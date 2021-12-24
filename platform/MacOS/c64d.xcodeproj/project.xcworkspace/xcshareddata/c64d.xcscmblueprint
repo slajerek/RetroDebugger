@@ -1,0 +1,30 @@
+{
+  "DVTSourceControlWorkspaceBlueprintPrimaryRemoteRepositoryKey" : "BCD6946949E0A8B9D435D57B34B3DC89E13BF771",
+  "DVTSourceControlWorkspaceBlueprintWorkingCopyRepositoryLocationsKey" : {
+
+  },
+  "DVTSourceControlWorkspaceBlueprintWorkingCopyStatesKey" : {
+    "BCD6946949E0A8B9D435D57B34B3DC89E13BF771" : 9223372036854775807,
+    "B98B83A6A5BDE187A401189A82C9FE1A36634376" : 9223372036854775807
+  },
+  "DVTSourceControlWorkspaceBlueprintIdentifierKey" : "4209045A-E7DD-47DE-B75A-EEAE1292C8D1",
+  "DVTSourceControlWorkspaceBlueprintWorkingCopyPathsKey" : {
+    "BCD6946949E0A8B9D435D57B34B3DC89E13BF771" : "c64d\/",
+    "B98B83A6A5BDE187A401189A82C9FE1A36634376" : "MTEngineSDL\/"
+  },
+  "DVTSourceControlWorkspaceBlueprintNameKey" : "c64d",
+  "DVTSourceControlWorkspaceBlueprintVersion" : 204,
+  "DVTSourceControlWorkspaceBlueprintRelativePathToProjectKey" : "platform\/MacOS\/c64d.xcodeproj",
+  "DVTSourceControlWorkspaceBlueprintRemoteRepositoriesKey" : [
+    {
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositoryURLKey" : "ssh:\/\/slaj.rabidus.pl:666\/~\/git\/MTEngineSDL.git",
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositorySystemKey" : "com.apple.dt.Xcode.sourcecontrol.Git",
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositoryIdentifierKey" : "B98B83A6A5BDE187A401189A82C9FE1A36634376"
+    },
+    {
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositoryURLKey" : "ssh:\/\/slaj.rabidus.pl:666\/~\/git\/c64d.git",
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositorySystemKey" : "com.apple.dt.Xcode.sourcecontrol.Git",
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositoryIdentifierKey" : "BCD6946949E0A8B9D435D57B34B3DC89E13BF771"
+    }
+  ]
+}
