@@ -79,7 +79,7 @@ Remember to have MTEngineSDL library in `./../../MTEngineSDL` folder.
 
 This product would not have been created without the help of alpha testers:
 Euan Gamble, Robert Troughton, Jesper Rune Larsen, Steve West, Lukhash, 
-Markus Dano Burgstaller, Brush/Elysium, Alex Goldblat, Cescom, Artix
+Markus Dano Burgstaller, Brush/Elysium, Alex Goldblat, Cescom, Artix, 
 Isildur/Samar, Dkt/Samar, Mojzesh/Samar, Pajero/MadTeam^Samar, Yugorin/Samar
 
 And C64 65XE NES Debugger testers: Scan/House, Dr.J/Delysid, Mr Wegi/Elysium, 
