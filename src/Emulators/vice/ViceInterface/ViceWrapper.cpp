@@ -171,7 +171,7 @@ void c64d_mark_disk_cell_read(uint16 addr)
 	if (debugInterfaceVice->snapshotsManager->IsPerformingSnapshotRestore())
 		return;
 	
-	CDebugSymbolSegmentDrive1541 *segment = (CDebugSymbolSegmentDrive1541*) debugInterfaceVice->symbolsDrive1541->currentSegment;
+	CDebugSymbolsSegmentDrive1541 *segment = (CDebugSymbolsSegmentDrive1541*) debugInterfaceVice->symbolsDrive1541->currentSegment;
 	
 	if (segment && segment->breakOnMemory)
 	{
@@ -197,7 +197,7 @@ void c64d_mark_disk_cell_write(uint16 addr, uint8 value)
 	if (debugInterfaceVice->snapshotsManager->IsPerformingSnapshotRestore())
 		return;
 	
-	CDebugSymbolSegmentDrive1541 *segment = (CDebugSymbolSegmentDrive1541*) debugInterfaceVice->symbolsDrive1541->currentSegment;
+	CDebugSymbolsSegmentDrive1541 *segment = (CDebugSymbolsSegmentDrive1541*) debugInterfaceVice->symbolsDrive1541->currentSegment;
 	
 	if (segment && segment->breakOnMemory)
 	{
@@ -623,7 +623,7 @@ void c64d_drive1541_check_pc_breakpoint(uint16 pc)
 	if (debugInterfaceVice->snapshotsManager->IsPerformingSnapshotRestore())
 		return;
 
-	CDebugSymbolSegmentDrive1541 *segment = (CDebugSymbolSegmentDrive1541*) debugInterfaceVice->symbolsDrive1541->currentSegment;
+	CDebugSymbolsSegmentDrive1541 *segment = (CDebugSymbolsSegmentDrive1541*) debugInterfaceVice->symbolsDrive1541->currentSegment;
 
 	if ((int)pc == segment->breakpointsPC->temporaryBreakpointPC)
 	{
@@ -1030,7 +1030,7 @@ int c64d_drive1541_is_checking_irq_breakpoints_enabled()
 	if (debugInterfaceVice->snapshotsManager->IsPerformingSnapshotRestore())
 		return 0;
 
-	CDebugSymbolSegmentDrive1541 *segment = (CDebugSymbolSegmentDrive1541*) debugInterfaceVice->symbolsDrive1541->currentSegment;
+	CDebugSymbolsSegmentDrive1541 *segment = (CDebugSymbolsSegmentDrive1541*) debugInterfaceVice->symbolsDrive1541->currentSegment;
 	if (segment->breakOnDrive1541IrqIEC || segment->breakOnDrive1541IrqVIA1 || segment->breakOnDrive1541IrqVIA2)
 		return 1;
 	
@@ -1042,7 +1042,7 @@ void c64d_drive1541_check_irqiec_breakpoint()
 	if (debugInterfaceVice->snapshotsManager->IsPerformingSnapshotRestore())
 		return;
 
-	CDebugSymbolSegmentDrive1541 *segment = (CDebugSymbolSegmentDrive1541*) debugInterfaceVice->symbolsDrive1541->currentSegment;
+	CDebugSymbolsSegmentDrive1541 *segment = (CDebugSymbolsSegmentDrive1541*) debugInterfaceVice->symbolsDrive1541->currentSegment;
 	if (segment && segment->breakOnDrive1541IrqIEC)
 	{
 		debugInterfaceVice->SetDebugMode(DEBUGGER_MODE_PAUSED);
@@ -1054,7 +1054,7 @@ void c64d_drive1541_check_irqvia1_breakpoint()
 	if (debugInterfaceVice->snapshotsManager->IsPerformingSnapshotRestore())
 		return;
 
-	CDebugSymbolSegmentDrive1541 *segment = (CDebugSymbolSegmentDrive1541*) debugInterfaceVice->symbolsDrive1541->currentSegment;
+	CDebugSymbolsSegmentDrive1541 *segment = (CDebugSymbolsSegmentDrive1541*) debugInterfaceVice->symbolsDrive1541->currentSegment;
 	if (segment && segment->breakOnDrive1541IrqVIA1)
 	{
 		debugInterfaceVice->SetDebugMode(DEBUGGER_MODE_PAUSED);
@@ -1067,7 +1067,7 @@ void c64d_drive1541_check_irqvia2_breakpoint()
 	if (debugInterfaceVice->snapshotsManager->IsPerformingSnapshotRestore())
 		return;
 
-	CDebugSymbolSegmentDrive1541 *segment = (CDebugSymbolSegmentDrive1541*) debugInterfaceVice->symbolsDrive1541->currentSegment;
+	CDebugSymbolsSegmentDrive1541 *segment = (CDebugSymbolsSegmentDrive1541*) debugInterfaceVice->symbolsDrive1541->currentSegment;
 	if (segment && segment->breakOnDrive1541IrqVIA2)
 	{
 		debugInterfaceVice->SetDebugMode(DEBUGGER_MODE_PAUSED);

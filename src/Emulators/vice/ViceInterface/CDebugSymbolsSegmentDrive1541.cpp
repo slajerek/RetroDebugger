@@ -1,7 +1,7 @@
 #include "CDebugSymbolsSegmentDrive1541.h"
 #include "CDebugSymbols.h"
 
-CDebugSymbolSegmentDrive1541::CDebugSymbolSegmentDrive1541(CDebugSymbols *debugSymbols, CSlrString *name, int segmentNum)
+CDebugSymbolsSegmentDrive1541::CDebugSymbolsSegmentDrive1541(CDebugSymbols *debugSymbols, CSlrString *name, int segmentNum)
 : CDebugSymbolsSegment(debugSymbols, name, segmentNum)
 {
 	driveNum = 0;
@@ -10,37 +10,37 @@ CDebugSymbolSegmentDrive1541::CDebugSymbolSegmentDrive1541(CDebugSymbols *debugS
 	breakOnDrive1541IrqIEC = false;
 }
 
-void CDebugSymbolSegmentDrive1541::UpdateRenderBreakpoints()
+void CDebugSymbolsSegmentDrive1541::UpdateRenderBreakpoints()
 {
 	CDebugSymbolsSegment::UpdateRenderBreakpoints();
 }
 
-CDebugSymbolSegmentDrive1541::~CDebugSymbolSegmentDrive1541()
+CDebugSymbolsSegmentDrive1541::~CDebugSymbolsSegmentDrive1541()
 {
-	CDebugSymbolsSegment::~CDebugSymbolsSegment();
+//	CDebugSymbolsSegment::~CDebugSymbolsSegment();
 }
 
-void CDebugSymbolSegmentDrive1541::AddBreakpointVIA1()
+void CDebugSymbolsSegmentDrive1541::AddBreakpointVIA1()
 {
 	this->breakOnDrive1541IrqVIA1 = true;
 }
 
-void CDebugSymbolSegmentDrive1541::AddBreakpointVIA2()
+void CDebugSymbolsSegmentDrive1541::AddBreakpointVIA2()
 {
 	this->breakOnDrive1541IrqVIA2 = true;
 }
 
-void CDebugSymbolSegmentDrive1541::AddBreakpointIEC()
+void CDebugSymbolsSegmentDrive1541::AddBreakpointIEC()
 {
 	this->breakOnDrive1541IrqIEC = true;
 }
 
-void CDebugSymbolSegmentDrive1541::ClearBreakpoints()
+void CDebugSymbolsSegmentDrive1541::ClearBreakpoints()
 {
 	CDebugSymbolsSegment::ClearBreakpoints();
 }
 
-bool CDebugSymbolSegmentDrive1541::ParseSymbolsXML(CSlrString *command, std::vector<CSlrString *> *words)
+bool CDebugSymbolsSegmentDrive1541::ParseSymbolsXML(CSlrString *command, std::vector<CSlrString *> *words)
 {
 	if (command->Equals("breakvia1") || command->Equals("breakonvia1") || command->Equals("breakonirqvia1")
 			 || command->Equals("via1"))

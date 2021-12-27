@@ -3,11 +3,11 @@
 
 #include "CDebugSymbolsSegment.h"
 
-class CDebugSymbolSegmentDrive1541 : public CDebugSymbolsSegment
+class CDebugSymbolsSegmentDrive1541 : public CDebugSymbolsSegment
 {
 public:
-	CDebugSymbolSegmentDrive1541(CDebugSymbols *debugSymbols, CSlrString *name, int segmentNum);
-	~CDebugSymbolSegmentDrive1541();
+	CDebugSymbolsSegmentDrive1541(CDebugSymbols *debugSymbols, CSlrString *name, int segmentNum);
+	~CDebugSymbolsSegmentDrive1541();
 	
 	int driveNum;
 	

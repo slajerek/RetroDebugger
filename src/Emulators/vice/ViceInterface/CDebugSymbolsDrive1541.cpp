@@ -19,7 +19,7 @@ CDebugSymbolsSegment *CDebugSymbolsDrive1541::CreateNewDebugSymbolsSegment(CSlrS
 {
 	LOGD("CDebugSymbolsDrive1541::CreateNewDebugSymbolsSegment");
 	
-	CDebugSymbolSegmentDrive1541 *segment = new CDebugSymbolSegmentDrive1541(this, name, segmentNum);
+	CDebugSymbolsSegmentDrive1541 *segment = new CDebugSymbolsSegmentDrive1541(this, name, segmentNum);
 	segment->Init();
 	return segment;
 }
