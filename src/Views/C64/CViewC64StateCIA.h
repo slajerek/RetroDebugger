@@ -40,6 +40,9 @@ public:
 	
 	bool renderCIA1;
 	bool renderCIA2;
+	
+	void SetFontSize(float fontSize);
+	float oneCiaSizeX;
 
 	//
 	virtual void RenderStateCIA(float px, float py, float posZ, CSlrFont *fontBytes, float fontSize, int ciaId);

@@ -27,9 +27,9 @@ CViewC64StateCIA::CViewC64StateCIA(const char *name, float posX, float posY, flo
 	renderCIA1 = true;
 	renderCIA2 = true;
 	
-	fontSize = 7.0f;
+	SetFontSize(7.0f);
 	AddLayoutParameter(new CLayoutParameterFloat("Font Size", &fontSize));
-
+	
 	fontBytes = viewC64->fontDisassembly;
 	
 	showRegistersOnly = false;
@@ -41,6 +41,12 @@ CViewC64StateCIA::CViewC64StateCIA(const char *name, float posX, float posY, flo
 	this->SetPosition(posX, posY, posZ, sizeX, sizeY);
 }
 
+void CViewC64StateCIA::SetFontSize(float fontSize)
+{
+	this->fontSize = fontSize;
+	this->oneCiaSizeX = 28.0f * fontSize;
+}
+
 void CViewC64StateCIA::SetPosition(float posX, float posY, float posZ, float sizeX, float sizeY)
 {
 	CGuiView::SetPosition(posX, posY, posZ, sizeX, sizeY);
@@ -49,6 +55,8 @@ void CViewC64StateCIA::SetPosition(float posX, float posY, float posZ, float siz
 void CViewC64StateCIA::LayoutParameterChanged(CLayoutParameter *layoutParameter)
 {
 	CGuiView::LayoutParameterChanged(layoutParameter);
+	
+	SetFontSize(fontSize);
 }
 
 void CViewC64StateCIA::DoLogic()
@@ -64,7 +72,7 @@ void CViewC64StateCIA::Render()
 	if (renderCIA1)
 	{
 		this->RenderStateCIA(px, posY, posZ, fontBytes, fontSize, 1);
-		px += 190;
+		px += oneCiaSizeX;
 	}
 	
 	if (renderCIA2)
@@ -238,7 +246,7 @@ bool CViewC64StateCIA::DoTap(float x, float y)
 		
 		if (renderCIA1)
 		{
-			if (x >= posX && x < posX+190)
+			if (x >= posX && x < posX + oneCiaSizeX)
 			{
 				editingCIAIndex = 1;
 //				px = posX;
@@ -247,10 +255,10 @@ bool CViewC64StateCIA::DoTap(float x, float y)
 		
 		if (renderCIA2)
 		{
-			if (x >= posX+190 && x < posX+190+190)
+			if (x >= posX + oneCiaSizeX && x < posX + oneCiaSizeX * 2.0f)
 			{
 				editingCIAIndex = 2;
-				px = posX+190;
+				px = posX + oneCiaSizeX;
 			}
 		}
 
