@@ -17,7 +17,6 @@ void CDebugSymbolsSegmentDrive1541::UpdateRenderBreakpoints()
 
 CDebugSymbolsSegmentDrive1541::~CDebugSymbolsSegmentDrive1541()
 {
-//	CDebugSymbolsSegment::~CDebugSymbolsSegment();
 }
 
 void CDebugSymbolsSegmentDrive1541::AddBreakpointVIA1()

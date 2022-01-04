@@ -17,6 +17,10 @@ CDebugDataAdapter::CDebugDataAdapter(char *adapterID, CDebugInterface *debugInte
 	this->viewMemoryMap = NULL;
 }
 
+CDebugDataAdapter::~CDebugDataAdapter()
+{
+}
+
 void CDebugDataAdapter::SetViewMemoryMap(CViewMemoryMap *viewMemoryMap)
 {
 	this->viewMemoryMap = viewMemoryMap;

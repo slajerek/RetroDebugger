@@ -291,7 +291,7 @@ void CViewDisassembly::SetViewParameters(float posX, float posY, float posZ, flo
 
 void CViewDisassembly::LayoutParameterChanged(CLayoutParameter *layoutParameter)
 {
-	LOGD("CViewDisassembly::LayoutParameterChanged");
+//	LOGD("CViewDisassembly::LayoutParameterChanged");
 	if (!showCodeCycles)
 	{
 		if (showHexCodes)
@@ -3590,7 +3590,7 @@ void CViewDisassembly::CreateAddrPositions()
 		numAddrPositions = 5;
 	}
 	
-	LOGD("CViewDisassembly::CreateAddrPositions: numAddrPositions=%d", numAddrPositions);
+//	LOGD("CViewDisassembly::CreateAddrPositions: numAddrPositions=%d", numAddrPositions);
 	if (numAddrPositions > 0)
 	{
 		addrPositions = new addrPosition_t[numAddrPositions];

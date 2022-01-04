@@ -142,6 +142,10 @@ CViewMemoryMapCell::CViewMemoryMapCell(int addr)
 	writeCycle = readCycle = executeCycle = -1;
 }
 
+CViewMemoryMapCell::~CViewMemoryMapCell()
+{
+}
+
 void CViewMemoryMapCell::ClearExecuteMarkers()
 {
 	isExecuteCode = false;

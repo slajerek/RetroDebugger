@@ -603,7 +603,7 @@ void CDebugInterfaceNes::SetApuMuteChannels(int apuNumber, bool muteSquare1, boo
 
 void CDebugInterfaceNes::SetApuReceiveChannelsData(int apuNumber, bool isReceiving)
 {
-	LOGD("SetApuReceiveChannelsData: isReceiving=%s", STRBOOL(isReceiving));
+//	LOGD("SetApuReceiveChannelsData: isReceiving=%s", STRBOOL(isReceiving));
 	nesd_isReceiveChannelsData = isReceiving;
 }
 

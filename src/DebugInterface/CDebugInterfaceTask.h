@@ -9,6 +9,7 @@ class CDebugInterface;
 class CDebugInterfaceTask
 {
 public:
+	virtual ~CDebugInterfaceTask();
 	virtual void ExecuteTask();
 };
 

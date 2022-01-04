@@ -14,6 +14,10 @@ CBreakpointAddr::CBreakpointAddr(int addr)
 	this->data = 0x00;
 }
 
+CBreakpointAddr::~CBreakpointAddr()
+{
+}
+
 CBreakpointMemory::CBreakpointMemory(int addr,
 									u32 memoryAccess, MemoryBreakpointComparison comparison, int value)
 : CBreakpointAddr(addr)

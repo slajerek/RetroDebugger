@@ -37,7 +37,8 @@ class CDebugInterface
 {
 public:
 	CDebugInterface(CViewC64 *viewC64);
-	~CDebugInterface();
+	virtual ~CDebugInterface();
+	
 	CViewC64 *viewC64;
 	
 	CSnapshotsManager *snapshotsManager;

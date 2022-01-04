@@ -53,7 +53,9 @@ public:
 	CLayoutData *layoutData;
 	char layoutName[128];
 	bool doNotUpdateViewsPosition;
-	
+	bool waitingForNewLayoutKeyShortcut;
+	virtual bool KeyDown(u32 keyCode, bool isShift, bool isAlt, bool isControl, bool isSuper);
+
 	std::vector<const char *> sidTypes;
 	std::list<const char *> *audioDevices;
 	std::list<const char *> *gamepads;
@@ -205,10 +207,6 @@ public:
 	virtual void SystemDialogFileSaveCancelled();
 	virtual void SystemDialogPickFolderSelected(CSlrString *path);
 	virtual void SystemDialogPickFolderCancelled();
-
-	//
-	bool waitingForKeyShortcut;
-	virtual bool KeyDown(u32 keyCode, bool isShift, bool isAlt, bool isControl, bool isSuper);
 	
 	CDebugInterface *selectedDebugInterface;
 };

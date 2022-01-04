@@ -39,7 +39,7 @@ CMainMenuBar::CMainMenuBar()
 	
 	audioDevices = NULL;
 	gamepads = NULL;
-	waitingForKeyShortcut = false;
+	waitingForNewLayoutKeyShortcut = false;
 	
 	extensionsImportLabels.push_back(new CSlrString("vs"));
 	extensionsImportLabels.push_back(new CSlrString("dbg"));
@@ -1135,18 +1135,18 @@ void CMainMenuBar::RenderImGui()
 			{
 				if (ImGui::BeginMenu("UI font"))
 				{
-					if (ImGui::InputFloat("Font size", &(viewC64->defaultFontSize), 0.5, 1))
+					if (ImGui::InputFloat("Font size", &(viewC64->defaultFontSize), 0.5, 1, "%.1f", ImGuiInputTextFlags_EnterReturnsTrue))
 					{
 						viewC64->defaultFontSize = URANGE(4, viewC64->defaultFontSize, 64);
 						viewC64->config->SetFloat("uiDefaultFontSize", &(viewC64->defaultFontSize));
-						viewC64->needsToRecreateUiFonts = true;
+						viewC64->UpdateDefaultUIFontFromSettings();
 					}
 
 					if (ImGui::InputInt("Oversampling", &(viewC64->defaultFontOversampling)))
 					{
 						viewC64->defaultFontOversampling = URANGE(1, viewC64->defaultFontOversampling, 8);
 						viewC64->config->SetInt("uiDefaultFontOversampling", &(viewC64->defaultFontOversampling));
-						viewC64->needsToRecreateUiFonts = true;
+						viewC64->UpdateDefaultUIFontFromSettings();
 					}
 
 					ImGui::Separator();
@@ -1155,49 +1155,49 @@ void CMainMenuBar::RenderImGui()
 					{
 						viewC64->defaultFontPath = "CousineRegular";
 						viewC64->config->SetString("uiDefaultFont", &(viewC64->defaultFontPath));
-						viewC64->needsToRecreateUiFonts = true;
+						viewC64->UpdateDefaultUIFontFromSettings();
 					}
 
 					if (ImGui::MenuItem("Sweet16", "", !strcmp(viewC64->defaultFontPath, "Sweet16")))
 					{
 						viewC64->defaultFontPath = "Sweet16";
 						viewC64->config->SetString("uiDefaultFont", &(viewC64->defaultFontPath));
-						viewC64->needsToRecreateUiFonts = true;
+						viewC64->UpdateDefaultUIFontFromSettings();
 					}
 
 					if (ImGui::MenuItem("Proggy Clean", "", !strcmp(viewC64->defaultFontPath, "ProggyClean")))
 					{
 						viewC64->defaultFontPath = "ProggyClean";
 						viewC64->config->SetString("uiDefaultFont", &(viewC64->defaultFontPath));
-						viewC64->needsToRecreateUiFonts = true;
+						viewC64->UpdateDefaultUIFontFromSettings();
 					}
 
 					if (ImGui::MenuItem("ProFontIIx", "", !strcmp(viewC64->defaultFontPath, "ProFontIIx")))
 					{
 						viewC64->defaultFontPath = "ProFontIIx";
 						viewC64->config->SetString("uiDefaultFont", &(viewC64->defaultFontPath));
-						viewC64->needsToRecreateUiFonts = true;
+						viewC64->UpdateDefaultUIFontFromSettings();
 					}
 
 					if (ImGui::MenuItem("Droid Sans", "", !strcmp(viewC64->defaultFontPath, "DroidSans")))
 					{
 						viewC64->defaultFontPath = "DroidSans";
 						viewC64->config->SetString("uiDefaultFont", &(viewC64->defaultFontPath));
-						viewC64->needsToRecreateUiFonts = true;
+						viewC64->UpdateDefaultUIFontFromSettings();
 					}
 
 					if (ImGui::MenuItem("Karla Regular", "", !strcmp(viewC64->defaultFontPath, "KarlaRegular")))
 					{
 						viewC64->defaultFontPath = "KarlaRegular";
 						viewC64->config->SetString("uiDefaultFont", &(viewC64->defaultFontPath));
-						viewC64->needsToRecreateUiFonts = true;
+						viewC64->UpdateDefaultUIFontFromSettings();
 					}
 
 					if (ImGui::MenuItem("Roboto Medium", "", !strcmp(viewC64->defaultFontPath, "RobotoMedium")))
 					{
 						viewC64->defaultFontPath = "RobotoMedium";
 						viewC64->config->SetString("uiDefaultFont", &(viewC64->defaultFontPath));
-						viewC64->needsToRecreateUiFonts = true;
+						viewC64->UpdateDefaultUIFontFromSettings();
 					}
 
 					ImGui::EndMenu();
@@ -1518,12 +1518,12 @@ void CMainMenuBar::RenderImGui()
 		ImGui::OpenPopup("New Workspace");
 	}
 	
-	if (ImGui::BeginPopupModal("New Workspace", NULL, waitingForKeyShortcut ? ImGuiWindowFlags_NoResize : ImGuiWindowFlags_AlwaysAutoResize))
+	if (ImGui::BeginPopupModal("New Workspace", NULL, waitingForNewLayoutKeyShortcut ? ImGuiWindowFlags_NoResize : ImGuiWindowFlags_AlwaysAutoResize))
 	{
 		if (openPopupImGuiWorkaround)
 			ImGui::SetKeyboardFocusHere();
 
-		if (waitingForKeyShortcut == false)
+		if (waitingForNewLayoutKeyShortcut == false)
 		{
 			bool saveLayout = false;
 			if (ImGui::InputText("Name##NewWorkspacePopup", layoutName, 127, ImGuiInputTextFlags_EnterReturnsTrue))
@@ -1540,7 +1540,7 @@ void CMainMenuBar::RenderImGui()
 
 			if (ImGui::Button("Assign keyboard shortcut"))
 			{
-				waitingForKeyShortcut = true;
+				waitingForNewLayoutKeyShortcut = true;
 			}
 
 			if (ImGui::Button("Cancel"))
@@ -1601,7 +1601,7 @@ void CMainMenuBar::RenderImGui()
 
 bool CMainMenuBar::KeyDown(u32 keyCode, bool isShift, bool isAlt, bool isControl, bool isSuper)
 {
-	if (waitingForKeyShortcut)
+	if (waitingForNewLayoutKeyShortcut)
 	{
 		if (SYS_IsKeyCodeSpecial(keyCode))
 			return false;
@@ -1620,14 +1620,14 @@ bool CMainMenuBar::KeyDown(u32 keyCode, bool isShift, bool isAlt, bool isControl
 			sprintf(buf, "Keyboard shortcut %s is already assigned to %s", findShortcut->cstr, findShortcut->name);
 			guiMain->ShowMessageBox("Please revise", buf);
 			SYS_ReleaseCharBuf(buf);
-			waitingForKeyShortcut = false;
+			waitingForNewLayoutKeyShortcut = false;
 			return true;
 		}
 
 		// keyboard shortcut name will be updated on save
 		layoutData->keyShortcut = new CSlrKeyboardShortcut(KBZONE_GLOBAL, "", keyCode, isShift, isAlt, isControl, guiMain->isSuperPressed, guiMain->layoutManager);
 		
-		waitingForKeyShortcut = false;
+		waitingForNewLayoutKeyShortcut = false;
 		return true;
 	}
 	return false;

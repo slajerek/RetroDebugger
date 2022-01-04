@@ -549,7 +549,7 @@ void c64PerformStartupTasksThreaded()
 	
 	if (c64CommandLineWindowFullScreen)
 	{
-		viewC64->GoFullScreen();
+		viewC64->GoFullScreen(NULL);
 	}
 
 	c64PreRunStartupCallbacks();
@@ -1458,7 +1458,7 @@ void c64PerformNewConfigurationTasksThreaded(CByteBuffer *byteBuffer)
 		}
 		else if (t == C64D_PASS_CONFIG_DATA_FULL_SCREEN)
 		{
-			viewC64->GoFullScreen();
+			viewC64->GoFullScreen(NULL);
 		}
 	}
 	

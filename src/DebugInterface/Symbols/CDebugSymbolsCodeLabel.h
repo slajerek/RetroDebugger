@@ -12,7 +12,7 @@ class CDebugSymbolsCodeLabel
 {
 public:
 	CDebugSymbolsCodeLabel(CDebugSymbolsSegment *segment);
-	~CDebugSymbolsCodeLabel();
+	virtual ~CDebugSymbolsCodeLabel();
 	void SetText(char *txt);
 	u16 address;
 	

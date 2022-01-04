@@ -27,7 +27,8 @@ class CDebugInterfaceC64 : public CDebugInterface
 {
 public:
 	CDebugInterfaceC64(CViewC64 *viewC64);
-	~CDebugInterfaceC64();
+	virtual ~CDebugInterfaceC64();
+	
 	CViewC64 *viewC64;
 	
 	virtual int GetEmulatorType();

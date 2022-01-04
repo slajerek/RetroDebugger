@@ -153,7 +153,6 @@ CViewC64::CViewC64(float posX, float posY, float posZ, float sizeX, float sizeY)
 
 	defaultFontPath = NULL;
 	defaultFontSize = 13.0f;
-	needsToRecreateUiFonts = false;
 	
 	// here comes windows shit:
 	this->config->GetFloat("mouseScrollWheelScaleX", &guiMain->mouseScrollWheelScaleX, 1.0f);
@@ -486,6 +485,10 @@ CViewC64::CViewC64(float posX, float posY, float posZ, float sizeX, float sizeY)
 	SYS_SetMainProcessPriority(c64SettingsProcessPriority);
 #endif
 	
+	//
+	mouseCursorNumFramesToHideCursor = 60;
+	mouseCursorVisibilityCounter = 0;
+	
 	// start
 	ShowMainScreen();
 	
@@ -549,7 +552,7 @@ void CViewC64::ShowMainScreen()
 	//	guiMain->SetView(viewVicEditor);
 //	guiMain->SetView(this->viewColodore);
 
-	CheckMouseCursorVisibility(true);
+	CheckMouseCursorVisibility();
 }
 
 CViewC64::~CViewC64()
@@ -1530,7 +1533,7 @@ void CViewC64::Render()
 #endif
 
 	// check if we need to hide or display cursor
-	CheckMouseCursorVisibility(true);
+	CheckMouseCursorVisibility();
 
 //	// debug render fps
 //	char buf[128];
@@ -1555,7 +1558,10 @@ void CViewC64::RenderImGui()
 //								 true, false, true, true);
 //	}
 	
-	mainMenuBar->RenderImGui();
+	if (guiMain->IsViewFullScreen() == false)
+	{
+		mainMenuBar->RenderImGui();
+	}
 	
 	this->Render();
 //	viewC64Screen->RefreshScreen();
@@ -2389,6 +2395,12 @@ bool CViewC64::DoNotTouchedMove(float x, float y)
 {
 //	LOGG("CViewC64::DoNotTouchedMove, mouseCursor=%f %f", mouseCursorX, mouseCursorY);
 
+	if (guiMain->IsMouseCursorVisible() == false)
+	{
+		guiMain->SetMouseCursorVisible(true);
+		mouseCursorVisibilityCounter = 0;
+	}
+
 	mouseCursorX = x;
 	mouseCursorY = y;
 	
@@ -2610,13 +2622,7 @@ void CViewC64::Create8BitFonts()
 void CViewC64::CreateDefaultUIFont()
 {
 	ImGuiIO& io = ImGui::GetIO();
-	
-	if (needsToRecreateUiFonts)
-	{
-		io.Fonts->Clear();
-	}
-	
-	
+		
 #if defined(MACOS)
 	config->GetString("uiDefaultFont", &defaultFontPath, "CousineRegular");
 	config->GetFloat("uiDefaultFontSize", &defaultFontSize, 16.0f);
@@ -2668,15 +2674,24 @@ void CViewC64::CreateDefaultUIFont()
 //
 //	}
 	
-	if (needsToRecreateUiFonts)
-	{
-		ImGui_ImplOpenGL3_CreateFontsTexture();
-	}
-	
-	needsToRecreateUiFonts = false;
-
-	//	ImGuiFreeType::BuildFontAtlas(io.Fonts, 0);
 }
+
+void CViewC64::UpdateDefaultUIFontFromSettings()
+{
+	CUiThreadTaskSetDefaultUiFont *task = new CUiThreadTaskSetDefaultUiFont();
+	guiMain->AddUiThreadTask(task);
+}
+
+void CUiThreadTaskSetDefaultUiFont::RunUIThreadTask()
+{
+	ImGuiIO& io = ImGui::GetIO();
+	io.Fonts->Clear();
+	
+	viewC64->CreateDefaultUIFont();
+	
+	guiMain->CreateUiFontsTexture();
+}
+
 
 // TODO: this is called by emulator code when frame is started (i.e. just after VSync)
 //       note that this assumes we have *ONE* emulator working (the C64 Vice is supported by now)
@@ -2755,51 +2770,41 @@ void CViewC64::UpdateSIDMute()
 	}
 }
 
-void CViewC64::CheckMouseCursorVisibility(bool checkIfFullScreen)
+void CViewC64::CheckMouseCursorVisibility()
 {
 //	LOGD("CViewC64::CheckMouseCursorVisibility: %f %f  %f %f", guiMain->mousePosX, guiMain->mousePosY, SCREEN_WIDTH, SCREEN_HEIGHT);
-	bool isVisible = true;
 	
-	/*
-	if (guiMain->currentView == this
-		&&
-		(	this->currentScreenLayoutId == SCREEN_LAYOUT_C64_ONLY
-			|| this->currentScreenLayoutId == SCREEN_LAYOUT_ATARI_ONLY
-			|| this->currentScreenLayoutId == SCREEN_LAYOUT_NES_ONLY
-		 ))
+	if (guiMain->IsViewFullScreen())
 	{
-		if (IsMouseCursorOnTimeline() == false
-			&& (checkIfFullScreen == false || VID_IsWindowFullScreen()))
+		if (guiMain->IsMouseCursorVisible() == false)
 		{
-			float gap = 5.0f;
-			if (! (guiMain->mousePosX < gap
-				   || guiMain->mousePosX > SCREEN_WIDTH-gap
-				   || guiMain->mousePosY < gap
-				   || guiMain->mousePosY > SCREEN_WIDTH-gap) )
-			{
-				if (guiMain->isMouseCursorVisible == true)
-				{
-					if (mouseCursorVisibilityCounter < mouseCursorNumFramesToHideCursor)
-					{
-						mouseCursorVisibilityCounter++;
-					}
-					else
-					{
-						mouseCursorVisibilityCounter = 0;
-						isVisible = false;
-					}
-				}
-				else
-				{
-					return;
-				}
-			}
+			// cursor is already hidden
+			return;
+		}
+
+		// cursor is visible
+		if (mouseCursorNumFramesToHideCursor > 0
+			&& mouseCursorVisibilityCounter > mouseCursorNumFramesToHideCursor)
+		{
+			// hide cursor
+			guiMain->SetMouseCursorVisible(false);
+			mouseCursorVisibilityCounter = 0;
+		}
+		else
+		{
+			mouseCursorVisibilityCounter++;
+		}
+	}
+	else
+	{
+		// not fullscreen, show cursor
+		if (guiMain->IsMouseCursorVisible() == false)
+		{
+			mouseCursorVisibilityCounter = 0;
+			guiMain->SetMouseCursorVisible(true);
 		}
 	}
 	
-//	LOGD("SetMouseCursorVisible: %s", STRBOOL(isVisible));
-	guiMain->SetMouseCursorVisible(isVisible);
-	 */
 }
 
 void CViewC64::ShowMouseCursor()
@@ -2807,14 +2812,41 @@ void CViewC64::ShowMouseCursor()
 	guiMain->SetMouseCursorVisible(true);
 }
 
-void CViewC64::GoFullScreen()
+void CViewC64::GoFullScreen(CGuiView *view)
 {
-	LOGM("CViewC64::GoFullScreen");
-	guiMain->SetApplicationWindowFullScreen(true);
-	
-	// note, we skip the fullscreen check for mouse cursor hide
-	viewC64->CheckMouseCursorVisibility(false);
+	if (view != NULL)
+	{
+		guiMain->SetViewFullScreen(view);
+	}
+	else
+	{
+		guiMain->SetApplicationWindowFullScreen(true);
+	}
 }
+	
+void CViewC64::ToggleFullScreen(CGuiView *view)
+{
+	if (guiMain->IsViewFullScreen())
+	{
+		guiMain->SetViewFullScreen(NULL);
+		return;
+	}
+	
+	if (guiMain->IsApplicationWindowFullScreen())
+	{
+		guiMain->SetApplicationWindowFullScreen(false);
+		return;
+	}
+	
+	if (view != NULL)
+	{
+		guiMain->SetViewFullScreen(view);
+		return;
+	}
+	
+	guiMain->SetApplicationWindowFullScreen(true);
+}
+
 
 CDebugInterface *CViewC64::GetDebugInterface(u8 emulatorType)
 {

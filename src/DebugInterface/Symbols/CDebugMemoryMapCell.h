@@ -7,6 +7,7 @@ class CViewMemoryMapCell
 {
 public:
 	CViewMemoryMapCell(int addr);
+	virtual ~CViewMemoryMapCell();
 	
 	// cell address (for virtual maps, like Drive 1541 map)
 	int addr;

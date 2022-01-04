@@ -47,7 +47,7 @@ class CDebugInterfaceVice : public CDebugInterfaceC64
 {
 public:
 	CDebugInterfaceVice(CViewC64 *viewC64, uint8 *c64memory, bool patchKernalFastBoot);
-	~CDebugInterfaceVice();
+	virtual ~CDebugInterfaceVice();
 	
 	void InitViceMainProgram();
 	

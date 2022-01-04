@@ -25,6 +25,7 @@ class CBreakpointAddr
 {
 public:
 	CBreakpointAddr(int addr);
+	virtual ~CBreakpointAddr();
 	bool isActive;
 
 	int addr;		

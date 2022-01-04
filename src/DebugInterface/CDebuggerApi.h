@@ -15,6 +15,8 @@ class CDebuggerApi
 {
 public:
 	CDebuggerApi(CDebugInterface *debugInterface);
+	virtual ~CDebuggerApi();
+	
 	CDebugInterface *debugInterface;
 	
 	static CDebuggerApi *GetDebuggerApi(u8 emulatorType);

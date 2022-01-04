@@ -151,6 +151,10 @@ CDebugInterfaceVice::CDebugInterfaceVice(CViewC64 *viewC64, uint8 *c64memory, bo
 	isCodeMonitorOpened = false;
 }
 
+CDebugInterfaceVice::~CDebugInterfaceVice()
+{
+}
+
 void CDebugInterfaceVice::InitViceMainProgram()
 {
 	int ret = vice_main_program(sysArgc, sysArgv, c64SettingsC64Model);

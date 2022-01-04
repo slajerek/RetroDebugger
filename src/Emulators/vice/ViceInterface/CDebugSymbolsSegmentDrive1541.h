@@ -7,7 +7,7 @@ class CDebugSymbolsSegmentDrive1541 : public CDebugSymbolsSegment
 {
 public:
 	CDebugSymbolsSegmentDrive1541(CDebugSymbols *debugSymbols, CSlrString *name, int segmentNum);
-	~CDebugSymbolsSegmentDrive1541();
+	virtual ~CDebugSymbolsSegmentDrive1541();
 	
 	int driveNum;
 	

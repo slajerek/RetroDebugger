@@ -18,7 +18,7 @@ class CDebugInterfaceNes : public CDebugInterface
 	
 public:
 	CDebugInterfaceNes(CViewC64 *viewC64); //, uint8 *memory);
-	~CDebugInterfaceNes();
+	virtual ~CDebugInterfaceNes();
 	
 	volatile bool isInitialised;
 	

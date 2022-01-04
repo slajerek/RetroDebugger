@@ -12,7 +12,7 @@ public:
 	CDebugSymbolsDataWatch(CDebugSymbolsSegment *segment);
 	CDebugSymbolsDataWatch(CDebugSymbolsSegment *segment, char *name, int addr);
 	CDebugSymbolsDataWatch(CDebugSymbolsSegment *segment, char *name, int addr, int representation, int numberOfValues);
-	~CDebugSymbolsDataWatch();
+	virtual ~CDebugSymbolsDataWatch();
 	
 	CDebugSymbolsSegment *segment;
 	

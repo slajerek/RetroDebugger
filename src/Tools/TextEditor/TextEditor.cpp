@@ -6,6 +6,7 @@
 
 
 // TODO: check https://github.com/cmaughan/sonic-pi/blob/b65f3c6bc6d070f69f2bffe5b1f9d7f78cb7149b/app/gui/imgui/edit_window.cpp
+// TODO: check https://github.com/xhighway999/luapad/blob/master/tinyide/ImGuiColorTextEdit/TextEditor.cpp
 
 #include "TextEditor.h"
 

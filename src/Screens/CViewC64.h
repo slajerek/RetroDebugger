@@ -423,7 +423,6 @@ public:
 //	ImFont *imFontPro;
 //	ImFont *imFontSweet16;
 
-	bool needsToRecreateUiFonts;
 	const char *defaultFontPath;
 	float defaultFontSize;
 	int defaultFontOversampling;
@@ -431,6 +430,7 @@ public:
 	void CreateFonts();
 	void Create8BitFonts();
 	void CreateDefaultUIFont();
+	void UpdateDefaultUIFontFromSettings();
 
 	volatile bool isShowingRasterCross;
 	
@@ -462,10 +462,16 @@ public:
 
 	void InitRasterColors();
 	
-	void CheckMouseCursorVisibility(bool checkIfFullScreen);
+	void CheckMouseCursorVisibility();
 	void ShowMouseCursor();
 
-	void GoFullScreen();
+	void GoFullScreen(CGuiView *view);
+	void ToggleFullScreen(CGuiView *view);
+	
+	//
+	bool IsMouseCursorOnTimeline();
+	int mouseCursorVisibilityCounter;
+	int mouseCursorNumFramesToHideCursor;
 	
 	//
 	void ShowMainScreen();
@@ -517,6 +523,11 @@ extern CViewC64 *viewC64;
 // drag & drop callbacks
 extern unsigned long c64dStartupTime;
 
+class CUiThreadTaskSetDefaultUiFont : public CUiThreadTaskCallback
+{
+public:
+	virtual void RunUIThreadTask();
+};
 
 
 #endif //_GUI_C64DEMO_

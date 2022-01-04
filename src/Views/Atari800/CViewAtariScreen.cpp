@@ -650,6 +650,11 @@ bool CViewAtariScreen::KeyDown(u32 keyCode, bool isShift, bool isAlt, bool isCon
 {
 	LOGI(".......... CViewAtariScreen::KeyDown: keyCode=%d", keyCode);
 	
+	if (keyCode == MTKEY_ENTER && isAlt)
+	{
+		viewC64->ToggleFullScreen(this);
+	}
+	
 	if (viewC64->mainMenuBar->selectedJoystick1 == SelectedJoystick::SelectedJoystickKeyboard
 		|| viewC64->mainMenuBar->selectedJoystick2 == SelectedJoystick::SelectedJoystickKeyboard)
 	{

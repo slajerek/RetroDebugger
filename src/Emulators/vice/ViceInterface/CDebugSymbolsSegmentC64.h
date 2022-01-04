@@ -10,7 +10,7 @@ class CDebugSymbolsSegmentC64 : public CDebugSymbolsSegment
 {
 public:
 	CDebugSymbolsSegmentC64(CDebugSymbols *debugSymbols, CSlrString *name, int segmentNum);
-	~CDebugSymbolsSegmentC64();
+	virtual ~CDebugSymbolsSegmentC64();
 	
 	// additional breakpoints, c64
 	bool breakOnRaster;

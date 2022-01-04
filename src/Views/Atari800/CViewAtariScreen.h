@@ -51,7 +51,7 @@ public:
 	
 	virtual void ActivateView();
 	virtual void DeactivateView();
-
+	
 	CSlrImage *imageScreen;
 
 	CImageData *imageDataScreenDefault;

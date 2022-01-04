@@ -49,13 +49,8 @@ void MT_PostInit()
 
 void MT_Render()
 {
-
 }
 
 void MT_PostRenderEndFrame()
 {
-	if (viewC64->needsToRecreateUiFonts)
-	{
-		viewC64->CreateDefaultUIFont();
-	}
 }

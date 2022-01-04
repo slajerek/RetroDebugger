@@ -216,6 +216,12 @@ bool CViewC64ScreenWrapper::KeyDown(u32 keyCode, bool isShift, bool isAlt, bool 
 	LOGI(".......... CViewC64ScreenWrapper::KeyDown: keyCode=%d isShift=%s isAlt=%s isControl=%s", keyCode,
 		 STRBOOL(isShift), STRBOOL(isAlt), STRBOOL(isControl));
 	
+	if (keyCode == MTKEY_ENTER && isAlt)
+	{
+		viewC64->ToggleFullScreen(this);
+	}
+	
+
 	return viewC64->viewC64Screen->KeyDown(keyCode, isShift, isAlt, isControl, isSuper);
 	
 	//return CGuiView::KeyDown(keyCode, isShift, isAlt, isControl, isSuper);

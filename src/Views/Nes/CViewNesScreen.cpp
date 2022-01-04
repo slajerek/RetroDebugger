@@ -461,6 +461,7 @@ void CViewNesScreen::Render(float posX, float posY)
 bool CViewNesScreen::DoTap(float x, float y)
 {
 	LOGG("CViewNesScreen::DoTap:  x=%f y=%f", x, y);
+	
 	return CGuiView::DoTap(x, y);
 }
 
@@ -597,6 +598,11 @@ bool CViewNesScreen::KeyDown(u32 keyCode, bool isShift, bool isAlt, bool isContr
 {
 	LOGI(".......... CViewNesScreen::KeyDown: keyCode=%d", keyCode);
 
+	if (keyCode == MTKEY_ENTER && isAlt)
+	{
+		viewC64->ToggleFullScreen(this);
+	}
+	
 	if (viewC64->mainMenuBar->selectedJoystick1 == SelectedJoystick::SelectedJoystickKeyboard
 		|| viewC64->mainMenuBar->selectedJoystick2 == SelectedJoystick::SelectedJoystickKeyboard)
 	{

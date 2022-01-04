@@ -23,7 +23,7 @@ class CDebugInterfaceNesTaskInsertCartridge : public CDebugInterfaceTask
 {
 public:
 	CDebugInterfaceNesTaskInsertCartridge(CDebugInterfaceNes *debugInterface, CSlrString *pathToCart);
-	~CDebugInterfaceNesTaskInsertCartridge();
+	virtual ~CDebugInterfaceNesTaskInsertCartridge();
 	
 	CDebugInterfaceNes *debugInterface;
 	CSlrString *pathToCart;

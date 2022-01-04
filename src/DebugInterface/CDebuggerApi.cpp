@@ -49,6 +49,10 @@ CDebuggerApi::CDebuggerApi(CDebugInterface *debugInterface)
 	this->byteBufferAssembleText = new CByteBuffer();
 }
 
+CDebuggerApi::~CDebuggerApi()
+{
+}
+
 void CDebuggerApi::StartThread(CSlrThread *run)
 {
 	SYS_StartThread(run);

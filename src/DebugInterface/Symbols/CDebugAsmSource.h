@@ -22,7 +22,7 @@ class CSlrFile;
 class CDebugAsmSourceFile
 {
 public:
-	~CDebugAsmSourceFile();
+	virtual ~CDebugAsmSourceFile();
 	
 	CSlrString *sourceFilePath;
 	CSlrString *sourceFileName;
@@ -53,7 +53,7 @@ class CDebugAsmSourceBlock
 {
 public:
 	CDebugAsmSourceBlock(CDebugSymbolsSegment *segment, CSlrString *name);
-	~CDebugAsmSourceBlock();
+	virtual ~CDebugAsmSourceBlock();
 	CSlrString *name;
 
 	CDebugSymbolsSegment *segment;
@@ -65,7 +65,7 @@ class CDebugAsmSource
 {
 public:
 	CDebugAsmSource(CByteBuffer *byteBuffer, CDebugInterface *debugInterface, CDataAdapter *dataAdapter);
-	~CDebugAsmSource();
+	virtual ~CDebugAsmSource();
 	
 	CDebugInterface *debugInterface;
 	CDataAdapter *dataAdapter;

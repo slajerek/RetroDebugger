@@ -17,6 +17,8 @@ class CDebugDataAdapter : public CDataAdapter
 {
 public:
 	CDebugDataAdapter(char *adapterID, CDebugInterface *debugInterface);
+	virtual ~CDebugDataAdapter();
+	
 	CDebugInterface *debugInterface;
 
 	virtual void SetViewMemoryMap(CViewMemoryMap *viewMemoryMap);

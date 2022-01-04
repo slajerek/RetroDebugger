@@ -56,7 +56,7 @@ class CSnapshotsManager
 {
 public:
 	CSnapshotsManager(CDebugInterface *debugInterface);
-	~CSnapshotsManager();
+	virtual ~CSnapshotsManager();
 	
 	CDebugInterface *debugInterface;
 	

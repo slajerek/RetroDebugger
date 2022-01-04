@@ -18,7 +18,7 @@ class CDebugSymbolsSegment
 {
 public:
 	CDebugSymbolsSegment(CDebugSymbols *debugSymbols, CSlrString *name, int segmentNum);
-	~CDebugSymbolsSegment();
+	virtual ~CDebugSymbolsSegment();
 	
 	int segmentNum;
 	CSlrString *name;

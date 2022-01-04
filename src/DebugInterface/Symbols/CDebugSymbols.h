@@ -24,7 +24,7 @@ class CDebugSymbols
 {
 public:
 	CDebugSymbols(CDebugInterface *debugInterface, CDataAdapter *dataAdapter);
-	~CDebugSymbols();
+	virtual ~CDebugSymbols();
 	
 	CDebugInterface *debugInterface;
 	CDataAdapter *dataAdapter;

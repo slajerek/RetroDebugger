@@ -40,7 +40,6 @@ void CDebugSymbolsSegmentC64::UpdateRenderBreakpoints()
 
 CDebugSymbolsSegmentC64::~CDebugSymbolsSegmentC64()
 {
-	CDebugSymbolsSegment::~CDebugSymbolsSegment();
 }
 
 void CDebugSymbolsSegmentC64::AddBreakpointVIC()

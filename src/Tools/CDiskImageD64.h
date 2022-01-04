@@ -53,7 +53,7 @@ public:
 	// get disk image from file
 	CDiskImageD64(char *fileName);
 	
-	~CDiskImageD64();
+	virtual ~CDiskImageD64();
 	
 	void SetDiskImage(int driveId);
 	void SetDiskImage(char *fileName);

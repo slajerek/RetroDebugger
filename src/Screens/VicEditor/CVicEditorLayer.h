@@ -11,7 +11,7 @@ class CVicEditorLayer
 {
 public:
 	CVicEditorLayer(CViewVicEditor *vicEditor, const char *layerName);
-	~CVicEditorLayer();
+	virtual ~CVicEditorLayer();
 	
 	CViewVicEditor *vicEditor;
 
