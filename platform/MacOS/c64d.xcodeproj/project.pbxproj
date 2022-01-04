@@ -1186,6 +1186,13 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
+		414BDFF82784EE0E00166AE2 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 41B5298823992DCB0084F0DB /* MTEngineSDL.xcodeproj */;
+			proxyType = 1;
+			remoteGlobalIDString = 410CAEF02397A470009DA199;
+			remoteInfo = MTEngineSDL;
+		};
 		41B5298F23992DCB0084F0DB /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 41B5298823992DCB0084F0DB /* MTEngineSDL.xcodeproj */;
@@ -6947,9 +6954,10 @@
 			buildRules = (
 			);
 			dependencies = (
+				414BDFF92784EE0E00166AE2 /* PBXTargetDependency */,
 			);
 			name = "Retro Debugger";
-			productName = "C64 65XE NES Debugger";
+			productName = "Retro Debugger";
 			productReference = 41C84A1923C61751007C0889 /* Retro Debugger.app */;
 			productType = "com.apple.product-type.application";
 		};
@@ -8183,6 +8191,14 @@
 		};
 /* End PBXSourcesBuildPhase section */
 
+/* Begin PBXTargetDependency section */
+		414BDFF92784EE0E00166AE2 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = MTEngineSDL;
+			targetProxy = 414BDFF82784EE0E00166AE2 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
 /* Begin XCBuildConfiguration section */
 		4147CA8D23992D74006B25A7 /* Debug */ = {
 			isa = XCBuildConfiguration;
@@ -8285,17 +8301,17 @@
 				CODE_SIGN_IDENTITY = "";
 				CODE_SIGN_INJECT_BASE_ENTITLEMENTS = YES;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 0.64.60.78;
+				CURRENT_PROJECT_VERSION = 0.64.61.78;
 				DEVELOPMENT_TEAM = APV7Y7Q9JY;
-				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_HARDENED_RUNTIME = NO;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					MACOS,
 					"$(inherited)",
 				);
 				HEADER_SEARCH_PATHS = (
-					"/Users/mars/develop/MTEngineSDL/platform/MacOS/src.MacOS/**",
-					"/Users/mars/develop/MTEngineSDL/src/**",
-					/Users/mars/develop/MTEngineSDL/platform/MacOS/include,
+					"$(PROJECT_DIR)/../../../MTEngineSDL/platform/MacOS/src.MacOS/**",
+					"$(PROJECT_DIR)/../../../MTEngineSDL/src/**",
+					"$(PROJECT_DIR)/../../../MTEngineSDL/platform/MacOS/include",
 					/usr/local/include/freetype2,
 				);
 				INFOPLIST_FILE = "$(SRCROOT)/src.MacOS/Info.plist";
@@ -8304,8 +8320,8 @@
 					/usr/local/lib,
 					"$(PROJECT_DIR)/lib",
 				);
-				MACOSX_DEPLOYMENT_TARGET = 10.15;
-				MARKETING_VERSION = 0.64.60.78;
+				MACOSX_DEPLOYMENT_TARGET = 10.12;
+				MARKETING_VERSION = 0.64.61.78;
 				OTHER_CFLAGS = "-Wno-implicit-function-declaration";
 				OTHER_CODE_SIGN_FLAGS = "--deep";
 				OTHER_CPLUSPLUSFLAGS = (
@@ -8328,14 +8344,14 @@
 				CODE_SIGN_IDENTITY = "";
 				CODE_SIGN_INJECT_BASE_ENTITLEMENTS = YES;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 0.64.60.78;
+				CURRENT_PROJECT_VERSION = 0.64.61.78;
 				DEVELOPMENT_TEAM = APV7Y7Q9JY;
-				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_HARDENED_RUNTIME = NO;
 				GCC_PREPROCESSOR_DEFINITIONS = MACOS;
 				HEADER_SEARCH_PATHS = (
-					"/Users/mars/develop/MTEngineSDL/platform/MacOS/src.MacOS/**",
-					"/Users/mars/develop/MTEngineSDL/src/**",
-					/Users/mars/develop/MTEngineSDL/platform/MacOS/include,
+					"$(PROJECT_DIR)/../../../MTEngineSDL/platform/MacOS/src.MacOS/**",
+					"$(PROJECT_DIR)/../../../MTEngineSDL/src/**",
+					"$(PROJECT_DIR)/../../../MTEngineSDL/platform/MacOS/include",
 					/usr/local/include/freetype2,
 				);
 				INFOPLIST_FILE = "$(SRCROOT)/src.MacOS/Info.plist";
@@ -8344,8 +8360,8 @@
 					/usr/local/lib,
 					"$(PROJECT_DIR)/lib",
 				);
-				MACOSX_DEPLOYMENT_TARGET = 10.15;
-				MARKETING_VERSION = 0.64.60.78;
+				MACOSX_DEPLOYMENT_TARGET = 10.12;
+				MARKETING_VERSION = 0.64.61.78;
 				OTHER_CFLAGS = "-Wno-implicit-function-declaration";
 				OTHER_CODE_SIGN_FLAGS = "--deep";
 				OTHER_CPLUSPLUSFLAGS = (
