@@ -15,17 +15,7 @@ C64DebuggerPluginDNDK::C64DebuggerPluginDNDK(float posX, float posY, float posZ,
 
 	this->SetEmulatorType(EMULATOR_TYPE_NESTOPIA);
 	
-	extensionsConfig.push_back(new CSlrString("hjson"));
-	extensionsPRG.push_back(new CSlrString("prg"));
-	extensionsPRGandSID.push_back(new CSlrString("prg"));
-	extensionsPRGandSID.push_back(new CSlrString("sid"));
-	extensionsPNG.push_back(new CSlrString("png"));
-
-	//
-	EMPTY_PATH_ALLOC(settingPrgOutputPath);
-	settingExportToPrg = false;
-
-	InitConfig("PluginTemplate");
+//	InitConfig("PluginDNDK");
 }
 
 C64DebuggerPluginDNDK::~C64DebuggerPluginDNDK()
@@ -37,30 +27,6 @@ void C64DebuggerPluginDNDK::Init()
 {
 	api->AddView(this);
 }
-
-//
-void C64DebuggerPluginDNDK::StoreToHjson(Hjson::Value hjsonRoot)
-{
-	char hexStr[16];
-	hjsonRoot["ExportToPrg"] = settingExportToPrg;
-	hjsonRoot["PrgOutputPath"] = settingPrgOutputPath;
-
-//	sprintf(hexStr, "%04x", PACKED_TEXTURES_ADDR);
-//	hjsonRoot["PackedTexturesAddr"] = hexStr;
-}
-
-void C64DebuggerPluginDNDK::InitFromHjson(Hjson::Value hjsonRoot)
-{
-	const char *hexValueStr;
-	char *p;
-	
-	settingExportToPrg 	= static_cast<const bool>(hjsonRoot["ExportToPrg"]);
-	strcpy(settingPrgOutputPath, static_cast<const char *>(hjsonRoot["PrgOutputPath"]));	
-
-//	hexValueStr = static_cast<const char *>(hjsonRoot["PackedTexturesAddr"]);
-//	PACKED_TEXTURES_ADDR = strtoul( hexValueStr, NULL, 16 );
-}
-
 
 void C64DebuggerPluginDNDK::RenderImGui()
 {
@@ -141,58 +107,11 @@ void C64DebuggerPluginDNDK::RenderImGui()
 	}
 
 	val = debugInterfaceNes->GetByte(0x06d0);
-	if (ImGui::InputScalar(
-						   "Location", ImGuiDataType_::ImGuiDataType_U8, &val, NULL, NULL, "%02X", defaultHexInputFlags))
+	if (ImGui::InputScalar("Location", ImGuiDataType_::ImGuiDataType_U8, &val, NULL, NULL, "%02X", defaultHexInputFlags))
 	{
 		debugInterfaceNes->SetByte(0x06d0, val);
 	}
 
-	
-	/*
-	
-	// init consts
-	if (ImGui::Button("Load", ImVec2(buttonSizeX/2.0f - style.FramePadding.x, buttonSizeY)))
-	{
-		pathToSet = featureConfigPath;
-		SYS_DialogOpenFile(this, &extensionsConfig, featureDefaultFolder, NULL);
-	}
-	ImGui::SameLine();
-	if (ImGui::Button("Save", ImVec2(buttonSizeX/2.0f - style.FramePadding.x, buttonSizeY)))
-	{
-		pathToSet = featureConfigPath;
-		SYS_DialogSaveFile(this, &extensionsConfig, NULL, featureDefaultFolder, NULL);
-	}
-	ImGui::SameLine();
-	ImGui::Text(featureConfigPath);
-	
-	if (ImGui::CollapsingHeader("Paths"))
-	{
-		if (ImGui::Button("Root folder", buttonSize))
-		{
-			pathToSet = featureRootFolderPath;
-			SYS_DialogPickFolder(this, featureDefaultFolder);
-		}
-		ImGui::SameLine();
-		ImGui::Text(featureRootFolderPath);
-
-		if (ImGui::Button("PRG output", buttonSize))
-		{
-			pathToSet = settingPrgOutputPath;
-			SYS_DialogSaveFile(this, &extensionsPRG, NULL, featureDefaultFolder, NULL);
-		}
-		ImGui::SameLine();
-		ImGui::Text(settingPrgOutputPath);
-	}
-	if (ImGui::CollapsingHeader("Settings"))
-	{
-		ImGui::Columns(2);
-		ImGui::Checkbox("Export to PRG", &settingExportToPrg);
-		ImGui::NextColumn();
-		ImGui::NextColumn();
-		
-	}
-	*/
-	
 	PostRenderImGui();
 }
 
@@ -204,88 +123,6 @@ void C64DebuggerPluginDNDK::ThreadRun(void *data)
 void C64DebuggerPluginDNDK::DoFrame()
 {
 	
-}
-
-void C64DebuggerPluginDNDK::SystemDialogFileOpenSelected(CSlrString *path)
-{
-	LOGD("C64DebuggerPluginDDNK::SystemDialogFileOpenSelected");
-	
-	guiMain->LockMutex();
-	
-	if (pathToSet == featureConfigPath)
-	{
-		LoadConfig(path);
-	}
-	else
-	{
-		path->RemoveFromBeginningSlrString(featureDefaultFolder);
-		char *cstr = path->GetStdASCII();
-		strcpy(pathToSet, cstr);
-		delete [] cstr;
-	}
-	
-	guiMain->UnlockMutex();
-}
-
-void C64DebuggerPluginDNDK::SystemDialogFileOpenCancelled()
-{
-	LOGD("C64DebuggerPluginDDNK::SystemDialogFileOpenCancelled");
-}
-
-void C64DebuggerPluginDNDK::SystemDialogFileSaveSelected(CSlrString *path)
-{
-	LOGD("CViewPluginMapper::SystemDialogFileSaveSelected");
-
-	guiMain->LockMutex();
-	
-	if (pathToSet == featureConfigPath)
-	{
-		SaveConfig(path);
-	}
-	else
-	{
-		path->RemoveFromBeginningSlrString(featureDefaultFolder);
-		char *cstr = path->GetStdASCII();
-		strcpy(pathToSet, cstr);
-		delete [] cstr;
-	}
-	
-	guiMain->UnlockMutex();
-}
-
-void C64DebuggerPluginDNDK::SystemDialogFileSaveCancelled()
-{
-	LOGD("C64DebuggerPluginDDNK::SystemDialogFileSaveCancelled");
-}
-
-void C64DebuggerPluginDNDK::SystemDialogPickFolderSelected(CSlrString *path)
-{
-	LOGD("C64DebuggerPluginDDNK::SystemDialogPickFolderSelected");
-
-	guiMain->LockMutex();
-	
-	if (pathToSet == featureRootFolderPath)
-	{
-		path->AddPathSeparatorAtEnd();
-		char *cstr = path->GetStdASCII();
-		strcpy(featureRootFolderPath, cstr);
-		delete [] cstr;
-		
-		featureSettings->SetSlrString("DefaultFolder", &path);
-		featureDefaultFolder->Set(path);
-	}
-	else
-	{
-		char *cstr = path->GetStdASCII();
-		strcpy(pathToSet, cstr);
-		delete [] cstr;
-	}
-	
-	guiMain->UnlockMutex();
-}
-
-void C64DebuggerPluginDNDK::SystemDialogPickFolderCancelled()
-{
 }
 
 //

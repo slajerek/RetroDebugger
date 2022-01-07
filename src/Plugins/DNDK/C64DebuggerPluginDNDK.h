@@ -30,32 +30,9 @@ public:
 	virtual void DoFrame();
 
 	//
-	void InitFromHjson(Hjson::Value hjsonRoot);
-	void StoreToHjson(Hjson::Value hjsonRoot);
-
-	std::list<CSlrString *> extensionsConfig;
-	std::list<CSlrString *> extensionsPRG;
-	std::list<CSlrString *> extensionsPRGandSID;
-	std::list<CSlrString *> extensionsPNG;
-	
-	// settings
-	bool settingExportToPrg;
-	char *settingPrgOutputPath;
-	
-	//
 	char *assembleTextBuf;
 	void GenerateCode();
 
-
-	// for save/open dialogs
-	virtual void SystemDialogFileOpenSelected(CSlrString *path);
-	virtual void SystemDialogFileOpenCancelled();
-	virtual void SystemDialogFileSaveSelected(CSlrString *path);
-	virtual void SystemDialogFileSaveCancelled();
-	virtual void SystemDialogPickFolderSelected(CSlrString *path);
-	virtual void SystemDialogPickFolderCancelled();
-	char *pathToSet;
-	
 	//
 	const ImGuiInputTextFlags defaultHexInputFlags = ImGuiInputTextFlags_CharsHexadecimal | ImGuiInputTextFlags_CharsUppercase | ImGuiInputTextFlags_EnterReturnsTrue;
 
