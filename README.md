@@ -66,6 +66,10 @@ Check VS2019 project in `./platform/Windows`. This should work when put into
 
 ## Linux
 
+You need SDL2 and GLEW installed:
+`sudo apt-get install libsdl2-dev`
+`sudo apt install libglew-dev`
+
 ```
 mkdir build
 cd build
