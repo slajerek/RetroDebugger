@@ -70,7 +70,10 @@ You need SDL2 and GLEW installed:
 `sudo apt install libsdl2-dev`
 `sudo apt install libglew-dev`
 
+Put MTEngineSDL and RetroDebugger folders into the same folder and then compile.
+
 ```
+cd RetroDebugger
 mkdir build
 cd build
 cmake ./../
