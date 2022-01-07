@@ -11,13 +11,13 @@ add_definitions(
 
 set (CMAKE_CXX_FLAGS "-fpermissive")
 
-FIND_PACKAGE(PkgConfig REQUIRED)
-FIND_PACKAGE(SDL2 REQUIRED)
-INCLUDE_DIRECTORIES(${SDL2_INCLUDE_DIRS})
-PKG_CHECK_MODULES(GTK3 REQUIRED gtk+-3.0)
-INCLUDE_DIRECTORIES(${GTK3_INCLUDE_DIRS})
-LINK_DIRECTORIES(${GTK3_LIBRARY_DIRS})
-ADD_DEFINITIONS(${GTK3_CFLAGS_OTHER})
+find_package(PkgConfig REQUIRED)
+find_package(SDL2 REQUIRED)
+include_directories(${SDL2_INCLUDE_DIRS})
+pkg_check_modules(GTK3 REQUIRED gtk+-3.0)
+include_directories(${GTK3_INCLUDE_DIRS})
+link_directories(${GTK3_LIBRARY_DIRS})
+add_definitions(${GTK3_CFLAGS_OTHER})
 
 include_directories(
     # These are includes copied from MTEngineSDL
@@ -1357,22 +1357,17 @@ target_link_libraries(retrodebugger
     EmulatorAtari800
     "${CMAKE_CURRENT_SOURCE_DIR}/../MTEngineSDL/build/libMTEngineSDL.a"
     xcb
-#    ts
-#    unwind-generic
-#    unwind
     glib-2.0
     gobject-2.0
     gio-2.0
-#    ibus-1.0
     dbus-1
     /usr/lib/x86_64-linux-gnu/libsndio.so
     dl
     m
     pthread
     freetype
+    X11
     z
-#    "${CMAKE_CURRENT_SOURCE_DIR}/../MTEngineSDL/other/lib/SDL2-2.0.10-static/Linux.build/lib/libSDL2.a"
-#    "${CMAKE_CURRENT_BINARY_DIR}/../sdl2/libSDL2.a"
     ${GTK3_LIBRARIES}
     ${SDL2_LIBRARIES}
 )
