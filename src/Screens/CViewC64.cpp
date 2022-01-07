@@ -730,13 +730,15 @@ void CViewC64::InitViceViews()
 	float minPosX = 10.0f;
 	float minPosY = 30.0f;
 	
+	// note: views are created first to have dependencies fulfilled. They are added later to have them sorted.
+	
 	// this is regular c64 screen
 	viewC64Screen = new CViewC64Screen("C64 Screen##direct", 510, 40, posZ, 540, 402, debugInterfaceC64);
 
 	//	this->AddGuiElement(viewC64Screen);   this will be added on the top
 
 	// wrapper wraps c64 screen with selectable display type: c64 screen, vic display, zoomed in c64 screen
-	viewC64ScreenWrapper = new CViewC64ScreenWrapper("C64 Screen", 510, 40, posZ, 540, 402, debugInterfaceC64);
+//	viewC64ScreenWrapper = new CViewC64ScreenWrapper("C64 Screen", 510, 40, posZ, 540, 402, debugInterfaceC64);
 	
 	viewC64StateCPU = new CViewC64StateCPU("C64 CPU", 510, 5, posZ, 350, 35, debugInterfaceC64);
 
@@ -866,7 +868,7 @@ void CViewC64::InitViceViews()
 	viewC64Timeline = new CViewTimeline("C64 Timeline", 0, 440, posZ, 700, timelineHeight, debugInterfaceC64);
 
 	// add sorted views
-	debugInterfaceC64->AddView(viewC64ScreenWrapper);
+	debugInterfaceC64->AddView(viewC64Screen);
 	debugInterfaceC64->AddView(viewC64StateCPU);
 	debugInterfaceC64->AddView(viewC64Disassembly);
 	debugInterfaceC64->AddView(viewC64Disassembly2);
@@ -1201,7 +1203,8 @@ void CViewC64::StartViceC64EmulationThread()
 		guiMain->UnlockMutex();
 	}
 	
-	viewC64ScreenWrapper->SetVisible(true);
+	viewC64Screen->SetVisible(true);
+//	viewC64ScreenWrapper->SetVisible(true);
 }
 
 void CViewC64::StartAtari800EmulationThread()
@@ -1521,10 +1524,10 @@ void CViewC64::Render()
 	//
 	
 #ifdef RUN_COMMODORE64
-	if (viewC64->viewC64ScreenWrapper->visible)
-	{
-		viewC64ScreenWrapper->RenderRaster(rasterToShowX, rasterToShowY);
-	}
+//	if (viewC64->viewC64ScreenWrapper->visible)
+//	{
+//		viewC64ScreenWrapper->RenderRaster(rasterToShowX, rasterToShowY);
+//	}
 	
 	if (viewC64Screen->showZoomedScreen)
 	{
@@ -2227,9 +2230,9 @@ bool CViewC64::KeyUp(u32 keyCode, bool isShift, bool isAlt, bool isControl, bool
 	
 	if (keyCode >= MTKEY_F1 && keyCode <= MTKEY_F8 && !guiMain->isControlPressed)
 	{
-		if (debugInterfaceC64 && debugInterfaceC64->isRunning && viewC64ScreenWrapper->hasFocus)
+		if (debugInterfaceC64 && debugInterfaceC64->isRunning && viewC64Screen->hasFocus)
 		{
-			return viewC64ScreenWrapper->KeyUp(keyCode, isShift, isAlt, isControl, isSuper);
+			return viewC64Screen->KeyUp(keyCode, isShift, isAlt, isControl, isSuper);
 		}
 		
 		if (debugInterfaceAtari && debugInterfaceAtari->isRunning && viewAtariScreen->hasFocus)
@@ -2313,9 +2316,9 @@ bool CViewC64::KeyUp(u32 keyCode, bool isShift, bool isAlt, bool isControl, bool
 	
 	// TODO: is this correct?
 	
-	if (debugInterfaceC64 && debugInterfaceC64->isRunning && viewC64ScreenWrapper->visible)
+	if (debugInterfaceC64 && debugInterfaceC64->isRunning && viewC64Screen->visible)
 	{
-		viewC64ScreenWrapper->KeyUp(keyCode, isShift, isAlt, isControl, isSuper);
+		viewC64Screen->KeyUp(keyCode, isShift, isAlt, isControl, isSuper);
 	}
 
 	if (debugInterfaceAtari && debugInterfaceAtari->isRunning && viewAtariScreen->visible)

@@ -223,7 +223,7 @@ public:
 	//
 	void InitViceViews();
 	CViewC64Screen *viewC64Screen;
-	CViewC64ScreenWrapper *viewC64ScreenWrapper;
+//	CViewC64ScreenWrapper *viewC64ScreenWrapper;
 	
 	CViewMemoryMap *viewC64MemoryMap;
 	CViewMemoryMap *viewDrive1541MemoryMap;

@@ -2778,7 +2778,7 @@ bool CViewDisassembly::KeyDown(u32 keyCode, bool isShift, bool isAlt, bool isCon
 
 bool CViewDisassembly::KeyDownRepeat(u32 keyCode, bool isShift, bool isAlt, bool isControl, bool isSuper)
 {
-	if (HasFocus())
+//	if (HasFocus())
 	{
 		return KeyDown(keyCode, isShift, isAlt, isControl, isSuper);
 	}

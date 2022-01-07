@@ -290,7 +290,8 @@ void CViewC64Screen::RenderImGui()
 	
 	if (ImGui::IsWindowFocused())
 	{
-		guiMain->SetViewFocus(viewC64->viewC64ScreenWrapper);
+		guiMain->SetViewFocus(viewC64->viewC64Screen);
+
 	}
 	
 	///
@@ -714,6 +715,12 @@ bool CViewC64Screen::KeyDown(u32 keyCode, bool isShift, bool isAlt, bool isContr
 	LOGG(".......... CViewC64Screen::KeyDown: keyCode=%d isShift=%s isAlt=%s isControl=%s", keyCode,
 		 STRBOOL(isShift), STRBOOL(isAlt), STRBOOL(isControl));
 	
+	if (keyCode == MTKEY_ENTER && isAlt)
+	{
+		viewC64->ToggleFullScreen(this);
+		return true;
+	}
+
 	if (viewC64->mainMenuBar->selectedJoystick1 == SelectedJoystick::SelectedJoystickKeyboard
 		|| viewC64->mainMenuBar->selectedJoystick2 == SelectedJoystick::SelectedJoystickKeyboard)
 	{

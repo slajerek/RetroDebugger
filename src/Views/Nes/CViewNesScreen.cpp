@@ -601,6 +601,7 @@ bool CViewNesScreen::KeyDown(u32 keyCode, bool isShift, bool isAlt, bool isContr
 	if (keyCode == MTKEY_ENTER && isAlt)
 	{
 		viewC64->ToggleFullScreen(this);
+		return true;
 	}
 	
 	if (viewC64->mainMenuBar->selectedJoystick1 == SelectedJoystick::SelectedJoystickKeyboard

@@ -219,6 +219,7 @@ bool CViewC64ScreenWrapper::KeyDown(u32 keyCode, bool isShift, bool isAlt, bool 
 	if (keyCode == MTKEY_ENTER && isAlt)
 	{
 		viewC64->ToggleFullScreen(this);
+		return true;
 	}
 	
 
