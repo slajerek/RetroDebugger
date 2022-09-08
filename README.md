@@ -12,16 +12,17 @@ computers. You can find that in the Settings menu.
 
 ROMS: 
 ```
-   2048 ATARI5200.rom
-   8192 ATARIBASIC.rom
-  10240 ATARIOSA.rom
-  10240 ATARIOSB.rom
-  16384 ATARIXL.rom
-   8192 basic
-   4096 chargen
-  16384 dos1541
-  16384 dos1541II
-   8192 kernal
+File Size Name
+     2048 ATARI5200.rom
+     8192 ATARIBASIC.rom
+    10240 ATARIOSA.rom
+    10240 ATARIOSB.rom
+    16384 ATARIXL.rom
+     8192 basic
+     4096 chargen
+    16384 dos1541
+    16384 dos1541II
+     8192 kernal
 ```
 
 
