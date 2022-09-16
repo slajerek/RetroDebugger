@@ -6,12 +6,44 @@
 #include "CDebugSymbolsCodeLabel.h"
 #include "GUI_Main.h"
 
+CDebugBreakpoint::CDebugBreakpoint()
+{
+}
+
+CDebugBreakpoint::~CDebugBreakpoint()
+{
+}
+
+void CDebugBreakpoint::Serialize(Hjson::Value hjsonRoot)
+{
+}
+
+void CDebugBreakpoint::Deserialize(Hjson::Value hjsonRoot)
+{
+}
+
 CBreakpointAddr::CBreakpointAddr(int addr)
 {
 	this->isActive = true;
 	this->addr = addr;
 	this->actions = ADDR_BREAKPOINT_ACTION_STOP;
 	this->data = 0x00;
+}
+
+void CBreakpointAddr::Serialize(Hjson::Value hjsonRoot)
+{
+	hjsonRoot["IsActive"] = isActive;
+	hjsonRoot["Addr"] = addr;
+	hjsonRoot["Actions"] = actions;
+	hjsonRoot["Data"] = data;
+}
+
+void CBreakpointAddr::Deserialize(Hjson::Value hjsonRoot)
+{
+	isActive = (bool)hjsonRoot["IsActive"];
+	addr = hjsonRoot["Addr"];
+	actions = hjsonRoot["Actions"];
+	data = hjsonRoot["Data"];
 }
 
 CBreakpointAddr::~CBreakpointAddr()
@@ -27,12 +59,32 @@ CBreakpointMemory::CBreakpointMemory(int addr,
 	this->comparison = comparison;
 }
 
+void CBreakpointMemory::Serialize(Hjson::Value hjsonRoot)
+{
+	CBreakpointAddr::Serialize(hjsonRoot);
+	
+	hjsonRoot["MemoryAccess"] = memoryAccess;
+	hjsonRoot["Value"] = value;
+	hjsonRoot["Comparison"] = (int)comparison;
+}
+
+void CBreakpointMemory::Deserialize(Hjson::Value hjsonRoot)
+{
+	CBreakpointAddr::Deserialize(hjsonRoot);
+	
+	memoryAccess = hjsonRoot["MemoryAccess"];
+	value = hjsonRoot["Value"];
+	comparison = (MemoryBreakpointComparison) ((int)hjsonRoot["Comparison"]);
+}
+
 //std::map<int, CBreakpointMemory *> memoryBreakpoints;
 
-CDebugBreakpointsAddr::CDebugBreakpointsAddr(int breakpointType, CDebugSymbols *symbols, char *addressFormatStr, int minAddr, int maxAddr)
+CDebugBreakpointsAddr::CDebugBreakpointsAddr(int breakpointType, const char *breakpointTypeStr, CDebugSymbolsSegment *segment, char *addressFormatStr, int minAddr, int maxAddr)
 {
-	this->breakpointType = breakpointType;
-	this->symbols = symbols;
+	this->breakpointsType = breakpointType;
+	this->breakpointsTypeStr = breakpointTypeStr;
+	this->segment = segment;
+	this->symbols = segment->symbols;
 	this->addressFormatStr = addressFormatStr;
 	this->minAddr = minAddr;
 	this->maxAddr = maxAddr;
@@ -76,11 +128,63 @@ void CDebugBreakpointsAddr::ClearBreakpoints()
 	}
 }
 
-CDebugBreakpointsMemory::CDebugBreakpointsMemory(int breakpointType, CDebugSymbols *symbols, char *addressFormatStr, int minAddr, int maxAddr)
-: CDebugBreakpointsAddr(breakpointType, symbols, addressFormatStr, minAddr, maxAddr)
+CDebugBreakpoint *CDebugBreakpointsAddr::CreateEmptyBreakpoint()
+{
+	return new CBreakpointAddr(0);
+}
+
+void CDebugBreakpointsAddr::Serialize(Hjson::Value hjsonBreakpoints)
+{
+	for (std::map<int, CBreakpointAddr *>::iterator it = breakpoints.begin(); it != breakpoints.end(); it++)
+	{
+		CBreakpointAddr *breakpoint = it->second;
+		Hjson::Value hjsonBreakpoint;
+		breakpoint->Serialize(hjsonBreakpoint);
+		
+		CDebugSymbolsCodeLabel *label = segment->FindLabel(breakpoint->addr);
+		if (label)
+		{
+			hjsonBreakpoint["Label"] = label->GetLabelText();
+		}
+		
+		hjsonBreakpoints.push_back(hjsonBreakpoint);
+	}
+}
+
+void CDebugBreakpointsAddr::Deserialize(Hjson::Value hjsonBreakpoints)
+{
+	for (int index = 0; index < hjsonBreakpoints.size(); ++index)
+	{
+		Hjson::Value hjsonBreakpoint = hjsonBreakpoints[index];
+		CBreakpointAddr *breakpoint = (CBreakpointAddr*)CreateEmptyBreakpoint();
+		breakpoint->Deserialize(hjsonBreakpoint);
+		
+		// check label
+		Hjson::Value hjsonBreakpointLabel = hjsonBreakpoint["Label"];
+		if (hjsonBreakpointLabel != Hjson::Type::Undefined)
+		{
+			const char *labelStr = hjsonBreakpoint["Label"];
+			CDebugSymbolsCodeLabel *label = segment->FindLabelByText(labelStr);
+			if (label)
+			{
+				breakpoint->addr = label->address;
+			}
+		}
+		
+		AddBreakpoint(breakpoint);
+	}
+}
+
+CDebugBreakpointsMemory::CDebugBreakpointsMemory(int breakpointType, const char *breakpointTypeStr, CDebugSymbolsSegment *segment, char *addressFormatStr, int minAddr, int maxAddr)
+: CDebugBreakpointsAddr(breakpointType, breakpointTypeStr, segment, addressFormatStr, minAddr, maxAddr)
 {
 	addBreakpointPopupHeadlineStr = "Add Memory Breakpoint";
 	addBreakpointPopupAddrStr = "Address";
+}
+
+CDebugBreakpoint *CDebugBreakpointsMemory::CreateEmptyBreakpoint()
+{
+	return new CBreakpointMemory(0, 0, MemoryBreakpointComparison::MEMORY_BREAKPOINT_EQUAL, 0);
 }
 
 void CDebugBreakpointsAddr::AddBreakpoint(CBreakpointAddr *breakpoint)
@@ -134,6 +238,18 @@ void CDebugBreakpointsAddr::DeleteBreakpoint(CBreakpointAddr *breakpoint)
 {
 	this->DeleteBreakpoint(breakpoint->addr);
 }
+
+void CDebugBreakpointsAddr::RemoveBreakpoint(CBreakpointAddr *breakpoint)
+{
+	std::map<int, CBreakpointAddr *>::iterator it = breakpoints.find(breakpoint->addr);
+	if (it != breakpoints.end())
+	{
+		breakpoints.erase(it);
+	}
+	
+	UpdateRenderBreakpoints();
+}
+
 
 // TODO: create a condition parser (tree for condition) and parse the condition text
 CBreakpointAddr *CDebugBreakpointsAddr::EvaluateBreakpoint(int addr)
@@ -358,6 +474,7 @@ void CDebugBreakpointsAddr::RenderImGui()
 
 		sprintf(buf, "##addPCBreakpointPopupAddress_%s", symbols->dataAdapter->adapterID);
 
+		bool buttonAddClicked = false;
 		if (symbols->currentSegment)
 		{
 			const char **hints = symbols->currentSegment->codeLabelsArray;
@@ -380,9 +497,16 @@ void CDebugBreakpointsAddr::RenderImGui()
 					strcpy(comboFilterTextBuf, hints[comboFilterState.activeIdx]);
 				}
 			}
+			
+			ImGui::SameLine();
+			if (ImGui::Button("Add"))
+			{
+				buttonAddClicked = true;
+			}
 		}
 		
-		bool finalizeAddingBreakpoint = !skipClosePopupByEnterPressInThisFrame && ImGui::IsWindowFocused() && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Enter));
+		bool finalizeAddingBreakpoint = buttonAddClicked
+			|| (!skipClosePopupByEnterPressInThisFrame && ImGui::IsWindowFocused() && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Enter)));
 		
 //		if (ImGui::Button("Create PC Breakpoint"))
 //		{

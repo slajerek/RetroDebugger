@@ -1,10 +1,10 @@
 #include "CDataAdaptersVice.h"
 #include "CDebugInterfaceVice.h"
 
-CDataAdapterVice::CDataAdapterVice(CDebugInterfaceVice *debugInterface)
-: CDataAdapter("Vice")
+CDataAdapterVice::CDataAdapterVice(CDebugInterfaceVice *debugInterfaceVice)
+: CDebugDataAdapter("Vice", debugInterfaceVice)
 {
-	this->debugInterface = debugInterface;
+	this->debugInterfaceVice = debugInterfaceVice;
 }
 
 int CDataAdapterVice::AdapterGetDataLength()
@@ -15,12 +15,12 @@ int CDataAdapterVice::AdapterGetDataLength()
 
 void CDataAdapterVice::AdapterReadByte(int pointer, uint8 *value)
 {
-	*value = this->debugInterface->GetByteC64(pointer);
+	*value = this->debugInterfaceVice->GetByteC64(pointer);
 }
 
 void CDataAdapterVice::AdapterWriteByte(int pointer, uint8 value)
 {
-	this->debugInterface->SetByteC64(pointer, value);
+	this->debugInterfaceVice->SetByteC64(pointer, value);
 }
 
 
@@ -29,7 +29,7 @@ void CDataAdapterVice::AdapterReadByte(int pointer, uint8 *value, bool *isAvaila
 	if (pointer < 0x10000)
 	{
 		*isAvailable = true;
-		*value = this->debugInterface->GetByteC64(pointer);
+		*value = this->debugInterfaceVice->GetByteC64(pointer);
 	}
 	else
 	{
@@ -39,22 +39,22 @@ void CDataAdapterVice::AdapterReadByte(int pointer, uint8 *value, bool *isAvaila
 
 void CDataAdapterVice::AdapterWriteByte(int pointer, uint8 value, bool *isAvailable)
 {
-	this->debugInterface->SetByteC64(pointer, value);
+	this->debugInterfaceVice->SetByteC64(pointer, value);
 	*isAvailable = true;
 }
 
 void CDataAdapterVice::AdapterReadBlockDirect(uint8 *buffer, int pointerStart, int pointerEnd)
 {
-	this->debugInterface->GetMemoryC64(buffer, pointerStart, pointerEnd);
+	this->debugInterfaceVice->GetMemoryC64(buffer, pointerStart, pointerEnd);
 }
 
 
 ///
 
-CDirectRamDataAdapterVice::CDirectRamDataAdapterVice(CDebugInterfaceVice *debugInterface)
-: CDataAdapter("ViceDirectRam")
+CDirectRamDataAdapterVice::CDirectRamDataAdapterVice(CDebugInterfaceVice *debugInterfaceVice)
+: CDebugDataAdapter("ViceDirectRam", debugInterfaceVice)
 {
-	this->debugInterface = debugInterface;
+	this->debugInterfaceVice = debugInterfaceVice;
 }
 
 int CDirectRamDataAdapterVice::AdapterGetDataLength()
@@ -65,12 +65,12 @@ int CDirectRamDataAdapterVice::AdapterGetDataLength()
 
 void CDirectRamDataAdapterVice::AdapterReadByte(int pointer, uint8 *value)
 {
-	*value = this->debugInterface->GetByteFromRamC64(pointer);
+	*value = this->debugInterfaceVice->GetByteFromRamC64(pointer);
 }
 
 void CDirectRamDataAdapterVice::AdapterWriteByte(int pointer, uint8 value)
 {
-	this->debugInterface->SetByteToRamC64(pointer, value);
+	this->debugInterfaceVice->SetByteToRamC64(pointer, value);
 }
 
 
@@ -79,7 +79,7 @@ void CDirectRamDataAdapterVice::AdapterReadByte(int pointer, uint8 *value, bool 
 	if (pointer >= 0 && pointer < 0x10000)
 	{
 		*isAvailable = true;
-		*value = this->debugInterface->GetByteFromRamC64(pointer);
+		*value = this->debugInterfaceVice->GetByteFromRamC64(pointer);
 	}
 	else
 	{
@@ -89,7 +89,7 @@ void CDirectRamDataAdapterVice::AdapterReadByte(int pointer, uint8 *value, bool 
 
 void CDirectRamDataAdapterVice::AdapterWriteByte(int pointer, uint8 value, bool *isAvailable)
 {
-	this->debugInterface->SetByteToRamC64(pointer, value);
+	this->debugInterfaceVice->SetByteToRamC64(pointer, value);
 	if (pointer >= 0 && pointer < 0x10000)
 	{
 		*isAvailable = true;
@@ -102,15 +102,15 @@ void CDirectRamDataAdapterVice::AdapterWriteByte(int pointer, uint8 value, bool 
 
 void CDirectRamDataAdapterVice::AdapterReadBlockDirect(uint8 *buffer, int pointerStart, int pointerEnd)
 {
-	this->debugInterface->GetMemoryFromRamC64(buffer, pointerStart, pointerEnd);
+	this->debugInterfaceVice->GetMemoryFromRamC64(buffer, pointerStart, pointerEnd);
 }
 
 ///
 
-CDiskDataAdapterVice::CDiskDataAdapterVice(CDebugInterfaceVice *debugInterface)
-: CDataAdapter("ViceDiskDrive")
+CDiskDataAdapterVice::CDiskDataAdapterVice(CDebugInterfaceVice *debugInterfaceVice)
+: CDebugDataAdapter("ViceDiskDrive", debugInterfaceVice)
 {
-	this->debugInterface = debugInterface;
+	this->debugInterfaceVice = debugInterfaceVice;
 }
 
 int CDiskDataAdapterVice::AdapterGetDataLength()
@@ -121,12 +121,12 @@ int CDiskDataAdapterVice::AdapterGetDataLength()
 
 void CDiskDataAdapterVice::AdapterReadByte(int pointer, uint8 *value)
 {
-	*value = this->debugInterface->GetByte1541(pointer);
+	*value = this->debugInterfaceVice->GetByte1541(pointer);
 }
 
 void CDiskDataAdapterVice::AdapterWriteByte(int pointer, uint8 value)
 {
-	this->debugInterface->SetByte1541(pointer, value);
+	this->debugInterfaceVice->SetByte1541(pointer, value);
 }
 
 void CDiskDataAdapterVice::AdapterReadByte(int pointer, uint8 *value, bool *isAvailable)
@@ -134,13 +134,13 @@ void CDiskDataAdapterVice::AdapterReadByte(int pointer, uint8 *value, bool *isAv
 	if (pointer >= 0x8000 && pointer <= 0x10000)
 	{
 		*isAvailable = true;
-		*value = this->debugInterface->GetByte1541(pointer);
+		*value = this->debugInterfaceVice->GetByte1541(pointer);
 		return;
 	}
 	else if (pointer < 0x2000)
 	{
 		*isAvailable = true;
-		*value = this->debugInterface->GetByte1541(pointer);
+		*value = this->debugInterfaceVice->GetByte1541(pointer);
 		return;
 	}
 	*isAvailable = false;
@@ -152,13 +152,13 @@ void CDiskDataAdapterVice::AdapterWriteByte(int pointer, uint8 value, bool *isAv
 	if (pointer >= 0xc000)
 	{
 		*isAvailable = true;
-		this->debugInterface->SetByte1541(pointer, value);
+		this->debugInterfaceVice->SetByte1541(pointer, value);
 		return;
 	}
 	else if (pointer < 0x2000)
 	{
 		*isAvailable = true;
-		this->debugInterface->SetByte1541(pointer, value);
+		this->debugInterfaceVice->SetByte1541(pointer, value);
 		return;
 	}
 	*isAvailable = false;
@@ -166,16 +166,16 @@ void CDiskDataAdapterVice::AdapterWriteByte(int pointer, uint8 value, bool *isAv
 
 void CDiskDataAdapterVice::AdapterReadBlockDirect(uint8 *buffer, int pointerStart, int pointerEnd)
 {
-	this->debugInterface->GetMemoryDrive1541(buffer, pointerStart, pointerEnd);
+	this->debugInterfaceVice->GetMemoryDrive1541(buffer, pointerStart, pointerEnd);
 }
 
 
 ///
 
-CDiskDirectRamDataAdapterVice::CDiskDirectRamDataAdapterVice(CDebugInterfaceVice *debugInterface)
-: CDataAdapter("ViceDiskDriveDirectRam")
+CDiskDirectRamDataAdapterVice::CDiskDirectRamDataAdapterVice(CDebugInterfaceVice *debugInterfaceVice)
+: CDebugDataAdapter("ViceDiskDriveDirectRam", debugInterfaceVice)
 {
-	this->debugInterface = debugInterface;
+	this->debugInterfaceVice = debugInterfaceVice;
 }
 
 int CDiskDirectRamDataAdapterVice::AdapterGetDataLength()
@@ -186,12 +186,12 @@ int CDiskDirectRamDataAdapterVice::AdapterGetDataLength()
 
 void CDiskDirectRamDataAdapterVice::AdapterReadByte(int pointer, uint8 *value)
 {
-	*value = this->debugInterface->GetByteFromRam1541(pointer);
+	*value = this->debugInterfaceVice->GetByteFromRam1541(pointer);
 }
 
 void CDiskDirectRamDataAdapterVice::AdapterWriteByte(int pointer, uint8 value)
 {
-	this->debugInterface->SetByteToRam1541(pointer, value);
+	this->debugInterfaceVice->SetByteToRam1541(pointer, value);
 }
 
 void CDiskDirectRamDataAdapterVice::AdapterReadByte(int pointer, uint8 *value, bool *isAvailable)
@@ -199,13 +199,13 @@ void CDiskDirectRamDataAdapterVice::AdapterReadByte(int pointer, uint8 *value, b
 	if (pointer >= 0xc000 && pointer <= 0x10000)
 	{
 		*isAvailable = true;
-		*value = this->debugInterface->GetByteFromRam1541(pointer);
+		*value = this->debugInterfaceVice->GetByteFromRam1541(pointer);
 		return;
 	}
 	else if (pointer < 0x2000)
 	{
 		*isAvailable = true;
-		*value = this->debugInterface->GetByteFromRam1541(pointer);
+		*value = this->debugInterfaceVice->GetByteFromRam1541(pointer);
 		return;
 	}
 	*isAvailable = false;
@@ -217,7 +217,7 @@ void CDiskDirectRamDataAdapterVice::AdapterWriteByte(int pointer, uint8 value, b
 	if (pointer < 0x1000)
 	{
 		*isAvailable = true;
-		this->debugInterface->SetByteToRam1541(pointer, value);
+		this->debugInterfaceVice->SetByteToRam1541(pointer, value);
 		return;
 	}
 	*isAvailable = false;
@@ -225,15 +225,15 @@ void CDiskDirectRamDataAdapterVice::AdapterWriteByte(int pointer, uint8 value, b
 
 void CDiskDirectRamDataAdapterVice::AdapterReadBlockDirect(uint8 *buffer, int pointerStart, int pointerEnd)
 {
-	this->debugInterface->GetMemoryFromRamDrive1541(buffer, pointerStart, pointerEnd);
+	this->debugInterfaceVice->GetMemoryFromRamDrive1541(buffer, pointerStart, pointerEnd);
 }
 
 // REU
 
-CReuDataAdapterVice::CReuDataAdapterVice(CDebugInterfaceVice *debugInterface)
-: CDataAdapter("ViceReu")
+CReuDataAdapterVice::CReuDataAdapterVice(CDebugInterfaceVice *debugInterfaceVice)
+: CDebugDataAdapter("ViceReu", debugInterfaceVice)
 {
-	this->debugInterface = debugInterface;
+	this->debugInterfaceVice = debugInterfaceVice;
 }
 
 int CReuDataAdapterVice::AdapterGetDataLength()
@@ -280,10 +280,10 @@ void CReuDataAdapterVice::AdapterReadBlockDirect(uint8 *buffer, int pointerStart
 }
 
 // Cartridge
-CCartridgeDataAdapterVice::CCartridgeDataAdapterVice(CDebugInterfaceVice *debugInterface, CCartridgeDataAdapterViceType memoryType)
-: CDataAdapter("ViceCartridge")
+CCartridgeDataAdapterVice::CCartridgeDataAdapterVice(CDebugInterfaceVice *debugInterfaceVice, CCartridgeDataAdapterViceType memoryType)
+: CDebugDataAdapter("ViceCartridge", debugInterfaceVice)
 {
-	this->debugInterface = debugInterface;
+	this->debugInterfaceVice = debugInterfaceVice;
 	this->memoryType = memoryType;
 }
 

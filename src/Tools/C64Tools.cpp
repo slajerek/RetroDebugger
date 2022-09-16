@@ -1089,6 +1089,7 @@ uint16 GetSidAddressByChipNum(int chipNum)
 	return 0xD400;
 }
 
+// *.SID file conversion
 CByteBuffer *ConvertSIDtoPRG(CByteBuffer *sidFileData)
 {
 	Psid64 psid64;
@@ -1171,6 +1172,7 @@ bool C64LoadSIDToBuffer(const char *filePath, u16 *fromAddr, u16 *toAddr, u16 *i
 	return true;
 }
 
+// Exomizer
 bool C64SaveMemoryExomizerPRG(int fromAddr, int toAddr, int jmpAddr, char *filePath)
 {
 	FILE *fp = fopen(filePath, "wb");

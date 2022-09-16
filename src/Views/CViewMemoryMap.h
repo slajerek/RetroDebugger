@@ -12,7 +12,7 @@ class CSlrImage;
 class CViewDataDump;
 class CDebugInterface;
 class CSlrFont;
-class CViewMemoryMapCell;
+class CDebugMemoryMapCell;
 
 class CViewMemoryMap : public CGuiView, CSlrThread
 {
@@ -70,7 +70,7 @@ public:
 	
 	CDebugInterface *debugInterface;
 	
-	CViewMemoryMapCell **memoryCells;
+	CDebugMemoryMapCell **memoryCells;
 	int ramSize;
 	int imageWidth;
 	int imageHeight;
@@ -85,7 +85,7 @@ public:
 	
 	void CellsAnimationLogic(double targetFPS);
 	void DriveROMCellsAnimationLogic();
-	void UpdateMapColorsForCell(CViewMemoryMapCell *cell);
+	void UpdateMapColorsForCell(CDebugMemoryMapCell *cell);
 	
 	CImageData *imageDataMemoryMap;
 	CSlrImage *imageMemoryMap;

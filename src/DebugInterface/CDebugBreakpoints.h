@@ -6,6 +6,7 @@
 #include "GUI_Main.h"
 #include "CDebugSymbols.h"
 #include "imguiComboFilter.h"
+#include "hjson.h"
 #include <map>
 
 #define BREAKPOINT_TYPE_CPU_PC				0
@@ -21,7 +22,18 @@
 
 class CDebugSymbols;
 
-class CBreakpointAddr
+// generic breakpoint
+class CDebugBreakpoint
+{
+public:
+	CDebugBreakpoint();
+	virtual ~CDebugBreakpoint();
+
+	virtual void Serialize(Hjson::Value hjsonRoot);
+	virtual void Deserialize(Hjson::Value hjsonRoot);
+};
+
+class CBreakpointAddr : public CDebugBreakpoint
 {
 public:
 	CBreakpointAddr(int addr);
@@ -31,6 +43,9 @@ public:
 	int addr;		
 	u32 actions;
 	u8 data;
+	
+	virtual void Serialize(Hjson::Value hjsonRoot);
+	virtual void Deserialize(Hjson::Value hjsonRoot);
 };
 
 // TODO: refactor this to 2 breakpoints (make list?)
@@ -43,15 +58,19 @@ public:
 	u32 memoryAccess;
 	int value;
 	MemoryBreakpointComparison comparison;
+	
+	virtual void Serialize(Hjson::Value hjsonRoot);
+	virtual void Deserialize(Hjson::Value hjsonRoot);
 };
 
 class CDebugBreakpointsAddr : public ImGui::ComboFilterCallback
 {
 public:
-	CDebugBreakpointsAddr(int breakpointType, CDebugSymbols *symbols, char *addressFormatStr, int minAddr, int maxAddr);
+	CDebugBreakpointsAddr(int breakpointType, const char *breakpointTypeStr, CDebugSymbolsSegment *segment, char *addressFormatStr, int minAddr, int maxAddr);
 	~CDebugBreakpointsAddr();
 
-	int breakpointType;
+	int breakpointsType;
+	const char *breakpointsTypeStr;
 	
 	char *addressFormatStr;
 	int minAddr, maxAddr;
@@ -59,6 +78,7 @@ public:
 	const char *addBreakpointPopupAddrStr;
 	ImGuiInputTextFlags addBreakpointPopupAddrInputFlags;
 	
+	CDebugSymbolsSegment *segment;
 	CDebugSymbols *symbols;
 	
 	std::map<int, CBreakpointAddr *> breakpoints;
@@ -69,11 +89,15 @@ public:
 
 	virtual void UpdateRenderBreakpoints();
 	
+	// factory
+	virtual CDebugBreakpoint *CreateEmptyBreakpoint();
+	
 	virtual void AddBreakpoint(CBreakpointAddr *addrBreakpoint);
 	CBreakpointAddr *GetBreakpoint(int addr);
+	virtual void RemoveBreakpoint(CBreakpointAddr *breakpoint);
 	virtual void DeleteBreakpoint(CBreakpointAddr *addrBreakpoint);
 	virtual void DeleteBreakpoint(int addr);
-
+	
 	virtual CBreakpointAddr *EvaluateBreakpoint(int addr);
 	
 	virtual void ClearBreakpoints();
@@ -88,7 +112,9 @@ public:
 	virtual bool ComboFilterShouldOpenPopupCallback(const char *label, char *buffer, int bufferlen,
 													const char **hints, int num_hints, ImGui::ComboFilterState *s);
 
-	
+	virtual void Serialize(Hjson::Value hjsonBreakpoints);
+	virtual void Deserialize(Hjson::Value hjsonBreakpoints);
+
 protected:
 	int addBreakpointPopupAddr;
 	char addBreakpointPopupSymbol[256];
@@ -101,8 +127,11 @@ protected:
 class CDebugBreakpointsMemory : public CDebugBreakpointsAddr
 {
 public:
-	CDebugBreakpointsMemory(int breakpointType, CDebugSymbols *symbols, char *addressFormatStr, int minAddr, int maxAddr);
+	CDebugBreakpointsMemory(int breakpointType, const char *breakpointTypeStr, CDebugSymbolsSegment *segment, char *addressFormatStr, int minAddr, int maxAddr);
 	~CDebugBreakpointsMemory();
+
+	// factory
+	virtual CDebugBreakpoint *CreateEmptyBreakpoint();
 
 	virtual CBreakpointMemory *EvaluateBreakpoint(int addr, int value, u32 memoryAccess);
 

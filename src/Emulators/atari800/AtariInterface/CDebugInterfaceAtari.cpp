@@ -8,12 +8,14 @@ extern "C" {
 #include "videomode.h"
 #include "a-video.h"
 #include "a-palette.h"
+#include "a-sound.h"
 #include "pokeysnd.h"
 #include "akey.h"
 #include "input.h"
 #include "statesav.h"
 #include "AtariWrapper.h"
 #include "sio.h"
+#include "cfg.h"
 }
 #endif
 
@@ -910,6 +912,9 @@ void CDebugInterfaceAtari::HardReset()
 	atrdMainCpuDebugCycle = 0;
 	atrdMainCpuPreviousInstructionCycle = 0;
 
+	// clear broken Atari800 framebuffer!
+	memset(Screen_atari, 0, Screen_HEIGHT * Screen_WIDTH);
+	
 	Atari800_Coldstart();
 }
 
@@ -1012,13 +1017,31 @@ void CDebugInterfaceAtari::SetSettingIsWarpSpeed(bool isWarpSpeed)
 	}
 }
 
-// TODO: this is not working for mzpokey now
 void CDebugInterfaceAtari::SetPokeyStereo(bool isStereo)
 {
 	LOGD("CDebugInterfaceAtari::SetPokeyStereo: %s", STRBOOL(isStereo));
-	POKEYSND_stereo_enabled = isStereo;
+//	Sound_desired.channels = 2;
+
+	gSoundEngine->LockMutex("CDebugInterfaceAtari::SetPokeyStereo");
+	
+	LockMutex();
+	//	Note: to set stereo Pokey we need to update Sound_desired, not POKEYSND_stereo_enabled = isStereo ? TRUE : FALSE;
+	Sound_desired.channels = isStereo ? 2 : 1;
+	Sound_Setup();
+	Sound_Continue();
+	
+	CFG_WriteConfig();
+	
+	UnlockMutex();
+	
+	gSoundEngine->UnlockMutex("CDebugInterfaceAtari::SetPokeyStereo");
 }
 
+bool CDebugInterfaceAtari::IsPokeyStereo()
+{
+//	LOGD("Sound_desired.channels = %d  Sound_out.channels=%d  POKEYSND_stereo_enabled=%d", Sound_desired.channels, Sound_out.channels, POKEYSND_stereo_enabled);
+	return POKEYSND_stereo_enabled;
+}
 
 extern "C" {
 	void atrd_async_load_snapshot(char *filePath);
@@ -1124,19 +1147,6 @@ bool CDebugInterfaceAtari::IsDriveDirtyForSnapshot()
 void CDebugInterfaceAtari::ClearDriveDirtyForSnapshotFlag()
 {
 	//c64d_clear_drive_dirty_for_snapshot();
-}
-
-//
-void CDebugInterfaceAtari::SetPokeyReceiveChannelsData(int pokeyNumber, bool isReceiving)
-{
-	if (isReceiving)
-	{
-		atrd_pokey_receive_channels_data(pokeyNumber, 1);
-	}
-	else
-	{
-		atrd_pokey_receive_channels_data(pokeyNumber, 0);
-	}
 }
 
 //

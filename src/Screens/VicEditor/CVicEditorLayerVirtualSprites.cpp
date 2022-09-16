@@ -153,7 +153,7 @@ void CVicEditorLayerVirtualSprites::FullScanSpritesInThisFrame()
 	if (c64SettingsVicStateRecordingMode != C64D_VICII_RECORD_MODE_EVERY_CYCLE)
 	{
 		return;
-//		guiMain->ShowMessage("Set VIC recording to every cycle");
+//		viewC64->ShowMessage("Set VIC recording to every cycle");
 //		return;
 	}
 	
@@ -551,12 +551,12 @@ void CVicEditorLayerVirtualSprites::FullScanSpritesInThisFrame()
 
 void CVicEditorLayerVirtualSprites::SimpleScanSpritesInThisFrame()
 {
-	//LOGD("------------ CVicEditorLayerVirtualSprites::SimpleScanSpritesInThisFrame");
+	LOGD("------------ CVicEditorLayerVirtualSprites::SimpleScanSpritesInThisFrame");
 	
 	if (c64SettingsVicStateRecordingMode != C64D_VICII_RECORD_MODE_EVERY_CYCLE)
 	{
 		return;
-		//		guiMain->ShowMessage("Set VIC recording to every cycle");
+		//		viewC64->ShowMessage("Set VIC recording to every cycle");
 		//		return;
 	}
 	
@@ -683,6 +683,7 @@ void CVicEditorLayerVirtualSprites::SimpleScanSpritesInThisFrame()
 						int v_bank = viciiState->vbank_phi1;
 						int pointerAddr = v_bank + viciiState->sprite[i].pointer * 64;
 						
+						LOGD("sprite %d->pointerAddr=%x", i, pointerAddr);
 						// color?
 						C64Sprite *sprite = NULL;
 						
@@ -708,6 +709,8 @@ void CVicEditorLayerVirtualSprites::SimpleScanSpritesInThisFrame()
 							C64Sprite *spr2 = *it;
 							if (spr2->IsEqual(sprite))
 							{
+								spr2->pointerAddr = pointerAddr;
+
 								newSprite = false;
 								delete sprite;
 								break;
@@ -722,7 +725,7 @@ void CVicEditorLayerVirtualSprites::SimpleScanSpritesInThisFrame()
 							sprite->pointerAddr = pointerAddr;
 							
 							this->sprites.push_back(sprite);
-							//sprite->DebugPrint();
+							sprite->DebugPrint();
 						}
 					}
 				}
@@ -739,7 +742,7 @@ void CVicEditorLayerVirtualSprites::SimpleScanSpritesInThisFrame()
 	
 	guiMain->UnlockMutex(); //"CVicEditorLayerVirtualSprites::SimpleScanSpritesInThisFrame");
 	
-	//LOGD("------------ FINISHED CVicEditorLayerVirtualSprites::SimpleScanSpritesInThisFrame in %d ms", SYS_GetCurrentTimeInMillis() - t);
+	LOGD("------------ FINISHED CVicEditorLayerVirtualSprites::SimpleScanSpritesInThisFrame in %d ms", SYS_GetCurrentTimeInMillis() - t);
 	
 }
 
@@ -762,7 +765,7 @@ void CVicEditorLayerVirtualSprites::ScanSpritesStoreAddressesOnly(int rx, int ry
 	if (c64SettingsVicStateRecordingMode != C64D_VICII_RECORD_MODE_EVERY_CYCLE)
 	{
 		return;
-		//		guiMain->ShowMessage("Set VIC recording to every cycle");
+		//		viewC64->ShowMessage("Set VIC recording to every cycle");
 		//		return;
 	}
 	
@@ -1406,7 +1409,13 @@ C64Sprite *CVicEditorLayerVirtualSprites::FindSpriteByRasterPos(int rx, int ry)
 
 u8 CVicEditorLayerVirtualSprites::Paint(bool forceColorReplace, bool isDither, int rlx, int rly, u8 colorLMB, u8 colorRMB, u8 colorSource, int charValue)
 {
-	LOGD("CVicEditorLayerVirtualSprites::Paint: rlx=%d rly=%d", rlx, rly);
+	// char value is not used in sprites
+	return Paint(forceColorReplace, isDither, rlx, rly, colorLMB, colorRMB, colorSource);
+}
+
+u8 CVicEditorLayerVirtualSprites::Paint(bool forceColorReplace, bool isDither, int rlx, int rly, u8 colorLMB, u8 colorRMB, u8 colorSource)
+{
+//	LOGD("CVicEditorLayerVirtualSprites::Paint: rlx=%d rly=%d", rlx, rly);
 	
 	CViewC64VicDisplay *vicDisplay = vicEditor->viewVicDisplayMain;
 	
@@ -1414,7 +1423,7 @@ u8 CVicEditorLayerVirtualSprites::Paint(bool forceColorReplace, bool isDither, i
 	int rx = rlx + vicDisplay->scrollInRasterPixelsX;
 	int ry = rly + vicDisplay->scrollInRasterPixelsY;
 	
-	LOGD("                                      rx=%d ry=%d  (%d %d)", rx, ry, vicDisplay->scrollInRasterPixelsX, vicDisplay->scrollInRasterPixelsY);
+//	LOGD("                                      rx=%d ry=%d  (%d %d)", rx, ry, vicDisplay->scrollInRasterPixelsX, vicDisplay->scrollInRasterPixelsY);
 	
 	///
 

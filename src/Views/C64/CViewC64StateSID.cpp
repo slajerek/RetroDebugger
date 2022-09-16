@@ -47,8 +47,8 @@ CViewC64StateSID::CViewC64StateSID(const char *name, float posX, float posY, flo
 	editingSIDIndex = -1;
 	
 	// waveforms
-	renderHorizontal = false;
-	AddLayoutParameter(new CLayoutParameterBool("Horizontal", &renderHorizontal));
+	renderSidChipsHorizontally = true;
+	AddLayoutParameter(new CLayoutParameterBool("SID Chips horizontally", &renderSidChipsHorizontally));
 
 	waveformPos = 0;
 
@@ -140,7 +140,7 @@ void CViewC64StateSID::SetPosition(float posX, float posY, float posZ, float siz
 		for (int sidNum = 0; sidNum < MAX_NUM_SIDS; sidNum++)
 		{
 			float pxs;
-			if (renderHorizontal == false)
+			if (renderSidChipsHorizontally == false)
 			{
 				pxs = px;
 			}
@@ -159,7 +159,7 @@ void CViewC64StateSID::SetPosition(float posX, float posY, float posZ, float siz
 	{
 		float pxs;
 		
-		if (renderHorizontal == false)
+		if (renderSidChipsHorizontally == false)
 		{
 			pxs = px;
 		}
@@ -173,6 +173,8 @@ void CViewC64StateSID::SetPosition(float posX, float posY, float posZ, float siz
 
 void CViewC64StateSID::LayoutParameterChanged(CLayoutParameter *layoutParameter)
 {
+	LOGD("CViewC64StateSID::LayoutParameterChanged: renderHorizontal=%s", STRBOOL(renderSidChipsHorizontally));
+	
 	// waveforms
 	float wsx = fontBytesSize*10.0f;
 	float wsy = fontBytesSize*3.5f;
@@ -197,7 +199,7 @@ void CViewC64StateSID::LayoutParameterChanged(CLayoutParameter *layoutParameter)
 		for (int sidNum = 0; sidNum < MAX_NUM_SIDS; sidNum++)
 		{
 			float pxs;
-			if (renderHorizontal == false)
+			if (renderSidChipsHorizontally == false)
 			{
 				pxs = px;
 			}
@@ -216,7 +218,7 @@ void CViewC64StateSID::LayoutParameterChanged(CLayoutParameter *layoutParameter)
 	{
 		float pxs;
 		
-		if (renderHorizontal == false)
+		if (renderSidChipsHorizontally == false)
 		{
 			pxs = px;
 		}
@@ -291,7 +293,7 @@ void CViewC64StateSID::SelectSid(int sidNum)
 	
 	if (this->visible)
 	{
-		if (renderHorizontal == false)
+		if (renderSidChipsHorizontally == false)
 		{
 			viewC64->debugInterfaceC64->SetSIDReceiveChannelsData(this->selectedSidNumber, false);
 			viewC64->debugInterfaceC64->SetSIDReceiveChannelsData(sidNum, true);
@@ -352,7 +354,7 @@ void CViewC64StateSID::Render()
 
 	c64d_sid_receive_channels_data(selectedSidNumber, 1);
 	
-	if (renderHorizontal == false)
+	if (renderSidChipsHorizontally == false)
 	{
 		this->RenderStateSID(selectedSidNumber, posX, posY + buttonSizeY, posZ, fontBytes, fontBytesSize);
 	
@@ -404,7 +406,7 @@ void CViewC64StateSID::RenderStateSID(int sidNum, float posX, float posY, float 
 
 		px += ONE_SID_STATE_SIZE_X * (float)sidNum;
 		
-		if (renderHorizontal == false)
+		if (renderSidChipsHorizontally == false)
 		{
 			sidNum = selectedSidNumber;
 		}
@@ -445,7 +447,7 @@ void CViewC64StateSID::RenderStateSID(int sidNum, float posX, float posY, float 
 				//			}
 			}
 			
-			if (renderHorizontal == false)
+			if (renderSidChipsHorizontally == false)
 				return;
 			
 			continue;
@@ -526,7 +528,7 @@ void CViewC64StateSID::RenderStateSID(int sidNum, float posX, float posY, float 
 		sprintf(buf, " Volume   : %1.1x", reg_volume & 0x0f);
 		fontBytes->BlitText(buf, px, py, posZ, fontSize); py += fontSize;
 		
-		if (renderHorizontal == false)
+		if (renderSidChipsHorizontally == false)
 			return;
 	}
 
@@ -569,7 +571,7 @@ bool CViewC64StateSID::DoTap(float x, float y)
 		
 		editingSIDIndex = -1;
 		
-		if (renderHorizontal == false)
+		if (renderSidChipsHorizontally == false)
 		{
 			editingSIDIndex = selectedSidNumber; //-1;
 		}
@@ -637,7 +639,7 @@ bool CViewC64StateSID::DoTap(float x, float y)
 
 	for (int sidNum = 0; sidNum < debugInterface->GetNumSids(); sidNum++)
 	{
-		if (renderHorizontal == false)
+		if (renderSidChipsHorizontally == false)
 		{
 			sidNum = selectedSidNumber;
 		}
@@ -682,7 +684,7 @@ bool CViewC64StateSID::DoTap(float x, float y)
 														sidChannelWaveform[sidNum][2]->isMuted, false);
 		}
 		
-		if (renderHorizontal == false)
+		if (renderSidChipsHorizontally == false)
 			break;
 	}
 	

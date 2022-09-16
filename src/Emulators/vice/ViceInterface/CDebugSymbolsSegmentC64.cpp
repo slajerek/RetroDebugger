@@ -8,12 +8,10 @@ CDebugSymbolsSegmentC64::CDebugSymbolsSegmentC64(CDebugSymbols *debugSymbols, CS
 
 void CDebugSymbolsSegmentC64::Init()
 {
-	this->numBreakpointsByType = NUM_C64_BREAKPOINT_TYPES;
-
 	CDebugSymbolsSegment::Init();
 
 	breakOnRaster = true;
-	breakpointsRasterLine = new CDebugBreakpointsAddr(BREAKPOINT_TYPE_RASTER_LINE, symbols, "%03X", 0, 0x137);
+	breakpointsRasterLine = new CDebugBreakpointsAddr(BREAKPOINT_TYPE_RASTER_LINE, "RasterLine", this, "%03X", 0, 0x137);
 	breakpointsRasterLine->addBreakpointPopupHeadlineStr = "Add Raster line Breakpoint";
 	
 	breakpointsByType[BREAKPOINT_TYPE_RASTER_LINE] = breakpointsRasterLine;

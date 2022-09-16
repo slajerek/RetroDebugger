@@ -84,6 +84,7 @@ public:
 
 	// TODO: this is not working for mzpokey now
 	virtual void SetPokeyStereo(bool isStereo);
+	virtual bool IsPokeyStereo();
 	
 	//
 	virtual bool LoadFullSnapshot(char *filePath);
@@ -133,9 +134,6 @@ public:
 	// when we restore snapshot, we will restore disk contents first
 	virtual bool IsDriveDirtyForSnapshot();
 	virtual void ClearDriveDirtyForSnapshotFlag();
-
-	//
-	void SetPokeyReceiveChannelsData(int pokeyNumber, bool isReceiving);
 
 	virtual void StepOneCycle();
 

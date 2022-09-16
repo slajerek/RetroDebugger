@@ -3,8 +3,18 @@
 
 #include "CGuiView.h"
 #include "CGuiButton.h"
+#include "SYS_Threading.h"
 
 class CDebugInterface;
+
+class CTimelineIoThread : public CSlrThread
+{
+public:
+	CDebugInterface *debugInterface;
+	u8 asyncOperation;
+	CSlrString *timelinePath;
+	virtual void ThreadRun(void *passData);
+};
 
 class CViewTimeline : public CGuiView, CGuiButtonCallback
 {
@@ -66,7 +76,12 @@ public:
 	void ScrubToFrame(int frameNum);
 	
 	void ScrubToPos(float x);
+	
+	virtual bool HasContextMenuItems();
+	virtual void RenderContextMenuItems();
 
+	static void LoadTimeline(CSlrString *path);
+	static void SaveTimeline(CSlrString *path, CDebugInterface *debugInterface);
 };
 
 #endif //_VIEW_TIMELINE_

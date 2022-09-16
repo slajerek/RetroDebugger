@@ -212,6 +212,9 @@ public:
 	
 	void SetIsTrackingPC(bool followPC);
 	
+	//
+	virtual void GetDisassemblyBackgroundColor(float *colorR, float *colorG, float *colorB);
+	
 	// Layout
 	virtual bool HasContextMenuItems();
 	virtual void RenderContextMenuItems();

@@ -1,15 +1,15 @@
 #ifndef _CDataAdaptersVice_H_
 #define _CDataAdapterVice_H_
 
-#include "CDataAdapter.h"
+#include "CDebugDataAdapter.h"
 
 class CDebugInterfaceVice;
 
-class CDataAdapterVice : public CDataAdapter
+class CDataAdapterVice : public CDebugDataAdapter
 {
 public:
-	CDataAdapterVice(CDebugInterfaceVice *debugInterface);
-	CDebugInterfaceVice *debugInterface;
+	CDataAdapterVice(CDebugInterfaceVice *debugInterfaceVice);
+	CDebugInterfaceVice *debugInterfaceVice;
 	
 	virtual int AdapterGetDataLength();
 	virtual void AdapterReadByte(int pointer, uint8 *value);
@@ -19,11 +19,11 @@ public:
 	virtual void AdapterReadBlockDirect(uint8 *buffer, int pointerStart, int pointerEnd);
 };
 
-class CDirectRamDataAdapterVice : public CDataAdapter
+class CDirectRamDataAdapterVice : public CDebugDataAdapter
 {
 public:
-	CDirectRamDataAdapterVice(CDebugInterfaceVice *debugInterface);
-	CDebugInterfaceVice *debugInterface;
+	CDirectRamDataAdapterVice(CDebugInterfaceVice *debugInterfaceVice);
+	CDebugInterfaceVice *debugInterfaceVice;
 	
 	virtual int AdapterGetDataLength();
 	virtual void AdapterReadByte(int pointer, uint8 *value);
@@ -33,11 +33,11 @@ public:
 	virtual void AdapterReadBlockDirect(uint8 *buffer, int pointerStart, int pointerEnd);
 };
 
-class CDiskDataAdapterVice : public CDataAdapter
+class CDiskDataAdapterVice : public CDebugDataAdapter
 {
 public:
-	CDiskDataAdapterVice(CDebugInterfaceVice *debugInterface);
-	CDebugInterfaceVice *debugInterface;
+	CDiskDataAdapterVice(CDebugInterfaceVice *debugInterfaceVice);
+	CDebugInterfaceVice *debugInterfaceVice;
 	
 	virtual int AdapterGetDataLength();
 	virtual void AdapterReadByte(int pointer, uint8 *value);
@@ -47,11 +47,11 @@ public:
 	virtual void AdapterReadBlockDirect(uint8 *buffer, int pointerStart, int pointerEnd);
 };
 
-class CDiskDirectRamDataAdapterVice : public CDataAdapter
+class CDiskDirectRamDataAdapterVice : public CDebugDataAdapter
 {
 public:
-	CDiskDirectRamDataAdapterVice(CDebugInterfaceVice *debugInterface);
-	CDebugInterfaceVice *debugInterface;
+	CDiskDirectRamDataAdapterVice(CDebugInterfaceVice *debugInterfaceVice);
+	CDebugInterfaceVice *debugInterfaceVice;
 	
 	virtual int AdapterGetDataLength();
 	virtual void AdapterReadByte(int pointer, uint8 *value);
@@ -69,11 +69,11 @@ enum CCartridgeDataAdapterViceType : u8
 	C64CartridgeDataAdapterViceTypeRamL
 };
 
-class CCartridgeDataAdapterVice : public CDataAdapter
+class CCartridgeDataAdapterVice : public CDebugDataAdapter
 {
 public:
-	CCartridgeDataAdapterVice(CDebugInterfaceVice *debugInterface, CCartridgeDataAdapterViceType memoryType);
-	CDebugInterfaceVice *debugInterface;
+	CCartridgeDataAdapterVice(CDebugInterfaceVice *debugInterfaceVice, CCartridgeDataAdapterViceType memoryType);
+	CDebugInterfaceVice *debugInterfaceVice;
 	CCartridgeDataAdapterViceType memoryType;
 	
 	virtual int AdapterGetDataLength();
@@ -85,11 +85,11 @@ public:
 };
 
 //
-class CReuDataAdapterVice : public CDataAdapter
+class CReuDataAdapterVice : public CDebugDataAdapter
 {
 public:
-	CReuDataAdapterVice(CDebugInterfaceVice *debugInterface);
-	CDebugInterfaceVice *debugInterface;
+	CReuDataAdapterVice(CDebugInterfaceVice *debugInterfaceVice);
+	CDebugInterfaceVice *debugInterfaceVice;
 	
 	virtual int AdapterGetDataLength();
 	virtual void AdapterReadByte(int pointer, uint8 *value);

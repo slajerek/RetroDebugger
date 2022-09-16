@@ -7,14 +7,7 @@
 
 // 16kB should be enough for everybody
 #define C64D_SHARED_MEMORY_SIZE		1024*16
-
-#if defined(RUN_COMMODORE64)
-#define C64D_SHARED_MEMORY_KEY		12666
-#elif defined(RUN_ATARI)
-#define C64D_SHARED_MEMORY_KEY		12667
-#elif defined(RUN_NES)
-#define C64D_SHARED_MEMORY_KEY		12668
-#endif
+#define C64D_SHARED_MEMORY_KEY		13666
 
 bool c64dSharedMemoryInit = false;
 

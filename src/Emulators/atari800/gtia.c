@@ -264,7 +264,7 @@ static void generate_partial_pmpl_colls(int l, int r)
 	if (r < 0 || l >= (int) sizeof(GTIA_pm_scanline) / (int) sizeof(GTIA_pm_scanline[0]))
 		return;
 	if (r >= (int) sizeof(GTIA_pm_scanline) / (int) sizeof(GTIA_pm_scanline[0])) {
-		r = (int) sizeof(GTIA_pm_scanline) / (int) sizeof(GTIA_pm_scanline[0]);
+		r = (int) (sizeof(GTIA_pm_scanline) / (int) sizeof(GTIA_pm_scanline[0]))-1;
 	}
 	if (l < 0)
 		l = 0;
@@ -272,12 +272,6 @@ static void generate_partial_pmpl_colls(int l, int r)
 	for (i = l; i <= r; i++) {
 		UBYTE p;
 
-		// bug fix by slajerek, i may be out of bounds ^^^^
-		if (i >= sizeof(GTIA_pm_scanline))
-		{
-			continue;
-		}
-		
 		p = GTIA_pm_scanline[i];
 /* It is possible that some bits are set in PxPL/MxPL here, which would
  * not otherwise be set ever in GTIA_NewPmScanline.  This is because the

@@ -108,6 +108,8 @@ public:
 	virtual void GuiEditHexEnteredValue(CGuiEditHex *editHex, u32 lastKeyCode, bool isCancelled);
 
 	bool isEditingValueAddr;
+	
+	void CancelEditingHexBox();
 
 	CSlrString *strTemp;
 	

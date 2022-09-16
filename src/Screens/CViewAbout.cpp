@@ -267,7 +267,7 @@ void CViewAbout::RenderAtari800License()
 
 	// TODO: SCROLL ME + ADD ALL CREDITS All contributors
 	
-	font->BlitTextColor("Atari800 emulator version 4.2.0", px, py, posZ, fontScale, tr, tg, tb, 1); py += fontHeight;
+	font->BlitTextColor("Atari800 emulator version 5.0.0", px, py, posZ, fontScale, tr, tg, tb, 1); py += fontHeight;
 	font->BlitTextColor("Current active members of the Atari800 development team:", px, py, posZ, fontScale, tr, tg, tb, 1); py += fontHeight;
 	font->BlitTextColor("--------------------------------------------------------", px, py, posZ, fontScale, tr, tg, tb, 1); py += fontHeight;
 	py += fontHeight;

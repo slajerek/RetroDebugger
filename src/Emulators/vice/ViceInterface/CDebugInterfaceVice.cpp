@@ -46,7 +46,7 @@ extern "C" {
 #include "CViewC64.h"
 #include "CViewC64StateSID.h"
 #include "CViewC64SidTrackerHistory.h"
-#include "CViewFileD64.h"
+#include "CViewDrive1541FileD64.h"
 #include "CAudioChannelVice.h"
 #include "CDebuggerEmulatorPlugin.h"
 #include "CSnapshotsManager.h"
@@ -236,7 +236,7 @@ int CDebugInterfaceVice::GetEmulatorType()
 CSlrString *CDebugInterfaceVice::GetEmulatorVersionString()
 {
 	char *buf = SYS_GetCharBuf();
-	sprintf(buf, "Vice %s by The VICE Team", VERSION);
+	sprintf(buf, "Vice %s", VERSION);	// by The VICE Team
 	CSlrString *versionString = new CSlrString(buf);
 	SYS_ReleaseCharBuf(buf);
 	
@@ -689,7 +689,7 @@ void CDebugInterfaceVice::InsertD64(CSlrString *path)
 	
 	if (rc == -1)
 	{
-		guiMain->ShowMessage("Inserting disk failed");
+		viewC64->ShowMessage("Inserting disk failed");
 	}
 	
 	delete [] asciiPath;
@@ -1019,7 +1019,37 @@ void CDebugInterfaceVice::GetC64ModelTypes(std::vector<CSlrString *> *modelTypeN
 	// no ROM: modelTypeIds->push_back(13);
 }
 
-
+void CDebugInterfaceVice::GetC64ModelTypes(std::vector<const char *> *modelTypeNames, std::vector<int> *modelTypeIds)
+{
+	modelTypeNames->push_back("C64 PAL");
+	modelTypeIds->push_back(0);
+	modelTypeNames->push_back("C64C PAL");
+	modelTypeIds->push_back(1);
+	modelTypeNames->push_back("C64 old PAL");
+	modelTypeIds->push_back(2);
+	modelTypeNames->push_back("C64 NTSC");
+	modelTypeIds->push_back(3);
+	modelTypeNames->push_back("C64C NTSC");
+	modelTypeIds->push_back(4);
+	modelTypeNames->push_back("C64 old NTSC");
+	modelTypeIds->push_back(5);
+	// crashes: modelTypeNames->push_back("C64 PAL N (Drean)");
+	// crashes: modelTypeIds->push_back(6);
+	modelTypeNames->push_back("C64 SX PAL");
+	modelTypeIds->push_back(7);
+	modelTypeNames->push_back("C64 SX NTSC");
+	modelTypeIds->push_back(8);
+	// no ROM: modelTypeNames->push_back("Japanese");
+	// no ROM: modelTypeIds->push_back(9);
+	// no ROM: modelTypeNames->push_back("C64 GS");
+	// no ROM: modelTypeIds->push_back(10);
+	modelTypeNames->push_back("PET64 PAL");
+	modelTypeIds->push_back(11);
+	modelTypeNames->push_back("PET64 NTSC");
+	modelTypeIds->push_back(12);
+	// no ROM: modelTypeNames->push_back("MAX Machine");
+	// no ROM: modelTypeIds->push_back(13);
+}
 int c64_change_model_type;
 
 static void c64_change_model_trap(WORD addr, void *v)
@@ -1952,7 +1982,7 @@ static void load_snapshot_trap(WORD addr, void *v)
 	FILE *fp = fopen(filePath, "rb");
 	if (!fp)
 	{
-		guiMain->ShowMessage("Snapshot not found");
+		viewC64->ShowMessage("Snapshot not found");
 		debugInterfaceVice->UnlockMutex();
 		guiMain->UnlockMutex();
 		return;
@@ -1963,7 +1993,7 @@ static void load_snapshot_trap(WORD addr, void *v)
 
 	if (c64_snapshot_read(filePath, 0, 1, 1, 1, 1) < 0)
 	{
-		guiMain->ShowMessage("Snapshot loading failed");
+		viewC64->ShowMessage("Snapshot loading failed");
 		
 		debugInterfaceVice->machineType = MACHINE_TYPE_UNKNOWN;
 		debugInterfaceVice->numEmulationFPS = 1;
@@ -2003,8 +2033,6 @@ static void load_snapshot_trap(WORD addr, void *v)
 	
 	SYS_ReleaseCharBuf(filePath);
 	
-	viewC64->viewC64SettingsMenu->UpdateSidSettings();
-
 	debugInterfaceVice->snapshotsManager->ClearSnapshotsHistory();
 
 	debugInterfaceVice->UnlockMutex();
@@ -2123,7 +2151,7 @@ bool CDebugInterfaceVice::LoadDiskDataSnapshotSynced(CByteBuffer *byteBuffer)
 	gSoundEngine->UnlockMutex("LoadDiskDataSnapshotSynced");
 	debugInterfaceVice->UnlockMutex();
 	
-	viewC64->viewFileD64->RefreshInsertedDiskImageAsync();
+	viewC64->viewDrive1541FileD64->RefreshInsertedDiskImageAsync();
 	return true;
 }
 
@@ -2185,6 +2213,7 @@ void CDebugInterfaceVice::ClearDriveDirtyForSnapshotFlag()
 // Profiler
 extern "C"
 {
+	extern int c64d_profiler_is_active;
 	void c64d_profiler_activate(char *fileName, int runForNumCycles, int pauseCpuWhenFinished);
 	void c64d_profiler_deactivate();	
 }
@@ -2201,7 +2230,29 @@ void CDebugInterfaceVice::ProfilerDeactivate()
 	c64d_profiler_deactivate();
 }
 
+bool CDebugInterfaceVice::IsProfilerActive()
+{
+	return c64d_profiler_is_active == 1 ? true : false;
+}
+
+//void CDebugInterfaceVice::UpdateDriveDiskID(int driveId)
+//{
+//	if (diskImage[driveId])
+//	{
+//		// set correct disk ID to let 1541 ROM not throw 29, 'disk id mismatch'
+//		// see $F3F6 in 1541 ROM: http://unusedino.de/ec64/technical/misc/c1541/romlisting.html#FDD3
+//		//
+//		LOGD("...diskId= %02x %02x", diskImage->diskId[2], diskImage[driveId]->diskId[3]);
 //
+//		viewC64->debugInterfaceC64->SetByte1541(0x0012, diskImage[driveId]->diskId[2]);
+//		viewC64->debugInterfaceC64->SetByte1541(0x0013, diskImage[driveId]->diskId[3]);
+//
+//		viewC64->debugInterfaceC64->SetByte1541(0x0016, diskImage[driveId]->diskId[2]);
+//		viewC64->debugInterfaceC64->SetByte1541(0x0017, diskImage[driveId]->diskId[3]);
+//	}
+//}
+
+// code monitor
 extern "C" {
 	void monitor_open(void);
 	void make_prompt(char *str);

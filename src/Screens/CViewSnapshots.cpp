@@ -299,7 +299,7 @@ void CViewSnapshots::QuickStoreFullSnapshot(int snapshotId)
 
 	char *buf = SYS_GetCharBuf();
 	sprintf(buf, "Snapshot #%d stored", snapshotId+1);
-	guiMain->ShowMessage(buf);
+	viewC64->ShowMessage(buf);
 	SYS_ReleaseCharBuf(buf);
 }
 
@@ -312,7 +312,7 @@ void CViewSnapshots::QuickRestoreFullSnapshot(int snapshotId)
 //		if (fullSnapshots[snapshotId] == NULL)
 //		{
 //			sprintf(buf, "No snapshot stored at #%d", snapshotId+1);
-//			guiMain->ShowMessage(buf);
+//			viewC64->ShowMessage(buf);
 //			SYS_ReleaseCharBuf(buf);
 //			return;
 //		}
@@ -323,7 +323,7 @@ void CViewSnapshots::QuickRestoreFullSnapshot(int snapshotId)
 //		viewC64->debugInterface->UnlockMutex();
 //		
 //		sprintf(buf, "Snapshot #%d restored", snapshotId+1);
-//		guiMain->ShowMessage(buf);
+//		viewC64->ShowMessage(buf);
 //		SYS_ReleaseCharBuf(buf);
 //	}
 //	else
@@ -613,11 +613,11 @@ void CViewSnapshots::LoadSnapshot(CSlrString *path, bool showMessage, CDebugInte
 	{
 		if (ret == true)
 		{
-			//guiMain->ShowMessage("Snapshot restored");
+			//viewC64->ShowMessage("Snapshot restored");
 		}
 		else
 		{
-			guiMain->ShowMessage("Snapshot file is not supported");
+			viewC64->ShowMessage("Snapshot file is not supported");
 			return;
 		}
 	}
@@ -648,7 +648,7 @@ void CViewSnapshots::LoadSnapshot(CByteBuffer *buffer, bool showMessage, CDebugI
 //	if (magic != C64SNAPSHOT_MAGIC1)
 //	{
 //		if (showMessage)
-//			guiMain->ShowMessage("Snapshot file is corrupted");
+//			viewC64->ShowMessage("Snapshot file is corrupted");
 //		return;
 //	}
 //	
@@ -656,7 +656,7 @@ void CViewSnapshots::LoadSnapshot(CByteBuffer *buffer, bool showMessage, CDebugI
 //	if (snapshotType != C64_SNAPSHOT)
 //	{
 //		if (showMessage)
-//			guiMain->ShowMessage("File version not supported");
+//			viewC64->ShowMessage("File version not supported");
 //		return;
 //	}
 //	
@@ -668,11 +668,11 @@ void CViewSnapshots::LoadSnapshot(CByteBuffer *buffer, bool showMessage, CDebugI
 //	{
 //		if (ret == true)
 //		{
-//			//guiMain->ShowMessage("Snapshot restored");
+//			//viewC64->ShowMessage("Snapshot restored");
 //		}
 //		else
 //		{
-//			guiMain->ShowMessage("Snapshot file is not supported");
+//			viewC64->ShowMessage("Snapshot file is not supported");
 //		}
 //	}
 }
@@ -708,7 +708,7 @@ void CViewSnapshots::SaveSnapshot(CSlrString *path, CDebugInterface *debugInterf
 	
 	delete asciiPath;
 	
-	guiMain->ShowMessage("Snapshot saved");
+	viewC64->ShowMessage("Snapshot saved");
 }
 
 

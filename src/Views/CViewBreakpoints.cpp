@@ -33,6 +33,7 @@ CViewBreakpoints::CViewBreakpoints(const char *name, float posX, float posY, flo
 	this->breakpointType = breakpointType;
 	
 	imGuiNoWindowPadding = false;
+	imGuiNoScrollbar = false;
 }
 
 CViewBreakpoints::~CViewBreakpoints()

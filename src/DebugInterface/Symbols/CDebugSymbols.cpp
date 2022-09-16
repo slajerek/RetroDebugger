@@ -1003,7 +1003,7 @@ void CDebugSymbols::LoadLabelsRetroDebuggerFormat(CSlrString *filePath)
 		try
 		{
 			ss >> hjsonRoot;
-			DeserializeSegmentsAndLabelsFromHjson(hjsonRoot);
+			DeserializeLabelsFromHjson(hjsonRoot);
 		}
 		catch (const std::exception& e)
 		{
@@ -1023,7 +1023,10 @@ void CDebugSymbols::LoadLabelsRetroDebuggerFormat(CSlrString *filePath)
 		CreateDefaultSegment();
 	}
 	
-	currentSegment = segments.front();
+	if (currentSegment == NULL)
+	{
+		currentSegment = segments.front();
+	}
 }
 
 void CDebugSymbols::SaveLabelsRetroDebuggerFormat(CSlrString *filePath)
@@ -1053,7 +1056,7 @@ void CDebugSymbols::SaveLabelsRetroDebuggerFormat(CSlrString *filePath)
 	char *buf = SYS_GetCharBuf();
 	sprintf(buf, "%04d/%02d/%02d %02d:%02d:%02d", date->year, date->month, date->day, date->hour, date->minute, date->second);
 
-	std::string comment = "// Exported by RetroDebugger v";
+	std::string comment = "// Labels exported by RetroDebugger v";
 	comment += RETRODEBUGGER_VERSION_STRING;
 	comment += " on ";
 	comment += buf;
@@ -1065,7 +1068,7 @@ void CDebugSymbols::SaveLabelsRetroDebuggerFormat(CSlrString *filePath)
 	//
 	hjsonRoot["Version"] = "1";
 
-	SerializeSegmentsAndLabelsToHjson(hjsonRoot);
+	SerializeLabelsToHjson(hjsonRoot);
 
 	std::stringstream ss;
 	ss << Hjson::Marshal(hjsonRoot);
@@ -1079,7 +1082,7 @@ void CDebugSymbols::SaveLabelsRetroDebuggerFormat(CSlrString *filePath)
 }
 
 // TODO: add bool export segments, labels, code mapping, breakpoints
-bool CDebugSymbols::SerializeSegmentsAndLabelsToHjson(Hjson::Value hjsonRoot)
+bool CDebugSymbols::SerializeLabelsToHjson(Hjson::Value hjsonRoot)
 {
 	Hjson::Value hjsonSegmentsArray;
 	for (auto segment : segments)
@@ -1099,7 +1102,7 @@ bool CDebugSymbols::SerializeSegmentsAndLabelsToHjson(Hjson::Value hjsonRoot)
 	return true;
 }
 
-bool CDebugSymbols::DeserializeSegmentsAndLabelsFromHjson(Hjson::Value hjsonRoot)
+bool CDebugSymbols::DeserializeLabelsFromHjson(Hjson::Value hjsonRoot)
 {
 	Hjson::Value hjsonSegmentsArray = hjsonRoot["Segments"];
 	for (int i = 0; i < hjsonSegmentsArray.size(); i++)
@@ -1108,19 +1111,22 @@ bool CDebugSymbols::DeserializeSegmentsAndLabelsFromHjson(Hjson::Value hjsonRoot
 		const char *cName = hjsonSegment["Name"];
 		CSlrString *name = new CSlrString(cName);
 		
-		CDebugSymbolsSegment *segment = CreateNewDebugSymbolsSegment(name, i);
+		CDebugSymbolsSegment *segment = FindSegment(name);
+		if (segment == NULL)
+		{
+			segment = CreateNewDebugSymbolsSegment(new CSlrString(name));
+			segments.push_back(segment);
+		}
+		delete name;
 		
 		Hjson::Value hjsonCodeLabels = hjsonSegment["CodeLabels"];
 		segment->DeserializeLabels(hjsonCodeLabels);
-		
-		segments.push_back(segment);
 	}
 	return true;
 }
 
 //
 // TODO: generalize me as this is mainly copy pasted code from above!
-// TODO: move me to SEGMENT as this is loading to current segment only!!!
 void CDebugSymbols::LoadWatchesRetroDebuggerFormat(CSlrString *filePath)
 {
 	LOGD("CDebugSymbols::LoadWatchsRetroDebuggerFormat");
@@ -1159,8 +1165,11 @@ void CDebugSymbols::LoadWatchesRetroDebuggerFormat(CSlrString *filePath)
 	{
 		CreateDefaultSegment();
 	}
-	
-	currentSegment = segments.front();
+
+	if (currentSegment == NULL)
+	{
+		currentSegment = segments.front();
+	}
 }
 
 void CDebugSymbols::SaveWatchesRetroDebuggerFormat(CSlrString *filePath)
@@ -1190,7 +1199,7 @@ void CDebugSymbols::SaveWatchesRetroDebuggerFormat(CSlrString *filePath)
 	char *buf = SYS_GetCharBuf();
 	sprintf(buf, "%04d/%02d/%02d %02d:%02d:%02d", date->year, date->month, date->day, date->hour, date->minute, date->second);
 
-	std::string comment = "// Exported by RetroDebugger v";
+	std::string comment = "// Watches exported by RetroDebugger v";
 	comment += RETRODEBUGGER_VERSION_STRING;
 	comment += " on ";
 	comment += buf;
@@ -1217,26 +1226,192 @@ void CDebugSymbols::SaveWatchesRetroDebuggerFormat(CSlrString *filePath)
 
 bool CDebugSymbols::SerializeWatchesToHjson(Hjson::Value hjsonRoot)
 {
-	if (currentSegment)
+	Hjson::Value hjsonSegmentsArray;
+	for (auto segment : segments)
 	{
+		Hjson::Value hjsonSegment;
+		char *cName = segment->name->GetStdASCII();
+		hjsonSegment["Name"] = cName;
+		STRFREE(cName);
+
 		Hjson::Value hjsonWatches;
-		currentSegment->SerializeWatches(hjsonWatches);
-		hjsonRoot["Watches"] = hjsonWatches;
-		return true;
+		segment->SerializeWatches(hjsonWatches);
+		hjsonSegment["Watches"] = hjsonWatches;
+
+		hjsonSegmentsArray.push_back(hjsonSegment);
 	}
-	return false;
+	hjsonRoot["Segments"] = hjsonSegmentsArray;
+	return true;
 }
 
 bool CDebugSymbols::DeserializeWatchesFromHjson(Hjson::Value hjsonRoot)
 {
-	if (currentSegment)
+	Hjson::Value hjsonSegmentsArray = hjsonRoot["Segments"];
+	for (int i = 0; i < hjsonSegmentsArray.size(); i++)
 	{
-		Hjson::Value hjsonWatches = hjsonRoot["Watches"];
-		currentSegment->DeserializeWatches(hjsonWatches);
-		return true;
+		Hjson::Value hjsonSegment = hjsonSegmentsArray[i];
+		const char *cName = hjsonSegment["Name"];
+
+		CSlrString *name = new CSlrString(cName);
+		CDebugSymbolsSegment *segment = FindSegment(name);
+		
+		if (segment == NULL)
+		{
+			segment = CreateNewDebugSymbolsSegment(new CSlrString(name));
+			segments.push_back(segment);
+		}
+		delete name;
+
+		Hjson::Value hjsonWatches = hjsonSegment["Watches"];
+		segment->DeserializeWatches(hjsonWatches);
 	}
-	return false;
+	return true;
 }
+
+///
+// TODO: generalize me as this is mainly copy pasted code from above!
+void CDebugSymbols::LoadBreakpointsRetroDebuggerFormat(CSlrString *filePath)
+{
+	LOGD("CDebugSymbols::LoadBreakpointsRetroDebuggerFormat");
+	filePath->DebugPrint("filePath=");
+	
+	CByteBuffer *byteBuffer = new CByteBuffer(filePath);
+	if (!byteBuffer->IsEmpty())
+	{
+		char *jsonText = new char[byteBuffer->length+2];
+		memcpy(jsonText, byteBuffer->data, byteBuffer->length);
+		jsonText[byteBuffer->length] = 0;
+		
+		Hjson::Value hjsonRoot;
+		std::stringstream ss;
+		ss.str(jsonText);
+		
+		try
+		{
+			ss >> hjsonRoot;
+			DeserializeBreakpointsFromHjson(hjsonRoot);
+		}
+		catch (const std::exception& e)
+		{
+			LOGError("CDebugSymbols::DeserializeBreakpointsFromHjson error: %s", e.what());
+			
+			char *buf = SYS_GetCharBuf();
+			sprintf(buf, "Loading breakpoints failed. Error:\n%s", e.what());
+			guiMain->ShowMessageBox("Error", buf);
+			SYS_ReleaseCharBuf(buf);
+		}
+	}
+	
+	delete byteBuffer;
+	
+	if (segments.empty())
+	{
+		CreateDefaultSegment();
+	}
+		
+	if (currentSegment == NULL)
+	{
+		currentSegment = segments.front();
+	}
+
+	debugInterface->symbols->UpdateRenderBreakpoints();
+
+}
+
+void CDebugSymbols::SaveBreakpointsRetroDebuggerFormat(CSlrString *filePath)
+{
+	LOGD("CDebugSymbols::SaveBreakpointsRetroDebuggerFormat");
+	filePath->DebugPrint("filePath=");
+	
+	const char *cstrPath = filePath->GetStdASCII();
+	
+	FILE *fp = fopen(cstrPath, "wb");
+	if (!fp)
+	{
+		LOGError("CDebugSymbols::SaveBreakpointsRetroDebuggerFormat: can't write to %s", cstrPath);
+		
+		char *buf = SYS_GetCharBuf();
+		sprintf(buf, "Can't write to file\n%s", cstrPath);
+		guiMain->ShowMessageBox("Error", buf);
+		SYS_ReleaseCharBuf(buf);
+		delete [] cstrPath;
+		return;
+	}
+	delete [] cstrPath;
+
+	Hjson::Value hjsonRoot;
+
+	CSlrDate *date = new CSlrDate();
+	char *buf = SYS_GetCharBuf();
+	sprintf(buf, "%04d/%02d/%02d %02d:%02d:%02d", date->year, date->month, date->day, date->hour, date->minute, date->second);
+
+	std::string comment = "// Breakpoints exported by RetroDebugger v";
+	comment += RETRODEBUGGER_VERSION_STRING;
+	comment += " on ";
+	comment += buf;
+	comment += "\n\r";
+	hjsonRoot.set_comment_before(comment);
+	
+	SYS_ReleaseCharBuf(buf);
+
+	//
+	hjsonRoot["Version"] = "1";
+
+	SerializeBreakpointsToHjson(hjsonRoot);
+
+	std::stringstream ss;
+	ss << Hjson::Marshal(hjsonRoot);
+	
+	std::string s = ss.str();
+	const char *cstrHjson = s.c_str();
+
+	fprintf(fp, "%s", cstrHjson);
+	
+	fclose(fp);
+}
+
+bool CDebugSymbols::SerializeBreakpointsToHjson(Hjson::Value hjsonRoot)
+{
+	Hjson::Value hjsonSegmentsArray;
+	for (auto segment : segments)
+	{
+		Hjson::Value hjsonSegment;
+		char *cName = segment->name->GetStdASCII();
+		hjsonSegment["Name"] = cName;
+		STRFREE(cName);
+
+		Hjson::Value hjsonBreakpointsTypes;
+		segment->SerializeBreakpoints(hjsonBreakpointsTypes);
+		hjsonSegment["Breakpoints"] = hjsonBreakpointsTypes;
+
+		hjsonSegmentsArray.push_back(hjsonSegment);
+	}
+	hjsonRoot["Segments"] = hjsonSegmentsArray;
+	return true;
+}
+
+bool CDebugSymbols::DeserializeBreakpointsFromHjson(Hjson::Value hjsonRoot)
+{
+	Hjson::Value hjsonSegmentsArray = hjsonRoot["Segments"];
+	for (int i = 0; i < hjsonSegmentsArray.size(); i++)
+	{
+		Hjson::Value hjsonSegment = hjsonSegmentsArray[i];
+		const char *cName = hjsonSegment["Name"];
+
+		CSlrString *name = new CSlrString(cName);
+		CDebugSymbolsSegment *segment = FindSegment(name);
+		
+		if (segment == NULL)
+		{
+			segment = CreateNewDebugSymbolsSegment(new CSlrString(name));
+			segments.push_back(segment);
+		}
+		delete name;
+
+		Hjson::Value hjsonBreakpointsTypes = hjsonSegment["Breakpoints"];
+		segment->DeserializeBreakpoints(hjsonBreakpointsTypes);
+	}
+	return true;}
 
 
 CDebugSymbolsSegment *CDebugSymbols::FindSegment(CSlrString *segmentName)
@@ -1359,6 +1534,12 @@ void CDebugSymbols::CreateDefaultSegment()
 }
 
 // virtual method to create specific symbols segment (for C64 including raster line, VIC, CIA, NMI irqs, for Drive including VIA irqs, etc.)
+CDebugSymbolsSegment *CDebugSymbols::CreateNewDebugSymbolsSegment(CSlrString *name)
+{
+	int segmentNum = segments.size();
+	return CreateNewDebugSymbolsSegment(name, segmentNum);
+}
+
 CDebugSymbolsSegment *CDebugSymbols::CreateNewDebugSymbolsSegment(CSlrString *name, int segmentNum)
 {
 	LOGD("CDebugSymbols::CreateNewDebugSymbolsSegment");

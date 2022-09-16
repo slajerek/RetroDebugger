@@ -69,6 +69,7 @@ class CVicEditorLayerVirtualSprites : public CVicEditorLayer
 	virtual void ReplaceStretchY(int rx, int ry, int spriteId, bool isStretchY);
 
 	virtual u8 Paint(bool forceColorReplace, bool isDither, int x, int y, u8 colorLMB, u8 colorRMB, u8 colorSource, int charValue);
+	virtual u8 Paint(bool forceColorReplace, bool isDither, int x, int y, u8 colorLMB, u8 colorRMB, u8 colorSource);
 
 	virtual bool GetColorAtPixel(int x, int y, u8 *color);
 

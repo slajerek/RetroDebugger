@@ -70,6 +70,7 @@ namespace Nes
 			Result SetVolume(uint,uint);
 			Result SetVolume(bool muteChannel[MAX_NESD_CHANNELS]);
 			uint   GetVolume(uint) const;
+			uint   GetCtrl();
 			void   Mute(bool);
 			void   SetAutoTranspose(bool);
 			void   SetGenie(bool);
@@ -467,14 +468,14 @@ namespace Nes
 				enum
 				{
 					MIN_FRQ                   = 2 + 1,
-					STEP_CHECK                = 0x00, // >= 0x1F is technically correct but will produce clicks/pops
+					STEP_CHECK                = 0x1F,
 					REG0_LINEAR_COUNTER_LOAD  = 0x7F,
 					REG0_LINEAR_COUNTER_START = 0x80,
 					REG2_WAVE_LENGTH_LOW      = 0x00FF,
 					REG3_WAVE_LENGTH_HIGH     = 0x0700
 				};
 
-				enum TriangleStatus : int
+				enum Status
 				{
 					STATUS_COUNTING,
 					STATUS_RELOAD
@@ -482,7 +483,7 @@ namespace Nes
 
 				uint step;
 				uint outputVolume;
-				TriangleStatus status;
+				Status status;
 				word waveLength;
 				byte linearCtrl;
 				byte linearCounter;
@@ -633,16 +634,6 @@ namespace Nes
 			Settings settings;
 
 		public:
-
-			void SetOverclockSafety(bool safe)
-			{
-				dmc.overclockingIsSafe = safe;
-			}
-
-			bool GetOverclockSafety()
-			{
-				return dmc.overclockingIsSafe;
-			}
 
 			dword GetSampleRate() const
 			{

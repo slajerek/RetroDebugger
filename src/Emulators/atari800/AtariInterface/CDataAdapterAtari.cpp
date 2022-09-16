@@ -1,10 +1,10 @@
 #include "CDataAdapterAtari.h"
 #include "CDebugInterfaceAtari.h"
 
-CDataAdapterAtari::CDataAdapterAtari(CDebugInterfaceAtari *debugInterface)
-: CDataAdapter("Atari")
+CDataAdapterAtari::CDataAdapterAtari(CDebugInterfaceAtari *debugInterfaceAtari)
+: CDebugDataAdapter("Atari", debugInterfaceAtari)
 {
-	this->debugInterface = debugInterface;
+	this->debugInterfaceAtari = debugInterfaceAtari;
 }
 
 int CDataAdapterAtari::AdapterGetDataLength()
@@ -15,12 +15,12 @@ int CDataAdapterAtari::AdapterGetDataLength()
 
 void CDataAdapterAtari::AdapterReadByte(int pointer, uint8 *value)
 {
-	*value = this->debugInterface->GetByte(pointer);
+	*value = this->debugInterfaceAtari->GetByte(pointer);
 }
 
 void CDataAdapterAtari::AdapterWriteByte(int pointer, uint8 value)
 {
-	this->debugInterface->SetByte(pointer, value);
+	this->debugInterfaceAtari->SetByte(pointer, value);
 }
 
 
@@ -29,7 +29,7 @@ void CDataAdapterAtari::AdapterReadByte(int pointer, uint8 *value, bool *isAvail
 	if (pointer < 0x10000)
 	{
 		*isAvailable = true;
-		*value = this->debugInterface->GetByte(pointer);
+		*value = this->debugInterfaceAtari->GetByte(pointer);
 	}
 	else
 	{
@@ -39,13 +39,13 @@ void CDataAdapterAtari::AdapterReadByte(int pointer, uint8 *value, bool *isAvail
 
 void CDataAdapterAtari::AdapterWriteByte(int pointer, uint8 value, bool *isAvailable)
 {
-	this->debugInterface->SetByte(pointer, value);
+	this->debugInterfaceAtari->SetByte(pointer, value);
 	*isAvailable = true;
 }
 
 void CDataAdapterAtari::AdapterReadBlockDirect(uint8 *buffer, int pointerStart, int pointerEnd)
 {
-	this->debugInterface->GetMemory(buffer, pointerStart, pointerEnd);
+	this->debugInterfaceAtari->GetMemory(buffer, pointerStart, pointerEnd);
 }
 
 

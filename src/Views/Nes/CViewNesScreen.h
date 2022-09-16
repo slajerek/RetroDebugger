@@ -153,6 +153,10 @@ public:
 	//std::map<u32, bool> pressedKeyCodes;
 	virtual void SetSupersampleFactor(int supersampleFactor);
 
+	//
+	bool HasContextMenuItems();
+	void RenderContextMenuItems();
+
 };
 
 #endif //_CViewNesScreen_H_

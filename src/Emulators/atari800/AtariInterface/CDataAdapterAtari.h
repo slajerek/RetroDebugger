@@ -1,15 +1,15 @@
 #ifndef _CDataAdapterAtari_H_
 #define _CDataAdapterAtari_H_
 
-#include "CDataAdapter.h"
+#include "CDebugDataAdapter.h"
 
 class CDebugInterfaceAtari;
 
-class CDataAdapterAtari : public CDataAdapter
+class CDataAdapterAtari : public CDebugDataAdapter
 {
 public:
-	CDataAdapterAtari(CDebugInterfaceAtari *debugInterface);
-	CDebugInterfaceAtari *debugInterface;
+	CDataAdapterAtari(CDebugInterfaceAtari *debugInterfaceAtari);
+	CDebugInterfaceAtari *debugInterfaceAtari;
 	
 	virtual int AdapterGetDataLength();
 	virtual void AdapterReadByte(int pointer, uint8 *value);

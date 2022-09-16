@@ -134,6 +134,7 @@ Vice (C) 1993 The VICE Team
 Atari800 emulator (C) The Atari800 emulator Team
 NestopiaUE emulator (C) The NestopiaUE and Nestopia teams.
 GoatTracker 2 is (C) Lasse Öörni and GoatTracker 2 team.
+ASAP library is (C) Piotr Fusik et al.
 
 This product uses 1-Writer font: http://home-2002.code-cop.org/c64/font_01.html
 UI assets licenses are provided by the ImGui, SDL2 and all referenced licenses.

@@ -53,6 +53,18 @@ CDebuggerApi::~CDebuggerApi()
 {
 }
 
+void CDebuggerApi::PauseEmulation()
+{
+	LOGD("CDebuggerApi::PauseEmulation");
+	this->debugInterface->SetDebugMode(DEBUGGER_MODE_PAUSED);
+}
+
+void CDebuggerApi::UnPauseEmulation()
+{
+	LOGD("CDebuggerApi::UnPauseEmulation");
+	this->debugInterface->SetDebugMode(DEBUGGER_MODE_RUNNING);
+}
+
 void CDebuggerApi::StartThread(CSlrThread *run)
 {
 	SYS_StartThread(run);
@@ -412,9 +424,15 @@ int CDebuggerApi::LoadBinary(u16 fromAddr, char *filePath)
 	return -1;
 }
 
+void CDebuggerApi::ResetEmulationCounters()
+{
+	debugInterface->ResetMainCpuDebugCycleCounter();
+	debugInterface->ResetEmulationFrameCounter();
+}
+
 void CDebuggerApi::ShowMessage(const char *text)
 {
-	guiMain->ShowMessage((char*)text);
+	viewC64->ShowMessage((char*)text);
 }
 
 void CDebuggerApi::BlitText(const char *text, float posX, float posY, float fontSize)

@@ -104,6 +104,7 @@ public:
 	
 	//
 	void BasicUpStart(u16 jmpAddr);
+	bool LoadPRG(const char *filePath);
 	bool LoadPRG(const char *filePath, u16 *fromAddr, u16 *toAddr);
 	bool LoadPRG(CByteBuffer *byteBuffer, u16 *fromAddr, u16 *toAddr);
 	bool LoadPRG(CByteBuffer *byteBuffer, bool autoStart, bool forceFastReset);

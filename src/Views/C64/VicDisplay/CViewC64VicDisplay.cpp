@@ -201,7 +201,7 @@ void CViewC64VicDisplay::Initialize(CDebugInterfaceC64 *debugInterface)
 	foundMemoryCellPC = false;
 	
 	// keyboard shortcut zones for this view
-	shortcutZones.push_back(KBZONE_DISASSEMBLE);
+	shortcutZones.push_back(KBZONE_DISASSEMBLY);
 	//shortcutZones.push_back(KBZONE_MEMORY);
 
 	this->autoScrollMode = AUTOSCROLL_DISASSEMBLE_UNKNOWN;
@@ -1759,11 +1759,11 @@ void CViewC64VicDisplay::RenderCursor(float rasterCursorPosX, float rasterCursor
 		{
 			if (viewC64->isShowingRasterCross)
 			{
-				int rx = viewC64->rasterToShowX - 0x88;
-				int ry = viewC64->rasterToShowY - 0x32;
+				int rx = viewC64->c64RasterPosToShowX - 0x88;
+				int ry = viewC64->c64RasterPosToShowY - 0x32;
 				
-				if (viewC64->rasterToShowX >= 0x000 && viewC64->rasterToShowX < 0x1F8
-					&& viewC64->rasterToShowY >= 0x000 && viewC64->rasterToShowY < 0x138)
+				if (viewC64->c64RasterPosToShowX >= 0x000 && viewC64->c64RasterPosToShowX < 0x1F8
+					&& viewC64->c64RasterPosToShowY >= 0x000 && viewC64->c64RasterPosToShowY < 0x138)
 				{
 					this->RenderRasterCursor(rx, ry);
 				}
@@ -1782,11 +1782,11 @@ void CViewC64VicDisplay::RenderCursor(float rasterCursorPosX, float rasterCursor
 		{
 			if (viewC64->isShowingRasterCross)
 			{
-				int rx = viewC64->rasterToShowX - 0x88;
-				int ry = viewC64->rasterToShowY - 0x32;
+				int rx = viewC64->c64RasterPosToShowX - 0x88;
+				int ry = viewC64->c64RasterPosToShowY - 0x32;
 				
-				if (viewC64->rasterToShowX >= 0x068 && viewC64->rasterToShowX < 0x1F0
-					&& viewC64->rasterToShowY >= 0x010 && viewC64->rasterToShowY < 0x128)
+				if (viewC64->c64RasterPosToShowX >= 0x068 && viewC64->c64RasterPosToShowX < 0x1F0
+					&& viewC64->c64RasterPosToShowY >= 0x010 && viewC64->c64RasterPosToShowY < 0x128)
 				{
 					this->RenderRasterCursor(rx, ry);
 				}
@@ -1803,8 +1803,8 @@ void CViewC64VicDisplay::RenderCursor(float rasterCursorPosX, float rasterCursor
 		{
 			if (viewC64->isShowingRasterCross)
 			{
-				int rx = viewC64->rasterToShowX - 0x88;
-				int ry = viewC64->rasterToShowY - 0x32;
+				int rx = viewC64->c64RasterPosToShowX - 0x88;
+				int ry = viewC64->c64RasterPosToShowY - 0x32;
 				
 				// X: 0x000  0x088 0x1C8  0x1F8
 				//        0    136   456    504
@@ -2026,7 +2026,7 @@ bool CViewC64VicDisplay::ScrollMemoryAndDisassembleToRasterPosition(float rx, fl
 			viewC64->viewC64Disassembly->changedByUser = false;
 		}
 		
-		CViewMemoryMapCell *cell = viewC64->viewC64MemoryMap->memoryCells[addr];
+		CDebugMemoryMapCell *cell = viewC64->viewC64MemoryMap->memoryCells[addr];
 		if (cell->writePC != -1)
 		{
 			//LOGD(".... isForced=%d changed=%d", isForced, viewC64->viewC64Disassemble->changedByUser);
@@ -2166,6 +2166,8 @@ void CViewC64VicDisplay::SetNextAutoScrollMode()
 			break;
 			
 	}
+	viewC64->viewC64Disassembly->isTrackingPC = true;
+	viewC64->viewC64Disassembly->changedByUser = false;
 }
 
 void CViewC64VicDisplay::UpdateRasterCursorPos()
@@ -2582,7 +2584,7 @@ void CViewC64VicDisplay::ToggleVICRasterBreakpoint()
 
 	if (viewC64->isShowingRasterCross)
 	{
-		rasterLine = viewC64->rasterToShowY;
+		rasterLine = viewC64->c64RasterPosToShowY;
 	}
 	else
 	{
@@ -2630,7 +2632,7 @@ void CViewC64VicDisplay::ToggleVICRasterBreakpoint()
 		
 		viewC64->debugInterfaceC64->UnlockMutex();
 		
-		guiMain->ShowMessage(buf);
+		viewC64->ShowMessage(buf);
 		SYS_ReleaseCharBuf(buf);
 	}
 }

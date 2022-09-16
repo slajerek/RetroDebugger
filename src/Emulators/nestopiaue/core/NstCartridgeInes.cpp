@@ -673,10 +673,10 @@ namespace Nes
 
 			setup.mapper = (header[6] >> 4) | (header[7] & 0xF0U);
 			setup.subMapper = 0;
-			
+
 			if (setup.version)
 			{
-				setup.mapper |= uint(header[8]) << 8 & 0x100;
+				setup.mapper |= uint(header[8]) << 8 & 0x300;
 				setup.subMapper = header[8] >> 4;
 			}
 
@@ -766,7 +766,7 @@ namespace Nes
 		Result Cartridge::Ines::WriteHeader(const Header& setup,byte* const file,const ulong length)
 		{
 			if
-			(	
+			(
 				(file == NULL || length < 16) ||
 				(setup.prgRom > (setup.version ? 0xFFFUL * SIZE_16K : 0xFFUL * SIZE_16K)) ||
 				(setup.chrRom > (setup.version ? 0xFFFUL * SIZE_8K : 0xFFUL * SIZE_8K)) ||

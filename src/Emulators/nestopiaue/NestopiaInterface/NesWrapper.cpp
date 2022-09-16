@@ -1221,7 +1221,6 @@ void nesd_set_defaults()
 	sound.SetGenie(0);
 	machine.SetRamPowerState(0);
 	video.EnableUnlimSprites(false);
-	video.EnableOverclocking(false);
 	fds_auto_insert = true;
 	
 	blargg_ntsc = 0;

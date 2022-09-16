@@ -39,6 +39,7 @@ CViewDataWatch::CViewDataWatch(const char *name, float posX, float posY, float p
 	
 	//
 	this->imGuiNoWindowPadding = false;
+	this->imGuiNoScrollbar = false;
 	
 }
 
@@ -51,13 +52,13 @@ void CViewDataWatch::RenderImGui()
 {
 	PreRenderImGui();
 
-	debugInterface->symbols->LockMutex();
+	symbols->LockMutex();
 	
-	CDebugSymbolsSegment *symbolsSegment = debugInterface->symbols->currentSegment;
+	CDebugSymbolsSegment *symbolsSegment = symbols->currentSegment;
 	if (!symbolsSegment)
 	{
 		LOGError("CViewDataWatch::RenderImGui: symbols segment is NULL");
-		debugInterface->symbols->UnlockMutex();
+		symbols->UnlockMutex();
 		return;
 	}
 	
@@ -247,6 +248,7 @@ void CViewDataWatch::RenderImGui()
 
 		sprintf(buf, "##addWatchPopupAddress%x", this);
 
+		bool buttonAddClicked = false;
 		if (symbols->currentSegment)
 		{
 			const char **hints = symbols->currentSegment->codeLabelsArray;
@@ -269,6 +271,12 @@ void CViewDataWatch::RenderImGui()
 					strcpy(comboFilterTextBuf, hints[comboFilterState.activeIdx]);
 				}
 			}
+			
+			ImGui::SameLine();
+			if (ImGui::Button("Add"))
+			{
+				buttonAddClicked = true;
+			}
 		}
 		
 		/*
@@ -287,12 +295,8 @@ void CViewDataWatch::RenderImGui()
 		}
 		 */
 		
-		bool finalizeAddingBreakpoint = !skipClosePopupByEnterPressInThisFrame && ImGui::IsWindowFocused() && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Enter));
-		
-//		if (ImGui::Button("Add Watch"))
-//		{
-//			finalizeAddingBreakpoint = true;
-//		}
+		bool finalizeAddingBreakpoint = buttonAddClicked
+			|| (!skipClosePopupByEnterPressInThisFrame && ImGui::IsWindowFocused() && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Enter)));
 		
 		if (finalizeAddingBreakpoint)
 		{
@@ -334,7 +338,7 @@ void CViewDataWatch::RenderImGui()
 		ImGui::EndPopup();
 	}
 	
-	debugInterface->symbols->UnlockMutex();
+	symbols->UnlockMutex();
 	
 	SYS_ReleaseCharBuf(buf);
 

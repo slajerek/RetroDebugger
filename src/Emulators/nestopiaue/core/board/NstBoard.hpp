@@ -94,7 +94,7 @@ namespace Nes
 						CRM_32
 					};
 
-					template<byte MPR,word PROM,word CROM,byte NVWRAM,byte WRAM,Cram CRAM,NmtInit NMT,byte UNIQUE>
+					template<word MPR,word PROM,word CROM,byte NVWRAM,byte WRAM,Cram CRAM,NmtInit NMT,byte UNIQUE>
 					struct MakeId
 					{
 						NST_COMPILE_ASSERT
@@ -258,7 +258,7 @@ namespace Nes
 						BANDAI_AEROBICSSTUDIO      = MakeId<    3,   32,   32,  0,  0, CRM_0,  NMT_X,  2 >::ID,
 						BANDAI_OEKAKIDS            = MakeId<   96,  128,    0,  0,  0, CRM_32, NMT_1,  0 >::ID,
 						// Bensheng
-						BENSHENG_BS5               = MakeId< NMPR,  128,   64,  0,  0, CRM_0,  NMT_V,  2 >::ID,
+						BENSHENG_BS5               = MakeId<  286,  128,   64,  0,  0, CRM_0,  NMT_V,  2 >::ID,
 						// Bootleg multicarts
 						BMC_110IN1                 = MakeId<  255, 2048, 1024,  0,  0, CRM_0,  NMT_V,  0 >::ID,
 						BMC_150IN1                 = MakeId<  202,  128,   64,  0,  0, CRM_0,  NMT_V,  0 >::ID,
@@ -273,16 +273,16 @@ namespace Nes
 						BMC_64IN1                  = MakeId<  204,  128,   64,  0,  0, CRM_0,  NMT_V,  0 >::ID,
 						BMC_72IN1                  = MakeId<  225, 1024,  512,  0,  0, CRM_0,  NMT_V,  0 >::ID,
 						BMC_76IN1                  = MakeId<  226, 2048,    0,  0,  0, CRM_8,  NMT_H,  0 >::ID,
-						BMC_8157                   = MakeId< NMPR,  512,    0,  0,  0, CRM_8,  NMT_V,  0 >::ID,
+						BMC_8157                   = MakeId<  301,  512,    0,  0,  0, CRM_8,  NMT_V,  0 >::ID,
 						BMC_9999999IN1             = MakeId<  213,  128,   64,  0,  0, CRM_0,  NMT_X,  0 >::ID,
-						BMC_A65AS                  = MakeId< NMPR,  512,    0,  0,  0, CRM_8,  NMT_V,  1 >::ID,
+						BMC_A65AS                  = MakeId<  285,  512,    0,  0,  0, CRM_8,  NMT_V,  1 >::ID,
 						BMC_BALLGAMES_11IN1        = MakeId<   51,  512,    0,  0,  0, CRM_8,  NMT_V,  0 >::ID,
-						BMC_CTC65                  = MakeId< NMPR, 2048,    0,  0,  0, CRM_8,  NMT_H,  0 >::ID,
+						BMC_CTC65                  = MakeId<  226, 2048,    0,  0,  0, CRM_8,  NMT_H,  1 >::ID,
 						BMC_DRAGONBOLLPARTY        = MakeId<   83, 1024, 1024,  8,  0, CRM_0,  NMT_V,  0 >::ID,
 						BMC_FAMILY_4646B           = MakeId<  134,  512,  512,  0,  0, CRM_0,  NMT_X,  0 >::ID,
-						BMC_FKC23C                 = MakeId< NMPR, 1024, 1024,  0,  0, CRM_0,  NMT_X,  0 >::ID,
+						BMC_FKC23C                 = MakeId<  176, 1024, 1024,  0,  0, CRM_0,  NMT_X,  0 >::ID,
 						BMC_GAME_800IN1            = MakeId<  236,  512,   64,  0,  0, CRM_8,  NMT_V,  0 >::ID,
-						BMC_GOLDEN_190IN1          = MakeId< NMPR,  128,   64,  0,  0, CRM_0,  NMT_V,  0 >::ID,
+						BMC_GOLDEN_190IN1          = MakeId<  300,  128,   64,  0,  0, CRM_0,  NMT_V,  0 >::ID,
 						BMC_GOLDENGAME_150IN1      = MakeId<  235, 2048,    0,  0,  0, CRM_8,  NMT_V,  0 >::ID,
 						BMC_GOLDENGAME_260IN1      = MakeId<  235, 4096,    0,  0,  0, CRM_8,  NMT_V,  0 >::ID,
 						BMC_GKA                    = MakeId<   57,  128,  128,  0,  0, CRM_0,  NMT_V,  0 >::ID,
@@ -294,9 +294,9 @@ namespace Nes
 						BMC_CH001                  = MakeId<   63, 4096,    0,  0,  0, CRM_8,  NMT_V,  0 >::ID,
 						BMC_POWERJOY_84IN1         = MakeId<  126, 2048, 1024,  0,  0, CRM_0,  NMT_X,  0 >::ID,
 						BMC_RESETBASED_4IN1        = MakeId<   60,   64,   32,  0,  0, CRM_0,  NMT_X,  0 >::ID,
-						BMC_SUPER_24IN1            = MakeId< NMPR, 4096, 2048,  8,  0, CRM_8,  NMT_X,  0 >::ID,
+						BMC_SUPER_24IN1            = MakeId<  176, 4096, 2048,  0,  0, CRM_8,  NMT_X,  0 >::ID,
 						BMC_SUPER_22GAMES          = MakeId<  233, 1024,    0,  0,  0, CRM_8,  NMT_Z,  0 >::ID,
-						BMC_SUPER_40IN1            = MakeId< NMPR,  128,   64,  0,  0, CRM_0,  NMT_V,  1 >::ID,
+						BMC_SUPER_40IN1            = MakeId<  332,  128,   64,  0,  0, CRM_0,  NMT_V,  1 >::ID,
 						BMC_SUPER_42IN1            = MakeId<  226, 1024,    0,  0,  0, CRM_8,  NMT_H,  0 >::ID,
 						BMC_SUPER_700IN1           = MakeId<   62, 2048, 1024,  0,  0, CRM_0,  NMT_V,  0 >::ID,
 						BMC_SUPERBIG_7IN1          = MakeId<   44, 1024, 1024,  0,  0, CRM_0,  NMT_X,  0 >::ID,
@@ -304,15 +304,15 @@ namespace Nes
 						BMC_SUPERHIK_4IN1          = MakeId<   49,  512,  512,  0,  0, CRM_0,  NMT_X,  0 >::ID,
 						BMC_SUPERHIK_300IN1        = MakeId<  212,  128,   64,  0,  0, CRM_0,  NMT_V,  0 >::ID,
 						BMC_SUPERVISION_16IN1      = MakeId<   53, 4096,    0,  0,  0, CRM_8,  NMT_V,  0 >::ID,
-						BMC_T262                   = MakeId< NMPR, 1024,    0,  0,  0, CRM_8,  NMT_V,  0 >::ID,
+						BMC_T262                   = MakeId<  265, 1024,    0,  0,  0, CRM_8,  NMT_V,  0 >::ID,
 						BMC_VRC4                   = MakeId<   23,  512,    0,  8,  0, CRM_8,  NMT_V,  0 >::ID,
 						BMC_VT5201                 = MakeId<   60,  128,   64,  0,  0, CRM_0,  NMT_V,  0 >::ID,
-						BMC_Y2K_64IN1              = MakeId< NMPR, 1024,  512,  0,  0, CRM_0,  NMT_V,  0 >::ID,
+						BMC_Y2K_64IN1              = MakeId<  314, 1024,  512,  0,  0, CRM_0,  NMT_V,  0 >::ID,
 						// Bootlegs
 						BTL_2708                   = MakeId<  103,  128,    0,  0, 16, CRM_8,  NMT_V,  0 >::ID,
 						BTL_6035052                = MakeId<  238,  512,  256,  0,  0, CRM_0,  NMT_X,  0 >::ID,
 						BTL_AISENSHINICOL          = MakeId<   42,  128,    0,  0,  0, CRM_8,  NMT_X,  0 >::ID,
-						BTL_AX5705                 = MakeId< NMPR,  128,  256,  0,  0, CRM_0,  NMT_X,  0 >::ID,
+						BTL_AX5705                 = MakeId<  530,  128,  256,  0,  0, CRM_0,  NMT_X,  0 >::ID,
 						BTL_DRAGONNINJA            = MakeId<  222,  128,  256,  0,  0, CRM_0,  NMT_X,  0 >::ID,
 						BTL_GENIUSMERIOBROS        = MakeId<   55,   64,    8,  2,  0, CRM_0,  NMT_X,  0 >::ID,
 						BTL_MARIOBABY              = MakeId<   42,  128,  128,  0,  0, CRM_0,  NMT_X,  0 >::ID,
@@ -323,7 +323,7 @@ namespace Nes
 						BTL_SMB2_C                 = MakeId<   43,  128,    8,  0,  0, CRM_0,  NMT_X,  0 >::ID,
 						BTL_SMB3                   = MakeId<  106,  256,  128,  8,  0, CRM_0,  NMT_H,  0 >::ID,
 						BTL_SUPERBROS11            = MakeId<  196,  512,  128,  0,  0, CRM_0,  NMT_V,  0 >::ID,
-						BTL_T230                   = MakeId< NMPR,  256,    0,  0,  0, CRM_8,  NMT_V,  0 >::ID,
+						BTL_T230                   = MakeId<  529,  256,    0,  0,  0, CRM_8,  NMT_V,  0 >::ID,
 						BTL_TOBIDASEDAISAKUSEN     = MakeId<  120,  128,    8,  0,  0, CRM_0,  NMT_X,  0 >::ID,
 						// Camerica
 						CAMERICA_BF9093            = MakeId<   71,  256,    0,  0,  0, CRM_8,  NMT_X,  0 >::ID,
@@ -342,7 +342,7 @@ namespace Nes
 						// Cony
 						CONY_STD                   = MakeId<   83,  256,  512,  0,  0, CRM_0,  NMT_V,  0 >::ID,
 						// Dreamtech
-						DREAMTECH_01               = MakeId< NMPR,  256,    0,  0,  0, CRM_8,  NMT_X,  0 >::ID,
+						DREAMTECH01                = MakeId<  521,  256,    0,  0,  0, CRM_8,  NMT_X,  0 >::ID,
 						// Fujiya
 						FUJIYA_STD                 = MakeId<  170,   32,    8,  0,  0, CRM_0,  NMT_X,  0 >::ID,
 						// Fukutake
@@ -418,9 +418,14 @@ namespace Nes
 						JYCOMPANY_TYPE_C           = MakeId<  211, 2048, 2048,  0,  0, CRM_0,  NMT_X,  0 >::ID,
 						// Kaiser
 						KAISER_KS202               = MakeId<   56,  256,  128,  8,  0, CRM_0,  NMT_V,  0 >::ID,
+						KAISER_KS7010              = MakeId<  554,  128,  128,  0,  0, CRM_0,  NMT_V,  1 >::ID,
+						KAISER_KS7013B             = MakeId<  312,  128,    0,  0,  0, CRM_8,  NMT_X,  0 >::ID,
+						KAISER_KS7016              = MakeId<  306,  128,    0,  0,  0, CRM_8,  NMT_V,  0 >::ID,
 						KAISER_KS7022              = MakeId<  175,  256,  128,  0,  0, CRM_0,  NMT_V,  0 >::ID,
-						KAISER_KS7031              = MakeId<  NMPR, 128,    0,  0, 16, CRM_8,  NMT_V,  0 >::ID,
+						KAISER_KS7031              = MakeId<  305,  128,    0,  0,  0, CRM_8,  NMT_V,  0 >::ID,
 						KAISER_KS7032              = MakeId<  142,  128,    0,  0,  0, CRM_8,  NMT_X,  0 >::ID,
+						KAISER_KS7037              = MakeId<  307,  128,    0,  0,  8, CRM_8,  NMT_X,  0 >::ID,
+						KAISER_KS7057              = MakeId<  302,  128,    0,  0,  0, CRM_8,  NMT_X,  0 >::ID,
 						KAISER_KS7058              = MakeId<  171,   32,   32,  0,  0, CRM_0,  NMT_X,  0 >::ID,
 						// Kasing
 						KASING_STD                 = MakeId<  115,  512,  512,  0,  0, CRM_0,  NMT_V,  0 >::ID,
@@ -454,8 +459,7 @@ namespace Nes
 						NAMCOT_163_S_0             = MakeId<   19,  512,  256,  0,  0, CRM_0,  NMT_X,  1 >::ID,
 						NAMCOT_163_S_1             = MakeId<   19,  512,  256,  8,  0, CRM_0,  NMT_X,  1 >::ID,
 						NAMCOT_175                 = MakeId<  210,  512,  128,  8,  0, CRM_0,  NMT_V,  0 >::ID,
-						// FIXME: Setting NMT_4 is incorrect but makes things work
-						NAMCOT_340                 = MakeId<  210,  256,  256,  0,  0, CRM_0,  NMT_4,  0 >::ID,
+						NAMCOT_340                 = MakeId<  210,  256,  256,  0,  0, CRM_0,  NMT_X,  0 >::ID,
 						// Nitra
 						NITRA_TDA                  = MakeId<  250,  512,  256,  0,  0, CRM_0,  NMT_V,  0 >::ID,
 						// NTDEC
@@ -468,10 +472,10 @@ namespace Nes
 						// Nihon Bussan
 						NIHON_UNROM_M5             = MakeId<  180,  128,    0,  0,  0, CRM_8,  NMT_X,  0 >::ID,
 						// Open Corp
-						OPENCORP_DAOU306           = MakeId<  156,  256,  256,  8,  0, CRM_0,  NMT_1,  0 >::ID,
+						OPENCORP_DAOU306           = MakeId<  156,  256,  512,  8,  0, CRM_0,  NMT_1,  0 >::ID,
 						// RCM
-						RCM_GS2004                 = MakeId< NMPR,  512,    0,  0,  0, CRM_8,  NMT_X,  0 >::ID,
-						RCM_GS2013                 = MakeId< NMPR,  512,    0,  0,  0, CRM_8,  NMT_X,  1 >::ID,
+						RCM_GS2004                 = MakeId<  283,  256,    0,  0,  0, CRM_8,  NMT_X,  0 >::ID,
+						RCM_GS2013                 = MakeId<  283,  512,    0,  0,  0, CRM_8,  NMT_X,  1 >::ID,
 						RCM_GS2015                 = MakeId<  216,   64,   64,  0,  0, CRM_0,  NMT_X,  0 >::ID,
 						RCM_TETRISFAMILY           = MakeId<   61,  512,    0,  0,  0, CRM_8,  NMT_V,  0 >::ID,
 						// Rex Soft
@@ -492,7 +496,6 @@ namespace Nes
 						SACHEN_SA72008             = MakeId<  133,   64,   32,  0,  0, CRM_0,  NMT_X,  0 >::ID,
 						SACHEN_74_374A             = MakeId<  243,   64,  128,  0,  0, CRM_0,  NMT_V,  0 >::ID,
 						SACHEN_74_374B             = MakeId<  150,   64,  128,  0,  0, CRM_0,  NMT_X,  0 >::ID,
-						SACHEN_STREETHEROES        = MakeId< NMPR,  512,  512,  0,  0, CRM_8,  NMT_2,  0 >::ID,
 						// Someri Team
 						SOMERITEAM_SL12            = MakeId<  116,  256,  512,  0,  0, CRM_0,  NMT_X,  0 >::ID,
 						// Subor
@@ -526,7 +529,6 @@ namespace Nes
 						TENGEN_800004              = MakeId<  206,  128,   64,  0,  0, CRM_0,  NMT_2,  1 >::ID,
 						TENGEN_800008              = MakeId<    3,   64,   64,  0,  0, CRM_0,  NMT_X,  0 >::ID,
 						TENGEN_800030              = MakeId<  206,  128,   64,  0,  0, CRM_0,  NMT_X,  1 >::ID,
-						//TENGEN_800032              = MakeId<   64,  128,  128,  0,  0, CRM_0,  NMT_V,  0 >::ID,
 						TENGEN_800032              = MakeId<   64,  128,  256,  0,  0, CRM_0,  NMT_V,  0 >::ID,
 						TENGEN_800037              = MakeId<  158,  128,  128,  0,  0, CRM_0,  NMT_Z,  0 >::ID,
 						TENGEN_800042              = MakeId<   68,  128,  256,  0,  0, CRM_0,  NMT_V,  1 >::ID,
@@ -539,14 +541,16 @@ namespace Nes
 						TXC_TW                     = MakeId<  189,  128,  256,  0,  0, CRM_0,  NMT_X,  0 >::ID,
 						// Unlicensed
 						UNL_A9746                  = MakeId<  219,  128,  256,  0,  0, CRM_0,  NMT_X,  0 >::ID,
-						UNL_CC21                   = MakeId< NMPR,   32,   16,  0,  0, CRM_0,  NMT_Z,  0 >::ID,
-						UNL_EDU2000                = MakeId< NMPR, 1024,    0, 32,  0, CRM_8,  NMT_Z,  0 >::ID,
+						UNL_CC21                   = MakeId<   27,   32,    8,  0,  0, CRM_0,  NMT_Z,  0 >::ID,
+						UNL_EDU2000                = MakeId<  329, 1024,    0,  0, 32, CRM_8,  NMT_Z,  0 >::ID,
+						UNL_FS304                  = MakeId<  162, 2048,    0,  8,  0, CRM_8,  NMT_X,  0 >::ID,
 						UNL_KINGOFFIGHTERS96       = MakeId<  187,  512,  512,  0,  0, CRM_0,  NMT_X,  0 >::ID,
-						UNL_KINGOFFIGHTERS97       = MakeId< NMPR,  512,  256,  0,  0, CRM_0,  NMT_X,  1 >::ID,
+						UNL_KINGOFFIGHTERS97       = MakeId<  263,  256,  256,  0,  0, CRM_0,  NMT_X,  0 >::ID,
 						UNL_MORTALKOMBAT2          = MakeId<   91,  256,  512,  0,  0, CRM_0,  NMT_X,  0 >::ID,
 						UNL_N625092                = MakeId<  221, 1024,    8,  0,  0, CRM_0,  NMT_V,  0 >::ID,
 						UNL_SUPERFIGHTER3          = MakeId<  197,  512,  512,  0,  0, CRM_0,  NMT_X,  0 >::ID,
-						UNL_TF1201                 = MakeId< NMPR,  256,  256,  0,  0, CRM_0,  NMT_V,  0 >::ID,
+						UNL_SHERO                  = MakeId<  262,  512,  512,  0,  0, CRM_8,  NMT_4,  0 >::ID,
+						UNL_TF1201                 = MakeId<  298,  128,  128,  0,  0, CRM_0,  NMT_V,  0 >::ID,
 						UNL_WORLDHERO              = MakeId<   27,  128,  512,  0,  0, CRM_0,  NMT_X,  0 >::ID,
 						UNL_AXROM                  = MakeId<    7,  512,    8,  8,  0, CRM_0,  NMT_Z,  0 >::ID,
 						UNL_BXROM                  = MakeId<   34, 4096,    8,  8,  0, CRM_8,  NMT_X,  0 >::ID,
@@ -653,7 +657,7 @@ namespace Nes
 					Context(Cpu*,Apu*,Ppu*,Ram&,Ram&,const Ram&,Type::Nmt,bool,bool,Chips&);
 
 					bool DetectBoard(wcstring,dword);
-					bool DetectBoard(byte,byte,dword,dword,bool);
+					bool DetectBoard(word,byte,dword,dword,bool);
 
 					cstring name;
 					Type type;

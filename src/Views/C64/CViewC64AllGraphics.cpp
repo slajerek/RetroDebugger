@@ -601,7 +601,7 @@ void CViewC64AllGraphics::Render()
 			lstScreenAddresses->SetElement(addrItemNum, updatePosition, false);
 		}
 		
-		u16 charsetAddress = (viciiState->regs[0x18] & 0xe) << 10;
+		u16 charsetAddress = (viciiState->regs[0x18] & 0x0E) << 10;
 		charsetAddress = (charsetAddress + viciiState->vbank_phi1);
 		charsetAddress &= viciiState->vaddr_mask_phi1;
 		charsetAddress |= viciiState->vaddr_offset_phi1;
@@ -996,11 +996,8 @@ void CViewC64AllGraphics::Render()
 		colorImage->ReBindImageData(colorImageData);
 		
 		// nearest neighbour
-		{
-			glBindTexture(GL_TEXTURE_2D, colorImage->textureId);
-			glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
-			glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST);
-		}
+		LOGTODO("is it required?");
+		colorImage->SetLinearScaling(false);
 
 		// TODO: the image is v-flipped, this has been fixed in GUI branch
 		const float itex = 40.0f/64.0f;
@@ -1215,7 +1212,7 @@ bool CViewC64AllGraphics::DoTap(float x, float y)
 	
 	// TODO: note this is copy pasted code from C64ViewStateVIC, needs to be generalized
 	//       idea is to sync values with VIC state view. Leds should be replaced with proper buttons and callbacks.
-	//		 the below is just a temporary POC made in few minutes
+	//		 the below is just a temporary POC made in a few minutes
 	
 	float ledX = posX + fontSize * 82.1725f;
 	float ledY = posY + fontSize * 5.5;

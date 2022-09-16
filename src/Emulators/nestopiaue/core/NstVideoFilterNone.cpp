@@ -39,7 +39,7 @@ namespace Nes
 			{
 				const Input::Pixel* NST_RESTRICT src = input.pixels;
 				T* NST_RESTRICT dst = static_cast<T*>(output.pixels);
-				
+
 				for (uint prefetched=*src++, i=PIXELS; i; --i)
 				{
 					const dword reg = input.palette[prefetched];

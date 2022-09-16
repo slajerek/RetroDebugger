@@ -9,6 +9,7 @@
 #include "C64D_Version.h"
 
 extern "C" {
+	extern int POKEYSND_stereo_enabled;
 	void Sound_Callback(uint8 *buffer, unsigned int size);
 }
 
@@ -24,12 +25,18 @@ CAudioChannelAtari::CAudioChannelAtari(CDebugInterfaceAtari *debugInterface)
 void CAudioChannelAtari::FillBuffer(int *mixBuffer, u32 numSamples)
 {
 #if defined(RUN_ATARI)
-	Sound_Callback((uint8*)monoBuffer, numSamples*2);
+	if (POKEYSND_stereo_enabled)
+	{
+		Sound_Callback((uint8*)monoBuffer, numSamples*4);
+	}
+	else
+	{
+		Sound_Callback((uint8*)monoBuffer, numSamples*2);
+	}
 #endif
 	
 //	memset(mixBuffer, 0, numSamples*4);
 
-	
 	// TODO: refactor me c64SettingsMuteSIDOnPause-> mute emulation sound on pause
 	if (c64SettingsMuteSIDOnPause)
 	{
@@ -40,43 +47,42 @@ void CAudioChannelAtari::FillBuffer(int *mixBuffer, u32 numSamples)
 		}
 	}
 
-	int amount = numSamples;
-	
-	u8 *src = (u8*)monoBuffer;
-	u8 *dest = (u8*)mixBuffer;
-
-	for (int i = 0; i < amount; i++)
+	if (POKEYSND_stereo_enabled)
 	{
-		uint8 s1, s2;
-		
-		s1 = *src;
-		src++;
-		s2 = *src;
-		src++;
-		
-		// L
-		*dest = s1;
-		dest++;
-		*dest = s2;
-		dest++;
-		
-		// R
-		*dest = s1;
-		dest++;
-		*dest = s2;
-		dest++;
-	}
+		u8 *src = (u8*)monoBuffer;
+		u8 *dest = (u8*)mixBuffer;
 
-//	// remix mono to stereo
-//	u16 *inPtr = monoBuffer;
-//	u16 *outPtr = (u16*)mixBuffer;
-//	for (int i = 0; i < numSamples; i++)
-//	{
-//		u16 s = *inPtr++;
-//		
-//		*outPtr++ = s;
-//		*outPtr++ = s;
-//	}
+		memcpy(dest, src, numSamples*4);
+	}
+	else
+	{
+		// one POKEY, mono
+		int amount = numSamples;
+		
+		u8 *src = (u8*)monoBuffer;
+		u8 *dest = (u8*)mixBuffer;
+
+		for (int i = 0; i < amount; i++)
+		{
+			uint8 s1, s2;
+			
+			s1 = *src;
+			src++;
+			s2 = *src;
+			src++;
+			
+			// L
+			*dest = s1;
+			dest++;
+			*dest = s2;
+			dest++;
+			
+			// R
+			*dest = s1;
+			dest++;
+			*dest = s2;
+			dest++;
+		}	}
 }
 
 

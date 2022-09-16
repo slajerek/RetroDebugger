@@ -308,7 +308,7 @@ u8 C64SpriteHires::PaintDither(bool forceColorReplace, int x, int y, u8 colorLMB
 // @returns painting status (ok, replaced color, blocked)
 u8 C64SpriteHires::PutColorAtPixel(bool forceColorReplace, int x, int y, u8 colorLMB, u8 colorRMB, u8 colorSource)
 {
-	LOGD("C64SpriteHires::PutColorAtPixel");
+	LOGD("C64SpriteHires::PutColorAtPixel: x=%d y=%d colorLMB=%x", colorLMB);
 	
 	if (colorSource == VICEDITOR_COLOR_SOURCE_LMB)
 	{

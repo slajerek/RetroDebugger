@@ -1,10 +1,10 @@
 #include "CDataAdapterNesRam.h"
 #include "CDebugInterfaceNes.h"
 
-CDataAdapterNesRam::CDataAdapterNesRam(CDebugInterfaceNes *debugInterface)
-: CDebugDataAdapter("NesRam", debugInterface)
+CDataAdapterNesRam::CDataAdapterNesRam(CDebugInterfaceNes *debugInterfaceNes)
+: CDebugDataAdapter("NesRam", debugInterfaceNes)
 {
-	this->debugInterface = debugInterface;
+	this->debugInterfaceNes = debugInterfaceNes;
 }
 
 int CDataAdapterNesRam::AdapterGetDataLength()
@@ -15,12 +15,12 @@ int CDataAdapterNesRam::AdapterGetDataLength()
 
 void CDataAdapterNesRam::AdapterReadByte(int pointer, uint8 *value)
 {
-	*value = this->debugInterface->GetByte(pointer);
+	*value = this->debugInterfaceNes->GetByte(pointer);
 }
 
 void CDataAdapterNesRam::AdapterWriteByte(int pointer, uint8 value)
 {
-	this->debugInterface->SetByte(pointer, value);
+	this->debugInterfaceNes->SetByte(pointer, value);
 }
 
 
@@ -29,7 +29,7 @@ void CDataAdapterNesRam::AdapterReadByte(int pointer, uint8 *value, bool *isAvai
 	if (pointer < 0x10000)
 	{
 		*isAvailable = true;
-		*value = this->debugInterface->GetByte(pointer);
+		*value = this->debugInterfaceNes->GetByte(pointer);
 	}
 	else
 	{
@@ -39,11 +39,11 @@ void CDataAdapterNesRam::AdapterReadByte(int pointer, uint8 *value, bool *isAvai
 
 void CDataAdapterNesRam::AdapterWriteByte(int pointer, uint8 value, bool *isAvailable)
 {
-	this->debugInterface->SetByte(pointer, value);
+	this->debugInterfaceNes->SetByte(pointer, value);
 	*isAvailable = true;
 }
 
 void CDataAdapterNesRam::AdapterReadBlockDirect(uint8 *buffer, int pointerStart, int pointerEnd)
 {
-	this->debugInterface->GetMemory(buffer, pointerStart, pointerEnd);
+	this->debugInterfaceNes->GetMemory(buffer, pointerStart, pointerEnd);
 }

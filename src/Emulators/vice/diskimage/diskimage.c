@@ -165,6 +165,7 @@ static const unsigned int sector_map_d80[SPEED_ZONE_COUNT] = {
  *
  * \return  number of sectors or 0 on error
  */
+
 unsigned int disk_image_sector_per_track(unsigned int format,
                                          unsigned int track)
 {

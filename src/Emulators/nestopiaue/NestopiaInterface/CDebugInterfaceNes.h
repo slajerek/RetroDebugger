@@ -8,7 +8,7 @@
 class CImageData;
 class CViewC64;
 
-#define NST_VERSION "1.50"
+#define NST_VERSION "1.51.1"
 #define C64DEBUGGER_NES_VERSION_STRING NST_VERSION
 
 class CAudioChannelNes;

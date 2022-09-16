@@ -2,20 +2,20 @@
 #include "CDebugMemoryMap.h"
 
 ///
-void _markCellReadStyleDebugger(CViewMemoryMapCell *cell)
+void _markCellReadStyleDebugger(CDebugMemoryMapCell *cell)
 {
 	cell->sg = 0.3f;
 	cell->sb = 1.0f;
 	cell->sa = 1.0f;
 }
 
-void _markCellWriteStyleDebugger(CViewMemoryMapCell *cell)
+void _markCellWriteStyleDebugger(CDebugMemoryMapCell *cell)
 {
 	cell->sr = 1.0f;
 	cell->sa = 1.0f;
 }
 
-void _markCellExecuteCodeStyleDebugger(CViewMemoryMapCell *cell)
+void _markCellExecuteCodeStyleDebugger(CDebugMemoryMapCell *cell)
 {
 	cell->sr = 0.0f;
 	cell->sg = 1.0f;
@@ -23,7 +23,7 @@ void _markCellExecuteCodeStyleDebugger(CViewMemoryMapCell *cell)
 	cell->sa = 1.0f;
 }
 
-void _markCellExecuteArgumentStyleDebugger(CViewMemoryMapCell *cell)
+void _markCellExecuteArgumentStyleDebugger(CDebugMemoryMapCell *cell)
 {
 	cell->sr = 0.0f;
 	cell->sg = 0.3f;
@@ -31,19 +31,19 @@ void _markCellExecuteArgumentStyleDebugger(CViewMemoryMapCell *cell)
 	cell->sa = 1.0f;
 }
 
-void _markCellReadStyleICU(CViewMemoryMapCell *cell)
+void _markCellReadStyleICU(CDebugMemoryMapCell *cell)
 {
 	cell->sg = 1.0f;
 	cell->sa = 1.0f;
 }
 
-void _markCellWriteStyleICU(CViewMemoryMapCell *cell)
+void _markCellWriteStyleICU(CDebugMemoryMapCell *cell)
 {
 	cell->sr = 1.0f;
 	cell->sa = 1.0f;
 }
 
-void _markCellExecuteCodeStyleICU(CViewMemoryMapCell *cell)
+void _markCellExecuteCodeStyleICU(CDebugMemoryMapCell *cell)
 {
 	cell->sr = 0.0f;
 	cell->sg = 1.0f;
@@ -51,7 +51,7 @@ void _markCellExecuteCodeStyleICU(CViewMemoryMapCell *cell)
 	cell->sa = 1.0f;
 }
 
-void _markCellExecuteArgumentStyleICU(CViewMemoryMapCell *cell)
+void _markCellExecuteArgumentStyleICU(CDebugMemoryMapCell *cell)
 {
 	cell->sr = 0.0f;
 	cell->sg = 1.0f;
@@ -59,10 +59,10 @@ void _markCellExecuteArgumentStyleICU(CViewMemoryMapCell *cell)
 	cell->sa = 1.0f;
 }
 
-typedef void (*MarkCellReadFunc)(CViewMemoryMapCell *cell);
-typedef void (*MarkCellWriteFunc)(CViewMemoryMapCell *cell);
-typedef void (*MarkCellExecuteCodeFunc)(CViewMemoryMapCell *cell);
-typedef void (*MarkCellExecuteArgumentFunc)(CViewMemoryMapCell *cell);
+typedef void (*MarkCellReadFunc)(CDebugMemoryMapCell *cell);
+typedef void (*MarkCellWriteFunc)(CDebugMemoryMapCell *cell);
+typedef void (*MarkCellExecuteCodeFunc)(CDebugMemoryMapCell *cell);
+typedef void (*MarkCellExecuteArgumentFunc)(CDebugMemoryMapCell *cell);
 
 MarkCellReadFunc markCellRead = _markCellReadStyleDebugger;
 MarkCellWriteFunc markCellWrite = _markCellWriteStyleDebugger;
@@ -122,7 +122,7 @@ void C64DebuggerSetMemoryMapMarkersStyle(uint8 memoryMapMarkersStyle)
 }
 
 
-CViewMemoryMapCell::CViewMemoryMapCell(int addr)
+CDebugMemoryMapCell::CDebugMemoryMapCell(int addr)
 {
 	this->addr = addr;
 	
@@ -142,11 +142,11 @@ CViewMemoryMapCell::CViewMemoryMapCell(int addr)
 	writeCycle = readCycle = executeCycle = -1;
 }
 
-CViewMemoryMapCell::~CViewMemoryMapCell()
+CDebugMemoryMapCell::~CDebugMemoryMapCell()
 {
 }
 
-void CViewMemoryMapCell::ClearExecuteMarkers()
+void CDebugMemoryMapCell::ClearExecuteMarkers()
 {
 	isExecuteCode = false;
 	isExecuteArgument = false;
@@ -159,7 +159,7 @@ void CViewMemoryMapCell::ClearExecuteMarkers()
 	sa = 0.0f; va = 0.0f; ra = 0.0f;
 }
 
-void CViewMemoryMapCell::ClearReadWriteMarkers()
+void CDebugMemoryMapCell::ClearReadWriteMarkers()
 {
 	isRead = false;
 	isWrite = false;
@@ -174,13 +174,13 @@ void CViewMemoryMapCell::ClearReadWriteMarkers()
 	writeCycle = readCycle = executeCycle = -1;
 }
 
-void CViewMemoryMapCell::MarkCellRead()
+void CDebugMemoryMapCell::MarkCellRead()
 {
 	markCellRead(this);
 	isRead = true;
 }
 
-void CViewMemoryMapCell::MarkCellWrite(uint8 value)
+void CDebugMemoryMapCell::MarkCellWrite(uint8 value)
 {
 	//LOGTODO("remove argument marker based on previous code length");
 	
@@ -190,13 +190,13 @@ void CViewMemoryMapCell::MarkCellWrite(uint8 value)
 	markCellWrite(this);
 }
 
-void CViewMemoryMapCell::MarkCellExecuteCode(uint8 opcode)
+void CDebugMemoryMapCell::MarkCellExecuteCode(uint8 opcode)
 {
 	isExecuteCode = true;
 	markCellExecuteCode(this);
 }
 
-void CViewMemoryMapCell::MarkCellExecuteArgument()
+void CDebugMemoryMapCell::MarkCellExecuteArgument()
 {
 	isExecuteArgument = true;
 	markCellExecuteArgument(this);

@@ -931,7 +931,7 @@ void CDebugAsmSource::ParseOldFormat(CByteBuffer *byteBuffer, CDebugInterface *d
 
 void CDebugAsmSource::LoadSource(CDebugAsmSourceFile *asmSourceFile, CSlrFile *file)
 {
-	CByteBuffer *byteBuffer = file->GetByteBuffer();
+	CByteBuffer *byteBuffer = file->GetWholeFileAsByteBuffer();
 	//			byteBuffer->DebugPrint();
 	
 	LOGD("LoadSource...");

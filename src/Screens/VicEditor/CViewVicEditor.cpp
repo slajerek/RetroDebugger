@@ -384,6 +384,13 @@ void CViewVicEditor::DoLogic()
 	
 }
 
+void CViewVicEditor::RenderImGui()
+{
+	PreRenderImGui();
+	Render();
+	PostRenderImGui();
+}
+
 void CViewVicEditor::Render()
 {
 	guiMain->LockMutex();
@@ -510,6 +517,11 @@ void CViewVicEditor::Render(float posX, float posY)
 	CGuiView::Render(posX, posY);
 }
 
+void CViewVicEditor::SetPosition(float posX, float posY, float posZ, float sizeX, float sizeY)
+{
+	CGuiView::SetPosition(posX, posY, posZ, sizeX, sizeY);
+}
+
 void CViewVicEditor::MoveDisplayToPreviewScreenPos(float x, float y)
 {
 	LOGD("CViewVicEditor::MoveDisplayToPreviewScreenPos: %f %f", x, y);
@@ -623,19 +635,19 @@ void CViewVicEditor::ShowPaintMessage(u8 result)
 {
 	if (result == PAINT_RESULT_ERROR)
 	{
-		guiMain->ShowMessage("Can't paint");
+		viewC64->ShowMessage("Can't paint");
 	}
 	else if (result == PAINT_RESULT_BLOCKED)
 	{
-		guiMain->ShowMessage("Paint blocked");
+		viewC64->ShowMessage("Paint blocked");
 	}
 	else if (result == PAINT_RESULT_REPLACED_COLOR)
 	{
-		guiMain->ShowMessage("Replaced color");
+		viewC64->ShowMessage("Replaced color");
 	}
 	else if (result == PAINT_RESULT_OUTSIDE)
 	{
-		guiMain->ShowMessage("Outside");
+		viewC64->ShowMessage("Outside");
 	}
 
 }
@@ -1309,8 +1321,6 @@ void CViewVicEditor::FinishTouches()
 //	return CGuiView::FinishTouches();
 }
 
-
-
 bool CViewVicEditor::DoScrollWheel(float deltaX, float deltaY)
 {
 	if (c64SettingsUseMultiTouchInMemoryMap)
@@ -1736,7 +1746,7 @@ bool CViewVicEditor::KeyDown(u32 keyCode, bool isShift, bool isAlt, bool isContr
 
 			guiMain->UnlockMutex();
 
-			guiMain->ShowMessage(buf);
+			viewC64->ShowMessage(buf);
 			SYS_ReleaseCharBuf(buf);
 		}
 		return true;
@@ -1758,7 +1768,7 @@ bool CViewVicEditor::KeyDown(u32 keyCode, bool isShift, bool isAlt, bool isContr
 
 			guiMain->UnlockMutex();
 
-			guiMain->ShowMessage(buf);
+			viewC64->ShowMessage(buf);
 			SYS_ReleaseCharBuf(buf);
 		}
 		return true;
@@ -1780,7 +1790,7 @@ bool CViewVicEditor::KeyDown(u32 keyCode, bool isShift, bool isAlt, bool isContr
 
 			guiMain->UnlockMutex();
 
-			guiMain->ShowMessage(buf);
+			viewC64->ShowMessage(buf);
 			SYS_ReleaseCharBuf(buf);
 		}
 		return true;
@@ -1802,7 +1812,7 @@ bool CViewVicEditor::KeyDown(u32 keyCode, bool isShift, bool isAlt, bool isContr
 
 			guiMain->UnlockMutex();
 
-			guiMain->ShowMessage(buf);
+			viewC64->ShowMessage(buf);
 			SYS_ReleaseCharBuf(buf);
 		}
 		return true;
@@ -2336,7 +2346,7 @@ void CViewVicEditor::SystemDialogFileOpenSelected(CSlrString *path)
 		char *buf = SYS_GetCharBuf();
 		
 		sprintf (buf, "Unknown extension: %s", cExt);
-		guiMain->ShowMessage(buf);
+		viewC64->ShowMessage(buf);
 		
 		delete [] cExt;
 		SYS_ReleaseCharBuf(buf);
@@ -2672,13 +2682,27 @@ void CViewVicEditor::SetVicAddresses(int vbank, int screenAddr, int charsetAddr,
 
 bool CViewVicEditor::ImportPNG(CSlrString *path)
 {
-	guiMain->LockMutex();
-	
 	// import png
 	char *cPath = path->GetStdASCII();
 	
 	CImageData *imageData = new CImageData(cPath);
 	delete [] cPath;
+	bool ret = ImportImage(imageData);
+	delete imageData;
+
+	if (ret)
+	{
+		CSlrString *str = path->GetFileNameComponentFromPath();
+		str->Concatenate(" imported");
+		viewC64->ShowMessage(str);
+		delete str;
+	}
+	return ret;
+}
+
+bool CViewVicEditor::ImportImage(CImageData *imageData)
+{
+	guiMain->LockMutex();
 
 	if (this->selectedLayer == layerReferenceImage || layerReferenceImage->isVisible)
 	{
@@ -2687,12 +2711,6 @@ bool CViewVicEditor::ImportPNG(CSlrString *path)
 		
 		if (this->selectedLayer == layerReferenceImage)
 		{
-			CSlrString *str = path->GetFileNameComponentFromPath();
-			str->Concatenate(" imported");
-			guiMain->ShowMessage(str);
-			delete str;
-
-			delete imageData;
 			guiMain->UnlockMutex();
 			return true;
 		}
@@ -2707,14 +2725,10 @@ bool CViewVicEditor::ImportPNG(CSlrString *path)
 		{
 			if (viewVicDisplayMain->currentCanvas->ConvertFrom(imageData) == PAINT_RESULT_OK)
 			{
-				CSlrString *str = path->GetFileNameComponentFromPath();
-				str->Concatenate(" imported");
-				guiMain->ShowMessage(str);
-				delete str;
 			}
 			else
 			{
-				guiMain->ShowMessage("Import failed");
+				viewC64->ShowMessage("Import failed");
 			}
 		}
 		else if (imageData->width == 384 && imageData->height == 272)
@@ -2725,7 +2739,7 @@ bool CViewVicEditor::ImportPNG(CSlrString *path)
 			if (viewVicDisplayMain->currentCanvas->ConvertFrom(interiorImage) != PAINT_RESULT_OK)
 			{
 				guiMain->UnlockMutex();
-				guiMain->ShowMessage("Import failed");
+				viewC64->ShowMessage("Import failed");
 				return false;
 			}
 			
@@ -2818,8 +2832,6 @@ bool CViewVicEditor::ImportPNG(CSlrString *path)
 							}
 						}
 					}
-					
-					
 				}
 			}
 			
@@ -2828,7 +2840,7 @@ bool CViewVicEditor::ImportPNG(CSlrString *path)
 		else
 		{
 			guiMain->UnlockMutex();
-			guiMain->ShowMessage("Image size should be 320x200 or 384x272");
+			viewC64->ShowMessage("Image size should be 320x200 or 384x272");
 
 			// scale
 			
@@ -2836,13 +2848,6 @@ bool CViewVicEditor::ImportPNG(CSlrString *path)
 			return false;
 		}
 	}
-	
-	CSlrString *str = path->GetFileNameComponentFromPath();
-	str->Concatenate(" imported");
-	guiMain->ShowMessage(str);
-	delete str;
-
-	delete imageData;
 	
 	guiMain->UnlockMutex();
 	
@@ -2889,7 +2894,7 @@ bool CViewVicEditor::ImportKoala(CSlrString *path, bool showMessage)
 	{
 		CSlrString *str = path->GetFileNameComponentFromPath();
 		str->Concatenate(" loaded");
-		guiMain->ShowMessage(str);
+		viewC64->ShowMessage(str);
 		delete str;
 	}
 
@@ -2906,7 +2911,7 @@ bool CViewVicEditor::ImportKoala(CSlrString *path, u16 bitmapAddress, u16 screen
 	if (!file->Exists())
 	{
 		delete file;
-		guiMain->ShowMessage("File not found");
+		viewC64->ShowMessage("File not found");
 		return false;
 	}
 	
@@ -2964,7 +2969,7 @@ bool CViewVicEditor::ImportDoodle(CSlrString *path)
 	if (!file->Exists())
 	{
 		delete file;
-		guiMain->ShowMessage("File not found");
+		viewC64->ShowMessage("File not found");
 		return false;
 	}
 	
@@ -3031,7 +3036,7 @@ bool CViewVicEditor::ImportDoodle(CSlrString *path)
 	
 	CSlrString *str = path->GetFileNameComponentFromPath();
 	str->Concatenate(" loaded");
-	guiMain->ShowMessage(str);
+	viewC64->ShowMessage(str);
 	delete str;
 
 	return true;
@@ -3046,7 +3051,7 @@ bool CViewVicEditor::ImportArtStudio(CSlrString *path)
 	if (!file->Exists())
 	{
 		delete file;
-		guiMain->ShowMessage("File not found");
+		viewC64->ShowMessage("File not found");
 		return false;
 	}
 	
@@ -3112,7 +3117,7 @@ bool CViewVicEditor::ImportArtStudio(CSlrString *path)
 	
 	CSlrString *str = path->GetFileNameComponentFromPath();
 	str->Concatenate(" loaded");
-	guiMain->ShowMessage(str);
+	viewC64->ShowMessage(str);
 	delete str;
 
 	return true;
@@ -3163,7 +3168,7 @@ bool CViewVicEditor::ExportKoala(CSlrString *path)
 
 	CSlrString *str = path->GetFileNameComponentFromPath();
 	str->Concatenate(" saved");
-	guiMain->ShowMessage(str);
+	viewC64->ShowMessage(str);
 	delete str;
 	
 	LOGM("CViewVicEditor::ExportKoala: file saved");
@@ -3214,7 +3219,7 @@ bool CViewVicEditor::ExportArtStudio(CSlrString *path)
 	
 	CSlrString *str = path->GetFileNameComponentFromPath();
 	str->Concatenate(" saved");
-	guiMain->ShowMessage(str);
+	viewC64->ShowMessage(str);
 	delete str;
 	
 	LOGM("CViewVicEditor::ExportArtStudio: file saved");
@@ -3259,7 +3264,7 @@ bool CViewVicEditor::ExportRawText(CSlrString *path)
 	
 	CSlrString *str = path->GetFileNameComponentFromPath();
 	str->Concatenate(" saved");
-	guiMain->ShowMessage(str);
+	viewC64->ShowMessage(str);
 	delete str;
 	
 	LOGM("CViewVicEditor::ExportRawText: file saved");
@@ -3372,7 +3377,7 @@ bool CViewVicEditor::ExportHyper(CSlrString *path)
 	
 	guiMain->UnlockMutex();
 	
-	guiMain->ShowMessage("File saved");
+	viewC64->ShowMessage("File saved");
 	
 	return true;
 }
@@ -3559,7 +3564,7 @@ bool CViewVicEditor::ExportPNG(CSlrString *path)
 	
 	CSlrString *str = path->GetFileNameComponentFromPath();
 	str->Concatenate(" exported");
-	guiMain->ShowMessage(str);
+	viewC64->ShowMessage(str);
 	delete str;
 	
 	LOGM("CViewVicEditor::ExportPNG: file saved");
@@ -3929,7 +3934,7 @@ bool CViewVicEditor::ExportVCE(CSlrString *path)
 		guiMain->UnlockMutex();
 
 		LOGError("zlib error: %d", result);
-		guiMain->ShowMessage("zlib error");
+		viewC64->ShowMessage("zlib error");
 		delete [] outBuffer;
 		delete serialiseBuffer;
 		delete byteBuffer;
@@ -3958,10 +3963,10 @@ bool CViewVicEditor::ExportVCE(CSlrString *path)
 	
 	CSlrString *str = path->GetFileNameComponentFromPath();
 	str->Concatenate(" saved");
-	guiMain->ShowMessage(str);
+	viewC64->ShowMessage(str);
 	delete str;
 	
-	LOGM("CViewVicEditor::ExportKoala: file saved");
+	LOGM("CViewVicEditor::ExportVCE: file saved");
 	
 	return true;
 }
@@ -3977,7 +3982,7 @@ bool CViewVicEditor::ImportVCE(CSlrString *path)
 	if (!file->Exists())
 	{
 		delete file;
-		guiMain->ShowMessage("File not found");
+		viewC64->ShowMessage("File not found");
 		return false;
 	}
 	
@@ -3988,7 +3993,7 @@ bool CViewVicEditor::ImportVCE(CSlrString *path)
 	{
 		guiMain->UnlockMutex();
 
-		guiMain->ShowMessage("VCE format error");
+		viewC64->ShowMessage("VCE format error");
 		delete file;
 		return false;
 	}
@@ -4000,7 +4005,7 @@ bool CViewVicEditor::ImportVCE(CSlrString *path)
 
 		char *buf = SYS_GetCharBuf();
 		sprintf(buf, "File v%d higher than supported %d.", fileVersion, VIC_EDITOR_FILE_VERSION);
-		guiMain->ShowMessage(buf);
+		viewC64->ShowMessage(buf);
 		SYS_ReleaseCharBuf(buf);
 		delete file;
 		return false;
@@ -4046,7 +4051,7 @@ bool CViewVicEditor::ImportVCE(CSlrString *path)
 	
 	CSlrString *str = path->GetFileNameComponentFromPath();
 	str->Concatenate(" loaded");
-	guiMain->ShowMessage(str);
+	viewC64->ShowMessage(str);
 	delete str;
 
 	return true;

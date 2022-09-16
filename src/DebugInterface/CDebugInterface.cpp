@@ -302,6 +302,20 @@ void CDebugInterface::SetDebugMode(uint8 debugMode)
 	this->debugMode = debugMode;
 }
 
+uint8 CDebugInterface::SetDebugModeBlockedWait(uint8 debugMode)
+{
+	u8 currentDebugMode = GetDebugMode();
+	
+	LockMutex();
+	this->SetDebugMode(debugMode);
+	UnlockMutex();
+	
+	// TODO: CDebugInterface::SetDebugModeBlockedWait add debug states, running cpu, paused, rewinding, etc.
+	SYS_Sleep(500);
+	
+	return currentDebugMode;
+}
+
 uint8 CDebugInterface::GetDebugMode()
 {
 	return this->debugMode;

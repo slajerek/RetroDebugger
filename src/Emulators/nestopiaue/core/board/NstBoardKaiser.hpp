@@ -3,6 +3,7 @@
 // Nestopia - NES/Famicom emulator written in C++
 //
 // Copyright (C) 2003-2008 Martin Freij
+// Copyright (C) 2021 Rupert Carmichael
 //
 // This file is part of Nestopia.
 //
@@ -37,18 +38,6 @@ namespace Nes
 		{
 			namespace Kaiser
 			{
-				class Ks7058 : public Board
-				{
-				public:
-
-					explicit Ks7058(const Context& c)
-					: Board(c) {}
-
-				private:
-
-					void SubReset(bool);
-				};
-
 				class Ks202 : public Board
 				{
 				public:
@@ -87,37 +76,58 @@ namespace Nes
 					uint ctrl;
 					Timer::M2<Irq> irq;
 				};
-				
-				class Ks7031 : public Board
+
+				class Ks7010 : public Board
 				{
 				public:
-					explicit Ks7031(const Context& c)
+
+					explicit Ks7010(const Context& c)
 					: Board(c) {}
-					
+
 				private:
-					
+
 					void SubReset(bool);
 					void SubLoad(State::Loader&,dword);
 					void SubSave(State::Saver&) const;
-					
-					byte regs[4];
-					
-					NES_DECL_POKE( 8000 );
+
 					NES_DECL_PEEK( 6000 );
+					NES_DECL_PEEK( FFFC );
+
+					uint reg;
 				};
-				
-				class Ks7032 : public Ks202
+
+				class Ks7013b : public Board
 				{
 				public:
 
-					explicit Ks7032(const Context& c)
-					: Ks202(c) {}
+					explicit Ks7013b(const Context& c)
+					: Board(c) {}
 
 				private:
 
 					void SubReset(bool);
 
+					NES_DECL_POKE( 6000 );
+					NES_DECL_POKE( 8000 );
+				};
+
+				class Ks7016 : public Board
+				{
+				public:
+
+					explicit Ks7016(const Context& c)
+					: Board(c) {}
+
+				private:
+
+					void SubReset(bool);
+					void SubLoad(State::Loader&,dword);
+					void SubSave(State::Saver&) const;
+
 					NES_DECL_PEEK( 6000 );
+					NES_DECL_POKE( 8000 );
+
+					uint reg;
 				};
 
 				class Ks7022 : public Board
@@ -138,6 +148,97 @@ namespace Nes
 					NES_DECL_PEEK( FFFC );
 
 					uint reg;
+				};
+
+				class Ks7031 : public Board
+				{
+				public:
+					explicit Ks7031(const Context& c)
+					: Board(c) {}
+
+				private:
+
+					void SubReset(bool);
+					void SubLoad(State::Loader&,dword);
+					void SubSave(State::Saver&) const;
+
+					byte regs[4];
+
+					NES_DECL_POKE( 8000 );
+					NES_DECL_PEEK( 6000 );
+				};
+
+				class Ks7032 : public Ks202
+				{
+				public:
+
+					explicit Ks7032(const Context& c)
+					: Ks202(c) {}
+
+				private:
+
+					void SubReset(bool);
+
+					NES_DECL_PEEK( 6000 );
+				};
+
+				class Ks7037 : public Board
+				{
+				public:
+					explicit Ks7037(const Context& c)
+					: Board(c) {}
+
+				private:
+
+					void SubReset(bool);
+					void SubLoad(State::Loader&,dword);
+					void SubSave(State::Saver&) const;
+
+					byte regNum;
+					byte regs[8];
+
+					NES_DECL_PEEK( 6000 );
+					NES_DECL_POKE( 6000 );
+					NES_DECL_PEEK( 7000 );
+					NES_DECL_PEEK( 8000 );
+					NES_DECL_POKE( 8000 );
+					NES_DECL_POKE( 8001 );
+					NES_DECL_PEEK( A000 );
+					NES_DECL_PEEK( B000 );
+					NES_DECL_POKE( B000 );
+					NES_DECL_PEEK( C000 );
+					NES_DECL_PEEK( E000 );
+				};
+
+				class Ks7057 : public Board
+				{
+				public:
+					explicit Ks7057(const Context& c)
+					: Board(c) {}
+
+				private:
+
+					void SubReset(bool);
+					void SubLoad(State::Loader&,dword);
+					void SubSave(State::Saver&) const;
+
+					byte regs[8];
+
+					NES_DECL_PEEK( 6000 );
+					NES_DECL_POKE( 8000 );
+					NES_DECL_POKE( B000 );
+				};
+
+				class Ks7058 : public Board
+				{
+				public:
+
+					explicit Ks7058(const Context& c)
+					: Board(c) {}
+
+				private:
+
+					void SubReset(bool);
 				};
 			}
 		}

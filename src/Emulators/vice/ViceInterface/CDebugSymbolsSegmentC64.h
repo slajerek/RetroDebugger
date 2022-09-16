@@ -4,7 +4,6 @@
 #include "CDebugSymbolsSegment.h"
 
 #define BREAKPOINT_TYPE_RASTER_LINE			2
-#define NUM_C64_BREAKPOINT_TYPES			3
 
 class CDebugSymbolsSegmentC64 : public CDebugSymbolsSegment
 {

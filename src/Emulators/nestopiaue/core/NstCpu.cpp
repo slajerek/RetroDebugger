@@ -217,8 +217,6 @@ namespace Nes
 			ticks   = 0;
 			logged  = 0;
 
-			cpuOverclocking = false;
-
 			pc = RESET_VECTOR;
 
 			cycles.count  = 0;
@@ -260,7 +258,12 @@ namespace Nes
 			if (hard)
 			{
 				Poke(0x4017, 0x00);
-				cycles.count = cycles.clock[RESET_CYCLES-1];
+				cycles.count = cycles.clock[RESET_CYCLES] + cycles.clock[0];
+			}
+			else
+			{
+				Poke(0x4017, apu.GetCtrl());
+				cycles.count = cycles.clock[RESET_CYCLES] + cycles.clock[0];
 			}
 		}
 
@@ -813,6 +816,10 @@ namespace Nes
 
 		void Cpu::Ram::Reset(const CpuModel model)
 		{
+//			TODO: bug, powerstate is not initalised variable
+//			Conditional jump or move depends on uninitialised value(s)
+//			==249397==    at 0x4E5AAD: Nes::Core::Cpu::Ram::Reset(Nes::Core::CpuModel) (NstCpu.cpp:816)
+
 			switch (powerstate) {
 				case 1: std::memset( mem, 0xFF, sizeof(mem) ); break;
 				case 2: std::memset( mem, byte(std::rand()), sizeof(mem) ); break;
@@ -985,7 +992,6 @@ namespace Nes
 
 			nesd_mark_cell_read(indexed);
 			data = ram.mem[indexed];
-			
 			return indexed;
 		}
 
@@ -1126,7 +1132,7 @@ namespace Nes
 
 			nesd_mark_cell_read((data + 1) & 0xFF);
 			data = (uint(ram.mem[(data + 1) & 0xFF]) << 8) + indexed;
-			
+
 			if (indexed & 0x100)
 			{
 				map.Peek8( data - 0x100 );
@@ -1149,7 +1155,6 @@ namespace Nes
 
 			nesd_mark_cell_read((address + 1) & 0xFF);
 			address = (uint(ram.mem[(address + 1) & 0xFF]) << 8) + indexed;
-			
 			map.Peek8( address - (indexed & 0x100) );
 
 			data = map.Peek8( address );
@@ -1345,6 +1350,7 @@ namespace Nes
 
 		NST_SINGLE_CALL void Cpu::Rts()
 		{
+			opcode = map.Peek8( pc );
 			pc = Pull16() + 1;
 			cycles.count += cycles.clock[RTS_CYCLES-1];
 		}
@@ -1355,6 +1361,7 @@ namespace Nes
 
 			{
 				const uint packed = Pull8();
+				opcode = map.Peek8( pc );
 				pc = Pull16();
 				flags.Unpack( packed );
 			}
@@ -1796,18 +1803,42 @@ namespace Nes
 			return address;
 		}
 
-		NST_SINGLE_CALL uint Cpu::Shx(uint address)
+		NST_SINGLE_CALL void Cpu::Shx(uint address)
 		{
-			address = x & ((address >> 8) + 1);
+			uint newaddress = (address + y);
+			uint data = x & ((address >> 8) + 1);
+			Peek((address & 0xFF00) | (newaddress & 0x00FF)); // Dummy read
+
+			if ((address ^ newaddress) & 0x100)
+			{
+				address = (newaddress & (x << 8)) | (newaddress & 0x00FF);
+			}
+			else
+			{
+				address = newaddress;
+			}
+
 			NotifyOp("SHX",1UL << 15);
-			return address;
+			StoreMem(address, data);
 		}
 
-		NST_SINGLE_CALL uint Cpu::Shy(uint address)
+		NST_SINGLE_CALL void Cpu::Shy(uint address)
 		{
-			address = y & ((address >> 8) + 1);
+			uint newaddress = (address + x);
+			uint data = y & ((address >> 8) + 1);
+			Peek((address & 0xFF00) | (newaddress & 0x00FF)); // Dummy read
+
+			if ((address ^ newaddress) & 0x100)
+			{
+				address = (newaddress & (y << 8)) | (newaddress & 0x00FF);
+			}
+			else
+			{
+				address = newaddress;
+			}
+
 			NotifyOp("SHY",1UL << 16);
-			return address;
+			StoreMem(address, data);
 		}
 
 		NST_NO_INLINE uint Cpu::Slo(uint data)
@@ -1848,6 +1879,7 @@ namespace Nes
 		{
 			NST_DEBUG_MSG("6502 BRK");
 
+			opcode = map.Peek8( pc );
 			Push16( pc + 1 );
 			Push8( flags.Pack() | Flags::B );
 			flags.i = Flags::I;
@@ -1976,18 +2008,6 @@ namespace Nes
 
 			if (interrupt.irqClock != CYCLE_MAX)
 				interrupt.irqClock = (interrupt.irqClock > cycles.frame ? interrupt.irqClock - cycles.frame : 0);
-
-			if (cpuOverclocking)
-			{
-				uint startCycle = cycles.count;
-				uint lastCycle = cycles.count + extraCycles;
-				do
-				{
-					ExecuteOp();
-				}
-				while (cycles.count < extraCycles);
-				cycles.count = startCycle;
-			}
 		}
 
 		void Cpu::Clock()
@@ -2229,6 +2249,15 @@ namespace Nes
 		{                                             \
 			const uint dst = addr_##_W();             \
 			Store##addr_( dst, instr_(dst) );         \
+		}
+
+		// Unofficial Opcodes SHX/SHY are edge cases
+		#define NES_I_W_U(instr_,addr_,hex_)          \
+                                                      \
+		void Cpu::op##hex_()                          \
+		{                                             \
+			const uint dst = addr_##_W();             \
+			instr_(dst);                              \
 		}
 
 		#define NES_IP_C_(instr_,ops_,ticks_,hex_)    \
@@ -2488,8 +2517,8 @@ namespace Nes
 		NES_I_W_A( Sha, AbsY,     0x9F )
 		NES_I_W_A( Sha, IndY,     0x93 )
 		NES_I_W_A( Shs, AbsY,     0x9B )
-		NES_I_W_A( Shx, AbsY,     0x9E )
-		NES_I_W_A( Shy, AbsX,     0x9C )
+		NES_I_W_U( Shx, Abs,      0x9E ) // Edge case: AbsY done internally
+		NES_I_W_U( Shy, Abs,      0x9C ) // Edge case: AbsX done internally
 		NES_IRW__( Slo, Zpg,      0x07 )
 		NES_IRW__( Slo, ZpgX,     0x17 )
 		NES_IRW__( Slo, Abs,      0x0F )
@@ -2561,8 +2590,6 @@ namespace Nes
 			byteBuffer->PutU16(jammed);
 			byteBuffer->PutU16(model);
 			byteBuffer->PutU64(ticks);
-			byteBuffer->PutBool(cpuOverclocking);
-			byteBuffer->PutU32(extraCycles);
 			byteBuffer->PutU32(logged);
 		}
 		
@@ -2593,8 +2620,6 @@ namespace Nes
 			jammed = byteBuffer->GetU16();
 			model = byteBuffer->GetU16();
 			ticks = byteBuffer->GetU64();
-			cpuOverclocking = byteBuffer->GetBool();
-			extraCycles = byteBuffer->GetU32();
 			logged = byteBuffer->GetU32();
 			
 			LOGD("LoadNesDebuggerState: load frame=%d instr=%d cycle=%d round=%d", nesdFrame, nesdMainCpuCycle, cycles.count, cycles.round);

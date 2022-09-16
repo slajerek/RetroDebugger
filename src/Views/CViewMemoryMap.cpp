@@ -203,15 +203,13 @@ CViewMemoryMap::CViewMemoryMap(const char *name, float posX, float posY, float p
 	
 	this->font = viewC64->fontCBMShifted;
 	this->fontScale = 0.11f;
-	
-	C64DebuggerComputeMemoryMapColorTables(c64SettingsMemoryValuesStyle);
 
 	// alloc with safe margin to avoid comparison in cells marking (quicker)
 	int numCells = ramSize + 0x0200;
-	memoryCells = new CViewMemoryMapCell *[numCells];
+	memoryCells = new CDebugMemoryMapCell *[numCells];
 	for (int i = 0; i < numCells; i++)
 	{
-		memoryCells[i] = new CViewMemoryMapCell(i);
+		memoryCells[i] = new CDebugMemoryMapCell(i);
 	}
 
 	// local copy of memory
@@ -225,8 +223,10 @@ CViewMemoryMap::CViewMemoryMap(const char *name, float posX, float posY, float p
 	imageMemoryMap->LoadImageForRebinding(imageDataMemoryMap, RESOURCE_PRIORITY_STATIC);
 	VID_PostImageBinding(imageMemoryMap, NULL, BINDING_MODE_DONT_FREE_IMAGEDATA);
 
-	//
+	// color mapping
+	C64DebuggerComputeMemoryMapColorTables(c64SettingsMemoryValuesStyle);
 
+	// 
 	frameCounter = 0;
 	nextScreenUpdateFrame = 0;
 	
@@ -273,7 +273,7 @@ void CViewMemoryMap::SetDataAdapter(CDataAdapter *newDataAdapter)
 	this->dataAdapter = newDataAdapter;
 }
 
-void CViewMemoryMap::UpdateMapColorsForCell(CViewMemoryMapCell *cell)
+void CViewMemoryMap::UpdateMapColorsForCell(CDebugMemoryMapCell *cell)
 {
 	int pc;
 
@@ -368,7 +368,7 @@ void CViewMemoryMap::UpdateWholeMap()
 			
 			for (int x = 0; x < imageWidth; x++)
 			{
-				CViewMemoryMapCell *cell = memoryCells[index];
+				CDebugMemoryMapCell *cell = memoryCells[index];
 				addr = cell->addr;
 			
 				u8 v = memoryBuffer[addr];
@@ -454,7 +454,7 @@ void CViewMemoryMap::UpdateWholeMap()
 				
 				v = memoryBuffer[addr];
 				
-				CViewMemoryMapCell *cell = memoryCells[addr];
+				CDebugMemoryMapCell *cell = memoryCells[addr];
 				
 				ColorFromValue(v, &(cell->vr), &(cell->vg), &(cell->vb), &(cell->va));
 				
@@ -489,13 +489,13 @@ void CViewMemoryMap::UpdateWholeMap()
 
 void CViewMemoryMap::CellRead(int addr)
 {
-	CViewMemoryMapCell *cell = memoryCells[addr];
+	CDebugMemoryMapCell *cell = memoryCells[addr];
 	cell->MarkCellRead();
 }
 
 void CViewMemoryMap::CellRead(int addr, int pc, int readRasterLine, int readRasterCycle)
 {
-	CViewMemoryMapCell *cell = memoryCells[addr];
+	CDebugMemoryMapCell *cell = memoryCells[addr];
 	cell->MarkCellRead();
 
 	cell->readPC = pc;
@@ -507,14 +507,14 @@ void CViewMemoryMap::CellRead(int addr, int pc, int readRasterLine, int readRast
 
 void CViewMemoryMap::CellWrite(int addr, uint8 value)
 {
-	CViewMemoryMapCell *cell = memoryCells[addr];
+	CDebugMemoryMapCell *cell = memoryCells[addr];
 
 	cell->MarkCellWrite(value);
 }
 
 void CViewMemoryMap::CellWrite(int addr, uint8 value, int pc, int writeRasterLine, int writeRasterCycle)
 {
-	CViewMemoryMapCell *cell = memoryCells[addr];
+	CDebugMemoryMapCell *cell = memoryCells[addr];
 	cell->MarkCellWrite(value);
 	
 	cell->writePC = pc;
@@ -527,7 +527,7 @@ void CViewMemoryMap::CellWrite(int addr, uint8 value, int pc, int writeRasterLin
 void CViewMemoryMap::CellExecute(int addr, uint8 opcode)
 {
 	//LOGD("CViewMemoryMap::CellExecute: addr=%4.4x", addr);
-	CViewMemoryMapCell *cell = memoryCells[addr];
+	CDebugMemoryMapCell *cell = memoryCells[addr];
 
 	cell->MarkCellExecuteCode(opcode);
 	cell->executeCycle = debugInterface->GetCurrentCpuInstructionCycleCounter();
@@ -644,7 +644,7 @@ void CViewMemoryMap::CellsAnimationLogic(double targetFPS)
 	{
 		for (int x = 0; x < imageWidth; x++)
 		{
-			CViewMemoryMapCell *cell = memoryCells[addr];
+			CDebugMemoryMapCell *cell = memoryCells[addr];
 			
 			if (cell->isExecuteCode || cell->isExecuteArgument)
 			{
@@ -721,7 +721,7 @@ void CViewMemoryMap::DriveROMCellsAnimationLogic()
 	
 	for (int addr = 0x8000; addr < 0x10000; addr++)
 	{
-		CViewMemoryMapCell *cell = memoryCells[addr];
+		CDebugMemoryMapCell *cell = memoryCells[addr];
 		
 		if (cell->isExecuteCode || cell->isExecuteArgument)
 		{
@@ -1263,7 +1263,7 @@ void CViewMemoryMap::Render()
 				if (addr > ramSize)
 					continue;
 
-				CViewMemoryMapCell *cell = memoryCells[addr];
+				CDebugMemoryMapCell *cell = memoryCells[addr];
 				
 				float z = 1.0f - (cell->sr + cell->sg + cell->sb)/2.5f;
 				
@@ -1485,7 +1485,7 @@ void CViewMemoryMap::RenderImGui()
 				if (addr > ramSize)
 					continue;
 				
-				CViewMemoryMapCell *cell = memoryCells[addr];
+				CDebugMemoryMapCell *cell = memoryCells[addr];
 				
 				float z = 1.0f - (cell->sr + cell->sg + cell->sb)/2.5f;
 				
@@ -1670,7 +1670,7 @@ bool CViewMemoryMap::DoTap(float x, float y)
 				
 				if (guiMain->isControlPressed)
 				{
-					CViewMemoryMapCell *cell = this->memoryCells[addr];
+					CDebugMemoryMapCell *cell = this->memoryCells[addr];
 					
 					if (guiMain->isShiftPressed)
 					{
@@ -1737,7 +1737,7 @@ bool CViewMemoryMap::KeyDown(u32 keyCode, bool isShift, bool isAlt, bool isContr
 		return true;
 	}
 	
-	CSlrKeyboardShortcut *keyboardShortcut = guiMain->keyboardShortcuts->FindShortcut(KBZONE_DISASSEMBLE, keyCode, isShift, isAlt, isControl, isSuper);
+	CSlrKeyboardShortcut *keyboardShortcut = guiMain->keyboardShortcuts->FindShortcut(KBZONE_DISASSEMBLY, keyCode, isShift, isAlt, isControl, isSuper);
 	if (keyboardShortcut == viewC64->mainMenuBar->kbsToggleTrackPC)
 	{
 		if (viewDataDump != NULL)
@@ -1784,7 +1784,7 @@ bool CViewMemoryMap::IsExecuteCodeAddress(int address)
 {
 	if (address >= 0 && address <= 0xFFFF)
 	{
-		CViewMemoryMapCell *cell = memoryCells[address];
+		CDebugMemoryMapCell *cell = memoryCells[address];
 		return cell->isExecuteCode;
 	}
 	

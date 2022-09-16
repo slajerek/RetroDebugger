@@ -225,6 +225,15 @@
     <Filter Include="Source Files\src\Plugins\DNDK">
       <UniqueIdentifier>{e4d4b877-3cfa-4be8-9c25-6a126d9c5052}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\src\Plugins\ShowPic">
+      <UniqueIdentifier>{7c3e62b9-daae-4208-a5ee-25db0dd086c6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\src\DebugInterface\C64">
+      <UniqueIdentifier>{0690dda0-2e4f-4e5d-a2d5-5373b635933e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\src\Emulators\atari800\codecs">
+      <UniqueIdentifier>{a7f8022c-4a17-44a3-b3d5-947b198c2261}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\src\Emulators\atari800\a-cartridge.c">
@@ -2006,9 +2015,6 @@
     <ClCompile Include="..\..\..\src\Screens\CViewColodore.cpp">
       <Filter>Source Files\src\Screens</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\src\Screens\CViewFileD64.cpp">
-      <Filter>Source Files\src\Screens</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\..\src\Screens\CViewKeyboardShortcuts.cpp">
       <Filter>Source Files\src\Screens</Filter>
     </ClCompile>
@@ -2100,9 +2106,6 @@
       <Filter>Source Files\src\Tools</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\Tools\C64Tools.cpp">
-      <Filter>Source Files\src\Tools</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\Tools\CDiskImageD64.cpp">
       <Filter>Source Files\src\Tools</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\Tools\CGuiLockableList.cpp">
@@ -2448,9 +2451,6 @@
       <Filter>Source Files\src\Views\C64</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\Views\C64\CViewDrive1541StateVIA.cpp">
-      <Filter>Source Files\src\Views\C64</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\Views\C64\CViewDriveStateCPU.cpp">
       <Filter>Source Files\src\Views\C64</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\Views\Atari800\CViewAtariScreen.cpp">
@@ -3590,9 +3590,6 @@
     <ClCompile Include="..\..\..\src\DebugInterface\CDebugInterface.cpp">
       <Filter>Source Files\src\DebugInterface</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\src\DebugInterface\CDebugInterfaceC64.cpp">
-      <Filter>Source Files\src\DebugInterface</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\..\src\DebugInterface\CDebugInterfaceTask.cpp">
       <Filter>Source Files\src\DebugInterface</Filter>
     </ClCompile>
@@ -3700,6 +3697,87 @@
     </ClCompile>
     <ClCompile Include="..\..\..\src\DebugInterface\Symbols\CDebugSymbolsDataWatch.cpp">
       <Filter>Source Files\src\DebugInterface\Symbols</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Plugins\ShowPic\C64DebuggerPluginShowPic.cpp">
+      <Filter>Source Files\src\Plugins\ShowPic</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\DebugInterface\C64\CDebugInterfaceC64.cpp">
+      <Filter>Source Files\src\DebugInterface\C64</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\DebugInterface\C64\CDiskImageD64.cpp">
+      <Filter>Source Files\src\DebugInterface\C64</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Views\C64\CViewDrive1541FileD64.cpp">
+      <Filter>Source Files\src\Views\C64</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Views\C64\CViewDrive1541StateCPU.cpp">
+      <Filter>Source Files\src\Views\C64</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Views\C64\CViewC64Disassembly.cpp">
+      <Filter>Source Files\src\Views\C64</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Views\C64\CViewC64ScreenViewfinder.cpp">
+      <Filter>Source Files\src\Views\C64</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Emulators\atari800\codecs\a-codecs-audio.c">
+      <Filter>Source Files\src\Emulators\atari800\codecs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Emulators\atari800\codecs\a-codecs-container.c">
+      <Filter>Source Files\src\Emulators\atari800\codecs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Emulators\atari800\codecs\a-codecs-image.c">
+      <Filter>Source Files\src\Emulators\atari800\codecs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Emulators\atari800\codecs\a-codecs-video.c">
+      <Filter>Source Files\src\Emulators\atari800\codecs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Emulators\atari800\codecs\audio_adpcm.c">
+      <Filter>Source Files\src\Emulators\atari800\codecs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Emulators\atari800\codecs\audio_mp3.c">
+      <Filter>Source Files\src\Emulators\atari800\codecs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Emulators\atari800\codecs\audio_mulaw.c">
+      <Filter>Source Files\src\Emulators\atari800\codecs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Emulators\atari800\codecs\audio_pcm.c">
+      <Filter>Source Files\src\Emulators\atari800\codecs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Emulators\atari800\codecs\container_avi.c">
+      <Filter>Source Files\src\Emulators\atari800\codecs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Emulators\atari800\codecs\container_mp3.c">
+      <Filter>Source Files\src\Emulators\atari800\codecs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Emulators\atari800\codecs\container_wav.c">
+      <Filter>Source Files\src\Emulators\atari800\codecs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Emulators\atari800\codecs\image_pcx.c">
+      <Filter>Source Files\src\Emulators\atari800\codecs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Emulators\atari800\codecs\image_png.c">
+      <Filter>Source Files\src\Emulators\atari800\codecs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Emulators\atari800\codecs\video_mpng.c">
+      <Filter>Source Files\src\Emulators\atari800\codecs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Emulators\atari800\codecs\video_mrle.c">
+      <Filter>Source Files\src\Emulators\atari800\codecs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Emulators\atari800\codecs\video_zmbv.c">
+      <Filter>Source Files\src\Emulators\atari800\codecs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Emulators\nestopiaue\core\board\NstBoardWaixingFs304.cpp">
+      <Filter>Source Files\src\Emulators\nestopiaue\core\board</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Emulators\nestopiaue\core\board\NstBoardNamcot340.cpp">
+      <Filter>Source Files\src\Emulators\nestopiaue\core\board</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Emulators\atari800\cartridge_info.c">
+      <Filter>Source Files\src\Emulators\atari800</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Emulators\atari800\file_export.c">
+      <Filter>Source Files\src\Emulators\atari800</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -5722,9 +5800,6 @@
     <ClInclude Include="..\..\..\src\Screens\CViewColodore.h">
       <Filter>Source Files\src\Screens</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\src\Screens\CViewFileD64.h">
-      <Filter>Source Files\src\Screens</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\..\src\Screens\CViewKeyboardShortcuts.h">
       <Filter>Source Files\src\Screens</Filter>
     </ClInclude>
@@ -5819,9 +5894,6 @@
       <Filter>Source Files\src\Tools</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\src\Tools\C64Tools.h">
-      <Filter>Source Files\src\Tools</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\src\Tools\CDiskImageD64.h">
       <Filter>Source Files\src\Tools</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\src\Tools\CGuiLockableList.h">
@@ -6254,9 +6326,6 @@
       <Filter>Source Files\src\Views\C64</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\src\Views\C64\CViewDrive1541StateVIA.h">
-      <Filter>Source Files\src\Views\C64</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\src\Views\C64\CViewDriveStateCPU.h">
       <Filter>Source Files\src\Views\C64</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\src\Views\Atari800\CViewAtariScreen.h">
@@ -7510,9 +7579,6 @@
     <ClInclude Include="..\..\..\src\DebugInterface\CDebugInterface.h">
       <Filter>Source Files\src\DebugInterface</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\src\DebugInterface\CDebugInterfaceC64.h">
-      <Filter>Source Files\src\DebugInterface</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\..\src\DebugInterface\CDebugInterfaceTask.h">
       <Filter>Source Files\src\DebugInterface</Filter>
     </ClInclude>
@@ -7644,6 +7710,87 @@
     </ClInclude>
     <ClInclude Include="..\..\..\src\DebugInterface\Symbols\CDebugSymbolsDataWatch.h">
       <Filter>Source Files\src\DebugInterface\Symbols</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Plugins\ShowPic\C64DebuggerPluginShowPic.h">
+      <Filter>Source Files\src\Plugins\ShowPic</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\DebugInterface\C64\CDebugInterfaceC64.h">
+      <Filter>Source Files\src\DebugInterface\C64</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\DebugInterface\C64\CDiskImageD64.h">
+      <Filter>Source Files\src\DebugInterface\C64</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Views\C64\CViewDrive1541FileD64.h">
+      <Filter>Source Files\src\Views\C64</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Views\C64\CViewDrive1541StateCPU.h">
+      <Filter>Source Files\src\Views\C64</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Views\C64\CViewC64Disassembly.h">
+      <Filter>Source Files\src\Views\C64</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Views\C64\CViewC64ScreenViewfinder.h">
+      <Filter>Source Files\src\Views\C64</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Emulators\atari800\codecs\a-codecs-audio.h">
+      <Filter>Source Files\src\Emulators\atari800\codecs</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Emulators\atari800\codecs\a-codecs-container.h">
+      <Filter>Source Files\src\Emulators\atari800\codecs</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Emulators\atari800\codecs\a-codecs-image.h">
+      <Filter>Source Files\src\Emulators\atari800\codecs</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Emulators\atari800\codecs\a-codecs-video.h">
+      <Filter>Source Files\src\Emulators\atari800\codecs</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Emulators\atari800\codecs\audio_adpcm.h">
+      <Filter>Source Files\src\Emulators\atari800\codecs</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Emulators\atari800\codecs\audio_mp3.h">
+      <Filter>Source Files\src\Emulators\atari800\codecs</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Emulators\atari800\codecs\audio_mulaw.h">
+      <Filter>Source Files\src\Emulators\atari800\codecs</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Emulators\atari800\codecs\audio_pcm.h">
+      <Filter>Source Files\src\Emulators\atari800\codecs</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Emulators\atari800\codecs\container_avi.h">
+      <Filter>Source Files\src\Emulators\atari800\codecs</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Emulators\atari800\codecs\container_mp3.h">
+      <Filter>Source Files\src\Emulators\atari800\codecs</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Emulators\atari800\codecs\container_wav.h">
+      <Filter>Source Files\src\Emulators\atari800\codecs</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Emulators\atari800\codecs\image_pcx.h">
+      <Filter>Source Files\src\Emulators\atari800\codecs</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Emulators\atari800\codecs\image_png.h">
+      <Filter>Source Files\src\Emulators\atari800\codecs</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Emulators\atari800\codecs\video_mpng.h">
+      <Filter>Source Files\src\Emulators\atari800\codecs</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Emulators\atari800\codecs\video_mrle.h">
+      <Filter>Source Files\src\Emulators\atari800\codecs</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Emulators\atari800\codecs\video_zmbv.h">
+      <Filter>Source Files\src\Emulators\atari800\codecs</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Emulators\nestopiaue\core\board\NstBoardWaixingFs304.hpp">
+      <Filter>Source Files\src\Emulators\nestopiaue\core\board</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Emulators\nestopiaue\core\board\NstBoardNamcot340.hpp">
+      <Filter>Source Files\src\Emulators\nestopiaue\core\board</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Emulators\atari800\cartridge_info.h">
+      <Filter>Source Files\src\Emulators\atari800</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Emulators\atari800\file_export.h">
+      <Filter>Source Files\src\Emulators\atari800</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

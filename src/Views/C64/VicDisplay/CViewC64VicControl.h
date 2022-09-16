@@ -109,7 +109,7 @@ public:
 	float txtCursorCharPosX, txtCursorCharPosY;
 	
 	CGuiLabel *lblAutolockText;
-	CGuiLabel *lblAutolockScrollMode;
+	CGuiButton *btnAutolockScrollMode;
 	
 	CSlrString *txtAutolockRasterPC;
 	CSlrString *txtAutolockBitmapAddress;
@@ -136,6 +136,7 @@ public:
 	void SetApplyScroll(bool isOn);
 	
 	//
+	virtual bool ButtonClicked(CGuiButton *button);
 	virtual bool ButtonSwitchChanged(CGuiButtonSwitch *button);
 	virtual void RenderFocusBorder();
 	

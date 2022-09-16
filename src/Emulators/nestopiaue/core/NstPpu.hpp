@@ -141,7 +141,6 @@ namespace Nes
 
 			enum
 			{
-				HCLOCK_POSTRENDER = 340,
 				HCLOCK_DUMMY    = 341,
 				HCLOCK_VBLANK_0 = 681,
 				HCLOCK_VBLANK_1 = 682,
@@ -178,6 +177,7 @@ namespace Nes
 			NST_FORCE_INLINE uint Emphasis() const;
 
 			NST_FORCE_INLINE void UpdateAddressLine(uint);
+			NST_FORCE_INLINE void UpdateScrollAddressLine();
 			NST_FORCE_INLINE void UpdateVramAddress();
 
 			NST_FORCE_INLINE void OpenName();
@@ -296,6 +296,7 @@ namespace Nes
 				enum
 				{
 					SIZE          = 0x20,
+					COLORS        = 0x40,
 					SPRITE_OFFSET = 0x10,
 					COLOR         = 0x3F,
 					MONO          = 0x30
@@ -346,9 +347,6 @@ namespace Nes
 
 				typedef void (Ppu::*Phase)();
 
-				byte ram[0x100];
-				byte buffer[MAX_LINE_SPRITES * 4];
-
 				const byte* limit;
 				Output* visible;
 				Phase phase;
@@ -361,6 +359,9 @@ namespace Nes
 				byte show[2];
 				bool spriteZeroInLine;
 				bool spriteLimit;
+
+				byte ram[0x100];
+				byte buffer[MAX_LINE_SPRITES*4];
 
 				Output output[MAX_LINE_SPRITES];
 			};
@@ -416,9 +417,8 @@ namespace Nes
 			Nmt nmt;
 			int scanline;
 			int scanline_sleep;
-			int ssleep;
-			bool overclocked;
-
+		public:
+			Output output;
 			PpuModel model;
 			Hook hActiveHook;
 			Hook hBlankHook;
@@ -436,7 +436,6 @@ namespace Nes
 			unsigned char registers[0x09];	// $00-$07 + $4014
 
 		public:
-			Output output;
 
 			void Update()
 			{
@@ -547,20 +546,9 @@ namespace Nes
 			{
 				return oam.spriteLimit;
 			}
-
-			bool GetOverclockState() const
-			{
-				return overclocked;
-			}
-
-			void SetOverclockState(bool overclock2x)
-			{
-				overclocked = overclock2x;
-			}
 			
 			void SaveNesDebuggerState(CByteBuffer *byteBuffer);
 			void LoadNesDebuggerState(CByteBuffer *byteBuffer);
-
 		};
 	}
 }

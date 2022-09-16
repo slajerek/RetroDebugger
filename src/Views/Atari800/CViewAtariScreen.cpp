@@ -185,26 +185,7 @@ void CViewAtariScreen::Render()
 	
 //	BlitFilledRectangle(posX, posY, -1, 50, 50, 1.0f, 0.0f, 0, 1);
 
-	if (c64SettingsRenderScreenNearest)
-	{
-		// nearest neighbour
-		{
-			glBindTexture(GL_TEXTURE_2D, imageScreen->textureId);
-			
-			glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
-			glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST);
-		}
-	}
-	else
-	{
-		// billinear interpolation
-		{
-			glBindTexture(GL_TEXTURE_2D, imageScreen->textureId);
-			
-			glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
-			glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
-		}
-	}
+	imageScreen->SetLinearScaling(!c64SettingsRenderScreenNearest);
 	
 	Blit(imageScreen,
 		 posX,
@@ -297,26 +278,7 @@ void CViewAtariScreen::RenderZoomedScreen(int rasterX, int rasterY)
 	
 	//LOGD("x=%6.2f %6.2f  y=%6.2f y=%6.2f", zoomedScreenImageStartX, zoomedScreenImageStartY, zoomedScreenImageSizeX, zoomedScreenImageSizeY);
 
-	if (c64SettingsRenderScreenNearest)
-	{
-		// nearest neighbour
-		{
-			glBindTexture(GL_TEXTURE_2D, imageScreen->textureId);
-			
-			glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
-			glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST);
-		}
-	}
-	else
-	{
-		// billinear interpolation
-		{
-			glBindTexture(GL_TEXTURE_2D, imageScreen->textureId);
-			
-			glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
-			glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
-		}
-	}
+	imageScreen->SetLinearScaling(!c64SettingsRenderScreenNearest);
 	
 	Blit(imageScreen,
 		 zoomedScreenImageStartX,
@@ -786,6 +748,63 @@ bool CViewAtariScreen::KeyPressed(u32 keyCode, bool isShift, bool isAlt, bool is
 	return CGuiView::KeyPressed(keyCode, isShift, isAlt, isControl, isSuper);
 }
 
+//
+bool CViewAtariScreen::HasContextMenuItems()
+{
+	return true;
+}
+
+void CViewAtariScreen::RenderContextMenuItems()
+{
+	CGuiView::RenderContextMenuItems();
+
+	if (guiMain->IsViewFullScreen())
+	{
+		if (ImGui::MenuItem("Leave fullscreen"))
+		{
+			viewC64->ToggleFullScreen(this);
+		}
+	}
+	else
+	{
+		float sx = debugInterface->GetScreenSizeX();
+		float sy = debugInterface->GetScreenSizeY();
+		
+		if (ImGui::MenuItem("Go fullscreen##atariScreen"))
+		{
+			viewC64->ToggleFullScreen(this);
+		}
+		
+		if (ImGui::BeginMenu("Scale##atariScreen"))
+		{
+			std::vector<float> sizes;
+			std::vector<const char *> names;
+			sizes.push_back(0.25f); names.push_back("25%##atariScreen");
+			sizes.push_back(0.50f); names.push_back("50%##atariScreen");
+			sizes.push_back(1.00f); names.push_back("100%##atariScreen");
+			sizes.push_back(2.00f); names.push_back("200%##atariScreen");
+			sizes.push_back(3.00f); names.push_back("300%##atariScreen");
+			sizes.push_back(4.00f); names.push_back("400%##atariScreen");
+
+			std::vector<float>::iterator itSize = sizes.begin();
+			for (std::vector<const char *>::iterator itName = names.begin(); itName != names.end(); itName++)
+			{
+				const char *name = *itName;
+				if (ImGui::MenuItem(name))
+				{
+					float f = *itSize;
+					this->SetNewImGuiWindowSize(sx * f, sy * f);
+				}
+				
+				itSize++;
+			}
+			
+			ImGui::EndMenu();
+		}
+	}
+}
+
+//
 void CViewAtariScreen::ActivateView()
 {
 	LOGG("CViewAtariScreen::ActivateView()");

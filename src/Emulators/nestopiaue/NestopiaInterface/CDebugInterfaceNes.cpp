@@ -166,7 +166,7 @@ void CDebugInterfaceNes::RunEmulationThread()
 		if (NestopiaUE_Initialize())
 		{
 			isInitialised = true;
-			guiMain->ShowMessage("disksys.rom missing");
+			viewC64->ShowMessage("disksys.rom missing");
 		}
 		else
 		{

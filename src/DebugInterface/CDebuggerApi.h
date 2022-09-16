@@ -22,6 +22,8 @@ public:
 	static CDebuggerApi *GetDebuggerApi(u8 emulatorType);
 	
 	virtual void ResetMachine();
+	virtual void PauseEmulation();
+	virtual void UnPauseEmulation();
 	
 	virtual void CreateNewPicture(u8 mode, u8 backgroundColor);
 	virtual void StartThread(CSlrThread *run);
@@ -87,6 +89,9 @@ public:
 	virtual int LoadBinary(u16 fromAddr, char *filePath);
 
 	virtual u8 *ExomizerMemoryRaw(u16 fromAddr, u16 toAddr, int *compressedSize);
+	
+	//
+	virtual void ResetEmulationCounters();
 	
 	//
 	virtual void ShowMessage(const char *text);

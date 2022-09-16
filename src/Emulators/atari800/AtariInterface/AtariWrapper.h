@@ -5,9 +5,9 @@
 #include "DebuggerDefs.h"
 #include <stdio.h>
 
-#define C64DEBUGGER_ATARI800_VERSION_STRING		"4.2.0"
+#define C64DEBUGGER_ATARI800_VERSION_STRING		"5.0.0"
 
-#define ATARI_AUDIO_BUFFER_FRAMES	512
+#define ATARI_AUDIO_BUFFER_FRAMES	1024
 #define MAX_NUM_POKEYS	2
 
 void mt_SYS_FatalExit(char *text);

@@ -67,7 +67,7 @@ namespace Nes
 					HEIGHT = Input::HEIGHT,
 					PIXELS = Input::PIXELS,
 					PALETTE = Input::PALETTE,
-					NDEFAULT_PALETTE = PALETTE_YUV
+					NES_DEFAULT_PALETTE = PALETTE_YUV
 				};
 
 				Result SetState(const RenderState&);
@@ -78,7 +78,7 @@ namespace Nes
 				Result SetDecoder(const Decoder&);
 
 				Result SetPaletteType(PaletteType);
-				Result LoadCustomPalette(const byte(*)[3],bool);
+				Result LoadCustomPalette(const byte (*)[3],bool);
 				void   ResetCustomPalette();
 
 				void EnableFieldMerging(bool);
@@ -100,8 +100,8 @@ namespace Nes
 					~Palette();
 
 					Result SetType(PaletteType);
-					Result LoadCustom(const byte(*)[3],bool);
-					uint   SaveCustom(byte(*)[3],bool) const;
+					Result LoadCustom(const byte (*)[3],bool);
+					uint   SaveCustom(byte (*)[3],bool) const;
 					bool   ResetCustom();
 					void   Update(int,int,int,int);
 					Result SetDecoder(const Decoder&);

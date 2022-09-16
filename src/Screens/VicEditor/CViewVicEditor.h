@@ -47,6 +47,7 @@ public:
 	virtual ~CViewVicEditor();
 	
 	virtual void Render();
+	virtual void RenderImGui();
 	virtual void Render(float posX, float posY);
 	//virtual void Render(float posX, float posY, float sizeX, float sizeY);
 	virtual void DoLogic();
@@ -85,6 +86,8 @@ public:
 	virtual void DeactivateView();
 	
 	virtual bool DoScrollWheel(float deltaX, float deltaY);
+
+	virtual void SetPosition(float posX, float posY, float posZ, float sizeX, float sizeY);
 
 	CSlrFont *font;
 	float fontScale;
@@ -234,6 +237,7 @@ public:
 	void SetVicModeRegsOnly(bool isBitmapMode, bool isMultiColor, bool isExtendedBackground);
 	void SetVicAddresses(int vbank, int screenAddr, int charsetAddr, int bitmapAddr);
 
+	bool ImportImage(CImageData *image);
 	bool ImportVCE(CSlrString *path);
 	bool ImportPNG(CSlrString *path);
 	bool ImportKoala(CSlrString *path, bool showMessage);

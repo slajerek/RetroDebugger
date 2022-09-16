@@ -166,7 +166,11 @@ public:
 	
 	//
 	virtual void SetSupersampleFactor(int supersampleFactor);
-	
+
+	//
+	virtual bool HasContextMenuItems();
+	virtual void RenderContextMenuItems();
+
 	//
 	// Layout
 	virtual void Serialize(CByteBuffer *byteBuffer);

@@ -39,6 +39,8 @@ bool isCRTInCommandLine = false;
 bool isXEXInCommandLine = false;
 bool isATRInCommandLine = false;
 
+bool cmdLineOptionDoAutoJmp = false;
+
 void C64DebuggerPassConfigToRunningInstance();
 
 #if !defined(WIN32)
@@ -707,7 +709,7 @@ void c64PerformStartupTasksThreaded()
 			}
 			else //if (isPRGInCommandLine == true)
 			{
-				viewC64->viewC64MainMenu->LoadPRG(c64SettingsPathToPRG, c64SettingsAutoJmp, false, true, false);
+				viewC64->viewC64MainMenu->LoadPRG(c64SettingsPathToPRG, cmdLineOptionDoAutoJmp, false, true, false);
 			}
 		}
 		
@@ -802,7 +804,7 @@ void c64PerformStartupTasksThreaded()
 			}
 			else //if (isXEXInCommandLine == true)
 			{
-				viewC64->viewC64MainMenu->LoadXEX(c64SettingsPathToXEX, c64SettingsAutoJmp, false, true);
+				viewC64->viewC64MainMenu->LoadXEX(c64SettingsPathToXEX, cmdLineOptionDoAutoJmp, false, true);
 			}
 		}
 		
@@ -916,7 +918,7 @@ void C64DebuggerParseCommandLine2()
 		}
 		else if (!strcmp(cmd, "autojmp") || !strcmp(cmd, "autojump"))
 		{
-			c64SettingsAutoJmp = true;
+			cmdLineOptionDoAutoJmp = true;
 		}
 		else if (!strcmp(cmd, "unpause"))
 		{
@@ -1167,10 +1169,10 @@ void C64DebuggerPassConfigToRunningInstance()
 		byteBuffer->PutSlrString(c64SettingsPathToATR);
 	}
 	
-	if (c64SettingsAutoJmp)
+	if (cmdLineOptionDoAutoJmp)
 	{
 		byteBuffer->PutU8(C64D_PASS_CONFIG_DATA_SET_AUTOJMP);
-		byteBuffer->PutBool(c64SettingsAutoJmp);
+		byteBuffer->PutBool(cmdLineOptionDoAutoJmp);
 	}
 	
 	if (c64SettingsForceUnpause)
@@ -1383,7 +1385,7 @@ void c64PerformNewConfigurationTasksThreaded(CByteBuffer *byteBuffer)
 		else if (t == C64D_PASS_CONFIG_DATA_PATH_TO_XEX)
 		{
 			CSlrString *str = byteBuffer->GetSlrString();
-			viewC64->viewC64MainMenu->LoadXEX(str, c64SettingsAutoJmp, false, true);
+			viewC64->viewC64MainMenu->LoadXEX(str, cmdLineOptionDoAutoJmp, false, true);
 			delete str;
 		}
 		else if (t == C64D_PASS_CONFIG_DATA_PATH_TO_ATR)
@@ -1401,7 +1403,7 @@ void c64PerformNewConfigurationTasksThreaded(CByteBuffer *byteBuffer)
 		else if (t == C64D_PASS_CONFIG_DATA_SET_AUTOJMP)
 		{
 			bool b = byteBuffer->GetBool();
-			c64SettingsAutoJmp = b;
+			cmdLineOptionDoAutoJmp = b;
 		}
 		else if (t == C64D_PASS_CONFIG_DATA_FORCE_UNPAUSE)
 		{
@@ -1421,7 +1423,7 @@ void c64PerformNewConfigurationTasksThreaded(CByteBuffer *byteBuffer)
 		else if (t == C64D_PASS_CONFIG_DATA_PATH_TO_PRG)
 		{
 			CSlrString *str = byteBuffer->GetSlrString();
-			viewC64->viewC64MainMenu->LoadPRG(str, c64SettingsAutoJmp, false, true, false);
+			viewC64->viewC64MainMenu->LoadPRG(str, cmdLineOptionDoAutoJmp, false, true, false);
 			delete str;
 		}
 //		else if (t == C64D_PASS_CONFIG_DATA_LAYOUT)
@@ -1478,7 +1480,7 @@ void c64PerformNewConfigurationTasksThreaded(CByteBuffer *byteBuffer)
 		}
 	}
 	
-	//guiMain->ShowMessage("updated");
+	//viewC64->ShowMessage("updated");
 	delete byteBuffer;
 }
 

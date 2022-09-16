@@ -8,8 +8,8 @@ class CDebugInterfaceNes;
 class CDataAdapterNesPpuPalette : public CDataAdapter
 {
 public:
-	CDataAdapterNesPpuPalette(CDebugInterfaceNes *debugInterface);
-	CDebugInterfaceNes *debugInterface;
+	CDataAdapterNesPpuPalette(CDebugInterfaceNes *debugInterfaceNes);
+	CDebugInterfaceNes *debugInterfaceNes;
 	
 	virtual int AdapterGetDataLength();
 	virtual void AdapterReadByte(int pointer, uint8 *value);

@@ -1,0 +1,208 @@
+commit f616d56e28fd6926352aa161d57dbe1f1f963b73
+Author: Marcin Skoczylas <slajerek@gmail.com>
+Date:   Fri Sep 16 01:28:28 2022 +0200
+
+    a800fixes
+
+diff --git a/src/Emulators/atari800/antic.c b/src/Emulators/atari800/antic.c
+index 150c406..326ceb9 100644
+--- a/src/Emulators/atari800/antic.c
++++ b/src/Emulators/atari800/antic.c
+@@ -234,8 +234,14 @@ UBYTE ANTIC_NMIST;
+ /* ANTIC Memory ------------------------------------------------------------ */
+ 
+ #if !defined(BASIC) && !defined(CURSES_BASIC)
+-static UBYTE antic_memory[52];
++
++// Note, Slajerek added margin due buffer overflow in draw_antic_8	at UBYTE screendata = *antic_memptr++;
++static UBYTE antic_with_additional_margin[32 + 52 + 128];
++static UBYTE *antic_memory = antic_with_additional_margin+32;
++
++// 2022-09-15 21:51:54.974065+0200 Retro Debugger[90330:1549345] 0x00010751987f is located 1 bytes to the left of global variable 'antic_memory' defined in '/Users/mars/develop/c64d/src/Emulators/atari800/antic.c:239:14' (0x107519880) of size 180
+ #define ANTIC_margin 4
++
+ /* It's number of bytes in antic_memory, which are never loaded, but may be
+    read in wide playfield mode. These bytes are uninitialized, because on
+    real computer there's some kind of 'garbage'. Possibly 1 is enough, but
+ 
+@@ -1822,7 +1828,14 @@ static void draw_antic_4(int nchars, const UBYTE *antic_memptr, UWORD *ptr, cons
+ 	lookup2[0xcf] = lookup2[0x3f] = lookup2[0x1b] = lookup2[0x12] = ANTIC_cl[C_PF3];
+ 
+ 	CHAR_LOOP_BEGIN
+-		UBYTE screendata = *antic_memptr++;
++		// Note, check added by Slajerek due to buffer overflow
++		UBYTE screendata = 0;
++		if (antic_memptr - antic_memory >= 0
++			&& antic_memptr - antic_memory < 52)
++		{
++			screendata = *antic_memptr++;
++		}
++//		UBYTE screendata = *antic_memptr++;
+ 		const UWORD *lookup;
+ 		UBYTE chdata;
+ 		if (screendata & 0x80)
+@@ -1834,28 +1847,38 @@ static void draw_antic_4(int nchars, const UBYTE *antic_memptr, UWORD *ptr, cons
+ #else
+ 		chdata = chptr[(screendata & 0x7f) << 3];
+ #endif
+-		if (IS_ZERO_ULONG(t_pm_scanline_ptr)) {
+-			if (chdata) {
+-				WRITE_VIDEO(ptr++, lookup[chdata & 0xc0]);
+-				WRITE_VIDEO(ptr++, lookup[chdata & 0x30]);
+-				WRITE_VIDEO(ptr++, lookup[chdata & 0x0c]);
+-				WRITE_VIDEO(ptr++, lookup[chdata & 0x03]);
++		// Note, check added by Slajerek because of buffer overflow
++		if ((const unsigned char*)t_pm_scanline_ptr - GTIA_pm_scanline < SIZEOF_GTIA_pm_scanline)
++		{
++			if (IS_ZERO_ULONG(t_pm_scanline_ptr))
++			{
++				if (chdata)
++				{
++					WRITE_VIDEO(ptr++, lookup[chdata & 0xc0]);
++					WRITE_VIDEO(ptr++, lookup[chdata & 0x30]);
++					WRITE_VIDEO(ptr++, lookup[chdata & 0x0c]);
++					WRITE_VIDEO(ptr++, lookup[chdata & 0x03]);
++				}
++				else
++					DRAW_BACKGROUND(C_BAK)
+ 			}
+ 			else
+-				DRAW_BACKGROUND(C_BAK)
+-		}
+-		else {
+-			const UBYTE *c_pm_scanline_ptr = (const UBYTE *) t_pm_scanline_ptr;
+-			int pm_pixel;
+-			int colreg;
+-			int k = 4;
+-			playfield_lookup[0xc0] = screendata & 0x80 ? L_PF3 : L_PF2;
+-			do {
+-				colreg = playfield_lookup[chdata & 0xc0];
+-				DO_PMG_LORES
+-				chdata <<= 2;
+-			} while (--k);
++			{
++				const UBYTE *c_pm_scanline_ptr = (const UBYTE *) t_pm_scanline_ptr;
++				int pm_pixel;
++				int colreg;
++				int k = 4;
++				playfield_lookup[0xc0] = screendata & 0x80 ? L_PF3 : L_PF2;
++				do {
++					colreg = playfield_lookup[chdata & 0xc0];
++					DO_PMG_LORES
++					chdata <<= 2;
++				} while (--k);
++			}
+ 		}
++		else
++			ptr += 4;
++			
+ 		t_pm_scanline_ptr++;
+ 	CHAR_LOOP_END
+ 	playfield_lookup[0xc0] = L_PF2;
+diff --git a/src/Emulators/atari800/gtia.c b/src/Emulators/atari800/gtia.c
+index dc43da7..ef340a3 100644
+--- a/src/Emulators/atari800/gtia.c
++++ b/src/Emulators/atari800/gtia.c
+@@ -159,7 +159,9 @@ bit 6 - Missile 2
+ bit 7 - Missile 3
+ */
+ 
+-UBYTE GTIA_pm_scanline[Screen_WIDTH / 2 + 8];	/* there's a byte for every *pair* of pixels */
++// Note, Slajerek added 128 as a safety marker because of:
++// src/Emulators/atari800/gtia.c:1093:35: runtime error: index 206 out of bounds for type 'unsigned char [200]'
++UBYTE GTIA_pm_scanline[Screen_WIDTH / 2 + 8 + 256];	/* there's a byte for every *pair* of pixels */
+ int GTIA_pm_dirty = TRUE;
+ 
+ #define C_PM0	0x01
+@@ -261,23 +263,19 @@ int GTIA_Initialise(int *argc, char *argv[])
+ static void generate_partial_pmpl_colls(int l, int r)
+ {
+ 	int i;
+-	if (r < 0 || l >= (int) sizeof(GTIA_pm_scanline) / (int) sizeof(GTIA_pm_scanline[0]))
++	if (r < 0 || l >= SIZEOF_GTIA_pm_scanline) //(int) sizeof(GTIA_pm_scanline) / (int) sizeof(GTIA_pm_scanline[0]))
+ 		return;
+-	if (r >= (int) sizeof(GTIA_pm_scanline) / (int) sizeof(GTIA_pm_scanline[0])) {
+-		r = (int) sizeof(GTIA_pm_scanline) / (int) sizeof(GTIA_pm_scanline[0]);
++	if (r >= SIZEOF_GTIA_pm_scanline) //(int) sizeof(GTIA_pm_scanline) / (int) sizeof(GTIA_pm_scanline[0]))
++	{
++		r = SIZEOF_GTIA_pm_scanline-1; //((int) sizeof(GTIA_pm_scanline) / (int) sizeof(GTIA_pm_scanline[0])) - 1;
+ 	}
++		
+ 	if (l < 0)
+ 		l = 0;
+ 
+ 	for (i = l; i <= r; i++) {
+ 		UBYTE p;
+ 
+-		// bug fix by slajerek, i may be out of bounds ^^^^
+-		if (i >= sizeof(GTIA_pm_scanline))
+-		{
+-			continue;
+-		}
+-		
+ 		p = GTIA_pm_scanline[i];
+ /* It is possible that some bits are set in PxPL/MxPL here, which would
+  * not otherwise be set ever in GTIA_NewPmScanline.  This is because the
+@@ -309,8 +307,9 @@ static void update_partial_pmpl_colls(void)
+ void GTIA_UpdatePmplColls(void)
+ {
+ 	if (hitclr_pos != 0){
+-		generate_partial_pmpl_colls(hitclr_pos,
+-				sizeof(GTIA_pm_scanline) / sizeof(GTIA_pm_scanline[0]) - 1);
++		generate_partial_pmpl_colls(hitclr_pos, SIZEOF_GTIA_pm_scanline-1);
++//				sizeof(GTIA_pm_scanline) / sizeof(GTIA_pm_scanline[0]) - 1);
++		
+ /* If hitclr was written to, then only part of GTIA_pm_scanline should be used
+  * for collisions */
+ 
+@@ -871,10 +870,14 @@ void GTIA_PutByte(UWORD addr, UBYTE byte)
+ #else /* USE_COLOUR_TRANSLATION_TABLE */
+ 	case GTIA_OFFSET_COLBK:
+ 		GTIA_COLBK = byte &= 0xfe;
+ 		GTIA_COLOUR_TO_WORD(cword,byte);
+ 		ANTIC_cl[C_BAK] = cword;
+ 		if (cword != (UWORD) (ANTIC_lookup_gtia9[0]) ) {
+-			ANTIC_lookup_gtia9[0] = cword + (cword << 16);
++			// NOTE: bug fix by Slajerek, this below crashes antic.c?
++//			ANTIC_lookup_gtia9[0] = cword + (cword << 16);
++			ANTIC_lookup_gtia9[0] = (ULONG)cword | ((ULONG)cword << 16);
+ 			if (GTIA_PRIOR & 0x40)
+ 				setup_gtia9_11();
+ 		}
+diff --git a/src/Emulators/atari800/gtia.h b/src/Emulators/atari800/gtia.h
+index 2a00f95..e3507ad 100644
+--- a/src/Emulators/atari800/gtia.h
++++ b/src/Emulators/atari800/gtia.h
+@@ -110,7 +110,10 @@ extern UWORD GTIA_colour_translation_table[256];
+ 
+ #endif /* USE_COLOUR_TRANSLATION_TABLE */
+ 
+-extern UBYTE GTIA_pm_scanline[Screen_WIDTH / 2 + 8];	/* there's a byte for every *pair* of pixels */
++// Note, Slajerek added 128 as a safety marker because of:
++// src/Emulators/atari800/gtia.c:1093:35: runtime error: index 206 out of bounds for type 'unsigned char [200]'
++#define SIZEOF_GTIA_pm_scanline (Screen_WIDTH / 2 + 8)
++extern UBYTE GTIA_pm_scanline[Screen_WIDTH / 2 + 8 + 256];	/* there's a byte for every *pair* of pixels */
+ extern int GTIA_pm_dirty;
+ 
+ extern UBYTE GTIA_collisions_mask_missile_playfield;
+diff --git a/src/Emulators/atari800/screen.c b/src/Emulators/atari800/screen.c
+index 1e85525..f71538b 100644
+--- a/src/Emulators/atari800/screen.c
++++ b/src/Emulators/atari800/screen.c
+@@ -149,9 +149,14 @@ int Screen_Initialise(int *argc, char *argv[])
+ 		return TRUE;
+ 
+ 	if (Screen_atari == NULL) { /* platform-specific code can initialize it */
+-		Screen_atari = (ULONG *) Util_malloc(Screen_HEIGHT * Screen_WIDTH);
++		
++		// Note, Slajerek added safety margin because of:
++		// ==89662==ERROR: AddressSanitizer: global-buffer-overflow on address 0x00010751987f at pc 0x000100239cd4 bp 0x700008533dd0 sp 0x700008533dc8
++		//		2022-09-15 21:14:13.665451+0200 Retro Debugger[89662:1514366] READ of size 1 at 0x00010751987f thread T24
++		//  2022-09-15 21:14:13.665531+0200 Retro Debugger[89662:1514366]     #0 0x100239cd3 in draw_antic_4 antic.c:1825
++		Screen_atari = (ULONG *) Util_malloc(Screen_HEIGHT * Screen_WIDTH  *2);
+ 		/* Clear the screen. */
+-		memset(Screen_atari, 0, Screen_HEIGHT * Screen_WIDTH);
++		memset(Screen_atari, 0, Screen_HEIGHT * Screen_WIDTH  *2);
+ #ifdef DIRTYRECT
+ 		Screen_dirty = (UBYTE *) Util_malloc(Screen_HEIGHT * Screen_WIDTH / 8);
+ 		Screen_EntireDirty();

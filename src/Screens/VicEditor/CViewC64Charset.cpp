@@ -108,27 +108,11 @@ void CViewC64Charset::Render()
 	
 	//viewC64->debugInterface
 	
-	// TODO: create generic engine function for this
-	
 	// nearest neighbour
-	{
-		glBindTexture(GL_TEXTURE_2D, this->imageCharset->textureId);
+	LOGTODO("is it required?");
+	this->imageCharset->SetLinearScaling(false);
 		
-		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST);
-	}
-	
-	
 	Blit(this->imageCharset, posX, posY, posZ, sizeX, sizeY);
-	
-	
-//	// back to linear scale
-//	{
-//		glBindTexture(GL_TEXTURE_2D, this->imageCharset->texture[0]);
-//		
-//		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
-//		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
-//	}
 
 	if (selectedChar >= 0)
 	{
@@ -248,7 +232,7 @@ void CViewC64Charset::SystemDialogFileOpenSelected(CSlrString *path)
 	char *buf = str->GetStdASCII();
 	char *buf2 = SYS_GetCharBuf();
 	sprintf(buf2, "%s imported at $%04x", buf, importCharsetAddr);
-	guiMain->ShowMessage(buf2);
+	viewC64->ShowMessage(buf2);
 	SYS_ReleaseCharBuf(buf2);
 	delete [] buf;
 	delete str;
@@ -272,7 +256,7 @@ int CViewC64Charset::ImportCharset(CSlrString *path)
 	CSlrFile *file = new CSlrFileFromOS(path);
 	if (!file->Exists())
 	{
-		guiMain->ShowMessage("Can't open file");
+		viewC64->ShowMessage("Can't open file");
 		return -1;
 	}
 	
@@ -281,7 +265,7 @@ int CViewC64Charset::ImportCharset(CSlrString *path)
 	{
 		if (byteBuffer->IsEof())
 		{
-			guiMain->ShowMessage("End of file reached");
+			viewC64->ShowMessage("End of file reached");
 			return -1;
 		}
 		
@@ -312,7 +296,7 @@ void CViewC64Charset::SystemDialogFileSaveSelected(CSlrString *path)
 	
 	CSlrString *str = path->GetFileNameComponentFromPath();
 	str->Concatenate(" saved");
-	guiMain->ShowMessage(str);
+	viewC64->ShowMessage(str);
 	delete str;
 }
 

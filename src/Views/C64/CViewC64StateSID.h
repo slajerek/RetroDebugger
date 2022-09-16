@@ -50,7 +50,7 @@ public:
 	virtual void RenderImGui();
 	virtual void DoLogic();
 	
-	bool renderHorizontal;
+	bool renderSidChipsHorizontally;
 	
 	CDebugInterfaceC64 *debugInterface;
 	

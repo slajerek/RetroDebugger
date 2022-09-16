@@ -140,6 +140,7 @@ public:
 	virtual void SetSidTripleAddress(uint16 sidAddress);
 
 	virtual void GetC64ModelTypes(std::vector<CSlrString *> *modelTypeNames, std::vector<int> *modelTypeIds);
+	virtual void GetC64ModelTypes(std::vector<const char *> *modelTypeNames, std::vector<int> *modelTypeIds);
 	virtual void SetC64ModelType(int modelType);
 	virtual void SetEmulationMaximumSpeed(int maximumSpeed);
 
@@ -299,10 +300,15 @@ public:
 	// if fileName is NULL no file will be created, if runForNumCycles is -1 it will run till ProfilerDeactivate
 	virtual void ProfilerActivate(char *fileName, int runForNumCycles, bool pauseCpuWhenFinished);
 	virtual void ProfilerDeactivate();
+	virtual bool IsProfilerActive();
 
 	// drive flush thread
 	CThreadViceDriveFlush *driveFlushThread;
 	
+//	// set correct disk ID to let 1541 ROM not throw 29, 'disk id mismatch'
+//	// see $F3F6 in 1541 ROM: http://unusedino.de/ec64/technical/misc/c1541/romlisting.html#FDD3
+//	virtual void UpdateDriveDiskID(int driveId);
+
 	// interface to vice monitor
 	virtual bool IsCodeMonitorSupported();
 	bool isCodeMonitorOpened;

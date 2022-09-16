@@ -93,7 +93,6 @@ void CViewC64StateCIA::RenderImGui()
 	PostRenderImGui();
 }
 
-
 void CViewC64StateCIA::RenderStateCIA(float px, float py, float posZ, CSlrFont *fontBytes, float fontSize, int ciaId)
 {
 	char buf[256];

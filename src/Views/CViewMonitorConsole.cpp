@@ -10,7 +10,7 @@
 #include "CViewDisassembly.h"
 #include "CViewMemoryMap.h"
 #include "CViewC64StateCPU.h"
-#include "CViewDriveStateCPU.h"
+#include "CViewDrive1541StateCPU.h"
 #include "C64Tools.h"
 #include "CDebugInterfaceC64.h"
 #include "CDebugInterfaceAtari.h"
@@ -1845,7 +1845,7 @@ bool CViewMonitorConsole::DoDisassembleMemory(int startAddress, int endAddress, 
 			addr = renderAddress;
 			
 			// +0
-			CViewMemoryMapCell *cell0 = memoryMap->memoryCells[addr];	//% memoryLength
+			CDebugMemoryMapCell *cell0 = memoryMap->memoryCells[addr];	//% memoryLength
 			if (cell0->isExecuteCode)
 			{
 				opcode = memory[addr ];	//% memoryLength
@@ -1855,7 +1855,7 @@ bool CViewMonitorConsole::DoDisassembleMemory(int startAddress, int endAddress, 
 			else
 			{
 				// +1
-				CViewMemoryMapCell *cell1 = memoryMap->memoryCells[ (addr+1) ];	//% memoryLength
+				CDebugMemoryMapCell *cell1 = memoryMap->memoryCells[ (addr+1) ];	//% memoryLength
 				if (cell1->isExecuteCode)
 				{
 					// check if at addr is 1-length opcode
@@ -1891,7 +1891,7 @@ bool CViewMonitorConsole::DoDisassembleMemory(int startAddress, int endAddress, 
 				else
 				{
 					// +2
-					CViewMemoryMapCell *cell2 = memoryMap->memoryCells[ (addr+2) ];	//% memoryLength
+					CDebugMemoryMapCell *cell2 = memoryMap->memoryCells[ (addr+2) ];	//% memoryLength
 					if (cell2->isExecuteCode)
 					{
 						// check if at addr is 2-length opcode

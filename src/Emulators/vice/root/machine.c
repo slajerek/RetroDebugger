@@ -71,6 +71,8 @@
 #include "vsync.h"
 #include "zfile.h"
 
+#include "DebuggerDefs.h"
+
 #ifdef HAS_JOYSTICK
 #include "joy.h"
 #endif
@@ -86,8 +88,12 @@ static int jam_action = MACHINE_JAM_ACTION_DIALOG;
 int machine_keymap_index;
 static char *ExitScreenshotName = NULL;
 
+void c64d_set_debug_mode(int newMode);
+
 unsigned int machine_jam(const char *format, ...)
 {
+	c64d_set_debug_mode(DEBUGGER_MODE_PAUSED);
+	
     char *str;
     va_list ap;
     ui_jam_action_t ret;

@@ -351,7 +351,7 @@ void CViewC64VicControl::AddGuiButtons()
 	//
 	float fs = buttonSizeX*2+gapX;
 	
-	lblAutolockText =	new CGuiLabel(new CSlrString("Show PC for:"), px, py, posZ, fs, fontHeight, LABEL_ALIGNED_LEFT, font, fontScale,
+	lblAutolockText =	new CGuiLabel(new CSlrString("Show addr for:"), px, py, posZ, fs, fontHeight, LABEL_ALIGNED_LEFT, font, fontScale,
 									  0.0f, 0.0f, 0.0f, 0.0f,
 									  1.0f, 1.0f, 1.0f, 1.0f,
 									  0.0f, 0.0f, NULL);
@@ -359,14 +359,24 @@ void CViewC64VicControl::AddGuiButtons()
 	lblAutolockText->drawFocusBorder = false;
 	this->AddGuiElement(lblAutolockText);
 	
-	lblAutolockScrollMode =	new CGuiLabel(new CSlrString(""), px, py, posZ, fs, fontHeight*2, LABEL_ALIGNED_CENTER, font, fontScale*2,
-										  0.0f, 0.0f, 0.0f, 0.0f,
-										  0.9f, 0.9f, 0.9f, 1.0f,
-										  0.0f, 0.0f, NULL);
-	lblAutolockScrollMode->image = NULL;
-	lblAutolockScrollMode->drawFocusBorder = false;
-	this->AddGuiElement(lblAutolockScrollMode);
-	
+	btnAutolockScrollMode = new CGuiButton(NULL, NULL, 
+											 px, py, posZ, fs, buttonSizeY,
+											 new CSlrString(""),
+											 FONT_ALIGN_CENTER, buttonSizeX/2, 3.5,
+											 font, fontScale,
+											 1.0, 1.0, 1.0, 1.0,
+											 0.3, 0.3, 0.3, 1.0,
+											 this);
+	btnAutolockScrollMode->buttonEnabledColorR = 0.0f;
+	btnAutolockScrollMode->buttonEnabledColorG = 0.0f;
+	btnAutolockScrollMode->buttonEnabledColorB = 0.0f;
+	btnAutolockScrollMode->buttonEnabledColorA = 1.0f;
+	btnAutolockScrollMode->buttonEnabledColor2R = 0.3f;
+	btnAutolockScrollMode->buttonEnabledColor2G = 0.3f;
+	btnAutolockScrollMode->buttonEnabledColor2B = 0.3f;
+	btnAutolockScrollMode->buttonEnabledColor2A = 1.0f;
+	this->AddGuiElement(btnAutolockScrollMode);
+
 	
 	btnLockCursor = new CGuiButtonSwitch(NULL, NULL, NULL,
 										 px, py, posZ, buttonSizeX*2+gapX, buttonSizeY,
@@ -409,7 +419,7 @@ void CViewC64VicControl::HideGuiButtons()
 	btnShowWithBorder->visible = false;
 	btnToggleBreakpoint->visible = false;
 	btnLockCursor->visible = false;
-	lblAutolockScrollMode->visible = false;
+	btnAutolockScrollMode->visible = false;
 	lblAutolockText->visible = false;
 }
 
@@ -419,23 +429,23 @@ void CViewC64VicControl::SetAutoScrollModeUI(int newMode)
 	
 	if (newMode == AUTOSCROLL_DISASSEMBLE_RASTER_PC)
 	{
-		lblAutolockScrollMode->SetText(txtAutolockRasterPC);
+		btnAutolockScrollMode->SetText(txtAutolockRasterPC);
 	}
 	else if (newMode == AUTOSCROLL_DISASSEMBLE_BITMAP_ADDRESS)
 	{
-		lblAutolockScrollMode->SetText(txtAutolockBitmapAddress);
+		btnAutolockScrollMode->SetText(txtAutolockBitmapAddress);
 	}
 	else if (newMode == AUTOSCROLL_DISASSEMBLE_TEXT_ADDRESS)
 	{
-		lblAutolockScrollMode->SetText(txtAutolockTextAddress);
+		btnAutolockScrollMode->SetText(txtAutolockTextAddress);
 	}
 	else if (newMode == AUTOSCROLL_DISASSEMBLE_COLOUR_ADDRESS)
 	{
-		lblAutolockScrollMode->SetText(txtAutolockColourAddress);
+		btnAutolockScrollMode->SetText(txtAutolockColourAddress);
 	}
 	else if (newMode == AUTOSCROLL_DISASSEMBLE_CHARSET_ADDRESS)
 	{
-		lblAutolockScrollMode->SetText(txtAutolockCharsetAddress);
+		btnAutolockScrollMode->SetText(txtAutolockCharsetAddress);
 	}
 }
 
@@ -728,13 +738,13 @@ void CViewC64VicControl::SetPosition(float posX, float posY, float posZ, float s
 	btnToggleBreakpoint->SetPosition(px, py, posZ, buttonSizeX, buttonSizeY);
 	btnToggleBreakpoint->SetFont(font, fontScale);
 
-	txtCursorPosX = px + buttonSizeX + gapX + 1.0f;
-	txtCursorPosY = py + 1.0f;
+	txtCursorPosX = px + buttonSizeX + gapX + 1.0f*scale;
+	txtCursorPosY = py + 1.0f*scale;
 	
 	txtCursorCharPosX = txtCursorPosX;
-	txtCursorCharPosY = py + 1.0f + 5.0f;
+	txtCursorCharPosY = py + (1.0f + 5.0f) * scale;
 	
-	py += 16.0f * scale; //buttonSizeY + gapY;
+	py += 14.0f * scale; //buttonSizeY + gapY;
 	
 	
 	px = startX + listGapX;
@@ -742,8 +752,8 @@ void CViewC64VicControl::SetPosition(float posX, float posY, float posZ, float s
 	lblAutolockText->SetFontSize(fontScale);
 	
 	py += 6.0f * scale;
-	lblAutolockScrollMode->SetPosition(px, py, posZ, buttonSizeX*2+gapX, fontHeight*2);
-	lblAutolockScrollMode->SetFontSize(fontScale);
+	btnAutolockScrollMode->SetPosition(px, py, posZ, buttonSizeX*2+gapX, fontHeight*2);
+	btnAutolockScrollMode->SetFont(font, fontScale);
 
 	btnLockCursor->visible = false; //SetPosition(px, py, posZ, buttonSizeX*2 + gapX, buttonSizeY);
 	
@@ -995,17 +1005,19 @@ void CViewC64VicControl::Render()
 	
 	if (btnLockCursor->IsOn())
 	{
-		lblAutolockScrollMode->textColorR = 1.0f * fBright;
-		lblAutolockScrollMode->textColorG = 0.3f * fBright;
-		lblAutolockScrollMode->textColorB = 0.3f * fBright;
-		
+		btnAutolockScrollMode->textColorR = 1.0f * fBright;
+		btnAutolockScrollMode->textColorG = 0.3f * fBright;
+		btnAutolockScrollMode->textColorB = 0.3f * fBright;
+
 	}
 	else
 	{
-		lblAutolockScrollMode->textColorR = 0.9f * fBright;
-		lblAutolockScrollMode->textColorG = 0.9f * fBright;
-		lblAutolockScrollMode->textColorB = 0.9f * fBright;
+		btnAutolockScrollMode->textColorR = 0.9f * fBright;
+		btnAutolockScrollMode->textColorG = 0.9f * fBright;
+		btnAutolockScrollMode->textColorB = 0.9f * fBright;
 	}
+
+	
 	
 	//BlitRectangle(lblAutolockScrollMode->posX, lblAutolockScrollMode->posY, posZ, lblAutolockScrollMode->sizeX, lblAutolockScrollMode->sizeY, 1, 1, 0, 1);
 	
@@ -1053,7 +1065,7 @@ void CViewC64VicControl::Render()
 
 			if (viewC64->isShowingRasterCross)
 			{
-				rasterLine = viewC64->rasterToShowY;
+				rasterLine = viewC64->c64RasterPosToShowY;
 			}
 			else
 			{
@@ -1167,6 +1179,17 @@ void CViewC64VicControl::ShowBadLines(bool showBadLines)
 {
 	btnShowBadLines->SetOn(showBadLines);
 	c64SettingsVicDisplayShowBadLines = showBadLines;
+}
+
+bool CViewC64VicControl::ButtonClicked(CGuiButton *button)
+{
+	if (button == btnAutolockScrollMode)
+	{
+		this->vicDisplay->SetNextAutoScrollMode();
+		return true;
+	}
+	
+	return false;
 }
 
 bool CViewC64VicControl::ButtonSwitchChanged(CGuiButtonSwitch *button)
@@ -1301,12 +1324,11 @@ bool CViewC64VicControl::DoTap(float x, float y)
 {
 	LOGG("CViewC64VicControl::DoTap:  x=%f y=%f", x, y);
 	
-	if (lblAutolockText->IsInside(x, y) || lblAutolockScrollMode->IsInside(x, y))
-	{
-		LOGTODO("tap does not work sometimes due to too small area size of CViewC64VicControl");
-		
-		this->vicDisplay->SetNextAutoScrollMode();
-	}
+//	if (lblAutolockText->IsInside(x, y))
+//	{
+//		this->vicDisplay->SetNextAutoScrollMode();
+//		return true;
+//	}
 	
 	return CGuiView::DoTap(x, y);
 }

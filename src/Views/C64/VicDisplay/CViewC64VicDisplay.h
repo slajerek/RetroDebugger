@@ -364,7 +364,7 @@ public:
 	virtual void Serialize(CByteBuffer *byteBuffer);
 	virtual void Deserialize(CByteBuffer *byteBuffer);
 
-private:
+//private:
 
 	C64VicDisplayCanvasBlank *canvasBlank;
 	C64VicDisplayCanvasHiresText *canvasHiresText;
@@ -373,6 +373,7 @@ private:
 	C64VicDisplayCanvasHiresBitmap *canvasHiresBitmap;
 	C64VicDisplayCanvasMultiBitmap *canvasMultiBitmap;
 	
+private:
 	bool updateViewAspectRatio;
 };
 

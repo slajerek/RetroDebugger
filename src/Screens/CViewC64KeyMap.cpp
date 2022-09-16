@@ -401,14 +401,14 @@ void CViewC64KeyMap::SystemDialogFileOpenSelected(CSlrString *path)
 		viewC64->debugInterfaceC64->UnlockMutex();
 		guiMain->UnlockMutex();
 		
-		guiMain->ShowMessage("C64 Key map loaded");
+		viewC64->ShowMessage("C64 Key map loaded");
 		return;
 	}
 
 	viewC64->debugInterfaceC64->UnlockMutex();
 	guiMain->UnlockMutex();
 
-	guiMain->ShowMessage("C64 Key map loading failed");
+	viewC64->ShowMessage("C64 Key map loading failed");
 }
 
 void CViewC64KeyMap::SystemDialogFileOpenCancelled()
@@ -420,7 +420,7 @@ void CViewC64KeyMap::SystemDialogFileSaveSelected(CSlrString *path)
 {
 	C64KeyMapStoreToFile(path);
 	
-	guiMain->ShowMessage("C64 Key map saved");
+	viewC64->ShowMessage("C64 Key map saved");
 }
 
 void CViewC64KeyMap::SystemDialogFileSaveCancelled()
@@ -1024,7 +1024,7 @@ void CViewC64KeyMap::AssignKey(u32 keyCode)
 		char *asciiKey = strKey->GetStdASCII();
 		
 		sprintf(buf, "Key   %s   is already assigned", asciiKey);
-		guiMain->ShowMessage(buf);
+		viewC64->ShowMessage(buf);
 		SYS_ReleaseCharBuf(buf);
 		
 		delete [] asciiKey;

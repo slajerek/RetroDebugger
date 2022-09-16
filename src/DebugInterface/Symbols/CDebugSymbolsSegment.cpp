@@ -26,21 +26,17 @@ CDebugSymbolsSegment::CDebugSymbolsSegment(CDebugSymbols *debugSymbols, CSlrStri
 	
 	numCodeLabelsInArray = 0;
 	codeLabelsArray = NULL;
-
-	numBreakpointsByType = NUM_DEFAULT_BREAKPOINT_TYPES;
 }
 
 void CDebugSymbolsSegment::Init()
 {
-	breakpointsByType = new CDebugBreakpointsAddr *[numBreakpointsByType];
-
 	breakOnPC = true;
 	breakOnMemory = true;
 
-	breakpointsPC = new CDebugBreakpointsAddr(BREAKPOINT_TYPE_CPU_PC, symbols, "%04X", 0, 0xFFFF);
+	breakpointsPC = new CDebugBreakpointsAddr(BREAKPOINT_TYPE_CPU_PC, "CpuPC", this, "%04X", 0, 0xFFFF);
 	breakpointsByType[BREAKPOINT_TYPE_CPU_PC] = breakpointsPC;
 	
-	breakpointsMemory = new CDebugBreakpointsMemory(BREAKPOINT_TYPE_MEMORY, symbols, "%04X", 0, 0xFFFF);
+	breakpointsMemory = new CDebugBreakpointsMemory(BREAKPOINT_TYPE_MEMORY, "Memory", this, "%04X", 0, 0xFFFF);
 	breakpointsByType[BREAKPOINT_TYPE_MEMORY] = breakpointsMemory;
 }
 
@@ -335,12 +331,56 @@ void CDebugSymbolsSegment::AddWatch(CDebugSymbolsDataWatch *watch)
 	guiMain->UnlockMutex();
 }
 
+CDebugSymbolsDataWatch *CDebugSymbolsSegment::FindWatch(int address)
+{
+	guiMain->LockMutex();
+
+	// check if exists
+	std::map<int, CDebugSymbolsDataWatch *>::iterator it = watches.find(address);
+	
+	if (it != watches.end())
+	{
+		CDebugSymbolsDataWatch *w = it->second;
+		return w;
+	}
+	
+	guiMain->UnlockMutex();
+	return NULL;
+}
+
 CDebugSymbolsDataWatch *CDebugSymbolsSegment::CreateWatch(int address, char *watchName, uint8 representation, int numberOfValues)
 {
 	CDebugSymbolsDataWatch *watch = new CDebugSymbolsDataWatch(this, watchName, address, representation, numberOfValues);
 	return watch;
 }
 
+void CDebugSymbolsSegment::RemoveWatch(CDebugSymbolsDataWatch *watch)
+{
+	guiMain->LockMutex();
+	
+	std::map<int, CDebugSymbolsDataWatch *>::iterator it = watches.find(watch->address);
+	
+	if (it != watches.end())
+	{
+		watches.erase(it);
+	}
+
+	guiMain->UnlockMutex();
+}
+
+void CDebugSymbolsSegment::RemoveWatch(int addr)
+{
+	guiMain->LockMutex();
+	std::map<int, CDebugSymbolsDataWatch *>::iterator it = watches.find(addr);
+	
+	if (it != watches.end())
+	{
+		CDebugSymbolsDataWatch *watch = it->second;
+		watches.erase(it);
+	}
+
+	guiMain->UnlockMutex();
+}
 
 void CDebugSymbolsSegment::DeleteWatch(int addr)
 {
@@ -558,3 +598,56 @@ bool CDebugSymbolsSegment::DeserializeWatches(Hjson::Value hjsonWatches)
 	UpdateCodeLabelsArray();
 	return false;
 }
+
+bool CDebugSymbolsSegment::SerializeBreakpoints(Hjson::Value hjsonBreakpointsTypes)
+{
+	LOGD("CDebugSymbolsSegment::SerializeBreakpoints");
+	for (std::map<int, CDebugBreakpointsAddr *>::iterator it = breakpointsByType.begin(); it != breakpointsByType.end(); it++)
+	{
+		CDebugBreakpointsAddr *breakpoints = it->second;
+		LOGD("...breakpointsTypeStr=%s", breakpoints->breakpointsTypeStr);
+
+		Hjson::Value hjsonBreakpointsType;
+		hjsonBreakpointsType["Type"] = breakpoints->breakpointsTypeStr;
+		
+		Hjson::Value hjsonBreakpoints;
+		breakpoints->Serialize(hjsonBreakpoints);
+		hjsonBreakpointsType["Items"] = hjsonBreakpoints;
+		
+		hjsonBreakpointsTypes.push_back(hjsonBreakpointsType);
+	}
+	return true;
+}
+
+bool CDebugSymbolsSegment::DeserializeBreakpoints(Hjson::Value hjsonBreakpointsTypes)
+{
+	LOGD("CDebugSymbolsSegment::DeserializeBreakpoints");
+	for (int i = 0; i < hjsonBreakpointsTypes.size(); i++)
+	{
+		Hjson::Value hjsonBreakpointsType = hjsonBreakpointsTypes[i];
+		const char *breakpointsTypeStr = hjsonBreakpointsType["Type"];
+		LOGD("...breakpointsTypeStr=%s", breakpointsTypeStr);
+		
+		CDebugBreakpointsAddr *foundBreakpointsType = NULL;
+		
+		// TODO: local breakpoints types as hash of name string, remove breakpointsType
+		for (std::map<int, CDebugBreakpointsAddr *>::iterator it = breakpointsByType.begin(); it != breakpointsByType.end(); it++)
+		{
+			CDebugBreakpointsAddr *breakpoints = it->second;
+			if (!strcmp(breakpoints->breakpointsTypeStr, breakpointsTypeStr))
+			{
+				foundBreakpointsType = breakpoints;
+				break;
+			}
+		}
+		
+		if (foundBreakpointsType)
+		{
+			Hjson::Value hjsonBreakpoints = hjsonBreakpointsType["Items"];
+			foundBreakpointsType->Deserialize(hjsonBreakpoints);
+		}
+	}
+	
+	return true;
+}
+

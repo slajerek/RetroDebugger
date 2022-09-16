@@ -4,6 +4,7 @@
 #include "CSnapshotsManager.h"
 #include "CGuiMain.h"
 #include "CViewC64.h"
+#include "CMainMenuBar.h"
 
 CViewTimeline::CViewTimeline(const char *name, float posX, float posY, float posZ, float sizeX, float sizeY, CDebugInterface *debugInterface)
 : CGuiView(name, posX, posY, posZ, sizeX, sizeY)
@@ -102,7 +103,7 @@ void CViewTimeline::Render()
 	sprintf(buf, "%d", textFrame);
 	float px = sizeX / 2.0f - (strlen(buf) / 2 * fontSize) + posX;
 	
-	float offsetY = 2.0f;
+	float offsetY = sizeY/2.0f - fontSize/2.0f;
 	viewC64->fontDisassembly->BlitTextColor(buf, px, posY + offsetY, posZ, fontSize, textR, textG, textB, textA);
 	
 	SYS_ReleaseCharBuf(buf);
@@ -203,6 +204,44 @@ bool CViewTimeline::DoFinishTap(float x, float y)
 	return CGuiView::DoFinishTap(x, y);
 }
 
+bool CViewTimeline::HasContextMenuItems()
+{
+	return true;
+}
+
+void CViewTimeline::RenderContextMenuItems()
+{
+	if (ImGui::MenuItem("Load timeline"))
+	{
+		viewC64->mainMenuBar->OpenDialogLoadTimeline();
+	}
+	if (ImGui::MenuItem("Save timeline"))
+	{
+		viewC64->mainMenuBar->OpenDialogSaveTimeline(debugInterface);
+	}
+	if (ImGui::MenuItem("Clear timeline"))
+	{
+		debugInterface->snapshotsManager->ClearSnapshotsHistory();
+	}
+	if (ImGui::MenuItem("Free pool memory"))
+	{
+		debugInterface->snapshotsManager->DeleteAllPools();
+	}
+	if (ImGui::BeginMenu("Stats"))
+	{
+		int minFrame, maxFrame;
+		debugInterface->snapshotsManager->GetFramesLimits(&minFrame, &maxFrame);
+		ImGui::Text("Frames from %d to %d", minFrame, maxFrame);
+		ImGui::Text("Chips snapshots stored: %d pool: %d", debugInterface->snapshotsManager->chipSnapshotsByCycle.size(),
+					debugInterface->snapshotsManager->chipsSnapshotsToReuse.size());
+		ImGui::Text("Disk snapshots stored: %d pool: %d", debugInterface->snapshotsManager->diskSnapshotsByCycle.size(),
+					debugInterface->snapshotsManager->diskSnapshotsToReuse.size());
+		ImGui::Text("Input events stored: %d pool: %d", debugInterface->snapshotsManager->inputEventsByCycle.size(),
+					debugInterface->snapshotsManager->inputEventsToReuse.size());
+		ImGui::EndMenu();
+	}
+}
+
 //@returns is consumed
 bool CViewTimeline::DoDoubleTap(float x, float y)
 {
@@ -291,4 +330,41 @@ void CViewTimeline::ActivateView()
 void CViewTimeline::DeactivateView()
 {
 	LOGG("CViewTimeline::DeactivateView()");
+}
+
+#define TIMELINE_ASYNC_STORE	1
+#define TIMELINE_ASYNC_RESTORE	2
+
+void CViewTimeline::LoadTimeline(CSlrString *path)
+{
+	LOGM("CViewTimeline::LoadTimeline");
+	CTimelineIoThread *timelineThread = new CTimelineIoThread();
+	timelineThread->asyncOperation = TIMELINE_ASYNC_RESTORE;
+	timelineThread->timelinePath = new CSlrString(path);
+	SYS_StartThread(timelineThread);
+}
+
+void CViewTimeline::SaveTimeline(CSlrString *path, CDebugInterface *debugInterface)
+{
+	LOGM("CViewTimeline::SaveTimeline");
+	CTimelineIoThread *timelineThread = new CTimelineIoThread();
+	timelineThread->debugInterface = debugInterface;
+	timelineThread->asyncOperation = TIMELINE_ASYNC_STORE;
+	timelineThread->timelinePath = new CSlrString(path);
+	SYS_StartThread(timelineThread);
+}
+
+// saving & loading timeline
+void CTimelineIoThread::ThreadRun(void *passData)
+{
+	if (asyncOperation == TIMELINE_ASYNC_STORE)
+	{
+		debugInterface->snapshotsManager->StoreTimelineToFile(timelinePath);
+		delete timelinePath;
+	}
+	else if (asyncOperation == TIMELINE_ASYNC_RESTORE)
+	{
+		CSnapshotsManager::RestoreTimelineFromFile(timelinePath);
+		delete timelinePath;
+	}
 }

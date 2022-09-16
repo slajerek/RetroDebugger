@@ -17,6 +17,7 @@ extern "C"{
 
 #include "CViewC64.h"
 #include "SYS_Defs.h"
+#include "SYS_DefaultConfig.h"
 #include "VID_Main.h"
 #include "VID_Blits.h"
 #include "CGuiMain.h"
@@ -34,19 +35,23 @@ extern "C"{
 #include "CAudioChannelAtari.h"
 #include "CAudioChannelNes.h"
 #include "RetroDebuggerEmbeddedData.h"
+#include "CGuiViewUiDebug.h"
+#include "CGuiViewMessages.h"
 
 #include "CDebugDataAdapter.h"
 #include "imgui_freetype.h"
 
+#include "SYS_KeyCodes.h"
 #include "CViewDataDump.h"
 #include "CViewDataWatch.h"
 #include "CViewMemoryMap.h"
 #include "CViewDisassembly.h"
+#include "CViewC64Disassembly.h"
 #include "CViewSourceCode.h"
 
 #include "CViewC64Screen.h"
 #include "CViewC64ScreenWrapper.h"
-
+#include "CViewC64ScreenViewfinder.h"
 #include "CViewC64StateCIA.h"
 #include "CViewC64StateREU.h"
 #include "CViewEmulationCounters.h"
@@ -58,11 +63,12 @@ extern "C"{
 #include "CViewC64VicControl.h"
 #include "CViewC64SidPianoKeyboard.h"
 #include "CViewC64MemoryDebuggerLayoutToolbar.h"
+#include "CViewDrive1541FileD64.h"
 #include "CViewC64StateCPU.h"
 #include "CViewInputEvents.h"
 #include "CViewBreakpoints.h"
 #include "CViewTimeline.h"
-#include "CViewDriveStateCPU.h"
+#include "CViewDrive1541StateCPU.h"
 
 #include "CViewAtariScreen.h"
 #include "CViewAtariStateCPU.h"
@@ -82,9 +88,11 @@ extern "C"{
 #include "CViewNesPpuOam.h"
 #include "CViewNesPpuPalette.h"
 
+#include "CGuiViewProgressBarWindow.h"
+
 #include "CViewMainMenu.h"
 #include "CViewSettingsMenu.h"
-#include "CViewFileD64.h"
+#include "CViewDrive1541FileD64.h"
 #include "CViewC64KeyMap.h"
 #include "CViewC64AllGraphics.h"
 #include "CViewC64SidTrackerHistory.h"
@@ -124,6 +132,12 @@ extern "C"{
 #include "CDebugInterfaceAtari.h"
 #include "CDebugInterfaceNes.h"
 
+#include "CSlrFileZlib.h"
+#include <fstream>
+#include <iostream>
+#include <sstream>
+#include <string>
+
 CViewC64 *viewC64 = NULL;
 
 unsigned long c64dStartupTime = 0;
@@ -146,10 +160,11 @@ CViewC64::CViewC64(float posX, float posY, float posZ, float sizeX, float sizeY)
 	viewC64 = this;
 	
 	SYS_SetThreadName("CViewC64");
+	mutexShowMessage = new CSlrMutex("CViewC64::ShowMessage");
 	
 	c64dStartupTime = SYS_GetCurrentTimeInMillis();
 	
-	this->config = new CConfigStorageHjson(C64D_SETTINGS_HJSON_FILE_PATH);
+	this->config = gApplicationDefaultConfig;
 
 	defaultFontPath = NULL;
 	defaultFontSize = 13.0f;
@@ -255,6 +270,13 @@ CViewC64::CViewC64(float posX, float posY, float posZ, float sizeX, float sizeY)
 	
 	this->InitViews();
 	
+	//
+	viewProgressBarWindow = new CGuiViewProgressBarWindow("Progress", 100, 100, -1, 150, 150, NULL);
+
+	// this is MTEngineSDL debug view that can be added by user via main menu, mainly to debug multiple monitor DPI-issues
+	viewUiDebug = new CGuiViewUiDebug(100, 100, -1, 500, 300);
+	viewUiDebug->visible = false;
+
 	
 	//
 	//
@@ -325,7 +347,7 @@ CViewC64::CViewC64(float posX, float posY, float posZ, float sizeX, float sizeY)
 	
 	if (this->debugInterfaceC64 != NULL)
 	{
-		viewFileD64 = new CViewFileD64(0, 0, -3.0, SCREEN_WIDTH, SCREEN_HEIGHT);
+//		viewFileD64 = new CViewDrive1541FileD64(0, 0, -3.0, SCREEN_WIDTH, SCREEN_HEIGHT);
 //		guiMain->AddGuiElement(viewFileD64);
 		
 //		viewC64BreakpointsPC = new CViewBreakpoints(0, 0, -3.0, SCREEN_WIDTH, SCREEN_HEIGHT, this->debugInterfaceC64->breakpointsPC);
@@ -342,7 +364,7 @@ CViewC64::CViewC64(float posX, float posY, float posZ, float sizeX, float sizeY)
 	}
 	else
 	{
-		viewFileD64 = NULL;
+		viewDrive1541FileD64 = NULL;
 		viewC64BreakpointsPC = NULL;
 		viewC64Snapshots = NULL;
 		viewC64KeyMap = NULL;
@@ -374,19 +396,19 @@ CViewC64::CViewC64(float posX, float posY, float posZ, float sizeX, float sizeY)
 	viewSaveFile = new CGuiViewSaveFile(0, 0, posZ, SCREEN_WIDTH-80.0, SCREEN_HEIGHT, this);
 	viewSaveFile->SetFont(fontCBMShifted, 2.0f);
 //	guiMain->AddGuiElement(viewSaveFile);
-	
-#if defined(RUN_COMMODORE64)
-	//
-	viewVicEditor = new CViewVicEditor("C64 VIC Editor", 0, 0, -3.0, SCREEN_WIDTH, SCREEN_HEIGHT);
-//	guiMain->AddGuiElement(viewVicEditor);
-#endif
-	
+		
 	SYS_AddApplicationPauseResumeListener(this);
 	
 	
 	//
 	// Init menu bar
 	this->mainMenuBar = new CMainMenuBar();
+	
+	// Log messages
+	this->viewMessages = new CGuiViewMessages("Log messages", 155, 200, -1, 500, 400);
+	this->viewMessages->visible = false;
+	guiMain->AddView(this->viewMessages);
+	guiMain->AddLayoutView(this->viewMessages);
 	
 	//
 	// RESTORE settings that need to be set when emulation is initialized
@@ -507,6 +529,9 @@ CViewC64::CViewC64(float posX, float posY, float posZ, float sizeX, float sizeY)
 	{
 		debugInterfaceNes->InitPlugins();
 	}
+	
+	DefaultSymbolsRestore();
+	firstStoreDefaultSymbols = true;
 	
 	isInitialized = true;
 	
@@ -707,6 +732,7 @@ void CViewC64::InitViews()
 	mouseCursorX = -SCREEN_WIDTH;
 	mouseCursorY = -SCREEN_HEIGHT;
 		
+	// TODO: generalize and move the views initialization to CDebugInterface
 	InitViceViews();
 	InitAtari800Views();
 	InitNestopiaViews();
@@ -733,13 +759,13 @@ void CViewC64::InitViceViews()
 	// note: views are created first to have dependencies fulfilled. They are added later to have them sorted.
 	
 	// this is regular c64 screen
-	viewC64Screen = new CViewC64Screen("C64 Screen##direct", 510, 40, posZ, 540, 402, debugInterfaceC64);
-
-	//	this->AddGuiElement(viewC64Screen);   this will be added on the top
+	viewC64Screen = new CViewC64Screen("C64 Screen", 510, 40, posZ, 540, 402, debugInterfaceC64);
 
 	// wrapper wraps c64 screen with selectable display type: c64 screen, vic display, zoomed in c64 screen
-//	viewC64ScreenWrapper = new CViewC64ScreenWrapper("C64 Screen", 510, 40, posZ, 540, 402, debugInterfaceC64);
-	
+//	viewC64ScreenWrapper = new CViewC64ScreenWrapper("C64 Screen##wrapper", 510, 40, posZ, 540, 402, debugInterfaceC64);
+
+	viewC64ScreenViewfinder = new CViewC64ScreenViewfinder("C64 Viewfinder", 310, 140, posZ, 270, 201, viewC64Screen);
+
 	viewC64StateCPU = new CViewC64StateCPU("C64 CPU", 510, 5, posZ, 350, 35, debugInterfaceC64);
 
 	
@@ -753,16 +779,16 @@ void CViewC64::InitViceViews()
 												64, 1024, 0x10000, true, true);
 
 	
-	viewC64Disassembly = new CViewDisassembly("C64 Disassembly", 0, 20, posZ, 190, 420,
+	viewC64Disassembly = new CViewC64Disassembly("C64 Disassembly", 0, 20, posZ, 190, 420,
 											  debugInterfaceC64->symbols, NULL, viewC64MemoryMap);
 	
-	viewC64Disassembly2 = new CViewDisassembly("C64 Disassembly 2", 100, 100, posZ, 200, 300,
+	viewC64Disassembly2 = new CViewC64Disassembly("C64 Disassembly 2", 100, 100, posZ, 200, 300,
 												 debugInterfaceC64->symbols, NULL, viewC64MemoryMap);
 
-	viewDrive1541Disassembly = new CViewDisassembly("1541 Disassembly", 110, 110, posZ, 200, 300,
+	viewDrive1541Disassembly = new CViewC64Disassembly("1541 Disassembly", 110, 110, posZ, 200, 300,
 													debugInterfaceC64->symbolsDrive1541, NULL, viewDrive1541MemoryMap);
 	
-	viewDrive1541Disassembly2 = new CViewDisassembly("1541 Disassembly 2", 120, 120, posZ, 200, 300,
+	viewDrive1541Disassembly2 = new CViewC64Disassembly("1541 Disassembly 2", 120, 120, posZ, 200, 300,
 													debugInterfaceC64->symbolsDrive1541, NULL, viewDrive1541MemoryMap);
 
 	viewC64MemoryDataDump = new CViewDataDump("C64 Memory", 190, 300, posZ, 320, 140,
@@ -804,6 +830,9 @@ void CViewC64::InitViceViews()
 
 	// set first drive data dump as main to be controlled by drive memory map
 	viewDrive1541MemoryMap->SetDataDumpView(viewDrive1541MemoryDataDump);
+	
+	//
+	viewDrive1541FileD64 = new CViewDrive1541FileD64("1541 Disk directory", 120, 120, posZ, SCREEN_WIDTH, SCREEN_HEIGHT);
 	
 	//
 	viewC64BreakpointsPC = new CViewBreakpoints("C64 PC Breakpoints", 10, 40, posZ, SCREEN_WIDTH, SCREEN_HEIGHT, this->debugInterfaceC64->symbols, BREAKPOINT_TYPE_CPU_PC);
@@ -854,7 +883,7 @@ void CViewC64::InitViceViews()
 	viewC64MonitorConsole = new CViewMonitorConsole("C64 Monitor console", 40, 70, posZ, 500, 300, debugInterfaceC64);
 
 	//
-	viewDriveStateCPU = new CViewDriveStateCPU("1541 CPU", 20, 50, posZ, 300, 35, debugInterfaceC64);
+	viewDrive1541StateCPU = new CViewDrive1541StateCPU("1541 CPU", 20, 50, posZ, 300, 35, debugInterfaceC64);
 
 	//
 	viewC64AllGraphics = new CViewC64AllGraphics("C64 All graphics", 0, 0, posZ, 500, 500, debugInterfaceC64);
@@ -867,8 +896,11 @@ void CViewC64::InitViceViews()
 	float timelineHeight = 40;
 	viewC64Timeline = new CViewTimeline("C64 Timeline", 0, 440, posZ, 700, timelineHeight, debugInterfaceC64);
 
+	viewVicEditor = new CViewVicEditor("C64 VIC Editor", 100, 150, -3.0, 480, 300);
+
 	// add sorted views
 	debugInterfaceC64->AddView(viewC64Screen);
+	debugInterfaceC64->AddView(viewC64ScreenViewfinder);
 	debugInterfaceC64->AddView(viewC64StateCPU);
 	debugInterfaceC64->AddView(viewC64Disassembly);
 	debugInterfaceC64->AddView(viewC64Disassembly2);
@@ -910,6 +942,9 @@ void CViewC64::InitViceViews()
 	debugInterfaceC64->AddView(viewC64VicControl);
 	viewC64VicControl->visible = false;
 	
+//	debugInterfaceC64->AddView(viewVicEditor);
+//	viewVicEditor->visible = false;
+
 //	debugInterfaceC64->AddView(viewC64AllGraphics);
 //	viewC64AllGraphics->visible = false;
 	debugInterfaceC64->AddView(viewC64SidTrackerHistory);
@@ -917,8 +952,8 @@ void CViewC64::InitViceViews()
 	debugInterfaceC64->AddView(viewC64SidPianoKeyboard);
 	viewC64SidPianoKeyboard->visible = false;
 
-	debugInterfaceC64->AddView(viewDriveStateCPU);
-	viewDriveStateCPU->visible = false;
+	debugInterfaceC64->AddView(viewDrive1541StateCPU);
+	viewDrive1541StateCPU->visible = false;
 	debugInterfaceC64->AddView(viewDrive1541Disassembly);
 	viewDrive1541Disassembly->visible = false;
 	debugInterfaceC64->AddView(viewDrive1541Disassembly2);
@@ -941,6 +976,9 @@ void CViewC64::InitViceViews()
 	
 	debugInterfaceC64->AddView(viewDrive1541StateVIA);
 	viewDrive1541StateVIA->visible = false;
+	
+	debugInterfaceC64->AddView(viewDrive1541FileD64);
+	viewDrive1541FileD64->visible = false;
 
 	debugInterfaceC64->AddView(viewC64MonitorConsole);
 	viewC64MonitorConsole->visible = false;
@@ -952,7 +990,8 @@ void CViewC64::InitViceViews()
 	
 	debugInterfaceC64->AddView(viewC64Timeline);
 
-	
+	// add timeline view to snapshots manager
+	debugInterfaceC64->snapshotsManager->viewTimeline = viewC64Timeline;
 	
 	// add c64 screen on top of all other views
 //	this->AddGuiElement(viewC64Screen);
@@ -1041,6 +1080,9 @@ void CViewC64::InitAtari800Views()
 	debugInterfaceAtari->AddView(viewAtariEmulationCounters);
 	viewAtariEmulationCounters->visible = true;
 	debugInterfaceAtari->AddView(viewAtariTimeline);
+	
+	// add timeline view to snapshots manager
+	debugInterfaceAtari->snapshotsManager->viewTimeline = viewAtariTimeline;
 }
 
 void CViewC64::InitNestopiaViews()
@@ -1146,6 +1188,9 @@ void CViewC64::InitNestopiaViews()
 	viewNesMonitorConsole->visible = false;
 	debugInterfaceNes->AddView(viewNesEmulationCounters);
 	debugInterfaceNes->AddView(viewNesTimeline);
+	
+	// add timeline view to snapshots manager
+	debugInterfaceNes->snapshotsManager->viewTimeline = viewNesTimeline;
 }
 
 // TODO: generalize me
@@ -1361,6 +1406,7 @@ void CEmulationThreadC64::ThreadRun(void *data)
 
 	LOGD("CEmulationThreadC64::ThreadRun");
 		
+	viewC64->viewDrive1541FileD64->SetDiskImage(0);
 	viewC64->debugInterfaceC64->RunEmulationThread();
 	
 	LOGD("CEmulationThreadC64::ThreadRun: finished");
@@ -1529,10 +1575,10 @@ void CViewC64::Render()
 //		viewC64ScreenWrapper->RenderRaster(rasterToShowX, rasterToShowY);
 //	}
 	
-	if (viewC64Screen->showZoomedScreen)
-	{
-		viewC64Screen->RenderZoomedScreen(rasterToShowX, rasterToShowY);
-	}
+//	if (viewC64Screen->showZoomedScreen)
+//	{
+//		viewC64Screen->RenderZoomedScreen(c64RasterPosToShowX, c64RasterPosToShowY);
+//	}
 #endif
 
 	// check if we need to hide or display cursor
@@ -1549,7 +1595,9 @@ void CViewC64::Render()
 
 void CViewC64::RenderImGui()
 {
+	/// SKIP FONT:
 	ImGui::SetCurrentFont(imFontDefault);
+
 //	ImGui::SetCurrentFont(imFontPro);
 //	ImGui::SetCurrentFont(imFontSweet16);
 	
@@ -1576,6 +1624,7 @@ void CViewC64::RenderImGui()
 
 ///////////////
 
+// TODO: refactor UpdateViciiColors and move to C64DebugInterfaceVice
 void CViewC64::UpdateViciiColors()
 {
 	int rasterX = viciiStateToShow.raster_cycle*8;
@@ -1583,29 +1632,29 @@ void CViewC64::UpdateViciiColors()
 	
 	// update current colors for rendering states
 	
-	this->rasterToShowX = rasterX;
-	this->rasterToShowY = rasterY;
-	this->rasterCharToShowX = (viewC64->viciiStateToShow.raster_cycle - 0x11);
-	this->rasterCharToShowY = (viewC64->viciiStateToShow.raster_line - 0x32) / 8;
+	this->c64RasterPosToShowX = rasterX;
+	this->c64RasterPosToShowY = rasterY;
+	this->c64RasterPosCharToShowX = (viewC64->viciiStateToShow.raster_cycle - 0x11);
+	this->c64RasterPosCharToShowY = (viewC64->viciiStateToShow.raster_line - 0x32) / 8;
 	
 	//LOGD("       |   rasterCharToShowX=%3d rasterCharToShowY=%3d", rasterCharToShowX, rasterCharToShowY);
 	
-	if (rasterCharToShowX < 0)
+	if (c64RasterPosCharToShowX < 0)
 	{
-		rasterCharToShowX = 0;
+		c64RasterPosCharToShowX = 0;
 	}
-	else if (rasterCharToShowX > 39)
+	else if (c64RasterPosCharToShowX > 39)
 	{
-		rasterCharToShowX = 39;
+		c64RasterPosCharToShowX = 39;
 	}
 	
-	if (rasterCharToShowY < 0)
+	if (c64RasterPosCharToShowY < 0)
 	{
-		rasterCharToShowY = 0;
+		c64RasterPosCharToShowY = 0;
 	}
-	else if (rasterCharToShowY > 24)
+	else if (c64RasterPosCharToShowY > 24)
 	{
-		rasterCharToShowY = 24;
+		c64RasterPosCharToShowY = 24;
 	}
 
 	
@@ -1622,7 +1671,7 @@ void CViewC64::UpdateViciiColors()
 	
 	if (viewC64StateVIC->forceColorD800 == -1)
 	{
-		this->colorToShowD800 = color_ram_ptr[ rasterCharToShowY * 40 + rasterCharToShowX ] & 0x0F;
+		this->colorToShowD800 = color_ram_ptr[ c64RasterPosCharToShowY * 40 + c64RasterPosCharToShowX ] & 0x0F;
 	}
 	else
 	{
@@ -1854,11 +1903,6 @@ CViewDisassembly *CViewC64::GetActiveDisassembleView()
 	return NULL;
 }
 
-void CViewC64::SwitchUseKeyboardAsJoystick()
-{
-	viewC64SettingsMenu->menuItemUseKeyboardAsJoystick->SwitchToNext();
-}
-
 // TODO: proper banking
 void CViewC64::SwitchIsDataDirectlyFromRam()
 {
@@ -2023,6 +2067,19 @@ bool CViewC64::KeyDown(u32 keyCode, bool isShift, bool isAlt, bool isControl, bo
 {
 	LOGI("CViewC64::KeyDown, keyCode=%4.4x (%d) %c", keyCode, keyCode, keyCode);
 
+	// debug
+//	if (keyCode == MTKEY_SPACEBAR)
+//	{
+////		debugInterfaceC64->snapshotsManager->StoreTimelineToFile(new CSlrString("/Users/mars/Downloads2/test.rdtl"));
+//		
+//		ImGuiIO& io = ImGui::GetIO();
+//		io.ConfigFlags &= ~ImGuiConfigFlags_ViewportsEnable;         // Disable Multi-Viewport / Platform Windows
+//	}
+//	if (keyCode == MTKEY_ENTER)
+//	{
+//		debugInterfaceC64->snapshotsManager->RestoreTimelineFromFile(new CSlrString("/Users/mars/Downloads2/test.rdtl"));
+//	}
+	
 #if defined(LOG_KEYBOARD_PRESS_KEY_NAME)
 	CSlrString *keyCodeStr = SYS_KeyCodeToString(keyCode);
 	char *str = keyCodeStr->GetStdASCII();
@@ -2071,7 +2128,7 @@ bool CViewC64::KeyDown(u32 keyCode, bool isShift, bool isAlt, bool isControl, bo
 ////		debugInterface->SetC64ModelType(4);
 //		
 //		MapC64MemoryToFile ("/Users/mars/memorymap");
-//		guiMain->ShowMessage("mapped");
+//		viewC64->ShowMessage("mapped");
 //		return true;
 //	}
 
@@ -2138,11 +2195,11 @@ bool CViewC64::KeyDown(u32 keyCode, bool isShift, bool isAlt, bool isControl, bo
 	}
 	*/
 	
-	// TODO: is this needed?
+	// TODO: is this below needed?
 	
 	/*
 	// TODO: this is a temporary UX workaround for step over jsr
-	CSlrKeyboardShortcut *shortcut = guiMain->keyboardShortcuts->FindShortcut(KBZONE_DISASSEMBLE, keyCode, isShift, isAlt, isControl, isSuper);
+	CSlrKeyboardShortcut *shortcut = guiMain->keyboardShortcuts->FindShortcut(KBZONE_DISASSEMBLY, keyCode, isShift, isAlt, isControl, isSuper);
 
 	if (shortcut == mainMenuBar->kbsStepOverJsr)
 	{
@@ -2624,6 +2681,9 @@ void CViewC64::Create8BitFonts()
 
 void CViewC64::CreateDefaultUIFont()
 {
+	/// SKIP FONT
+//	return;
+	
 	ImGuiIO& io = ImGui::GetIO();
 		
 #if defined(MACOS)
@@ -2695,6 +2755,19 @@ void CUiThreadTaskSetDefaultUiFont::RunUIThreadTask()
 	guiMain->CreateUiFontsTexture();
 }
 
+//
+void CViewC64::SetViewportsEnable(bool viewportsEnable)
+{
+	LOGM("CViewC64::SetViewportsEnable: %s", STRBOOL(viewportsEnable));
+	CUiThreadTaskSetViewportsEnable *task = new CUiThreadTaskSetViewportsEnable();
+	task->viewportsEnable = viewportsEnable;
+	guiMain->AddUiThreadTask(task);
+}
+
+void CUiThreadTaskSetViewportsEnable::RunUIThreadTask()
+{
+	VID_SetViewportsEnable(viewportsEnable);
+}
 
 // TODO: this is called by emulator code when frame is started (i.e. just after VSync)
 //       note that this assumes we have *ONE* emulator working (the C64 Vice is supported by now)
@@ -2759,7 +2832,7 @@ void CViewC64::UpdateSIDMute()
 	if (this->isSoundMuted == false)
 	{
 		// start sound
-		debugInterfaceC64->SetAudioVolume((float)(c64SettingsAudioVolume) / 100.0f);
+		debugInterfaceC64->SetAudioVolume((float)(c64SettingsViceAudioVolume) / 100.0f);
 		debugInterfaceC64->SetRunSIDEmulation(c64SettingsRunSIDEmulation);
 	}
 	else
@@ -2893,6 +2966,201 @@ void CViewC64::CreateEmulatorPlugins()
 	C64D_InitPlugins();
 }
 
+// keep current symbols for all emus in settings for the 'keep symbols' functionality:
+// observer of symbols data change:
+#define DEFAULT_SYMBOLS_FILE_NAME	"defaultSymbols.hjson"
+void CViewC64::DefaultSymbolsStore()
+{
+	LOGD("CViewC64::DefaultSymbolsStore");
+	
+	// TODO: BUG: workaround for DefaultSymbolsStore will NOT work for multiple emulators only the first
+	// Note: this workaround below checks if this is first store of default watches and breakpoints without labels.
+	//       examine this case below: we are storing watches/breakpoints without labels
+	//		 watches/breakpoints contain a label (if exists) and address,
+	//		 when we restore watches/breakpoints we check if label exists, and point to that label/address,
+	//		 if there's no label we use backup address instead
+	//		 thus this causes a problem:
+	//       watches and breakpoints are restored without labels on startup of the application
+	//       but as there are no labels on startup, then watches/breakpoints that point to labels will be converted to their backup addresses
+	//       and watchpoints/breakpoints labels are lost
+	//       then a while later code will load async within startup thread,
+	//       and normally before loading code we would store now breakpoints/watches with addresses only and no labels
+	//		 now, code loads its own labels and say- some label has been changed (i.e. code recompiled),
+	//       but our default symbols created by the user in debugger do not contain labels anymore, so we would see wrong addresses instead
+	//		 to solve this as a workaround we do not store watches/breakpoints on first load of code and will re-load default from previous session
+	//       allowing properly matching old watches/breakpoints that point to a label to a new label address
+	if (firstStoreDefaultSymbols)
+	{
+		firstStoreDefaultSymbols = false;
+		if (c64SettingsKeepSymbolsLabels == false)
+		{
+			return;
+		}
+	}
+	
+	if (c64SettingsKeepSymbolsLabels == false
+		&& c64SettingsKeepSymbolsWatches == false
+		&& c64SettingsKeepSymbolsBreakpoints == false)
+	{
+		return;
+	}
+
+	Hjson::Value hjsonRoot;
+	SerializeAllEmulatorsSymbols(hjsonRoot, c64SettingsKeepSymbolsLabels, c64SettingsKeepSymbolsWatches, c64SettingsKeepSymbolsBreakpoints);
+
+	std::stringstream ss;
+	ss << Hjson::Marshal(hjsonRoot);
+	
+	std::string s = ss.str();
+	const char *cstrHjson = s.c_str();
+
+	CSlrString *fileName = new CSlrString(DEFAULT_SYMBOLS_FILE_NAME);
+	CByteBuffer *byteBuffer = new CByteBuffer();
+	byteBuffer->PutBytes((u8*)cstrHjson, strlen(cstrHjson));
+	byteBuffer->storeToSettings(fileName);
+	delete byteBuffer;
+	delete fileName;
+}
+
+void CViewC64::SerializeAllEmulatorsSymbols(Hjson::Value hjsonRoot, bool storeLabels, bool storeWatches, bool storeBreakpoints)
+{
+	LOGD("CViewC64::SerializeAllEmulatorsSymbols");
+
+	hjsonRoot["Version"] = "1";
+
+	Hjson::Value hjsonEmulators;
+	for (std::vector<CDebugInterface *>::iterator it = debugInterfaces.begin(); it != debugInterfaces.end(); it++)
+	{
+		CDebugInterface *debugInterface = *it;
+				
+		debugInterface->LockMutex();
+
+		LOGD("...emulator %s", debugInterface->GetPlatformNameString());
+		
+		Hjson::Value hjsonEmulator;
+		
+		if (storeLabels)
+		{
+			Hjson::Value hjsonLabels;
+			debugInterface->symbols->SerializeLabelsToHjson(hjsonLabels);
+			hjsonEmulator["Labels"] = hjsonLabels;
+		}
+		
+		if (storeWatches)
+		{
+			Hjson::Value hjsonWatches;
+			debugInterface->symbols->SerializeWatchesToHjson(hjsonWatches);
+			hjsonEmulator["Watches"] = hjsonWatches;
+		}
+
+		if (storeBreakpoints)
+		{
+			Hjson::Value hjsonBreakpoints;
+			debugInterface->symbols->SerializeBreakpointsToHjson(hjsonBreakpoints);
+			hjsonEmulator["Breakpoints"] = hjsonBreakpoints;
+		}
+
+		debugInterface->UnlockMutex();
+
+		const char *name = debugInterface->GetPlatformNameString();
+		hjsonEmulators[name] = hjsonEmulator;
+	}
+
+	hjsonRoot["Emulators"] = hjsonEmulators;
+}
+
+void CViewC64::DefaultSymbolsRestore()
+{
+	LOGD("CViewC64::DefaultSymbolsRestore");
+	if (c64SettingsKeepSymbolsLabels == false
+		&& c64SettingsKeepSymbolsWatches == false
+		&& c64SettingsKeepSymbolsBreakpoints == false)
+	{
+		return;
+	}
+
+	CSlrString *fileName = new CSlrString(DEFAULT_SYMBOLS_FILE_NAME);
+	CByteBuffer *byteBuffer = new CByteBuffer();
+	byteBuffer->loadFromSettings(fileName);
+	
+	if (!byteBuffer->IsEmpty())
+	{
+		char *jsonText = new char[byteBuffer->length+2];
+		memcpy(jsonText, byteBuffer->data, byteBuffer->length);
+		jsonText[byteBuffer->length] = 0;
+		
+		Hjson::Value hjsonRoot;
+		std::stringstream ss;
+		ss.str(jsonText);
+		
+		try
+		{
+			ss >> hjsonRoot;
+			DeserializeAllEmulatorsSymbols(hjsonRoot, c64SettingsKeepSymbolsLabels, c64SettingsKeepSymbolsWatches, c64SettingsKeepSymbolsBreakpoints);
+		}
+		catch (const std::exception& e)
+		{
+			LOGError("CViewC64::DefaultSymbolsRestore error: %s", e.what());
+			
+			char *buf = SYS_GetCharBuf();
+			sprintf(buf, "Loading default symbols failed. Error:\n%s", e.what());
+			guiMain->ShowMessageBox("Error", buf);
+			SYS_ReleaseCharBuf(buf);
+		}
+	}
+	
+	delete byteBuffer;
+	delete fileName;
+
+}
+
+void CViewC64::DeserializeAllEmulatorsSymbols(Hjson::Value hjsonRoot, bool restoreLabels, bool restoreWatches, bool restoreBreakpoints)
+{
+	LOGD("CViewC64::DeserializeAllEmulatorsSymbols");
+	Hjson::Value hjsonEmulators = hjsonRoot["Emulators"];
+	for (auto it = hjsonEmulators.begin(); it != hjsonEmulators.end(); ++it)
+	{
+		std::string emulatorName = it->first;
+		const char *cEmulatorName = emulatorName.c_str();
+
+		LOGD("....emulatorName=%s", cEmulatorName);
+		
+		for (std::vector<CDebugInterface *>::iterator itInterface = debugInterfaces.begin();
+			 itInterface != debugInterfaces.end(); itInterface++)
+		{
+			CDebugInterface *debugInterface = *itInterface;
+			if (!strcmp(cEmulatorName, debugInterface->GetPlatformNameString()))
+			{
+				Hjson::Value hjsonEmulator = it->second;
+				
+				debugInterface->LockMutex();
+				
+				if (restoreLabels)
+				{
+					Hjson::Value hjsonLabels = hjsonEmulator["Labels"];
+					debugInterface->symbols->DeserializeLabelsFromHjson(hjsonLabels);
+				}
+				
+				if (restoreWatches)
+				{
+					Hjson::Value hjsonWatches = hjsonEmulator["Watches"];
+					debugInterface->symbols->DeserializeWatchesFromHjson(hjsonWatches);
+				}
+
+				if (restoreBreakpoints)
+				{
+					Hjson::Value hjsonBreakpoints = hjsonEmulator["Breakpoints"];
+					debugInterface->symbols->DeserializeBreakpointsFromHjson(hjsonBreakpoints);
+					debugInterface->UpdateRenderBreakpoints();
+				}
+				
+				debugInterface->UnlockMutex();
+			}
+		}
+	}
+}
+
+
 // REMOVE THESE OLD DIALOGS
 void CViewC64::ShowDialogOpenFile(CSystemFileDialogCallback *callback, std::list<CSlrString *> *extensions,
 						CSlrString *defaultFolder,
@@ -2924,6 +3192,34 @@ void CViewC64::ShowDialogOpenFile(CSystemFileDialogCallback *callback, std::list
 	}
 }
 
+//
+#define BUFSIZE 1024*8
+void CViewC64::ShowMessage(const char *fmt, ...)
+{
+	mutexShowMessage->Lock();
+	static char buffer[BUFSIZE];
+	//memset(buffer, 0x00, BUFSIZE);
+
+	va_list args;
+
+	va_start(args, fmt);
+	vsnprintf(buffer, BUFSIZE, fmt, args);
+	va_end(args);
+	buffer[BUFSIZE-1] = 0x00;
+	
+	viewMessages->AddLog(buffer);
+	viewMessages->AddLog("\n");
+	mutexShowMessage->Unlock();
+}
+
+void CViewC64::ShowMessage(CSlrString *showMessage)
+{
+	char *cStr = showMessage->GetStdASCII();
+	this->ShowMessage(cStr);
+	delete [] cStr;
+}
+
+//
 void CViewC64::FileSelected(CSlrString *filePath)
 {
 	LOGTODO("ShowDialogOpenFile CHECK MEMORY LEAKS");
@@ -3006,23 +3302,23 @@ void CViewC64::ApplicationShutdown()
 {
 	LOGD("CViewC64::ApplicationShutdown");
 	
-	_exit(0);
-	
-	guiMain->RemoveAllViews();
-	
-	if (viewC64->debugInterfaceC64)
-	{
-		viewC64->debugInterfaceC64->Shutdown();
-	}
-	if (viewC64->debugInterfaceAtari)
-	{
-		viewC64->debugInterfaceAtari->Shutdown();
-	}
-	if (viewC64->debugInterfaceNes)
-	{
-		viewC64->debugInterfaceNes->Shutdown();
-	}
-	SYS_Sleep(100);
+	viewC64->DefaultSymbolsStore();
+
+//	guiMain->RemoveAllViews();
+//
+//	if (viewC64->debugInterfaceC64)
+//	{
+//		viewC64->debugInterfaceC64->Shutdown();
+//	}
+//	if (viewC64->debugInterfaceAtari)
+//	{
+//		viewC64->debugInterfaceAtari->Shutdown();
+//	}
+//	if (viewC64->debugInterfaceNes)
+//	{
+//		viewC64->debugInterfaceNes->Shutdown();
+//	}
+//	SYS_Sleep(100);
 }
 
 void CViewC64::GlobalDropFileCallback(char *filePath, bool consumedByView)

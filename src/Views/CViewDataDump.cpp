@@ -43,8 +43,6 @@ CViewDataDump::CViewDataDump(const char *name, float posX, float posY, float pos
 	this->viewMemoryMap = viewMemoryMap;
 	this->viewDisassemble = viewDisassemble;
 	
-	this->debugInterface = debugInterface;
-	
 	this->viewMemoryMap->SetDataDumpView(this);
 
 	SetNumDigitsInAddress(4);
@@ -102,8 +100,8 @@ CViewDataDump::CViewDataDump(const char *name, float posX, float posY, float pos
 	AddLayoutParameter(new CLayoutParameterBool("Character graphics", &showCharacters));
 	AddLayoutParameter(new CLayoutParameterBool("Sprites", &showSprites));
 
-	static const char* dataCharsets[] = { "C64 upper case", "C64 lower case", "Atari 800", "Custom from RAM", "Custom from file" };
-	AddLayoutParameter(new CLayoutParameterCombo("Charset", &selectedCharset, dataCharsets, 5));
+	static const char* dataCharsets[] = { "C64 upper case", "C64 lower case", "Atari 800" }; //, "Custom from RAM", "Custom from file" };
+	AddLayoutParameter(new CLayoutParameterCombo("Charset", &selectedCharset, dataCharsets, 3));
 
 	// init images for characters
 	for (int i = 0; i < numberOfCharactersToShow; i++)
@@ -193,7 +191,7 @@ void CViewDataDump::RecalculateFontSizes()
 	// calculate font sizes
 	
 	// workaround for broken layout
-	if (fontSize < 0.001f)
+	if (fontSize < 0.01f)
 	{
 		fontSize = 5.0f;
 	}
@@ -373,7 +371,7 @@ void CViewDataDump::Render()
 			dataAdapter->AdapterReadByte(a, &value, &isAvailable);
 			if (isAvailable)
 			{
-				CViewMemoryMapCell *cell = viewMemoryMap->memoryCells[a];
+				CDebugMemoryMapCell *cell = viewMemoryMap->memoryCells[a];
 				
 				if (cell->isExecuteCode)
 				{
@@ -403,7 +401,7 @@ void CViewDataDump::Render()
 					{
 						sprintfHexCode8(buf, value);
 
-						CViewMemoryMapCell *cell = viewMemoryMap->memoryCells[this->dataAddr];
+						CDebugMemoryMapCell *cell = viewMemoryMap->memoryCells[this->dataAddr];
 //						fontBytes->BlitTextColor(buf, px, py, posZ, fontBytesSize,
 
 //						fontBytesSize*2.0f, fontCharactersWidth, 0.3f,  1.0f, 0.3f, 0.5f, 1.3f);
@@ -734,9 +732,11 @@ bool CViewDataDump::DoTap(float x, float y)
 	int dataPositionY;
 	int dataPositionAddr;
 	
-	if (isEditingValue)
-		editHex->FinalizeEntering(MTKEY_ENTER, true);
-
+	if (isEditingValue || isEditingValueAddr)
+	{
+		CancelEditingHexBox();
+	}
+	
 	bool found = FindDataPosition(x, y, &dataPositionX, &dataPositionY, &dataPositionAddr);
 	if (found == false)
 	{
@@ -758,7 +758,7 @@ bool CViewDataDump::DoTap(float x, float y)
 
 	if (guiMain->isControlPressed)
 	{
-		CViewMemoryMapCell *cell = viewMemoryMap->memoryCells[dataPositionAddr];
+		CDebugMemoryMapCell *cell = viewMemoryMap->memoryCells[dataPositionAddr];
 		
 		if (guiMain->isShiftPressed)
 		{
@@ -865,6 +865,9 @@ bool CViewDataDump::DoScrollWheel(float deltaX, float deltaY)
 
 void CViewDataDump::ScrollDataUp()
 {
+	if (isEditingValue || isEditingValueAddr)
+		CancelEditingHexBox();
+
 	int newDataAddr;
 	newDataAddr = dataShowStart - numberOfBytesPerLine;
 	if (newDataAddr < 0)
@@ -877,6 +880,9 @@ void CViewDataDump::ScrollDataUp()
 
 void CViewDataDump::ScrollDataPageUp()
 {
+	if (isEditingValue || isEditingValueAddr)
+		CancelEditingHexBox();
+
 	int newDataAddr;
 	newDataAddr = dataShowStart - dataShowSize;
 	if (newDataAddr < 0)
@@ -889,6 +895,9 @@ void CViewDataDump::ScrollDataPageUp()
 
 void CViewDataDump::ScrollDataDown()
 {
+	if (isEditingValue || isEditingValueAddr)
+		CancelEditingHexBox();
+
 	int newDataAddr;
 	newDataAddr = dataShowStart + numberOfBytesPerLine;
 	
@@ -902,6 +911,9 @@ void CViewDataDump::ScrollDataDown()
 
 void CViewDataDump::ScrollDataPageDown()
 {
+	if (isEditingValue || isEditingValueAddr)
+		CancelEditingHexBox();
+
 	int newDataAddr;
 	newDataAddr = dataShowEnd;
 	
@@ -925,6 +937,9 @@ void CViewDataDump::ScrollToAddress(int address, bool updateDataShowStart)
 	if (this->visible == false || numberOfBytesPerLine == 0)
 		return;
 	
+	if (isEditingValue || isEditingValueAddr)
+		CancelEditingHexBox();
+
 	if (address >= dataAdapter->AdapterGetDataLength())
 	{
 		address = dataAdapter->AdapterGetDataLength()-1;
@@ -1014,6 +1029,16 @@ bool CViewDataDump::KeyDown(u32 keyCode, bool isShift, bool isAlt, bool isContro
 		return false;
 	}
 	
+	CSlrKeyboardShortcut *keyboardShortcutMemory = guiMain->keyboardShortcuts->FindShortcut(KBZONE_MEMORY, bareKey, isShift, isAlt, isControl, isSuper);
+	
+	// check if editing value and go to address shortcut pressed
+	if (isEditingValue && keyboardShortcutMemory == viewC64->mainMenuBar->kbsGoToAddress)
+	{
+		CancelEditingHexBox();
+
+		// setting up the key shortcut to enter goto address will be handled later
+	}
+	
 	if (isEditingValue || isEditingValueAddr)
 	{
 		editHex->KeyDown(keyCode);
@@ -1032,15 +1057,15 @@ bool CViewDataDump::KeyDown(u32 keyCode, bool isShift, bool isAlt, bool isContro
 		return true;
 	}
 	
-	CSlrKeyboardShortcut *keyboardShortcut = guiMain->keyboardShortcuts->FindShortcut(KBZONE_DISASSEMBLE, bareKey, isShift, isAlt, isControl, isSuper);
-	if (keyboardShortcut == viewC64->mainMenuBar->kbsToggleTrackPC)
+	CSlrKeyboardShortcut *keyboardShortcutDisassembly = guiMain->keyboardShortcuts->FindShortcut(KBZONE_DISASSEMBLY, bareKey, isShift, isAlt, isControl, isSuper);
+	if (keyboardShortcutDisassembly == viewC64->mainMenuBar->kbsToggleTrackPC)
 	{
 		return viewDisassemble->KeyDown(keyCode, isShift, isAlt, isControl, isSuper);
 	}
 	
-	keyboardShortcut = guiMain->keyboardShortcuts->FindShortcut(KBZONE_MEMORY, bareKey, isShift, isAlt, isControl, isSuper);
+	//
 	
-	if (keyboardShortcut == viewC64->mainMenuBar->kbsGoToAddress)
+	if (keyboardShortcutMemory == viewC64->mainMenuBar->kbsGoToAddress)
 	{
 		int adr = dataShowStart + dataShowSize/2 + dataAdapter->GetDataOffset();
 		editHex->SetValue(adr, numDigitsInAddress);
@@ -1065,21 +1090,21 @@ bool CViewDataDump::KeyDown(u32 keyCode, bool isShift, bool isAlt, bool isContro
 		return true;
 	}
 
-	keyboardShortcut = guiMain->keyboardShortcuts->FindShortcut(KBZONE_GLOBAL, bareKey, isShift, isAlt, isControl, isSuper);
+	CSlrKeyboardShortcut *keyboardShortcutGlobal = guiMain->keyboardShortcuts->FindShortcut(KBZONE_GLOBAL, bareKey, isShift, isAlt, isControl, isSuper);
 
-	if (keyboardShortcut == viewC64->mainMenuBar->kbsCopyToClipboard)
+	if (keyboardShortcutGlobal == viewC64->mainMenuBar->kbsCopyToClipboard)
 	{
 		this->CopyHexValuesToClipboard();
 		return true;
 	}
 
-	if (keyboardShortcut == viewC64->mainMenuBar->kbsCopyAlternativeToClipboard)
+	if (keyboardShortcutGlobal == viewC64->mainMenuBar->kbsCopyAlternativeToClipboard)
 	{
 		this->CopyHexAddressToClipboard();
 		return true;
 	}
 
-	if (keyboardShortcut == viewC64->mainMenuBar->kbsPasteFromClipboard)
+	if (keyboardShortcutGlobal == viewC64->mainMenuBar->kbsPasteFromClipboard)
 	{
 		this->PasteHexValuesFromClipboard();
 		return true;
@@ -1390,13 +1415,13 @@ void CViewDataDump::CopyHexValuesToClipboard()
 		delete str;
 
 		sprintf(buf, "Copied $%02X", val);
-		guiMain->ShowMessage(buf);
+		viewC64->ShowMessage(buf);
 		
 		SYS_ReleaseCharBuf(buf);
 	}
 	else
 	{
-		guiMain->ShowMessage("Data not available for copy");
+		viewC64->ShowMessage("Data not available for copy");
 	}
 }
 
@@ -1413,7 +1438,7 @@ void CViewDataDump::CopyHexAddressToClipboard()
 	delete str;
 	
 	sprintf(buf, "Copied $%04X", addrCursor);
-	guiMain->ShowMessage(buf);
+	viewC64->ShowMessage(buf);
 
 	SYS_ReleaseCharBuf(buf);
 }
@@ -1453,7 +1478,7 @@ void CViewDataDump::RenderContextMenuItems()
 {
 	CGuiView::RenderContextMenuItems();
 	
-	CViewMemoryMapCell *cell = viewMemoryMap->memoryCells[dataAddr];
+	CDebugMemoryMapCell *cell = viewMemoryMap->memoryCells[dataAddr];
 	
 	u8 val;
 	dataAdapter->AdapterReadByte(dataAddr, &val);
@@ -1670,6 +1695,13 @@ void CViewDataDump::RenderContextMenuItems()
 	ImGui::Separator();
 	
 //	if (ImGui::CollapsingHeader("Config", ImGuiTreeNodeFlags_DefaultOpen))
+}
+
+void CViewDataDump::CancelEditingHexBox()
+{
+	editHex->CancelEntering();
+	isEditingValue = false;
+	isEditingValueAddr = false;
 }
 
 void CViewDataDump::Serialize(CByteBuffer *byteBuffer)

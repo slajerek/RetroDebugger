@@ -8,6 +8,7 @@
 #include "CViewVicEditorLayers.h"
 #include "CVicEditorLayerC64Screen.h"
 #include "CViewC64Sprite.h"
+#include "CMainMenuBar.h"
 #include "SYS_KeyCodes.h"
 #include "C64Tools.h"
 #include "CViewDisassembly.h"
@@ -54,7 +55,7 @@ void CDebuggerApiVice::ConvertImageToScreen(char *filePath)
 
 void CDebuggerApiVice::ConvertImageToScreen(CImageData *imageData)
 {
-	viewC64->viewVicEditor->viewVicDisplayMain->currentCanvas->ConvertFrom(imageData);
+	viewC64->viewVicEditor->ImportImage(imageData);
 }
 
 void CDebuggerApiVice::ClearReferenceImage()
@@ -226,7 +227,7 @@ u8 CDebuggerApiVice::GetByteFromRamC64(int addr)
 
 void CDebuggerApiVice::DetachEverything()
 {
-	viewC64->viewC64SettingsMenu->DetachEverything(false, false);
+	viewC64->mainMenuBar->DetachEverything(false, false);
 }
 
 void CDebuggerApiVice::ClearRam(int startAddr, int endAddr, u8 value)
@@ -334,6 +335,12 @@ void CDebuggerApiVice::AddWatch(int address, char *watchName, uint8 representati
 void CDebuggerApiVice::AddWatch(int address, char *watchName)
 {
 	this->AddWatch(address, watchName, WATCH_REPRESENTATION_HEX_8, 1);
+}
+
+bool CDebuggerApiVice::LoadPRG(const char *filePath)
+{
+	u16 fromAddr, toAddr;
+	return this->LoadPRG(filePath, &fromAddr, &toAddr);
 }
 
 bool CDebuggerApiVice::LoadPRG(const char *filePath, u16 *fromAddr, u16 *toAddr)
@@ -452,16 +459,17 @@ void CDebuggerApiVice::BasicUpStart(u16 jmpAddr)
 	
 	char buf[16];
 	sprintf(buf, "%d", jmpAddr);
-	viewC64->debugInterfaceC64->SetByteToRamC64(0x0801, 0x0C);
+	viewC64->debugInterfaceC64->SetByteToRamC64(0x0801, 0x0D);
 	viewC64->debugInterfaceC64->SetByteToRamC64(0x0802, 0x08);
-	viewC64->debugInterfaceC64->SetByteToRamC64(0x0803, 0x9A);
-	viewC64->debugInterfaceC64->SetByteToRamC64(0x0804, (u8) (lineNumber & 0xff));
-	viewC64->debugInterfaceC64->SetByteToRamC64(0x0805, (u8) (lineNumber >> 8));
-	
-	int a = 0x0806;
+	viewC64->debugInterfaceC64->SetByteToRamC64(0x0803, (u8) (lineNumber & 0xff));
+	viewC64->debugInterfaceC64->SetByteToRamC64(0x0804, (u8) (lineNumber >> 8));
+	viewC64->debugInterfaceC64->SetByteToRamC64(0x0805, 0x9E);
+	viewC64->debugInterfaceC64->SetByteToRamC64(0x0806, 0x20);
+
+	int a = 0x0807;
 	for (int i = 0; i < strlen(buf); i++)
 	{
-		viewC64->debugInterfaceC64->SetByteToRamC64(a++, i);
+		viewC64->debugInterfaceC64->SetByteToRamC64(a++, buf[i]);
 	}
 	viewC64->debugInterfaceC64->SetByteToRamC64(a++, 0x00);
 }
@@ -602,7 +610,7 @@ void CDebuggerApiVice::GetCBMColor(u8 colorNum, u8 *r, u8 *g, u8 *b)
 
 void CDebuggerApiVice::ShowMessage(const char *text)
 {
-	guiMain->ShowMessage((char*)text);
+	viewC64->ShowMessage((char*)text);
 }
 
 void CDebuggerApiVice::BlitText(const char *text, float posX, float posY, float fontSize)

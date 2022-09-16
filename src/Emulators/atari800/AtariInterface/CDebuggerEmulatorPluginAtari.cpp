@@ -3,10 +3,10 @@
 #include "CDebuggerApiNestopia.h"
 
 CDebuggerEmulatorPluginAtari::CDebuggerEmulatorPluginAtari()
-: CDebuggerEmulatorPlugin(EMULATOR_TYPE_NESTOPIA)
+: CDebuggerEmulatorPlugin(EMULATOR_TYPE_ATARI800)
 {
-	this->api = (CDebuggerApiVice *)CDebuggerApi::GetDebuggerApi(EMULATOR_TYPE_NESTOPIA);
-	this->debugInterfaceNes = (CDebugInterfaceNes *)this->api->debugInterface;
+	this->api = (CDebuggerApiAtari *)CDebuggerApi::GetDebuggerApi(EMULATOR_TYPE_ATARI800);
+	this->debugInterfaceAtari = (CDebugInterfaceAtari *)this->api->debugInterface;
 }
 
 CDebuggerEmulatorPluginAtari::~CDebuggerEmulatorPluginAtari()

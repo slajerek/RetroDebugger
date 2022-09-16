@@ -71,8 +71,8 @@ public:
 	void LoadLabelsRetroDebuggerFormat(CSlrString *filePath);
 	void SaveLabelsRetroDebuggerFormat(CSlrString *filePath);
 	
-	bool SerializeSegmentsAndLabelsToHjson(Hjson::Value hjsonRoot);
-	bool DeserializeSegmentsAndLabelsFromHjson(Hjson::Value hjsonRoot);
+	bool SerializeLabelsToHjson(Hjson::Value hjsonRoot);
+	bool DeserializeLabelsFromHjson(Hjson::Value hjsonRoot);
 
 	//
 	void LoadWatchesRetroDebuggerFormat(CSlrString *filePath);
@@ -80,6 +80,12 @@ public:
 	bool SerializeWatchesToHjson(Hjson::Value hjsonRoot);
 	bool DeserializeWatchesFromHjson(Hjson::Value hjsonRoot);
 	
+	//
+	void LoadBreakpointsRetroDebuggerFormat(CSlrString *filePath);
+	void SaveBreakpointsRetroDebuggerFormat(CSlrString *filePath);
+	bool SerializeBreakpointsToHjson(Hjson::Value hjsonRoot);
+	bool DeserializeBreakpointsFromHjson(Hjson::Value hjsonRoot);
+
 	// get currently executed addr (PC) to be checked against breakpoint, note it is virtual to have it different for C64 Drive CPU
 	virtual int GetCurrentExecuteAddr();
 
@@ -91,6 +97,7 @@ public:
 	void CreateDefaultSegment();
 	
 	// virtual method to create specific symbols segment (for C64 including raster line, VIC, CIA, NMI irqs, for Drive including VIA irqs, etc.)
+	virtual CDebugSymbolsSegment *CreateNewDebugSymbolsSegment(CSlrString *name);
 	virtual CDebugSymbolsSegment *CreateNewDebugSymbolsSegment(CSlrString *name, int segmentNum);
 };
 

@@ -31,8 +31,7 @@ public:
 	// breakpoints
 	
 	// all types of breakpoints in one table
-	int numBreakpointsByType;
-	CDebugBreakpointsAddr **breakpointsByType;
+	std::map<int, CDebugBreakpointsAddr *> breakpointsByType;
 	
 	bool breakOnPC;
 	CDebugBreakpointsAddr *breakpointsPC;
@@ -70,6 +69,9 @@ public:
 	virtual void AddWatch(int address, char *watchName, uint8 representation, int numberOfValues);
 	virtual void AddWatch(CDebugSymbolsDataWatch *watch);
 	virtual CDebugSymbolsDataWatch *CreateWatch(int address, char *watchName, uint8 representation, int numberOfValues);
+	virtual CDebugSymbolsDataWatch *FindWatch(int address);
+	virtual void RemoveWatch(int addr);
+	virtual void RemoveWatch(CDebugSymbolsDataWatch *watch);
 	virtual void DeleteWatch(int addr);
 	virtual void DeleteAllWatches();
 
@@ -84,6 +86,8 @@ public:
 	virtual bool DeserializeLabels(Hjson::Value hjsonCodeLabels);
 	virtual bool SerializeWatches(Hjson::Value hjsonWatches);
 	virtual bool DeserializeWatches(Hjson::Value hjsonWatches);
+	virtual bool SerializeBreakpoints(Hjson::Value hjsonBreakpointsTypes);
+	virtual bool DeserializeBreakpoints(Hjson::Value hjsonBreakpointsTypes);
 };
 
 #endif

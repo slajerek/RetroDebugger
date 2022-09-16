@@ -3,11 +3,11 @@
 
 #include "SYS_Defs.h"
 
-class CViewMemoryMapCell
+class CDebugMemoryMapCell
 {
 public:
-	CViewMemoryMapCell(int addr);
-	virtual ~CViewMemoryMapCell();
+	CDebugMemoryMapCell(int addr);
+	virtual ~CDebugMemoryMapCell();
 	
 	// cell address (for virtual maps, like Drive 1541 map)
 	int addr;

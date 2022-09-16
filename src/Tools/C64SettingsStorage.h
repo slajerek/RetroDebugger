@@ -8,7 +8,6 @@
 
 // TODO: make generic. move settings.dat to settings.hjson (in progress...)
 #define C64D_SETTINGS_FILE_PATH				"settings.dat"
-#define C64D_SETTINGS_HJSON_FILE_PATH		"settings.hjson"
 #define C64D_KEYBOARD_SHORTCUTS_FILE_PATH	"shortcuts.dat"
 #define C64D_KEYMAP_FILE_PATH				"keymap.dat"
 
@@ -51,6 +50,10 @@ extern u8 c64SettingsSelectEmulator;
 extern bool c64SettingsSkipConfig;
 extern bool c64SettingsPassConfigToRunningInstance;
 
+extern bool c64SettingsKeepSymbolsLabels;
+extern bool c64SettingsKeepSymbolsWatches;
+extern bool c64SettingsKeepSymbolsBreakpoints;
+
 extern int c64SettingsDefaultScreenLayoutId;
 extern bool c64SettingsIsInVicEditor;
 
@@ -75,8 +78,8 @@ extern int c64SettingsReuSize;
 extern uint8 c64SettingsSIDEngineModel;
 extern uint8 c64SettingsRESIDSamplingMethod;
 extern bool c64SettingsRESIDEmulateFilters;
-extern uint32 c64SettingsRESIDPassBand;
-extern uint32 c64SettingsRESIDFilterBias;
+extern int c64SettingsRESIDPassBand;
+extern int c64SettingsRESIDFilterBias;
 
 extern uint8 c64SettingsSIDStereo;			// "SidStereo" 0=none, 1=stereo, 2=triple
 extern uint16 c64SettingsSIDStereoAddress;	// "SidStereoAddressStart"
@@ -84,7 +87,7 @@ extern uint16 c64SettingsSIDTripleAddress;	// "SidTripleAddressStart"
 
 extern bool c64SettingsMuteSIDOnPause;
 
-extern int c64SettingsAudioVolume;
+extern int c64SettingsViceAudioVolume;
 extern bool c64SettingsRunSIDEmulation;
 extern uint8 c64SettingsMuteSIDMode;
 
@@ -195,7 +198,6 @@ extern bool c64SettingsRestartAudioOnEmulationReset;
 
 extern int c64SettingsJmpOnStartupAddr;
 
-extern bool c64SettingsAutoJmp;
 extern bool c64SettingsAutoJmpAlwaysToLoadedPRGAddress;
 extern bool c64SettingsAutoJmpFromInsertedDiskFirstPrg;
 extern int c64SettingsAutoJmpDoReset;

@@ -47,11 +47,11 @@ public:
 	CViewWaveform *pokeyChannelWaveform[MAX_NUM_POKEYS][4];
 	CViewWaveform *pokeyMixWaveform[MAX_NUM_POKEYS];
 
-	int waveformPos;
+	int waveformPos[MAX_NUM_POKEYS];
 	void AddWaveformData(int pokeyNumber, int v1, int v2, int v3, int v4, short mix);
 
 	//
-	virtual void RenderState(float px, float py, float posZ, CSlrFont *fontBytes, float fontSize, int pokeyId);
+	virtual void RenderState(float px, float py, float posZ, CSlrFont *fontBytes, float fontSize, int pokeyNum);
 	
 	// editing registers
 	bool showRegistersOnly;

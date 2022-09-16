@@ -694,7 +694,7 @@ void CViewC64Sprite::PaletteColorChanged(u8 colorId, u8 newColorValue)
 			
 			if (paintResult == PAINT_RESULT_ERROR)
 			{
-				guiMain->ShowMessage("Error in Sprite replace color");
+				viewC64->ShowMessage("Error in Sprite replace color");
 			}
 		}
 	}
@@ -768,7 +768,7 @@ void CViewC64Sprite::SystemDialogFileOpenSelected(CSlrString *path)
 	char *buf = str->GetStdASCII();
 	char *buf2 = SYS_GetCharBuf();
 	sprintf(buf2, "%s imported at $%04x", buf, importSpriteAddr);
-	guiMain->ShowMessage(buf2);
+	viewC64->ShowMessage(buf2);
 	SYS_ReleaseCharBuf(buf2);
 	delete [] buf;
 	delete str;
@@ -816,7 +816,7 @@ int CViewC64Sprite::ImportSprite(CSlrString *path)
 
 		if (sprite == NULL)
 		{
-			guiMain->ShowMessage("Sprite not selected");
+			viewC64->ShowMessage("Sprite not selected");
 			delete file;
 			guiMain->UnlockMutex();
 			return -1;
@@ -830,7 +830,7 @@ int CViewC64Sprite::ImportSprite(CSlrString *path)
 		{
 			if (byteBuffer->IsEof())
 			{
-				guiMain->ShowMessage("Sprite file corrupted");
+				viewC64->ShowMessage("Sprite file corrupted");
 				delete byteBuffer;
 				delete file;
 				guiMain->UnlockMutex();
@@ -895,7 +895,7 @@ void CViewC64Sprite::SystemDialogFileSaveSelected(CSlrString *path)
 	
 	CSlrString *str = path->GetFileNameComponentFromPath();
 	str->Concatenate(" saved");
-	guiMain->ShowMessage(str);
+	viewC64->ShowMessage(str);
 	delete str;
 }
 

@@ -755,7 +755,11 @@ u8 C64VicDisplayCanvasMultiBitmap::PaintDither(bool forceColorReplace, int x, in
 //
 u8 C64VicDisplayCanvasMultiBitmap::ConvertFrom(CImageData *imageData)
 {
-	// TODO: 'forced colors mode'
+	return ConvertFrom(imageData, false, 0);
+}
+
+u8 C64VicDisplayCanvasMultiBitmap::ConvertFrom(CImageData *imageData, bool isForceBackgroundColor, u8 forcedBackgroundColor)
+{
 	// TODO: 'bit align mode' to always align colors the same way in each char
 //	return ConvertFromWithForcedColors(imageData, 0x00, 0x0F, 0x0B, 0x08);
 	
@@ -765,7 +769,15 @@ u8 C64VicDisplayCanvasMultiBitmap::ConvertFrom(CImageData *imageData)
 	
 	std::vector<C64ColorsHistogramElement *> *colors = GetSortedColorsHistogram(image);
 	
-	u8 backgroundColor = (*colors)[0]->color;
+	u8 backgroundColor;
+	if (isForceBackgroundColor == false)
+	{
+		backgroundColor = (*colors)[0]->color;
+	}
+	else
+	{
+		backgroundColor = forcedBackgroundColor;
+	}
 	
 	LOGF("backgroundColor = %d numColors=%d", backgroundColor, colors->size());
 	

@@ -1,4 +1,4 @@
-//////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////
 //
 // Nestopia - NES/Famicom emulator written in C++
 //
@@ -97,13 +97,13 @@
 #include "NstBoardWaixing.hpp"
 #include "NstBoardWhirlwind.hpp"
 #include "NstBoardBenshengBs5.hpp"
-#include "NstBoardUnlN625092.hpp"
 #include "NstBoardUnlA9746.hpp"
 #include "NstBoardUnlCc21.hpp"
 #include "NstBoardUnlEdu2000.hpp"
 #include "NstBoardUnlKingOfFighters96.hpp"
 #include "NstBoardUnlKingOfFighters97.hpp"
 #include "NstBoardUnlMortalKombat2.hpp"
+#include "NstBoardUnlN625092.hpp"
 #include "NstBoardUnlSuperFighter3.hpp"
 #include "NstBoardUnlTf1201.hpp"
 #include "NstBoardUnlWorldHero.hpp"
@@ -399,7 +399,16 @@ namespace Nes
 				{
 					wrk.Source().SetSecurity( true, board.GetWram() > 0 );
 
-					for (uint i=board.GetSavableWram(), n=board.GetWram(); i < n; ++i)
+					uint i = board.GetSavableWram();
+					uint n = board.GetWram();
+
+					if (board.GetMapper() == 1 && board.GetWram() == SIZE_16K)
+					{
+						i = 0;
+						n = SIZE_8K;
+					}
+
+					for (; i < n; ++i)
 						*wrk.Source().Mem(i) = (board.IsAutoWram() && i < SIZE_8K) ? (0x6000 + i) >> 8 : 0x00;
 
 					vram.Fill( 0x00 );
@@ -817,7 +826,7 @@ namespace Nes
 					{ "CAMERICA-BF9097",             Type::CAMERICA_BF9097          },
 					{ "CAMERICA-GAMEGENIE",          Type::STD_NROM                 },
 					{ "COLORDREAMS-74*377",          Type::DISCRETE_74_377          },
-					{ "DREAMTECH01",                 Type::DREAMTECH_01             },
+					{ "DREAMTECH01",                 Type::DREAMTECH01              },
 					{ "HVC-AMROM",                   Type::STD_AMROM                },
 					{ "HVC-AN1ROM",                  Type::STD_AN1ROM               },
 					{ "HVC-ANROM",                   Type::STD_ANROM                },
@@ -1096,10 +1105,15 @@ namespace Nes
 					{ "UNL-AX5705",                  Type::BTL_AX5705               },
 					{ "UNL-CC-21",                   Type::UNL_CC21                 },
 					{ "UNL-EDU2000",                 Type::UNL_EDU2000              },
+					{ "UNL-FS304",                   Type::UNL_FS304                },
 					{ "UNL-H2288",                   Type::KAY_H2288                },
 					{ "UNL-KOF97",                   Type::UNL_KINGOFFIGHTERS97     },
+					{ "UNL-KS7013B",                 Type::KAISER_KS7013B           },
+					{ "UNL-KS7016",                  Type::KAISER_KS7016            },
 					{ "UNL-KS7031",                  Type::KAISER_KS7031            },
 					{ "UNL-KS7032",                  Type::KAISER_KS7032            },
+					{ "UNL-KS7037",                  Type::KAISER_KS7037            },
+					{ "UNL-KS7057",                  Type::KAISER_KS7057            },
 					{ "UNL-N625092",                 Type::UNL_N625092              },
 					{ "UNL-SA-0036",                 Type::SACHEN_SA0036            },
 					{ "UNL-SA-0037",                 Type::SACHEN_SA0037            },
@@ -1112,7 +1126,7 @@ namespace Nes
 					{ "UNL-SACHEN-8259B",            Type::SACHEN_8259B             },
 					{ "UNL-SACHEN-8259C",            Type::SACHEN_8259C             },
 					{ "UNL-SACHEN-8259D",            Type::SACHEN_8259D             },
-					{ "UNL-SHERO",                   Type::SACHEN_STREETHEROES      },
+					{ "UNL-SHERO",                   Type::UNL_SHERO                },
 					{ "UNL-SL1632",                  Type::REXSOFT_SL1632           },
 					{ "UNL-SMB2J",                   Type::BTL_SMB2_C               },
 					{ "UNL-T-230",                   Type::BTL_T230                 },
@@ -1220,7 +1234,7 @@ namespace Nes
 				return true;
 			}
 
-			bool Board::Context::DetectBoard(const byte mapper,const byte submapper,const dword chrRam,const dword wram,bool wramAuto)
+			bool Board::Context::DetectBoard(const word mapper,const byte submapper,const dword chrRam,const dword wram,bool wramAuto)
 			{
 				Type::Id id;
 
@@ -1244,7 +1258,12 @@ namespace Nes
 				{
 					case 0:
 
-						if ((prg < SIZE_32K && prg != SIZE_16K) || !chr || wram >= SIZE_8K || (nmt != Type::NMT_HORIZONTAL && nmt != Type::NMT_VERTICAL))
+						if (prg == SIZE_8K && chr == SIZE_8K)
+						{
+							name = "NAMCOT-3301";
+							id = Type::STD_NROM;
+						}
+						else if ((prg < SIZE_32K && prg != SIZE_16K) || !chr || wram >= SIZE_8K || (nmt != Type::NMT_HORIZONTAL && nmt != Type::NMT_VERTICAL))
 						{
 							name = "NROM (non-standard)";
 							id = Type::UNL_NROM;
@@ -1435,7 +1454,7 @@ namespace Nes
 					case 4:
 
 						if (submapper == 1)
-						{ // StarTropics/Zoda's Revenge - might not be correct
+						{ // StarTropics/Zoda's Revenge
 							chips.Add(L"MMC6B");
 							name = "NES-HKROM";
 							id = Type::STD_HKROM;
@@ -1448,7 +1467,7 @@ namespace Nes
 							id = Type::ACCLAIM_MCACC;
 							break;
 						}
-						
+
 						if (chrRam == 32)
 						{
 							name = "UNL-MMC3BIGCHRRAM";
@@ -1924,24 +1943,32 @@ namespace Nes
 
 					case 27:
 
-						name = "UNL WORLDHERO";
-						id = Type::UNL_WORLDHERO;
+						if (prg >= SIZE_128K)
+						{
+							name = "UNL WORLDHERO";
+							id = Type::UNL_WORLDHERO;
+						}
+						else
+						{
+							name = "UNL-CC-21";
+							id = Type::UNL_CC21;
+						}
 						break;
-						
+
 					case 28:
-						
+
 						name = "ACTION 53";
 						id = Type::ACTION53;
 						break;
-						
+
 					case 30:
-						
+
 						name = "UNROM 512";
 						id = Type::STD_UNROM512;
 						break;
-						
+
 					case 31:
-						
+
 						name = "INLNSF";
 						id = Type::INLNSF;
 						break;
@@ -2756,6 +2783,12 @@ namespace Nes
 						id = Type::BANDAI_LZ93D50_24C01;
 						break;
 
+					case 162:
+
+						name = "UNL-FS304";
+						id = Type::UNL_FS304;
+						break;
+
 					case 163:
 
 						name = "NANJING";
@@ -2836,8 +2869,21 @@ namespace Nes
 
 					case 176:
 
-						name = "XIAO ZHUAN YUAN";
-						id = Type::UNL_XZY;
+						if (prg >= SIZE_2048K)
+						{
+							name = "BMC-SUPER24IN1SC03";
+							id = Type::BMC_SUPER_24IN1;
+						}
+						else if (prg > SIZE_128K)
+						{
+							name = "BMC-FK23C";
+							id = Type::BMC_FKC23C;
+						}
+						else
+						{
+							name = "XIAO ZHUAN YUAN";
+							id = Type::UNL_XZY;
+						}
 						break;
 
 					case 177:
@@ -3173,10 +3219,15 @@ namespace Nes
 							name = "BMC SUPER 42-IN-1";
 							id = Type::BMC_SUPER_42IN1;
 						}
-						else
+						else if (prg == SIZE_2048K)
 						{
 							name = "BMC 76-IN-1";
 							id = Type::BMC_76IN1;
+						}
+						else
+						{
+							name = "BMC-GHOSTBUSTERS63IN1";
+							id = Type::BMC_CTC65;
 						}
 						break;
 
@@ -3335,6 +3386,139 @@ namespace Nes
 
 						name = "BMC 110/115-IN-1";
 						id = Type::BMC_110IN1;
+						break;
+
+					case 262:
+
+						name = "UNL-SHERO";
+						id = Type::UNL_SHERO;
+						break;
+
+					case 263:
+
+						name = "UNL-KOF97";
+						id = Type::UNL_KINGOFFIGHTERS97;
+						break;
+
+					case 265:
+
+						name = "BMC-T-262";
+						id = Type::BMC_T262;
+						break;
+
+					case 283:
+						if (prg > SIZE_256K)
+						{
+							name = "BMC-GS-2013";
+							id = Type::RCM_GS2013;
+						}
+						else
+						{
+							name = "BMC-GS-2004";
+							id = Type::RCM_GS2004;
+						}
+						break;
+
+					case 285:
+
+						name = "BMC-A65AS";
+						id = Type::BMC_A65AS;
+						break;
+
+					case 286:
+
+						name = "BMC-BS-5";
+						id = Type::BENSHENG_BS5;
+						break;
+
+					case 298:
+
+						name = "UNL-TF1201";
+						id = Type::UNL_TF1201;
+						break;
+
+					case 300:
+
+						name = "BMC-190IN1";
+						id = Type::BMC_GOLDEN_190IN1;
+						break;
+
+					case 301:
+
+						name = "BMC-8157";
+						id = Type::BMC_8157;
+						break;
+
+					case 302:
+
+						name = "UNL-KS7057";
+						id = Type::KAISER_KS7057;
+						break;
+
+					case 305:
+
+						name = "UNL-KS7031";
+						id = Type::KAISER_KS7031;
+						break;
+
+					case 306:
+
+						name = "UNL-KS7016";
+						id = Type::KAISER_KS7016;
+						break;
+
+					case 307:
+
+						name = "UNL-KS7037";
+						id = Type::KAISER_KS7037;
+						break;
+
+					case 312:
+
+						name = "UNL-KS7013B";
+						id = Type::KAISER_KS7013B;
+						break;
+
+					case 314:
+
+						name = "BMC-64IN1NOREPEAT";
+						id = Type::BMC_Y2K_64IN1;
+						break;
+
+					case 329:
+
+						name = "UNL-EDU2000";
+						id = Type::UNL_EDU2000;
+						break;
+
+					case 332:
+
+						name = "BMC-WS";
+						id = Type::BMC_SUPER_40IN1;
+						break;
+
+					case 521:
+
+						name = "DREAMTECH01";
+						id = Type::DREAMTECH01;
+						break;
+
+					case 529:
+
+						name = "UNL-T-230";
+						id = Type::BTL_T230;
+						break;
+
+					case 530:
+
+						name = "UNL-AX5705";
+						id = Type::BTL_AX5705;
+						break;
+
+					case 554:
+
+						name = "UNL-KS7010";
+						id = Type::KAISER_KS7010;
 						break;
 
 					default:
@@ -3540,7 +3724,7 @@ namespace Nes
 					case Type::CNE_DECATHLON              : return new Cne::Decathlon(c);
 					case Type::CNE_PSB                    : return new Cne::Psb(c);
 					case Type::CONY_STD                   : return new Cony::Standard(c);
-					case Type::DREAMTECH_01               : return new DreamTech::D01(c);
+					case Type::DREAMTECH01                : return new DreamTech::D01(c);
 					case Type::FUTUREMEDIA_STD            : return new FutureMedia::Standard(c);
 					case Type::FUJIYA_STD                 : return new Fujiya::Standard(c);
 					case Type::FUKUTAKE_SBX               : return new Fukutake::Sbx(c);
@@ -3605,9 +3789,14 @@ namespace Nes
 					case Type::JYCOMPANY_TYPE_B           :
 					case Type::JYCOMPANY_TYPE_C           : return new JyCompany::Standard(c);
 					case Type::KAISER_KS202               : return new Kaiser::Ks202(c);
+					case Type::KAISER_KS7010              : return new Kaiser::Ks7010(c);
+					case Type::KAISER_KS7013B             : return new Kaiser::Ks7013b(c);
+					case Type::KAISER_KS7016              : return new Kaiser::Ks7016(c);
 					case Type::KAISER_KS7022              : return new Kaiser::Ks7022(c);
 					case Type::KAISER_KS7031              : return new Kaiser::Ks7031(c);
 					case Type::KAISER_KS7032              : return new Kaiser::Ks7032(c);
+					case Type::KAISER_KS7037              : return new Kaiser::Ks7037(c);
+					case Type::KAISER_KS7057              : return new Kaiser::Ks7057(c);
 					case Type::KAISER_KS7058              : return new Kaiser::Ks7058(c);
 					case Type::KASING_STD                 : return new Kasing::Standard(c);
 					case Type::KAY_H2288                  : return new Kay::H2288(c);
@@ -3634,8 +3823,8 @@ namespace Nes
 					case Type::NAMCOT_163_1               :
 					case Type::NAMCOT_163_S_0             :
 					case Type::NAMCOT_163_S_1             : return new Namcot::N163(c);
-					case Type::NAMCOT_340                 :
 					case Type::NAMCOT_175                 : return new Namcot::N175(c);
+					case Type::NAMCOT_340                 : return new Namcot::N340(c);
 					case Type::NANJING_STD                : return new Nanjing::Standard(c);
 					case Type::UNL_UXROM_M5               :
 					case Type::NIHON_UNROM_M5             : return new Nihon::UnRomM5(c);
@@ -3665,7 +3854,6 @@ namespace Nes
 					case Type::SACHEN_SA72008             : return new Sachen::Sa72008(c);
 					case Type::SACHEN_74_374A             : return new Sachen::S74x374a(c);
 					case Type::SACHEN_74_374B             : return new Sachen::S74x374b(c);
-					case Type::SACHEN_STREETHEROES        : return new Sachen::StreetHeroes(c);
 					case Type::SOMERITEAM_SL12            : return new SomeriTeam::Sl12(c);
 					case Type::SUBOR_TYPE0                : return new Subor::Type0(c);
 					case Type::SUBOR_TYPE1                : return new Subor::Type1(c);
@@ -3705,11 +3893,13 @@ namespace Nes
 					case Type::UNL_A9746                  : return new Unlicensed::A9746(c);
 					case Type::UNL_CC21                   : return new Unlicensed::Cc21(c);
 					case Type::UNL_EDU2000                : return new Unlicensed::Edu2000(c);
+					case Type::UNL_FS304                  : return new Waixing::Fs304(c);
 					case Type::UNL_KINGOFFIGHTERS96       : return new Unlicensed::KingOfFighters96(c);
 					case Type::UNL_KINGOFFIGHTERS97       : return new Unlicensed::KingOfFighters97(c);
 					case Type::UNL_MORTALKOMBAT2          : return new Unlicensed::MortalKombat2(c);
 					case Type::UNL_N625092                : return new Unlicensed::N625092(c);
 					case Type::UNL_SUPERFIGHTER3          : return new Unlicensed::SuperFighter3(c);
+					case Type::UNL_SHERO                  : return new Sachen::StreetHeroes(c);
 					case Type::UNL_TF1201                 : return new Unlicensed::Tf1201(c);
 					case Type::UNL_WORLDHERO              : return new Unlicensed::WorldHero(c);
 					case Type::UNL_XZY                    : return new Unlicensed::Xzy(c);

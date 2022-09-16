@@ -44,7 +44,7 @@ CViewSourceCode::CViewSourceCode(const char *name, float posX, float posY, float
 	this->showLineNumbers = true;
 	
 //	// keyboard shortcut zones for this view
-//	shortcutZones.push_back(KBZONE_DISASSEMBLE);
+//	shortcutZones.push_back(KBZONE_DISASSEMBLY);
 //	shortcutZones.push_back(KBZONE_MEMORY);
 
 	/// debug

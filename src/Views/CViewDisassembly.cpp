@@ -18,6 +18,7 @@
 #include "CDebugSymbols.h"
 #include "CDebugSymbolsSegment.h"
 #include "CDebugSymbolsCodeLabel.h"
+#include "CDebugSymbolsDataWatch.h"
 #include "CDebugAsmSource.h"
 #include "CDebugMemoryMap.h"
 #include "CDebugMemoryMapCell.h"
@@ -93,7 +94,7 @@ CViewDisassembly::CViewDisassembly(const char *name, float posX, float posY, flo
 	this->isErrorCode = false;
 	
 	// keyboard shortcut zones for this view
-	shortcutZones.push_back(KBZONE_DISASSEMBLE);
+	shortcutZones.push_back(KBZONE_DISASSEMBLY);
 	shortcutZones.push_back(KBZONE_MEMORY);
 	shortcutZones.push_back(KBZONE_GLOBAL);
 
@@ -399,7 +400,7 @@ void CViewDisassembly::CalcDisassembleStart(int startAddress, int *newStart, int
 			// check if cells marked as execute
 
 			// +0
-			CViewMemoryMapCell *cell0 = viewMemoryMap->memoryCells[addr % memoryLength];
+			CDebugMemoryMapCell *cell0 = viewMemoryMap->memoryCells[addr % memoryLength];
 			if (cell0->isExecuteCode)
 			{
 				opcode = memory[addr % memoryLength];
@@ -409,7 +410,7 @@ void CViewDisassembly::CalcDisassembleStart(int startAddress, int *newStart, int
 			else
 			{
 				// +1
-				CViewMemoryMapCell *cell1 = viewMemoryMap->memoryCells[ (addr+1) % memoryLength];
+				CDebugMemoryMapCell *cell1 = viewMemoryMap->memoryCells[ (addr+1) % memoryLength];
 				if (cell1->isExecuteCode)
 				{
 					checkAddress += 1;
@@ -422,7 +423,7 @@ void CViewDisassembly::CalcDisassembleStart(int startAddress, int *newStart, int
 				else
 				{
 					// +2
-					CViewMemoryMapCell *cell2 = viewMemoryMap->memoryCells[ (addr+2) % memoryLength];
+					CDebugMemoryMapCell *cell2 = viewMemoryMap->memoryCells[ (addr+2) % memoryLength];
 					if (cell2->isExecuteCode)
 					{
 						// check if at addr is 2-length opcode
@@ -583,7 +584,7 @@ void CViewDisassembly::RenderDisassembly(int startAddress, int endAddress)
 			addr = renderAddress;
 			
 			// +0
-			CViewMemoryMapCell *cell0 = viewMemoryMap->memoryCells[addr];
+			CDebugMemoryMapCell *cell0 = viewMemoryMap->memoryCells[addr];
 			if (cell0->isExecuteCode)
 			{
 				opcode = memory[addr];
@@ -593,7 +594,7 @@ void CViewDisassembly::RenderDisassembly(int startAddress, int endAddress)
 			else
 			{
 				// +1
-				CViewMemoryMapCell *cell1 = viewMemoryMap->memoryCells[ (addr+1) ];
+				CDebugMemoryMapCell *cell1 = viewMemoryMap->memoryCells[ (addr+1) ];
 				if (cell1->isExecuteCode)
 				{
 					// check if at addr is 1-length opcode
@@ -628,7 +629,7 @@ void CViewDisassembly::RenderDisassembly(int startAddress, int endAddress)
 				else
 				{
 					// +2
-					CViewMemoryMapCell *cell2 = viewMemoryMap->memoryCells[ (addr+2) ];
+					CDebugMemoryMapCell *cell2 = viewMemoryMap->memoryCells[ (addr+2) ];
 					if (cell2->isExecuteCode)
 					{
 						// check if at addr is 2-length opcode
@@ -719,7 +720,7 @@ void CViewDisassembly::RenderDisassembly(int startAddress, int endAddress)
 				int addr;
 				
 				addr = renderAddress-1;
-				CViewMemoryMapCell *cell1 = viewMemoryMap->memoryCells[addr];
+				CDebugMemoryMapCell *cell1 = viewMemoryMap->memoryCells[addr];
 				if (cell1->isExecuteCode)
 				{
 					op = memory[addr];
@@ -736,7 +737,7 @@ void CViewDisassembly::RenderDisassembly(int startAddress, int endAddress)
 				}
 				
 				addr = renderAddress-2;
-				CViewMemoryMapCell *cell2 = viewMemoryMap->memoryCells[addr];
+				CDebugMemoryMapCell *cell2 = viewMemoryMap->memoryCells[addr];
 				if (cell2->isExecuteCode)
 				{
 					op = memory[addr];
@@ -758,7 +759,7 @@ void CViewDisassembly::RenderDisassembly(int startAddress, int endAddress)
 				}
 				
 				addr = renderAddress-3;
-				CViewMemoryMapCell *cell3 = viewMemoryMap->memoryCells[addr];
+				CDebugMemoryMapCell *cell3 = viewMemoryMap->memoryCells[addr];
 				if (cell3->isExecuteCode)
 				{
 					op = memory[addr];
@@ -824,8 +825,8 @@ void CViewDisassembly::RenderDisassembly(int startAddress, int endAddress)
 			// check -2
 			if (renderAddress > 1)
 			{
-				CViewMemoryMapCell *cell1 = viewMemoryMap->memoryCells[renderAddress-1];
-				CViewMemoryMapCell *cell2 = viewMemoryMap->memoryCells[renderAddress-2];
+				CDebugMemoryMapCell *cell1 = viewMemoryMap->memoryCells[renderAddress-1];
+				CDebugMemoryMapCell *cell2 = viewMemoryMap->memoryCells[renderAddress-2];
 				if (cell1->isExecuteArgument == false
 					&& cell2->isExecuteArgument == false)
 				{
@@ -847,7 +848,7 @@ void CViewDisassembly::RenderDisassembly(int startAddress, int endAddress)
 			// check -1
 			if (renderAddress > 0)
 			{
-				CViewMemoryMapCell *cell1 = viewMemoryMap->memoryCells[renderAddress-1];
+				CDebugMemoryMapCell *cell1 = viewMemoryMap->memoryCells[renderAddress-1];
 
 				if (cell1->isExecuteArgument == false)
 				{
@@ -931,7 +932,7 @@ int CViewDisassembly::RenderDisassembleLine(float px, float py, int addr, uint8 
 		}
 	}
 
-	CViewMemoryMapCell *cell = viewMemoryMap->memoryCells[addr];
+	CDebugMemoryMapCell *cell = viewMemoryMap->memoryCells[addr];
 	
 	float cr, cg, cb, ca;
 	
@@ -1619,7 +1620,7 @@ void CViewDisassembly::RenderHexLine(float px, float py, int addr)
 		}
 	}
 	
-	CViewMemoryMapCell *cell = viewMemoryMap->memoryCells[addr];
+	CDebugMemoryMapCell *cell = viewMemoryMap->memoryCells[addr];
 	
 	float cr, cg, cb, ca;
 	
@@ -1929,7 +1930,7 @@ void CViewDisassembly::UpdateDisassemble(int startAddress, int endAddress)
 			addr = renderAddress;
 			
 			// +0
-			CViewMemoryMapCell *cell0 = viewMemoryMap->memoryCells[addr];	//% memoryLength
+			CDebugMemoryMapCell *cell0 = viewMemoryMap->memoryCells[addr];	//% memoryLength
 			if (cell0->isExecuteCode)
 			{
 				opcode = memory[addr];	//% memoryLength
@@ -1939,7 +1940,7 @@ void CViewDisassembly::UpdateDisassemble(int startAddress, int endAddress)
 			else
 			{
 				// +1
-				CViewMemoryMapCell *cell1 = viewMemoryMap->memoryCells[ (addr+1) ];	//% memoryLength
+				CDebugMemoryMapCell *cell1 = viewMemoryMap->memoryCells[ (addr+1) ];	//% memoryLength
 				if (cell1->isExecuteCode)
 				{
 					// check if at addr is 1-length opcode
@@ -1974,7 +1975,7 @@ void CViewDisassembly::UpdateDisassemble(int startAddress, int endAddress)
 				else
 				{
 					// +2
-					CViewMemoryMapCell *cell2 = viewMemoryMap->memoryCells[ (addr+2) ];	//% memoryLength
+					CDebugMemoryMapCell *cell2 = viewMemoryMap->memoryCells[ (addr+2) ];	//% memoryLength
 					if (cell2->isExecuteCode)
 					{
 						// check if at addr is 2-length opcode
@@ -2065,7 +2066,7 @@ void CViewDisassembly::UpdateDisassemble(int startAddress, int endAddress)
 				int addr;
 				
 				addr = renderAddress-1;
-				CViewMemoryMapCell *cell1 = viewMemoryMap->memoryCells[addr];
+				CDebugMemoryMapCell *cell1 = viewMemoryMap->memoryCells[addr];
 				if (cell1->isExecuteCode)
 				{
 					op = memory[addr];
@@ -2082,7 +2083,7 @@ void CViewDisassembly::UpdateDisassemble(int startAddress, int endAddress)
 				}
 				
 				addr = renderAddress-2;
-				CViewMemoryMapCell *cell2 = viewMemoryMap->memoryCells[addr];
+				CDebugMemoryMapCell *cell2 = viewMemoryMap->memoryCells[addr];
 				if (cell2->isExecuteCode)
 				{
 					op = memory[addr];
@@ -2104,7 +2105,7 @@ void CViewDisassembly::UpdateDisassemble(int startAddress, int endAddress)
 				}
 				
 				addr = renderAddress-3;
-				CViewMemoryMapCell *cell3 = viewMemoryMap->memoryCells[addr];
+				CDebugMemoryMapCell *cell3 = viewMemoryMap->memoryCells[addr];
 				if (cell3->isExecuteCode)
 				{
 					op = memory[addr];
@@ -2170,8 +2171,8 @@ void CViewDisassembly::UpdateDisassemble(int startAddress, int endAddress)
 			// check -2
 			if (renderAddress > 1)
 			{
-				CViewMemoryMapCell *cell1 = viewMemoryMap->memoryCells[renderAddress-1];
-				CViewMemoryMapCell *cell2 = viewMemoryMap->memoryCells[renderAddress-2];
+				CDebugMemoryMapCell *cell1 = viewMemoryMap->memoryCells[renderAddress-1];
+				CDebugMemoryMapCell *cell2 = viewMemoryMap->memoryCells[renderAddress-2];
 				if (cell1->isExecuteArgument == false
 					&& cell2->isExecuteArgument == false)
 				{
@@ -2193,7 +2194,7 @@ void CViewDisassembly::UpdateDisassemble(int startAddress, int endAddress)
 			// check -1
 			if (renderAddress > 0)
 			{
-				CViewMemoryMapCell *cell1 = viewMemoryMap->memoryCells[renderAddress-1];
+				CDebugMemoryMapCell *cell1 = viewMemoryMap->memoryCells[renderAddress-1];
 				
 				if (cell1->isExecuteArgument == false)
 				{
@@ -2229,7 +2230,6 @@ void CViewDisassembly::StartEditingAtCursorPosition(int newCursorPos, bool goLef
 	if (newCursorPos < EDIT_CURSOR_POS_ADDR || newCursorPos > EDIT_CURSOR_POS_MNEMONIC)
 		return;
 		
-	
 	guiMain->LockMutex();
 	
 	isTrackingPC = false;
@@ -2304,6 +2304,11 @@ void CViewDisassembly::DoLogic()
 {
 }
 
+void CViewDisassembly::GetDisassemblyBackgroundColor(float *colorR, float *colorG, float *colorB)
+{
+	GetColorsFromScheme(c64SettingsDisassemblyBackgroundColor, colorR, colorG, colorB);
+}
+
 void CViewDisassembly::Render()
 {
 //	if (debugInterface->GetSettingIsWarpSpeed() == true)
@@ -2329,7 +2334,7 @@ void CViewDisassembly::Render()
 	float colorBackgroundR, colorBackgroundG, colorBackgroundB;
 	float colorBackgroundA = 1.0f;
 	
-	GetColorsFromScheme(c64SettingsDisassemblyBackgroundColor, &colorBackgroundR, &colorBackgroundG, &colorBackgroundB);
+	GetDisassemblyBackgroundColor(&colorBackgroundR, &colorBackgroundG, &colorBackgroundB);
 
 	BlitFilledRectangle(this->posX, this->posY, -1, this->sizeX, this->sizeY, colorBackgroundR, colorBackgroundG, colorBackgroundB, colorBackgroundA);
 	
@@ -2447,9 +2452,12 @@ bool CViewDisassembly::KeyDown(u32 keyCode, bool isShift, bool isAlt, bool isCon
 
 	u32 bareKey = SYS_GetBareKey(keyCode, isShift, isAlt, isControl, isSuper);
 	
-	if (editCursorPos == EDIT_CURSOR_POS_ADDR
+	CSlrKeyboardShortcut *keyboardShortcut = guiMain->keyboardShortcuts->FindShortcut(shortcutZones, bareKey, isShift, isAlt, isControl, isSuper);
+	
+	if (keyboardShortcut != viewC64->mainMenuBar->kbsGoToAddress
+		&& (editCursorPos == EDIT_CURSOR_POS_ADDR
 		|| editCursorPos == EDIT_CURSOR_POS_HEX1 || editCursorPos == EDIT_CURSOR_POS_HEX2
-		|| editCursorPos == EDIT_CURSOR_POS_HEX3 || editCursorPos == EDIT_CURSOR_POS_MNEMONIC)
+		|| editCursorPos == EDIT_CURSOR_POS_HEX3 || editCursorPos == EDIT_CURSOR_POS_MNEMONIC))
 	{
 		if (keyCode == MTKEY_ESC)
 		{
@@ -2458,12 +2466,12 @@ bool CViewDisassembly::KeyDown(u32 keyCode, bool isShift, bool isAlt, bool isCon
 			editCursorPos = EDIT_CURSOR_POS_NONE;
 			return true;
 		}
-
+		
 		guiMain->LockMutex();
 		debugInterface->LockMutex();
 		
-		CSlrKeyboardShortcut *keyboardShortcut = guiMain->keyboardShortcuts->FindShortcut(KBZONE_GLOBAL, bareKey, isShift, isAlt, isControl, isSuper);
-		if (keyboardShortcut == viewC64->mainMenuBar->kbsPasteFromClipboard)
+		CSlrKeyboardShortcut *keyboardShortcutGlobal = guiMain->keyboardShortcuts->FindShortcut(KBZONE_GLOBAL, bareKey, isShift, isAlt, isControl, isSuper);
+		if (keyboardShortcutGlobal == viewC64->mainMenuBar->kbsPasteFromClipboard)
 		{
 			// will run keyb downs from clipboard
 			this->PasteKeysFromClipboard();
@@ -2565,8 +2573,6 @@ bool CViewDisassembly::KeyDown(u32 keyCode, bool isShift, bool isAlt, bool isCon
 		}
 		keyCode = MTKEY_PAGE_UP;
 	}
-	
-	CSlrKeyboardShortcut *keyboardShortcut = guiMain->keyboardShortcuts->FindShortcut(shortcutZones, bareKey, isShift, isAlt, isControl, isSuper);
 	
 	if (keyboardShortcut == viewC64->mainMenuBar->kbsToggleBreakpoint)
 	{
@@ -2710,7 +2716,7 @@ bool CViewDisassembly::KeyDown(u32 keyCode, bool isShift, bool isAlt, bool isCon
 		ScrollUp();
 		return true;
 	}
-	else if (keyCode == '[')	// was: MTKEY_ARROW_LEFT)
+	else if (keyCode == '[' && isShift==false && isAlt == false && isControl == false && isSuper == false)	// was: MTKEY_ARROW_LEFT)
 	{
 		isTrackingPC = false;
 		changedByUser = true;
@@ -2746,7 +2752,7 @@ bool CViewDisassembly::KeyDown(u32 keyCode, bool isShift, bool isAlt, bool isCon
 		SetCursorToNearExecuteCodeAddress(newCursorAddress);
 		return true;
 	}
-	else if (keyCode == ']')
+	else if (keyCode == ']' && isShift == false && isAlt == false && isControl == false && isSuper == false)
 	{
 		isTrackingPC = false;
 		changedByUser = true;
@@ -3197,7 +3203,7 @@ int CViewDisassembly::Assemble(int assembleAddress, char *lineBuffer, bool showM
 		// error
 		if (showMessage)
 		{
-			guiMain->ShowMessage(errorMessage);
+			viewC64->ShowMessage(errorMessage);
 		}
 		SYS_ReleaseCharBuf(errorMessage);
 		return -1;
@@ -3230,7 +3236,7 @@ int CViewDisassembly::Assemble(int assembleAddress, char *lineBuffer, bool showM
 			
 		default:
 			// should never happen
-			guiMain->ShowMessage(("Assemble failed"));
+			viewC64->ShowMessage(("Assemble failed"));
 			LOGError("CViewDisassembly::error: %s", ("Assemble failed"));
 			isErrorCode = true;
 			SYS_ReleaseCharBuf(errorMessage);
@@ -4116,7 +4122,7 @@ void CViewDisassembly::CopyAssemblyToClipboard()
 	char *buf2 = SYS_GetCharBuf();
 
 	sprintf(buf2, "Copied %s", buf);
-	guiMain->ShowMessage(buf2);
+	viewC64->ShowMessage(buf2);
 	
 	SYS_ReleaseCharBuf(buf);
 	SYS_ReleaseCharBuf(buf2);
@@ -4134,7 +4140,7 @@ void CViewDisassembly::CopyHexAddressToClipboard()
 	delete str;
 	
 	sprintf(buf, "Copied $%04X", this->cursorAddress);
-	guiMain->ShowMessage(buf);
+	viewC64->ShowMessage(buf);
 	
 	SYS_ReleaseCharBuf(buf);
 }
@@ -4176,7 +4182,7 @@ void CViewDisassembly::RenderContextMenuItems()
 //	LOGD("=============================== CViewDisassembly::RenderContextMenuItems: %s", this->name);
 	CGuiView::RenderContextMenuItems();
 	
-	CViewMemoryMapCell *cell = viewMemoryMap->memoryCells[cursorAddress];
+	CDebugMemoryMapCell *cell = viewMemoryMap->memoryCells[cursorAddress];
 	
 	localLabelText[0] = 0;
 	CDebugSymbolsSegment *currentSegment = NULL;
@@ -4204,16 +4210,100 @@ void CViewDisassembly::RenderContextMenuItems()
 	
 	ImGui::SameLine();
 		
-	// TODO: this code to show labels for memory cell is used in multiple places (memorydump, memorymap, disassembly), move me
+	// TODO: this code to show and update labels for memory cell is used in multiple places (memorydump, memorymap, disassembly), move me
 	if (currentSegment)
 	{
+		bool edited = false;
 		if (ImGui::InputText("##disassemblyLabelText", localLabelText, MAX_STRING_LENGTH))
 		{
-			SetIsTrackingPC(false);
-			
+			edited = true;
+		}
+		
+		ImGuiIO& io = ImGui::GetIO();
+		if (ImGui::IsItemDeactivatedAfterEdit())
+		{
 			if (label != NULL)
 			{
-				// empty text?
+				// find if there is other label with the same text
+				CDebugSymbolsCodeLabel *existingLabel = currentSegment->FindLabelByText(localLabelText);
+				if (existingLabel != NULL && existingLabel != label)
+				{
+//					printf("existingL=%x label=%x setText=%s\n", existingLabel, label, localLabelText);
+
+					currentSegment->RemoveCodeLabel(label, true);
+					delete label;
+					
+					currentSegment->RemoveCodeLabel(existingLabel, false);
+					
+					// TODO: observer for watch and breakpoint when observing label for custom breakpoints
+					
+					// update watch
+					CDebugSymbolsDataWatch *watch = currentSegment->FindWatch(existingLabel->address);
+					if (watch)
+					{
+						currentSegment->RemoveWatch(existingLabel->address);
+					}
+					
+					// update breakpoint PC
+					CBreakpointAddr *breakpointPC = currentSegment->breakpointsPC->GetBreakpoint(existingLabel->address);
+					if (breakpointPC)
+					{
+						currentSegment->breakpointsPC->RemoveBreakpoint(breakpointPC);
+					}
+					
+					// update breakpoint memory
+					CBreakpointAddr *breakpointMemory = currentSegment->breakpointsMemory->GetBreakpoint(existingLabel->address);
+					if (breakpointMemory)
+					{
+						currentSegment->breakpointsMemory->RemoveBreakpoint(breakpointMemory);
+					}
+
+					// update label
+					existingLabel->address = cursorAddress;
+					currentSegment->AddCodeLabel(existingLabel, true);
+					
+					// add back symbols
+					if (watch)
+					{
+						watch->address = cursorAddress;
+						currentSegment->AddWatch(watch);
+					}
+					
+					if (breakpointPC)
+					{
+						breakpointPC->addr = cursorAddress;
+						currentSegment->breakpointsPC->AddBreakpoint(breakpointPC);
+					}
+
+					if (breakpointMemory)
+					{
+						breakpointMemory->addr = cursorAddress;
+						currentSegment->breakpointsMemory->AddBreakpoint(breakpointMemory);
+					}
+				}
+				else
+				{
+					label->SetText(localLabelText);
+				}
+			}
+			else
+			{
+				// find if there is other label with the same text
+				CDebugSymbolsCodeLabel *existingLabel = currentSegment->FindLabelByText(localLabelText);
+				if (existingLabel != NULL && existingLabel != label)
+				{
+					currentSegment->RemoveCodeLabel(label, true);
+					delete label;
+					existingLabel->address = cursorAddress;
+				}
+			}
+		}
+		else if (edited)
+		{
+			SetIsTrackingPC(false);
+					
+			if (label != NULL)
+			{
 				if (localLabelText[0] == 0)
 				{
 					currentSegment->RemoveCodeLabel(label, true);
@@ -4221,7 +4311,14 @@ void CViewDisassembly::RenderContextMenuItems()
 				}
 				else
 				{
-					label->SetText(localLabelText);
+					
+					// find if there is other label with the same text
+					CDebugSymbolsCodeLabel *existingLabel = currentSegment->FindLabelByText(localLabelText);
+					if (existingLabel == NULL)
+					{
+//						printf("existingL=%x label=%x setText=%s\n", existingLabel, label, localLabelText);
+						label->SetText(localLabelText);
+					}
 				}
 			}
 			else
@@ -4232,6 +4329,8 @@ void CViewDisassembly::RenderContextMenuItems()
 			}
 		}
 	}
+	
+	
 	SYS_ReleaseCharBuf(buf);
 }
 

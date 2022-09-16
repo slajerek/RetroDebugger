@@ -234,7 +234,7 @@ void c64d_display_drive_led(int drive_number, unsigned int pwm1, unsigned int le
 
 void c64d_show_message(char *message)
 {
-	guiMain->ShowMessage(message);
+	viewC64->ShowMessage(message);
 }
 
 // C64 frodo color palette (more realistic looking colors)

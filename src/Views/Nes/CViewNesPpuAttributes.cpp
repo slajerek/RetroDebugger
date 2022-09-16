@@ -90,26 +90,7 @@ void CViewNesPpuAttributes::Render()
 
 	RefreshScreen();
 	
-	if (c64SettingsRenderScreenNearest)
-	{
-		// nearest neighbour
-		{
-			glBindTexture(GL_TEXTURE_2D, imageScreen->textureId);
-			
-			glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
-			glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST);
-		}
-	}
-	else
-	{
-		// billinear interpolation
-		{
-			glBindTexture(GL_TEXTURE_2D, imageScreen->textureId);
-			
-			glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
-			glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
-		}
-	}
+	imageScreen->SetLinearScaling(!c64SettingsRenderScreenNearest);
 	
 	Blit(imageScreen,
 		 posX,

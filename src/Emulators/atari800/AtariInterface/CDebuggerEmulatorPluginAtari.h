@@ -2,11 +2,11 @@
 #define _CDebuggerEmulatorPluginAtari_H_
 
 #include "SYS_Defs.h"
-#include "CDebuggerApiVice.h"
+#include "CDebuggerApiAtari.h"
 #include "CDebuggerEmulatorPlugin.h"
 
-class CDebuggerApiVice;
-class CDebugInterfaceNes;
+class CDebuggerApiAtari;
+class CDebugInterfaceAtari;
 
 class CDebuggerEmulatorPluginAtari : public CDebuggerEmulatorPlugin
 {
@@ -14,8 +14,8 @@ public:
 	CDebuggerEmulatorPluginAtari();
 	virtual ~CDebuggerEmulatorPluginAtari();
 	
-	CDebuggerApiVice *api;
-	CDebugInterfaceNes *debugInterfaceNes;
+	CDebuggerApiAtari *api;
+	CDebugInterfaceAtari *debugInterfaceAtari;
 
 	virtual void Init();
 	virtual void DoFrame();

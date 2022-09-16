@@ -24,6 +24,7 @@
 #include "CConfigStorageHjson.h"
 #include "CGlobalDropFileCallback.h"
 #include "CRecentlyOpenedFiles.h"
+#include "CGuiViewProgressBarWindow.h"
 
 extern "C"
 {
@@ -53,8 +54,11 @@ class CC64DiskDataAdapter;
 class CC64DiskDirectRamDataAdapter;
 class CDebugSymbols;
 
+class CGuiViewMessages;
+
 class CViewC64Screen;
 class CViewC64ScreenWrapper;
+class CViewC64ScreenViewfinder;
 
 class CViewMemoryMap;
 class CViewDataDump;
@@ -72,8 +76,9 @@ class CViewC64SidTrackerHistory;
 class CViewC64SidPianoKeyboard;
 class CViewC64MemoryDebuggerLayoutToolbar;
 class CViewVicEditor;
-class CViewDriveStateCPU;
+class CViewDrive1541StateCPU;
 class CViewDrive1541StateVIA;
+class CViewDrive1541FileD64;
 class CViewC64StateREU;
 class CViewC64AllGraphics;
 class CViewEmulationState;
@@ -81,6 +86,7 @@ class CViewEmulationCounters;
 class CViewTimeline;
 class CViewInputEvents;
 class CViewMonitorConsole;
+class CGuiViewUiDebug;
 
 class CViewAtariScreen;
 class CViewAtariStateCPU;
@@ -103,7 +109,7 @@ class CViewNesPianoKeyboard;
 class CViewJukeboxPlaylist;
 class CViewMainMenu;
 class CViewSettingsMenu;
-class CViewFileD64;
+class CViewDrive1541FileD64;
 class CViewC64KeyMap;
 class CViewKeyboardShortcuts;
 class CViewSnapshots;
@@ -204,16 +210,18 @@ public:
 	CGuiButton *btnDone;
 	bool ButtonClicked(CGuiButton *button);
 	bool ButtonPressed(CGuiButton *button);
-
+	
 	CMainMenuBar *mainMenuBar;
+	CGuiViewMessages *viewMessages;
 	CViewMainMenu *viewC64MainMenu;
 	CViewSettingsMenu *viewC64SettingsMenu;
-	CViewFileD64 *viewFileD64;
 	CViewC64KeyMap *viewC64KeyMap;
 	CViewKeyboardShortcuts *viewKeyboardShortcuts;
 	CViewSnapshots *viewC64Snapshots;
 	CViewColodore *viewColodore;
 	CViewAbout *viewAbout;
+	CGuiViewUiDebug *viewUiDebug;
+
 
 	int currentScreenLayoutId;
 	
@@ -224,6 +232,7 @@ public:
 	void InitViceViews();
 	CViewC64Screen *viewC64Screen;
 //	CViewC64ScreenWrapper *viewC64ScreenWrapper;
+	CViewC64ScreenViewfinder *viewC64ScreenViewfinder;
 	
 	CViewMemoryMap *viewC64MemoryMap;
 	CViewMemoryMap *viewDrive1541MemoryMap;
@@ -276,7 +285,9 @@ public:
 	CViewMonitorConsole *viewC64MonitorConsole;
 	
 	CViewC64StateCPU *viewC64StateCPU;
-	CViewDriveStateCPU *viewDriveStateCPU;
+	CViewDrive1541StateCPU *viewDrive1541StateCPU;
+	
+	CViewDrive1541FileD64 *viewDrive1541FileD64;
 	
 	// VIC Editor
 	CViewVicEditor *viewVicEditor;
@@ -330,6 +341,9 @@ public:
 	CViewTimeline *viewNesTimeline;
 
 	//
+	CGuiViewProgressBarWindow *viewProgressBarWindow;
+	
+	//
 	bool isDataDirectlyFromRAM;
 	
 	// TODO: these below are C64 related, move to debug interface
@@ -343,10 +357,10 @@ public:
 	u8 colorsToShow[0x0F];
 	u8 colorToShowD800;
 	
-	int rasterToShowX;
-	int rasterToShowY;
-	int rasterCharToShowX;
-	int rasterCharToShowY;
+	int c64RasterPosToShowX;
+	int c64RasterPosToShowY;
+	int c64RasterPosCharToShowX;
+	int c64RasterPosCharToShowY;
 	
 	void UpdateViciiColors();
 	
@@ -373,8 +387,9 @@ public:
 	
 	void InitViews();
 	
+	//
 	void InitJukebox(CSlrString *jukeboxJsonFilePath);
-	
+		
 	int guiRenderFrameCounter;
 //	int nextScreenUpdateFrame;
 	
@@ -387,7 +402,6 @@ public:
 	C64KeyboardShortcuts *keyboardShortcuts;
 	bool ProcessKeyboardShortcut(u32 zone, u8 actionType, CSlrKeyboardShortcut *keyboardShortcut);
 	
-	void SwitchUseKeyboardAsJoystick();
 	void SwitchIsMulticolorDataDump();
 	void SetIsMulticolorDataDump(bool isMultiColor);
 	void SwitchIsShowRasterBeam();
@@ -431,6 +445,8 @@ public:
 	void Create8BitFonts();
 	void CreateDefaultUIFont();
 	void UpdateDefaultUIFontFromSettings();
+	
+	void SetViewportsEnable(bool viewportsEnable);
 
 	volatile bool isShowingRasterCross;
 	
@@ -451,6 +467,14 @@ public:
 //	uint8 *mappedAtariMemory;
 //	void *mappedAtariMemoryDescriptor;
 
+	
+	//
+	void DefaultSymbolsStore();
+	void SerializeAllEmulatorsSymbols(Hjson::Value hjsonRoot, bool storeLabels, bool storeWatches, bool storeBreakpoints);
+	void DefaultSymbolsRestore();
+	void DeserializeAllEmulatorsSymbols(Hjson::Value hjsonRoot, bool restoreLabels, bool restoreWatches, bool restoreBreakpoints);
+	bool firstStoreDefaultSymbols;
+	
 	//
 	std::list<u32> keyDownCodes;
 	
@@ -505,6 +529,11 @@ public:
 	void CreateEmulatorPlugins();
 	void RegisterEmulatorPlugin(CDebuggerEmulatorPlugin *emuPlugin);
 	
+	// async show message
+	CSlrMutex *mutexShowMessage;
+	void ShowMessage(CSlrString *showMessage);
+	void ShowMessage(const char *fmt, ...);
+
 	//
 	virtual void GlobalDropFileCallback(char *filePath, bool consumedByView);
 	
@@ -529,5 +558,11 @@ public:
 	virtual void RunUIThreadTask();
 };
 
+class CUiThreadTaskSetViewportsEnable : public CUiThreadTaskCallback
+{
+public:
+	bool viewportsEnable;
+	virtual void RunUIThreadTask();
+};
 
 #endif //_GUI_C64DEMO_

@@ -26,12 +26,8 @@ void CVicEditorLayerC64Screen::RenderMain(vicii_cycle_state_t *viciiState)
 	viewC64Screen->RefreshScreen();
 	
 	// nearest neighbour
-	{
-		glBindTexture(GL_TEXTURE_2D, viewC64Screen->imageScreen->textureId);
-		
-		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST);
-	}
+	LOGTODO("is it required?");
+	viewC64Screen->imageScreen->SetLinearScaling(false);
 	
 	if (vicEditor->viewVicDisplayMain->showDisplayBorderType == VIC_DISPLAY_SHOW_BORDER_VISIBLE_AREA
 		|| vicEditor->viewVicDisplayMain->showDisplayBorderType == VIC_DISPLAY_SHOW_BORDER_NONE)
@@ -117,12 +113,8 @@ void CVicEditorLayerC64Screen::RenderPreview(vicii_cycle_state_t *viciiState)
 	CViewC64Screen *viewC64Screen = viewC64->viewC64Screen;
 
 	// nearest neighbour
-	{
-		glBindTexture(GL_TEXTURE_2D, viewC64Screen->imageScreen->textureId);
-		
-		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST);
-	}
+	LOGTODO("is it required?");
+	viewC64Screen->imageScreen->SetLinearScaling(false);
 	
 	if (vicEditor->viewVicDisplayMain->showDisplayBorderType == VIC_DISPLAY_SHOW_BORDER_VISIBLE_AREA
 		|| vicEditor->viewVicDisplayMain->showDisplayBorderType == VIC_DISPLAY_SHOW_BORDER_NONE)

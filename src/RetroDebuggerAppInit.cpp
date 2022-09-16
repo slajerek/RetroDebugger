@@ -45,6 +45,8 @@ void MT_PostInit()
 	
 	CViewC64 *viewC64 = new CViewC64(0, 0, -1, SCREEN_WIDTH, SCREEN_HEIGHT);
 	guiMain->SetView(viewC64);
+	
+	VID_SetFPS(5);
 }
 
 void MT_Render()

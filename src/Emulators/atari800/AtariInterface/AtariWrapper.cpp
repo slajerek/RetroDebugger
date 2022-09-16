@@ -283,6 +283,8 @@ extern "C" {
 
 void atrd_async_check()
 {
+//	LOGD("atrd_async_check");
+	
 	atrd_mutex_lock();
 	
 	if (atrd_check_snapshot_restore())
@@ -639,24 +641,19 @@ void atrd_sound_unlock()
 	gSoundEngine->UnlockMutex("atrd_sound_unlock");
 }
 
-// TODO: remove me, pokey receive is based on the visibiliy of the viewAtariStatePOKEY, make callback
-int ZZatrd_is_receive_channels_data[MAX_NUM_POKEYS] = { 0, 0 };
-
 int atrd_get_is_receive_channels_data(int pokeyNum)
 {
 	return viewC64->viewAtariStatePOKEY->IsVisible();
 }
 
-void atrd_pokey_receive_channels_data(int pokeyNum, int isOn)
-{
-//	ZZatrd_is_receive_channels_data[pokeyNum] = isOn;
-}
-
 void atrd_pokey_channels_data(int pokeyNumber, int v1, int v2, int v3, int v4, short mix)
 {
-	//	LOGD("atrd_pokey_channels_data: pokey#%d, %d %d %d %d | %d", pokeyNumber, v1, v2, v3, v4, mix);
+//		LOGD("atrd_pokey_channels_data: pokey#%d, %d %d %d %d | %d", pokeyNumber, v1, v2, v3, v4, mix);
 	
-	viewC64->viewAtariStatePOKEY->AddWaveformData(pokeyNumber, v1, v2, v3, v4, mix);
+//	if (pokeyNumber == 0)
+	{
+		viewC64->viewAtariStatePOKEY->AddWaveformData(pokeyNumber, v1, v2, v3, v4, mix);
+	}
 }
 
 

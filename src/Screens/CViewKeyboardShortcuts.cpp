@@ -130,7 +130,7 @@ void CViewKeyboardShortcuts::SaveAndBack()
 	
 //	if (viewC64->viewC64MainMenu->kbsMainMenuScreen->keyCode < 1)
 //	{
-//		guiMain->ShowMessage("Please assign \"Main Menu\" keyboard shortcut");
+//		viewC64->ShowMessage("Please assign \"Main Menu\" keyboard shortcut");
 //
 //		// TODO: scroll to Main Menu shortcut menu item
 //
@@ -229,7 +229,7 @@ void CViewKeyboardShortcuts::SystemDialogFileSaveSelected(CSlrString *path)
 	
 	delete byteBuffer;
 	
-	guiMain->ShowMessage("Keyboard shortcuts saved");
+	viewC64->ShowMessage("Keyboard shortcuts saved");
 	 */
 }
 
@@ -255,7 +255,7 @@ void CViewKeyboardShortcuts::SystemDialogFileOpenSelected(CSlrString *path)
 	
 	if (byteBuffer->length == 0)
 	{
-		guiMain->ShowMessage("Keyboard shortcuts not found");
+		viewC64->ShowMessage("Keyboard shortcuts not found");
 		delete byteBuffer;
 		return;
 	}
@@ -263,7 +263,7 @@ void CViewKeyboardShortcuts::SystemDialogFileOpenSelected(CSlrString *path)
 	u16 version = byteBuffer->GetU16();
 	if (version != C64DEBUGGER_KEYBOARD_SHORTCUTS_VERSION)
 	{
-		guiMain->ShowMessage("Not compatible file version");
+		viewC64->ShowMessage("Not compatible file version");
 		delete byteBuffer;
 		return;
 	}
@@ -274,7 +274,7 @@ void CViewKeyboardShortcuts::SystemDialogFileOpenSelected(CSlrString *path)
 
 	UpdateMenuKeyboardShortcuts();
 	
-	guiMain->ShowMessage("Load keyboard shortcuts");
+	viewC64->ShowMessage("Load keyboard shortcuts");
 	 */
 }
 
@@ -615,7 +615,7 @@ void CViewKeyboardShortcuts::EnteredKeyCode(u32 keyCode)
 		
 	}
 	
-	guiMain->ShowMessage(buf);
+	viewC64->ShowMessage(buf);
 	
 	SYS_ReleaseCharBuf(buf);
 	

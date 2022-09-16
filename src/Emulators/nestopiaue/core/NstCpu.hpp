@@ -269,8 +269,8 @@ namespace Nes
 			NST_SINGLE_CALL void Lxa (uint);
 			NST_SINGLE_CALL void Sbx (uint);
 			NST_SINGLE_CALL uint Shs (uint);
-			NST_SINGLE_CALL uint Shx (uint);
-			NST_SINGLE_CALL uint Shy (uint);
+			NST_SINGLE_CALL void Shx (uint);
+			NST_SINGLE_CALL void Shy (uint);
 
 			NST_NO_INLINE void Anc (uint);
 			NST_NO_INLINE uint Dcp (uint);
@@ -498,8 +498,6 @@ namespace Nes
 			Ram ram;
 			Apu apu;
 			IoMap map;
-			bool cpuOverclocking;
-			uint extraCycles;
 
 			static dword logged;
 			static void (Cpu::*const opcodes[0x100])();
@@ -510,12 +508,6 @@ namespace Nes
 			Apu& GetApu()
 			{
 				return apu;
-			}
-
-			void SetOverclocking(bool overclocking,uint newCycles)
-			{
-				cpuOverclocking = overclocking;
-				extraCycles = newCycles;
 			}
 
 			Cycle Update(uint readAddress=0)

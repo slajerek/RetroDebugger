@@ -121,6 +121,7 @@ public:
 	
 	//
 	virtual void SetDebugMode(uint8 debugMode);
+	virtual uint8 SetDebugModeBlockedWait(uint8 debugMode);
 	virtual uint8 GetDebugMode();
 
 	//

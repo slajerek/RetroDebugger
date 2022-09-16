@@ -1,10 +1,10 @@
 #include "CDataAdapterNesPpuOam.h"
 #include "CDebugInterfaceNes.h"
 
-CDataAdapterNesPpuOam::CDataAdapterNesPpuOam(CDebugInterfaceNes *debugInterface)
+CDataAdapterNesPpuOam::CDataAdapterNesPpuOam(CDebugInterfaceNes *debugInterfaceNes)
 : CDataAdapter("NesPpuOam")
 {
-	this->debugInterface = debugInterface;
+	this->debugInterfaceNes = debugInterfaceNes;
 }
 
 int CDataAdapterNesPpuOam::AdapterGetDataLength()
@@ -15,12 +15,12 @@ int CDataAdapterNesPpuOam::AdapterGetDataLength()
 
 void CDataAdapterNesPpuOam::AdapterReadByte(int pointer, uint8 *value)
 {
-	*value = this->debugInterface->GetByte(pointer);
+	*value = this->debugInterfaceNes->GetByte(pointer);
 }
 
 void CDataAdapterNesPpuOam::AdapterWriteByte(int pointer, uint8 value)
 {
-	this->debugInterface->SetByte(pointer, value);
+	this->debugInterfaceNes->SetByte(pointer, value);
 }
 
 
@@ -29,7 +29,7 @@ void CDataAdapterNesPpuOam::AdapterReadByte(int pointer, uint8 *value, bool *isA
 	if (pointer < 0x10000)
 	{
 		*isAvailable = true;
-		*value = this->debugInterface->GetByte(pointer);
+		*value = this->debugInterfaceNes->GetByte(pointer);
 	}
 	else
 	{
@@ -39,13 +39,13 @@ void CDataAdapterNesPpuOam::AdapterReadByte(int pointer, uint8 *value, bool *isA
 
 void CDataAdapterNesPpuOam::AdapterWriteByte(int pointer, uint8 value, bool *isAvailable)
 {
-	this->debugInterface->SetByte(pointer, value);
+	this->debugInterfaceNes->SetByte(pointer, value);
 	*isAvailable = true;
 }
 
 void CDataAdapterNesPpuOam::AdapterReadBlockDirect(uint8 *buffer, int pointerStart, int pointerEnd)
 {
-	this->debugInterface->GetMemory(buffer, pointerStart, pointerEnd);
+	this->debugInterfaceNes->GetMemory(buffer, pointerStart, pointerEnd);
 }
 
 

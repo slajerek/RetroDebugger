@@ -314,7 +314,7 @@ bool CViewC64CrtMaker::ProcessFiles()
 				else
 				{
 					LOGD("... sid already converted");
-					SYS_PrintError("Already converted: %s", file->displayName);
+					SYS_PrintError("Already converted: %s (exo: %s)", file->prgFilePath, file->exoFilePath);
 				}
 			}
 			else

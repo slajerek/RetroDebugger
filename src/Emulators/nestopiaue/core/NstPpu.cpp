@@ -112,7 +112,6 @@ namespace Nes
 		yuvMap (NULL)
 		{
 			cycles.one = PPU_RP2C02_CC;
-			overclocked = false;
 			PowerOff();
 		}
 
@@ -173,7 +172,7 @@ namespace Nes
 			{
 				static const byte powerUpPalette[] =
 				{
-					0x3F,0x01,0x00,0x01,0x00,0x02,0x02,0x0D,
+					0x09,0x01,0x00,0x01,0x00,0x02,0x02,0x0D,
 					0x08,0x10,0x08,0x24,0x00,0x00,0x04,0x2C,
 					0x09,0x01,0x34,0x03,0x00,0x04,0x00,0x14,
 					0x08,0x3A,0x00,0x02,0x00,0x20,0x2C,0x08
@@ -244,8 +243,7 @@ namespace Nes
 			cycles.count = Cpu::CYCLE_MAX;
 
 			scanline = SCANLINE_VBLANK;
-			scanline_sleep = -1;
-			ssleep = -1;
+			scanline_sleep = 0;
 
 			io.address = 0;
 			io.pattern = 0;
@@ -499,8 +497,6 @@ namespace Nes
 			
 			Cycle frame;
 
-			scanline_sleep = -1;
-
 			switch (model)
 			{
 				case PPU_RP2C02:
@@ -508,8 +504,6 @@ namespace Nes
 					regs.frame ^= Regs::FRAME_ODD;
 
 				default:
-
-					ssleep = PPU_RP2C02_VSLEEP - 2;
 
 					if (cycles.hClock == HCLOCK_DUMMY)
 					{
@@ -527,8 +521,6 @@ namespace Nes
 
 				case PPU_RP2C07:
 
-					ssleep = PPU_RP2C07_VSLEEP - 2;
-
 					if (cycles.hClock == HCLOCK_DUMMY)
 					{
 						cycles.vClock = PPU_RP2C07_HVINT / PPU_RP2C07_CC - HCLOCK_DUMMY;
@@ -545,8 +537,6 @@ namespace Nes
 
 				case PPU_DENDY:
 
-					ssleep = PPU_DENDY_VSLEEP - 2;
-
 					if (cycles.hClock == HCLOCK_DUMMY)
 					{
 						cycles.vClock = PPU_DENDY_HVINT / PPU_DENDY_CC - HCLOCK_DUMMY;
@@ -560,44 +550,6 @@ namespace Nes
 						frame = PPU_DENDY_HVSYNCBOOT;
 					}
 					break;
-			}
-
-			if (overclocked)
-			{
-				Apu& audioSafeOverclock = cpu.GetApu();
-				if (audioSafeOverclock.GetOverclockSafety())
-				{
-					switch (model)
-					{
-						case PPU_RP2C02:
-						default:
-
-						cpu.SetOverclocking(true,PPU_RP2C02_HSYNC * PPU_RP2C02_VACTIVE);
-						break;
-
-						case PPU_RP2C07:
-
-						cpu.SetOverclocking(true,PPU_RP2C07_HSYNC * PPU_RP2C07_VACTIVE);
-						break;
-
-						case PPU_DENDY:
-
-						cpu.SetOverclocking(true,PPU_DENDY_HSYNC * PPU_DENDY_VACTIVE);
-						break;
-					}
-				}
-				else
-				{
-					cpu.SetOverclocking(false,0);
-				}
-
-				audioSafeOverclock.SetOverclockSafety(true);//overclocking is only safe if direct pcm audio has not been written for one frame
-			}
-			else
-			{
-				cpu.SetOverclocking(false,0);
-				Apu& audioSafeOverclock = cpu.GetApu();
-				audioSafeOverclock.SetOverclockSafety(false);
 			}
 
 			cpu.SetFrameCycles( frame );
@@ -702,6 +654,12 @@ namespace Nes
 
 			if (io.line)
 				io.line.Toggle( io.address, GetCycles() );
+		}
+
+		NST_FORCE_INLINE void Ppu::UpdateScrollAddressLine()
+		{
+			if (io.line)
+				io.line.Toggle( scroll.address & 0x3FFF, cpu.GetCycles() );
 		}
 
 		NST_FORCE_INLINE void Ppu::UpdateVramAddress()
@@ -834,7 +792,7 @@ namespace Nes
 					oam.mask = oam.show[pos];
 
 					if ((regs.ctrl[1] & Regs::CTRL1_BG_SP_ENABLED) && !(data & Regs::CTRL1_BG_SP_ENABLED))
-						UpdateAddressLine(scroll.address & 0x3fff);
+						UpdateScrollAddressLine();
 				}
 
 				io.latch = data;
@@ -986,10 +944,7 @@ namespace Nes
 				{
 					scroll.latch = (scroll.latch & 0x7F00) | data;
 					scroll.address = scroll.latch;
-					if (!(regs.ctrl[1] & Regs::CTRL1_BG_SP_ENABLED) ||
-					    (scanline == SCANLINE_VBLANK)) {
-						UpdateAddressLine(scroll.address & 0x3fff);
-					}
+					UpdateScrollAddressLine();
 				}
 			}
 		}
@@ -1005,13 +960,11 @@ namespace Nes
 			uint address = scroll.address;
 
 			UpdateVramAddress();
-			if (!(regs.ctrl[1] & Regs::CTRL1_BG_SP_ENABLED) ||
-			    (scanline == SCANLINE_VBLANK)) {
+
+			if (!(regs.ctrl[1] & Regs::CTRL1_BG_SP_ENABLED) || (scanline == SCANLINE_VBLANK))
 				UpdateAddressLine(scroll.address & 0x3fff);
-			}
-			else {
+			else
 				return;
-			}
 
 			io.latch = data;
 
@@ -1054,10 +1007,9 @@ namespace Nes
 
 			address = scroll.address & 0x3FFF;
 			UpdateVramAddress();
-			if (!(regs.ctrl[1] & Regs::CTRL1_BG_SP_ENABLED) ||
-			    (scanline == SCANLINE_VBLANK)) {
+
+			if (!(regs.ctrl[1] & Regs::CTRL1_BG_SP_ENABLED) || (scanline == SCANLINE_VBLANK))
 				UpdateAddressLine(scroll.address & 0x3fff);
-			}
 
 			io.latch = (address & 0x3F00) != 0x3F00 ? io.buffer : palette.ram[address & 0x1F] & Coloring();
 			io.buffer = (address >= 0x2000 ? nmt.FetchName( address ) : chr.FetchPattern( address ));
@@ -1493,7 +1445,7 @@ namespace Nes
 		{
 			NST_VERIFY( cycles.count != cycles.hClock );
 
-			if (scanline_sleep >= 0)
+			if (scanline_sleep) // Extra lines between VBLANK and NMI in Dendy mode
 			{
 				switch (cycles.hClock)
 				{
@@ -1842,15 +1794,15 @@ namespace Nes
 
 					case 338:
 
-						if (scanline_sleep++ != ssleep)
+						if (++scanline_sleep < PPU_DENDY_VSLEEP)
 						{
 							cycles.hClock = 0;
-							cycles.vClock += 341;
+							cycles.vClock += HCLOCK_DUMMY;
 
-							if (cycles.count <= 341)
+							if (cycles.count <= HCLOCK_DUMMY)
 								break;
 
-							cycles.count -= 341;
+							cycles.count -= HCLOCK_DUMMY;
 
 							goto HActiveSleep;
 						}
@@ -1863,37 +1815,13 @@ namespace Nes
 						}
 
 					case HCLOCK_VBLANK_0:
-					VBlank0:
-
-						regs.status |= Regs::STATUS_VBLANKING;
-						cycles.hClock = HCLOCK_VBLANK_1;
-
-						if (cycles.count <= HCLOCK_VBLANK_1)
-							break;
+						goto VBlank0;
 
 					case HCLOCK_VBLANK_1:
-					VBlank1:
-
-						regs.status = (regs.status & 0xFF) | (regs.status >> 1 & Regs::STATUS_VBLANK);
-						oam.visible = oam.output;
-						cycles.hClock = HCLOCK_VBLANK_2;
-
-						if (cycles.count <= HCLOCK_VBLANK_2)
-							break;
+						goto VBlank1;
 
 					case HCLOCK_VBLANK_2:
-					VBlank2:
-
-						scanline_sleep = -1;
-
-						cycles.hClock = HCLOCK_DUMMY;
-						cycles.count = Cpu::CYCLE_MAX;
-						cycles.reset = 0;
-
-						if (regs.ctrl[0] & regs.status & Regs::CTRL0_NMI)
-							cpu.DoNMI( cpu.GetFrameCycles() );
-
-						return;
+						goto VBlank2;
 				}
 			}
 			else if (regs.ctrl[1] & Regs::CTRL1_BG_SP_ENABLED)
@@ -2554,7 +2482,7 @@ namespace Nes
 
 						if (scanline++ != 239)
 						{
-							const uint line = (scanline != 0 || model != PPU_RP2C02 || !regs.frame ? 341 : 340);
+							const uint line = (scanline != 0 || model != PPU_RP2C02 || !regs.frame ? HCLOCK_DUMMY : (HCLOCK_DUMMY - 1));
 
 							cycles.hClock = 0;
 							cycles.vClock += line;
@@ -2568,16 +2496,17 @@ namespace Nes
 						}
 						else
 						{
-							if (ssleep >= 0)
+							if (model == PPU_DENDY)
 							{
-								scanline_sleep = 0;
-								cycles.hClock = 0;
-								cycles.vClock += 341;
+								scanline_sleep = 1;
 
-								if (cycles.count <= 341)
+								cycles.hClock = 0;
+								cycles.vClock += HCLOCK_DUMMY;
+
+								if (cycles.count <= HCLOCK_DUMMY)
 									break;
 
-								cycles.count -= 341;
+								cycles.count -= HCLOCK_DUMMY;
 
 								goto HActiveSleep;
 							}
@@ -2591,13 +2520,37 @@ namespace Nes
 						}
 
 					case HCLOCK_VBLANK_0:
-						goto VBlank0;
+					VBlank0:
+
+						regs.status |= Regs::STATUS_VBLANKING;
+						cycles.hClock = HCLOCK_VBLANK_1;
+
+						if (cycles.count <= HCLOCK_VBLANK_1)
+							break;
 
 					case HCLOCK_VBLANK_1:
-						goto VBlank1;
+					VBlank1:
+
+						regs.status = (regs.status & 0xFF) | (regs.status >> 1 & Regs::STATUS_VBLANK);
+						oam.visible = oam.output;
+						cycles.hClock = HCLOCK_VBLANK_2;
+
+						if (cycles.count <= HCLOCK_VBLANK_2)
+							break;
 
 					case HCLOCK_VBLANK_2:
-						goto VBlank2;
+					VBlank2:
+
+						scanline_sleep = 0;
+
+						cycles.hClock = HCLOCK_DUMMY;
+						cycles.count = Cpu::CYCLE_MAX;
+						cycles.reset = 0;
+
+						if (regs.ctrl[0] & regs.status & Regs::CTRL0_NMI)
+							cpu.DoNMI( cpu.GetFrameCycles() );
+
+						return;
 
 					case HCLOCK_BOOT:
 						goto Boot;
@@ -3262,29 +3215,29 @@ namespace Nes
 							if (scanline == 0 && model == PPU_RP2C02)
 								output.burstPhase = (output.burstPhase + 1) % 3;
 
-							cycles.vClock += 341;
+							cycles.vClock += HCLOCK_DUMMY;
 							cycles.hClock = 0;
 
-							if (cycles.count <= 341)
+							if (cycles.count <= HCLOCK_DUMMY)
 								break;
 
-							cycles.count -= 341;
+							cycles.count -= HCLOCK_DUMMY;
 
 							goto HActiveOff;
 						}
- 						else
- 						{
-							if (ssleep >= 0)
+						else
+						{
+							if (model == PPU_DENDY)
 							{
-								scanline_sleep = 0;
+								scanline_sleep = 1;
 
-								cycles.vClock += 341;
+								cycles.vClock += HCLOCK_DUMMY;
 								cycles.hClock = 0;
 
-								if (cycles.count <= 341)
+								if (cycles.count <= HCLOCK_DUMMY)
 									break;
 
-								cycles.count -= 341;
+								cycles.count -= HCLOCK_DUMMY;
 
 								goto HActiveSleep;
 							}
@@ -3593,8 +3546,6 @@ namespace Nes
 			
 			byteBuffer->PutI32(scanline);
 			byteBuffer->PutI32(scanline_sleep);
-			byteBuffer->PutI32(ssleep);
-			byteBuffer->PutBool(overclocked);
 		}
 	
 		void Ppu::LoadNesDebuggerState(CByteBuffer *byteBuffer)
@@ -3673,8 +3624,6 @@ namespace Nes
 			
 			scanline = byteBuffer->GetI32();
 			scanline_sleep = byteBuffer->GetI32();
-			ssleep = byteBuffer->GetI32();
-			overclocked = byteBuffer->GetBool();
 		}
 
 	}

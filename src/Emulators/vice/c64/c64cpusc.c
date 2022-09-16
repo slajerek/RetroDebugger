@@ -940,7 +940,7 @@ void c64d_profiler_rts()
 	
 	if (c64d_profiler_is_active)
 	{
-		if (c64d_profiler_trace_stack[c64d_profiler_trace_stack_pointer + 1] == reg_sp + 2)
+		if (c64d_profiler_trace_stack[c64d_profiler_trace_stack_pointer + 1] == reg_sp - 2)
 		{
 
 			if (c64d_profiler_file_out)
@@ -2994,6 +2994,7 @@ INC_PC(1);                \
 				
 				switch (p0) {
 					case 0x00:          /* BRK */
+						c64d_set_debug_mode(DEBUGGER_MODE_PAUSED);
 						BRK();
 						break;
 						

@@ -64,8 +64,8 @@ void CViewC64StateCPU::RenderRegisters()
 	font->BlitText(buf, px, py, -1, fontSize);
 	py += fontSize;
 	
-	int rasterX = viewC64->rasterToShowX; //viewC64->viciiStateToShow.raster_cycle*8;
-	int rasterY = viewC64->rasterToShowY; //viewC64->viciiStateToShow.raster_line;
+	int rasterX = viewC64->c64RasterPosToShowX; //viewC64->viciiStateToShow.raster_cycle*8;
+	int rasterY = viewC64->c64RasterPosToShowY; //viewC64->viciiStateToShow.raster_line;
 
 	//		char flags[20] = {0};
 	//		Byte2Bits(cpuState.processorFlags, flags);

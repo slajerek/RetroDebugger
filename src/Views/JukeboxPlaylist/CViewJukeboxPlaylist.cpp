@@ -3,6 +3,7 @@
 #include "CGuiMain.h"
 #include "CSlrString.h"
 #include "CViewC64.h"
+#include "CMainMenuBar.h"
 #include "CDebugInterfaceC64.h"
 #include "CJukeboxPlaylist.h"
 #include "CSlrFileFromOS.h"
@@ -376,13 +377,13 @@ void CViewJukeboxPlaylist::RunCurrentAction()
 			viewC64->debugInterfaceC64->SetSettingIsWarpSpeed(currentAction->code == 1 ? true : false);
 			break;
 		case JUKEBOX_ACTION_DUMP_C64_MEMORY:
-			viewC64->viewC64SettingsMenu->DumpC64Memory(currentAction->text);
+			viewC64->debugInterfaceC64->DumpC64Memory(currentAction->text);
 			break;
 		case JUKEBOX_ACTION_DUMP_DISK_MEMORY:
-			viewC64->viewC64SettingsMenu->DumpDisk1541Memory(currentAction->text);
+			viewC64->debugInterfaceC64->DumpDisk1541Memory(currentAction->text);
 			break;
 		case JUKEBOX_ACTION_DETACH_CARTRIDGE:
-			viewC64->viewC64SettingsMenu->DetachCartridge(false);
+			viewC64->mainMenuBar->DetachCartridge(false);
 			break;
 		case JUKEBOX_ACTION_SAVE_SCREENSHOT:
 			LOGD("JUKEBOX_ACTION_SAVE_SCREENSHOT");

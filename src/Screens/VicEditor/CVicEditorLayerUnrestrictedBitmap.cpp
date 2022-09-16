@@ -50,12 +50,8 @@ void CVicEditorLayerUnrestrictedBitmap::RenderMain(vicii_cycle_state_t *viciiSta
 	RefreshImage();
 	
 	// nearest neighbour
-	{
-		glBindTexture(GL_TEXTURE_2D, imageUnrestricted->textureId);
-		
-		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST);
-	}
+	LOGTODO("is it required?");
+	imageUnrestricted->SetLinearScaling(false);
 	
 	if (vicEditor->viewVicDisplayMain->showDisplayBorderType == VIC_DISPLAY_SHOW_BORDER_VISIBLE_AREA
 		|| vicEditor->viewVicDisplayMain->showDisplayBorderType == VIC_DISPLAY_SHOW_BORDER_NONE)
@@ -76,12 +72,8 @@ void CVicEditorLayerUnrestrictedBitmap::RenderPreview(vicii_cycle_state_t *vicii
 	RefreshImage();
 	
 	// nearest neighbour
-	{
-		glBindTexture(GL_TEXTURE_2D, imageUnrestricted->textureId);
-		
-		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST);
-	}
+	LOGTODO("is it required?");
+	imageUnrestricted->SetLinearScaling(false);
 	
 	if (vicEditor->viewVicDisplayMain->showDisplayBorderType == VIC_DISPLAY_SHOW_BORDER_VISIBLE_AREA
 		|| vicEditor->viewVicDisplayMain->showDisplayBorderType == VIC_DISPLAY_SHOW_BORDER_NONE)

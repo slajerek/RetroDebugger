@@ -153,6 +153,10 @@ public:
 	//std::map<u32, bool> pressedKeyCodes;
 	virtual void SetSupersampleFactor(int supersampleFactor);
 
+	//
+	virtual bool HasContextMenuItems();
+	virtual void RenderContextMenuItems();
+
 };
 
 #endif //_CVIEWATARISCREEN_H_

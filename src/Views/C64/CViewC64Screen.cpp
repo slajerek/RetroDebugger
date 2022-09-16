@@ -208,28 +208,7 @@ void CViewC64Screen::RefreshScreenColodore()
 void CViewC64Screen::Render()
 {
 	// render texture of C64's screen
-	
-	if (c64SettingsRenderScreenNearest)
-	{
-		// nearest neighbour
-		{
-			glBindTexture(GL_TEXTURE_2D, imageScreen->textureId);
-			
-			glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
-			glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST);
-			
-		}
-	}
-	else
-	{
-		// billinear interpolation
-		{
-			glBindTexture(GL_TEXTURE_2D, imageScreen->textureId);
-			
-			glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
-			glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
-		}
-	}
+	imageScreen->SetLinearScaling(!c64SettingsRenderScreenNearest);
 
 	// blit texture of the screen
 	Blit(imageScreen,
@@ -402,61 +381,63 @@ void CViewC64Screen::CalcZoomedScreenTextureFromRaster(int rasterX, int rasterY)
 
 void CViewC64Screen::RenderZoomedScreen(int rasterX, int rasterY)
 {
+//	LOGD("CViewC64Screen::RenderZoomedScreen rx=%d ry=%d", rasterX, rasterY);
 	CalcZoomedScreenTextureFromRaster(rasterX, rasterY);
 	
 	VID_SetClipping(zoomedScreenPosX, zoomedScreenPosY, zoomedScreenSizeX, zoomedScreenSizeY);
-	
-	//LOGD("x=%6.2f %6.2f  y=%6.2f y=%6.2f", zoomedScreenImageStartX, zoomedScreenImageStartY, zoomedScreenImageSizeX, zoomedScreenImageSizeY);
-
-	if (c64SettingsRenderScreenNearest)
-	{
-		imageScreen->linearScaling = false;
-//		// nearest neighbour
-//		{
-//			glBindTexture(GL_TEXTURE_2D, imageScreen->textureId);
 //
-//			glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
-//			glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST);
-//		}
-	}
-	else
-	{
-		imageScreen->linearScaling = true;
-//		// billinear interpolation
-//		{
-//			glBindTexture(GL_TEXTURE_2D, imageScreen->textureId);
-//			
-//			glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
-//			glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
-//		}
-	}
+//	LOGD("x=%6.2f %6.2f  y=%6.2f y=%6.2f", zoomedScreenImageStartX, zoomedScreenImageStartY, zoomedScreenImageSizeX, zoomedScreenImageSizeY);
+//
+//	if (c64SettingsRenderScreenNearest)
+//	{
+//		imageScreen->linearScaling = false;
+////		// nearest neighbour
+////		{
+////			glBindTexture(GL_TEXTURE_2D, imageScreen->textureId);
+////
+////			glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
+////			glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST);
+////		}
+//	}
+//	else
+//	{
+//		imageScreen->linearScaling = true;
+////		// billinear interpolation
+////		{
+////			glBindTexture(GL_TEXTURE_2D, imageScreen->textureId);
+////
+////			glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
+////			glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
+////		}
+//	}
 	
+//	LOGD("zoomedScreenImageStartX=%f zoomedScreenImageStartY=%f zoomedScreenImageSizeX=%f zoomedScreenImageSizeY=%f",
+//		 zoomedScreenImageStartX, zoomedScreenImageStartY, zoomedScreenImageSizeX, zoomedScreenImageSizeY);
 	Blit(imageScreen,
 		 zoomedScreenImageStartX,
 		 zoomedScreenImageStartY, -1,
 		 zoomedScreenImageSizeX,
 		 zoomedScreenImageSizeY,
-		 0.0f, 1.0f, screenTexEndX, screenTexEndY);
+		 0.0f, 0.0f, screenTexEndX, screenTexEndY);
 	
-	// clipping
-	BlitRectangle(zoomedScreenPosX, zoomedScreenPosY, -1, zoomedScreenSizeX, zoomedScreenSizeY, 0.0f, 1.0f, 1.0f, 1.0f);
-	
-	
+//	// clipping
+//	BlitRectangle(zoomedScreenPosX, zoomedScreenPosY, -1, zoomedScreenSizeX, zoomedScreenSizeY, 0.0f, 1.0f, 1.0f, 1.0f);
+
+
 	float rs = 0.3f;
 	float rs2 = rs*2.0f;
 	BlitFilledRectangle(zoomedScreenCenterX - rs, zoomedScreenPosY, -1, rs2, zoomedScreenSizeY,
 						rasterLongScrenLineR, rasterLongScrenLineG, rasterLongScrenLineB, rasterLongScrenLineA);
 	BlitFilledRectangle(zoomedScreenPosX, zoomedScreenCenterY, -1, zoomedScreenSizeX, rs2,
 						rasterLongScrenLineR, rasterLongScrenLineG, rasterLongScrenLineB, rasterLongScrenLineA);
-	
-	VID_ResetClipping();
-	
-	if (this->hasFocus)
-	{
-		this->RenderFocusBorder();
-	}
-}
 
+	VID_ResetClipping();
+
+//	if (this->hasFocus)
+//	{
+//		this->RenderFocusBorder();
+//	}
+}
 
 void CViewC64Screen::SetPosition(float posX, float posY, float sizeX, float sizeY)
 {
@@ -942,6 +923,61 @@ bool CViewC64Screen::IsInsideZoomedScreen(float x, float y)
 	}
 	
 	return false;
+}
+
+bool CViewC64Screen::HasContextMenuItems()
+{
+	return true;
+}
+
+void CViewC64Screen::RenderContextMenuItems()
+{
+	CGuiView::RenderContextMenuItems();
+
+	if (guiMain->IsViewFullScreen())
+	{
+		if (ImGui::MenuItem("Leave fullscreen"))
+		{
+			viewC64->ToggleFullScreen(this);
+		}
+	}
+	else
+	{
+		float sx = debugInterface->GetScreenSizeX();
+		float sy = debugInterface->GetScreenSizeY();
+		
+		if (ImGui::MenuItem("Go fullscreen##c64Screen"))
+		{
+			viewC64->ToggleFullScreen(this);
+		}
+		
+		if (ImGui::BeginMenu("Scale##c64Screen"))
+		{
+			std::vector<float> sizes;
+			std::vector<const char *> names;
+			sizes.push_back(0.25f); names.push_back("25%##c64Screen");
+			sizes.push_back(0.50f); names.push_back("50%##c64Screen");
+			sizes.push_back(1.00f); names.push_back("100%##c64Screen");
+			sizes.push_back(2.00f); names.push_back("200%##c64Screen");
+			sizes.push_back(3.00f); names.push_back("300%##c64Screen");
+			sizes.push_back(4.00f); names.push_back("400%##c64Screen");
+
+			std::vector<float>::iterator itSize = sizes.begin();
+			for (std::vector<const char *>::iterator itName = names.begin(); itName != names.end(); itName++)
+			{
+				const char *name = *itName;
+				if (ImGui::MenuItem(name))
+				{
+					float f = *itSize;
+					this->SetNewImGuiWindowSize(sx * f, sy * f);
+				}
+				
+				itSize++;
+			}
+			
+			ImGui::EndMenu();
+		}
+	}
 }
 
 void CViewC64Screen::ActivateView()
