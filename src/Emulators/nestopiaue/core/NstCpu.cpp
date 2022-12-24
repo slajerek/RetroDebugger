@@ -163,6 +163,7 @@ namespace Nes
 		apu   ( *this ),
 		map   ( this, &Cpu::Peek_Overflow, &Cpu::Poke_Overflow )
 		{
+			ram.powerstate = 0;
 			cycles.UpdateTable( GetModel() );
 			Reset( false, false );
 		}

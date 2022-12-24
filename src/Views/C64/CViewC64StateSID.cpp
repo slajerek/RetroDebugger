@@ -21,23 +21,39 @@ extern "C" {
 #include "VID_ImageBinding.h"
 #include "C64SIDFrequencies.h"
 #include "CViewC64SidTrackerHistory.h"
+#include "CDebugInterfaceVice.h"
 #include "CViewWaveform.h"
+#include "CWaveformData.h"
+#include "CSlrFileFromOS.h"
 #include "CLayoutParameter.h"
+#include "CByteBuffer.h"
 
-// TODO: calculate this based on fontSize!
-#define ONE_SID_STATE_SIZE_X	170.0f
-
+#define ONE_SID_STATE_DEFAULT_SIZE_X 235.0f
 
 CViewC64StateSID::CViewC64StateSID(const char *name, float posX, float posY, float posZ, float sizeX, float sizeY, CDebugInterfaceC64 *debugInterface)
 : CGuiView(name, posX, posY, posZ, sizeX, sizeY)
 {
 	this->debugInterface = debugInterface;
 	
+	imGuiNoWindowPadding = true;
+	imGuiNoScrollbar = true;
+
+	recentlyOpened = new CRecentlyOpenedFiles(new CSlrString("recents-sidregs"), this);
+	
+	// local sid data for store/restore purposes
+	sidData = new CSidData();
+
 	fontBytes = viewC64->fontDisassembly;
 	fontBytesSize = 7.0f;
-	AddLayoutParameter(new CLayoutParameterFloat("Font Size", &fontBytesSize));
+//	AddLayoutParameter(new CLayoutParameterFloat("Font Size", &fontBytesSize));
 
+	oneSidStateSizeX = 170.0f;
+	
 	selectedSidNumber = 0;
+	
+	//
+	sidRegsFileExtensions.push_back(new CSlrString("sidregs"));
+	sidRegsFileExtensions.push_back(new CSlrString("bin"));
 	
 	//
 	showRegistersOnly = false;
@@ -47,10 +63,8 @@ CViewC64StateSID::CViewC64StateSID(const char *name, float posX, float posY, flo
 	editingSIDIndex = -1;
 	
 	// waveforms
-	renderSidChipsHorizontally = true;
-	AddLayoutParameter(new CLayoutParameterBool("SID Chips horizontally", &renderSidChipsHorizontally));
-
-	waveformPos = 0;
+	showAllSidChips = true;
+	AddLayoutParameter(new CLayoutParameterBool("Show all SID chips", &showAllSidChips));
 
 	font = viewC64->fontCBMShifted;
 	fontScale = 0.8;
@@ -59,13 +73,13 @@ CViewC64StateSID::CViewC64StateSID(const char *name, float posX, float posY, flo
 	buttonSizeX = 25.0f;
 	buttonSizeY = 8.0f;
 	
-	for (int sidNum = 0; sidNum < MAX_NUM_SIDS; sidNum++)
+	for (int sidNum = 0; sidNum < C64_MAX_NUM_SIDS; sidNum++)
 	{
 		for (int i = 0; i < 3; i++)
 		{
-			sidChannelWaveform[sidNum][i] = new CViewWaveform(0, 0, 0, 0, 0, SID_WAVEFORM_LENGTH);
+			viewChannelWaveform[sidNum][i] = new CViewWaveform("CViewC64StateSID::CViewWaveform", 0, 0, 0, 0, 0, debugInterface->sidChannelWaveform[sidNum][i]);
 		}
-		sidMixWaveform[sidNum] = new CViewWaveform(0, 0, 0, 0, 0, SID_WAVEFORM_LENGTH);
+		viewMixWaveform[sidNum] = new CViewWaveform("CViewC64StateSID::CViewWaveform", 0, 0, 0, 0, 0, debugInterface->sidMixWaveform[sidNum]);
 		
 		// button
 		btnsSelectSID[sidNum] = new CGuiButtonSwitch(NULL, NULL, NULL,
@@ -112,123 +126,80 @@ CViewC64StateSID::CViewC64StateSID(const char *name, float posX, float posY, flo
 	
 }
 
+void CViewC64StateSID::UpdateWaveformsPosition()
+{
+	oneSidStateSizeX = ONE_SID_STATE_DEFAULT_SIZE_X/7.0f * fontBytesSize;
+
+	// waveforms
+	float wsx = fontBytesSize*10.0f;
+	float wsy = fontBytesSize*3.5f;
+	float wgx = fontBytesSize*23.0f;
+	float wgy = fontBytesSize*9.0f;
+	
+	float px = posX;
+	float py = posY;
+	
+	for (int sidNum = 0; sidNum < C64_MAX_NUM_SIDS; sidNum++)
+	{
+		btnsSelectSID[sidNum]->SetPosition(px, py);
+		
+		px += buttonSizeX + 5.0f;
+	}
+	
+	px = posX + wgx;
+	py += buttonSizeY;
+	
+	for (int chanNum = 0; chanNum < 3; chanNum++)
+	{
+		for (int sidNum = 0; sidNum < C64_MAX_NUM_SIDS; sidNum++)
+		{
+			float pxs;
+			if (showAllSidChips == false)
+			{
+				pxs = px;
+			}
+			else
+			{
+				pxs = px + (float)sidNum * oneSidStateSizeX;
+			}
+			viewChannelWaveform[sidNum][chanNum]->SetPosition(pxs, py, posZ, wsx, wsy);
+		}
+		py += wgy;
+	}
+	
+	py += fontBytesSize*1;
+	
+	for (int sidNum = 0; sidNum < C64_MAX_NUM_SIDS; sidNum++)
+	{
+		float pxs;
+		
+		if (showAllSidChips == false)
+		{
+			pxs = px;
+		}
+		else
+		{
+			pxs = px + (float)sidNum * oneSidStateSizeX;
+		}
+		viewMixWaveform[sidNum]->SetPosition(pxs, py, posZ, wsx, wsy);
+	}
+}
+
 void CViewC64StateSID::SetPosition(float posX, float posY, float posZ, float sizeX, float sizeY)
 {
 	CGuiView::SetPosition(posX, posY, posZ, sizeX, sizeY);
 	
-	// waveforms
-	float wsx = fontBytesSize*10.0f;
-	float wsy = fontBytesSize*3.5f;
-	float wgx = fontBytesSize*23.0f;
-	float wgy = fontBytesSize*9.0f;
+	float sx = ONE_SID_STATE_DEFAULT_SIZE_X * (showAllSidChips ? (float)debugInterface->GetNumSids() : 1.0f);
 	
-	float px = posX;
-	float py = posY;
-	
-	for (int sidNum = 0; sidNum < MAX_NUM_SIDS; sidNum++)
-	{
-		btnsSelectSID[sidNum]->SetPosition(px, py);
-		
-		px += buttonSizeX + 5.0f;
-	}
-	
-	px = posX + wgx;
-	py += buttonSizeY;
-	
-	for (int chanNum = 0; chanNum < 3; chanNum++)
-	{
-		for (int sidNum = 0; sidNum < MAX_NUM_SIDS; sidNum++)
-		{
-			float pxs;
-			if (renderSidChipsHorizontally == false)
-			{
-				pxs = px;
-			}
-			else
-			{
-				pxs = px + (float)sidNum * ONE_SID_STATE_SIZE_X;
-			}
-			sidChannelWaveform[sidNum][chanNum]->SetPosition(pxs, py, posZ, wsx, wsy);
-		}
-		py += wgy;
-	}
-	
-	py += fontBytesSize*1;
-	
-	for (int sidNum = 0; sidNum < MAX_NUM_SIDS; sidNum++)
-	{
-		float pxs;
-		
-		if (renderSidChipsHorizontally == false)
-		{
-			pxs = px;
-		}
-		else
-		{
-			pxs = px + (float)sidNum * ONE_SID_STATE_SIZE_X;
-		}
-		sidMixWaveform[sidNum]->SetPosition(pxs, py, posZ, wsx, wsy);
-	}
+	fontBytesSize = 7.0f/sx * sizeX;
+	UpdateWaveformsPosition();
 }
 
 void CViewC64StateSID::LayoutParameterChanged(CLayoutParameter *layoutParameter)
 {
-	LOGD("CViewC64StateSID::LayoutParameterChanged: renderHorizontal=%s", STRBOOL(renderSidChipsHorizontally));
+	LOGD("CViewC64StateSID::LayoutParameterChanged: renderHorizontal=%s", STRBOOL(showAllSidChips));
 	
-	// waveforms
-	float wsx = fontBytesSize*10.0f;
-	float wsy = fontBytesSize*3.5f;
-	float wgx = fontBytesSize*23.0f;
-	float wgy = fontBytesSize*9.0f;
-	
-	float px = posX;
-	float py = posY;
-	
-	for (int sidNum = 0; sidNum < MAX_NUM_SIDS; sidNum++)
-	{
-		btnsSelectSID[sidNum]->SetPosition(px, py);
-		
-		px += buttonSizeX + 5.0f;
-	}
-	
-	px = posX + wgx;
-	py += buttonSizeY;
-	
-	for (int chanNum = 0; chanNum < 3; chanNum++)
-	{
-		for (int sidNum = 0; sidNum < MAX_NUM_SIDS; sidNum++)
-		{
-			float pxs;
-			if (renderSidChipsHorizontally == false)
-			{
-				pxs = px;
-			}
-			else
-			{
-				pxs = px + (float)sidNum * ONE_SID_STATE_SIZE_X;
-			}
-			sidChannelWaveform[sidNum][chanNum]->SetPosition(pxs, py, posZ, wsx, wsy);
-		}
-		py += wgy;
-	}
-	
-	py += fontBytesSize*1;
-	
-	for (int sidNum = 0; sidNum < MAX_NUM_SIDS; sidNum++)
-	{
-		float pxs;
-		
-		if (renderSidChipsHorizontally == false)
-		{
-			pxs = px;
-		}
-		else
-		{
-			pxs = px + (float)sidNum * ONE_SID_STATE_SIZE_X;
-		}
-		sidMixWaveform[sidNum]->SetPosition(pxs, py, posZ, wsx, wsy);
-	}
-	
+	UpdateWaveformsPosition();
 	CGuiView::LayoutParameterChanged(layoutParameter);
 }
 
@@ -247,38 +218,41 @@ void CViewC64StateSID::UpdateSidButtonsState()
 {
 	guiMain->LockMutex();
 	
-	for (int sidNum = 0; sidNum < MAX_NUM_SIDS; sidNum++)
+	for (int sidNum = 0; sidNum < C64_MAX_NUM_SIDS; sidNum++)
 	{
 		btnsSelectSID[sidNum]->visible = false;
 	}
 	
-	if (c64SettingsSIDStereo >= 1)
+	if (showAllSidChips == false)
 	{
-		char *buf = SYS_GetCharBuf();
-		sprintf(buf, "%04X", c64SettingsSIDStereoAddress);
+		if (c64SettingsSIDStereo >= 1)
+		{
+			char *buf = SYS_GetCharBuf();
+			sprintf(buf, "%04X", c64SettingsSIDStereoAddress);
+			
+			CSlrString *str = new CSlrString(buf);
+			btnsSelectSID[1]->SetText(str);
+			delete str;
+			SYS_ReleaseCharBuf(buf);
+			
+			btnsSelectSID[0]->visible = true;
+			btnsSelectSID[1]->visible = true;
+		}
 		
-		CSlrString *str = new CSlrString(buf);
-		btnsSelectSID[1]->SetText(str);
-		delete str;
-		SYS_ReleaseCharBuf(buf);
-		
-		btnsSelectSID[0]->visible = true;
-		btnsSelectSID[1]->visible = true;
-	}
-	
-	if (c64SettingsSIDStereo >= 2)
-	{
-		char *buf = SYS_GetCharBuf();
-		sprintf(buf, "%04X", c64SettingsSIDTripleAddress);
-		
-		CSlrString *str = new CSlrString(buf);
-		btnsSelectSID[2]->SetText(str);
-		delete str;
-		SYS_ReleaseCharBuf(buf);
+		if (c64SettingsSIDStereo >= 2)
+		{
+			char *buf = SYS_GetCharBuf();
+			sprintf(buf, "%04X", c64SettingsSIDTripleAddress);
+			
+			CSlrString *str = new CSlrString(buf);
+			btnsSelectSID[2]->SetText(str);
+			delete str;
+			SYS_ReleaseCharBuf(buf);
 
-		btnsSelectSID[2]->visible = true;
+			btnsSelectSID[2]->visible = true;
+		}
 	}
-	
+
 	if (selectedSidNumber > c64SettingsSIDStereo)
 	{
 		SelectSid(0);
@@ -293,7 +267,7 @@ void CViewC64StateSID::SelectSid(int sidNum)
 	
 	if (this->visible)
 	{
-		if (renderSidChipsHorizontally == false)
+		if (showAllSidChips == false)
 		{
 			viewC64->debugInterfaceC64->SetSIDReceiveChannelsData(this->selectedSidNumber, false);
 			viewC64->debugInterfaceC64->SetSIDReceiveChannelsData(sidNum, true);
@@ -309,7 +283,7 @@ void CViewC64StateSID::SelectSid(int sidNum)
 	
 	this->selectedSidNumber = sidNum;
 	
-	for (int i = 0; i < MAX_NUM_SIDS; i++)
+	for (int i = 0; i < C64_MAX_NUM_SIDS; i++)
 	{
 		btnsSelectSID[i]->SetOn(false);
 	}
@@ -321,7 +295,7 @@ void CViewC64StateSID::SelectSid(int sidNum)
 
 bool CViewC64StateSID::ButtonSwitchChanged(CGuiButtonSwitch *button)
 {
-	for (int sidNum = 0; sidNum < MAX_NUM_SIDS; sidNum++)
+	for (int sidNum = 0; sidNum < C64_MAX_NUM_SIDS; sidNum++)
 	{
 		if (button == btnsSelectSID[sidNum])
 		{
@@ -343,32 +317,22 @@ void CViewC64StateSID::RenderImGui()
 	PostRenderImGui();
 }
 
-extern "C" {
-void c64d_sid_receive_channels_data(int sidNum, int isOn);
-}
-
 void CViewC64StateSID::Render()
 {
 //	if (viewC64->debugInterface->GetSettingIsWarpSpeed() == true)
 //		return;
 
-	c64d_sid_receive_channels_data(selectedSidNumber, 1);
-	
-	if (renderSidChipsHorizontally == false)
+	// calc trigger pos, render waveform
+	if (showAllSidChips == false)
 	{
 		this->RenderStateSID(selectedSidNumber, posX, posY + buttonSizeY, posZ, fontBytes, fontBytesSize);
 	
-		sidChannelWaveform[selectedSidNumber][0]->CalculateWaveform();
-		sidChannelWaveform[selectedSidNumber][1]->CalculateWaveform();
-		sidChannelWaveform[selectedSidNumber][2]->CalculateWaveform();
-		sidMixWaveform[selectedSidNumber]->CalculateWaveform();
-	
 		for (int i = 0; i < 3; i++)
 		{
-			sidChannelWaveform[selectedSidNumber][i]->Render();
+			viewChannelWaveform[selectedSidNumber][i]->Render();
 		}
 	
-		sidMixWaveform[selectedSidNumber]->Render();
+		viewMixWaveform[selectedSidNumber]->Render();
 	}
 	else
 	{
@@ -378,17 +342,12 @@ void CViewC64StateSID::Render()
 		{
 			this->RenderStateSID(sidNum, posX, posY + buttonSizeY, posZ, fontBytes, fontBytesSize);
 			
-			sidChannelWaveform[sidNum][0]->CalculateWaveform();
-			sidChannelWaveform[sidNum][1]->CalculateWaveform();
-			sidChannelWaveform[sidNum][2]->CalculateWaveform();
-			sidMixWaveform[sidNum]->CalculateWaveform();
-			
 			for (int i = 0; i < 3; i++)
 			{
-				sidChannelWaveform[sidNum][i]->Render();
+				viewChannelWaveform[sidNum][i]->Render();
 			}
 			
-			sidMixWaveform[sidNum]->Render();
+			viewMixWaveform[sidNum]->Render();
 		}
 	}
 
@@ -404,9 +363,9 @@ void CViewC64StateSID::RenderStateSID(int sidNum, float posX, float posY, float 
 		float px = posX;
 		float py = posY;
 
-		px += ONE_SID_STATE_SIZE_X * (float)sidNum;
+		px += oneSidStateSizeX * (float)sidNum;
 		
-		if (renderSidChipsHorizontally == false)
+		if (showAllSidChips == false)
 		{
 			sidNum = selectedSidNumber;
 		}
@@ -447,7 +406,7 @@ void CViewC64StateSID::RenderStateSID(int sidNum, float posX, float posY, float 
 				//			}
 			}
 			
-			if (renderSidChipsHorizontally == false)
+			if (showAllSidChips == false)
 				return;
 			
 			continue;
@@ -528,7 +487,7 @@ void CViewC64StateSID::RenderStateSID(int sidNum, float posX, float posY, float 
 		sprintf(buf, " Volume   : %1.1x", reg_volume & 0x0f);
 		fontBytes->BlitText(buf, px, py, posZ, fontSize); py += fontSize;
 		
-		if (renderSidChipsHorizontally == false)
+		if (showAllSidChips == false)
 			return;
 	}
 
@@ -571,27 +530,27 @@ bool CViewC64StateSID::DoTap(float x, float y)
 		
 		editingSIDIndex = -1;
 		
-		if (renderSidChipsHorizontally == false)
+		if (showAllSidChips == false)
 		{
 			editingSIDIndex = selectedSidNumber; //-1;
 		}
 		else
 		{
 			// check SID 1
-			if (x >= posX && x < posX+ONE_SID_STATE_SIZE_X)
+			if (x >= posX && x < posX+oneSidStateSizeX)
 			{
 				editingSIDIndex = 0;
 			}
-			else if (x >= posX+ONE_SID_STATE_SIZE_X && x < posX+ONE_SID_STATE_SIZE_X*2.0f
+			else if (x >= posX+oneSidStateSizeX && x < posX+oneSidStateSizeX*2.0f
 				&& debugInterface->GetNumSids() > 1)
 			{
-				px += ONE_SID_STATE_SIZE_X;
+				px += oneSidStateSizeX;
 				editingSIDIndex = 1;
 			}
-			else if (x >= posX+ONE_SID_STATE_SIZE_X*2.0f && x < posX+ONE_SID_STATE_SIZE_X*3.0f
+			else if (x >= posX+oneSidStateSizeX*2.0f && x < posX+oneSidStateSizeX*3.0f
 				&& debugInterface->GetNumSids() > 2)
 			{
-				px += 2.0f * ONE_SID_STATE_SIZE_X;
+				px += 2.0f * oneSidStateSizeX;
 				editingSIDIndex = 2;
 			}
 		}
@@ -639,52 +598,34 @@ bool CViewC64StateSID::DoTap(float x, float y)
 
 	for (int sidNum = 0; sidNum < debugInterface->GetNumSids(); sidNum++)
 	{
-		if (renderSidChipsHorizontally == false)
+		if (showAllSidChips == false)
 		{
 			sidNum = selectedSidNumber;
 		}
 		
 		for (int i = 0; i < 3; i++)
 		{
-			if (sidChannelWaveform[sidNum][i]->IsInside(x, y))
+			if (viewChannelWaveform[sidNum][i]->IsInside(x, y))
 			{
-				sidChannelWaveform[sidNum][i]->isMuted = !sidChannelWaveform[sidNum][i]->isMuted;
+				viewChannelWaveform[sidNum][i]->waveform->isMuted = !viewChannelWaveform[sidNum][i]->waveform->isMuted;
 				
-				viewC64->debugInterfaceC64->SetSIDMuteChannels(sidNum,
-															sidChannelWaveform[sidNum][0]->isMuted,
-															sidChannelWaveform[sidNum][1]->isMuted,
-															sidChannelWaveform[sidNum][2]->isMuted, false);
-
-				if (sidChannelWaveform[sidNum][0]->isMuted
-					&& sidChannelWaveform[sidNum][1]->isMuted
-					&& sidChannelWaveform[sidNum][2]->isMuted)
-				{
-					sidMixWaveform[sidNum]->isMuted = true;
-				}
-				else if (!sidChannelWaveform[sidNum][0]->isMuted
-						 || !sidChannelWaveform[sidNum][1]->isMuted
-						 || !sidChannelWaveform[sidNum][2]->isMuted)
-				{
-					sidMixWaveform[sidNum]->isMuted = false;
-				}
+				debugInterface->UpdateWaveformsMuteStatus();
 				return true;
 			}
 		}
 
-		if (sidMixWaveform[sidNum]->IsInside(x,y))
+		if (viewMixWaveform[sidNum]->IsInside(x,y))
 		{
-			sidMixWaveform[sidNum]->isMuted = !sidMixWaveform[sidNum]->isMuted;
-			sidChannelWaveform[sidNum][0]->isMuted = sidMixWaveform[sidNum]->isMuted;
-			sidChannelWaveform[sidNum][1]->isMuted = sidMixWaveform[sidNum]->isMuted;
-			sidChannelWaveform[sidNum][2]->isMuted = sidMixWaveform[sidNum]->isMuted;
+			viewMixWaveform[sidNum]->waveform->isMuted = !viewMixWaveform[sidNum]->waveform->isMuted;
+			viewChannelWaveform[sidNum][0]->waveform->isMuted = viewMixWaveform[sidNum]->waveform->isMuted;
+			viewChannelWaveform[sidNum][1]->waveform->isMuted = viewMixWaveform[sidNum]->waveform->isMuted;
+			viewChannelWaveform[sidNum][2]->waveform->isMuted = viewMixWaveform[sidNum]->waveform->isMuted;
 
-			viewC64->debugInterfaceC64->SetSIDMuteChannels(sidNum,
-														sidChannelWaveform[sidNum][0]->isMuted,
-														sidChannelWaveform[sidNum][1]->isMuted,
-														sidChannelWaveform[sidNum][2]->isMuted, false);
+			debugInterface->UpdateWaveformsMuteStatus();
+			return true;
 		}
 		
-		if (renderSidChipsHorizontally == false)
+		if (showAllSidChips == false)
 			break;
 	}
 	
@@ -776,33 +717,6 @@ bool CViewC64StateSID::KeyDownRepeat(u32 keyCode, bool isShift, bool isAlt, bool
 }
 
 
-void CViewC64StateSID::AddWaveformData(int sidNumber, int v1, int v2, int v3, short mix)
-{
-	//	LOGD("CViewC64StateSID::AddWaveformData: sid#%d, %d %d %d %d", sidNumber, v1, v2, v3, mix);
-	
-	// sid channels
-	sidChannelWaveform[sidNumber][0]->waveformData[waveformPos] = v1;
-	sidChannelWaveform[sidNumber][1]->waveformData[waveformPos] = v2;
-	sidChannelWaveform[sidNumber][2]->waveformData[waveformPos] = v3;
-	
-	// mix channel
-	sidMixWaveform[sidNumber]->waveformData[waveformPos] = mix;
-	
-	waveformPos++;
-	
-	if (waveformPos == SID_WAVEFORM_LENGTH)
-	{
-//		guiMain->LockRenderMutex();
-//		sidChannelWaveform[sidNumber][0]->CalculateWaveform();
-//		sidChannelWaveform[sidNumber][1]->CalculateWaveform();
-//		sidChannelWaveform[sidNumber][2]->CalculateWaveform();
-//		sidMixWaveform[sidNumber]->CalculateWaveform();
-//		guiMain->UnlockRenderMutex();
-		
-		waveformPos = 0;
-	}
-}
-
 bool CViewC64StateSID::KeyUp(u32 keyCode, bool isShift, bool isAlt, bool isControl, bool isSuper)
 {
 	return false;
@@ -812,6 +726,109 @@ void CViewC64StateSID::RenderFocusBorder()
 {
 	//	CGuiView::RenderFocusBorder();
 	//
+}
+
+bool CViewC64StateSID::HasContextMenuItems()
+{
+	return true;
+}
+
+void CViewC64StateSID::RenderContextMenuItems()
+{
+	if (ImGui::MenuItem("Export SID registers"))
+	{
+		CSlrString *defaultFileName = new CSlrString("registers");
+
+		CSlrString *windowTitle = new CSlrString("Export SID registers");
+		viewC64->ShowDialogSaveFile(this, &sidRegsFileExtensions, defaultFileName, c64SettingsDefaultSnapshotsFolder, windowTitle);
+		delete windowTitle;
+		delete defaultFileName;
+	}
+	if (ImGui::MenuItem("Import SID registers"))
+	{
+		CSlrString *windowTitle = new CSlrString("Import SID registers");
+		windowTitle->DebugPrint("windowTitle=");
+		viewC64->ShowDialogOpenFile(this, &sidRegsFileExtensions, NULL, windowTitle);
+		delete windowTitle;
+	}
+	recentlyOpened->RenderImGuiMenu("Recent##CViewC64StateSID");
+	
+	ImGui::Separator();
+}
+
+void CViewC64StateSID::SystemDialogFileOpenSelected(CSlrString *path)
+{
+	bool ret = this->ImportSidRegs(path);
+	if (!ret)
+	{
+		return;
+	}
+	
+	CSlrString *str = path->GetFileNameComponentFromPath();
+		
+	char *buf = str->GetStdASCII();
+	char *buf2 = SYS_GetCharBuf();
+	sprintf(buf2, "%s imported", buf);
+	viewC64->ShowMessageSuccess(buf2);
+	SYS_ReleaseCharBuf(buf2);
+	delete [] buf;
+	delete str;
+	
+	recentlyOpened->Add(path);
+}
+
+void CViewC64StateSID::RecentlyOpenedFilesCallbackSelectedMenuItem(CSlrString *filePath)
+{
+	ImportSidRegs(filePath);
+}
+
+bool CViewC64StateSID::ImportSidRegs(CSlrString *path)
+{
+	CSlrFile *file = new CSlrFileFromOS(path);
+	if (!file->Exists())
+	{
+		guiMain->ShowMessageBox("Error", "Import SID registers failed. Can't open file.");
+		return false;
+	}
+	
+	CByteBuffer *byteBuffer = new CByteBuffer(file);
+	
+	sidData->Deserialize(byteBuffer);
+	sidData->RestoreSids();
+
+	delete byteBuffer;
+	delete file;
+
+	return true;
+}
+
+void CViewC64StateSID::SystemDialogFileSaveSelected(CSlrString *path)
+{
+	this->ExportSidRegs(path);
+	
+	CSlrString *str = path->GetFileNameComponentFromPath();
+	str->Concatenate(" saved");
+	viewC64->ShowMessageInfo(str);
+	delete str;
+
+	recentlyOpened->Add(path);
+}
+
+bool CViewC64StateSID::ExportSidRegs(CSlrString *path)
+{
+	LOGM("CViewC64StateSID::ExportSidRegs");
+	
+	path->DebugPrint("ExportSidRegs path=");
+
+	CByteBuffer *byteBuffer = new CByteBuffer();
+	sidData->PeekFromSids();
+	sidData->Serialize(byteBuffer);
+	byteBuffer->storeToFile(path);
+	delete byteBuffer;
+	
+	LOGM("CViewC64StateSID::ExportSidRegs: file saved");
+	
+	return true;
 }
 
 // Layout

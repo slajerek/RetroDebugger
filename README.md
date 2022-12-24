@@ -88,13 +88,17 @@ Remember to have MTEngineSDL library in `./../../MTEngineSDL` folder.
 This product would not have been created without the help of alpha testers:
 Euan Gamble, Robert Troughton, Jesper Rune Larsen, Steve West, Lukhash, 
 Markus Dano Burgstaller, Brush/Elysium, Alex Goldblat, Cescom, Artix, 
-Isildur/Samar, Dkt/Samar, Mojzesh/Samar, Pajero/MadTeam^Samar, Yugorin/Samar
+Isildur/Samar, Dkt/Samar, Mojzesh/Samar, Pajero/MadTeam^Samar, 
+Euan Gamble, Tebe, Linus Nielsen Boogaloo/Horizon, zero211, 
+Mr.Mouse/XeNTaX/Genesis Project, Yugorin/Samar
 
 And C64 65XE NES Debugger testers: Scan/House, Dr.J/Delysid, Mr Wegi/Elysium, 
 ElfKaa/Avatar, Ruben Aparicio, 64 bites, Stein Pedersen, 
 Mads Nielsen (Slammer/Camelot), Roy C Riggs (furroy)
-    
-*And everyone who made a donation!*
+
+Also, the famous SDL2 and ImGui team!
+
+*Plus everyone who made a donation, you know who you are and you are awesome!*
 
 # Promo videos
 
@@ -165,6 +169,7 @@ http://www.proggyfonts.net/
 Karla-Regular.ttf, by Jonathan Pinhorn 
 SIL OPEN FONT LICENSE Version 1.1
 
+imgui-notify by patrickcjk
 
 
 CIAO!

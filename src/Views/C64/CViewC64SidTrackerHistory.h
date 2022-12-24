@@ -6,6 +6,7 @@
 #include "CGuiLockableList.h"
 #include "CGuiLabel.h"
 #include "CPianoKeyboard.h"
+#include "DebuggerDefs.h"
 
 class CDebugInterfaceVice;
 
@@ -19,7 +20,6 @@ public:
 	virtual bool DoScrollWheel(float deltaX, float deltaY);
 	virtual bool DoMove(float x, float y, float distX, float distY, float diffX, float diffY);
 	virtual bool DoTap(float x, float y);
-	virtual bool IsFocusable();
 	virtual void RenderFocusBorder();
 	virtual bool KeyDown(u32 keyCode, bool isShift, bool isAlt, bool isControl, bool isSuper);
 	virtual bool KeyUp(u32 keyCode, bool isShift, bool isAlt, bool isControl, bool isSuper);
@@ -85,8 +85,10 @@ public:
 	void VSyncStepsAdded();
 	
 	// callbacks from SidPianoKeyboard
-	virtual void PianoKeyboardNotePressed(CPianoKeyboard *pianoKeyboard, u8 note);
-	virtual void PianoKeyboardNoteReleased(CPianoKeyboard *pianoKeyboard, u8 note);
+	virtual void PianoKeyboardNotePressed(CPianoKeyboard *pianoKeyboard, CPianoKey *pianoKey);
+	virtual void PianoKeyboardNoteReleased(CPianoKeyboard *pianoKeyboard, CPianoKey *pianoKey);
+	
+	CPianoKey *pressedKeys[C64_MAX_NUM_SIDS * 3];
 	
 	// layout params
 	bool showController;

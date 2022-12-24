@@ -35,12 +35,7 @@ CViewDataWatch::CViewDataWatch(const char *name, float posX, float posY, float p
 	this->symbols = symbols;
 	this->debugInterface = symbols->debugInterface;
 	this->dataAdapter = symbols->dataAdapter;
-	this->viewMemoryMap = viewMemoryMap;
-	
-	//
-	this->imGuiNoWindowPadding = false;
-	this->imGuiNoScrollbar = false;
-	
+	this->viewMemoryMap = viewMemoryMap;	
 }
 
 void CViewDataWatch::DoLogic()

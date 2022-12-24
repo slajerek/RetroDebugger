@@ -22,6 +22,9 @@
 CViewDrive1541FileD64::CViewDrive1541FileD64(const char *name, float posX, float posY, float posZ, float sizeX, float sizeY)
 : CGuiView(name, posX, posY, posZ, sizeX, sizeY)
 {
+	imGuiNoWindowPadding = true;
+	imGuiNoScrollbar = true;
+
 	font = viewC64->fontCBMShifted;
 	fontScale = 3;
 	fontHeight = font->GetCharHeight('@', fontScale);
@@ -55,8 +58,7 @@ CViewDrive1541FileD64::~CViewDrive1541FileD64()
 void CViewDrive1541FileD64::SetPosition(float posX, float posY, float posZ, float sizeX, float sizeY)
 {
 	CGuiView::SetPosition(posX, posY, posZ, sizeX, sizeY);
-
-	viewMenu->SetPosition(posX+35, posY+56);
+	viewMenu->SetPosition(posX+35, posY+56, posZ, sizeX-70, sizeY-76);
 }
 
 void CViewDrive1541FileD64::MenuCallbackItemEntered(CGuiViewMenuItem *menuItem)
@@ -79,7 +81,7 @@ void CViewDrive1541FileD64::StartFileEntry(DiskImageFileEntry *fileEntry, bool s
 		bool readed = diskImage->ReadEntry(fileEntry, byteBuffer);
 		if (readed == false)
 		{
-			viewC64->ShowMessage("Load error");
+			viewC64->ShowMessageError("Load error");
 			delete byteBuffer;
 			return;
 		}
@@ -91,7 +93,7 @@ void CViewDrive1541FileD64::StartFileEntry(DiskImageFileEntry *fileEntry, bool s
 		
 		if (ret == false)
 		{
-			viewC64->ShowMessage("Load error");
+			viewC64->ShowMessageError("Load error");
 		}
 		// note: this is handled by LoadPRG asynchronously
 //		else
@@ -179,7 +181,7 @@ void CViewDrive1541FileD64::Render()
 	float scry = posY+sb;
 	float scrsx = sizeX - sb*2.0f;
 	float scrsy = sizeY - sb*2.0f;
-	float cx = scrsx/2.0f + sb;
+	float cx = posX+scrsx/2.0f + sb;
 	
 	BlitFilledRectangle(scrx, scry, -1, scrsx, scrsy,
 						viewC64->colorsTheme->colorBackgroundR,
@@ -298,7 +300,7 @@ void CViewDrive1541FileD64::StartBrowsingD64(char *fullFilePath)
 	this->StartSelectedDiskImageBrowsing();
 }
 
-void CViewDrive1541FileD64::SetDiskImage(char *fileName)
+void CViewDrive1541FileD64::SetDiskImage(char *fullFilePath)
 {
 	if (this->diskImage != NULL)
 		delete this->diskImage;
@@ -338,7 +340,7 @@ void CViewDrive1541FileD64::StartBrowsingD64(int deviceId)
 	}
 	else
 	{
-		viewC64->ShowMessage("No disk");
+		viewC64->ShowMessageError("No disk");
 	}
 }
 
@@ -470,7 +472,7 @@ void CViewDrive1541FileD64::RefreshDiskImageMenu()
 	for (std::vector<DiskImageFileEntry *>::iterator it = diskImage->fileEntries.begin(); it != diskImage->fileEntries.end(); it++)
 	{
 		DiskImageFileEntry *fileEntry = *it;
-		
+	
 		CSlrString *strFileEntry = new CSlrString();
 		
 		sprintf(buf, "%-4d \"", fileEntry->fileSize);
@@ -536,7 +538,8 @@ void CViewDrive1541FileD64::RefreshDiskImageMenu()
 			strFileEntry->Concatenate("\" ");
 			strFileEntry->Concatenate((u16)0x3F);
 		}
-		
+
+		strFileEntry->DebugPrint("DiskImageFileEntry: ");
 		
 		menuItem = new CViewDrive1541FileD64EntryItem(fontHeight, strFileEntry, tr, tg, tb);
 		if (fileEntry->fileType == 0x02) // && fileEntry->fileSize > 0)
@@ -581,6 +584,12 @@ void CViewDrive1541FileD64::RefreshDiskImageMenu()
 //	CByteBuffer *entryData = new CByteBuffer();
 //	this->diskImage->ReadEntry(6, entryData);
 
+	LOGD("start browsing with first file entry");
+	
+	viewMenu->InitSelection();
+	
+	// TODO: fix me, CViewDrive1541FileD64: start browsing with first file entry viewMenu->SelectNext() this does not work when window has just appeared, it seems pos/size is wrong
+	/*
 	// start browsing with first file entry
 	viewMenu->SelectNext();
 
@@ -615,10 +624,11 @@ void CViewDrive1541FileD64::RefreshDiskImageMenu()
 		
 		viewMenu->SelectNext();
 	}
-	
+		*/
 	
 	guiMain->UnlockMutex();
 
+	LOGD("CViewDrive1541FileD64::RefreshDiskImageMenu completed");
 }
 
 void CViewDrive1541FileD64::SwitchFileD64Screen()
@@ -681,7 +691,6 @@ bool CViewDrive1541FileD64::DoScrollWheel(float deltaX, float deltaY)
 		}
 	}
 	
-	
 	return true;
 }
 
@@ -719,7 +728,7 @@ void CViewDrive1541FileD64::StartDiskPRGEntry(int entryNum, bool showLoadAddress
 	
 	if (this->diskImage->diskImage == NULL)
 	{
-		viewC64->ShowMessage("No disk");
+		viewC64->ShowMessageError("No disk");
 		return;
 	}
 	
@@ -727,7 +736,7 @@ void CViewDrive1541FileD64::StartDiskPRGEntry(int entryNum, bool showLoadAddress
 	
 	if (fileEntry == NULL)
 	{
-		viewC64->ShowMessage("No start file");
+		viewC64->ShowMessageError("No start file");
 		return;
 	}
 	

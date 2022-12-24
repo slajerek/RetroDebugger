@@ -16,12 +16,9 @@ class CDataAdapter;
 class CViewMemoryMap;
 class CSlrMutex;
 class CDebugInterfaceNes;
-class CViewC64StateSIDWaveform;
 
 // TODO: move me to NES APU VIEW
 class CViewNesPianoKeyboard;
-
-#define MAX_NUM_NES_APUS 1
 
 class CViewNesStatePPU : public CGuiView, CGuiEditHexCallback
 {

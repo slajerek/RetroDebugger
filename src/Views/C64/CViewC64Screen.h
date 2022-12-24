@@ -138,6 +138,7 @@ public:
 	
 	void SetZoomedScreenPos(float zoomedScreenPosX, float zoomedScreenPosY, float zoomedScreenSizeX, float zoomedScreenSizeY);
 	void SetZoomedScreenLevel(float zoomedScreenLevel);
+	void UpdateZoomedScreenLevel();
 	void CalcZoomedScreenTextureFromRaster(int rasterX, int rasterY);
 	void RenderZoomedScreen(int rasterX, int rasterY);
 	

@@ -7,7 +7,7 @@
 #include "CPool.h"
 
 #ifndef SOUND_SIDS_MAX
-#define SOUND_SIDS_MAX 3
+#define SOUND_SIDS_MAX C64_MAX_NUM_SIDS
 #endif
 
 //HAVE_NETWORK  ?
@@ -33,6 +33,7 @@ class CAudioChannelVice;
 class CSidData;
 class CDebugInterfaceVice;
 class CViewBreakpoints;
+class CWaveformData;
 
 class CThreadViceDriveFlush : public CSlrThread
 {
@@ -55,8 +56,6 @@ public:
 
 	CAudioChannelVice *audioChannel;
 	
-	int screenHeight;
-	
 	int modelType;
 	virtual int GetC64ModelType();
 
@@ -70,7 +69,8 @@ public:
 	virtual void DoVSync();
 	virtual void DoFrame();
 	virtual void RefreshSync();
-	
+	virtual void RestartAudio();
+
 	virtual uint8 *GetCharRom();
 
 	volatile uint8 machineType;
@@ -118,6 +118,9 @@ public:
 	virtual bool GetSettingIsWarpSpeed();
 	virtual void SetSettingIsWarpSpeed(bool isWarpSpeed);
 
+	virtual void SetViciiBorderMode(int borderMode);
+	virtual int  GetViciiBorderMode();
+	virtual void GetViciiGeometry(int *canvasWidth, int *canvasHeight, int *gfxPosX, int *gfxPosY);
 	virtual void GetSidTypes(std::vector<CSlrString *> *sidTypes);
 	virtual void GetSidTypes(std::vector<const char *> *sidTypes);
 	virtual void SetSidType(int sidType);
@@ -321,10 +324,16 @@ public:
 	virtual void UpdateRomsTrap();
 	virtual void ReadEmbeddedRoms();
 	virtual void DumpRomsToFolder(const char *folderPath);
+	virtual void CheckLoadedRoms();
+	
+	//
+	virtual void SupportsBreakpoints(bool *writeBreakpoint, bool *readBreakpoint);
 	
 	//
 	virtual void Shutdown();
 };
+
+#define C64_NUM_SID_REGISTERS 0x20
 
 class CSidData
 {
@@ -333,8 +342,14 @@ public:
 	
 	void PeekFromSids();
 	void RestoreSids();
-	u8 sidData[SOUND_SIDS_MAX][32];
+	void CopyFrom(CSidData *sidData);
+	u8 sidRegs[SOUND_SIDS_MAX][C64_NUM_SID_REGISTERS];
 	
+	void Serialize(CByteBuffer *byteBuffer);
+	bool Deserialize(CByteBuffer *byteBuffer);
+	bool SaveRegs(const char *fileName);
+	bool LoadRegs(const char *fileName);
+
 private:
 	static CPool poolSidData;
 public:

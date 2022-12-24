@@ -51,7 +51,7 @@ public:
 	virtual void Render();
 	virtual void DoLogic();
 
-	virtual bool SetFocus();
+	virtual bool WillReceiveFocus();
 
 	CJukeboxPlaylist *playlist;
 	CJukeboxPlaylistEntry *currentEntry;

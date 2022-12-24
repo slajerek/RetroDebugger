@@ -1,10 +1,6 @@
 #ifndef _C64D_VERSION_H_
 
-#define RETRODEBUGGER_VERSION_STRING	"0.64.61b.04E-014c "
-
-#define RUN_COMMODORE64
-#define RUN_ATARI
-#define RUN_NES
+#define RETRODEBUGGER_VERSION_STRING	"0.64.62"
 
 #endif
 

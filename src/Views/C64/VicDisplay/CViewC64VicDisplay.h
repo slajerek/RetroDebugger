@@ -1,7 +1,6 @@
 #ifndef _CViewC64VicDisplay_H_
 #define _CViewC64VicDisplay_H_
 
-#include "CGuiWindow.h"
 #include "CGuiLockableList.h"
 #include "CGuiButtonSwitch.h"
 #include "CGuiLabel.h"
@@ -28,12 +27,12 @@ class C64VicDisplayCanvasMultiBitmap;
 
 enum
 {
-	AUTOSCROLL_DISASSEMBLE_UNKNOWN	=	0,
-	AUTOSCROLL_DISASSEMBLE_RASTER_PC,
-	AUTOSCROLL_DISASSEMBLE_BITMAP_ADDRESS,
-	AUTOSCROLL_DISASSEMBLE_TEXT_ADDRESS,
-	AUTOSCROLL_DISASSEMBLE_COLOUR_ADDRESS,
-	AUTOSCROLL_DISASSEMBLE_CHARSET_ADDRESS
+	AUTOSCROLL_DISASSEMBLY_UNKNOWN	=	0,
+	AUTOSCROLL_DISASSEMBLY_RASTER_PC,
+	AUTOSCROLL_DISASSEMBLY_BITMAP_ADDRESS,
+	AUTOSCROLL_DISASSEMBLY_TEXT_ADDRESS,
+	AUTOSCROLL_DISASSEMBLY_COLOUR_ADDRESS,
+	AUTOSCROLL_DISASSEMBLY_CHARSET_ADDRESS
 };
 
 enum
@@ -44,7 +43,7 @@ enum
 };
 
 
-class CViewC64VicDisplay : public CGuiWindow
+class CViewC64VicDisplay : public CGuiView
 {
 public:
 	
@@ -53,10 +52,6 @@ public:
 
 	CViewC64VicDisplay(const char *name, float posX, float posY, float posZ, float sizeX, float sizeY,
 					   CDebugInterfaceC64 *debugInterface);
-
-	CViewC64VicDisplay(const char *name, float posX, float posY, float posZ, float sizeX, float sizeY,
-					   CDebugInterfaceC64 *debugInterface,
-					   CSlrString *windowName, u32 mode, CGuiWindowCallback *callback);
 	virtual ~CViewC64VicDisplay();
 	
 	
@@ -119,16 +114,16 @@ public:
 	float scale;
 	
 	//
-	void GetRasterPosFromScreenPos2(float x, float y, float *rasterX, float *rasterY);
+	void GetRasterPosFromScreenPos(float x, float y, float *rasterX, float *rasterY);
 	void GetRasterPosFromScreenPosWithoutScroll(float x, float y, float *rasterX, float *rasterY);
-	void GetRasterPosFromMousePos2(float *rasterX, float *rasterY);
+	void GetRasterPosFromMousePos(float *rasterX, float *rasterY);
 	void GetRasterPosFromMousePosWithoutScroll(float *rasterX, float *rasterY);
-	void GetScreenPosFromRasterPos2(float rasterX, float rasterY, float *x, float *y);
+	void GetScreenPosFromRasterPos(float rasterX, float rasterY, float *x, float *y);
 	void GetScreenPosFromRasterPosWithoutScroll(float rasterX, float rasterY, float *x, float *y);
 	
-	void UpdateAutoscrollDisassemble(bool isForced);
+	void UpdateAutoscrollDisassembly(bool isForced);
 	
-	bool ScrollMemoryAndDisassembleToRasterPosition(float rx, float ry, bool forced);
+	bool ScrollMemoryAndDisassemblyToRasterPosition(float rx, float ry, bool forced);
 	void RasterCursorLeft();
 	void RasterCursorRight();
 	void RasterCursorUp();
@@ -165,14 +160,19 @@ public:
 	void RenderDisplaySpritesOnly(vicii_cycle_state_t *viciiState);
 	void RenderGridSpritesOnly(vicii_cycle_state_t *viciiState);
 
+	float gridLinesShowValuesZoomLevel;
+	float gridLinesShowZoomLevel;
+	bool gridLinesAutomatic;
 	void RenderGridLines();
+	void UpdateGridLinesVisibleOnCurrentZoom();
+	
 	void RenderCursor();
 	void RenderCursor(float rasterCursorPosX, float rasterCursorPosY);
 			 
 	bool IsRasterCursorInsideScreen();
 	vicii_cycle_state_t *UpdateViciiState();
-	void CopyViciiStateFromCurrent();
 	vicii_cycle_state_t *UpdateViciiStateNonVisible(float rx, float ry);
+	void CopyCurrentViciiStateAndUnlock();
 	
 	float rasterCursorPosX, rasterCursorPosY;
 	void UpdateRasterCursorPos();
@@ -322,7 +322,7 @@ public:
 	bool showSpritesGraphics;
 	bool showSpritesFrames;
 	
-	bool canScrollDisassemble;
+	bool canScrollDisassembly;
 	
 	bool isCursorLocked;
 	
@@ -355,10 +355,11 @@ public:
 	
 	void ToggleVICRasterBreakpoint();
 
-	bool backupRenderDataWithColors;
-	
 	u8 backgroundColorAlpha;
 	u8 foregroundColorAlpha;
+	
+	bool performIsTopWindowCheck;
+	virtual bool IsTopWindow();
 	
 	// Layout
 	virtual void Serialize(CByteBuffer *byteBuffer);

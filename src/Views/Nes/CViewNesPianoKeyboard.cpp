@@ -1,4 +1,4 @@
-#include "C64D_Version.h"
+#include "EmulatorsConfig.h"
 #if defined(RUN_NES)
 
 extern "C" {
@@ -15,6 +15,7 @@ extern "C" {
 #include "CDebugInterface.h"
 #include "SYS_KeyCodes.h"
 #include "CViewWaveform.h"
+#include "CWaveformData.h"
 
 CViewNesPianoKeyboard::CViewNesPianoKeyboard(const char *name, float posX, float posY, float posZ, float sizeX, float sizeY, CPianoKeyboardCallback *callback)
 : CPianoKeyboard(name, posX, posY, posZ, sizeX, sizeY, callback)
@@ -59,7 +60,7 @@ void CViewNesPianoKeyboard::Render()
 	for (int chanNum = 0; chanNum < 5; chanNum++)
 	{
 		// check if channel is not muted
-		if (viewC64->viewNesStateAPU->nesChannelWaveform[0][chanNum]->isMuted)
+		if (viewC64->viewNesStateAPU->viewChannelWaveform[0][chanNum]->waveform->isMuted)
 			continue;
 		
 		float freq = viewC64->viewNesStateAPU->GetFrequencyForChannel(chanNum);

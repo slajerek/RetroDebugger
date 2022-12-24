@@ -115,12 +115,12 @@ public:
 //	bool LoadAndRelocateSID(char *filePath, u16 fromAddr, u16 *toAddr, u16 *initAddr, u16 *playAddr);
 	bool LoadKLA(const char *filePath);
 	bool LoadKLA(const char *filePath, u16 bitmapAddress, u16 screenAddress, u16 colorRamAddress, u8 *colorD020, u8 *colorD021);
-	void SaveExomizerPRG(u16 fromAddr, u16 toAddr, u16 jmpAddr, char *fileName);
-	void SavePRG(u16 fromAddr, u16 toAddr, char *fileName);
+	void SaveExomizerPRG(u16 fromAddr, u16 toAddr, u16 jmpAddr, const char *fileName);
+	void SavePRG(u16 fromAddr, u16 toAddr, const char *fileName);
 	void AddCrtEntryPoint(u8 *cartImage, u16 coldStartAddr, u16 warmStartAddr);
 	CByteBuffer *MakeCrt(const char *cartName, int cartSize, int bankSize, u8 *cartImage);
-	void SaveBinary(u16 fromAddr, u16 toAddr, char *fileName);
-	int LoadBinary(u16 fromAddr, char *filePath);
+	void SaveBinary(u16 fromAddr, u16 toAddr, const char *fileName);
+	int LoadBinary(u16 fromAddr, const char *filePath);
 
 	u8 *ExomizerMemoryRaw(u16 fromAddr, u16 toAddr, int *compressedSize);
 	

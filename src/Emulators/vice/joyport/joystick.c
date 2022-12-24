@@ -786,6 +786,8 @@ static int joystick_snapshot_read_module(snapshot_t *s, int port)
 }
 
 ///
+void c64d_lock_mutex();
+void c64d_unlock_mutex();
 
 /* called on key-down event */
 

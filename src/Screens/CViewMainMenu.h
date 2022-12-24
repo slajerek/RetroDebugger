@@ -45,7 +45,7 @@ public:
 
 	void LoadFile(CSlrString *path);
 	void OpenDialogInsertD64();
-	void InsertD64(CSlrString *path, bool updatePathToD64, bool autoRun, int autoRunEntryNum, bool showLoadAddressInfo);
+	bool InsertD64(CSlrString *path, bool updatePathToD64, bool autoRun, int autoRunEntryNum, bool showLoadAddressInfo);
 	std::list<char *> cDiskExtensions;
 	void InsertNextD64();
 	void OpenDialogInsertCartridge();
@@ -76,7 +76,7 @@ public:
 	bool LoadASAP(CSlrString *filePath);
 	
 	void OpenDialogInsertATR();
-	void InsertATR(CSlrString *path, bool updatePathToATR, bool autoRun, int autoRunEntryNum, bool showLoadAddressInfo);
+	bool InsertATR(CSlrString *path, bool updatePathToATR, bool autoRun, int autoRunEntryNum, bool showLoadAddressInfo);
 		
 	//
 	CViewC64MenuItem *menuItemSetFolderWithNesROMs;

@@ -952,6 +952,7 @@ namespace Nes
 		Apu::Settings::Settings()
 		: rate(44100), bits(16), speed(0), muted(false), transpose(false), stereo(false), audible(true)
 		{
+			genie = false;
 			for (uint i=0; i < MAX_CHANNELS; ++i)
 				volumes[i] = Channel::DEFAULT_VOLUME;
 		}

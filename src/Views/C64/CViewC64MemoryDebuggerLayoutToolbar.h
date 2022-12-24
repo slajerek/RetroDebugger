@@ -41,7 +41,7 @@ public:
 	virtual bool KeyPressed(u32 keyCode, bool isShift, bool isAlt, bool isControl, bool isSuper);	// repeats
 	
 	virtual void SetPosition(float posX, float posY);
-	virtual bool IsFocusable();
+	virtual bool IsFocusableElement();
 
 	virtual void ActivateView();
 	virtual void DeactivateView();

@@ -34,18 +34,19 @@
 #include "CViewNesScreen.h"
 
 CViewDataDump::CViewDataDump(const char *name, float posX, float posY, float posZ, float sizeX, float sizeY,
-							 CDebugSymbols *symbols, CViewMemoryMap *viewMemoryMap, CViewDisassembly *viewDisassemble)
+							 CDebugSymbols *symbols, CViewMemoryMap *viewMemoryMap, CViewDisassembly *viewDisassembly)
 : CGuiView(name, posX, posY, posZ, sizeX, sizeY)
 {
+	imGuiNoWindowPadding = true;
+	imGuiNoScrollbar = true;
+
 	this->symbols = symbols;
 	this->debugInterface = symbols->debugInterface;
 	this->dataAdapter = symbols->dataAdapter;
 	this->viewMemoryMap = viewMemoryMap;
-	this->viewDisassemble = viewDisassemble;
+	this->viewDisassembly = viewDisassembly;
 	
 	this->viewMemoryMap->SetDataDumpView(this);
-
-	SetNumDigitsInAddress(4);
 	
 	fontAtari = viewC64->fontAtari;
 	fontCBM1 = viewC64->fontCBM1;
@@ -92,7 +93,10 @@ CViewDataDump::CViewDataDump(const char *name, float posX, float posY, float pos
 	strTemp = new CSlrString();
 
 	renderDataWithColors = false;
-	
+
+	//
+	SetNumDigitsInAddress(4);
+
 	//
 	AddLayoutParameter(new CLayoutParameterFloat("Font Size", &fontSize));
 	AddLayoutParameter(new CLayoutParameterInt("Bytes per line", &numberOfBytesPerLine));
@@ -764,7 +768,7 @@ bool CViewDataDump::DoTap(float x, float y)
 		{
 			if (cell->readPC != -1)
 			{
-				viewDisassemble->ScrollToAddress(cell->readPC);
+				viewDisassembly->ScrollToAddress(cell->readPC);
 			}
 			
 			if (guiMain->isAltPressed)
@@ -783,7 +787,7 @@ bool CViewDataDump::DoTap(float x, float y)
 		{
 			if (cell->writePC != -1)
 			{
-				viewDisassemble->ScrollToAddress(cell->writePC);
+				viewDisassembly->ScrollToAddress(cell->writePC);
 			}
 			
 			if (guiMain->isAltPressed)
@@ -807,7 +811,7 @@ bool CViewDataDump::DoTap(float x, float y)
 			if (time < c64SettingsDoubleClickMS)
 			{
 				// double click
-				viewDisassemble->ScrollToAddress(dataPositionAddr);
+				viewDisassembly->ScrollToAddress(dataPositionAddr);
 			}
 		}
 	}
@@ -823,8 +827,6 @@ bool CViewDataDump::DoTap(float x, float y)
 	
 //	isVisibleEditCursor = true;
 
-	guiMain->SetFocus(this);
-	
 	guiMain->UnlockMutex();
 	return true;
 }
@@ -932,7 +934,7 @@ void CViewDataDump::ScrollToAddress(int address)
 
 void CViewDataDump::ScrollToAddress(int address, bool updateDataShowStart)
 {
-	LOGD("CViewDataDump::ScrollToAddress: address=%4.4x", address);
+	LOGG("CViewDataDump::ScrollToAddress: address=%4.4x", address);
 
 	if (this->visible == false || numberOfBytesPerLine == 0)
 		return;
@@ -1060,7 +1062,7 @@ bool CViewDataDump::KeyDown(u32 keyCode, bool isShift, bool isAlt, bool isContro
 	CSlrKeyboardShortcut *keyboardShortcutDisassembly = guiMain->keyboardShortcuts->FindShortcut(KBZONE_DISASSEMBLY, bareKey, isShift, isAlt, isControl, isSuper);
 	if (keyboardShortcutDisassembly == viewC64->mainMenuBar->kbsToggleTrackPC)
 	{
-		return viewDisassemble->KeyDown(keyCode, isShift, isAlt, isControl, isSuper);
+		return viewDisassembly->KeyDown(keyCode, isShift, isAlt, isControl, isSuper);
 	}
 	
 	//
@@ -1415,13 +1417,13 @@ void CViewDataDump::CopyHexValuesToClipboard()
 		delete str;
 
 		sprintf(buf, "Copied $%02X", val);
-		viewC64->ShowMessage(buf);
+		viewC64->ShowMessageInfo(buf);
 		
 		SYS_ReleaseCharBuf(buf);
 	}
 	else
 	{
-		viewC64->ShowMessage("Data not available for copy");
+		viewC64->ShowMessageError("Data not available for copy");
 	}
 }
 
@@ -1438,7 +1440,7 @@ void CViewDataDump::CopyHexAddressToClipboard()
 	delete str;
 	
 	sprintf(buf, "Copied $%04X", addrCursor);
-	viewC64->ShowMessage(buf);
+	viewC64->ShowMessageInfo(buf);
 
 	SYS_ReleaseCharBuf(buf);
 }
@@ -1567,90 +1569,107 @@ void CViewDataDump::RenderContextMenuItems()
 		{
 			if (currentSegment->breakpointsMemory)
 			{
-				currentSegment->symbols->debugInterface->LockMutex();
+				bool supportsWriteBreakpoint, supportsReadBreakpoint;
+				debugInterface->SupportsBreakpoints(&supportsWriteBreakpoint, &supportsReadBreakpoint);
 				
-				ImGui::Text("Breakpoint:");
-				CBreakpointMemory *memoryBreakpoint = (CBreakpointMemory*)currentSegment->breakpointsMemory->GetBreakpoint(dataAddr);
-
-				if (!memoryBreakpoint)
+				if (supportsWriteBreakpoint || supportsReadBreakpoint)
 				{
-					bool isWrite = false;
-					if (ImGui::Checkbox("Write##memoryBreakpoint", &isWrite))
-					{
-						currentSegment->AddBreakpointMemory(dataAddr, MEMORY_BREAKPOINT_ACCESS_WRITE, MemoryBreakpointComparison::MEMORY_BREAKPOINT_LESS_OR_EQUAL, 0xFF);
-					}
+					currentSegment->symbols->debugInterface->LockMutex();
 					
-	//				// TODO: read breakpoint in Vice is fired on STA (because 6502 reads on STA too)
-	//				bool isRead = false;
-	//				ImGui::SameLine();
-	//				if (ImGui::Checkbox("Read##memoryBreakpoint", &isRead))
-	//				{
-	//					currentSegment->AddBreakpointMemory(dataAddr, MEMORY_BREAKPOINT_ACCESS_READ, MemoryBreakpointComparison::MEMORY_BREAKPOINT_LESS_OR_EQUAL, 0xFF);
-	//				}
-				}
-				else
-				{
-					bool isWrite = IS_SET(memoryBreakpoint->memoryAccess, MEMORY_BREAKPOINT_ACCESS_WRITE);
-					if (ImGui::Checkbox("Write##memoryBreakpoint", &isWrite))
+					ImGui::Text("Breakpoint:");
+					CBreakpointMemory *memoryBreakpoint = (CBreakpointMemory*)currentSegment->breakpointsMemory->GetBreakpoint(dataAddr);
+					
+					if (!memoryBreakpoint)
 					{
-						if (isWrite)
+						if (supportsWriteBreakpoint)
 						{
-							SET_BIT(memoryBreakpoint->memoryAccess, MEMORY_BREAKPOINT_ACCESS_WRITE);
+							bool isWrite = false;
+							if (ImGui::Checkbox("Write##memoryBreakpoint", &isWrite))
+							{
+								currentSegment->AddBreakpointMemory(dataAddr, MEMORY_BREAKPOINT_ACCESS_WRITE, MemoryBreakpointComparison::MEMORY_BREAKPOINT_LESS_OR_EQUAL, 0xFF);
+							}
 						}
-						else
+						
+						if (supportsReadBreakpoint)
 						{
-							REMOVE_BIT(memoryBreakpoint->memoryAccess, MEMORY_BREAKPOINT_ACCESS_WRITE);
+							bool isRead = false;
+							ImGui::SameLine();
+							if (ImGui::Checkbox("Read##memoryBreakpoint", &isRead))
+							{
+								currentSegment->AddBreakpointMemory(dataAddr, MEMORY_BREAKPOINT_ACCESS_READ, MemoryBreakpointComparison::MEMORY_BREAKPOINT_LESS_OR_EQUAL, 0xFF);
+							}
 						}
 					}
-
-	//				// TODO: read breakpoint in Vice is fired on STA (because it reads)
-	//				bool isRead  = IS_SET(memoryBreakpoint->memoryAccess, MEMORY_BREAKPOINT_ACCESS_READ);
-	//				ImGui::SameLine();
-	//				if (ImGui::Checkbox("Read##memoryBreakpoint", &isRead))
-	//				{
-	//					if (isRead)
-	//					{
-	//						SET_BIT(memoryBreakpoint->memoryAccess, MEMORY_BREAKPOINT_ACCESS_READ);
-	//					}
-	//					else
-	//					{
-	//						REMOVE_BIT(memoryBreakpoint->memoryAccess, MEMORY_BREAKPOINT_ACCESS_READ);
-	//					}
-	//				}
-					
-					ImGui::SameLine();
-					
-	//				MEMORY_BREAKPOINT_EQUAL = 0,
-	//				MEMORY_BREAKPOINT_NOT_EQUAL,
-	//				MEMORY_BREAKPOINT_LESS,
-	//				MEMORY_BREAKPOINT_LESS_OR_EQUAL,
-	//				MEMORY_BREAKPOINT_GREATER,
-	//				MEMORY_BREAKPOINT_GREATER_OR_EQUAL,
-
-					ImGui::PushItemWidth(50);
-					int comparison = memoryBreakpoint->comparison;
-					if (ImGui::Combo("##memoryBreakpointComparison", &comparison, "==\0!=\0<\0<=\0>\0>=\0\0"))
+					else
 					{
-						memoryBreakpoint->comparison = (MemoryBreakpointComparison)comparison;
-					}
-					ImGui::PopItemWidth();
-					
-					ImGui::SameLine();
+						if (supportsWriteBreakpoint)
+						{
+							bool isWrite = IS_SET(memoryBreakpoint->memoryAccess, MEMORY_BREAKPOINT_ACCESS_WRITE);
+							if (ImGui::Checkbox("Write##memoryBreakpoint", &isWrite))
+							{
+								if (isWrite)
+								{
+									SET_BIT(memoryBreakpoint->memoryAccess, MEMORY_BREAKPOINT_ACCESS_WRITE);
+								}
+								else
+								{
+									REMOVE_BIT(memoryBreakpoint->memoryAccess, MEMORY_BREAKPOINT_ACCESS_WRITE);
+								}
+							}
+						}
 
-					ImGui::PushItemWidth(30);
-					ImGuiInputTextFlags defaultHexInputFlags = ImGuiInputTextFlags_CharsHexadecimal | ImGuiInputTextFlags_CharsUppercase | ImGuiInputTextFlags_EnterReturnsTrue;
-					
-					u8 val = memoryBreakpoint->value;
-					if (ImGui::InputScalar("##memoryBreakpointValue", ImGuiDataType_::ImGuiDataType_U8, &val, NULL, NULL, "%02X", defaultHexInputFlags))
-					{
-						memoryBreakpoint->value = val;
+						if (supportsReadBreakpoint)
+						{
+							// TODO: read breakpoint in Vice is fired on STA (because it reads)
+							bool isRead  = IS_SET(memoryBreakpoint->memoryAccess, MEMORY_BREAKPOINT_ACCESS_READ);
+							ImGui::SameLine();
+							if (ImGui::Checkbox("Read##memoryBreakpoint", &isRead))
+							{
+								if (isRead)
+								{
+									SET_BIT(memoryBreakpoint->memoryAccess, MEMORY_BREAKPOINT_ACCESS_READ);
+								}
+								else
+								{
+									REMOVE_BIT(memoryBreakpoint->memoryAccess, MEMORY_BREAKPOINT_ACCESS_READ);
+								}
+							}
+						}
+						
+						ImGui::SameLine();
+						
+		//				MEMORY_BREAKPOINT_EQUAL = 0,
+		//				MEMORY_BREAKPOINT_NOT_EQUAL,
+		//				MEMORY_BREAKPOINT_LESS,
+		//				MEMORY_BREAKPOINT_LESS_OR_EQUAL,
+		//				MEMORY_BREAKPOINT_GREATER,
+		//				MEMORY_BREAKPOINT_GREATER_OR_EQUAL,
+
+						ImGui::PushItemWidth(50);
+						int comparison = memoryBreakpoint->comparison;
+						if (ImGui::Combo("##memoryBreakpointComparison", &comparison, "==\0!=\0<\0<=\0>\0>=\0\0"))
+						{
+							memoryBreakpoint->comparison = (MemoryBreakpointComparison)comparison;
+						}
+						ImGui::PopItemWidth();
+						
+						ImGui::SameLine();
+
+						ImGui::PushItemWidth(30);
+						ImGuiInputTextFlags defaultHexInputFlags = ImGuiInputTextFlags_CharsHexadecimal | ImGuiInputTextFlags_CharsUppercase | ImGuiInputTextFlags_EnterReturnsTrue;
+						
+						u8 val = memoryBreakpoint->value;
+						if (ImGui::InputScalar("##memoryBreakpointValue", ImGuiDataType_::ImGuiDataType_U8, &val, NULL, NULL, "%02X", defaultHexInputFlags))
+						{
+							memoryBreakpoint->value = val;
+						}
+						ImGui::PopItemWidth();
 					}
-					ImGui::PopItemWidth();
+					
+					currentSegment->symbols->debugInterface->UnlockMutex();
+
+					ImGui::Separator();
 				}
-				
-				currentSegment->symbols->debugInterface->UnlockMutex();
-
-				ImGui::Separator();
 			}
 		}
 	}
@@ -1660,12 +1679,12 @@ void CViewDataDump::RenderContextMenuItems()
 		// scroll/rewind
 		if (ImGui::MenuItem("Scroll to last read", PLATFORM_STR_KEY_CTRL "+Shift+click", false, (cell->readPC != -1) ))
 		{
-			viewDisassemble->ScrollToAddress(cell->readPC);
+			viewDisassembly->ScrollToAddress(cell->readPC);
 		}
 
 		if (ImGui::MenuItem("Scroll to last write", PLATFORM_STR_KEY_CTRL "+click", false, (cell->writePC != -1)))
 		{
-			viewDisassemble->ScrollToAddress(cell->writePC);
+			viewDisassembly->ScrollToAddress(cell->writePC);
 		}
 
 		if (debugInterface->snapshotsManager)

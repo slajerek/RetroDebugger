@@ -59,9 +59,9 @@ bool C64LoadSIDToRam(const char *filePath, u16 *fromAddr, u16 *toAddr, u16 *init
 bool C64LoadSIDToBuffer(const char *filePath, u16 *fromAddr, u16 *toAddr, u16 *initAddr, u16 *playAddr, u8 **buffer);
 
 //
-bool C64SaveMemory(int fromAddr, int toAddr, bool isPRG, CDataAdapter *dataAdapter, char *filePath);
-int C64LoadMemory(int fromAddr, CDataAdapter *dataAdapter, char *filePath);
-bool C64SaveMemoryExomizerPRG(int fromAddr, int toAddr, int jmpAddr, char *filePath);
+bool C64SaveMemory(int fromAddr, int toAddr, bool isPRG, CDataAdapter *dataAdapter, const char *filePath);
+int C64LoadMemory(int fromAddr, CDataAdapter *dataAdapter, const char *filePath);
+bool C64SaveMemoryExomizerPRG(int fromAddr, int toAddr, int jmpAddr, const char *filePath);
 u8 *C64ExomizeMemoryRaw(int fromAddr, int toAddr, int *compressedSize);
 
 int ConvertSdlAxisToJoystickAxis(int sdlAxis);

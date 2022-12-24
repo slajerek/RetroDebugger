@@ -1,10 +1,10 @@
 #include "CViewC64.h"
 #include "CViewMonitorConsole.h"
-#include "CViewVicEditor.h"
-#include "CViewVicEditorCreateNewPicture.h"
+#include "CViewC64VicEditor.h"
+#include "CViewC64VicEditorCreateNewPicture.h"
 #include "C64VicDisplayCanvas.h"
 #include "CVicEditorLayerImage.h"
-#include "CViewVicEditorLayers.h"
+#include "CViewC64VicEditorLayers.h"
 #include "CVicEditorLayerC64Screen.h"
 #include "CViewC64Sprite.h"
 #include "SYS_KeyCodes.h"
@@ -315,7 +315,7 @@ u8 *CDebuggerApi::Assemble64Tass(int *codeStartAddr, int *codeSize)
 	return this->Assemble64Tass(codeStartAddr, codeSize, NULL, false);
 }
 
-u8 *CDebuggerApi::Assemble64Tass(int *codeStartAddr, int *codeSize, char *storeAsmFileName, bool quiet)
+u8 *CDebuggerApi::Assemble64Tass(int *codeStartAddr, int *codeSize, const char *storeAsmFileName, bool quiet)
 {
 	assemble_64tass_setquiet(quiet);
 	
@@ -444,7 +444,7 @@ void CDebuggerApi::BlitText(const char *text, float posX, float posY, float font
 void CDebuggerApi::AddView(CGuiView *view)
 {
 	guiMain->LockMutex();
-	guiMain->AddView(view);
+	guiMain->AddViewSkippingLayout(view);
 	debugInterface->AddView(view);
 	guiMain->UnlockMutex();
 }

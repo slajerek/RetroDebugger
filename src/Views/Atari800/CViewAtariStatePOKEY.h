@@ -11,8 +11,6 @@ extern "C" {
 #include "AtariWrapper.h"
 }
 
-#define POKEY_WAVEFORM_LENGTH 128
-
 class CSlrFont;
 class CDataAdapter;
 class CViewMemoryMap;
@@ -44,12 +42,9 @@ public:
 	virtual void DoLogic();	
 	
 	// [pokey num][channel num]
-	CViewWaveform *pokeyChannelWaveform[MAX_NUM_POKEYS][4];
-	CViewWaveform *pokeyMixWaveform[MAX_NUM_POKEYS];
-
-	int waveformPos[MAX_NUM_POKEYS];
-	void AddWaveformData(int pokeyNumber, int v1, int v2, int v3, int v4, short mix);
-
+	CViewWaveform *viewChannelWaveform[MAX_NUM_POKEYS][4];
+	CViewWaveform *viewMixWaveform[MAX_NUM_POKEYS];
+	
 	//
 	virtual void RenderState(float px, float py, float posZ, CSlrFont *fontBytes, float fontSize, int pokeyNum);
 	

@@ -401,14 +401,14 @@ void CViewC64KeyMap::SystemDialogFileOpenSelected(CSlrString *path)
 		viewC64->debugInterfaceC64->UnlockMutex();
 		guiMain->UnlockMutex();
 		
-		viewC64->ShowMessage("C64 Key map loaded");
+		viewC64->ShowMessageInfo("C64 Key map loaded");
 		return;
 	}
 
 	viewC64->debugInterfaceC64->UnlockMutex();
 	guiMain->UnlockMutex();
 
-	viewC64->ShowMessage("C64 Key map loading failed");
+	viewC64->ShowMessageError("C64 Key map loading failed");
 }
 
 void CViewC64KeyMap::SystemDialogFileOpenCancelled()
@@ -420,7 +420,7 @@ void CViewC64KeyMap::SystemDialogFileSaveSelected(CSlrString *path)
 {
 	C64KeyMapStoreToFile(path);
 	
-	viewC64->ShowMessage("C64 Key map saved");
+	viewC64->ShowMessageInfo("C64 Key map saved");
 }
 
 void CViewC64KeyMap::SystemDialogFileSaveCancelled()
@@ -1163,12 +1163,12 @@ bool CViewC64KeyMap::KeyDown(u32 keyCode, bool isShift, bool isAlt, bool isContr
 		return true;
 	}
 	
-	CSlrKeyboardShortcut *shortcut = guiMain->keyboardShortcuts->FindGlobalShortcut(keyCode, isShift, isAlt, isControl, isSuper);
-	if (shortcut == viewC64->mainMenuBar->kbsMainMenuScreen)
-	{
-		SaveAndGoBack();
-		return true;
-	}
+//	CSlrKeyboardShortcut *shortcut = guiMain->keyboardShortcuts->FindGlobalShortcut(keyCode, isShift, isAlt, isControl, isSuper);
+//	if (shortcut == viewC64->mainMenuBar->kbsMainMenuScreen)
+//	{
+//		SaveAndGoBack();
+//		return true;
+//	}
 	
 	if (keyCode == MTKEY_BACKSPACE)
 	{

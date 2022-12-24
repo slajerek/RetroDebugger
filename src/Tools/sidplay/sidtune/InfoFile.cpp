@@ -26,7 +26,7 @@
 #include <iostream>
 #include <iomanip>
 #include <ctype.h>
-#include <string.h>
+#include <string>
 
 #if defined(HAVE_SSTREAM)
 #   include <sstream>

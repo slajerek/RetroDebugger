@@ -7,7 +7,7 @@
 
 #define C64DEBUGGER_ATARI800_VERSION_STRING		"5.0.0"
 
-#define ATARI_AUDIO_BUFFER_FRAMES	1024
+#define ATARI_AUDIO_BUFFER_FRAMES	4096
 #define MAX_NUM_POKEYS	2
 
 void mt_SYS_FatalExit(char *text);

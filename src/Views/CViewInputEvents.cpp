@@ -32,10 +32,11 @@ CViewInputEvents::CViewInputEvents(const char *name, float posX, float posY, flo
 {
 	this->debugInterface = debugInterface;
 	
+	imGuiNoWindowPadding = true;
+	imGuiNoScrollbar = true;
+
 	fontSize = 7.0f;
 	fontBytes = viewC64->fontDisassembly;
-	
-	imGuiNoWindowPadding = false;
 	
 	this->SetPosition(posX, posY, posZ, sizeX, sizeY);
 }

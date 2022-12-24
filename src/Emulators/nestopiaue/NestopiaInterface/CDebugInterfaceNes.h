@@ -11,7 +11,10 @@ class CViewC64;
 #define NST_VERSION "1.51.1"
 #define C64DEBUGGER_NES_VERSION_STRING NST_VERSION
 
+#define MAX_NUM_NES_APUS 1
+
 class CAudioChannelNes;
+class CWaveformData;
 
 class CDebugInterfaceNes : public CDebugInterface
 {
@@ -31,6 +34,9 @@ public:
 	virtual float GetEmulationFPS();
 
 	virtual void RunEmulationThread();
+	virtual void RestartAudio();
+	// reset a/v sync
+	virtual void RefreshSync();
 
 	CAudioChannelNes *audioChannel;
 	
@@ -113,18 +119,27 @@ public:
 	// make jmp and reset CPU
 	virtual void MakeJmpAndReset(uint16 addr);
 
-	virtual CDataAdapter *GetDataAdapter();
+	virtual CDebugDataAdapter *GetDataAdapter();
 
 	// APU
 	virtual void SetApuMuteChannels(int apuNumber, bool mute1, bool mute2, bool mute3, bool mute4, bool mute5, bool muteExt);
 	virtual void SetApuReceiveChannelsData(int apuNumber, bool isReceiving);
 	virtual unsigned char GetApuRegister(u16 addr);
 	virtual unsigned char GetPpuRegister(u16 addr);
+	// [apu num][channel num]
+	// square0, square1, triangle, noise, dmc, extChannel
+	CWaveformData *nesChannelWaveform[MAX_NUM_NES_APUS][6];
+	CWaveformData *nesMixWaveform[MAX_NUM_NES_APUS];
+	virtual void AddWaveformData(int apuNumber, int v1, int v2, int v3, int v4, int v5, int v6, short mix);
+	virtual void UpdateWaveforms();
+	virtual void UpdateWaveformsMuteStatus();
 
+	
 	void ResetClockCounters();
 	
 	virtual void StepOneCycle();
-	
+
+	virtual void SupportsBreakpoints(bool *writeBreakpoint, bool *readBreakpoint);
 	
 	//	virtual uint8 GetByteFromRamC64(uint16 addr);
 //	virtual void MakeJmpC64(uint16 addr);

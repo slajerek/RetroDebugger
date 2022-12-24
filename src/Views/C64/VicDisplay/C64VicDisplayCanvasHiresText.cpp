@@ -166,7 +166,6 @@ void C64VicDisplayCanvasHiresText::RenderCanvasSpecificGridLines()
 	float lineWidth = 1.0f;
 	float lw2 = lineWidth/2.0f;
 	
-	
 	float cys = vicDisplay->displayPosWithScrollY + 0.0f * vicDisplay->rasterScaleFactorY  + vicDisplay->rasterCrossOffsetY;
 	float cye = vicDisplay->displayPosWithScrollY + 200.0f * vicDisplay->rasterScaleFactorY  + vicDisplay->rasterCrossOffsetY;
 	float cysz = 200.0f * vicDisplay->rasterScaleFactorY  + vicDisplay->rasterCrossOffsetY;
@@ -289,7 +288,7 @@ void C64VicDisplayCanvasHiresText::RenderCanvasSpecificGridValues()
 					sprintf(buf, "%02x %02x  %02x",
 							colors[0], colors[1], colorValue);
 					
-					if (cx >= -fs2 && cx < SCREEN_WIDTH && cy >= -fs2 && cy < SCREEN_HEIGHT)
+					if (cx >= -fs2 && cx < vicDisplay->sizeX && cy >= -fs2 && cy < vicDisplay->sizeY)
 					{
 						viewC64->fontDisassembly->BlitText(buf, cx + vox + fs*7, cy, vicDisplay->posZ, fs);
 					}
@@ -302,7 +301,7 @@ void C64VicDisplayCanvasHiresText::RenderCanvasSpecificGridValues()
 					sprintfHexCode8(buf1 + 5, charValue);
 					
 					
-					if (cx >= -fs2 && cx < SCREEN_WIDTH && cy >= -fs2 && cy < SCREEN_HEIGHT)
+					if (cx >= -fs2 && cx < vicDisplay->sizeX && cy >= -fs2 && cy < vicDisplay->sizeY)
 					{
 						viewC64->fontDisassembly->BlitText(buf1, cx, cy, vicDisplay->posZ, fs);
 					}
@@ -316,6 +315,22 @@ void C64VicDisplayCanvasHiresText::RenderCanvasSpecificGridValues()
 	}
 }
 
+u8 C64VicDisplayCanvasHiresText::GetColorAtPixel(int x, int y)
+{
+	int charColumn = floor((float)((float)x / 8.0f));
+	int charRow = floor((float)((float)y / 8.0f));
+
+	if (charColumn < 0 || charColumn > 39)
+		return 0;
+
+	if (charRow < 0 || charRow > 24)
+		return 0;
+
+	int offset = charColumn + charRow * 40;
+	
+	u8 color = debugInterface->GetByteC64(0xD800 + offset) & 0x0F;
+	return color;
+}
 
 // @returns painting status (ok, replaced color, blocked)
 u8 C64VicDisplayCanvasHiresText::PutColorAtPixel(bool forceColorReplace, int x, int y, u8 colorLMB, u8 colorRMB, u8 colorSource, int charValue)

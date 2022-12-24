@@ -2,15 +2,15 @@
 #define _CVIEWC64STATESID_H_
 
 #include "SYS_Defs.h"
+#include "EmulatorsConfig.h"
 #include "CGuiView.h"
 #include "CGuiEditHex.h"
 #include "ViceWrapper.h"
 #include "CGuiButtonSwitch.h"
-#include "C64D_Version.h"
+#include "SYS_FileSystem.h"
+#include "CRecentlyOpenedFiles.h"
 #include <vector>
 #include <list>
-
-#define SID_WAVEFORM_LENGTH 1024
 
 class CSlrFont;
 class CDataAdapter;
@@ -18,11 +18,12 @@ class CViewMemoryMap;
 class CSlrMutex;
 class CDebugInterfaceC64;
 class CViewWaveform;
+class CSidData;
 
 // TODO: make base class to have Vice specific state rendering and editing
 //       class CViewC64ViceStateSID : public CViewC64StateSID
 
-class CViewC64StateSID : public CGuiView, CGuiEditHexCallback, CGuiButtonSwitchCallback
+class CViewC64StateSID : public CGuiView, CGuiEditHexCallback, CGuiButtonSwitchCallback, CSystemFileDialogCallback, CRecentlyOpenedFilesCallback
 {
 public:
 	CViewC64StateSID(const char *name, float posX, float posY, float posZ, float sizeX, float sizeY, CDebugInterfaceC64 *debugInterface);
@@ -50,19 +51,19 @@ public:
 	virtual void RenderImGui();
 	virtual void DoLogic();
 	
-	bool renderSidChipsHorizontally;
+	bool showAllSidChips;
 	
 	CDebugInterfaceC64 *debugInterface;
 	
 	void DumpSidWaveform(uint8 wave, char *buf);
 	
 	// [sid num][channel num]
-	CViewWaveform *sidChannelWaveform[MAX_NUM_SIDS][3];
-	CViewWaveform *sidMixWaveform[MAX_NUM_SIDS];
+	CViewWaveform *viewChannelWaveform[C64_MAX_NUM_SIDS][3];
+	CViewWaveform *viewMixWaveform[C64_MAX_NUM_SIDS];
 	
 	int selectedSidNumber;
 	
-	CGuiButtonSwitch *btnsSelectSID[MAX_NUM_SIDS];
+	CGuiButtonSwitch *btnsSelectSID[C64_MAX_NUM_SIDS];
 	virtual bool ButtonSwitchChanged(CGuiButtonSwitch *button);
 	float buttonSizeX;
 	float buttonSizeY;
@@ -73,9 +74,7 @@ public:
 	void PrintSidWaveform(uint8 wave, char *buf);
 	
 	void UpdateSidButtonsState();
-	
-	volatile int waveformPos;
-	void AddWaveformData(int sidNumber, int v1, int v2, int v3, short mix);
+	void UpdateWaveformsPosition();
 	
 	// editing registers
 	bool showRegistersOnly;
@@ -84,8 +83,26 @@ public:
 	CGuiEditHex *editHex;
 	virtual void GuiEditHexEnteredValue(CGuiEditHex *editHex, u32 lastKeyCode, bool isCancelled);
 
+	float oneSidStateSizeX;
+	
 	//
 	virtual void RenderFocusBorder();
+
+	std::list<CSlrString *> sidRegsFileExtensions;
+	virtual void SystemDialogFileOpenSelected(CSlrString *path);
+	virtual void SystemDialogFileSaveSelected(CSlrString *path);
+
+	CRecentlyOpenedFiles *recentlyOpened;
+	virtual void RecentlyOpenedFilesCallbackSelectedMenuItem(CSlrString *filePath);
+
+	// returns charset addr
+	CSidData *sidData;
+	bool ImportSidRegs(CSlrString *path);
+	bool ExportSidRegs(CSlrString *path);
+
+	//
+	virtual bool HasContextMenuItems();
+	virtual void RenderContextMenuItems();
 
 	// Layout
 	virtual void Serialize(CByteBuffer *byteBuffer);

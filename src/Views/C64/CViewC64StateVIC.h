@@ -74,6 +74,9 @@ public:
 	bool showSprites;
 	
 	volatile bool isLockedState;
+	void SetIsLockedState(bool newIsLockedState);
+	bool GetIsLockedState();
+	u64 previousIsLockedStateFrameNum;
 	
 	// force colors D020-D02E, -1 = don't force
 	int forceColors[0x0F];

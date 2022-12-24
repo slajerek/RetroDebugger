@@ -1,4 +1,4 @@
-#include "C64D_Version.h"
+#include "EmulatorsConfig.h"
 #if defined(RUN_NES)
 
 #include "NstApiMachine.hpp"
@@ -17,13 +17,12 @@
 #include "CViewMemoryMap.h"
 #include "C64Tools.h"
 #include "CViewC64Screen.h"
-#include "CDebugInterfaceNes.h"
-#include "CViewC64StateSID.h"
 #include "SYS_Threading.h"
 #include "CGuiEditHex.h"
 #include "VID_ImageBinding.h"
 #include "C64SIDFrequencies.h"
 #include "CViewWaveform.h"
+#include "CWaveformData.h"
 #include "CLayoutParameter.h"
 
 CViewNesStateAPU::CViewNesStateAPU(const char *name, float posX, float posY, float posZ, float sizeX, float sizeY, CDebugInterfaceNes *debugInterface)
@@ -31,6 +30,9 @@ CViewNesStateAPU::CViewNesStateAPU(const char *name, float posX, float posY, flo
 {
 	this->debugInterface = debugInterface;
 	
+	imGuiNoWindowPadding = true;
+	imGuiNoScrollbar = true;
+
 	fontBytes = viewC64->fontDisassembly;
 	
 	fontSize = 7.0f;
@@ -45,11 +47,10 @@ CViewNesStateAPU::CViewNesStateAPU(const char *name, float posX, float posY, flo
 	{
 		for (int chanNum = 0; chanNum < 6; chanNum++)
 		{
-			nesChannelWaveform[apuNum][chanNum] = new CViewWaveform(0, 0, 0, 0, 0, NES_APU_WAVEFORM_LENGTH);
+			viewChannelWaveform[apuNum][chanNum] = new CViewWaveform("CViewNesStateAPU::CViewWaveform", 0, 0, 0, 0, 0, debugInterface->nesChannelWaveform[apuNum][chanNum]);
 		}
-		nesMixWaveform[apuNum] = new CViewWaveform(0, 0, 0, 0, 0, NES_APU_WAVEFORM_LENGTH);
+		viewMixWaveform[apuNum] = new CViewWaveform("CViewNesStateAPU::CViewWaveform", 0, 0, 0, 0, 0, debugInterface->nesMixWaveform[apuNum]);
 	}
-	waveformPos = 0;
 	
 	this->SetPosition(posX, posY, posZ, sizeX, sizeY);	
 }
@@ -84,7 +85,7 @@ void CViewNesStateAPU::UpdateFontSize()
 		{
 			for (int apuNum = 0; apuNum < MAX_NUM_NES_APUS; apuNum++)
 			{
-				nesChannelWaveform[apuNum][chanNum]->SetPosition(px, py, posZ, wsx, wsy);
+				viewChannelWaveform[apuNum][chanNum]->SetPosition(px, py, posZ, wsx, wsy);
 			}
 			px += wsx + dx;
 			sx += wsx + dx;
@@ -95,7 +96,7 @@ void CViewNesStateAPU::UpdateFontSize()
 
 		for (int apuNum = 0; apuNum < MAX_NUM_NES_APUS; apuNum++)
 		{
-			nesMixWaveform[apuNum]->SetPosition(px, py, posZ, wsx, wsy);
+			viewMixWaveform[apuNum]->SetPosition(px, py, posZ, wsx, wsy);
 		}
 		
 		sy += wsy;
@@ -174,21 +175,14 @@ void CViewNesStateAPU::Render()
 //	if (debugInterface->GetSettingIsWarpSpeed() == true)
 //		return;
 
-	int apuNumber = 0;
-	
-	for (int chanNum = 0; chanNum < 6; chanNum++)
-	{
-		nesChannelWaveform[apuNumber][chanNum]->CalculateWaveform();
-	}
-	nesMixWaveform[apuNumber]->CalculateWaveform();
-
 	int selectedApuNumber = 0;
 
+	// calc trigger pos, render
 	for (int chanNum = 0; chanNum < 6; chanNum++)
 	{
-		nesChannelWaveform[selectedApuNumber][chanNum]->Render();
+		viewChannelWaveform[selectedApuNumber][chanNum]->Render();
 	}
-	nesMixWaveform[selectedApuNumber]->Render();
+	viewMixWaveform[selectedApuNumber]->Render();
 
 	this->RenderState(posX, posY, posZ, fontBytes, fontSize, 1);
 }
@@ -616,29 +610,6 @@ void CViewNesStateAPU::RenderState(float px, float py, float posZ, CSlrFont *fon
 	
 }
 
-void CViewNesStateAPU::AddWaveformData(int apuNumber, int v1, int v2, int v3, int v4, int v5, int v6, short mix)
-{
-//	LOGD("CViewNesStateAPU::AddWaveformData: #%d, %d %d %d %d %d %d | %d", apuNumber, v1, v2, v3, v4, v5, v6, mix);
-	
-	// apu channels
-	nesChannelWaveform[apuNumber][0]->waveformData[waveformPos] = v1;
-	nesChannelWaveform[apuNumber][1]->waveformData[waveformPos] = v2;
-	nesChannelWaveform[apuNumber][2]->waveformData[waveformPos] = v3;
-	nesChannelWaveform[apuNumber][3]->waveformData[waveformPos] = v4;
-	nesChannelWaveform[apuNumber][4]->waveformData[waveformPos] = v5;
-	nesChannelWaveform[apuNumber][5]->waveformData[waveformPos] = v6;
-
-	// mix channel
-	nesMixWaveform[apuNumber]->waveformData[waveformPos] = mix;
-	
-	waveformPos++;
-	
-	if (waveformPos == NES_APU_WAVEFORM_LENGTH)
-	{
-		waveformPos = 0;
-	}
-}
-
 bool CViewNesStateAPU::DoTap(float x, float y)
 {
 	guiMain->LockMutex();
@@ -648,61 +619,26 @@ bool CViewNesStateAPU::DoTap(float x, float y)
 		editHex->FinalizeEntering(MTKEY_ENTER, true);
 	}
 
-//	for (int apuNum = 0; apuNum < debugInterface->GetNumSids(); sidNum++)
+//	for (int apuNum = 0; apuNum < debugInterface->GetNumSids(); apuNum++)
 	int apuNum = 0;
 	{
 		for (int i = 0; i < 6; i++)
 		{
-			if (nesChannelWaveform[apuNum][i]->IsInside(x, y))
+			if (viewChannelWaveform[apuNum][i]->IsInside(x, y))
 			{
-				nesChannelWaveform[apuNum][i]->isMuted = !nesChannelWaveform[apuNum][i]->isMuted;
-				
-				viewC64->debugInterfaceNes->SetApuMuteChannels(0,
-															   nesChannelWaveform[apuNum][0]->isMuted,
-															   nesChannelWaveform[apuNum][1]->isMuted,
-															   nesChannelWaveform[apuNum][2]->isMuted,
-															   nesChannelWaveform[apuNum][3]->isMuted,
-															   nesChannelWaveform[apuNum][4]->isMuted,
-															   nesChannelWaveform[apuNum][5]->isMuted);
-
-				if (nesChannelWaveform[apuNum][0]->isMuted
-					&& nesChannelWaveform[apuNum][1]->isMuted
-					&& nesChannelWaveform[apuNum][2]->isMuted
-					&& nesChannelWaveform[apuNum][3]->isMuted
-					&& nesChannelWaveform[apuNum][4]->isMuted
-					&& nesChannelWaveform[apuNum][5]->isMuted)
-				{
-					nesMixWaveform[apuNum]->isMuted = true;
-				}
-				else if (!nesChannelWaveform[apuNum][0]->isMuted
-						 || !nesChannelWaveform[apuNum][1]->isMuted
-						 || !nesChannelWaveform[apuNum][2]->isMuted
-						 || !nesChannelWaveform[apuNum][3]->isMuted
-						 || !nesChannelWaveform[apuNum][4]->isMuted
-						 || !nesChannelWaveform[apuNum][5]->isMuted)
-				{
-					nesMixWaveform[apuNum]->isMuted = false;
-				}
+				viewChannelWaveform[apuNum][i]->waveform->isMuted = !viewChannelWaveform[apuNum][i]->waveform->isMuted;
+				debugInterface->UpdateWaveformsMuteStatus();
 				guiMain->UnlockMutex();
 				return true;
 			}
 		}
 
-		if (nesMixWaveform[apuNum]->IsInside(x,y))
+		if (viewMixWaveform[apuNum]->IsInside(x,y))
 		{
-			nesMixWaveform[apuNum]->isMuted = !nesMixWaveform[apuNum]->isMuted;
-			for (int i = 0; i < 6; i++)
-			{
-				nesChannelWaveform[apuNum][0]->isMuted = nesMixWaveform[apuNum]->isMuted;
-			}
-
-			viewC64->debugInterfaceNes->SetApuMuteChannels(0,
-														   nesChannelWaveform[apuNum][0]->isMuted,
-														   nesChannelWaveform[apuNum][1]->isMuted,
-														   nesChannelWaveform[apuNum][2]->isMuted,
-														   nesChannelWaveform[apuNum][3]->isMuted,
-														   nesChannelWaveform[apuNum][4]->isMuted,
-														   nesChannelWaveform[apuNum][5]->isMuted);
+			viewMixWaveform[apuNum]->waveform->isMuted = !viewMixWaveform[apuNum]->waveform->isMuted;
+			debugInterface->UpdateWaveformsMuteStatus();
+			guiMain->UnlockMutex();
+			return true;
 		}
 	}
 	

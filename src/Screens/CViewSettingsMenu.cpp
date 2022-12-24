@@ -342,17 +342,6 @@ CViewSettingsMenu::CViewSettingsMenu(float posX, float posY, float posZ, float s
 	menuItemSubMenuUI->AddMenuItem(menuItemDisassemblyBackgroundColor);
 	
 	
-	if (viewC64->debugInterfaceC64)
-	{
-		//
-		options = new std::vector<CSlrString *>();
-		C64GetAvailablePalettes(options);
-		menuItemVicPalette = new CViewC64MenuItemOption(fontHeight, new CSlrString("VIC palette: "),
-														NULL, tr, tg, tb, options, font, fontScale);
-		menuItemSubMenuUI->AddMenuItem(menuItemVicPalette);
-		
-	}
-	
 	options = new std::vector<CSlrString *>();
 	options->push_back(new CSlrString("Billinear"));
 	options->push_back(new CSlrString("Nearest"));
@@ -422,11 +411,6 @@ CViewSettingsMenu::CViewSettingsMenu(float posX, float posY, float posZ, float s
 
 
 	//
-	menuItemPaintGridShowZoomLevel = new CViewC64MenuItemFloat(fontHeight*2, new CSlrString("Show paint grid from zoom level: "),
-															   NULL, tr, tg, tb,
-															   1.0f, 50.0f, 0.05f, font, fontScale);
-	menuItemPaintGridShowZoomLevel->SetValue(c64SettingsPaintGridShowZoomLevel, false);
-	menuItemSubMenuUI->AddMenuItem(menuItemPaintGridShowZoomLevel);
 	
 
 	menuItemPaintGridCharactersColorR = new CViewC64MenuItemFloat(fontHeight, new CSlrString("Paint grid characters Color R: "),
@@ -500,160 +484,15 @@ CViewSettingsMenu::CViewSettingsMenu(float posX, float posY, float posZ, float s
 	//
 	if (viewC64->debugInterfaceC64)
 	{
-		// tape menu
-		kbsTapeAttach = new CSlrKeyboardShortcut(KBZONE_GLOBAL, "Tape Attach", 't', true, false, true, false, this);
-		guiMain->AddKeyboardShortcut(kbsTapeAttach);
-		
-		menuItemTapeAttach = new CViewC64MenuItem(fontHeight, new CSlrString("Attach Tape"),
-													 kbsTapeAttach, tr, tg, tb);
-		menuItemSubMenuTape->AddMenuItem(menuItemTapeAttach);
-		
-		// TODO: add showing path when tape is attached
-		
-		kbsTapeDetach = new CSlrKeyboardShortcut(KBZONE_GLOBAL, "Tape Detach", 't', true, true, true, false, this);
-		guiMain->AddKeyboardShortcut(kbsTapeDetach);
-
-		menuItemTapeDetach = new CViewC64MenuItem(fontHeight*2, new CSlrString("Detach Tape"),
-													 kbsTapeDetach, tr, tg, tb);
-		menuItemSubMenuTape->AddMenuItem(menuItemTapeDetach);
-		
-		menuItemTapeCreate = new CViewC64MenuItem(fontHeight*2, new CSlrString("Create Tape"),
-													 NULL, tr, tg, tb);
-		menuItemSubMenuTape->AddMenuItem(menuItemTapeCreate);
-		
-		//
-
-		kbsTapeStop = new CSlrKeyboardShortcut(KBZONE_GLOBAL, "Tape Stop", 's', true, true, true, false, this);
-		guiMain->AddKeyboardShortcut(kbsTapeStop);
-
-		menuItemTapeStop = new CViewC64MenuItem(fontHeight, new CSlrString("Stop"),
-													 kbsTapeStop, tr, tg, tb);
-		menuItemSubMenuTape->AddMenuItem(menuItemTapeStop);
-
-		kbsTapePlay = new CSlrKeyboardShortcut(KBZONE_GLOBAL, "Tape Play", 'p', true, true, true, false, this);
-		guiMain->AddKeyboardShortcut(kbsTapePlay);
-
-		menuItemTapePlay = new CViewC64MenuItem(fontHeight, new CSlrString("Play"),
-											kbsTapePlay, tr, tg, tb);
-		menuItemSubMenuTape->AddMenuItem(menuItemTapePlay);
-		
-		kbsTapeForward = new CSlrKeyboardShortcut(KBZONE_GLOBAL, "Tape Forward", 'f', true, true, true, false, this);
-		guiMain->AddKeyboardShortcut(kbsTapeForward);
-
-		menuItemTapeForward = new CViewC64MenuItem(fontHeight, new CSlrString("Forward"),
-											kbsTapeForward, tr, tg, tb);
-		menuItemSubMenuTape->AddMenuItem(menuItemTapeForward);
-		
-		kbsTapeRewind = new CSlrKeyboardShortcut(KBZONE_GLOBAL, "Tape Rewind", 'r', true, true, true, false, this);
-		guiMain->AddKeyboardShortcut(kbsTapeRewind);
-
-		menuItemTapeRewind = new CViewC64MenuItem(fontHeight, new CSlrString("Rewind"),
-											kbsTapeRewind, tr, tg, tb);
-		menuItemSubMenuTape->AddMenuItem(menuItemTapeRewind);
-		
-		kbsTapeRecord = new CSlrKeyboardShortcut(KBZONE_GLOBAL, "Tape Record", 'y', true, true, true, false, this);
-		guiMain->AddKeyboardShortcut(kbsTapeRecord);
-
-		menuItemTapeRecord = new CViewC64MenuItem(fontHeight*2, new CSlrString("Record"),
-											kbsTapeRecord, tr, tg, tb);
-		menuItemSubMenuTape->AddMenuItem(menuItemTapeRecord);
-		
-		menuItemTapeReset = new CViewC64MenuItem(fontHeight*2, new CSlrString("Reset Datasette"),
-											NULL, tr, tg, tb);
-		menuItemSubMenuTape->AddMenuItem(menuItemTapeReset);
-		
-		//
-		menuItemDatasetteSpeedTuning = new CViewC64MenuItemFloat(fontHeight, new CSlrString("Datasette speed tuning: "),
-														NULL, tr, tg, tb,
-														0.0f, 100.0f, 1.0f, font, fontScale);
-		menuItemDatasetteSpeedTuning->numDecimalsDigits = 0;
-		menuItemDatasetteSpeedTuning->SetValue(0.0f, false);
-		menuItemSubMenuTape->AddMenuItem(menuItemDatasetteSpeedTuning);
-		
-		menuItemDatasetteZeroGapDelay = new CViewC64MenuItemFloat(fontHeight, new CSlrString("Datasette zero-gap delay: "),
-																 NULL, tr, tg, tb,
-																 0.0f, 50000.0f, 100.0f, font, fontScale);
-		menuItemDatasetteZeroGapDelay->numDecimalsDigits = 0;
-		menuItemDatasetteZeroGapDelay->SetValue(20000.0f, false);
-		menuItemSubMenuTape->AddMenuItem(menuItemDatasetteZeroGapDelay);
-
-		menuItemDatasetteTapeWobble = new CViewC64MenuItemFloat(fontHeight, new CSlrString("Datasette tape wobble: "),
-																 NULL, tr, tg, tb,
-																 0.0f, 100.0f, 1.0f, font, fontScale);
-		menuItemDatasetteTapeWobble->numDecimalsDigits = 0;
-		menuItemDatasetteTapeWobble->SetValue(10.0f, false);
-		menuItemSubMenuTape->AddMenuItem(menuItemDatasetteTapeWobble);
-
-		
-		menuItemDatasetteResetWithCPU = new CViewC64MenuItemOption(fontHeight, new CSlrString("Datasette reset with CPU: "),
-																   NULL, tr, tg, tb, optionsYesNo, font, fontScale);
-		menuItemSubMenuTape->AddMenuItem(menuItemDatasetteResetWithCPU);
 
 
 	}
 	
 	//
-	
-	if (viewC64->debugInterfaceC64)
-	{
-		//
-		// memory mapping can be initialised only on startup
-		menuItemMapC64MemoryToFile = new CViewC64MenuItem(fontHeight*3, NULL,
-														  NULL, tr, tg, tb);
-		menuItemSubMenuMemory->AddMenuItem(menuItemMapC64MemoryToFile);
-		
-		UpdateMapC64MemoryToFileLabels();
-		
-		///
-//		menuItemDumpC64Memory = new CViewC64MenuItem(fontHeight, new CSlrString("Dump C64 memory"),
-//													 kbsDumpC64Memory, tr, tg, tb);
-//		menuItemSubMenuMemory->AddMenuItem(menuItemDumpC64Memory);
-//		
-//		menuItemDumpC64MemoryMarkers = new CViewC64MenuItem(fontHeight, new CSlrString("Dump C64 memory markers"),
-//															NULL, tr, tg, tb);
-//		menuItemSubMenuMemory->AddMenuItem(menuItemDumpC64MemoryMarkers);
-//				
-//		menuItemDumpDrive1541Memory = new CViewC64MenuItem(fontHeight, new CSlrString("Dump Disk 1541 memory"),
-//														   kbsDumpDrive1541Memory, tr, tg, tb);
-//		menuItemSubMenuMemory->AddMenuItem(menuItemDumpDrive1541Memory);
-//		
-//		menuItemDumpDrive1541MemoryMarkers = new CViewC64MenuItem(fontHeight*2, new CSlrString("Dump Disk 1541 memory markers"),
-//																  NULL, tr, tg, tb);
-//		menuItemSubMenuMemory->AddMenuItem(menuItemDumpDrive1541MemoryMarkers);
-	}
 
 	//
 	
 	
-	//
-
-	
-
-	
-
-	if (viewC64->debugInterfaceC64)
-	{
-		kbsCartridgeFreezeButton = new CSlrKeyboardShortcut(KBZONE_GLOBAL, "Cartridge freeze", 'f', false, false, true, false, this);
-		guiMain->AddKeyboardShortcut(kbsCartridgeFreezeButton);
-		menuItemCartridgeFreeze = new CViewC64MenuItem(fontHeight*2.0f, new CSlrString("Cartridge freeze"),
-													   kbsCartridgeFreezeButton, tr, tg, tb);
-		menuItemSubMenuEmulation->AddMenuItem(menuItemCartridgeFreeze);
-		
-
-		
-		
-		//
-	}
-	
-	//
-	
-	
-	menuItemDisassembleExecuteAware = new CViewC64MenuItemOption(fontHeight, new CSlrString("Execute-aware disassemble: "),
-																 NULL, tr, tg, tb, optionsYesNo, font, fontScale);
-	menuItemDisassembleExecuteAware->SetSelectedOption(c64SettingsRenderDisassembleExecuteAware, false);
-	menuItemSubMenuEmulation->AddMenuItem(menuItemDisassembleExecuteAware);
-	
-
 	//
 	menuItemStartJukeboxPlaylist = new CViewC64MenuItem(fontHeight*2, new CSlrString("Start JukeBox playlist"),
 														NULL, tr, tg, tb);
@@ -684,41 +523,7 @@ bool CViewSettingsMenu::ProcessKeyboardShortcut(u32 zone, u8 actionType, CSlrKey
 {
 	LOGD("CViewSettingsMenu::ProcessKeyboardShortcut");
 	
-	if (shortcut == kbsTapeAttach)
-	{
-		viewC64->viewC64MainMenu->OpenDialogInsertTape();
-		return true;
-	}
-	else if (shortcut == kbsTapeDetach)
-	{
-		viewC64->debugInterfaceC64->DetachTape();
-		viewC64->ShowMessage("Tape detached");
-		return true;
-	}
-	else if (shortcut == kbsTapeStop)
-	{
-		viewC64->debugInterfaceC64->DatasetteStop();
-		viewC64->ShowMessage("Datasette STOP");
-		return true;
-	}
-	else if (shortcut == kbsTapePlay)
-	{
-		viewC64->debugInterfaceC64->DatasettePlay();
-		viewC64->ShowMessage("Datasette PLAY");
-		return true;
-	}
-	else if (shortcut == kbsTapeForward)
-	{
-		viewC64->debugInterfaceC64->DatasetteForward();
-		viewC64->ShowMessage("Datasette FORWARD");
-		return true;
-	}
-	else if (shortcut == kbsTapeRewind)
-	{
-		viewC64->debugInterfaceC64->DatasetteRewind();
-		viewC64->ShowMessage("Datasette REWIND");
-		return true;
-	}
+
 //		else if (shortcut == viewC64SettingsMenu->kbsTapeReset)
 //		{
 //			viewC64->debugInterfaceC64->DatasetteReset();
@@ -730,48 +535,12 @@ bool CViewSettingsMenu::ProcessKeyboardShortcut(u32 zone, u8 actionType, CSlrKey
 //		viewC64->SwitchIsWarpSpeed();
 //		return true;
 //	}
-	else if (shortcut == kbsCartridgeFreezeButton)
-	{
-		viewC64->debugInterfaceC64->CartridgeFreezeButtonPressed();
-		return true;
-	}
-
-	else if (shortcut == kbsSwitchSoundOnOff)
+	if (shortcut == kbsSwitchSoundOnOff)
 	{
 		viewC64->ToggleSoundMute();
 		return true;
 	}
 	return false;
-}
-
-
-void CViewSettingsMenu::UpdateMapC64MemoryToFileLabels()
-{
-	guiMain->LockMutex();
-
-	if (c64SettingsPathToC64MemoryMapFile == NULL)
-	{
-		menuItemMapC64MemoryToFile->SetString(new CSlrString("Map C64 memory to a file"));
-		if (menuItemMapC64MemoryToFile->str2 != NULL)
-			delete menuItemMapC64MemoryToFile->str2;
-		menuItemMapC64MemoryToFile->str2 = NULL;
-	}
-	else
-	{
-		menuItemMapC64MemoryToFile->SetString(new CSlrString("Unmap C64 memory from file"));
-		
-		char *asciiPath = c64SettingsPathToC64MemoryMapFile->GetStdASCII();
-		
-		// display file name in menu
-		char *fname = SYS_GetFileNameWithExtensionFromFullPath(asciiPath);
-		
-		if (menuItemMapC64MemoryToFile->str2 != NULL)
-			delete menuItemMapC64MemoryToFile->str2;
-		
-		menuItemMapC64MemoryToFile->str2 = new CSlrString(fname);
-		delete [] fname;
-	}
-	guiMain->UnlockMutex();
 }
 
 
@@ -783,11 +552,7 @@ void CViewSettingsMenu::MenuCallbackItemChanged(CGuiViewMenuItem *menuItem)
 {
 	return;
 	
-	if (menuItem == menuItemVicPalette)
-	{
-		C64DebuggerSetSetting("VicPalette", &(menuItemVicPalette->selectedOption));
-	}
-	else if (menuItem == menuItemRenderScreenInterpolation)
+	if (menuItem == menuItemRenderScreenInterpolation)
 	{
 		bool v = menuItemRenderScreenInterpolation->selectedOption == 0 ? false : true;
 		C64DebuggerSetSetting("RenderScreenNearest", &(v));
@@ -855,35 +620,7 @@ void CViewSettingsMenu::MenuCallbackItemChanged(CGuiViewMenuItem *menuItem)
 		bool v = menuItemAtariPokeyStereo->selectedOption == 0 ? false : true;
 		C64DebuggerSetSetting("AtariPokeyStereo", &v);
 	}
-
-	else if (menuItem == menuItemDatasetteSpeedTuning)
-	{
-		i32 v = (i32)(menuItemDatasetteSpeedTuning->value);
-		C64DebuggerSetSetting("DatasetteSpeedTuning", &v);
-	}
-	else if (menuItem == menuItemDatasetteZeroGapDelay)
-	{
-		i32 v = (i32)(menuItemDatasetteZeroGapDelay->value);
-		C64DebuggerSetSetting("DatasetteZeroGapDelay", &v);
-	}
-	else if (menuItem == menuItemDatasetteTapeWobble)
-	{
-		i32 v = (i32)(menuItemDatasetteTapeWobble->value);
-		C64DebuggerSetSetting("DatasetteTapeWobble", &v);
-	}
-	else if (menuItem == menuItemDatasetteResetWithCPU)
-	{
-		bool v = menuItemDatasetteResetWithCPU->selectedOption == 0 ? false : true;
-		C64DebuggerSetSetting("DatasetteResetWithCPU", &(v));
 		
-		viewC64->debugInterfaceC64->SetPatchKernalFastBoot(v);
-	}
-		
-	else if (menuItem == menuItemDisassembleExecuteAware)
-	{
-		bool v = menuItemDisassembleExecuteAware->selectedOption == 0 ? false : true;
-		C64DebuggerSetSetting("DisassembleExecuteAware", &(v));
-	}
 	else if (menuItem == menuItemDisassemblyBackgroundColor)
 	{
 		int v = menuItemDisassemblyBackgroundColor->selectedOption;
@@ -1014,11 +751,6 @@ void CViewSettingsMenu::MenuCallbackItemChanged(CGuiViewMenuItem *menuItem)
 	}
 	
 	//
-	else if (menuItem == menuItemPaintGridShowZoomLevel)
-	{
-		float v = menuItemPaintGridShowZoomLevel->value;
-		C64DebuggerSetSetting("PaintGridShowZoomLevel", &v);
-	}
 	
 	else if (menuItem == menuItemPaintGridCharactersColorR)
 	{
@@ -1132,60 +864,9 @@ void CViewSettingsMenu::MenuCallbackItemChanged(CGuiViewMenuItem *menuItem)
 
 void CViewSettingsMenu::MenuCallbackItemEntered(CGuiViewMenuItem *menuItem)
 {
-	if (menuItem == menuItemTapeAttach)
-	{
-		viewC64->viewC64MainMenu->OpenDialogInsertTape();
-	}
-	else if (menuItem == menuItemTapeDetach)
-	{
-		viewC64->mainMenuBar->DetachTape(true);
-	}
-	else if (menuItem == menuItemTapeStop)
-	{
-		viewC64->debugInterfaceC64->DatasetteStop();
-		viewC64->ShowMessage("Datasette STOP");
-	}
-	else if (menuItem == menuItemTapePlay)
-	{
-		viewC64->debugInterfaceC64->DatasettePlay();
-		viewC64->ShowMessage("Datasette PLAY");
-	}
-	else if (menuItem == menuItemTapeForward)
-	{
-		viewC64->debugInterfaceC64->DatasetteForward();
-		viewC64->ShowMessage("Datasette FORWARD");
-	}
-	else if (menuItem == menuItemTapeRewind)
-	{
-		viewC64->debugInterfaceC64->DatasetteRewind();
-		viewC64->ShowMessage("Datasette REWIND");
-	}
-	else if (menuItem == menuItemTapeReset)
-	{
-		viewC64->debugInterfaceC64->DatasetteReset();
-		viewC64->ShowMessage("Datasette RESET");
-	}
+
 	
-	else if (menuItem == menuItemMapC64MemoryToFile)
-	{
-		if (c64SettingsPathToC64MemoryMapFile == NULL)
-		{
-			OpenDialogMapC64MemoryToFile();
-		}
-		else
-		{
-			guiMain->LockMutex();
-			delete c64SettingsPathToC64MemoryMapFile;
-			c64SettingsPathToC64MemoryMapFile = NULL;
-			guiMain->UnlockMutex();
-			
-			C64DebuggerStoreSettings();
-			
-			UpdateMapC64MemoryToFileLabels();
-			viewC64->ShowMessage("Please restart Retro Debugger to unmap file");
-		}
-	}
-	else if (menuItem == menuItemSetC64KeyboardMapping)
+	if (menuItem == menuItemSetC64KeyboardMapping)
 	{
 //		guiMain->SetView(viewC64->viewC64KeyMap);
 	}
@@ -1199,40 +880,6 @@ void CViewSettingsMenu::MenuCallbackItemEntered(CGuiViewMenuItem *menuItem)
 	}
 	else if (menuItem == menuItemClearSettings)
 	{
-		// TODO: move to C64DebuggerClearSettings
-		
-		CByteBuffer *byteBuffer = new CByteBuffer();
-		
-		CSlrString *fileName = new CSlrString(C64D_SETTINGS_FILE_PATH);
-		byteBuffer->storeToSettings(fileName);
-		
-		fileName->Set(C64D_KEYBOARD_SHORTCUTS_FILE_PATH);
-		byteBuffer->storeToSettings(fileName);
-		
-		fileName->Set(C64D_KEYMAP_FILE_PATH);
-		byteBuffer->storeToSettings(fileName);
-
-		fileName->Set(C64D_LAYOUTS_FILE_NAME);
-		byteBuffer->storeToSettings(fileName);
-		
-		fileName->Set(C64D_RECENTS_FILE_NAME);
-		byteBuffer->storeToSettings(fileName);
-		
-		fileName->Set(APPLICATION_DEFAULT_CONFIG_HJSON_FILE_PATH);
-		byteBuffer->storeToSettings(fileName);
-		
-		delete fileName;
-		delete byteBuffer;
-		
-		LOGTODO("zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz");
-//#if defined(MACOS)
-//		NSString *appDomain = NSBundle.mainBundle.bundleIdentifier;
-//		[[NSUserDefaults standardUserDefaults] removePersistentDomainForName:appDomain];
-//		[[NSUserDefaults standardUserDefaults] synchronize];
-//#endif
-		// that could be a bad bug:  :D
-		
-		viewC64->ShowMessage("Settings cleared, please restart Retro Debugger");
 		return;
 	}
 	else if (menuItem == menuItemBack)
@@ -1271,6 +918,7 @@ void CViewSettingsMenu::SystemDialogFileSaveCancelled()
 
 void CViewSettingsMenu::MapC64MemoryToFile(CSlrString *path)
 {
+	/// DELETE ME
 	//path->DebugPrint("CViewSettingsMenu::MapC64MemoryToFile, path=");
 	
 	if (c64SettingsPathToC64MemoryMapFile != path)
@@ -1283,9 +931,5 @@ void CViewSettingsMenu::MapC64MemoryToFile(CSlrString *path)
 	if (c64SettingsDefaultMemoryDumpFolder != NULL)
 		delete c64SettingsDefaultMemoryDumpFolder;
 	c64SettingsDefaultMemoryDumpFolder = path->GetFilePathWithoutFileNameComponentFromPath();
-	
-	UpdateMapC64MemoryToFileLabels();
-	
-	viewC64->ShowMessage("Please restart Retro Debugger to map memory");
 }
 

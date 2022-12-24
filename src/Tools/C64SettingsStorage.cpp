@@ -1,5 +1,5 @@
 // TODO: it is high time to convert settings into JSON as the parser is finally available and tested
-
+#include "EmulatorsConfig.h"
 #include "C64SettingsStorage.h"
 #include "SYS_Platform.h"
 #include "CViewMemoryMap.h"
@@ -12,10 +12,10 @@
 #include "CViewMonitorConsole.h"
 #include "SND_SoundEngine.h"
 #include "CViewC64Screen.h"
+#include "CViewC64VicEditor.h"
 #include "CViewC64VicDisplay.h"
 #include "CViewC64VicControl.h"
 #include "CViewC64StateSID.h"
-#include "CViewVicEditor.h"
 #include "CSnapshotsManager.h"
 #include "C64Palette.h"
 #include "CMainMenuBar.h"
@@ -23,10 +23,10 @@
 #include "CDebugMemoryMapCell.h"
 #include "CViewAtariScreen.h"
 #include "CViewNesScreen.h"
-
 #include "CDebugInterfaceC64.h"
 #include "CDebugInterfaceAtari.h"
 #include "CDebugInterfaceNes.h"
+#include "SYS_DefaultConfig.h"
 
 #include "DebuggerDefs.h"
 
@@ -82,7 +82,8 @@ bool c64SettingsUsePipeIntegration = true;
 bool c64SettingsWindowAlwaysOnTop = false;
 CByteBuffer *c64SettingsWindowPosition = NULL;
 
-bool c64SettingsRenderDisassembleExecuteAware = true;
+bool c64SettingsExecuteAwareDisassembly = true;
+bool c64SettingsPressCtrlToSetBreakpoint = false;
 
 uint8 c64SettingsMemoryValuesStyle = MEMORY_MAP_VALUES_STYLE_RGB;
 uint8 c64SettingsMemoryMarkersStyle = MEMORY_MAP_MARKER_STYLE_DEFAULT;
@@ -96,6 +97,7 @@ int c64SettingsEmulationMaximumSpeed = 100;		// percentage
 bool c64SettingsFastBootKernalPatch = false;
 bool c64SettingsEmulateVSPBug = false;
 bool c64SettingsVicSkipDrawingSprites = false;
+extern bool c64dSkipBogusPageOffsetReadOnSTA;
 
 // TODO: refactor SID to Sid for better readability
 
@@ -138,6 +140,7 @@ bool c64SettingsSnapshotsRecordIsActive = true;
 int c64SettingsSnapshotsIntervalNumFrames = 10;
 // max number of snapshots. TODO: get fps from debuginterface. 50 frames per second * 60 seconds = 3 mins
 int c64SettingsSnapshotsLimit = (50 * 60 * 3) / 10;
+u8 c64SettingsTimelineSaveZlibCompressionLevel = 1;	// Z_BEST_SPEED
 
 CSlrString *c64SettingsPathToC64Roms = NULL;
 CSlrString *c64SettingsPathToC64Kernal = NULL;
@@ -267,10 +270,7 @@ int c64SettingsDisassemblyNonExecuteColor = C64D_COLOR_LIGHT_GRAY;
 
 int c64SettingsMenusColorTheme = 0;
 
-float c64SettingsPaintGridShowZoomLevel = 5.0;
-float c64SettingsPaintGridShowValuesZoomLevel = 26.0;
-
-bool c64SettingsVicEditorForceReplaceColor = false;
+bool c64SettingsVicEditorForceReplaceColor = true;
 u8 c64SettingsVicEditorDefaultBackgroundColor = 0;
 
 bool c64SettingsUseSystemFileDialogs = true;
@@ -426,7 +426,7 @@ void C64DebuggerStoreSettings()
 	storeSettingU8(byteBuffer, "ScreenLayoutId", c64SettingsDefaultScreenLayoutId);
 	storeSettingBool(byteBuffer, "IsInVicEditor", c64SettingsIsInVicEditor);
 	
-	storeSettingBool(byteBuffer, "DisassembleExecuteAware", c64SettingsRenderDisassembleExecuteAware);
+	storeSettingBool(byteBuffer, "DisassemblyExecuteAware", c64SettingsExecuteAwareDisassembly);
 		
 	storeSettingBool(byteBuffer, "WindowAlwaysOnTop", c64SettingsWindowAlwaysOnTop);
 
@@ -498,6 +498,8 @@ void C64DebuggerStoreSettings()
 	
 	storeSettingBool(byteBuffer, "EmulateVSPBug", c64SettingsEmulateVSPBug);
 	storeSettingBool(byteBuffer, "VicSkipDrawingSprites", c64SettingsVicSkipDrawingSprites);
+	storeSettingBool(byteBuffer, "SkipBogusPageOffsetReadOnSTA", c64dSkipBogusPageOffsetReadOnSTA);
+	
 	
 	storeSettingU8(byteBuffer, "VicDisplayBorder", c64SettingsVicDisplayBorderType);
 	storeSettingBool(byteBuffer, "VicDisplayShowGrid", c64SettingsVicDisplayShowGridLines);
@@ -563,15 +565,15 @@ void C64DebuggerStoreSettings()
 	storeSettingFloat (byteBuffer, "PaintGridPixelsColorG", c64SettingsPaintGridPixelsColorG);
 	storeSettingFloat (byteBuffer, "PaintGridPixelsColorB", c64SettingsPaintGridPixelsColorB);
 	storeSettingFloat (byteBuffer, "PaintGridPixelsColorA", c64SettingsPaintGridPixelsColorA);
-	
-	storeSettingFloat (byteBuffer, "PaintGridShowZoomLevel", c64SettingsPaintGridShowZoomLevel);
-	
+		
 	storeSettingBool(byteBuffer, "SnapshotsManagerIsActive", c64SettingsSnapshotsRecordIsActive);
 	storeSettingI32(byteBuffer, "SnapshotsManagerStoreInterval", c64SettingsSnapshotsIntervalNumFrames);
 	storeSettingI32(byteBuffer, "SnapshotsManagerLimit", c64SettingsSnapshotsLimit);
-
+	storeSettingU8(byteBuffer, "SnapshotsManagerSaveZlibCompressionLevel", c64SettingsTimelineSaveZlibCompressionLevel);
+	
 	storeSettingBlock(byteBuffer, C64DEBUGGER_BLOCK_EOF);
 
+	gApplicationDefaultConfig->SetBoolSkipConfigSave("DisassemblyPressCtrlToSetBreakpoint", &c64SettingsPressCtrlToSetBreakpoint);
 	
 #if !defined(DEBUG_SETTINGS_FILE_PATH)
 	LOGD("C64D_SETTINGS_FILE_PATH is set to=%s", C64D_SETTINGS_FILE_PATH);
@@ -731,6 +733,9 @@ void C64DebuggerReadSettingsValues(CByteBuffer *byteBuffer, uint8 settingsBlockT
 			delete (CSlrString*)value;
 		}
 	}
+	
+	// TODO: the settings binary file will be replaced with hjson soon
+	gApplicationDefaultConfig->GetBool("DisassemblyPressCtrlToSetBreakpoint", &c64SettingsPressCtrlToSetBreakpoint, false);
 }
 
 void C64DebuggerReadSettingCustom(char *name, CByteBuffer *byteBuffer)
@@ -1023,6 +1028,13 @@ void C64DebuggerSetSetting(const char *name, void *value)
 		}
 		return;
 	}
+	else if (!strcmp(name, "SnapshotsManagerSaveZlibCompressionLevel"))
+	{
+		u8 v = *(u8*)value;
+		c64SettingsTimelineSaveZlibCompressionLevel = v;
+		return;
+	}
+	
 	else if (!strcmp(name, "UseNativeEmulatorMonitor"))
 	{
 		bool v = *((bool*)value);
@@ -1259,6 +1271,12 @@ void C64DebuggerSetSetting(const char *name, void *value)
 			bool v = *((bool*)value);
 			c64SettingsVicSkipDrawingSprites = v;
 			viewC64->debugInterfaceC64->SetSkipDrawingSprites(c64SettingsVicSkipDrawingSprites);
+			return;
+		}
+		else if (!strcmp(name, "SkipBogusPageOffsetReadOnSTA"))
+		{
+			bool v = *((bool*)value);
+			c64dSkipBogusPageOffsetReadOnSTA = v;
 			return;
 		}
 
@@ -1651,10 +1669,10 @@ void C64DebuggerSetSetting(const char *name, void *value)
 		c64SettingsPathToC64MemoryMapFile = new CSlrString((CSlrString*)value);
 		return;
 	}
-	else if (!strcmp(name, "DisassembleExecuteAware"))
+	else if (!strcmp(name, "DisassemblyExecuteAware"))
 	{
 		bool v = *((bool*)value);
-		c64SettingsRenderDisassembleExecuteAware = v;
+		c64SettingsExecuteAwareDisassembly = v;
 		return;
 	}
 	else if (!strcmp(name, "WindowAlwaysOnTop"))
@@ -1711,7 +1729,7 @@ void C64DebuggerSetSetting(const char *name, void *value)
 	{
 		if (c64SettingsAudioOutDevice != NULL)
 			delete c64SettingsAudioOutDevice;
-		
+
 		c64SettingsAudioOutDevice = new CSlrString((CSlrString*)value);
 		char *cDeviceName = c64SettingsAudioOutDevice->GetStdASCII();
 		gSoundEngine->SetOutputAudioDevice(cDeviceName);
@@ -1871,92 +1889,90 @@ void C64DebuggerSetSetting(const char *name, void *value)
 	}
 	else if (!strcmp(name, "PaintGridCharactersColorR"))
 	{
-		float v = *((float*)value);
-		c64SettingsPaintGridCharactersColorR = v;
-		if (viewC64->debugInterfaceC64)
-		{
-			viewC64->viewVicEditor->InitPaintGridColors();
-		}
+		LOGTODO("C64SettingsStorage: PaintGridCharactersColorR");
+//		float v = *((float*)value);
+//		c64SettingsPaintGridCharactersColorR = v;
+//		if (viewC64->debugInterfaceC64)
+//		{
+//			viewC64->screenVicEditor->InitPaintGridColors();
+//		}
 		return;
 	}
 	else if (!strcmp(name, "PaintGridCharactersColorG"))
 	{
-		float v = *((float*)value);
-		c64SettingsPaintGridCharactersColorG = v;
-		if (viewC64->debugInterfaceC64)
-		{
-			viewC64->viewVicEditor->InitPaintGridColors();
-		}
+		LOGTODO("C64SettingsStorage: PaintGridCharactersColorG");
+//		float v = *((float*)value);
+//		c64SettingsPaintGridCharactersColorG = v;
+//		if (viewC64->debugInterfaceC64)
+//		{
+//			viewC64->screenVicEditor->InitPaintGridColors();
+//		}
 		return;
 	}
 	else if (!strcmp(name, "PaintGridCharactersColorB"))
 	{
-		float v = *((float*)value);
-		c64SettingsPaintGridCharactersColorB = v;
-		if (viewC64->debugInterfaceC64)
-		{
-			viewC64->viewVicEditor->InitPaintGridColors();
-		}
+		LOGTODO("C64SettingsStorage: PaintGridCharactersColorB");
+//		float v = *((float*)value);
+//		c64SettingsPaintGridCharactersColorB = v;
+//		if (viewC64->debugInterfaceC64)
+//		{
+//			viewC64->screenVicEditor->InitPaintGridColors();
+//		}
 		return;
 	}
 	else if (!strcmp(name, "PaintGridCharactersColorA"))
 	{
-		float v = *((float*)value);
-		c64SettingsPaintGridCharactersColorA = v;
-		if (viewC64->debugInterfaceC64)
-		{
-			viewC64->viewVicEditor->InitPaintGridColors();
-		}
+		LOGTODO("C64SettingsStorage: PaintGridCharactersColorA");
+//		float v = *((float*)value);
+//		c64SettingsPaintGridCharactersColorA = v;
+//		if (viewC64->debugInterfaceC64)
+//		{
+//			viewC64->screenVicEditor->InitPaintGridColors();
+//		}
 		return;
 	}
 	else if (!strcmp(name, "PaintGridPixelsColorR"))
 	{
-		float v = *((float*)value);
-		c64SettingsPaintGridPixelsColorR = v;
-		if (viewC64->debugInterfaceC64)
-		{
-			viewC64->viewVicEditor->InitPaintGridColors();
-		}
+		LOGTODO("C64SettingsStorage: PaintGridPixelsColor");
+//		float v = *((float*)value);
+//		c64SettingsPaintGridPixelsColorR = v;
+//		if (viewC64->debugInterfaceC64)
+//		{
+//			viewC64->screenVicEditor->InitPaintGridColors();
+//		}
 		return;
 	}
 	else if (!strcmp(name, "PaintGridPixelsColorG"))
 	{
-		float v = *((float*)value);
-		c64SettingsPaintGridPixelsColorG = v;
-		if (viewC64->debugInterfaceC64)
-		{
-			viewC64->viewVicEditor->InitPaintGridColors();
-		}
+		LOGTODO("C64SettingsStorage: PaintGridPixelsColor");
+//		float v = *((float*)value);
+//		c64SettingsPaintGridPixelsColorG = v;
+//		if (viewC64->debugInterfaceC64)
+//		{
+//			viewC64->screenVicEditor->InitPaintGridColors();
+//		}
 		return;
 	}
 	else if (!strcmp(name, "PaintGridPixelsColorB"))
 	{
-		float v = *((float*)value);
-		c64SettingsPaintGridPixelsColorB = v;
-		if (viewC64->debugInterfaceC64)
-		{
-			viewC64->viewVicEditor->InitPaintGridColors();
-		}
+		LOGTODO("C64SettingsStorage: PaintGridPixelsColor");
+//		float v = *((float*)value);
+//		c64SettingsPaintGridPixelsColorB = v;
+//		if (viewC64->debugInterfaceC64)
+//		{
+//			viewC64->screenVicEditor->InitPaintGridColors();
+//		}
 		return;
 	}
 	else if (!strcmp(name, "PaintGridPixelsColorA"))
 	{
-		float v = *((float*)value);
-		c64SettingsPaintGridPixelsColorA = v;
-		if (viewC64->debugInterfaceC64)
-		{
-			viewC64->viewVicEditor->InitPaintGridColors();
-		}
-		return;
-	}
-	else if (!strcmp(name, "PaintGridShowZoomLevel"))
-	{
-		float v = *((float*)value);
-		c64SettingsPaintGridShowZoomLevel = v;
-		if (viewC64->debugInterfaceC64)
-		{
-			viewC64->viewVicEditor->InitPaintGridShowZoomLevel();
-		}
+		LOGTODO("C64SettingsStorage: PaintGridPixelsColor");
+//		float v = *((float*)value);
+//		c64SettingsPaintGridPixelsColorA = v;
+//		if (viewC64->debugInterfaceC64)
+//		{
+//			viewC64->screenVicEditor->InitPaintGridColors();
+//		}
 		return;
 	}
 	

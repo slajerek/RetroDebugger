@@ -79,55 +79,14 @@ CViewSnapshots::CViewSnapshots(float posX, float posY, float posZ, float sizeX, 
 	menuItemBack  = new CViewC64MenuItem(fontHeight*2.0f, new CSlrString("<< BACK"),
 										 NULL, tr, tg, tb);
 	viewMenu->AddMenuItem(menuItemBack);
-	
-//	LOGTODO("ATARI SNAPSHOTS SHORTCUTS");
 
-	kbsSaveSnapshot = new CSlrKeyboardShortcut(KBZONE_GLOBAL, "Save snapshot", 's', false, false, true, false, this);
-	guiMain->AddKeyboardShortcut(kbsSaveSnapshot);
-		
-	menuItemSaveSnapshot = new CViewC64MenuItem(fontHeight, new CSlrString("Save Snapshot"), kbsSaveSnapshot, tr, tg, tb);
+	menuItemSaveSnapshot = new CViewC64MenuItem(fontHeight, new CSlrString("Save Snapshot"), NULL, tr, tg, tb);
 	viewMenu->AddMenuItem(menuItemSaveSnapshot);
-	
-	kbsSaveSnapshot = new CSlrKeyboardShortcut(KBZONE_GLOBAL, "Save snapshot", 's', false, false, true, false, this);
-	kbsLoadSnapshot = new CSlrKeyboardShortcut(KBZONE_GLOBAL, "Load snapshot", 'd', false, false, true, false, this);
-	guiMain->AddKeyboardShortcut(kbsLoadSnapshot);
-
-	menuItemLoadSnapshot = new CViewC64MenuItem(fontHeight*2, new CSlrString("Load Snapshot"), kbsLoadSnapshot, tr, tg, tb);
+		
+	menuItemLoadSnapshot = new CViewC64MenuItem(fontHeight*2, new CSlrString("Load Snapshot"), NULL, tr, tg, tb);
 	viewMenu->AddMenuItem(menuItemLoadSnapshot);
 
-
-	// ctrl+shift+1,2,3... store snapshot
-	kbsStoreSnapshot1 = new CSlrKeyboardShortcut(KBZONE_GLOBAL, "Store snapshot #1", '1', true, false, true, false, this);
-	guiMain->AddKeyboardShortcut(kbsStoreSnapshot1);
-	kbsStoreSnapshot2 = new CSlrKeyboardShortcut(KBZONE_GLOBAL, "Store snapshot #2", '2', true, false, true, false, this);
-	guiMain->AddKeyboardShortcut(kbsStoreSnapshot2);
-	kbsStoreSnapshot3 = new CSlrKeyboardShortcut(KBZONE_GLOBAL, "Store snapshot #3", '3', true, false, true, false, this);
-	guiMain->AddKeyboardShortcut(kbsStoreSnapshot3);
-	kbsStoreSnapshot4 = new CSlrKeyboardShortcut(KBZONE_GLOBAL, "Store snapshot #4", '4', true, false, true, false, this);
-	guiMain->AddKeyboardShortcut(kbsStoreSnapshot4);
-	kbsStoreSnapshot5 = new CSlrKeyboardShortcut(KBZONE_GLOBAL, "Store snapshot #5", '5', true, false, true, false, this);
-	guiMain->AddKeyboardShortcut(kbsStoreSnapshot5);
-	kbsStoreSnapshot6 = new CSlrKeyboardShortcut(KBZONE_GLOBAL, "Store snapshot #6", '6', true, false, true, false, this);
-	guiMain->AddKeyboardShortcut(kbsStoreSnapshot6);
-	kbsStoreSnapshot7 = new CSlrKeyboardShortcut(KBZONE_GLOBAL, "Store snapshot #7", '7', true, false, true, false, this);
-	guiMain->AddKeyboardShortcut(kbsStoreSnapshot7);
-
-	// ctrl+1,2,3,... restore snapshot
-	kbsRestoreSnapshot1 = new CSlrKeyboardShortcut(KBZONE_GLOBAL, "Restore snapshot #1", '1', false, false, true, false, this);
-	guiMain->AddKeyboardShortcut(kbsRestoreSnapshot1);
-	kbsRestoreSnapshot2 = new CSlrKeyboardShortcut(KBZONE_GLOBAL, "Restore snapshot #2", '2', false, false, true, false, this);
-	guiMain->AddKeyboardShortcut(kbsRestoreSnapshot2);
-	kbsRestoreSnapshot3 = new CSlrKeyboardShortcut(KBZONE_GLOBAL, "Restore snapshot #3", '3', false, false, true, false, this);
-	guiMain->AddKeyboardShortcut(kbsRestoreSnapshot3);
-	kbsRestoreSnapshot4 = new CSlrKeyboardShortcut(KBZONE_GLOBAL, "Restore snapshot #4", '4', false, false, true, false, this);
-	guiMain->AddKeyboardShortcut(kbsRestoreSnapshot4);
-	kbsRestoreSnapshot5 = new CSlrKeyboardShortcut(KBZONE_GLOBAL, "Restore snapshot #5", '5', false, false, true, false, this);
-	guiMain->AddKeyboardShortcut(kbsRestoreSnapshot5);
-	kbsRestoreSnapshot6 = new CSlrKeyboardShortcut(KBZONE_GLOBAL, "Restore snapshot #6", '6', false, false, true, false, this);
-	guiMain->AddKeyboardShortcut(kbsRestoreSnapshot6);
-	kbsRestoreSnapshot7 = new CSlrKeyboardShortcut(KBZONE_GLOBAL, "Restore snapshot #7", '7', false, false, true, false, this);
-	guiMain->AddKeyboardShortcut(kbsRestoreSnapshot7);
-
+	
 	//
 	strStoreSnapshotText = new CSlrString("Quick store snapshot");
 	
@@ -150,97 +109,6 @@ CViewSnapshots::CViewSnapshots(float posX, float posY, float posZ, float sizeX, 
 
 CViewSnapshots::~CViewSnapshots()
 {
-}
-
-bool CViewSnapshots::ProcessKeyboardShortcut(u32 zone, u8 actionType, CSlrKeyboardShortcut *shortcut)
-{
-//	if (shortcut == KBFUN_SNAPSHOT_MENU)
-//	{
-//		SwitchSnapshotsScreen();
-//		return true;
-//	}
-//	else
-	if (shortcut == kbsSaveSnapshot)
-	{
-		OpenDialogSaveSnapshot();
-	}
-	else if (shortcut == kbsLoadSnapshot)
-	{
-		OpenDialogLoadSnapshot();
-	}
-	else if (shortcut == kbsStoreSnapshot1)
-	{
-		QuickStoreFullSnapshot(0);
-		return true;
-	}
-	else if (shortcut == kbsRestoreSnapshot1)
-	{
-		QuickRestoreFullSnapshot(0);
-		return true;
-	}
-	else if (shortcut == kbsStoreSnapshot2)
-	{
-		QuickStoreFullSnapshot(1);
-		return true;
-	}
-	else if (shortcut == kbsRestoreSnapshot2)
-	{
-		QuickRestoreFullSnapshot(1);
-		return true;
-	}
-	else if (shortcut == kbsStoreSnapshot3)
-	{
-		QuickStoreFullSnapshot(2);
-		return true;
-	}
-	else if (shortcut == kbsRestoreSnapshot3)
-	{
-		QuickRestoreFullSnapshot(2);
-		return true;
-	}
-	else if (shortcut == kbsStoreSnapshot4)
-	{
-		QuickStoreFullSnapshot(3);
-		return true;
-	}
-	else if (shortcut == kbsRestoreSnapshot4)
-	{
-		QuickRestoreFullSnapshot(3);
-		return true;
-	}
-	else if (shortcut == kbsStoreSnapshot5)
-	{
-		QuickStoreFullSnapshot(4);
-		return true;
-	}
-	else if (shortcut == kbsRestoreSnapshot5)
-	{
-		QuickRestoreFullSnapshot(4);
-		return true;
-	}
-	else if (shortcut == kbsStoreSnapshot6)
-	{
-		QuickStoreFullSnapshot(5);
-		return true;
-	}
-	else if (shortcut == kbsRestoreSnapshot6)
-	{
-		QuickRestoreFullSnapshot(5);
-		return true;
-	}
-	else if (shortcut == kbsStoreSnapshot7)
-	{
-		QuickStoreFullSnapshot(6);
-		return true;
-	}
-	else if (shortcut == kbsRestoreSnapshot7)
-	{
-		QuickRestoreFullSnapshot(6);
-		return true;
-	}
-	
-	return false;
-
 }
 
 void CViewSnapshots::QuickStoreFullSnapshot(int snapshotId)
@@ -617,7 +485,7 @@ void CViewSnapshots::LoadSnapshot(CSlrString *path, bool showMessage, CDebugInte
 		}
 		else
 		{
-			viewC64->ShowMessage("Snapshot file is not supported");
+			viewC64->ShowMessageError("Snapshot file is not supported");
 			return;
 		}
 	}
@@ -708,7 +576,7 @@ void CViewSnapshots::SaveSnapshot(CSlrString *path, CDebugInterface *debugInterf
 	
 	delete asciiPath;
 	
-	viewC64->ShowMessage("Snapshot saved");
+	viewC64->ShowMessageSuccess("Snapshot saved");
 }
 
 
@@ -917,8 +785,6 @@ void CViewSnapshots::DeactivateView()
 
 CSnapshotUpdateThread::CSnapshotUpdateThread()
 {
-	this->ThreadSetName("CSnapshotUpdateThread");
-	
 	this->snapshotLoadedTime = 0;
 	this->snapshotUpdatedTime = -1;
 }
@@ -926,6 +792,8 @@ CSnapshotUpdateThread::CSnapshotUpdateThread()
 // workaround for C64 Vice snapshot loading when machine is different than current
 void CSnapshotUpdateThread::ThreadRun(void *data)
 {
+	ThreadSetName("SnapshotUpdate");
+
 	LOGD("CSnapshotUpdateThread::ThreadRun");
 	
 	// come back t0 me to me

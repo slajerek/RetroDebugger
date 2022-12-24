@@ -61,8 +61,8 @@ void nesd_joystick_down(int port, uint32 axis);
 void nesd_joystick_up(int port, uint32 axis);
 
 void nesd_audio_callback(uint8 *stream, int numSamples);
-void nesd_sound_lock(char *whoLocked);
-void nesd_sound_unlock(char *whoLocked);
+void nesd_sound_lock(const char *whoLocked);
+void nesd_sound_unlock(const char *whoLocked);
 
 void nesd_reset_sync();
 

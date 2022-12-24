@@ -11,6 +11,7 @@ extern "C" {
 #include "CDebugInterfaceC64.h"
 #include "SYS_KeyCodes.h"
 #include "CViewWaveform.h"
+#include "CWaveformData.h"
 
 CViewC64SidPianoKeyboard::CViewC64SidPianoKeyboard(const char *name, float posX, float posY, float posZ, float sizeX, float sizeY, CPianoKeyboardCallback *callback)
 : CPianoKeyboard(name, posX, posY, posZ, sizeX, sizeY, callback)
@@ -65,7 +66,7 @@ void CViewC64SidPianoKeyboard::Render()
 		for (int chanNum = 0; chanNum < 3; chanNum++)
 		{
 			// check if channel is not muted
-			if (viewC64->viewC64StateSID->sidChannelWaveform[sidNum][chanNum]->isMuted)
+			if (viewC64->viewC64StateSID->viewChannelWaveform[sidNum][chanNum]->waveform->isMuted)
 				continue;
 			
 			u16 voiceBase = sidBase + chanNum * 0x07;

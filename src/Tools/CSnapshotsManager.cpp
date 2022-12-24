@@ -144,6 +144,7 @@ CStoredChipsSnapshot::CStoredChipsSnapshot(CSnapshotsManager *manager, u32 frame
 CStoredChipsSnapshot::CStoredChipsSnapshot(CSnapshotsManager *manager, CSlrFile *file)
 : CStoredSnapshot(manager, SNAPSHOT_TYPE_CHIPS)
 {
+	this->diskSnapshot = NULL;
 	RestoreFromFile(file);
 }
 
@@ -456,12 +457,20 @@ bool CSnapshotsManager::CheckSnapshotRestore()
 
 		// restore disk
 		CStoredDiskSnapshot *diskSnapshot = snapshotToRestore->diskSnapshot;
-		LOGS("!!!!!!!!!!!!!!!!!!!!!!!!     -> diskSnapshot frame=%d", diskSnapshot->frame);
-		debugInterface->LoadDiskDataSnapshotSynced(diskSnapshot->byteBuffer);
 		
-		// make all following chips snapshots use this diskSnapshot
-		currentDiskSnapshot = diskSnapshot;
+		// TODO: note, we *must* always have a disk snapshot. if disk snapshot is NULL that means there's a bug in storing code.
+		// my observation is that this might happen when a regular snapshot is restored, then the disk snapshot is missing.
+		// a solution for this is to completely skip emulator's snapshots and always use our own format.
 		
+		if (diskSnapshot != NULL)
+		{
+			LOGS("!!!!!!!!!!!!!!!!!!!!!!!!     -> diskSnapshot frame=%d", diskSnapshot->frame);
+			debugInterface->LoadDiskDataSnapshotSynced(diskSnapshot->byteBuffer);
+			
+			// make all following chips snapshots use this diskSnapshot
+			currentDiskSnapshot = diskSnapshot;
+		}
+				
 		// restore chips
 		debugInterface->LoadChipsSnapshotSynced(snapshotToRestore->byteBuffer);
 		
@@ -474,6 +483,7 @@ bool CSnapshotsManager::CheckSnapshotRestore()
 			isPerformingSnapshotRestore = false;
 		}
 
+		// TODO: WTF c64d_reset_sound_clk?   generalize
 		c64d_reset_sound_clk();
 		
 		gSoundEngine->UnlockMutex("CSnapshotsManager::CheckSnapshotRestore: restore snapshot");
@@ -492,6 +502,13 @@ bool CSnapshotsManager::CheckSnapshotRestore()
 }
 
 // @returns false=snapshot was not found, not possible to restore. cycleNum is optional, if -1 only frame will be searched.
+bool CSnapshotsManager::RestoreSnapshotByFrame(int frame)
+{
+	if (frame < 0)
+		return false;
+	return RestoreSnapshotByFrame(frame, -1, debugInterface->GetDebugMode());
+}
+
 bool CSnapshotsManager::RestoreSnapshotByFrame(int frame, long cycleNum)
 {
 	return RestoreSnapshotByFrame(frame, cycleNum, debugInterface->GetDebugMode());
@@ -616,12 +633,12 @@ bool CSnapshotsManager::RestoreSnapshotByFrame(int frame, long cycleNum, u8 targ
 //				debugInterface->SetDebugMode(DEBUGGER_MODE_PAUSED);
 //				isPerformingSnapshotRestore = false;
 //#else
-				// TODO BUG: this below does not work now and thus we can't restore to exact frame, TODO: allow restore to exact frame
+				//
 				// just run one cycle, we are already where we should be
 				skipFrameRender = true;
 				pauseNumCycle = -1;
 				
-				// BUG: note this may not restore correctly and sometimes may not stop at all when debug interface is doing messy things
+				// TODO maybe a bug: note this may not restore correctly and sometimes may not stop at all when debug interface is doing messy things  on some emu interfces, also above the cycle may be not right sometimes in some emus
 				pauseNumFrame = frame;
 				debugInterface->SetDebugMode(DEBUGGER_MODE_RUNNING);
 //#endif
@@ -664,7 +681,7 @@ bool CSnapshotsManager::IsPerformingSnapshotRestore()
 }
 
 // this is called by CDebugInterface when new input event is fired
-// result is CByteBuffer that can be filled with events and later replayed by CDebugInterface at given cycle
+// result is CByteBuffer that can be filled with events and later replayed by CDebugInterface at a given cycle
 // note: this creates/adds the CStoredInputEvent, so CDebugInterface will fill the required data after it is added
 CByteBuffer *CSnapshotsManager::StoreNewInputEventsSnapshotAtCurrentCycle()
 {
@@ -1131,7 +1148,7 @@ void CSnapshotsManager::SetRecordingIsActive(bool isActive)
 {
 	debugInterface->LockMutex();
 
-	this->ClearSnapshotsHistory();
+//	this->ClearSnapshotsHistory();
 	c64SettingsSnapshotsRecordIsActive = isActive;
 
 	debugInterface->UnlockMutex();
@@ -1144,7 +1161,6 @@ void CSnapshotsManager::SetRecordingStoreInterval(int recordingInterval)
 		recordingInterval = 1;
 	}
 	debugInterface->LockMutex();
-	this->ClearSnapshotsHistory();
 	c64SettingsSnapshotsIntervalNumFrames = recordingInterval;
 	debugInterface->UnlockMutex();
 }
@@ -1335,15 +1351,15 @@ float CSnapshotsManager::GetGuiViewProgressBarWindowValue(void *userData)
 	return progressStoreOrRestore;
 }
 
-void CSnapshotsManager::StoreTimelineToFile(CSlrString *filePath)
+void CSnapshotsManager::StoreTimelineToFile(CSlrString *timelineFilePath)
 {
-	const char *cFilePath = filePath->GetStdASCII();
+	const char *cFilePath = timelineFilePath->GetStdASCII();
 	LOGM("CSnapshotsManager::StoreTimelineToFile: %s", cFilePath);
 	
 	progressStoreOrRestore = 0.0f;
 	u8 prevDebugMode = debugInterface->SetDebugModeBlockedWait(DEBUGGER_MODE_PAUSED);
 	
-	CSlrFileFromOS *file = new CSlrFileFromOS(filePath, SLR_FILE_MODE_WRITE);
+	CSlrFileFromOS *file = new CSlrFileFromOS(timelineFilePath, SLR_FILE_MODE_WRITE);
 	file->WriteU32(RDTL_MAGIC);
 	file->WriteU16(RDTL_VERSION);
 	
@@ -1361,16 +1377,18 @@ void CSnapshotsManager::StoreTimelineToFile(CSlrString *filePath)
 	progressCurrentSnapshot = 0;
 
 	// show progress bar
-	guiMain->LockMutex();
-	guiMain->AddView(viewC64->viewProgressBarWindow);
-	char *progressBarWindowTitle = SYS_GetCharBuf();
-	sprintf(progressBarWindowTitle, "Save %s Timeline", debugInterface->GetPlatformNameString());
-	viewC64->viewProgressBarWindow->ShowProgressBar(progressBarWindowTitle, debugInterface->snapshotsManager);
-	guiMain->UnlockMutex();
-	
+	CSlrString *fileName = timelineFilePath->GetFileNameComponentFromPath();
+	char *cFileName = fileName->GetStdASCII();
 
+	char *progressBarWindowTitle = SYS_GetCharBuf();
+	sprintf(progressBarWindowTitle, "Save %s Timeline: %s", debugInterface->GetPlatformNameString(), cFileName);
+	viewC64->viewProgressBarWindow->ShowProgressBar(progressBarWindowTitle, debugInterface->snapshotsManager);
+
+	STRFREE(cFileName);
+	delete fileName;
+	
 	// store timeline snapshots as compressed zlib stream
-	CSlrFileZlib *zlibFile = new CSlrFileZlib(file, Z_BEST_SPEED);
+	CSlrFileZlib *zlibFile = new CSlrFileZlib(file, c64SettingsTimelineSaveZlibCompressionLevel);
 
 	StoreTimelineSnapshotsToFile(zlibFile);
 	
@@ -1378,13 +1396,10 @@ void CSnapshotsManager::StoreTimelineToFile(CSlrString *filePath)
 	delete file;
 	
 	LOGM("CSnapshotsManager::StoreTimelineToFile done: %s", cFilePath);
-	delete [] cFilePath;
+	STRFREE(cFilePath);
 
 	// hide progress bar
-	guiMain->LockMutex();
 	viewC64->viewProgressBarWindow->HideProgressBar();
-	guiMain->RemoveView(viewC64->viewProgressBarWindow);
-	guiMain->UnlockMutex();
 
 	debugInterface->SetDebugMode(prevDebugMode);
 	
@@ -1431,12 +1446,15 @@ bool CSnapshotsManager::RestoreTimelineFromFile(CSlrString *timelineFilePath)
 	}
 
 	// show progress bar
-	guiMain->LockMutex();
-	guiMain->AddView(viewC64->viewProgressBarWindow);
+	CSlrString *fileName = timelineFilePath->GetFileNameComponentFromPath();
+	char *cFileName = fileName->GetStdASCII();
+	
 	char *progressBarWindowTitle = SYS_GetCharBuf();
-	sprintf(progressBarWindowTitle, "Load %s Timeline", debugInterface->GetPlatformNameString());
+	sprintf(progressBarWindowTitle, "Load %s Timeline: %s", debugInterface->GetPlatformNameString(), cFileName);
 	viewC64->viewProgressBarWindow->ShowProgressBar(progressBarWindowTitle, debugInterface->snapshotsManager);
-	guiMain->UnlockMutex();
+	
+	STRFREE(cFileName);
+	delete fileName;
 	
 	//
 	u32 readTimelineFrameNumber = file->ReadU32();
@@ -1464,10 +1482,7 @@ bool CSnapshotsManager::RestoreTimelineFromFile(CSlrString *timelineFilePath)
 	LOGM("CViewC64::LoadTimeline: Rewind emulation to timeline cycle=%d", readTimelineCpuCycle);
 	
 	// hide progress bar
-	guiMain->LockMutex();
 	viewC64->viewProgressBarWindow->HideProgressBar();
-	guiMain->RemoveView(viewC64->viewProgressBarWindow);
-	guiMain->UnlockMutex();
 
 	debugInterface->snapshotsManager->RestoreSnapshotByCycle(readTimelineCpuCycle, prevDebugMode);
 		

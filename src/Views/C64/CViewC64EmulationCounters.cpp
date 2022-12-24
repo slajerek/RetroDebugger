@@ -23,8 +23,10 @@ CViewC64EmulationCounters::CViewC64EmulationCounters(const char *name, float pos
 {
 	this->debugInterface = debugInterface;
 	
-	fontSize = 7.0f;
-	
+	imGuiNoWindowPadding = true;
+	imGuiNoScrollbar = true;
+
+	fontSize = 7.0f;	
 	fontBytes = viewC64->fontDisassembly;
 	
 	this->SetPosition(posX, posY, posZ, sizeX, sizeY);

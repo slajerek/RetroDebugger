@@ -3,8 +3,8 @@
 
 #include "SYS_Defs.h"
 
-class CViewVicEditor;
+class CViewC64VicEditor;
 
-void C64GenerateDisplayListCode(CViewVicEditor *vicEditor);
+void C64GenerateDisplayListCode(CViewC64VicEditor *vicEditor);
 
 #endif

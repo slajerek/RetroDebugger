@@ -562,3 +562,12 @@ unsigned int Sound_NextPow2(unsigned int num)
 		result <<= 1;
 	return result;
 }
+
+void atrd_reset_av_sync()
+{
+#ifdef SYNCHRONIZED_SOUND
+/*		sync_write_pos = sync_read_pos + sync_min_fill;
+		avg_fill = sync_min_fill;*/
+		last_audio_write_time = Util_time();
+#endif /* SYNCHRONIZED_SOUND */
+}

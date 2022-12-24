@@ -231,8 +231,20 @@
     <Filter Include="Source Files\src\DebugInterface\C64">
       <UniqueIdentifier>{0690dda0-2e4f-4e5d-a2d5-5373b635933e}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source Files\src\Emulators\atari800\codecs">
-      <UniqueIdentifier>{a7f8022c-4a17-44a3-b3d5-947b198c2261}</UniqueIdentifier>
+    <Filter Include="Source Files\src\Tools\asap">
+      <UniqueIdentifier>{3208a681-9cb4-4339-8f75-93ea6b5d8db3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\src\Views\C64\VicEditor">
+      <UniqueIdentifier>{7a655d66-52ca-4dba-ad47-d810ed94fbfb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\src\Views\C64\VicEditor\Layers">
+      <UniqueIdentifier>{d2d94f3b-f9cc-4ab3-8acd-a36a813eea07}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\src\DebugInterface\MenuItems">
+      <UniqueIdentifier>{428399f4-5412-420c-8e9a-0acadf00b49a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\src\Views\C64\AllGraphics">
+      <UniqueIdentifier>{f74b295e-af56-4718-a9c6-008a7ce63ea0}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -2027,57 +2039,6 @@
     <ClCompile Include="..\..\..\src\Screens\CViewSnapshots.cpp">
       <Filter>Source Files\src\Screens</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\src\Screens\VicEditor\C64DisplayListCodeGenerator.cpp">
-      <Filter>Source Files\src\Screens\VicEditor</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\Screens\VicEditor\CVicEditorLayer.cpp">
-      <Filter>Source Files\src\Screens\VicEditor</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\Screens\VicEditor\CVicEditorLayerC64Canvas.cpp">
-      <Filter>Source Files\src\Screens\VicEditor</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\Screens\VicEditor\CVicEditorLayerC64Screen.cpp">
-      <Filter>Source Files\src\Screens\VicEditor</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\Screens\VicEditor\CVicEditorLayerC64Sprites.cpp">
-      <Filter>Source Files\src\Screens\VicEditor</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\Screens\VicEditor\CVicEditorLayerImage.cpp">
-      <Filter>Source Files\src\Screens\VicEditor</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\Screens\VicEditor\CVicEditorLayerUnrestrictedBitmap.cpp">
-      <Filter>Source Files\src\Screens\VicEditor</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\Screens\VicEditor\CVicEditorLayerVirtualSprites.cpp">
-      <Filter>Source Files\src\Screens\VicEditor</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\Screens\VicEditor\CVicEditorTool.cpp">
-      <Filter>Source Files\src\Screens\VicEditor</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\Screens\VicEditor\CVicEditorUndoData.cpp">
-      <Filter>Source Files\src\Screens\VicEditor</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\Screens\VicEditor\CViewC64Charset.cpp">
-      <Filter>Source Files\src\Screens\VicEditor</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\Screens\VicEditor\CViewC64Palette.cpp">
-      <Filter>Source Files\src\Screens\VicEditor</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\Screens\VicEditor\CViewC64Sprite.cpp">
-      <Filter>Source Files\src\Screens\VicEditor</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\Screens\VicEditor\CViewVicEditor.cpp">
-      <Filter>Source Files\src\Screens\VicEditor</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\Screens\VicEditor\CViewVicEditorCreateNewPicture.cpp">
-      <Filter>Source Files\src\Screens\VicEditor</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\Screens\VicEditor\CViewVicEditorDisplayPreview.cpp">
-      <Filter>Source Files\src\Screens\VicEditor</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\Screens\VicEditor\CViewVicEditorLayers.cpp">
-      <Filter>Source Files\src\Screens\VicEditor</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\..\src\Tools\C64ColodoreScreen.cpp">
       <Filter>Source Files\src\Tools</Filter>
     </ClCompile>
@@ -2422,9 +2383,6 @@
     </ClCompile>
     <ClCompile Include="..\..\..\src\Views\Nes\CViewNesStatePPU.cpp">
       <Filter>Source Files\src\Views\Nes</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\Views\C64\CViewC64AllGraphics.cpp">
-      <Filter>Source Files\src\Views\C64</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\Views\C64\CViewC64EmulationCounters.cpp">
       <Filter>Source Files\src\Views\C64</Filter>
@@ -3353,9 +3311,6 @@
     <ClCompile Include="..\..\..\src\Tools\TextEditor\TextEditor.cpp">
       <Filter>Source Files\src\Tools\TextEditor</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\src\Views\CViewWaveform.cpp">
-      <Filter>Source Files\src\Views</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\..\src\Views\C64\CViewC64MemoryDebuggerLayoutToolbar.cpp">
       <Filter>Source Files\src\Views\C64</Filter>
     </ClCompile>
@@ -3719,65 +3674,116 @@
     <ClCompile Include="..\..\..\src\Views\C64\CViewC64ScreenViewfinder.cpp">
       <Filter>Source Files\src\Views\C64</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\src\Emulators\atari800\codecs\a-codecs-audio.c">
-      <Filter>Source Files\src\Emulators\atari800\codecs</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\Emulators\atari800\codecs\a-codecs-container.c">
-      <Filter>Source Files\src\Emulators\atari800\codecs</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\Emulators\atari800\codecs\a-codecs-image.c">
-      <Filter>Source Files\src\Emulators\atari800\codecs</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\Emulators\atari800\codecs\a-codecs-video.c">
-      <Filter>Source Files\src\Emulators\atari800\codecs</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\Emulators\atari800\codecs\audio_adpcm.c">
-      <Filter>Source Files\src\Emulators\atari800\codecs</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\Emulators\atari800\codecs\audio_mp3.c">
-      <Filter>Source Files\src\Emulators\atari800\codecs</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\Emulators\atari800\codecs\audio_mulaw.c">
-      <Filter>Source Files\src\Emulators\atari800\codecs</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\Emulators\atari800\codecs\audio_pcm.c">
-      <Filter>Source Files\src\Emulators\atari800\codecs</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\Emulators\atari800\codecs\container_avi.c">
-      <Filter>Source Files\src\Emulators\atari800\codecs</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\Emulators\atari800\codecs\container_mp3.c">
-      <Filter>Source Files\src\Emulators\atari800\codecs</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\Emulators\atari800\codecs\container_wav.c">
-      <Filter>Source Files\src\Emulators\atari800\codecs</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\Emulators\atari800\codecs\image_pcx.c">
-      <Filter>Source Files\src\Emulators\atari800\codecs</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\Emulators\atari800\codecs\image_png.c">
-      <Filter>Source Files\src\Emulators\atari800\codecs</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\Emulators\atari800\codecs\video_mpng.c">
-      <Filter>Source Files\src\Emulators\atari800\codecs</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\Emulators\atari800\codecs\video_mrle.c">
-      <Filter>Source Files\src\Emulators\atari800\codecs</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\Emulators\atari800\codecs\video_zmbv.c">
-      <Filter>Source Files\src\Emulators\atari800\codecs</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\..\src\Emulators\nestopiaue\core\board\NstBoardWaixingFs304.cpp">
       <Filter>Source Files\src\Emulators\nestopiaue\core\board</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\Emulators\nestopiaue\core\board\NstBoardNamcot340.cpp">
       <Filter>Source Files\src\Emulators\nestopiaue\core\board</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\src\Emulators\atari800\cartridge_info.c">
-      <Filter>Source Files\src\Emulators\atari800</Filter>
+    <ClCompile Include="..\..\..\src\Tools\asap\asap.c">
+      <Filter>Source Files\src\Tools\asap</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\src\Emulators\atari800\file_export.c">
-      <Filter>Source Files\src\Emulators\atari800</Filter>
+    <ClCompile Include="..\..\..\src\Tools\asap\AtariAsap.cpp">
+      <Filter>Source Files\src\Tools\asap</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Views\C64\VicEditor\CVicEditorUndoData.cpp">
+      <Filter>Source Files\src\Views\C64\VicEditor</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Views\C64\VicEditor\CViewC64Charset.cpp">
+      <Filter>Source Files\src\Views\C64\VicEditor</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Views\C64\VicEditor\CViewC64Palette.cpp">
+      <Filter>Source Files\src\Views\C64\VicEditor</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Views\C64\VicEditor\CViewC64Sprite.cpp">
+      <Filter>Source Files\src\Views\C64\VicEditor</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Views\C64\VicEditor\Layers\CVicEditorLayer.cpp">
+      <Filter>Source Files\src\Views\C64\VicEditor\Layers</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Views\C64\VicEditor\Layers\CVicEditorLayerC64Canvas.cpp">
+      <Filter>Source Files\src\Views\C64\VicEditor\Layers</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Views\C64\VicEditor\Layers\CVicEditorLayerC64Screen.cpp">
+      <Filter>Source Files\src\Views\C64\VicEditor\Layers</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Views\C64\VicEditor\Layers\CVicEditorLayerC64Sprites.cpp">
+      <Filter>Source Files\src\Views\C64\VicEditor\Layers</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Views\C64\VicEditor\Layers\CVicEditorLayerImage.cpp">
+      <Filter>Source Files\src\Views\C64\VicEditor\Layers</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Views\C64\VicEditor\Layers\CVicEditorLayerUnrestrictedBitmap.cpp">
+      <Filter>Source Files\src\Views\C64\VicEditor\Layers</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Views\C64\VicEditor\Layers\CVicEditorLayerVirtualSprites.cpp">
+      <Filter>Source Files\src\Views\C64\VicEditor\Layers</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Screens\VicEditor\C64DisplayListCodeGenerator.cpp">
+      <Filter>Source Files\src\Screens\VicEditor</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Screens\VicEditor\CVicEditorTool.cpp">
+      <Filter>Source Files\src\Screens\VicEditor</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\DebugInterface\MenuItems\CDebugInterfaceMenuItem.cpp">
+      <Filter>Source Files\src\DebugInterface\MenuItems</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\DebugInterface\MenuItems\CDebugInterfaceMenuItemFolder.cpp">
+      <Filter>Source Files\src\DebugInterface\MenuItems</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\DebugInterface\MenuItems\CDebugInterfaceMenuItemView.cpp">
+      <Filter>Source Files\src\DebugInterface\MenuItems</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Views\C64\VicEditor\CVicEditorBrush.cpp">
+      <Filter>Source Files\src\Views\C64\VicEditor</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Views\C64\VicEditor\CViewC64VicEditor.cpp">
+      <Filter>Source Files\src\Views\C64\VicEditor</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Views\C64\VicEditor\CViewC64VicEditorCreateNewPicture.cpp">
+      <Filter>Source Files\src\Views\C64\VicEditor</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Views\C64\VicEditor\CViewC64VicEditorDisplayPreview.cpp">
+      <Filter>Source Files\src\Views\C64\VicEditor</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Views\C64\VicEditor\CViewC64VicEditorPreview.cpp">
+      <Filter>Source Files\src\Views\C64\VicEditor</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Views\C64\VicEditor\Layers\CViewC64VicEditorLayers.cpp">
+      <Filter>Source Files\src\Views\C64\VicEditor\Layers</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Views\C64\CViewDrive1541Led.cpp">
+      <Filter>Source Files\src\Views\C64</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Views\C64\CViewC64ColorRamScreen.cpp">
+      <Filter>Source Files\src\Views</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Views\C64\AllGraphics\CViewC64AllGraphics.cpp">
+      <Filter>Source Files\src\Views\C64\AllGraphics</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Views\C64\AllGraphics\CViewC64AllGraphicsBitmaps.cpp">
+      <Filter>Source Files\src\Views\C64\AllGraphics</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Views\C64\AllGraphics\CViewC64AllGraphicsCharsets.cpp">
+      <Filter>Source Files\src\Views\C64\AllGraphics</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Views\C64\AllGraphics\CViewC64AllGraphicsScreens.cpp">
+      <Filter>Source Files\src\Views\C64\AllGraphics</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Views\C64\AllGraphics\CViewC64AllGraphicsSprites.cpp">
+      <Filter>Source Files\src\Views\C64\AllGraphics</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Views\C64\AllGraphics\CViewC64AllGraphicsBitmapsControl.cpp">
+      <Filter>Source Files\src\Views\C64\AllGraphics</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Views\C64\AllGraphics\CViewC64AllGraphicsCharsetsControl.cpp">
+      <Filter>Source Files\src\Views\C64\AllGraphics</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Views\C64\AllGraphics\CViewC64AllGraphicsScreensControl.cpp">
+      <Filter>Source Files\src\Views\C64\AllGraphics</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Views\C64\AllGraphics\CViewC64AllGraphicsSpritesControl.cpp">
+      <Filter>Source Files\src\Views\C64\AllGraphics</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -5812,57 +5818,6 @@
     <ClInclude Include="..\..\..\src\Screens\CViewSnapshots.h">
       <Filter>Source Files\src\Screens</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\src\Screens\VicEditor\C64DisplayListCodeGenerator.h">
-      <Filter>Source Files\src\Screens\VicEditor</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\src\Screens\VicEditor\CVicEditorLayer.h">
-      <Filter>Source Files\src\Screens\VicEditor</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\src\Screens\VicEditor\CVicEditorLayerC64Canvas.h">
-      <Filter>Source Files\src\Screens\VicEditor</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\src\Screens\VicEditor\CVicEditorLayerC64Screen.h">
-      <Filter>Source Files\src\Screens\VicEditor</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\src\Screens\VicEditor\CVicEditorLayerC64Sprites.h">
-      <Filter>Source Files\src\Screens\VicEditor</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\src\Screens\VicEditor\CVicEditorLayerImage.h">
-      <Filter>Source Files\src\Screens\VicEditor</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\src\Screens\VicEditor\CVicEditorLayerUnrestrictedBitmap.h">
-      <Filter>Source Files\src\Screens\VicEditor</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\src\Screens\VicEditor\CVicEditorLayerVirtualSprites.h">
-      <Filter>Source Files\src\Screens\VicEditor</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\src\Screens\VicEditor\CVicEditorTool.h">
-      <Filter>Source Files\src\Screens\VicEditor</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\src\Screens\VicEditor\CVicEditorUndoData.h">
-      <Filter>Source Files\src\Screens\VicEditor</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\src\Screens\VicEditor\CViewC64Charset.h">
-      <Filter>Source Files\src\Screens\VicEditor</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\src\Screens\VicEditor\CViewC64Palette.h">
-      <Filter>Source Files\src\Screens\VicEditor</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\src\Screens\VicEditor\CViewC64Sprite.h">
-      <Filter>Source Files\src\Screens\VicEditor</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\src\Screens\VicEditor\CViewVicEditor.h">
-      <Filter>Source Files\src\Screens\VicEditor</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\src\Screens\VicEditor\CViewVicEditorCreateNewPicture.h">
-      <Filter>Source Files\src\Screens\VicEditor</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\src\Screens\VicEditor\CViewVicEditorDisplayPreview.h">
-      <Filter>Source Files\src\Screens\VicEditor</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\src\Screens\VicEditor\CViewVicEditorLayers.h">
-      <Filter>Source Files\src\Screens\VicEditor</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\..\src\Tools\C64ColodoreScreen.h">
       <Filter>Source Files\src\Tools</Filter>
     </ClInclude>
@@ -6297,9 +6252,6 @@
     </ClInclude>
     <ClInclude Include="..\..\..\src\Views\Nes\CViewNesStatePPU.h">
       <Filter>Source Files\src\Views\Nes</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\src\Views\C64\CViewC64AllGraphics.h">
-      <Filter>Source Files\src\Views\C64</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\src\Views\C64\CViewC64EmulationCounters.h">
       <Filter>Source Files\src\Views\C64</Filter>
@@ -7333,9 +7285,6 @@
     <ClInclude Include="..\..\..\src\Tools\TextEditor\TextEditor.h">
       <Filter>Source Files\src\Tools\TextEditor</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\src\Views\CViewWaveform.h">
-      <Filter>Source Files\src\Views</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\..\src\Embedded\icon_tool_on_top_off_gfx.h">
       <Filter>Source Files\src\Embedded</Filter>
     </ClInclude>
@@ -7732,65 +7681,119 @@
     <ClInclude Include="..\..\..\src\Views\C64\CViewC64ScreenViewfinder.h">
       <Filter>Source Files\src\Views\C64</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\src\Emulators\atari800\codecs\a-codecs-audio.h">
-      <Filter>Source Files\src\Emulators\atari800\codecs</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\src\Emulators\atari800\codecs\a-codecs-container.h">
-      <Filter>Source Files\src\Emulators\atari800\codecs</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\src\Emulators\atari800\codecs\a-codecs-image.h">
-      <Filter>Source Files\src\Emulators\atari800\codecs</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\src\Emulators\atari800\codecs\a-codecs-video.h">
-      <Filter>Source Files\src\Emulators\atari800\codecs</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\src\Emulators\atari800\codecs\audio_adpcm.h">
-      <Filter>Source Files\src\Emulators\atari800\codecs</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\src\Emulators\atari800\codecs\audio_mp3.h">
-      <Filter>Source Files\src\Emulators\atari800\codecs</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\src\Emulators\atari800\codecs\audio_mulaw.h">
-      <Filter>Source Files\src\Emulators\atari800\codecs</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\src\Emulators\atari800\codecs\audio_pcm.h">
-      <Filter>Source Files\src\Emulators\atari800\codecs</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\src\Emulators\atari800\codecs\container_avi.h">
-      <Filter>Source Files\src\Emulators\atari800\codecs</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\src\Emulators\atari800\codecs\container_mp3.h">
-      <Filter>Source Files\src\Emulators\atari800\codecs</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\src\Emulators\atari800\codecs\container_wav.h">
-      <Filter>Source Files\src\Emulators\atari800\codecs</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\src\Emulators\atari800\codecs\image_pcx.h">
-      <Filter>Source Files\src\Emulators\atari800\codecs</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\src\Emulators\atari800\codecs\image_png.h">
-      <Filter>Source Files\src\Emulators\atari800\codecs</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\src\Emulators\atari800\codecs\video_mpng.h">
-      <Filter>Source Files\src\Emulators\atari800\codecs</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\src\Emulators\atari800\codecs\video_mrle.h">
-      <Filter>Source Files\src\Emulators\atari800\codecs</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\src\Emulators\atari800\codecs\video_zmbv.h">
-      <Filter>Source Files\src\Emulators\atari800\codecs</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\..\src\Emulators\nestopiaue\core\board\NstBoardWaixingFs304.hpp">
       <Filter>Source Files\src\Emulators\nestopiaue\core\board</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\src\Emulators\nestopiaue\core\board\NstBoardNamcot340.hpp">
       <Filter>Source Files\src\Emulators\nestopiaue\core\board</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\src\Emulators\atari800\cartridge_info.h">
-      <Filter>Source Files\src\Emulators\atari800</Filter>
+    <ClInclude Include="..\..\..\src\Tools\asap\asap.h">
+      <Filter>Source Files\src\Tools\asap</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\src\Emulators\atari800\file_export.h">
-      <Filter>Source Files\src\Emulators\atari800</Filter>
+    <ClInclude Include="..\..\..\src\Tools\asap\AtariAsap.h">
+      <Filter>Source Files\src\Tools\asap</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Views\C64\VicEditor\CVicEditorUndoData.h">
+      <Filter>Source Files\src\Views\C64\VicEditor</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Views\C64\VicEditor\CViewC64Charset.h">
+      <Filter>Source Files\src\Views\C64\VicEditor</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Views\C64\VicEditor\CViewC64Palette.h">
+      <Filter>Source Files\src\Views\C64\VicEditor</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Views\C64\VicEditor\CViewC64Sprite.h">
+      <Filter>Source Files\src\Views\C64\VicEditor</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Views\C64\VicEditor\Layers\CVicEditorLayer.h">
+      <Filter>Source Files\src\Views\C64\VicEditor\Layers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Views\C64\VicEditor\Layers\CVicEditorLayerC64Canvas.h">
+      <Filter>Source Files\src\Views\C64\VicEditor\Layers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Views\C64\VicEditor\Layers\CVicEditorLayerC64Screen.h">
+      <Filter>Source Files\src\Views\C64\VicEditor\Layers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Views\C64\VicEditor\Layers\CVicEditorLayerC64Sprites.h">
+      <Filter>Source Files\src\Views\C64\VicEditor\Layers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Views\C64\VicEditor\Layers\CVicEditorLayerImage.h">
+      <Filter>Source Files\src\Views\C64\VicEditor\Layers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Views\C64\VicEditor\Layers\CVicEditorLayerUnrestrictedBitmap.h">
+      <Filter>Source Files\src\Views\C64\VicEditor\Layers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Views\C64\VicEditor\Layers\CVicEditorLayerVirtualSprites.h">
+      <Filter>Source Files\src\Views\C64\VicEditor\Layers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Screens\VicEditor\C64DisplayListCodeGenerator.h">
+      <Filter>Source Files\src\Screens\VicEditor</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Screens\VicEditor\CVicEditorTool.h">
+      <Filter>Source Files\src\Screens\VicEditor</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\DebugInterface\MenuItems\CDebugInterfaceMenuItem.h">
+      <Filter>Source Files\src\DebugInterface\MenuItems</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\DebugInterface\MenuItems\CDebugInterfaceMenuItemFolder.h">
+      <Filter>Source Files\src\DebugInterface\MenuItems</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\DebugInterface\MenuItems\CDebugInterfaceMenuItemView.h">
+      <Filter>Source Files\src\DebugInterface\MenuItems</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Views\C64\VicEditor\CVicEditorBrush.h">
+      <Filter>Source Files\src\Views\C64\VicEditor</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Views\C64\VicEditor\CViewC64VicEditor.h">
+      <Filter>Source Files\src\Views\C64\VicEditor</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Views\C64\VicEditor\CViewC64VicEditorCreateNewPicture.h">
+      <Filter>Source Files\src\Views\C64\VicEditor</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Views\C64\VicEditor\CViewC64VicEditorDisplayPreview.h">
+      <Filter>Source Files\src\Views\C64\VicEditor</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Views\C64\VicEditor\CViewC64VicEditorPreview.h">
+      <Filter>Source Files\src\Views\C64\VicEditor</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Views\C64\VicEditor\Layers\CViewC64VicEditorLayers.h">
+      <Filter>Source Files\src\Views\C64\VicEditor\Layers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Emulators\EmulatorsConfig.h">
+      <Filter>Source Files\src\Emulators</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Views\C64\CViewDrive1541Led.h">
+      <Filter>Source Files\src\Views\C64</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Views\C64\CViewC64ColorRamScreen.h">
+      <Filter>Source Files\src\Views</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Views\C64\AllGraphics\CViewC64AllGraphics.h">
+      <Filter>Source Files\src\Views\C64\AllGraphics</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Views\C64\AllGraphics\CViewC64AllGraphicsBitmaps.h">
+      <Filter>Source Files\src\Views\C64\AllGraphics</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Views\C64\AllGraphics\CViewC64AllGraphicsCharsets.h">
+      <Filter>Source Files\src\Views\C64\AllGraphics</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Views\C64\AllGraphics\CViewC64AllGraphicsScreens.h">
+      <Filter>Source Files\src\Views\C64\AllGraphics</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Views\C64\AllGraphics\CViewC64AllGraphicsSprites.h">
+      <Filter>Source Files\src\Views\C64\AllGraphics</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Views\C64\AllGraphics\CViewC64AllGraphicsBitmapsControl.h">
+      <Filter>Source Files\src\Views\C64\AllGraphics</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Views\C64\AllGraphics\CViewC64AllGraphicsCharsetsControl.h">
+      <Filter>Source Files\src\Views\C64\AllGraphics</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Views\C64\AllGraphics\CViewC64AllGraphicsScreensControl.h">
+      <Filter>Source Files\src\Views\C64\AllGraphics</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Views\C64\AllGraphics\CViewC64AllGraphicsSpritesControl.h">
+      <Filter>Source Files\src\Views\C64\AllGraphics</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

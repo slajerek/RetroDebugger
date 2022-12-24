@@ -34,8 +34,8 @@ public:
 	
 	virtual void SetElement(int elementNum, bool updatePosition, bool runCallback);
 
-	virtual bool IsFocusable();
-	virtual bool SetFocus();
+	virtual bool IsFocusableElement();
+	virtual bool WillReceiveFocus();
 	
 	virtual void SetListLocked(bool isLocked);
 };

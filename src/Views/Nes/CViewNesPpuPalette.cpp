@@ -1,4 +1,4 @@
-#include "C64D_Version.h"
+#include "EmulatorsConfig.h"
 
 #include "NstApiMachine.hpp"
 #include "NstMachine.hpp"
@@ -26,6 +26,9 @@ CViewNesPpuPalette::CViewNesPpuPalette(const char *name, float posX, float posY,
 {
 	this->debugInterface = debugInterface;
 	
+	imGuiNoWindowPadding = true;
+	imGuiNoScrollbar = true;
+
 	this->showGridLines = true;
 	
 	this->SetPosition(posX, posY, posZ, sizeX, sizeY);

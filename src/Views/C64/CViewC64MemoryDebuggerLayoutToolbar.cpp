@@ -1,3 +1,5 @@
+// NOTE THIS IS TO BE DELETED
+
 #include "CViewC64MemoryDebuggerLayoutToolbar.h"
 #include "GUI_Main.h"
 #include "CDebugInterface.h"
@@ -148,24 +150,24 @@ void CViewC64MemoryDebuggerLayoutToolbar::UpdateStateFromButtons()
 	{
 		if (viewC64->viewDrive1541Disassembly->HasFocus())
 		{
-			viewC64->SetFocus(viewC64->viewC64Disassembly);
+			guiMain->SetFocus(viewC64->viewC64Disassembly);
 		}
 		
 		if (viewC64->viewDrive1541MemoryDataDump->HasFocus())
 		{
-			viewC64->SetFocus(viewC64->viewC64MemoryDataDump);
+			guiMain->SetFocus(viewC64->viewC64MemoryDataDump);
 		}
 	}
 	else
 	{
 		if (viewC64->viewC64Disassembly->HasFocus())
 		{
-			viewC64->SetFocus(viewC64->viewDrive1541Disassembly);
+			guiMain->SetFocus(viewC64->viewDrive1541Disassembly);
 		}
 		
 		if (viewC64->viewC64MemoryDataDump->HasFocus())
 		{
-			viewC64->SetFocus(viewC64->viewDrive1541MemoryDataDump);
+			guiMain->SetFocus(viewC64->viewDrive1541MemoryDataDump);
 		}
 	}
 
@@ -173,24 +175,24 @@ void CViewC64MemoryDebuggerLayoutToolbar::UpdateStateFromButtons()
 	{
 		if (viewC64->viewDrive1541Disassembly2->HasFocus())
 		{
-			viewC64->SetFocus(viewC64->viewC64Disassembly2);
+			guiMain->SetFocus(viewC64->viewC64Disassembly2);
 		}
 		
 		if (viewC64->viewDrive1541MemoryDataDump2->HasFocus())
 		{
-			viewC64->SetFocus(viewC64->viewC64MemoryDataDump2);
+			guiMain->SetFocus(viewC64->viewC64MemoryDataDump2);
 		}
 	}
 	else
 	{
 		if (viewC64->viewC64Disassembly2->HasFocus())
 		{
-			viewC64->SetFocus(viewC64->viewDrive1541Disassembly2);
+			guiMain->SetFocus(viewC64->viewDrive1541Disassembly2);
 		}
 		
 		if (viewC64->viewC64MemoryDataDump2->HasFocus())
 		{
-			viewC64->SetFocus(viewC64->viewDrive1541MemoryDataDump2);
+			guiMain->SetFocus(viewC64->viewDrive1541MemoryDataDump2);
 		}
 	}
 
@@ -198,14 +200,14 @@ void CViewC64MemoryDebuggerLayoutToolbar::UpdateStateFromButtons()
 	{
 		if (viewC64->viewDrive1541MemoryDataDump3->HasFocus())
 		{
-			viewC64->SetFocus(viewC64->viewC64MemoryDataDump3);
+			guiMain->SetFocus(viewC64->viewC64MemoryDataDump3);
 		}
 	}
 	else
 	{
 		if (viewC64->viewC64MemoryDataDump3->HasFocus())
 		{
-			viewC64->SetFocus(viewC64->viewDrive1541MemoryDataDump3);
+			guiMain->SetFocus(viewC64->viewDrive1541MemoryDataDump3);
 		}
 	}
 }
@@ -321,7 +323,7 @@ bool CViewC64MemoryDebuggerLayoutToolbar::KeyPressed(u32 keyCode, bool isShift, 
 	return CGuiView::KeyPressed(keyCode, isShift, isAlt, isControl, isSuper);
 }
 
-bool CViewC64MemoryDebuggerLayoutToolbar::IsFocusable()
+bool CViewC64MemoryDebuggerLayoutToolbar::IsFocusableElement()
 {
 	return false;
 }

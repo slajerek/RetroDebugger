@@ -846,14 +846,7 @@ void CopyHiresCharsetToImage(u8 *charsetData, CImageData *imageData, int numColu
 			chy += 8;
 		}
 	}
-	
-	// don't ask me why - there's a bug in macos engine part waiting to be fixed
-//#if !defined(WIN32) && !defined(LINUX)
-	imageData->FlipVertically();
-//#endif
-
 }
-
 
 void CopyMultiCharsetToImage(u8 *charsetData, CImageData *imageData, int numColumns,
 							 u8 colorD021, u8 colorD022, u8 colorD023, u8 colorD800, CDebugInterfaceC64 *debugInterface)
@@ -965,12 +958,6 @@ void CopyMultiCharsetToImage(u8 *charsetData, CImageData *imageData, int numColu
 			chy += 8;
 		}
 	}
-	
-	// don't ask me why - there's a bug in macos engine part waiting to be fixed
-	//#if !defined(WIN32) && !defined(LINUX)
-	imageData->FlipVertically();
-	//#endif
-	
 }
 
 u8 FindC64Color(u8 r, u8 g, u8 b, CDebugInterfaceC64 *debugInterface)
@@ -1041,7 +1028,7 @@ void RenderColorRectangle(float px, float py, float ledSizeX, float ledSizeY, fl
 		colorG = colorB = 0.3f;
 	}
 	
-	BlitRectangle(px, py - gap, -1, ledSizeX, ledSizeY,
+	BlitRectangle(px, py, -1, ledSizeX, ledSizeY,
 				  colorR, colorG, colorB, 1.0f, gap);
 	
 }
@@ -1064,7 +1051,7 @@ void RenderColorRectangleWithHexCode(float px, float py, float ledSizeX, float l
 		colorG = colorB = 0.3f;
 	}
 	
-	BlitRectangle(px, py - gap, -1, ledSizeX, ledSizeY,
+	BlitRectangle(px, py - gap, -1, ledSizeX, ledSizeY + gap,
 				  colorR, colorG, colorB, 1.0f, gap);
 	
 	// blit hex color code
@@ -1173,7 +1160,7 @@ bool C64LoadSIDToBuffer(const char *filePath, u16 *fromAddr, u16 *toAddr, u16 *i
 }
 
 // Exomizer
-bool C64SaveMemoryExomizerPRG(int fromAddr, int toAddr, int jmpAddr, char *filePath)
+bool C64SaveMemoryExomizerPRG(int fromAddr, int toAddr, int jmpAddr, const char *filePath)
 {
 	FILE *fp = fopen(filePath, "wb");
 	if (!fp)
@@ -1229,8 +1216,7 @@ u8 *C64ExomizeMemoryRaw(int fromAddr, int toAddr, int *compressedSize)
 	return compressedData;
 }
 
-
-bool C64SaveMemory(int fromAddr, int toAddr, bool isPRG, CDataAdapter *dataAdapter, char *filePath)
+bool C64SaveMemory(int fromAddr, int toAddr, bool isPRG, CDataAdapter *dataAdapter, const char *filePath)
 {
 	FILE *fp;
 	fp = fopen(filePath, "wb");
@@ -1272,7 +1258,7 @@ bool C64SaveMemory(int fromAddr, int toAddr, bool isPRG, CDataAdapter *dataAdapt
 	return true;
 }
 
-int C64LoadMemory(int fromAddr, CDataAdapter *dataAdapter, char *filePath)
+int C64LoadMemory(int fromAddr, CDataAdapter *dataAdapter, const char *filePath)
 {
 	FILE *fp;
 	fp = fopen(filePath, "rb");

@@ -4,7 +4,7 @@
 #include "SYS_Defs.h"
 #include "SYS_Types.h"
 #include "CSlrString.h"
-#include "C64D_Version.h"
+#include "EmulatorsConfig.h"
 
 // TODO: make generic. move settings.dat to settings.hjson (in progress...)
 #define C64D_SETTINGS_FILE_PATH				"settings.dat"
@@ -100,7 +100,8 @@ extern uint8 c64SettingsVicStateRecordingMode;
 extern uint16 c64SettingsVicPalette;
 extern bool c64SettingsRenderScreenNearest;
 
-extern bool c64SettingsRenderDisassembleExecuteAware;
+extern bool c64SettingsExecuteAwareDisassembly;
+extern bool c64SettingsPressCtrlToSetBreakpoint;
 
 extern bool c64SettingsWindowAlwaysOnTop;
 extern CByteBuffer *c64SettingsWindowPosition;
@@ -188,7 +189,8 @@ extern bool c64SettingsSnapshotsRecordIsActive;
 extern int c64SettingsSnapshotsIntervalNumFrames;
 // max number of snapshots
 extern int c64SettingsSnapshotsLimit;
-
+// compression level for save
+extern u8 c64SettingsTimelineSaveZlibCompressionLevel;
 
 // sid import
 extern u8 c64SettingsC64SidImportMode;
@@ -228,9 +230,6 @@ extern float c64SettingsPaintGridPixelsColorR;
 extern float c64SettingsPaintGridPixelsColorG;
 extern float c64SettingsPaintGridPixelsColorB;
 extern float c64SettingsPaintGridPixelsColorA;
-
-extern float c64SettingsPaintGridShowZoomLevel;
-extern float c64SettingsPaintGridShowValuesZoomLevel;
 
 extern float c64SettingsFocusBorderLineWidth;
 

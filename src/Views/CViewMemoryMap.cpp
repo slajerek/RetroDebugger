@@ -1,4 +1,5 @@
 #include "SYS_Defs.h"
+#include "EmulatorsConfig.h"
 #include "DBG_Log.h"
 #include "CViewMemoryMap.h"
 #include "CViewC64.h"
@@ -21,7 +22,6 @@
 #include "C64Opcodes.h"
 #include "CGuiMain.h"
 #include "CMainMenuBar.h"
-#include "C64D_Version.h"
 
 #include <math.h>
 
@@ -185,6 +185,9 @@ CViewMemoryMap::CViewMemoryMap(const char *name, float posX, float posY, float p
 {
 	viewDataDump = NULL;
 	
+	imGuiNoWindowPadding = true;
+	imGuiNoScrollbar = true;
+
 	this->debugInterface = debugInterface;
 	this->dataAdapter = dataAdapter;
 	
@@ -556,7 +559,7 @@ void CViewMemoryMap::CellExecute(int addr, uint8 opcode)
 void CViewMemoryMap::ThreadRun(void *data)
 {
 //	return;
-	
+	ThreadSetName("CViewMemoryMap update");
 	//SYS_SetThreadPriority(LOW);
 
 	while(true)
@@ -1661,7 +1664,7 @@ bool CViewMemoryMap::DoTap(float x, float y)
 					if (time < c64SettingsDoubleClickMS)
 					{
 						// double click
-						viewDataDump->viewDisassemble->ScrollToAddress(addr);
+						viewDataDump->viewDisassembly->ScrollToAddress(addr);
 					}
 				}
 				
@@ -1676,7 +1679,7 @@ bool CViewMemoryMap::DoTap(float x, float y)
 					{
 						if (cell->readPC != -1)
 						{
-							viewDataDump->viewDisassemble->ScrollToAddress(cell->readPC);
+							viewDataDump->viewDisassembly->ScrollToAddress(cell->readPC);
 						}
 						
 						if (guiMain->isAltPressed)
@@ -1692,7 +1695,7 @@ bool CViewMemoryMap::DoTap(float x, float y)
 					{
 						if (cell->writePC != -1)
 						{
-							viewDataDump->viewDisassemble->ScrollToAddress(cell->writePC);
+							viewDataDump->viewDisassembly->ScrollToAddress(cell->writePC);
 						}
 						
 						if (guiMain->isAltPressed)
@@ -1742,7 +1745,7 @@ bool CViewMemoryMap::KeyDown(u32 keyCode, bool isShift, bool isAlt, bool isContr
 	{
 		if (viewDataDump != NULL)
 		{
-			return viewDataDump->viewDisassemble->KeyDown(keyCode, isShift, isAlt, isControl, isSuper);
+			return viewDataDump->viewDisassembly->KeyDown(keyCode, isShift, isAlt, isControl, isSuper);
 		}
 	}
 
@@ -1753,7 +1756,7 @@ bool CViewMemoryMap::KeyDownOnMouseHover(u32 keyCode, bool isShift, bool isAlt, 
 {
 	if (keyCode == MTKEY_SPACEBAR && !isShift && !isAlt && !isControl)
 	{
-//		viewC64->SetFocus(this);
+//		guiMain->SetFocus(this);
 		if (this->KeyDown(keyCode, isShift, isAlt, isControl, isSuper))
 				return true;
 	}
@@ -1826,7 +1829,7 @@ void CViewMemoryMap::RenderContextMenuItems()
 //	{
 //		if (cell->readPC != -1)
 //		{
-//			viewDataDump->viewDisassemble->ScrollToAddress(cell->readPC);
+//			viewDataDump->viewDisassembly->ScrollToAddress(cell->readPC);
 //		}
 //	}
 

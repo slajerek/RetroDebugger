@@ -175,6 +175,14 @@ static int vicii_get_crt_type(void)
     }
 }
 
+void c64d_vicii_get_geometry(int *canvasWidth, int *canvasHeight, int *gfxPosX, int *gfxPosY)
+{
+	*canvasWidth = vicii.raster.canvas->draw_buffer->visible_width;
+	*canvasHeight = vicii.raster.canvas->draw_buffer->visible_height;
+	*gfxPosX = vicii.raster.geometry->gfx_position.x;
+	*gfxPosY = vicii.raster.geometry->gfx_position.y;
+}
+
 static void vicii_set_geometry(void)
 {
     unsigned int width, height;

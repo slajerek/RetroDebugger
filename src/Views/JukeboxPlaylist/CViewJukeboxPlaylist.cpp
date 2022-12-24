@@ -3,6 +3,7 @@
 #include "CGuiMain.h"
 #include "CSlrString.h"
 #include "CViewC64.h"
+#include "CViewC64VicEditor.h"
 #include "CMainMenuBar.h"
 #include "CDebugInterfaceC64.h"
 #include "CJukeboxPlaylist.h"
@@ -10,7 +11,6 @@
 #include "CViewSnapshots.h"
 #include "C64SettingsStorage.h"
 #include "CViewC64Screen.h"
-#include "CViewVicEditor.h"
 
 // JukeBox playlist is a tool for having fun. It was created for the first ever C64 emulator in VR created by slajerek
 // and ought to be a demo player for VR. never finished, but definitely that was first C64 VR attempt i.e. world first :)
@@ -19,6 +19,9 @@
 CViewJukeboxPlaylist::CViewJukeboxPlaylist(float posX, float posY, float posZ, float sizeX, float sizeY)
 : CGuiView("JukeBox playlist", posX, posY, posZ, sizeX, sizeY)
 {
+	imGuiNoWindowPadding = true;
+	imGuiNoScrollbar = true;
+
 	this->mutex = new CSlrMutex("CViewJukeboxPlaylist");
 	this->font = viewC64->fontDisassembly;
 	fontSize = 5.0f;
@@ -122,7 +125,7 @@ bool CViewJukeboxPlaylist::KeyUp(u32 keyCode, bool isShift, bool isAlt, bool isC
 	return false;
 }
 
-bool CViewJukeboxPlaylist::SetFocus()
+bool CViewJukeboxPlaylist::WillReceiveFocus()
 {
 	return false;
 }
@@ -392,6 +395,7 @@ void CViewJukeboxPlaylist::RunCurrentAction()
 			break;
 		case JUKEBOX_ACTION_EXPORT_SCREEN:
 			currentAction->text->DebugPrint("EXPORT_SCREEN currentAction->text=");
+			LOGTODO("TODO: complete refactor of viewC64->viewVicEditor->ExportScreen(currentAction->text)");
 			viewC64->viewVicEditor->ExportScreen(currentAction->text);
 			break;
 		case JUKEBOX_ACTION_SHUTDOWN:

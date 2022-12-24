@@ -3,7 +3,6 @@
 #include "SYS_SharedMemory.h"
 #include "CViewC64.h"
 #include "C64CommandLine.h"
-#include "C64D_Version.h"
 
 // 16kB should be enough for everybody
 #define C64D_SHARED_MEMORY_SIZE		1024*16

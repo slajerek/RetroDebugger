@@ -120,16 +120,27 @@ void SID_FrequenciesInit()
 	// TODO: update / change values to allow de-tuning (select middle between notes)
 
 	int currentFreqIndex = 0;
+	int thisFreqVal = sidFrequencies[currentFreqIndex  ].sidValue;
 	int nextFreqVal = sidFrequencies[currentFreqIndex+1].sidValue;
-	
+	int midFreqVal  = nextFreqVal; ///(int) ((float)(thisFreqVal+nextFreqVal)*0.75f);
+
 	for (int i = 0; i < 0x10000; i++)
 	{
-		sidFrequenciesTable[i] = &(sidFrequencies[currentFreqIndex]);
+		if (i < midFreqVal)
+		{
+			sidFrequenciesTable[i] = &(sidFrequencies[currentFreqIndex  ]);
+		}
+		else
+		{
+			sidFrequenciesTable[i] = &(sidFrequencies[currentFreqIndex+1]);
+		}
 
 		if (i == nextFreqVal)
 		{
+			thisFreqVal = nextFreqVal;
 			currentFreqIndex++;
 			nextFreqVal = sidFrequencies[currentFreqIndex+1].sidValue;
+			midFreqVal  = nextFreqVal; //(int) ((float)(thisFreqVal+nextFreqVal)*0.75f);
 		}
 	}
 }
@@ -141,9 +152,6 @@ const sid_frequency_t *SidFrequencyToNote(u16 sidValue)
 
 const sid_frequency_t *SidNoteToFrequency(u16 sidNote)
 {
-	// TODO: fix me. something is off here, note is skewed +1. fishy fish. quite a priority when we add playing notes with SID
-	sidNote++;
-	
 	if (sidNote >= 0 && sidNote < NUM_SID_FREQUENCIES-1)
 	{
 		//LOGD("sidNote=%d", sidNote);

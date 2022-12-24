@@ -54,6 +54,7 @@ C64DebuggerPluginTemplate::~C64DebuggerPluginTemplate()
 void C64DebuggerPluginTemplate::Init()
 {
 	api->AddView(this);
+	api->StartThread(this);
 }
 
 //

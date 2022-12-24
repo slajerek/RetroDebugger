@@ -12,11 +12,26 @@
 #include "CMainMenuBar.h"
 #include "C64Tools.h"
 
+//Święty — Yesterday at 11:01 AM
+//właśnie , nie bawiłęm sie tym debugerem , ale mam kilka koncepcji które może fajnie byłoby zaimplemetować
+//nie widziałem nigdzie możliwości nakładania sobie miejsca gdzie pokey generuje przerwanie timera na ekran , pewnie w przypadku C64 podobnie byłoby z timerem CIA to by ułatwiło np napisanie sobie playera czy czegoś co odtwarza sample bądź coś cykluje przy pomocy timerów 😉
+//jednocześnie nakładając cykle dma np antica widać czy przerwanie zostanie obsłużone oraz z jakim lagiem
+
+//slr: GtiaDisplay?
+
+//Święty — Yesterday at 11:13 AM
+//kolejną rzeczą któa byłby przydatna to generowanie statystyk dla ramki  - np ile antic zabrał cykli , fajne byłby gdyby w lini w której jest wpis do $d40a - byłaby opcja zliczenia cykli od wpisu do rejestru do miejsca kiedy antic przetaje zatrzymywać procka dla każdej linii , podobnie w statystyce dla ramki np laczna ilosc cykli zmarnowana przez zapisy do d40a
+//używałem shift F8 i tylko pokazuje dma antica , brak pokazywania kiedy każdy z timerów pokeya generowałby przerwanie np 😉
+
+
 CViewAtariScreen::CViewAtariScreen(const char *name, float posX, float posY, float posZ, float sizeX, float sizeY, CDebugInterfaceAtari *debugInterface)
 : CGuiView(name, posX, posY, posZ, sizeX, sizeY)
 {
 	this->debugInterface = debugInterface;
 	
+	imGuiNoWindowPadding = true;
+	imGuiNoScrollbar = true;
+
 	int w = 512 * debugInterface->screenSupersampleFactor;
 	int h = 512 * debugInterface->screenSupersampleFactor;
 	imageDataScreenDefault = new CImageData(w, h, IMG_TYPE_RGBA);
@@ -298,12 +313,7 @@ void CViewAtariScreen::RenderZoomedScreen(int rasterX, int rasterY)
 	BlitFilledRectangle(zoomedScreenPosX, zoomedScreenCenterY, -1, zoomedScreenSizeX, rs2,
 						rasterLongScrenLineR, rasterLongScrenLineG, rasterLongScrenLineB, rasterLongScrenLineA);
 	
-	VID_ResetClipping();
-	
-	if (this->hasFocus)
-	{
-		this->RenderFocusBorder();
-	}
+	VID_ResetClipping();	
 }
 
 

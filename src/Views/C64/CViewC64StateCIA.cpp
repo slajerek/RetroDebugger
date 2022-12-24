@@ -24,6 +24,9 @@ CViewC64StateCIA::CViewC64StateCIA(const char *name, float posX, float posY, flo
 {
 	this->debugInterface = debugInterface;
 	
+	imGuiNoWindowPadding = true;
+	imGuiNoScrollbar = true;
+
 	renderCIA1 = true;
 	renderCIA2 = true;
 	

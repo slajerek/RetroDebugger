@@ -70,7 +70,7 @@ public:
 	void SetViewDataDump(CViewDataDump *viewDataDump);
 	void SetViewMemoryMap(CViewMemoryMap *viewMemoryMap);
 
-	CSlrFont *fontDisassemble;
+	CSlrFont *fontDisassembly;
 	float fontSize;
 	float fontSize3;
 	float fontSize5;
@@ -80,21 +80,21 @@ public:
 	float disassembledCodeOffsetX;
 
 	int renderStartAddress;
-	void CalcDisassembleStart(int startAddress, int *newStart, int *renderLinesBefore);
+	void CalcDisassemblyStart(int startAddress, int *newStart, int *renderLinesBefore);
 	void RenderDisassembly(int startAddress, int endAddress);
 
-	int RenderDisassembleLine(float px, float py, int addr, uint8 op, uint8 lo, uint8 hi);
+	int RenderDisassemblyLine(float px, float py, int addr, uint8 op, uint8 lo, uint8 hi);
 	void MnemonicWithArgumentToStr(u16 addr, u8 op, u8 lo, u8 hi, char *buf);
 	void MnemonicWithDollarArgumentToStr(u16 addr, u8 op, u8 lo, u8 hi, char *buf);
 	void RenderHexLine(float px, float py, int addr);
 	
-	int UpdateDisassembleOpcodeLine(float py, int addr, uint8 op, uint8 lo, uint8 hi);
-	void UpdateDisassembleHexLine(float py, int addr);
-	void UpdateDisassemble(int startAddress, int endAddress);
+	int UpdateDisassemblyOpcodeLine(float py, int addr, uint8 op, uint8 lo, uint8 hi);
+	void UpdateDisassemblyHexLine(float py, int addr);
+	void UpdateDisassembly(int startAddress, int endAddress);
 
 	void CalcDisassembleStartNotExecuteAware(int startAddress, int *newStart, int *renderLinesBefore);
 	void RenderDisassemblyNotExecuteAware(int startAddress, int endAddress);
-	void UpdateDisassembleNotExecuteAware(int startAddress, int endAddress);
+	void UpdateDisassemblyNotExecuteAware(int startAddress, int endAddress);
 	bool DoTapNotExecuteAware(float x, float y);
 	
 	void TogglePCBreakpoint(int addr);
@@ -228,4 +228,4 @@ private:
 
 
 
-#endif //_CVIEWC64DISASSEMBLE_H_
+#endif //_CVIEWC64DISASSEMBLY_H_

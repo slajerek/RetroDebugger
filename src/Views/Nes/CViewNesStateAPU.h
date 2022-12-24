@@ -4,6 +4,7 @@
 #include "SYS_Defs.h"
 #include "CGuiView.h"
 #include "CGuiEditHex.h"
+#include "CDebugInterfaceNes.h"
 #include <vector>
 #include <list>
 
@@ -20,9 +21,6 @@ class CViewWaveform;
 
 // TODO: move me to NES APU VIEW
 class CViewNesPianoKeyboard;
-
-#define MAX_NUM_NES_APUS 1
-#define NES_APU_WAVEFORM_LENGTH	1024
 
 class CViewNesStateAPU : public CGuiView, CGuiEditHexCallback
 {
@@ -49,11 +47,8 @@ public:
 	
 	// [apu num][channel num]
 	// square0, square1, triangle, noise, dmc, extChannel
-	CViewWaveform *nesChannelWaveform[MAX_NUM_NES_APUS][6];
-	CViewWaveform *nesMixWaveform[MAX_NUM_NES_APUS];
-
-	int waveformPos;
-	void AddWaveformData(int apuNumber, int v1, int v2, int v3, int v4, int v5, int v6, short mix);
+	CViewWaveform *viewChannelWaveform[MAX_NUM_NES_APUS][6];
+	CViewWaveform *viewMixWaveform[MAX_NUM_NES_APUS];
 
 	//
 	virtual void RenderState(float px, float py, float posZ, CSlrFont *fontBytes, float fontSize, int apuId);

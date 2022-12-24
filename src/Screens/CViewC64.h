@@ -56,6 +56,9 @@ class CDebugSymbols;
 
 class CGuiViewMessages;
 
+class CDebugInterfaceMenuItemFolder;
+class CDebugInterfaceMenuItemView;
+
 class CViewC64Screen;
 class CViewC64ScreenWrapper;
 class CViewC64ScreenViewfinder;
@@ -75,12 +78,28 @@ class CViewC64VicControl;
 class CViewC64SidTrackerHistory;
 class CViewC64SidPianoKeyboard;
 class CViewC64MemoryDebuggerLayoutToolbar;
-class CViewVicEditor;
 class CViewDrive1541StateCPU;
 class CViewDrive1541StateVIA;
+class CViewDrive1541Led;
 class CViewDrive1541FileD64;
 class CViewC64StateREU;
-class CViewC64AllGraphics;
+class CViewC64AllGraphicsBitmaps;
+class CViewC64AllGraphicsBitmapsControl;
+class CViewC64AllGraphicsScreens;
+class CViewC64AllGraphicsScreensControl;
+class CViewC64AllGraphicsSprites;
+class CViewC64AllGraphicsSpritesControl;
+class CViewC64AllGraphicsCharsets;
+class CViewC64AllGraphicsCharsetsControl;
+class CViewC64ColorRamScreen;
+
+class CViewC64VicEditor;
+class CViewC64VicEditorPreview;
+class CViewC64VicEditorLayers;
+class CViewC64Charset;
+class CViewC64Palette;
+class CViewC64Sprite;
+
 class CViewEmulationState;
 class CViewEmulationCounters;
 class CViewTimeline;
@@ -116,6 +135,7 @@ class CViewSnapshots;
 class CViewColodore;
 class CViewAbout;
 
+class CViewAudioMixer;
 class CMainMenuBar;
 
 class CColorsTheme;
@@ -213,6 +233,7 @@ public:
 	
 	CMainMenuBar *mainMenuBar;
 	CGuiViewMessages *viewMessages;
+	
 	CViewMainMenu *viewC64MainMenu;
 	CViewSettingsMenu *viewC64SettingsMenu;
 	CViewC64KeyMap *viewC64KeyMap;
@@ -221,7 +242,6 @@ public:
 	CViewColodore *viewColodore;
 	CViewAbout *viewAbout;
 	CGuiViewUiDebug *viewUiDebug;
-
 
 	int currentScreenLayoutId;
 	
@@ -268,6 +288,7 @@ public:
 	CViewC64StateSID *viewC64StateSID;
 	CViewC64StateVIC *viewC64StateVIC;
 	CViewDrive1541StateVIA *viewDrive1541StateVIA;
+	CViewDrive1541Led *viewDrive1541Led;
 	CViewC64StateREU *viewC64StateREU;
 	CViewEmulationCounters *viewC64EmulationCounters;
 
@@ -277,8 +298,15 @@ public:
 	CViewC64VicDisplay *viewC64VicDisplay;
 	CViewC64VicControl *viewC64VicControl;
 	
-	CViewC64AllGraphics *viewC64AllGraphics;
-	
+	CViewC64AllGraphicsBitmaps *viewC64AllGraphicsBitmaps;
+	CViewC64AllGraphicsBitmapsControl *viewC64AllGraphicsBitmapsControl;
+	CViewC64AllGraphicsScreens *viewC64AllGraphicsScreens;
+	CViewC64AllGraphicsScreensControl *viewC64AllGraphicsScreensControl;
+	CViewC64AllGraphicsCharsets *viewC64AllGraphicsCharsets;
+	CViewC64AllGraphicsCharsetsControl *viewC64AllGraphicsCharsetsControl;
+	CViewC64AllGraphicsSprites *viewC64AllGraphicsSprites;
+	CViewC64AllGraphicsSpritesControl *viewC64AllGraphicsSpritesControl;
+
 	CViewC64SidTrackerHistory *viewC64SidTrackerHistory;
 	CViewC64SidPianoKeyboard *viewC64SidPianoKeyboard;
 	
@@ -290,8 +318,15 @@ public:
 	CViewDrive1541FileD64 *viewDrive1541FileD64;
 	
 	// VIC Editor
-	CViewVicEditor *viewVicEditor;
-	
+	CViewC64VicEditor *viewVicEditor;
+	CViewC64VicEditorPreview *viewVicEditorPreview;
+//	CViewVicEditorCreateNewPicture *viewVicEditorCreateNewPicture;
+	CViewC64VicEditorLayers *viewVicEditorLayers;
+	CViewC64Charset *viewC64Charset;
+	CViewC64Palette *viewC64Palette;
+	CViewC64Sprite *viewC64Sprite;
+	CViewC64ColorRamScreen *viewC64ColorRamScreen;
+
 	// Atari
 	void InitAtari800Views();
 	CViewAtariScreen *viewAtariScreen;
@@ -341,10 +376,11 @@ public:
 	CViewTimeline *viewNesTimeline;
 
 	//
+	CViewAudioMixer *viewAudioMixer;
 	CGuiViewProgressBarWindow *viewProgressBarWindow;
 	
 	//
-	bool isDataDirectlyFromRAM;
+	volatile bool isDataDirectlyFromRAM;
 	
 	// TODO: these below are C64 related, move to debug interface
 	// updated every render frame
@@ -386,12 +422,14 @@ public:
 	//
 	
 	void InitViews();
-	
+	CDebugInterfaceMenuItemView *AddEmulatorMenuItemView(CDebugInterface *debugInterface, CGuiView *view);
+	CDebugInterfaceMenuItemView *AddEmulatorMenuItemViewToFolder(CDebugInterface *debugInterface, CDebugInterfaceMenuItemFolder *folder, CGuiView *view);
+	CDebugInterfaceMenuItemFolder *AddEmulatorMenuItemFolder(CDebugInterface *debugInterface, const char *folderName);
+
 	//
 	void InitJukebox(CSlrString *jukeboxJsonFilePath);
 		
 	int guiRenderFrameCounter;
-//	int nextScreenUpdateFrame;
 	
 	//
 	void EmulationStartFrameCallback(CDebugInterface *debugInterface);
@@ -417,7 +455,7 @@ public:
 	void SwitchIsDataDirectlyFromRam(bool isFromRam);
 
 	//
-	CViewDisassembly *GetActiveDisassembleView();
+	CViewDisassembly *GetActiveDisassemblyView();
 	
 	
 	std::vector<CGuiView *> traversalOfViews;
@@ -436,10 +474,6 @@ public:
 	ImFont *imFontDefault;
 //	ImFont *imFontPro;
 //	ImFont *imFontSweet16;
-
-	const char *defaultFontPath;
-	float defaultFontSize;
-	int defaultFontOversampling;
 
 	void CreateFonts();
 	void Create8BitFonts();
@@ -489,7 +523,7 @@ public:
 	void CheckMouseCursorVisibility();
 	void ShowMouseCursor();
 
-	void GoFullScreen(CGuiView *view);
+	void GoFullScreen(SetFullScreenMode fullScreenMode, CGuiView *view);
 	void ToggleFullScreen(CGuiView *view);
 	
 	//
@@ -533,6 +567,15 @@ public:
 	CSlrMutex *mutexShowMessage;
 	void ShowMessage(CSlrString *showMessage);
 	void ShowMessage(const char *fmt, ...);
+	void ShowMessageWarning(const char *fmt, ...);
+	void ShowMessageError(const char *fmt, ...);
+	void ShowMessageSuccess(const char *fmt, ...);
+	void ShowMessageInfo(const char *fmt, ...);
+	void ShowMessage(ImGuiToastType_ toastType, const char *title, const char *fmt, ...);
+	void ShowMessageWarning(CSlrString *showMessage);
+	void ShowMessageError(CSlrString *showMessage);
+	void ShowMessageSuccess(CSlrString *showMessage);
+	void ShowMessageInfo(CSlrString *showMessage);
 
 	//
 	virtual void GlobalDropFileCallback(char *filePath, bool consumedByView);
@@ -540,8 +583,6 @@ public:
 	//
 	CRecentlyOpenedFiles *recentlyOpenedFiles;
 	virtual void RecentlyOpenedFilesCallbackSelectedMenuItem(CSlrString *filePath);
-		
-	//
 	
 	char *ATRD_GetPathForRoms_IMPL();
 

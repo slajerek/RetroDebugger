@@ -325,7 +325,7 @@ void C64VicDisplayCanvasMultiText::RenderCanvasSpecificGridValues()
 					sprintf(buf, "%02x %02x  %02x",
 							colors[0], colors[1], colorValue);
 					
-					if (cx >= -fs2 && cx < SCREEN_WIDTH && cy >= -fs2 && cy < SCREEN_HEIGHT)
+					if (cx >= -fs2 && cx < vicDisplay->sizeX && cy >= -fs2 && cy < vicDisplay->sizeY)
 					{
 						viewC64->fontDisassembly->BlitText(buf, cx + vox + fs*7, cy, vicDisplay->posZ, fs);
 					}
@@ -338,7 +338,7 @@ void C64VicDisplayCanvasMultiText::RenderCanvasSpecificGridValues()
 					sprintfHexCode8(buf1 + 5, charValue);
 					
 					
-					if (cx >= -fs2 && cx < SCREEN_WIDTH && cy >= -fs2 && cy < SCREEN_HEIGHT)
+					if (cx >= -fs2 && cx < vicDisplay->sizeX && cy >= -fs2 && cy < vicDisplay->sizeY)
 					{
 						viewC64->fontDisassembly->BlitText(buf1, cx, cy, vicDisplay->posZ, fs);
 					}

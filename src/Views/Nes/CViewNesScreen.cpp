@@ -18,6 +18,9 @@ CViewNesScreen::CViewNesScreen(const char *name, float posX, float posY, float p
 {
 	this->debugInterface = debugInterface;
 	
+	imGuiNoWindowPadding = true;
+	imGuiNoScrollbar = true;
+
 	int w = 512 * debugInterface->screenSupersampleFactor;
 	int h = 512 * debugInterface->screenSupersampleFactor;
 	imageDataScreenDefault = new CImageData(w, h, IMG_TYPE_RGBA);
@@ -319,11 +322,6 @@ void CViewNesScreen::RenderZoomedScreen(int rasterX, int rasterY)
 						rasterLongScrenLineR, rasterLongScrenLineG, rasterLongScrenLineB, rasterLongScrenLineA);
 	
 	VID_ResetClipping();
-	
-	if (this->hasFocus)
-	{
-		this->RenderFocusBorder();
-	}
 }
 
 

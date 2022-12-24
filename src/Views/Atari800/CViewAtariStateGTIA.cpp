@@ -1,4 +1,4 @@
-#include "C64D_Version.h"
+#include "EmulatorsConfig.h"
 #if defined(RUN_ATARI)
 
 extern "C" {
@@ -31,6 +31,9 @@ CViewAtariStateGTIA::CViewAtariStateGTIA(const char *name, float posX, float pos
 {
 	this->debugInterface = debugInterface;
 	
+	imGuiNoWindowPadding = true;
+	imGuiNoScrollbar = true;
+
 	fontSize = 7.0f;
 	AddLayoutParameter(new CLayoutParameterFloat("Font Size", &fontSize));
 

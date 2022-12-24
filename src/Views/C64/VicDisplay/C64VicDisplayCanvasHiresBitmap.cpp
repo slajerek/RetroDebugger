@@ -7,9 +7,9 @@
 #include "C64CharHires.h"
 #include "CImageData.h"
 #include "C64Tools.h"
-#include "CViewVicEditor.h"
 #include "CViewC64VicControl.h"
 #include "CViewC64Palette.h"
+#include "CViewC64VicEditor.h"
 
 C64VicDisplayCanvasHiresBitmap::C64VicDisplayCanvasHiresBitmap(CViewC64VicDisplay *vicDisplay)
 : C64VicDisplayCanvas(vicDisplay, C64_CANVAS_TYPE_BITMAP, false, false)
@@ -268,7 +268,7 @@ void C64VicDisplayCanvasHiresBitmap::RenderCanvasSpecificGridValues()
 					sprintf(buf, "%02x %02x  %02x %02x",
 							d020colors[0], d020colors[1], bgcolor, fgcolor);
 					
-					if (cx >= -fs2 && cx < SCREEN_WIDTH && cy >= -fs2 && cy < SCREEN_HEIGHT)
+					if (cx >= -fs2 && cx < vicDisplay->sizeX && cy >= -fs2 && cy < vicDisplay->sizeY)
 					{
 						viewC64->fontDisassembly->BlitText(buf, cx + vox + fs*7, cy, vicDisplay->posZ, fs);
 					}
@@ -299,7 +299,7 @@ void C64VicDisplayCanvasHiresBitmap::RenderCanvasSpecificGridValues()
 				sprintfHexCode8(buf1 + 5, val);
 				
 				
-				if (cx >= -fs2 && cx < SCREEN_WIDTH && cy >= -fs2 && cy < SCREEN_HEIGHT)
+				if (cx >= -fs2 && cx < vicDisplay->sizeX && cy >= -fs2 && cy < vicDisplay->sizeY)
 				{
 					viewC64->fontDisassembly->BlitText(buf1, cx, cy, vicDisplay->posZ, fs);
 				}
@@ -312,7 +312,7 @@ void C64VicDisplayCanvasHiresBitmap::RenderCanvasSpecificGridValues()
 					
 					//LOGD("buf2=%s", buf2);
 					
-					if (cx >= -fs2 && cx < SCREEN_WIDTH && cy >= -fs2 && cy < SCREEN_HEIGHT)
+					if (cx >= -fs2 && cx < vicDisplay->sizeX && cy >= -fs2 && cy < vicDisplay->sizeY)
 					{
 						viewC64->fontDisassembly->BlitText(buf2, cx + vox, cy + voy, vicDisplay->posZ, fs);
 					}
@@ -329,6 +329,7 @@ void C64VicDisplayCanvasHiresBitmap::RenderCanvasSpecificGridValues()
 void C64VicDisplayCanvasHiresBitmap::ClearScreen()
 {
 	LOGD("C64VicDisplayCanvasHiresBitmap::ClearScreen");
+	// TODO: check this
 	ClearScreen(viewC64->viewVicEditor->viewPalette->colorD021, 0x00);
 }
 
@@ -430,7 +431,12 @@ void C64VicDisplayCanvasHiresBitmap::ReplaceColorHiresBitmapRaster(int x, int y,
 void C64VicDisplayCanvasHiresBitmap::ReplaceColorHiresBitmapCharacter(int charColumn, int charRow, u8 colorNum, u8 paintColor)
 {
 	LOGF("............. ReplaceColorHiresBitmapCharacter %d %d colorNum=%d paintColor=%02x", charColumn, charRow, colorNum, paintColor);
+	if (charColumn < 0 || charColumn > 39)
+		return; // PAINT_RESULT_OUTSIDE;
 	
+	if (charRow < 0 || charRow > 24)
+		return; // PAINT_RESULT_OUTSIDE;
+
 	int offset = charColumn + charRow * 40;
 
 	u8 *screen_ptr;

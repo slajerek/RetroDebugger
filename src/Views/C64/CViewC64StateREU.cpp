@@ -24,6 +24,9 @@ CViewC64StateREU::CViewC64StateREU(const char *name, float posX, float posY, flo
 {
 	this->debugInterface = debugInterface;
 	
+	imGuiNoWindowPadding = true;
+	imGuiNoScrollbar = true;
+
 	fontBytes = viewC64->fontDisassembly;
 	
 	fontSize = 7.0f;

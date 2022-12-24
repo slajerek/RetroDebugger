@@ -3,14 +3,12 @@
 
 #include "C64Sprite.h"
 
-class CViewVicEditor;
-
 class C64SpriteHires : public C64Sprite
 {
 public:
 	C64SpriteHires();
-	C64SpriteHires(CViewVicEditor *vicEditor, int x, int y, bool isStretchedHorizontally, bool isStretchedVertically, int pointerValue, int pointerAddr);
-	C64SpriteHires(CViewVicEditor *vicEditor, CByteBuffer *byteBuffer);
+	C64SpriteHires(CViewC64VicEditor *vicEditor, int x, int y, bool isStretchedHorizontally, bool isStretchedVertically, int pointerValue, int pointerAddr);
+	C64SpriteHires(CViewC64VicEditor *vicEditor, CByteBuffer *byteBuffer);
 
 	virtual ~C64SpriteHires();
 
@@ -32,8 +30,8 @@ public:
 	//
 	virtual void Clear();
 
-	virtual void Serialise(CByteBuffer *byteBuffer);
-	virtual void Deserialise(CByteBuffer *byteBuffer);
+	virtual void Serialize(CByteBuffer *byteBuffer);
+	virtual void Deserialize(CByteBuffer *byteBuffer);
 
 };
 

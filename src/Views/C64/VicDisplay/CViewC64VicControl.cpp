@@ -36,6 +36,9 @@ CViewC64VicControl::CViewC64VicControl(const char *name, float posX, float posY,
 	this->vicDisplay = vicDisplay;
 	this->vicDisplay->SetVicControlView(this);
 	
+	imGuiNoWindowPadding = true;
+	imGuiNoScrollbar = true;
+
 	viewFrame = NULL;
 	//	viewFrame = new CGuiViewFrame(this, new CSlrString("VIC Display"));
 	//	this->AddGuiElement(viewFrame);
@@ -57,7 +60,7 @@ CViewC64VicControl::CViewC64VicControl(const char *name, float posX, float posY,
 	
 	this->SetPosition(posX, posY, posZ, sizeX, sizeY);
 	
-	this->vicDisplay->SetAutoScrollMode(AUTOSCROLL_DISASSEMBLE_RASTER_PC);
+	this->vicDisplay->SetAutoScrollMode(AUTOSCROLL_DISASSEMBLY_RASTER_PC);
 
 	this->vicDisplay->showBreakpointsLines = true;
 }
@@ -427,23 +430,23 @@ void CViewC64VicControl::SetAutoScrollModeUI(int newMode)
 {
 //	LOGD("CViewC64VicControl::SetAutoScrollModeUI: %d", newMode);
 	
-	if (newMode == AUTOSCROLL_DISASSEMBLE_RASTER_PC)
+	if (newMode == AUTOSCROLL_DISASSEMBLY_RASTER_PC)
 	{
 		btnAutolockScrollMode->SetText(txtAutolockRasterPC);
 	}
-	else if (newMode == AUTOSCROLL_DISASSEMBLE_BITMAP_ADDRESS)
+	else if (newMode == AUTOSCROLL_DISASSEMBLY_BITMAP_ADDRESS)
 	{
 		btnAutolockScrollMode->SetText(txtAutolockBitmapAddress);
 	}
-	else if (newMode == AUTOSCROLL_DISASSEMBLE_TEXT_ADDRESS)
+	else if (newMode == AUTOSCROLL_DISASSEMBLY_TEXT_ADDRESS)
 	{
 		btnAutolockScrollMode->SetText(txtAutolockTextAddress);
 	}
-	else if (newMode == AUTOSCROLL_DISASSEMBLE_COLOUR_ADDRESS)
+	else if (newMode == AUTOSCROLL_DISASSEMBLY_COLOUR_ADDRESS)
 	{
 		btnAutolockScrollMode->SetText(txtAutolockColourAddress);
 	}
-	else if (newMode == AUTOSCROLL_DISASSEMBLE_CHARSET_ADDRESS)
+	else if (newMode == AUTOSCROLL_DISASSEMBLY_CHARSET_ADDRESS)
 	{
 		btnAutolockScrollMode->SetText(txtAutolockCharsetAddress);
 	}
@@ -993,11 +996,11 @@ void CViewC64VicControl::Render()
 	// update lock label brightness based on if PC is correct
 	float fBright = 1.0f;
 	
-	if (c64SettingsVicStateRecordingMode == C64D_VICII_RECORD_MODE_NONE && vicDisplay->autoScrollMode == AUTOSCROLL_DISASSEMBLE_RASTER_PC)
+	if (c64SettingsVicStateRecordingMode == C64D_VICII_RECORD_MODE_NONE && vicDisplay->autoScrollMode == AUTOSCROLL_DISASSEMBLY_RASTER_PC)
 	{
 		fBright = 0.0f;
 	}
-	else if (vicDisplay->autoScrollMode != AUTOSCROLL_DISASSEMBLE_RASTER_PC
+	else if (vicDisplay->autoScrollMode != AUTOSCROLL_DISASSEMBLY_RASTER_PC
 			 && vicDisplay->foundMemoryCellPC == false)
 	{
 		fBright = 0.3f;
@@ -1438,7 +1441,7 @@ bool CViewC64VicControl::KeyDown(u32 keyCode, bool isShift, bool isAlt, bool isC
 	if ((keyCode == ' ') && !isShift && !isAlt && !isControl)
 	{
 		this->vicDisplay->UnlockCursor();
-		this->vicDisplay->SetAutoScrollMode(AUTOSCROLL_DISASSEMBLE_RASTER_PC);
+		this->vicDisplay->SetAutoScrollMode(AUTOSCROLL_DISASSEMBLY_RASTER_PC);
 		viewC64->viewC64Disassembly->isTrackingPC = true;
 		viewC64->viewC64Disassembly->changedByUser = false;
 		return true;
@@ -1453,31 +1456,31 @@ bool CViewC64VicControl::KeyDown(u32 keyCode, bool isShift, bool isAlt, bool isC
 	if ((keyCode == 'r' || keyCode == 'R') && !isShift && !isAlt && !isControl)
 	{
 		// Raster
-		this->vicDisplay->SetAutoScrollMode(AUTOSCROLL_DISASSEMBLE_RASTER_PC);
+		this->vicDisplay->SetAutoScrollMode(AUTOSCROLL_DISASSEMBLY_RASTER_PC);
 		return true;
 	}
 	else if ((keyCode == 's' || keyCode == 'S') && !isShift && !isAlt && !isControl)
 	{
 		// Screen
-		this->vicDisplay->SetAutoScrollMode(AUTOSCROLL_DISASSEMBLE_TEXT_ADDRESS);
+		this->vicDisplay->SetAutoScrollMode(AUTOSCROLL_DISASSEMBLY_TEXT_ADDRESS);
 		return true;
 	}
 	else if ((keyCode == 'b' || keyCode == 'B') && !isShift && !isAlt && !isControl)
 	{
 		// Screen
-		this->vicDisplay->SetAutoScrollMode(AUTOSCROLL_DISASSEMBLE_BITMAP_ADDRESS);
+		this->vicDisplay->SetAutoScrollMode(AUTOSCROLL_DISASSEMBLY_BITMAP_ADDRESS);
 		return true;
 	}
 	else if ((keyCode == 'c' || keyCode == 'C') && !isShift && !isAlt && !isControl)
 	{
 		// Screen
-		this->vicDisplay->SetAutoScrollMode(AUTOSCROLL_DISASSEMBLE_COLOUR_ADDRESS);
+		this->vicDisplay->SetAutoScrollMode(AUTOSCROLL_DISASSEMBLY_COLOUR_ADDRESS);
 		return true;
 	}
 	else if ((keyCode == 't' || keyCode == 'T') && !isShift && !isAlt && !isControl)
 	{
 		// Screen
-		this->vicDisplay->SetAutoScrollMode(AUTOSCROLL_DISASSEMBLE_CHARSET_ADDRESS);
+		this->vicDisplay->SetAutoScrollMode(AUTOSCROLL_DISASSEMBLY_CHARSET_ADDRESS);
 		return true;
 	}
 	else if ((keyCode == 'v' || keyCode == 'V') && !isShift && !isAlt && !isControl)
@@ -1537,4 +1540,71 @@ void CViewC64VicControl::Deserialize(CByteBuffer *byteBuffer)
 {
 }
 
+// State
+void CViewC64VicControl::SerializeState(CByteBuffer *byteBuffer)
+{
+	byteBuffer->PutBool(btnModeText->IsOn());
+	byteBuffer->PutBool(btnModeBitmap->IsOn());
+	byteBuffer->PutBool(btnModeHires->IsOn());
+	byteBuffer->PutBool(btnModeMulti->IsOn());
+	byteBuffer->PutBool(btnModeStandard->IsOn());
+	byteBuffer->PutBool(btnModeExtended->IsOn());
+	
+	byteBuffer->PutBool(lstScreenAddresses->isLocked);
+	if (lstScreenAddresses->isLocked)
+	{
+		byteBuffer->PutI16(lstScreenAddresses->selectedElement);
+	}
+	
+	byteBuffer->PutBool(lstCharsetAddresses->isLocked);
+	if (lstCharsetAddresses->isLocked)
+	{
+		byteBuffer->PutI16(lstCharsetAddresses->selectedElement);
+	}
 
+	byteBuffer->PutBool(lstBitmapAddresses->isLocked);
+	if (lstBitmapAddresses->isLocked)
+	{
+		byteBuffer->PutI16(lstBitmapAddresses->selectedElement);
+	}
+}
+
+void CViewC64VicControl::DeserializeState(CByteBuffer *byteBuffer)
+{
+	btnModeText->SetOn(byteBuffer->GetBool());
+	btnModeBitmap->SetOn(byteBuffer->GetBool());
+	btnModeHires->SetOn(byteBuffer->GetBool());
+	btnModeMulti->SetOn(byteBuffer->GetBool());
+	btnModeStandard->SetOn(byteBuffer->GetBool());
+	btnModeExtended->SetOn(byteBuffer->GetBool());
+	
+	if (byteBuffer->GetBool())
+	{
+		lstScreenAddresses->SetListLocked(true);
+		lstScreenAddresses->SetElement(byteBuffer->GetI16(), true, true);
+	}
+	else
+	{
+		lstScreenAddresses->SetListLocked(false);
+	}
+	
+	if (byteBuffer->GetBool())
+	{
+		lstCharsetAddresses->SetListLocked(true);
+		lstCharsetAddresses->SetElement(byteBuffer->GetI16(), true, true);
+	}
+	else
+	{
+		lstCharsetAddresses->SetListLocked(false);
+	}
+	
+	if (byteBuffer->GetBool())
+	{
+		lstBitmapAddresses->SetListLocked(true);
+		lstBitmapAddresses->SetElement(byteBuffer->GetI16(), true, true);
+	}
+	else
+	{
+		lstBitmapAddresses->SetListLocked(false);
+	}
+}

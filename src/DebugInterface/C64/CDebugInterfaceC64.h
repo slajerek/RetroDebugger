@@ -22,6 +22,7 @@ class CSlrImage;
 class CSlrFont;
 class C64KeyMap;
 class CDiskImageD64;
+class CWaveformData;
 
 // abstract class
 class CDebugInterfaceC64 : public CDebugInterface
@@ -52,7 +53,9 @@ public:
 	virtual void RefreshScreenNoCallback();
 
 	virtual void RunEmulationThread();
-	
+	virtual void RestartAudio();
+	virtual void RefreshSync();
+
 	virtual void InitKeyMap(C64KeyMap *keyMap);
 	
 	virtual uint8 *GetCharRom();
@@ -67,11 +70,11 @@ public:
 	CDebugSymbols *symbolsCartridgeC64;
 
 	// data adapters
-	CDataAdapter *dataAdapterC64;
-	CDataAdapter *dataAdapterC64DirectRam;
-	CDataAdapter *dataAdapterDrive1541;
-	CDataAdapter *dataAdapterDrive1541DirectRam;
-	CDataAdapter *dataAdapterCartridgeC64;
+	CDebugDataAdapter *dataAdapterC64;
+	CDebugDataAdapter *dataAdapterC64DirectRam;
+	CDebugDataAdapter *dataAdapterDrive1541;
+	CDebugDataAdapter *dataAdapterDrive1541DirectRam;
+	CDebugDataAdapter *dataAdapterCartridgeC64;
 
 	virtual int GetC64ModelType();
 	virtual uint8 GetC64MachineType();
@@ -129,6 +132,12 @@ public:
 
 	virtual void UpdateSidDataHistory();
 
+	CWaveformData *sidChannelWaveform[C64_MAX_NUM_SIDS][3];
+	CWaveformData *sidMixWaveform[C64_MAX_NUM_SIDS];
+	virtual void AddWaveformData(int sidNumber, int voice1, int voice2, int voice3, short mix);
+	virtual void UpdateWaveforms();
+	virtual void UpdateWaveformsMuteStatus();
+	
 	//
 	virtual void GetC64ModelTypes(std::vector<CSlrString *> *modelTypeNames, std::vector<int> *modelTypeIds);
 	virtual void GetC64ModelTypes(std::vector<const char *> *modelTypeNames, std::vector<int> *modelTypeIds);
@@ -159,6 +168,7 @@ public:
 	// make jsr (push PC to stack)
 	virtual void MakeJsrC64(uint16 addr);
 	
+	virtual void SupportsBreakpoints(bool *writeBreakpoint, bool *readBreakpoint);
 	virtual void ClearTemporaryBreakpoint();
 
 	//
@@ -214,7 +224,8 @@ public:
 	virtual void GetC64CartridgeState(C64StateCartridge *cartridgeState);
 
 	// drive leds
-	float ledState[C64_NUM_DRIVES];
+	float ledGreenPwm[C64_NUM_DRIVES];
+	float ledRedPwm[C64_NUM_DRIVES];
 
 	// TODO: refactor diskImage from view to debug interface (blocked by refactoring to have multiple interfaces for c64 drives)
 //	// disk
@@ -308,7 +319,7 @@ public:
 	virtual void DumpDisk1541MemoryMarkers(CSlrString *path);
 	
 	//
-	virtual CDataAdapter *GetDataAdapter();
+	virtual CDebugDataAdapter *GetDataAdapter();
 
 	//
 	// @returns NULL when monitor is not supported
@@ -317,6 +328,9 @@ public:
 	virtual bool ExecuteCodeMonitorCommand(CSlrString *commandStr);
 
 	//
+	virtual void CheckLoadedRoms();
+	
+	//
 	virtual void Shutdown();
 	
 	// profiler
@@ -324,6 +338,9 @@ public:
 	virtual void ProfilerActivate(char *fileName, int runForNumCycles, bool pauseCpuWhenFinished);
 	virtual void ProfilerDeactivate();
 	virtual bool IsProfilerActive();
+	
+	//
+	
 };
 
 #endif

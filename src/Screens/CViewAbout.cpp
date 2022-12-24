@@ -3,6 +3,7 @@
 // This view will be removed. It is being refactored and moved to main menu bar instead
 //
 
+#include "EmulatorsConfig.h"
 #include "CViewC64.h"
 #include "CViewAbout.h"
 #include "VID_Main.h"
@@ -33,18 +34,7 @@ CViewAbout::CViewAbout(float posX, float posY, float posZ, float sizeX, float si
 	fontScale = 1.5;
 	fontHeight = font->GetCharHeight('@', fontScale) + 2;
 	
-#if defined(RUN_COMMODORE64) && defined(RUN_ATARI)
-	strHeader = new CSlrString("About C64+65XE Debugger");
-#elif defined(RUN_COMMODORE64)
-	strHeader = new CSlrString("About C64 Debugger");
-#elif defined(RUN_ATARI)
-	strHeader = new CSlrString("About 65XE Debugger");
-#elif defined(RUN_NES)
-	strHeader = new CSlrString("About NES Debugger");
-#else
-	SYS_FatalExit("Unknown version");
-#endif
-
+	strHeader = new CSlrString("About Retro Debugger");
 }
 
 CViewAbout::~CViewAbout()

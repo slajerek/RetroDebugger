@@ -1,4 +1,4 @@
-#include "C64D_Version.h"
+#include "EmulatorsConfig.h"
 #if defined(RUN_ATARI)
 
 extern "C" {
@@ -65,13 +65,49 @@ extern "C" {
 // http://krap.pl/mirrorz/atari/homepage.ntlworld.com/kryten_droid/Atari/800XL/atari_hw/pokey.htm
 
 
+/*
+ TODO: POKEY NOTES VIEW
+ Zoltraks — 09/10/2022
+ Częstotliwości można wyliczyć, ale zależą one od trybu PAL/NTSC, zegara 64kHz/15kHz oraz ewentualnego połączenia kanałów 1+3/2+4 oraz 1+2/3+4 (rejestr AUDCTL). Nie słyszałem o gotowej procedurze, ale... RMT w wersji VinsCool wyświetla częstotliwości (chociaż chyba też nie do końca dobrze)
+ Myślę, że może tam coś będzie, kod RMT to w dużej mierze C++ i także open source https://github.com/VinsCool/RASTER-Music-Tracker a poniżej zrzut ekranu (po prawej stronie są wyświetlane częstotliwości i wartości rejestrów)
+ GitHub
+ GitHub - VinsCool/RASTER-Music-Tracker
+ Contribute to VinsCool/RASTER-Music-Tracker development by creating an account on GitHub.
+ GitHub - VinsCool/RASTER-Music-Tracker
+ Image
+ ZWiSU — 09/10/2022
+ Ping @mono
+ mono — 09/10/2022
+ mozna to policzyc generalnie dla fali prostokatnej http://atariki.krap.pl/index.php/Rejestry_POKEY-a#AUDF1 (konfiguracja pokeya dokonywana jest generalnie przez AUDCTL a kanalu przez AUDCx - rodzaj dzwieku i AUDFx - czestotliwosc), ewentualnie dla fali z wlaczona synchronizacja (SKCTL tzw. transmisja dwutonowa), bo wtedy zmienia sie wypelnienie; gorzej bedzie z szumem, bo tam mozna chyba tylko podac czestotliwosc maksymalna
+ transmisja dwutonowa dziala tak, ze jak AUDF2 doliczy do 0 to resetowany jest kanal 1 - czyli wyjscie audio ustawiane jest w stan wysoki i przeladowywany AUDF1 - jesli AUDF2 jest mniejsze niz 2*AUDF1 to w konsekwencji dostaje sie fale o okresie w AUDF2 (nie wg powyzszego wzoru), ale o wypelnieniu wynikajacym z ilorazu czasu trwania stanu wysokiego (AUDF1) do okresu fali (AUDF2)
+ te rejestry tylko sie nazywaja "frequency" a w rzeczywistosci to sa period 🙂 bo to zwykly licznik odliczajacy tikniecia zegara bazowego - czyli dzielnik czestotliwosci
+ mono — 09/10/2022
+ pamietaj ze sa dwie kwestie
+ czestotliwosc nuty granej kanalem kiedy grasz dzwiek
+ i druga rzecz to okres miedzy przerwaniami kiedy generujesz licznikiem irq
+ trzecia rzecz to taktowanie transmisji SIO czyli predkosc transmisji w bitach na sekunde
+ Image
+ mono — 09/10/2022
+ mozna, choc wzor jest w http://atariki.krap.pl/index.php/POKEY#Szybko.C5.9B.C4.87_transmisji
+ oni tam pisza o parze dzielnikow 3+4 bo tak OS ustawia tryb komunikacji, ale naprawde konfiguracje dla transmisji ustawia sie w SKCTL
+ podobienstwo wzoru (Q/2)/(N+M) do tego z generowaniem dzwieku polega na tym, ze bit jest probkowany 2x
+ uwaga na kwarc systemowy, bo wystepuja 4: dwa dla NTSC i jeden dla PAL http://atariki.krap.pl/index.php/NTSC_vs_PAL oraz jeden dla SECAM http://atariki.krap.pl/index.php/130XE_SECAM
+
+ */
+
+
+
+
 #if defined(RUN_ATARI)
 
 CViewAtariStatePOKEY::CViewAtariStatePOKEY(const char *name, float posX, float posY, float posZ, float sizeX, float sizeY, CDebugInterfaceAtari *debugInterface)
 : CGuiView(name, posX, posY, posZ, sizeX, sizeY)
 {
 	this->debugInterface = debugInterface;
-		
+
+	imGuiNoWindowPadding = true;
+	imGuiNoScrollbar = true;
+
 	fontBytes = viewC64->fontDisassembly;
 	fontSize = 7.0f;
 	AddLayoutParameter(new CLayoutParameterFloat("Font Size", &fontSize));
@@ -85,10 +121,9 @@ CViewAtariStatePOKEY::CViewAtariStatePOKEY(const char *name, float posX, float p
 	{
 		for (int chanNum = 0; chanNum < 4; chanNum++)
 		{
-			pokeyChannelWaveform[pokeyNum][chanNum] = new CViewWaveform(0, 0, 0, 0, 0, POKEY_WAVEFORM_LENGTH);
+			viewChannelWaveform[pokeyNum][chanNum] = new CViewWaveform("CViewAtariStatePOKEY::CViewWaveform", 0, 0, 0, 0, 0, debugInterface->pokeyChannelWaveform[pokeyNum][chanNum]);
 		}
-		pokeyMixWaveform[pokeyNum] = new CViewWaveform(0, 0, 0, 0, 0, POKEY_WAVEFORM_LENGTH);
-		waveformPos[pokeyNum] = 0;
+		viewMixWaveform[pokeyNum] = new CViewWaveform("CViewAtariStatePOKEY::CViewWaveform", 0, 0, 0, 0, 0, debugInterface->pokeyMixWaveform[pokeyNum]);
 	}
 	
 	this->SetPosition(posX, posY, posZ, sizeX, sizeY);
@@ -123,7 +158,7 @@ void CViewAtariStatePOKEY::UpdateFontSize()
 			px = posX + wgx;
 			for (int chanNum = 0; chanNum < 4; chanNum++)
 			{
-				pokeyChannelWaveform[pokeyNum][chanNum]->SetPosition(px, py, posZ, wsx, wsy);
+				viewChannelWaveform[pokeyNum][chanNum]->SetPosition(px, py, posZ, wsx, wsy);
 				px += wsx + dx;
 			}
 			
@@ -135,7 +170,7 @@ void CViewAtariStatePOKEY::UpdateFontSize()
 		py = posY + wgy;
 		for (int pokeyNum = 0; pokeyNum < MAX_NUM_POKEYS; pokeyNum++)
 		{
-			pokeyMixWaveform[pokeyNum]->SetPosition(px, py, posZ, wsx, wsy);
+			viewMixWaveform[pokeyNum]->SetPosition(px, py, posZ, wsx, wsy);
 			
 			py += wgy + wsy;
 		}
@@ -210,17 +245,16 @@ void CViewAtariStatePOKEY::Render()
 //		return;
 
 	int numPokeys = debugInterfaceAtari->IsPokeyStereo() ? 2 : 1;
-	
+
+	// calc trigger pos, render
 	for (int pokeyNumber = 0; pokeyNumber < numPokeys; pokeyNumber++)
 	{
 		for (int chanNum = 0; chanNum < 4; chanNum++)
 		{
-			pokeyChannelWaveform[pokeyNumber][chanNum]->CalculateWaveform();
-			pokeyChannelWaveform[pokeyNumber][chanNum]->Render();
+			viewChannelWaveform[pokeyNumber][chanNum]->Render();
 		}
 		
-		pokeyMixWaveform[pokeyNumber]->CalculateWaveform();
-		pokeyMixWaveform[pokeyNumber]->Render();
+		viewMixWaveform[pokeyNumber]->Render();
 	}
 
 	this->RenderState(posX, posY, posZ, fontBytes, fontSize, 1);
@@ -356,38 +390,6 @@ void CViewAtariStatePOKEY::RenderState(float px, float py, float posZ, CSlrFont 
 
 	
 }
-
-void CViewAtariStatePOKEY::AddWaveformData(int pokeyNumber, int v1, int v2, int v3, int v4, short mix)
-{
-//	LOGD("CViewAtariStatePOKEY::AddWaveformData: pokey #%d, %d %d %d %d | %d", pokeyNumber, v1, v2, v3, v4, mix);
-	
-	// pokey channels
-	int pos = waveformPos[pokeyNumber];
-	pokeyChannelWaveform[pokeyNumber][0]->waveformData[pos] = v1;
-	pokeyChannelWaveform[pokeyNumber][1]->waveformData[pos] = v2;
-	pokeyChannelWaveform[pokeyNumber][2]->waveformData[pos] = v3;
-	pokeyChannelWaveform[pokeyNumber][3]->waveformData[pos] = v4;
-	
-	// mix channel
-	pokeyMixWaveform[pokeyNumber]->waveformData[pos] = mix;
-	
-	waveformPos[pokeyNumber]++;
-	
-	if (waveformPos[pokeyNumber] == POKEY_WAVEFORM_LENGTH)
-	{
-//		guiMain->LockRenderMutex();
-//		pokeyChannelWaveform[pokeyNumber][0]->CalculateWaveform();
-//		pokeyChannelWaveform[pokeyNumber][1]->CalculateWaveform();
-//		pokeyChannelWaveform[pokeyNumber][2]->CalculateWaveform();
-//		pokeyChannelWaveform[pokeyNumber][3]->CalculateWaveform();
-//		pokeyMixWaveform[pokeyNumber]->CalculateWaveform();
-//		guiMain->UnlockRenderMutex();
-		
-		waveformPos[pokeyNumber] = 0;
-	}
-}
-
-
 
 bool CViewAtariStatePOKEY::DoTap(float x, float y)
 {
@@ -552,3 +554,4 @@ void CViewAtariStatePOKEY::SetVisible(bool isVisible) {}
 void CViewAtariStatePOKEY::AddWaveformData(int pokeyNumber, int v1, int v2, int v3, int v4, short mix) {}
 
 #endif
+

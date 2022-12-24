@@ -74,7 +74,7 @@ public:
 	virtual u8 *Assemble64Tass(char *assembleText, int *codeStartAddr, int *codeSize);
 	virtual void Assemble64TassClearBuffer();
 	virtual u8 *Assemble64Tass(int *codeStartAddr, int *codeSize);
-	virtual u8 *Assemble64Tass(int *codeStartAddr, int *codeSize, char *storeAsmFileName, bool quiet);
+	virtual u8 *Assemble64Tass(int *codeStartAddr, int *codeSize, const char *storeAsmFileName, bool quiet);
 	virtual bool Assemble64TassToRam(int *codeStartAddr, int *codeSize);
 	virtual bool Assemble64TassToRam(int *codeStartAddr, int *codeSize, char *storeAsmFileName, bool quiet);
 	virtual void Assemble64TassAddLine(const char *format, ...);

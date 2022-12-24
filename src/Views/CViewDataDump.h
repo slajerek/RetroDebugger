@@ -19,7 +19,7 @@ class CViewDataDump : public CGuiView, CGuiEditHexCallback
 {
 public:
 	CViewDataDump(const char *name, float posX, float posY, float posZ, float sizeX, float sizeY,
-				  CDebugSymbols *symbols, CViewMemoryMap *viewMemoryMap, CViewDisassembly *viewDisassemble);
+				  CDebugSymbols *symbols, CViewMemoryMap *viewMemoryMap, CViewDisassembly *viewDisassembly);
 	
 	virtual bool KeyDown(u32 keyCode, bool isShift, bool isAlt, bool isControl, bool isSuper);
 	virtual bool KeyDownRepeat(u32 keyCode, bool isShift, bool isAlt, bool isControl, bool isSuper);
@@ -52,7 +52,7 @@ public:
 	
 	CDataAdapter *dataAdapter;
 	CViewMemoryMap *viewMemoryMap;
-	CViewDisassembly *viewDisassemble;
+	CViewDisassembly *viewDisassembly;
 
 	void SetDataAdapter(CDataAdapter *newDataAdapter);
 	

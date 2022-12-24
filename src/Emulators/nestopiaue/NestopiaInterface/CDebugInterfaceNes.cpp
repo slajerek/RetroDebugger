@@ -11,10 +11,11 @@
 #include "NstMachine.hpp"
 #include "NstPpu.hpp"
 #include "NstCpu.hpp"
+#include "CWaveformData.h"
 
 #include "CDataAdapterNesPpuNmt.h"
 
-#include "C64D_Version.h"
+#include "EmulatorsConfig.h"
 #include "CDebugInterfaceNes.h"
 #include "CDebugInterfaceNesTasks.h"
 #include "RES_ResourceManager.h"
@@ -41,6 +42,8 @@
 CDebugInterfaceNes *debugInterfaceNes;
 extern Nes::Api::Emulator nesEmulator;
 
+// 44100/50*5
+#define NES_APU_WAVEFORM_LENGTH	4410
 
 CDebugInterfaceNes::CDebugInterfaceNes(CViewC64 *viewC64) //, uint8 *memory)
 : CDebugInterface(viewC64)
@@ -53,6 +56,15 @@ CDebugInterfaceNes::CDebugInterfaceNes(CViewC64 *viewC64) //, uint8 *memory)
 	CreateScreenData();
 	
 	audioChannel = NULL;
+	for (int apuNum = 0; apuNum < MAX_NUM_NES_APUS; apuNum++)
+	{
+		for (int chanNum = 0; chanNum < 6; chanNum++)
+		{
+			nesChannelWaveform[apuNum][chanNum] = new CWaveformData(NES_APU_WAVEFORM_LENGTH);
+		}
+		nesMixWaveform[apuNum] = new CWaveformData(NES_APU_WAVEFORM_LENGTH);
+	}
+
 	snapshotsManager = new CSnapshotsManager(this);
 
 	dataAdapter = new CDataAdapterNesRam(this);
@@ -166,7 +178,7 @@ void CDebugInterfaceNes::RunEmulationThread()
 		if (NestopiaUE_Initialize())
 		{
 			isInitialised = true;
-			viewC64->ShowMessage("disksys.rom missing");
+			viewC64->ShowMessageError("disksys.rom missing");
 		}
 		else
 		{
@@ -191,6 +203,18 @@ void CDebugInterfaceNes::DoFrame()
 	this->UnlockMutex();
 	
 	CDebugInterface::DoFrame();
+}
+
+void CDebugInterfaceNes::RestartAudio()
+{
+	audioChannel->Start();
+	RefreshSync();
+}
+
+// reset a/v sync
+void CDebugInterfaceNes::RefreshSync()
+{
+	nesd_reset_sync();
 }
 
 //	UBYTE MEMORY_mem[65536 + 2];
@@ -313,7 +337,7 @@ uint8 CDebugInterfaceNes::GetDebugMode()
 	return debugMode;
 }
 
-CDataAdapter *CDebugInterfaceNes::GetDataAdapter()
+CDebugDataAdapter *CDebugInterfaceNes::GetDataAdapter()
 {
 	return this->dataAdapter;
 }
@@ -607,6 +631,79 @@ void CDebugInterfaceNes::SetApuReceiveChannelsData(int apuNumber, bool isReceivi
 	nesd_isReceiveChannelsData = isReceiving;
 }
 
+void CDebugInterfaceNes::AddWaveformData(int apuNumber, int v1, int v2, int v3, int v4, int v5, int v6, short mix)
+{
+//	LOGD("CDebugInterfaceNes::AddWaveformData: #%d, %d %d %d %d %d %d | %d", apuNumber, v1, v2, v3, v4, v5, v6, mix);
+	
+	// apu channels
+	nesChannelWaveform[apuNumber][0]->AddSample(v1);
+	nesChannelWaveform[apuNumber][1]->AddSample(v2);
+	nesChannelWaveform[apuNumber][2]->AddSample(v3);
+	nesChannelWaveform[apuNumber][3]->AddSample(v4);
+	nesChannelWaveform[apuNumber][4]->AddSample(v5);
+	nesChannelWaveform[apuNumber][5]->AddSample(v6);
+
+	// mix channel
+	nesMixWaveform[apuNumber]->AddSample(mix);
+}
+
+void CDebugInterfaceNes::UpdateWaveforms()
+{
+	// copy waveform data as quickly as possible
+	LockMutex();
+//	for (int apuNumber = 0; apuNumber < MAX_NUM_NES_APUS; apuNumber++)
+	{
+		int apuNumber = 0;
+		for (int chanNum = 0; chanNum < 6; chanNum++)
+		{
+			nesChannelWaveform[apuNumber][chanNum]->CopySampleData();
+		}
+		nesMixWaveform[apuNumber]->CopySampleData();
+	}
+	UnlockMutex();
+
+//	for (int apuNumber = 0; apuNumber < MAX_NUM_NES_APUS; apuNumber++)
+	{
+		int apuNumber = 0;
+		for (int chanNum = 0; chanNum < 6; chanNum++)
+		{
+			nesChannelWaveform[apuNumber][chanNum]->CalculateTriggerPos();
+		}
+		nesMixWaveform[apuNumber]->CalculateTriggerPos();
+	}
+}
+
+void CDebugInterfaceNes::UpdateWaveformsMuteStatus()
+{
+	int apuNumber = 0;
+	SetApuMuteChannels(apuNumber,
+					   nesChannelWaveform[apuNumber][0]->isMuted,
+					   nesChannelWaveform[apuNumber][1]->isMuted,
+					   nesChannelWaveform[apuNumber][2]->isMuted,
+					   nesChannelWaveform[apuNumber][3]->isMuted,
+					   nesChannelWaveform[apuNumber][4]->isMuted,
+					   nesChannelWaveform[apuNumber][5]->isMuted);
+
+	if (nesChannelWaveform[apuNumber][0]->isMuted
+		&& nesChannelWaveform[apuNumber][1]->isMuted
+		&& nesChannelWaveform[apuNumber][2]->isMuted
+		&& nesChannelWaveform[apuNumber][3]->isMuted
+		&& nesChannelWaveform[apuNumber][4]->isMuted
+		&& nesChannelWaveform[apuNumber][5]->isMuted)
+	{
+		nesMixWaveform[apuNumber]->isMuted = true;
+	}
+	else if (!nesChannelWaveform[apuNumber][0]->isMuted
+			 || !nesChannelWaveform[apuNumber][1]->isMuted
+			 || !nesChannelWaveform[apuNumber][2]->isMuted
+			 || !nesChannelWaveform[apuNumber][3]->isMuted
+			 || !nesChannelWaveform[apuNumber][4]->isMuted
+			 || !nesChannelWaveform[apuNumber][5]->isMuted)
+	{
+		nesMixWaveform[apuNumber]->isMuted = false;
+	}
+}
+
 u8 CDebugInterfaceNes::GetApuRegister(u16 addr)
 {
 	return nesd_get_apu_register(addr);
@@ -616,5 +713,11 @@ u8 CDebugInterfaceNes::GetPpuRegister(u16 addr)
 {
 	Nes::Core::Machine& machine = nesEmulator;
 	return machine.ppu.registers[addr & 0x0F];
+}
+
+void CDebugInterfaceNes::SupportsBreakpoints(bool *writeBreakpoint, bool *readBreakpoint)
+{
+	*writeBreakpoint = true;
+	*readBreakpoint = false;
 }
 

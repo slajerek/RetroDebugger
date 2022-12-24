@@ -3,7 +3,9 @@ extern "C" {
 #include "ViceWrapper.h"
 #include "vice.h"
 #include "main.h"
+#include "vicii.h"
 #include "viciitypes.h"
+#include "machine.h"
 #include "vsync.h"
 #include "raster.h"
 #include "videoarch.h"
@@ -13,6 +15,7 @@ extern "C" {
 #include "cia.h"
 #include "maincpu.h"
 #include "snapshot.h"
+#include "vicii-resources.h"
 }
 
 #include "CDebugInterfaceVice.h"
@@ -110,26 +113,49 @@ void mt_SYS_Sleep(unsigned long milliseconds)
 	SYS_Sleep(milliseconds);
 }
 
+bool c64dSkipBogusPageOffsetReadOnSTA = false;
+
 void c64d_mark_c64_cell_read(uint16 addr)
 {
-	viewC64->viewC64MemoryMap->CellRead(addr, viceCurrentC64PC, vicii.raster_line, vicii.raster_cycle);
+//	LOGD("c64d_mark_c64_cell_read=%04x", addr);
+	
+	bool isBogusPageOffsetRead = false;
+	if (c64dSkipBogusPageOffsetReadOnSTA)
+	{
+		int pc = viceCurrentC64PC;
+//		LOGD("c64d_mark_c64_cell_read pc=%04x", pc);
+		u8 opcode = c64d_peek_c64(pc);
+		if (opcode == 0x9D || opcode == 0x95 || opcode == 0x99 || opcode == 0x81 || opcode == 0x91
+			|| opcode == 0x94 || opcode == 0x96)
+		{
+			isBogusPageOffsetRead = true;
+//			LOGD("...bogus page read=true");
+		}
+
+	}
+	
+	if (!isBogusPageOffsetRead)
+		viewC64->viewC64MemoryMap->CellRead(addr, viceCurrentC64PC, vicii.raster_line, vicii.raster_cycle);
 
 	// skip checking breakpoints when quick fast-forward/restoring snapshot
 	if (debugInterfaceVice->snapshotsManager->IsPerformingSnapshotRestore())
 		return;
 	
-	debugInterfaceVice->LockMutex();
-	
-	CDebugSymbolsSegment *segment = debugInterfaceVice->symbols->currentSegment;
-	if (segment)
+	if (!isBogusPageOffsetRead)
 	{
-		u8 value = c64d_peek_c64(addr);
-		if (segment->breakpointsMemory->EvaluateBreakpoint(addr, value, MEMORY_BREAKPOINT_ACCESS_READ) != NULL)
+		debugInterfaceVice->LockMutex();
+		
+		CDebugSymbolsSegment *segment = debugInterfaceVice->symbols->currentSegment;
+		if (segment)
 		{
-			debugInterfaceVice->SetDebugMode(DEBUGGER_MODE_PAUSED);
+			u8 value = c64d_peek_c64(addr);
+			if (segment->breakpointsMemory->EvaluateBreakpoint(addr, value, MEMORY_BREAKPOINT_ACCESS_READ) != NULL)
+			{
+				debugInterfaceVice->SetDebugMode(DEBUGGER_MODE_PAUSED);
+			}
 		}
+		debugInterfaceVice->UnlockMutex();
 	}
-	debugInterfaceVice->UnlockMutex();
 }
 
 void c64d_mark_c64_cell_write(uint16 addr, uint8 value)
@@ -229,12 +255,13 @@ void c64d_display_drive_led(int drive_number, unsigned int pwm1, unsigned int le
 {
 	//LOGD("c64d_display_drive_led: %d: %d %d", drive_number, pwm1, led_pwm2);
 	
-	debugInterfaceVice->ledState[drive_number] = (float)pwm1 / 1000.0f;
+	debugInterfaceVice->ledGreenPwm[drive_number] = (float)pwm1 / 1000.0f;
+	debugInterfaceVice->ledRedPwm[drive_number] = (float)led_pwm2 / 1000.0f;
 }
 
 void c64d_show_message(char *message)
 {
-	viewC64->ShowMessage(message);
+	viewC64->ShowMessageInfo(message);
 }
 
 // C64 frodo color palette (more realistic looking colors)
@@ -286,6 +313,29 @@ void c64d_set_palette_vice(uint8 *palette)
 	}
 }
 
+//
+extern "C" {
+extern vicii_resources_t vicii_resources;
+void vicii_change_timing(machine_timing_t *machine_timing, int border_mode);
+}
+
+int c64d_get_vicii_border_mode()
+{
+	return vicii_resources.border_mode;
+}
+
+int c64d_set_vicii_border_mode(int borderMode)
+{
+	if (vicii_resources.border_mode != borderMode) {
+		vicii_resources.border_mode = borderMode;
+		/* this works because vicii-timing.c only handles borders in
+		   viciisc. */
+		vicii_change_timing(0, vicii_resources.border_mode);
+	}
+	return 0;
+}
+
+//
 
 void c64d_clear_screen()
 {
@@ -319,6 +369,25 @@ void c64d_clear_screen()
 
 }
 
+int c64d_screen_num_skip_top_lines()
+{
+	int borderMode = vicii_resources.border_mode;
+	
+	switch(borderMode)
+	{
+		case VICII_NORMAL_BORDERS:
+			return 16;
+		case VICII_FULL_BORDERS:
+			return 8;
+		case VICII_DEBUG_BORDERS:
+			return 0;
+		default:
+		case VICII_NO_BORDERS:
+			return 51;
+	}
+	return 16;
+}
+
 void c64d_refresh_screen_no_callback()
 {
 //	LOGD("c64d_refresh_screen_no_callback");
@@ -338,16 +407,19 @@ void c64d_refresh_screen_no_callback()
 	if (superSample == 1)
 	{
 		// dest screen width is 512
-		// src  screen width is 384
+		// src  screen width is vicii.raster.canvas->draw_buffer->visible_width (normal borders=384)
 		//
-		// skip 16 top lines
-		uint8 *srcScreenPtr = screenBuffer + (16*384);
+		// skip approx 16 black top lines
+		int skipTopLines = c64d_screen_num_skip_top_lines();
+		int screenWidth = vicii.raster.canvas->draw_buffer->visible_width;
+		int screenHeight = vicii.raster.canvas->draw_buffer->visible_height; //-skipTopLines;
+		
+		uint8 *srcScreenPtr = screenBuffer + (skipTopLines*screenWidth);
 		uint8 *destScreenPtr = (uint8 *)debugInterfaceVice->screenImage->resultData;
 		
-		int screenHeight = debugInterfaceVice->GetScreenSizeY();
 		for (int y = 0; y < screenHeight; y++)
 		{
-			for (int x = 0; x < 384; x++)
+			for (int x = 0; x < screenWidth; x++)
 			{
 				u8 v = *srcScreenPtr++;
 				*destScreenPtr++ = c64d_palette_red[v];
@@ -356,7 +428,7 @@ void c64d_refresh_screen_no_callback()
 				*destScreenPtr++ = 255;
 			}
 			
-			destScreenPtr += (512-384)*4;
+			destScreenPtr += (512-screenWidth)*4;
 		}
 	}
 	else
@@ -365,17 +437,20 @@ void c64d_refresh_screen_no_callback()
 		//	// src  screen width is 384
 		//
 		// skip 16 top lines
-		uint8 *srcScreenPtr = screenBuffer + (16*384);
+		int skipTopLines = c64d_screen_num_skip_top_lines();
+		int screenWidth = vicii.raster.canvas->draw_buffer->visible_width;
+		int screenHeight = vicii.raster.canvas->draw_buffer->visible_height; //-skipTopLines;
+
+		uint8 *srcScreenPtr = screenBuffer + (skipTopLines*screenWidth);
 		uint8 *destScreenPtr = (uint8 *)debugInterfaceVice->screenImage->resultData;
 		
-		int screenHeight = debugInterfaceVice->GetScreenSizeY();
 		for (int y = 0; y < screenHeight; y++)
 		{
 			for (int j = 0; j < superSample; j++)
 			{
 				uint8 *pScreenPtrSrc = srcScreenPtr;
 				uint8 *pScreenPtrDest = destScreenPtr;
-				for (int x = 0; x < 384; x++)
+				for (int x = 0; x < screenWidth; x++)
 				{
 					u8 v = *pScreenPtrSrc++;
 					
@@ -391,7 +466,7 @@ void c64d_refresh_screen_no_callback()
 				destScreenPtr += (512)*superSample*4;
 			}
 			
-			srcScreenPtr += 384;
+			srcScreenPtr += screenWidth;
 		}
 	}
 	
@@ -414,7 +489,11 @@ void c64d_refresh_previous_lines()
 //	LOGD("c64d_refresh_previous_lines");
 	debugInterfaceVice->LockRenderScreenMutex();
 	
-	int rasterY = vicii.raster_line - 16;
+	int skipTopLines = c64d_screen_num_skip_top_lines();
+	int screenWidth = vicii.raster.canvas->draw_buffer->visible_width;
+	int screenHeight = vicii.raster.canvas->draw_buffer->visible_height; //-skipTopLines
+	
+	int rasterY = vicii.raster_line - skipTopLines;
 	
 	rasterY--;
 	
@@ -423,11 +502,11 @@ void c64d_refresh_previous_lines()
 	
 //	LOGD("..... rasterY=%x", rasterY);
 	
-	for (int x = 0; x < 384; x++)
+	for (int x = 0; x < screenWidth; x++)
 	{
 		for (int y = 0; y < rasterY; y++)
 		{
-			int offset = x + ((y+16) * 384);
+			int offset = x + ((y+skipTopLines) * screenWidth);
 			
 			u8 v = screenBuffer[offset];
 			
@@ -455,9 +534,13 @@ void c64d_refresh_dbuf()
 
 //	return;
 //	LOGD("c64d_refresh_dbuf");
-	int rasterY = vicii.raster_line - 16;
+	int skipTopLines = c64d_screen_num_skip_top_lines();
+	int screenWidth = vicii.raster.canvas->draw_buffer->visible_width;
+	int screenHeight = vicii.raster.canvas->draw_buffer->visible_height; //-skipTopLines
 
-	if (rasterY < 0 || rasterY > debugInterfaceVice->GetScreenSizeY())
+	int rasterY = vicii.raster_line - skipTopLines;
+
+	if (rasterY < 0 || rasterY > screenHeight)
 	{
 		return;
 	}
@@ -473,13 +556,32 @@ void c64d_refresh_dbuf()
 //	LOGD(".... rasterY=%x vicii.dbuf_offset + 8=%d", rasterY, (vicii.dbuf_offset + 8));
 //	LOGD(".... rasterX=%x raster_cycle=%d", vicii.raster_cycle*8, vicii.raster_cycle);
 
+	int borderMode = debugInterfaceVice->GetViciiBorderMode();
+	int lineOffset;
+	
+	switch(borderMode)
+	{
+		default:
+		case VICII_NORMAL_BORDERS:
+			lineOffset = 104;
+			break;
+		case VICII_FULL_BORDERS:
+			lineOffset = 104-16;
+			break;
+		case VICII_DEBUG_BORDERS:
+			lineOffset = 0;
+			break;
+		case VICII_NO_BORDERS:
+			lineOffset = 104+32;
+			break;
+	}
 	
 	int maxX = 0;
 	
 	for (int l = 0; l < vicii.dbuf_offset; l++)	//+8
 	{
-		int x = l - 104;
-		if (x < 0 || x > 383)
+		int x = l - lineOffset;
+		if (x < 0 || x > screenWidth)
 			continue;
 		
 		if (maxX < x)
@@ -1289,7 +1391,7 @@ extern "C" {
 ////////////
 
 // sid
-int c64d_is_receive_channels_data[MAX_NUM_SIDS] = { 0, 0, 0 };
+int c64d_is_receive_channels_data[C64_MAX_NUM_SIDS] = { 0, 0, 0 };
 
 void c64d_sid_receive_channels_data(int sidNum, int isOn)
 {
@@ -1300,7 +1402,7 @@ void c64d_sid_channels_data(int sidNumber, int v1, int v2, int v3, short mix)
 {
 //	LOGD("c64d_sid_channels_data: sid#%d, %d %d %d %d", sidNumber, v1, v2, v3, mix);
 	
-	viewC64->viewC64StateSID->AddWaveformData(sidNumber, v1, v2, v3, mix);
+	debugInterfaceVice->AddWaveformData(sidNumber, v1, v2, v3, mix);
 }
 
 // is drive dirty for snapshot interval?

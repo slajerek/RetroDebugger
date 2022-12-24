@@ -1,4 +1,4 @@
-#include "C64D_Version.h"
+#include "EmulatorsConfig.h"
 
 #if defined(RUN_ATARI)
 extern "C" {
@@ -33,11 +33,15 @@ extern "C" {
 #include "C64SettingsStorage.h"
 #include "CViewC64.h"
 #include "SND_Main.h"
+#include "CWaveformData.h"
 #include "CSnapshotsManager.h"
 #include "CDebuggerEmulatorPlugin.h"
 #include "CDebugSymbols.h"
 
 #include "CAudioChannelAtari.h"
+
+//44100/50*4/8
+#define POKEY_WAVEFORM_LENGTH 441*3
 
 CDebugInterfaceAtari *debugInterfaceAtari;
 
@@ -45,6 +49,7 @@ CDebugInterfaceAtari *debugInterfaceAtari;
 
 extern "C" {
 void ATRD_SetConfigFileName(const char *fileName);
+void atrd_reset_av_sync();
 };
 
 CDebugInterfaceAtari::CDebugInterfaceAtari(CViewC64 *viewC64) //, uint8 *memory)
@@ -57,6 +62,15 @@ CDebugInterfaceAtari::CDebugInterfaceAtari(CViewC64 *viewC64) //, uint8 *memory)
 	CreateScreenData();
 	
 	audioChannel = NULL;
+	for (int pokeyNum = 0; pokeyNum < MAX_NUM_POKEYS; pokeyNum++)
+	{
+		for (int chanNum = 0; chanNum < 4; chanNum++)
+		{
+			pokeyChannelWaveform[pokeyNum][chanNum] = new CWaveformData(POKEY_WAVEFORM_LENGTH);
+		}
+		pokeyMixWaveform[pokeyNum] = new CWaveformData(POKEY_WAVEFORM_LENGTH);
+	}
+
 	snapshotsManager = new CSnapshotsManager(this);
 
 	dataAdapter = new CDataAdapterAtari(this);
@@ -167,7 +181,7 @@ float CDebugInterfaceAtari::GetEmulationFPS()
 	return this->numEmulationFPS;
 }
 
-CDataAdapter *CDebugInterfaceAtari::GetDataAdapter()
+CDebugDataAdapter *CDebugInterfaceAtari::GetDataAdapter()
 {
 	return this->dataAdapter;
 }
@@ -266,10 +280,20 @@ void CDebugInterfaceAtari::RunEmulationThread()
 	audioChannel->Stop();
 }
 
-
 void CDebugInterfaceAtari::DoFrame()
 {
 	CDebugInterface::DoFrame();
+}
+
+void CDebugInterfaceAtari::RefreshSync()
+{
+	atrd_reset_av_sync();
+}
+
+void CDebugInterfaceAtari::RestartAudio()
+{
+	audioChannel->Start();
+	RefreshSync();
 }
 
 //
@@ -1043,6 +1067,50 @@ bool CDebugInterfaceAtari::IsPokeyStereo()
 	return POKEYSND_stereo_enabled;
 }
 
+void CDebugInterfaceAtari::AddWaveformData(int pokeyNumber, int voice1, int voice2, int voice3, int voice4, short mix)
+{
+//	LOGD("CDebugInterfaceAtari::AddWaveformData: pokey #%d, %d %d %d %d | %d", pokeyNumber, v1, v2, v3, v4, mix);
+	
+	// pokey channels
+	pokeyChannelWaveform[pokeyNumber][0]->AddSample(voice1);
+	pokeyChannelWaveform[pokeyNumber][1]->AddSample(voice2);
+	pokeyChannelWaveform[pokeyNumber][2]->AddSample(voice3);
+	pokeyChannelWaveform[pokeyNumber][3]->AddSample(voice4);
+	
+	// mix channel
+	pokeyMixWaveform[pokeyNumber]->AddSample(mix);
+}
+
+void CDebugInterfaceAtari::UpdateWaveforms()
+{
+	// update POKEY waveforms
+	int numPokeys = debugInterfaceAtari->IsPokeyStereo() ? 2 : 1;
+
+	// copy waveform data as quickly as possible
+	LockMutex();
+	for (int pokeyNumber = 0; pokeyNumber < numPokeys; pokeyNumber++)
+	{
+		for (int chanNum = 0; chanNum < 4; chanNum++)
+		{
+			pokeyChannelWaveform[pokeyNumber][chanNum]->CopySampleData();
+		}
+		
+		pokeyMixWaveform[pokeyNumber]->CopySampleData();
+	}
+	UnlockMutex();
+	
+	// calculate trigger pos
+	for (int pokeyNumber = 0; pokeyNumber < numPokeys; pokeyNumber++)
+	{
+		for (int chanNum = 0; chanNum < 4; chanNum++)
+		{
+			pokeyChannelWaveform[pokeyNumber][chanNum]->CalculateTriggerPos();
+		}
+		
+		pokeyMixWaveform[pokeyNumber]->CalculateTriggerPos();
+	}
+}
+
 extern "C" {
 	void atrd_async_load_snapshot(char *filePath);
 	void atrd_async_save_snapshot(char *filePath);
@@ -1202,7 +1270,7 @@ void CDebugInterfaceAtari::SetMachineType(u8 machineType)
 		Atari800_keyboard_detached = FALSE;
 	Atari800_InitialiseMachine();
 
-	snapshotsManager->ClearSnapshotsHistory();
+//	snapshotsManager->ClearSnapshotsHistory();
 	this->ResetEmulationFrameCounter();
 	this->ResetMainCpuDebugCycleCounter();
 	
@@ -1285,11 +1353,17 @@ void CDebugInterfaceAtari::SetRamSizeOption(u8 ramSizeOption)
 
 	Atari800_InitialiseMachine();
 
-	snapshotsManager->ClearSnapshotsHistory();
+//	snapshotsManager->ClearSnapshotsHistory();
 	this->ResetEmulationFrameCounter();
 	this->ResetMainCpuDebugCycleCounter();
 	
 	snapshotsManager->UnlockMutex();
+}
+
+void CDebugInterfaceAtari::SupportsBreakpoints(bool *writeBreakpoint, bool *readBreakpoint)
+{
+	*writeBreakpoint = true;
+	*readBreakpoint = false;
 }
 
 #else

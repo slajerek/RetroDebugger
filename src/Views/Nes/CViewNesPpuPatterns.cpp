@@ -14,6 +14,9 @@ CViewNesPpuPatterns::CViewNesPpuPatterns(const char *name, float posX, float pos
 {
 	this->debugInterface = debugInterface;
 	
+	imGuiNoWindowPadding = true;
+	imGuiNoScrollbar = true;
+
 	int w = 512 * debugInterface->screenSupersampleFactor;
 	int h = 512 * debugInterface->screenSupersampleFactor;
 	imageDataScreenDefault = new CImageData(w, h, IMG_TYPE_RGBA);

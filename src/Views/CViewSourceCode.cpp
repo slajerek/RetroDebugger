@@ -23,10 +23,13 @@
 
 CViewSourceCode::CViewSourceCode(const char *name, float posX, float posY, float posZ, float sizeX, float sizeY,
 								 CDebugInterface *debugInterface, CDataAdapter *dataAdapter, CViewMemoryMap *memoryMap,
-								 CViewDisassembly *viewDisassemble)
+								 CViewDisassembly *viewDisassembly)
 : CGuiView(name, posX, posY, posZ, sizeX, sizeY)
 {
-	this->viewDisassemble = viewDisassemble;
+	imGuiNoWindowPadding = true;
+	imGuiNoScrollbar = true;
+
+	this->viewDisassembly = viewDisassembly;
 	this->memoryMap = memoryMap;
 	this->dataAdapter = dataAdapter;
 	this->memoryLength = dataAdapter->AdapterGetDataLength();
@@ -49,8 +52,8 @@ CViewSourceCode::CViewSourceCode(const char *name, float posX, float posY, float
 
 	/// debug
 
-	// render execute-aware version of disassemble?
-	//c64SettingsRenderDisassembleExecuteAware = true;
+	// render execute-aware version of disassembly?
+	//c64SettingsRenderDisassemblyExecuteAware = true;
 	
 //	this->AddCodeLabel(0xE5D1, "labE5D1x:");
 //	this->AddCodeLabel(0xE5D3, "labE5D3x:");
@@ -108,8 +111,8 @@ void CViewSourceCode::RenderImGui()
 
 void CViewSourceCode::Render()
 {
-	this->font = viewDisassemble->fontDisassemble;
-	this->fontSize = viewDisassemble->fontSize;
+	this->font = viewDisassembly->fontDisassembly;
+	this->fontSize = viewDisassembly->fontSize;
 	
 //	this->font->BlitText("CViewSourceCode", posX, posY, -1, fontSize);
 	
@@ -193,7 +196,7 @@ void CViewSourceCode::Render()
 	const float segmentFontSize = 6.0f;
 	font->BlitTextColor(sourceSegment->name, posX, posY, -1, segmentFontSize, 1, 1, 1, 1);
 	
-	this->cursorAddress = viewDisassemble->cursorAddress;
+	this->cursorAddress = viewDisassembly->cursorAddress;
 
 	if (this->cursorAddress >= 0 && this->cursorAddress < asmSource->maxMemoryAddress)
 	{

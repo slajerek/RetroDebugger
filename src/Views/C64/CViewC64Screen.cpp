@@ -20,7 +20,10 @@ CViewC64Screen::CViewC64Screen(const char *name, float posX, float posY, float p
 : CGuiView(name, posX, posY, posZ, sizeX, sizeY)
 {
 	this->debugInterface = debugInterface;
-		
+
+	imGuiNoWindowPadding = true;
+	imGuiNoScrollbar = true;
+
 	int w = 512 * debugInterface->screenSupersampleFactor;
 	int h = 512 * debugInterface->screenSupersampleFactor;
 	imageDataScreenDefault = new CImageData(w, h, IMG_TYPE_RGBA);
@@ -192,6 +195,7 @@ void CViewC64Screen::RefreshScreen()
 void CViewC64Screen::RefreshScreenColodore()
 {
 	//LOGD("CViewC64Screen::RefreshScreen");
+	return;
 	
 	debugInterface->LockRenderScreenMutex();
 	
@@ -207,17 +211,82 @@ void CViewC64Screen::RefreshScreenColodore()
 
 void CViewC64Screen::Render()
 {
-	// render texture of C64's screen
-	imageScreen->SetLinearScaling(!c64SettingsRenderScreenNearest);
+//	// render texture of C64's screen
+//	imageScreen->SetLinearScaling(!c64SettingsRenderScreenNearest);
+//
+//	// blit texture of the screen
+//	Blit(imageScreen,
+//		 posX,
+//		 posY, -1,
+//		 sizeX,
+//		 sizeY,
+//		 0.0f, 0.0f, screenTexEndX, screenTexEndY);
+//
+//	// and any other stuff on top of the screen
+//	if (showGridLines)
+//	{
+//		// raster screen in hex:
+//		// startx = 68 (88) endx = 1e8 (1c8)
+//		// starty = 10 (32) endy = 120 ( fa)
+//
+//		float cys = posY + (float)0x0010 * rasterScaleFactorY  + rasterCrossOffsetY;
+//		float cye = posY + (float)0x0120 * rasterScaleFactorY  + rasterCrossOffsetY;
+//
+//		float cxs = posX + (float)0x0068 * rasterScaleFactorX  + rasterCrossOffsetX;
+//		float cxe = posX + (float)0x01E8 * rasterScaleFactorX  + rasterCrossOffsetX;
+//
+//
+//		// vertical lines
+//		for (float rasterX = 103.5f; rasterX < 0x01e8; rasterX += 0x08)
+//		{
+//			float cx = posX + (float)rasterX * rasterScaleFactorX  + rasterCrossOffsetX;
+//
+//			BlitLine(cx, cys, cx, cye, -1,
+//					 gridLinesColorR, gridLinesColorG, gridLinesColorB, gridLinesColorA);
+//		}
+//
+//		// horizontal lines
+//		for (float rasterY = 18.5f; rasterY < 0x0120; rasterY += 0x08)
+//		{
+//			float cy = posY + (float)rasterY * rasterScaleFactorY  + rasterCrossOffsetY;
+//
+//			BlitLine(cxs, cy, cxe, cy, -1,
+//					 gridLinesColorR, gridLinesColorG, gridLinesColorB, gridLinesColorA);
+//		}
+//
+//
+////		float cx = posX + (float)rasterX * rasterScaleFactorX  + rasterCrossOffsetX;
+////		float cy = posY + (float)rasterY * rasterScaleFactorY  + rasterCrossOffsetY;
+//	}
+//
+//	if (viewC64->isShowingRasterCross)
+//	{
+//		RenderRaster(viewC64->c64RasterPosToShowX, viewC64->c64RasterPosToShowY);
+//	}
+//
+}
 
-	// blit texture of the screen
-	Blit(imageScreen,
-		 posX,
-		 posY, -1,
-		 sizeX,
-		 sizeY,
-		 0.0f, 0.0f, screenTexEndX, screenTexEndY);
+void CViewC64Screen::RenderImGui()
+{
+	float w = (float)viewC64->debugInterfaceC64->GetScreenSizeX();
+	float h = (float)viewC64->debugInterfaceC64->GetScreenSizeY();
+	
+//	LOGD("CViewC64Screen: w=%f h=%f", w, h);
+	this->SetKeepAspectRatio(true, w/h);
 
+	PreRenderImGui();
+	
+	///
+	
+	CSlrImage *image = viewC64->viewC64Screen->imageScreen;
+	
+	// c64 screen texture boundaries
+	screenTexEndX = (float)debugInterface->GetScreenSizeX() / 512.0f;
+	screenTexEndY = (float)debugInterface->GetScreenSizeY() / 512.0f;
+	
+	Blit(image, posX, posY, -1, sizeX, sizeY, 0.0, 0.0, screenTexEndX, screenTexEndY);
+		
+	/* TODO: grid lines & raster in c64 CViewC64Screen
 	// and any other stuff on top of the screen
 	if (showGridLines)
 	{
@@ -254,56 +323,12 @@ void CViewC64Screen::Render()
 //		float cx = posX + (float)rasterX * rasterScaleFactorX  + rasterCrossOffsetX;
 //		float cy = posY + (float)rasterY * rasterScaleFactorY  + rasterCrossOffsetY;
 	}
-	
-}
-
-void CViewC64Screen::RenderImGui()
-{
-	this->imGuiWindowSkipFocusCheck = true;
-	
-	float w = (float)viewC64->debugInterfaceC64->GetScreenSizeX();
-	float h = (float)viewC64->debugInterfaceC64->GetScreenSizeY();
-	this->SetKeepAspectRatio(true, w/h);
-
-	PreRenderImGui();
-	
-	if (ImGui::IsWindowFocused())
+	if (viewC64->isShowingRasterCross)
 	{
-		guiMain->SetViewFocus(viewC64->viewC64Screen);
+		RenderRaster(viewC64->c64RasterPosToShowX, viewC64->c64RasterPosToShowY);
+	}
+	 */
 
-	}
-	
-	///
-	
-	CSlrImage *image = viewC64->viewC64Screen->imageScreen;
-	
-	/*
-	 that old code below was replaced into proper image->linear
-	if (c64SettingsRenderScreenNearest)
-	{
-		// nearest neighbour
-		{
-			glBindTexture(GL_TEXTURE_2D, image->textureId);
-			
-			glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
-			glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST);
-			
-		}
-	}
-	else
-	{
-		// billinear interpolation
-		{
-			glBindTexture(GL_TEXTURE_2D, image->textureId);
-			
-			glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
-			glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
-		}
-	}
-*/
-	
-	Blit(image, posX, posY, -1, sizeX, sizeX, 0.0, 0.0, screenTexEndX, screenTexEndX);
-		
 	PostRenderImGui();
 }
 
@@ -318,8 +343,7 @@ void CViewC64Screen::SetZoomedScreenPos(float zoomedScreenPosX, float zoomedScre
 	this->zoomedScreenCenterX = zoomedScreenPosX + zoomedScreenSizeX/2.0f;
 	this->zoomedScreenCenterY = zoomedScreenPosY + zoomedScreenSizeY/2.0f;
 
-	this->SetZoomedScreenLevel(this->zoomedScreenLevel);
-	
+	this->UpdateZoomedScreenLevel();
 }
 
 void CViewC64Screen::SetZoomedScreenLevel(float zoomedScreenLevel)
@@ -335,12 +359,17 @@ void CViewC64Screen::SetZoomedScreenLevel(float zoomedScreenLevel)
 	}
 	
 	this->zoomedScreenLevel = zoomedScreenLevel;
-	
+
+	UpdateZoomedScreenLevel();
+}
+
+void CViewC64Screen::UpdateZoomedScreenLevel()
+{
 	zoomedScreenImageSizeX = (float)debugInterface->GetScreenSizeX() * zoomedScreenLevel;
 	zoomedScreenImageSizeY = (float)debugInterface->GetScreenSizeY() * zoomedScreenLevel;
 
-	zoomedScreenRasterScaleFactorX = zoomedScreenImageSizeX / (float)384; //debugInterface->GetC64ScreenSizeX();
-	zoomedScreenRasterScaleFactorY = zoomedScreenImageSizeY / (float)272; //debugInterface->GetC64ScreenSizeY();
+	zoomedScreenRasterScaleFactorX = zoomedScreenImageSizeX / (float)debugInterface->GetScreenSizeX();
+	zoomedScreenRasterScaleFactorY = zoomedScreenImageSizeY / (float)debugInterface->GetScreenSizeY();
 	zoomedScreenRasterOffsetX =  -103.787 * zoomedScreenRasterScaleFactorX;
 	zoomedScreenRasterOffsetY = -15.500 * zoomedScreenRasterScaleFactorY;
 	
@@ -382,6 +411,8 @@ void CViewC64Screen::CalcZoomedScreenTextureFromRaster(int rasterX, int rasterY)
 void CViewC64Screen::RenderZoomedScreen(int rasterX, int rasterY)
 {
 //	LOGD("CViewC64Screen::RenderZoomedScreen rx=%d ry=%d", rasterX, rasterY);
+	
+	UpdateZoomedScreenLevel();
 	CalcZoomedScreenTextureFromRaster(rasterX, rasterY);
 	
 	VID_SetClipping(zoomedScreenPosX, zoomedScreenPosY, zoomedScreenSizeX, zoomedScreenSizeY);

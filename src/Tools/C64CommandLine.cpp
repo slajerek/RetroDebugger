@@ -1,3 +1,5 @@
+#include "C64D_Version.h"
+#include "EmulatorsConfig.h"
 #include "C64CommandLine.h"
 #include "SYS_FileSystem.h"
 #include "CViewC64.h"
@@ -9,18 +11,16 @@
 #include "RES_ResourceManager.h"
 #include "C64SettingsStorage.h"
 #include "C64SharedMemory.h"
-#include "CViewVicEditor.h"
 #include "CGuiMain.h"
 #include "SND_SoundEngine.h"
 #include "CViewJukeboxPlaylist.h"
-#include "C64D_Version.h"
 #include "SYS_Platform.h"
 
 #include "CDebugInterfaceC64.h"
 #include "CDebugInterfaceAtari.h"
 #include "CDebugInterfaceNes.h"
 
-// TODO: fixme, plugins should also pare command line options
+// TODO: fixme, plugins should also parse command line options
 extern char *crtMakerConfigFilePath;
 
 
@@ -551,7 +551,7 @@ void c64PerformStartupTasksThreaded()
 	
 	if (c64CommandLineWindowFullScreen)
 	{
-		viewC64->GoFullScreen(NULL);
+		viewC64->GoFullScreen(SetFullScreenMode::MainWindowEnterFullScreen, NULL);
 	}
 
 	c64PreRunStartupCallbacks();
@@ -830,10 +830,10 @@ void c64PerformStartupTasksThreaded()
 	}
 	
 	//
-	if (viewC64->debugInterfaceC64)
-	{
-		viewC64->viewVicEditor->RunDebug();
-	}
+//	if (viewC64->debugInterfaceC64)
+//	{
+//		viewC64->screenVicEditor->RunDebug();
+//	}
 	
 	c64PostRunStartupCallbacks();
 }
@@ -842,6 +842,7 @@ class C64PerformStartupTasksThread : public CSlrThread
 {
 	virtual void ThreadRun(void *data)
 	{
+		ThreadSetName("PerformStartupTasks");
 		LOGM("C64PerformStartupTasksThread: ThreadRun");
 		
 		if (c64SettingsPathToViceSnapshot != NULL && c64SettingsWaitOnStartup < 150)
@@ -1046,7 +1047,6 @@ void C64DebuggerPerformStartupTasks()
 {
 	LOGM("C64DebuggerPerformStartupTasks()");
 	C64PerformStartupTasksThread *thread = new C64PerformStartupTasksThread();
-	thread->ThreadSetName("C64PerformStartupTasksThread");
 	SYS_StartThread(thread, NULL);
 }
 
@@ -1286,6 +1286,11 @@ void c64PerformNewConfigurationTasksThreaded(CByteBuffer *byteBuffer)
 		}
 	}
 
+	if (viewC64->config->GetBool("uiRaiseWindowOnPass", true))
+	{
+		guiMain->RaiseMainWindow();
+	}
+	
 	while(!byteBuffer->IsEof())
 	{
 		uint8 t = byteBuffer->GetU8();
@@ -1460,7 +1465,7 @@ void c64PerformNewConfigurationTasksThreaded(CByteBuffer *byteBuffer)
 		}
 		else if (t == C64D_PASS_CONFIG_DATA_FULL_SCREEN)
 		{
-			viewC64->GoFullScreen(NULL);
+			viewC64->GoFullScreen(SetFullScreenMode::MainWindowEnterFullScreen, NULL);
 		}
 	}
 	

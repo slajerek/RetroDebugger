@@ -36,7 +36,7 @@
 #include "machine.h"
 #include "machine-drive.h"
 #include "types.h"
-
+#include "log.h"
 
 int machine_drive_resources_init(void)
 {

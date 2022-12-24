@@ -110,6 +110,7 @@ public:
 	virtual bool CheckSnapshotRestore();
 	
 	virtual void RestoreSnapshot(CStoredChipsSnapshot *snapshot);
+	virtual bool RestoreSnapshotByFrame(int frame);
 	virtual bool RestoreSnapshotByFrame(int frame, long cycleNum);
 	virtual bool RestoreSnapshotByFrame(int frame, long cycleNum, u8 targetDebugMode);
 	virtual bool RestoreSnapshotByCycle(u64 cycle);

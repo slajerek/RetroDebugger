@@ -1,3 +1,4 @@
+#include "EmulatorsConfig.h"
 #include "SYS_Types.h"
 #include "C64SettingsStorage.h"
 #include "CViewC64.h"
@@ -6,17 +7,15 @@
 #include "CAudioChannelAtari.h"
 #include "AtariWrapper.h"
 
-#include "C64D_Version.h"
-
 extern "C" {
 	extern int POKEYSND_stereo_enabled;
 	void Sound_Callback(uint8 *buffer, unsigned int size);
 }
 
 CAudioChannelAtari::CAudioChannelAtari(CDebugInterfaceAtari *debugInterface)
+: CAudioChannel("Atari")
 {
 	this->debugInterface = debugInterface;
-	sprintf(this->name, "atari");
 	this->bypass = true;
 	
 	monoBuffer = new u16[ATARI_AUDIO_BUFFER_FRAMES];

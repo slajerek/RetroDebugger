@@ -6,6 +6,9 @@
 CViewC64ScreenViewfinder::CViewC64ScreenViewfinder(const char *name, float posX, float posY, float posZ, float sizeX, float sizeY, CViewC64Screen *viewC64Screen)
 : CGuiView(name, posX, posY, posZ, sizeX, sizeY)
 {
+	imGuiNoWindowPadding = true;
+	imGuiNoScrollbar = true;
+
 	this->viewC64Screen = viewC64Screen;
 	
 //	AddLayoutParameter(new CLayoutParameterFloat("Font Size", &fontSize));

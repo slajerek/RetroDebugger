@@ -78,31 +78,9 @@ public:
 
 	CViewC64MenuItem *menuItemBack;
 
-	CSlrKeyboardShortcut *kbsSaveSnapshot;
 	CViewC64MenuItem *menuItemSaveSnapshot;
-	CSlrKeyboardShortcut *kbsLoadSnapshot;
 	CViewC64MenuItem *menuItemLoadSnapshot;
-
 	
-	CSlrKeyboardShortcut *kbsStoreSnapshot1;
-	CSlrKeyboardShortcut *kbsStoreSnapshot2;
-	CSlrKeyboardShortcut *kbsStoreSnapshot3;
-	CSlrKeyboardShortcut *kbsStoreSnapshot4;
-	CSlrKeyboardShortcut *kbsStoreSnapshot5;
-	CSlrKeyboardShortcut *kbsStoreSnapshot6;
-	CSlrKeyboardShortcut *kbsStoreSnapshot7;
-
-	CSlrKeyboardShortcut *kbsRestoreSnapshot1;
-	CSlrKeyboardShortcut *kbsRestoreSnapshot2;
-	CSlrKeyboardShortcut *kbsRestoreSnapshot3;
-	CSlrKeyboardShortcut *kbsRestoreSnapshot4;
-	CSlrKeyboardShortcut *kbsRestoreSnapshot5;
-	CSlrKeyboardShortcut *kbsRestoreSnapshot6;
-	CSlrKeyboardShortcut *kbsRestoreSnapshot7;
-
-	bool ProcessKeyboardShortcut(u32 zone, u8 actionType, CSlrKeyboardShortcut *keyboardShortcut);
-	
-
 	CByteBuffer **fullSnapshots;
 	
 	void QuickStoreFullSnapshot(int snapshotId);

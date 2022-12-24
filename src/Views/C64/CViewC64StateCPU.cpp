@@ -20,6 +20,9 @@ register_def c64_cpu_regs[NUM_C64_REGS] = {
 CViewC64StateCPU::CViewC64StateCPU(const char *name, float posX, float posY, float posZ, float sizeX, float sizeY, CDebugInterfaceC64 *debugInterface)
 : CViewBaseStateCPU(name, posX, posY, posZ, sizeX, sizeY, debugInterface)
 {
+	imGuiNoWindowPadding = true;
+	imGuiNoScrollbar = true;
+
 	this->numRegisters = NUM_C64_REGS;
 	regs = (register_def*)&c64_cpu_regs;
 	
@@ -43,7 +46,7 @@ void CViewC64StateCPU::Render()
 	float bg = 0.0f;
 	float bb = 0.0f;
 	
-	if (viewC64->viewC64StateVIC->isLockedState)
+	if (viewC64->viewC64StateVIC->GetIsLockedState())
 	{
 		br = 0.35f; bg = 0.0f; bb = 0.0f;
 		BlitFilledRectangle(px-fontSize*0.3f, py-fontSize*0.3f, -1, fontSize*49.6f, fontSize*2.3f, br, bg, bb, 1.00f);

@@ -2,7 +2,6 @@
 #define _C64Sprite_H_
 
 #include "C64Bitmap.h"
-#include "CViewVicEditor.h"
 
 class CSlrImage;
 class CImageData;
@@ -11,10 +10,10 @@ class CByteBuffer;
 class C64Sprite : public C64Bitmap
 {
 public:
-	C64Sprite(CViewVicEditor *vicEditor, int width, int height, bool isMulti);
+	C64Sprite(CViewC64VicEditor *vicEditor, int width, int height, bool isMulti);
 	virtual ~C64Sprite();
 	
-	CViewVicEditor *vicEditor;
+	CViewC64VicEditor *vicEditor;
 	
 	int spriteId;
 	
@@ -55,8 +54,8 @@ public:
 
 	virtual void Clear();
 	
-	virtual void Serialise(CByteBuffer *byteBuffer);
-	virtual void Deserialise(CByteBuffer *byteBuffer);
+	virtual void Serialize(CByteBuffer *byteBuffer);
+	virtual void Deserialize(CByteBuffer *byteBuffer);
 	
 	u8 spriteData[63];
 };

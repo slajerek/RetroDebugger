@@ -27,6 +27,7 @@
 #include "vice.h"
 
 #include <stdlib.h>
+#include <string.h>
 
 #include "gfxoutput.h"
 #include "lib.h"

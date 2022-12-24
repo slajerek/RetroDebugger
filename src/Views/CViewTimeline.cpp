@@ -11,6 +11,12 @@ CViewTimeline::CViewTimeline(const char *name, float posX, float posY, float pos
 {
 	this->debugInterface = debugInterface;
 	
+	imGuiNoWindowPadding = true;
+	imGuiNoScrollbar = true;
+
+	enteredGoToFrameNum = 1;
+	enteredGoToCycleNum = 1;
+	
 	fontSize = 8.0f;
 	
 	isLockedVisible = false;
@@ -18,13 +24,8 @@ CViewTimeline::CViewTimeline(const char *name, float posX, float posY, float pos
 	
 	scrubIntervalMS = 25;
 	nextPossibleScrubTime = 0;
-
-	/*btnDone = new CGuiButton("DONE", posEndX - (guiButtonSizeX + guiButtonGapX), 
-							 posEndY - (guiButtonSizeY + guiButtonGapY), posZ + 0.04, 
-							 guiButtonSizeX, guiButtonSizeY, 
-							 BUTTON_ALIGNED_DOWN, this);
-	this->AddGuiElement(btnDone);	
-	 */
+	
+	viewC64->config->GetInt("TimelineDisplayMode", (int*)&displayMode, DisplayMode::Frames);
 }
 
 CViewTimeline::~CViewTimeline()
@@ -100,7 +101,28 @@ void CViewTimeline::Render()
 		BlitFilledRectangle(bx, posY, posZ, bwidth, sizeY, frameBoxR, frameBoxG, frameBoxB, frameBoxA);
 	}
 	
-	sprintf(buf, "%d", textFrame);
+	if (displayMode == DisplayMode::Frames)
+	{
+		sprintf(buf, "%d", textFrame);
+	}
+	else if (displayMode == DisplayMode::Time)
+	{
+		float f = (float)textFrame;
+		int ss = (int)floor(textFrame % (int)debugInterface->GetEmulationFPS());
+		int s = (int)floor((f / debugInterface->GetEmulationFPS()))  % 60;
+		int m = (int)floor((f / (debugInterface->GetEmulationFPS() * 60))) % 60;
+		int h = (int)floor((f / (debugInterface->GetEmulationFPS() * 60 * 60))) % 60;
+		
+		if (h > 0)
+		{
+			sprintf(buf, "%02d:%02d:%02d:%02d", h, m, s, ss);
+		}
+		else
+		{
+			sprintf(buf, "%02d:%02d:%02d", m, s, ss);
+		}
+	}
+	
 	float px = sizeX / 2.0f - (strlen(buf) / 2 * fontSize) + posX;
 	
 	float offsetY = sizeY/2.0f - fontSize/2.0f;
@@ -150,6 +172,12 @@ int CViewTimeline::GetCurrentFrameNum()
 	return currentFrame;
 }
 
+u64 CViewTimeline::GetCurrentCycleNum()
+{
+	u64 currentCycle = debugInterface->GetMainCpuCycleCounter();
+	return currentCycle;
+}
+
 void CViewTimeline::GetFramesLimits(int *minFrame, int *maxFrame)
 {
 	return debugInterface->snapshotsManager->GetFramesLimits(minFrame, maxFrame);
@@ -187,7 +215,7 @@ bool CViewTimeline::DoTap(float x, float y)
 {
 	LOGG("CViewTimeline::DoTap:  x=%f y=%f", x, y);
 	
-	if (!IsInside(x, y))
+	if (!IsInsideView(x, y))
 		return false;
 	
 	isScrubbing = true;
@@ -211,24 +239,31 @@ bool CViewTimeline::HasContextMenuItems()
 
 void CViewTimeline::RenderContextMenuItems()
 {
-	if (ImGui::MenuItem("Load timeline"))
-	{
-		viewC64->mainMenuBar->OpenDialogLoadTimeline();
-	}
 	if (ImGui::MenuItem("Save timeline"))
 	{
 		viewC64->mainMenuBar->OpenDialogSaveTimeline(debugInterface);
+	}
+	ImGui::Separator();
+	if (ImGui::MenuItem("Load timeline"))
+	{
+		viewC64->mainMenuBar->OpenDialogLoadTimeline();
 	}
 	if (ImGui::MenuItem("Clear timeline"))
 	{
 		debugInterface->snapshotsManager->ClearSnapshotsHistory();
 	}
-	if (ImGui::MenuItem("Free pool memory"))
-	{
-		debugInterface->snapshotsManager->DeleteAllPools();
-	}
+	
+	ImGui::Separator();
+	RenderMenuGoTo(false);
+
+	ImGui::Separator();
 	if (ImGui::BeginMenu("Stats"))
 	{
+		if (ImGui::MenuItem("Free pool memory"))
+		{
+			debugInterface->snapshotsManager->DeleteAllPools();
+		}
+		ImGui::Separator();
 		int minFrame, maxFrame;
 		debugInterface->snapshotsManager->GetFramesLimits(&minFrame, &maxFrame);
 		ImGui::Text("Frames from %d to %d", minFrame, maxFrame);
@@ -240,7 +275,63 @@ void CViewTimeline::RenderContextMenuItems()
 					debugInterface->snapshotsManager->inputEventsToReuse.size());
 		ImGui::EndMenu();
 	}
+	ImGui::Separator();
+	if (ImGui::BeginMenu("Counter"))
+	{
+		if (ImGui::MenuItem("Frames", NULL, displayMode == DisplayMode::Frames))
+		{
+			displayMode = DisplayMode::Frames;
+			viewC64->config->SetInt("TimelineDisplayMode", (int*)&displayMode);
+		}
+		if (ImGui::MenuItem("Time", NULL, displayMode == DisplayMode::Time))
+		{
+			displayMode = DisplayMode::Time;
+			viewC64->config->SetInt("TimelineDisplayMode", (int*)&displayMode);
+		}
+		ImGui::EndMenu();
+	}
 }
+
+void CViewTimeline::RenderMenuGoTo(bool withEmulatorName)
+{
+	char *buf = SYS_GetCharBuf();
+	
+	int goToFrameNum = GetCurrentFrameNum();
+	
+	char *bufEmulatorName = SYS_GetCharBuf();
+	if (withEmulatorName)
+	{
+		sprintf(bufEmulatorName, " %s", debugInterface->GetPlatformNameString());
+	}
+
+	sprintf(buf, "Go to%s frame##%x", bufEmulatorName, this);
+	if (ImGui::InputInt(buf, &goToFrameNum, 1, 10, ImGuiInputTextFlags_EnterReturnsTrue))
+	{
+		enteredGoToFrameNum = goToFrameNum;
+		debugInterface->snapshotsManager->RestoreSnapshotByFrame(goToFrameNum);
+	}
+	sprintf(buf, "Go to%s frame %d##%x", bufEmulatorName, enteredGoToFrameNum, this);
+	if (ImGui::MenuItem(buf, viewC64->mainMenuBar->kbsGoToFrame->cstr, false, (enteredGoToFrameNum >= 0)))
+	{
+		debugInterface->snapshotsManager->RestoreSnapshotByFrame(enteredGoToFrameNum);
+	}
+
+	int goToCycleNum = GetCurrentCycleNum();
+	sprintf(buf, "Go to%s cycle##%x", bufEmulatorName, this);
+	if (ImGui::InputInt(buf, &goToCycleNum, 1, 10, ImGuiInputTextFlags_EnterReturnsTrue))
+	{
+		enteredGoToCycleNum = goToCycleNum;
+		debugInterface->snapshotsManager->RestoreSnapshotByCycle(goToCycleNum);
+	}
+	sprintf(buf, "Go to%s cycle %d##%x", bufEmulatorName, enteredGoToCycleNum, this);
+	if (ImGui::MenuItem(buf, viewC64->mainMenuBar->kbsGoToCycle->cstr, false, (enteredGoToCycleNum >= 0)))
+	{
+		debugInterface->snapshotsManager->RestoreSnapshotByCycle(enteredGoToCycleNum);
+	}
+	
+	SYS_ReleaseCharBuf(buf);
+}
+
 
 //@returns is consumed
 bool CViewTimeline::DoDoubleTap(float x, float y)
@@ -258,6 +349,9 @@ bool CViewTimeline::DoFinishDoubleTap(float x, float y)
 
 bool CViewTimeline::DoMove(float x, float y, float distX, float distY, float diffX, float diffY)
 {
+	if (!IsInsideView(x, y))
+		return false;
+
 	if (isScrubbing)
 	{
 		ScrubToPos(x);

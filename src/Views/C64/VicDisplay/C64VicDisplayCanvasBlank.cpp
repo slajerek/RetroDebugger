@@ -49,7 +49,16 @@ void C64VicDisplayCanvasBlank::RefreshScreen(vicii_cycle_state_t *viciiState, CI
 
 void C64VicDisplayCanvasBlank::RenderCanvasSpecificGridLines()
 {
-	// nothing
+	// blank screen, render only interior screen rectangle
+	float cys = vicDisplay->displayPosWithScrollY + 0.0f * vicDisplay->rasterScaleFactorY  + vicDisplay->rasterCrossOffsetY;
+//	float cye = vicDisplay->displayPosWithScrollY + 200.0f * vicDisplay->rasterScaleFactorY  + vicDisplay->rasterCrossOffsetY;
+	float cysz = 200.0f * vicDisplay->rasterScaleFactorY  + vicDisplay->rasterCrossOffsetY;
+	
+	float cxs = vicDisplay->displayPosWithScrollX + 0.0f * vicDisplay->rasterScaleFactorX  + vicDisplay->rasterCrossOffsetX;
+//	float cxe = vicDisplay->displayPosWithScrollX + 320.0f * vicDisplay->rasterScaleFactorX  + vicDisplay->rasterCrossOffsetX;
+	float cxsz = 320.0f * vicDisplay->rasterScaleFactorX  + vicDisplay->rasterCrossOffsetX;
+
+	BlitRectangle(cxs, cys, -1, cxsz, cysz, vicDisplay->gridLinesColorR, vicDisplay->gridLinesColorG, vicDisplay->gridLinesColorB, vicDisplay->gridLinesColorA);
 }
 
 void C64VicDisplayCanvasBlank::RenderCanvasSpecificGridValues()

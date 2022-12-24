@@ -56,10 +56,10 @@ void INT_InterpretBinaryPacket(CByteBuffer *inByteBuffer)
 		
 		case C64D_PACKET_STEP_OVER_JSR:
 		{
-			CViewDisassembly *viewDisassemble = viewC64->GetActiveDisassembleView();
-			if (viewDisassemble)
+			CViewDisassembly *viewDisassembly = viewC64->GetActiveDisassemblyView();
+			if (viewDisassembly)
 			{
-				viewDisassemble->StepOverJsr();
+				viewDisassembly->StepOverJsr();
 				INT_SendBinaryPacketStatus(sequenceNumber, C64D_PACKET_STATUS_OK);
 			}
 			else
@@ -78,10 +78,10 @@ void INT_InterpretBinaryPacket(CByteBuffer *inByteBuffer)
 			
 		case C64D_PACKET_JMP_TO_ADDRESS_AT_CURSOR:
 		{
-			CViewDisassembly *viewDisassemble = viewC64->GetActiveDisassembleView();
-			if (viewDisassemble)
+			CViewDisassembly *viewDisassembly = viewC64->GetActiveDisassemblyView();
+			if (viewDisassembly)
 			{
-				viewDisassemble->MakeJMPToCursor();
+				viewDisassembly->MakeJMPToCursor();
 				INT_SendBinaryPacketStatus(sequenceNumber, C64D_PACKET_STATUS_OK);
 			}
 			else
@@ -94,10 +94,10 @@ void INT_InterpretBinaryPacket(CByteBuffer *inByteBuffer)
 		{
 			u16 address = inByteBuffer->GetU16();
 			
-			CViewDisassembly *viewDisassemble = viewC64->GetActiveDisassembleView();
-			if (viewDisassemble)
+			CViewDisassembly *viewDisassembly = viewC64->GetActiveDisassemblyView();
+			if (viewDisassembly)
 			{
-				viewDisassemble->ScrollToAddress(address);
+				viewDisassembly->ScrollToAddress(address);
 				INT_SendBinaryPacketStatus(sequenceNumber, C64D_PACKET_STATUS_OK);
 			}
 			else
@@ -110,10 +110,10 @@ void INT_InterpretBinaryPacket(CByteBuffer *inByteBuffer)
 		{
 			u16 address = inByteBuffer->GetU16();
 			
-			CViewDisassembly *viewDisassemble = viewC64->GetActiveDisassembleView();
-			if (viewDisassemble)
+			CViewDisassembly *viewDisassembly = viewC64->GetActiveDisassemblyView();
+			if (viewDisassembly)
 			{
-				viewDisassemble->MakeJMPToAddress(address);
+				viewDisassembly->MakeJMPToAddress(address);
 				INT_SendBinaryPacketStatus(sequenceNumber, C64D_PACKET_STATUS_OK);
 			}
 			else
@@ -131,10 +131,10 @@ void INT_InterpretBinaryPacket(CByteBuffer *inByteBuffer)
 			u16 address = inByteBuffer->GetU16();
 			bool setOn = inByteBuffer->GetBool();
 			
-			CViewDisassembly *viewDisassemble = viewC64->GetActiveDisassembleView();
-			if (viewDisassemble)
+			CViewDisassembly *viewDisassembly = viewC64->GetActiveDisassemblyView();
+			if (viewDisassembly)
 			{
-				viewDisassemble->SetBreakpointPC(address, setOn);
+				viewDisassembly->SetBreakpointPC(address, setOn);
 				INT_SendBinaryPacketStatus(sequenceNumber, C64D_PACKET_STATUS_OK);
 			}
 			else

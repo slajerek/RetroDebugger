@@ -5,12 +5,12 @@
 #include "DebuggerDefs.h"
 #include "CAudioChannelNes.h"
 
-#define NES_AUDIO_BUFFER_FRAMES 512
+#define NES_AUDIO_BUFFER_FRAMES 4096
 
 CAudioChannelNes::CAudioChannelNes(CDebugInterfaceNes *debugInterface)
+: CAudioChannel("NES")
 {
 	this->debugInterface = debugInterface;
-	sprintf(this->name, "nes");
 	this->bypass = true;
 	
 	monoBuffer = new i16[NES_AUDIO_BUFFER_FRAMES];

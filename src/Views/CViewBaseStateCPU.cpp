@@ -12,6 +12,9 @@ CViewBaseStateCPU::CViewBaseStateCPU(const char *name, float posX, float posY, f
 {
 	this->debugInterface = debugInterface;
 
+	imGuiNoWindowPadding = true;
+	imGuiNoScrollbar = true;
+
 	this->font = viewC64->fontDisassembly;
 	fontSize = 7.0f;
 	AddLayoutParameter(new CLayoutParameterFloat("Font Size", &fontSize));
@@ -188,7 +191,6 @@ bool CViewBaseStateCPU::DoTap(float x, float y)
 	{
 		editingCpuRegisterIndex = index;
 		StartEditingRegister();
-		viewC64->SetFocus(this);
 	}
 	
 	guiMain->UnlockMutex();
@@ -286,7 +288,7 @@ bool CViewBaseStateCPU::KeyUp(u32 keyCode, bool isShift, bool isAlt, bool isCont
 	return false;
 }
 
-bool CViewBaseStateCPU::SetFocus()
+bool CViewBaseStateCPU::WillReceiveFocus()
 {
 	if (editingCpuRegisterIndex != -1)
 		return true;

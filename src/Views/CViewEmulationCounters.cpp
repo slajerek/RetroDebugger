@@ -24,6 +24,9 @@ CViewEmulationCounters::CViewEmulationCounters(char *name, float posX, float pos
 {
 	this->debugInterface = debugInterface;
 	
+	imGuiNoWindowPadding = true;
+	imGuiNoScrollbar = true;
+
 	fontSize = 7.0f;
 	AddLayoutParameter(new CLayoutParameterFloat("Font Size", &fontSize));
 

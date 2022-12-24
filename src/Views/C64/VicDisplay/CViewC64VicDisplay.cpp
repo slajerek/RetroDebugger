@@ -37,6 +37,7 @@ extern "C" {
 #include "CMainMenuBar.h"
 #include "CDebugMemoryMap.h"
 #include "CDebugMemoryMapCell.h"
+#include "CViewC64VicEditor.h"
 
 #include "C64KeyboardShortcuts.h"
 
@@ -61,19 +62,10 @@ extern "C" {
 
 CViewC64VicDisplay::CViewC64VicDisplay(const char *name, float posX, float posY, float posZ, float sizeX, float sizeY,
 									   CDebugInterfaceC64 *debugInterface)
-: CGuiWindow(name, posX, posY, posZ, sizeX, sizeY, NULL, GUI_FRAME_NO_FRAME, NULL)
+: CGuiView(name, posX, posY, posZ, sizeX, sizeY)
 {
 	this->Initialize(debugInterface);
 }
-
-CViewC64VicDisplay::CViewC64VicDisplay(const char *name, float posX, float posY, float posZ, float sizeX, float sizeY,
-									   CDebugInterfaceC64 *debugInterface,
-									   CSlrString *windowName, u32 mode, CGuiWindowCallback *callback)
-: CGuiWindow(name, posX, posY, posZ, sizeX, sizeY, windowName, mode, callback)
-{
-	this->Initialize(debugInterface);
-}
-
 
 void CViewC64VicDisplay::Initialize(CDebugInterfaceC64 *debugInterface)
 {
@@ -82,12 +74,22 @@ void CViewC64VicDisplay::Initialize(CDebugInterfaceC64 *debugInterface)
 	// view with buttons to control this Vic Display
 	viewVicControl = NULL;
 	
+	imGuiNoWindowPadding = true;
+	imGuiNoScrollbar = true;
+
+	performIsTopWindowCheck = true;
+	
+	// config
+	viewC64->config->GetBool ("VicDisplayAutomaticGridLines", &gridLinesAutomatic, true);
+	viewC64->config->GetFloat("VicDisplayAutomaticGridLinesShowZoomLevel", &gridLinesShowZoomLevel, 5.0f);
+	viewC64->config->GetFloat("VicDisplayAutomaticValuesShowZoomLevel", &gridLinesShowValuesZoomLevel, 26.0f);
+
 //	//	m_ecm = (video_mode & 4) >> 2;  // 0 standard, 1 extended
 //	//	m_bmm = (video_mode & 2) >> 1;  // 0 text, 1 bitmap
 //	//	m_mcm = video_mode & 1;         // 0 hires, 1 multi
 //
 	
-	this->autoScrollMode = AUTOSCROLL_DISASSEMBLE_UNKNOWN;
+	this->autoScrollMode = AUTOSCROLL_DISASSEMBLY_UNKNOWN;
 	
 	font = viewC64->fontCBMShifted;
 	fontScale = 0.8;
@@ -102,6 +104,12 @@ void CViewC64VicDisplay::Initialize(CDebugInterfaceC64 *debugInterface)
 	displayFrameRasterY = 0.0f;
 	displayFrameRasterSizeX = 320.0f;
 	displayFrameRasterSizeY = 200.0f;
+	
+	// default
+	displayPosX = 0.0f;
+	displayPosY = 0.0f;
+	displaySizeX = 320.0f;
+	displaySizeY = 200.0f;
 
 	renderDisplayFrame = false;
 
@@ -148,7 +156,7 @@ void CViewC64VicDisplay::Initialize(CDebugInterfaceC64 *debugInterface)
 	this->foregroundColorAlpha = 255;
 	
 	this->showGridLines = true; //false;
-
+	
 	this->showDisplayBorderType = VIC_DISPLAY_SHOW_BORDER_FULL;		//VIC_DISPLAY_SHOW_BORDER_VISIBLE_AREA
 	this->showSpritesGraphics = true;
 	this->showSpritesFrames = true;
@@ -176,7 +184,7 @@ void CViewC64VicDisplay::Initialize(CDebugInterfaceC64 *debugInterface)
 	
 	showRasterCursor = true;
 	
-	canScrollDisassemble = true;
+	canScrollDisassembly = true;
 	
 	currentVicMode = 0;
 	
@@ -195,8 +203,6 @@ void CViewC64VicDisplay::Initialize(CDebugInterfaceC64 *debugInterface)
 	
 	applyScrollRegister = false;
 	
-	backupRenderDataWithColors = false;
-	
 	arrowKeyDown = false;
 	foundMemoryCellPC = false;
 	
@@ -204,7 +210,7 @@ void CViewC64VicDisplay::Initialize(CDebugInterfaceC64 *debugInterface)
 	shortcutZones.push_back(KBZONE_DISASSEMBLY);
 	//shortcutZones.push_back(KBZONE_MEMORY);
 
-	this->autoScrollMode = AUTOSCROLL_DISASSEMBLE_UNKNOWN;
+	this->autoScrollMode = AUTOSCROLL_DISASSEMBLY_UNKNOWN;
 
 }
 
@@ -223,9 +229,9 @@ void CViewC64VicDisplay::SetAutoScrollMode(int newMode)
 //	LOGD("CViewC64VicDisplay::SetAutoScrollMode: %d", newMode);
 	this->autoScrollMode = newMode;
 	
-	if (autoScrollMode == AUTOSCROLL_DISASSEMBLE_RASTER_PC)
+	if (autoScrollMode == AUTOSCROLL_DISASSEMBLY_RASTER_PC)
 	{
-		if (canScrollDisassemble == true)
+		if (canScrollDisassembly == true)
 		{
 			if (viewC64->viewC64Disassembly->changedByUser == false)
 			{
@@ -234,14 +240,14 @@ void CViewC64VicDisplay::SetAutoScrollMode(int newMode)
 			}
 		}
 	}
-	else if (autoScrollMode == AUTOSCROLL_DISASSEMBLE_BITMAP_ADDRESS
-			 || autoScrollMode == AUTOSCROLL_DISASSEMBLE_TEXT_ADDRESS
-			 || autoScrollMode == AUTOSCROLL_DISASSEMBLE_COLOUR_ADDRESS
-			 || autoScrollMode == AUTOSCROLL_DISASSEMBLE_CHARSET_ADDRESS)
+	else if (autoScrollMode == AUTOSCROLL_DISASSEMBLY_BITMAP_ADDRESS
+			 || autoScrollMode == AUTOSCROLL_DISASSEMBLY_TEXT_ADDRESS
+			 || autoScrollMode == AUTOSCROLL_DISASSEMBLY_COLOUR_ADDRESS
+			 || autoScrollMode == AUTOSCROLL_DISASSEMBLY_CHARSET_ADDRESS)
 	{
 		if (viewC64->viewC64Disassembly->changedByUser == false)
 		{
-			ScrollMemoryAndDisassembleToRasterPosition(rasterCursorPosX, rasterCursorPosY, true);
+			ScrollMemoryAndDisassemblyToRasterPosition(rasterCursorPosX, rasterCursorPosY, true);
 		}
 	}
 	
@@ -254,13 +260,7 @@ void CViewC64VicDisplay::SetAutoScrollMode(int newMode)
 
 bool CViewC64VicDisplay::IsInside(float x, float y)
 {
-	if (viewFrame != NULL)
-	{
-		return viewFrame->IsInside(x, y);
-	}
-
-	return CGuiView::IsInside(x, y);
-	
+	return CGuiView::IsInside(x, y);	
 }
 
 void CViewC64VicDisplay::SetShowDisplayBorderType(u8 borderType)
@@ -368,10 +368,11 @@ void CViewC64VicDisplay::SetDisplayPosition(float posX, float posY, float scale,
 	
 	UpdateRasterCrossFactors();
 
-	if (this->viewFrame)
-	{
-		this->viewFrame->UpdateSize();
-	}	
+	// TODO: check callbacks
+//	if (this->viewFrame)
+//	{
+//		this->viewFrame->UpdateSize();
+//	}
 }
 
 void CViewC64VicDisplay::SetDisplayScale(float scale)
@@ -381,8 +382,12 @@ void CViewC64VicDisplay::SetDisplayScale(float scale)
 
 void CViewC64VicDisplay::SetScreenAndDisplaySize(float dPosX, float dPosY, float dSizeX, float dSizeY)
 {
-//	LOGG("CViewC64VicDisplay::SetScreenAndDisplaySize: %f %f %f %f", dPosX, dPosY, dSizeX, dSizeY);
+//	LOGD("CViewC64VicDisplay::SetScreenAndDisplaySize: %s %f %f %f %f", this->name, dPosX, dPosY, dSizeX, dSizeY);
 	
+	if (isnan(dPosY) || dSizeX < 1 || dSizeY < 1)
+	{
+		LOGError("CViewC64VicDisplay::SetScreenAndDisplaySize: is nan");
+	}
 	if (showDisplayBorderType == VIC_DISPLAY_SHOW_BORDER_FULL)
 	{
 		// border is on, make display smaller
@@ -480,6 +485,9 @@ void CViewC64VicDisplay::SetScreenAndDisplaySize(float dPosX, float dPosY, float
 		scrollInRasterPixelsY = 0;
 	}
 	else SYS_FatalExit("CViewC64VicDisplay::SetScreenAndDisplaySize: unknown border type: %d", showDisplayBorderType);
+
+//	LOGD("CViewC64VicDisplay::SetScreenAndDisplaySize: %s visibleScreenPosX=%f %f %f %f", this->name, visibleScreenPosX, visibleScreenPosY, visibleScreenSizeX, visibleScreenSizeY);
+
 }
 
 /*
@@ -751,6 +759,12 @@ void CViewC64VicDisplay::GetViciiPointers(vicii_cycle_state_t *viciiState,
 	u8 *bitmap_low_base;        // Pointer to bitmap memory (low part).
 	u8 *bitmap_high_base;       // Pointer to bitmap memory (high part).
 	int charset_addr, bitmap_bank;
+	
+	if (viciiState == NULL)
+	{
+		LOGError("viciiState can't be NULL!");
+		return;
+	}
 	
 	screen_addr = viciiState->vbank_phi2 + ((viciiState->regs[0x18] & 0xf0) << 6);
 	screen_addr = (screen_addr & viciiState->vaddr_mask_phi2) | viciiState->vaddr_offset_phi2;
@@ -1145,13 +1159,11 @@ void CViewC64VicDisplay::Render()
 	
 	//BlitRectangle(lblAutolockScrollMode->posX, lblAutolockScrollMode->posY, posZ, lblAutolockScrollMode->sizeX, lblAutolockScrollMode->sizeY, 1, 1, 0, 1);
 	
-	
-	
 	// render UI
 	CGuiView::Render();
 }
 
-void CViewC64VicDisplay::GetScreenPosFromRasterPos2(float rasterX, float rasterY, float *x, float *y)
+void CViewC64VicDisplay::GetScreenPosFromRasterPos(float rasterX, float rasterY, float *x, float *y)
 {
 	*x = (rasterX * displaySizeX / 320.0f) + displayPosWithScrollX;
 	*y = (rasterY * displaySizeY / 200.0f) + displayPosWithScrollY;
@@ -1163,7 +1175,7 @@ void CViewC64VicDisplay::GetScreenPosFromRasterPosWithoutScroll(float rasterX, f
 	*y = (rasterY * displaySizeY / 200.0f) + displayPosY;
 }
 
-void CViewC64VicDisplay::GetRasterPosFromScreenPos2(float x, float y, float *rasterX, float *rasterY)
+void CViewC64VicDisplay::GetRasterPosFromScreenPos(float x, float y, float *rasterX, float *rasterY)
 {
 //	LOGD("CViewC64VicDisplay::GetRasterPosFromScreenPos: %f %f", x, y);
 	
@@ -1180,22 +1192,22 @@ void CViewC64VicDisplay::GetRasterPosFromScreenPos2(float x, float y, float *ras
 
 void CViewC64VicDisplay::GetRasterPosFromScreenPosWithoutScroll(float x, float y, float *rasterX, float *rasterY)
 {
-//	LOGD("CViewC64VicDisplay::GetRasterPosFromScreenPosWithoutScroll: %f %f", x, y);
+	LOGD("CViewC64VicDisplay::GetRasterPosFromScreenPosWithoutScroll: %f %f", x, y);
 	
 	float px1 = x - displayPosX;
 	float py1 = y - displayPosY;
 	
-//	LOGD(" disp=%f %f | size=%f %f", displayPosX, displayPosY, displaySizeX, displaySizeY);
+	LOGD(" disp=%f %f | size=%f %f", displayPosX, displayPosY, displaySizeX, displaySizeY);
 	
 	*rasterX = px1 / displaySizeX * 320.0f;
 	*rasterY = py1 / displaySizeY * 200.0f;
 	
-//	LOGD("  p1=%f %f raster=%f %f (%f %f)", px1, py1, *rasterX, *rasterY, floor(*rasterX), floor(*rasterY));
+	LOGD("  p1=%f %f raster=%f %f (%f %f)", px1, py1, *rasterX, *rasterY, floor(*rasterX), floor(*rasterY));
 }
 
-void CViewC64VicDisplay::GetRasterPosFromMousePos2(float *rasterX, float *rasterY)
+void CViewC64VicDisplay::GetRasterPosFromMousePos(float *rasterX, float *rasterY)
 {
-	GetRasterPosFromScreenPos2(guiMain->mousePosX, guiMain->mousePosY, rasterX, rasterY);
+	GetRasterPosFromScreenPos(guiMain->mousePosX, guiMain->mousePosY, rasterX, rasterY);
 }
 
 void CViewC64VicDisplay::GetRasterPosFromMousePosWithoutScroll(float *rasterX, float *rasterY)
@@ -1253,28 +1265,36 @@ vicii_cycle_state_t *CViewC64VicDisplay::UpdateViciiState()
 {
 	vicii_cycle_state_t *viciiState = NULL;
 	
-	if (this->visible == false && this->isCursorLocked == false)
+	if (performIsTopWindowCheck)
 	{
-		// not locked & not visible - copy current state
-		viciiState = &(viewC64->currentViciiState);
-		c64d_vicii_copy_state_data(&(viewC64->viciiStateToShow), viciiState);
-		viewC64->viewC64StateVIC->isLockedState = false;
+		if (this->IsVisible() == false && viewC64->viewVicEditor->IsVisible() == false && this->isCursorLocked == false)
+		{
+			// not locked & not visible - copy current state
+			CopyCurrentViciiStateAndUnlock();
+			return viciiState;
+		}
 		
-		return viciiState;
+		float mouseX = guiMain->mousePosX;
+		float mouseY = guiMain->mousePosY;
+		CGuiView *viewTop = guiMain->FindTopWindow(mouseX, mouseY);
+		
+		bool isInsideVicDisplay = (viewTop == this)
+								&& this->IsInsideView(mouseX, mouseY);
+
+		bool isInsideVicEditor = (viewTop == viewC64->viewVicEditor)
+								&& viewC64->viewVicEditor->IsInsideView(mouseX, mouseY);
+			
+		if (this->isCursorLocked == false && !isInsideVicDisplay && !isInsideVicEditor)
+		{
+			// not locked and not inside vic display nor the vic editor
+			CopyCurrentViciiStateAndUnlock();
+			return viciiState;
+		}
 	}
 
 //	LOGD("rasterCursorPosX=%f rasterCursorPosY=%f", rasterCursorPosX, rasterCursorPosY);
 	
 	return UpdateViciiStateNonVisible(this->rasterCursorPosX, this->rasterCursorPosY);
-}
-
-void CViewC64VicDisplay::CopyViciiStateFromCurrent()
-{
-	// not locked & not visible - copy current state
-	vicii_cycle_state_t *viciiState = &(viewC64->currentViciiState);
-	c64d_vicii_copy_state_data(&(viewC64->viciiStateToShow), viciiState);
-	viewC64->viewC64StateVIC->isLockedState = false;
-
 }
 
 vicii_cycle_state_t *CViewC64VicDisplay::UpdateViciiStateNonVisible(float rx, float ry)
@@ -1293,33 +1313,38 @@ vicii_cycle_state_t *CViewC64VicDisplay::UpdateViciiStateNonVisible(float rx, fl
 			float cycle = (rasterX + 0x88) / 8;
 			viciiState = c64d_get_vicii_state_for_raster_cycle(rasterY + 0x32, cycle);
 			c64d_vicii_copy_state_data(&(viewC64->viciiStateToShow), viciiState);
-			
-			viewC64->viewC64StateVIC->isLockedState = true;
+			viewC64->viewC64StateVIC->SetIsLockedState(true);
 		}
 		else if (c64SettingsVicStateRecordingMode == C64D_VICII_RECORD_MODE_EVERY_LINE)
 		{
 			viciiState = c64d_get_vicii_state_for_raster_cycle(rasterY + 0x32, 0x00);
 			c64d_vicii_copy_state_data(&(viewC64->viciiStateToShow), viciiState);
-			viewC64->viewC64StateVIC->isLockedState = true;
+			viewC64->viewC64StateVIC->SetIsLockedState(true);
 		}
 		else
 		{
 			viciiState = &(viewC64->currentViciiState);
 			c64d_vicii_copy_state_data(&(viewC64->viciiStateToShow), viciiState);
-			viewC64->viewC64StateVIC->isLockedState = false;
+			viewC64->viewC64StateVIC->SetIsLockedState(false);
 		}
 	}
 	else
 	{
 		// outside screen - copy current state
-		viciiState = &(viewC64->currentViciiState);
-		c64d_vicii_copy_state_data(&(viewC64->viciiStateToShow), viciiState);
-		viewC64->viewC64StateVIC->isLockedState = false;
+		CopyCurrentViciiStateAndUnlock();
 	}
 	
 	viewC64->UpdateViciiColors();
 	
 	return viciiState;
+}
+
+void CViewC64VicDisplay::CopyCurrentViciiStateAndUnlock()
+{
+//	LOGD("CopyCurrentViciiStateAndUnlock");
+	// outside screen - copy current state
+	c64d_vicii_copy_state_data(&(viewC64->viciiStateToShow), &(viewC64->currentViciiState));
+	viewC64->viewC64StateVIC->SetIsLockedState(false);
 }
 
 void CViewC64VicDisplay::RenderDisplay()
@@ -1713,7 +1738,7 @@ void CViewC64VicDisplay::RenderGridLines()
 	if (showDisplayBorderType == VIC_DISPLAY_SHOW_BORDER_FULL
 		|| showDisplayBorderType == VIC_DISPLAY_SHOW_BORDER_VISIBLE_AREA)
 	{
-		if (this->hasFocus == false)
+		if (this->HasFocus() == false)
 		{
 			BlitRectangle(fullScanScreenPosX, fullScanScreenPosY, posZ, fullScanScreenSizeX, fullScanScreenSizeY,
 						  0.5f, 0.5f, 0.5f, 0.5f);
@@ -1739,7 +1764,7 @@ void CViewC64VicDisplay::RenderCursor(float rasterCursorPosX, float rasterCursor
 	if (isCursorLocked && viewC64->viewC64Disassembly->isTrackingPC == false)
 	{
 		UpdateRasterCursorPos();
-		ScrollMemoryAndDisassembleToRasterPosition(rasterCursorPosX, rasterCursorPosY, false);
+		ScrollMemoryAndDisassemblyToRasterPosition(rasterCursorPosX, rasterCursorPosY, false);
 	}
 	
 	//    frame  |visible   interior  visible|  frame
@@ -1967,14 +1992,14 @@ void CViewC64VicDisplay::Render(float posX, float posY)
 
 
 
-bool CViewC64VicDisplay::ScrollMemoryAndDisassembleToRasterPosition(float rx, float ry, bool isForced)
+bool CViewC64VicDisplay::ScrollMemoryAndDisassemblyToRasterPosition(float rx, float ry, bool isForced)
 {
-//	LOGD("ScrollMemoryAndDisassembleToRasterPosition: %f %f %d", rx, ry, isForced);
+	LOGG("ScrollMemoryAndDisassemblyToRasterPosition: %f %f %d", rx, ry, isForced);
 
 	// check if outside
 	int addr = -1;
 	
-	if (autoScrollMode == AUTOSCROLL_DISASSEMBLE_RASTER_PC)
+	if (autoScrollMode == AUTOSCROLL_DISASSEMBLY_RASTER_PC)
 	{
 		// will be updated via VIC State view / PC state lock
 		foundMemoryCellPC = true;
@@ -1988,19 +2013,19 @@ bool CViewC64VicDisplay::ScrollMemoryAndDisassembleToRasterPosition(float rx, fl
 	}
 
 	
-	if (autoScrollMode == AUTOSCROLL_DISASSEMBLE_COLOUR_ADDRESS)
+	if (autoScrollMode == AUTOSCROLL_DISASSEMBLY_COLOUR_ADDRESS)
 	{
 		addr = GetColorAddressForRaster(rx, ry);
 	}
-	else if (autoScrollMode == AUTOSCROLL_DISASSEMBLE_TEXT_ADDRESS)
+	else if (autoScrollMode == AUTOSCROLL_DISASSEMBLY_TEXT_ADDRESS)
 	{
 		addr = GetScreenAddressForRaster(rx, ry);
 	}
-	else if (autoScrollMode == AUTOSCROLL_DISASSEMBLE_BITMAP_ADDRESS)
+	else if (autoScrollMode == AUTOSCROLL_DISASSEMBLY_BITMAP_ADDRESS)
 	{
 		addr = GetBitmapAddressForRaster(rx, ry);
 	}
-	else if (autoScrollMode == AUTOSCROLL_DISASSEMBLE_CHARSET_ADDRESS)
+	else if (autoScrollMode == AUTOSCROLL_DISASSEMBLY_CHARSET_ADDRESS)
 	{
 		addr = GetCharsetAddressForRaster(rx, ry);
 	}
@@ -2019,7 +2044,7 @@ bool CViewC64VicDisplay::ScrollMemoryAndDisassembleToRasterPosition(float rx, fl
 	
 	viewC64->viewC64MemoryDataDump->ScrollToAddress(addr, true);
 	
-	if (canScrollDisassemble == true)
+	if (canScrollDisassembly == true)
 	{
 		if (isForced)
 		{
@@ -2029,12 +2054,13 @@ bool CViewC64VicDisplay::ScrollMemoryAndDisassembleToRasterPosition(float rx, fl
 		CDebugMemoryMapCell *cell = viewC64->viewC64MemoryMap->memoryCells[addr];
 		if (cell->writePC != -1)
 		{
-			//LOGD(".... isForced=%d changed=%d", isForced, viewC64->viewC64Disassemble->changedByUser);
-			//LOGD("viewC64->viewC64Disassemble->changedByUser=%d", viewC64->viewC64Disassemble->changedByUser);
+			//LOGD(".... isForced=%d changed=%d", isForced, viewC64->viewC64Disassembly->changedByUser);
+			//LOGD("viewC64->viewC64Disassembly->changedByUser=%d", viewC64->viewC64Disassembly->changedByUser);
 			if (isForced || viewC64->viewC64Disassembly->changedByUser == false)
 			{
 				//LOGD("      SCROLL TO %04x", cell->pc);
 				viewC64->viewC64Disassembly->ScrollToAddress(cell->writePC);
+				viewC64->viewC64StateVIC->SetIsLockedState(true);
 				foundMemoryCellPC = true;
 			}
 		}
@@ -2077,7 +2103,7 @@ bool CViewC64VicDisplay::DoTap(float x, float y)
 	{
 		float rx, ry;
 		
-		this->GetRasterPosFromScreenPos2(x, y, &rx, &ry);
+		this->GetRasterPosFromScreenPos(x, y, &rx, &ry);
 		
 		// check if tapped the same raster position = unlock
 		const float area = 5.0f;
@@ -2088,17 +2114,17 @@ bool CViewC64VicDisplay::DoTap(float x, float y)
 			return true;
 		}
 		
-		if (autoScrollMode == AUTOSCROLL_DISASSEMBLE_RASTER_PC)
+		if (autoScrollMode == AUTOSCROLL_DISASSEMBLY_RASTER_PC)
 		{
 			rasterCursorPosX = rx;
 			rasterCursorPosY = ry;
 			
 			LockCursor();
 			
-			// *UX fix: always update* // do not update disassemble when user moved code
-//			if (viewC64->viewC64Disassemble->changedByUser == false)
+			// *UX fix: always update* // do not update disassembly when user moved code
+//			if (viewC64->viewC64Disassembly->changedByUser == false)
 			{
-				if (canScrollDisassemble == true)
+				if (canScrollDisassembly == true)
 				{
 					viewC64->viewC64Disassembly->isTrackingPC = true;
 				}
@@ -2107,13 +2133,13 @@ bool CViewC64VicDisplay::DoTap(float x, float y)
 		}
 		else
 		{
-			// *UX fix: always update* // do not update disassemble when user moved code
-//			if (viewC64->viewC64Disassemble->changedByUser == false)
+			// *UX fix: always update* // do not update disassembly when user moved code
+//			if (viewC64->viewC64Disassembly->changedByUser == false)
 			{
-				if (ScrollMemoryAndDisassembleToRasterPosition(rx, ry, true))
+				if (ScrollMemoryAndDisassemblyToRasterPosition(rx, ry, true))
 				{
 					LockCursor();
-					if (canScrollDisassemble == true)
+					if (canScrollDisassembly == true)
 					{
 						viewC64->viewC64Disassembly->isTrackingPC = false;
 					}
@@ -2144,25 +2170,25 @@ void CViewC64VicDisplay::SetNextAutoScrollMode()
 {
 	switch(autoScrollMode)
 	{
-		case AUTOSCROLL_DISASSEMBLE_RASTER_PC:
-			SetAutoScrollMode(AUTOSCROLL_DISASSEMBLE_BITMAP_ADDRESS);
+		case AUTOSCROLL_DISASSEMBLY_RASTER_PC:
+			SetAutoScrollMode(AUTOSCROLL_DISASSEMBLY_BITMAP_ADDRESS);
 			break;
 			
-		case AUTOSCROLL_DISASSEMBLE_BITMAP_ADDRESS:
-			SetAutoScrollMode(AUTOSCROLL_DISASSEMBLE_TEXT_ADDRESS);
+		case AUTOSCROLL_DISASSEMBLY_BITMAP_ADDRESS:
+			SetAutoScrollMode(AUTOSCROLL_DISASSEMBLY_TEXT_ADDRESS);
 			break;
 			
-		case AUTOSCROLL_DISASSEMBLE_TEXT_ADDRESS:
-			SetAutoScrollMode(AUTOSCROLL_DISASSEMBLE_COLOUR_ADDRESS);
+		case AUTOSCROLL_DISASSEMBLY_TEXT_ADDRESS:
+			SetAutoScrollMode(AUTOSCROLL_DISASSEMBLY_COLOUR_ADDRESS);
 			break;
 
-		case AUTOSCROLL_DISASSEMBLE_COLOUR_ADDRESS:
-			SetAutoScrollMode(AUTOSCROLL_DISASSEMBLE_CHARSET_ADDRESS);
+		case AUTOSCROLL_DISASSEMBLY_COLOUR_ADDRESS:
+			SetAutoScrollMode(AUTOSCROLL_DISASSEMBLY_CHARSET_ADDRESS);
 			break;
 
 		default:
-		case AUTOSCROLL_DISASSEMBLE_CHARSET_ADDRESS:
-			SetAutoScrollMode(AUTOSCROLL_DISASSEMBLE_RASTER_PC);
+		case AUTOSCROLL_DISASSEMBLY_CHARSET_ADDRESS:
+			SetAutoScrollMode(AUTOSCROLL_DISASSEMBLY_RASTER_PC);
 			break;
 			
 	}
@@ -2174,20 +2200,24 @@ void CViewC64VicDisplay::UpdateRasterCursorPos()
 {
 	if (!isCursorLocked)
 	{
-		float px = guiMain->mousePosX - displayPosWithScrollX;
-		float py = guiMain->mousePosY - displayPosWithScrollY;
-		
-		rasterCursorPosX = px / displaySizeX * 320.0f;
-		rasterCursorPosY = py / displaySizeY * 200.0f;
-		
-		//LOGD("mx=%f x=%f rx=%f  my=%f y=%f ry=%f", mousePosX, px, rasterX, mousePosY, py, rasterY);
+		if (IsTopWindow())
+		{
+			float px = guiMain->mousePosX - displayPosWithScrollX;
+			float py = guiMain->mousePosY - displayPosWithScrollY;
+			
+			rasterCursorPosX = px / displaySizeX * 320.0f;
+			rasterCursorPosY = py / displaySizeY * 200.0f;
+			
+			//LOGD("mx=%f x=%f rx=%f  my=%f y=%f ry=%f", mousePosX, px, rasterX, mousePosY, py, rasterY);
+		}
 	}
 }
 
 void CViewC64VicDisplay::ClearRasterCursorPos()
 {
-	rasterCursorPosX = -1;
-	rasterCursorPosY = -1;
+//	LOGD("ClearRasterCursorPos");
+	rasterCursorPosX = -9999;
+	rasterCursorPosY = -9999;
 }
 
 bool CViewC64VicDisplay::DoFinishTap(float x, float y)
@@ -2209,18 +2239,18 @@ bool CViewC64VicDisplay::DoFinishDoubleTap(float x, float y)
 	return CGuiView::DoFinishDoubleTap(x, y);
 }
 
-void CViewC64VicDisplay::UpdateAutoscrollDisassemble(bool isForced)
+void CViewC64VicDisplay::UpdateAutoscrollDisassembly(bool isForced)
 {
-	if (autoScrollMode == AUTOSCROLL_DISASSEMBLE_TEXT_ADDRESS
-		|| autoScrollMode == AUTOSCROLL_DISASSEMBLE_BITMAP_ADDRESS
-		|| autoScrollMode == AUTOSCROLL_DISASSEMBLE_COLOUR_ADDRESS
-		|| autoScrollMode == AUTOSCROLL_DISASSEMBLE_CHARSET_ADDRESS)
+	if (autoScrollMode == AUTOSCROLL_DISASSEMBLY_TEXT_ADDRESS
+		|| autoScrollMode == AUTOSCROLL_DISASSEMBLY_BITMAP_ADDRESS
+		|| autoScrollMode == AUTOSCROLL_DISASSEMBLY_COLOUR_ADDRESS
+		|| autoScrollMode == AUTOSCROLL_DISASSEMBLY_CHARSET_ADDRESS)
 	{
-		ScrollMemoryAndDisassembleToRasterPosition(rasterCursorPosX, rasterCursorPosY, isForced);
+		ScrollMemoryAndDisassemblyToRasterPosition(rasterCursorPosX, rasterCursorPosY, isForced);
 	}
-	else if (autoScrollMode == AUTOSCROLL_DISASSEMBLE_RASTER_PC)
+	else if (autoScrollMode == AUTOSCROLL_DISASSEMBLY_RASTER_PC)
 	{
-		if (canScrollDisassemble == true)
+		if (canScrollDisassembly == true)
 		{
 			if (isForced || viewC64->viewC64Disassembly->changedByUser == false)
 			{
@@ -2234,12 +2264,24 @@ void CViewC64VicDisplay::UpdateAutoscrollDisassemble(bool isForced)
 bool CViewC64VicDisplay::DoNotTouchedMove(float x, float y)
 {
 //	LOGI("CViewC64VicDisplay::DoNotTouchedMove (this=%x)", this);
-	
-	this->UpdateRasterCursorPos();
 
-	UpdateAutoscrollDisassemble(false);
+	if (!isCursorLocked)
+	{
+		if (IsTopWindow())
+		{
+			UpdateRasterCursorPos();
+			UpdateAutoscrollDisassembly(false);
+		}
+		else
+		{
+			if (guiMain->FindTopWindow(x, y) != viewC64->viewVicEditor)
+			{
+				ClearRasterCursorPos();
+			}
+		}
+	}
 
-	return CGuiView::DoNotTouchedMove(x, y);
+	return false; //CGuiView::DoNotTouchedMove(x, y);
 }
 
 bool CViewC64VicDisplay::DoMove(float x, float y, float distX, float distY, float diffX, float diffY)
@@ -2302,14 +2344,14 @@ void CViewC64VicDisplay::MoveDisplayToScreenPos(float px, float py)
 	if (py > 0.0f)
 		py = 0.0f;
 	
-	if (px + this->visibleScreenSizeX < SCREEN_WIDTH)
+	if (px + this->visibleScreenSizeX < this->sizeX)
 	{
-		px = SCREEN_WIDTH - this->visibleScreenSizeX;
+		px = this->sizeX - this->visibleScreenSizeX;
 	}
 	
-	if (py + this->visibleScreenSizeY < SCREEN_HEIGHT)
+	if (py + this->visibleScreenSizeY < this->sizeY)
 	{
-		py = SCREEN_HEIGHT - this->visibleScreenSizeY;
+		py = this->sizeY - this->visibleScreenSizeY;
 	}
 	
 	this->SetPosition(px, py);
@@ -2323,15 +2365,6 @@ void CViewC64VicDisplay::ZoomDisplay(float newScale)
 	
 	if (newScale > 60.0f)
 		newScale = 60.0f;
-	
-	if (newScale < c64SettingsPaintGridShowZoomLevel)
-	{
-		this->showGridLines = false;
-	}
-	else
-	{
-		this->showGridLines = true;
-	}
 	
 	float cx = guiMain->mousePosX;
 	float cy = guiMain->mousePosY;
@@ -2347,7 +2380,24 @@ void CViewC64VicDisplay::ZoomDisplay(float newScale)
 		MoveDisplayDiff(cx-pcx, cy-pcy);
 	
 	UpdateDisplayFrame();
+	UpdateGridLinesVisibleOnCurrentZoom();	
 }
+
+void CViewC64VicDisplay::UpdateGridLinesVisibleOnCurrentZoom()
+{
+	if (gridLinesAutomatic)
+	{
+		if (scale < gridLinesShowZoomLevel)
+		{
+			showGridLines = false;
+		}
+		else
+		{
+			showGridLines = true;
+		}
+	}
+}
+
 
 void CViewC64VicDisplay::UpdateDisplayFrame()
 {
@@ -2361,14 +2411,14 @@ void CViewC64VicDisplay::UpdateDisplayFrame()
 	if (py > 0.0f)
 		py = 0.0f;
 	
-	if (px + this->visibleScreenSizeX < SCREEN_WIDTH)
+	if (px + this->visibleScreenSizeX < this->sizeX)
 	{
-		px = SCREEN_WIDTH - this->visibleScreenSizeX;
+		px = this->sizeX - this->visibleScreenSizeX;
 	}
 	
-	if (py + this->visibleScreenSizeY < SCREEN_HEIGHT)
+	if (py + this->visibleScreenSizeY < this->sizeY)
 	{
-		py = SCREEN_HEIGHT - this->visibleScreenSizeY;
+		py = this->sizeY - this->visibleScreenSizeY;
 	}
 	
 	this->SetPosition(px, py);
@@ -2382,8 +2432,8 @@ void CViewC64VicDisplay::UpdateDisplayFrame()
 	//	viewVicDisplayMain->GetRasterPosFromScreenPos(viewVicDisplayMain->posX + viewVicDisplayMain->sizeX,
 	//												  viewVicDisplayMain->posY + viewVicDisplayMain->sizeY, &rx2, &ry2);
 	
-	this->GetRasterPosFromScreenPosWithoutScroll(SCREEN_WIDTH-1,
-												  SCREEN_HEIGHT-1, &rx2, &ry2);
+	this->GetRasterPosFromScreenPosWithoutScroll(this->sizeX-1,
+												  this->sizeY-1, &rx2, &ry2);
 	
 	
 	
@@ -2632,7 +2682,7 @@ void CViewC64VicDisplay::ToggleVICRasterBreakpoint()
 		
 		viewC64->debugInterfaceC64->UnlockMutex();
 		
-		viewC64->ShowMessage(buf);
+		viewC64->ShowMessageInfo(buf);
 		SYS_ReleaseCharBuf(buf);
 	}
 }
@@ -2703,16 +2753,16 @@ bool CViewC64VicDisplay::KeyDown(u32 keyCode, bool isShift, bool isAlt, bool isC
 			}
 		}
 		
-		if (canScrollDisassemble == true)
+		if (canScrollDisassembly == true)
 		{
-			if (autoScrollMode == AUTOSCROLL_DISASSEMBLE_RASTER_PC)
+			if (autoScrollMode == AUTOSCROLL_DISASSEMBLY_RASTER_PC)
 			{
 				viewC64->viewC64Disassembly->isTrackingPC = true;
 			}
 			else
 			{
 				viewC64->viewC64Disassembly->isTrackingPC = false;
-				ScrollMemoryAndDisassembleToRasterPosition(rasterCursorPosX, rasterCursorPosY, true);
+				ScrollMemoryAndDisassemblyToRasterPosition(rasterCursorPosX, rasterCursorPosY, true);
 			}
 		}
 		
@@ -2734,7 +2784,6 @@ bool CViewC64VicDisplay::KeyDown(u32 keyCode, bool isShift, bool isAlt, bool isC
 		viewC64->viewC64Screen->KeyUpModifierKeys(isShift, isAlt, isControl);
 		return true;
 	}
-
 	
 	return false; //CGuiView::KeyDown(keyCode, isShift, isAlt, isControl, isSuper);
 }
@@ -2761,31 +2810,43 @@ void CViewC64VicDisplay::ActivateView()
 {
 	LOGG("CViewC64VicDisplay::ActivateView()");
 	
-	backupRenderDataWithColors = viewC64->viewC64MemoryDataDump->renderDataWithColors;
-	viewC64->viewC64MemoryDataDump->renderDataWithColors = true;
+//	backupRenderDataWithColors = viewC64->viewC64MemoryDataDump->renderDataWithColors;
+//	viewC64->viewC64MemoryDataDump->renderDataWithColors = true;
 }
 
 void CViewC64VicDisplay::DeactivateView()
 {
 	LOGG("CViewC64VicDisplay::DeactivateView()");
 	
-	if (!isCursorLocked)
-	{
-		viewC64->viewC64MemoryDataDump->renderDataWithColors = backupRenderDataWithColors;
-
-		ResetCursorLock();
-		
-		UpdateRasterCursorPos();
-		UpdateViciiState();
-	}
+//	if (!isCursorLocked)
+//	{
+//		viewC64->viewC64MemoryDataDump->renderDataWithColors = backupRenderDataWithColors;
+//
+//		ResetCursorLock();
+//		
+//		UpdateRasterCursorPos();
+//		UpdateViciiState();
+//	}
 	
 }
 
 
 void CViewC64VicDisplay::ResetCursorLock()
 {
-	rasterCursorPosX = -1;
-	rasterCursorPosY = -1;
+	ClearRasterCursorPos();
+}
+
+bool CViewC64VicDisplay::IsTopWindow()
+{
+	if (performIsTopWindowCheck)
+	{
+		if (guiMain->FindTopWindow(guiMain->mousePosX, guiMain->mousePosY) == this)
+		{
+			return true;
+		}
+		return false;
+	}
+	return true;
 }
 
 // Layout

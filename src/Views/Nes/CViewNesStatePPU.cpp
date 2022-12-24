@@ -1,4 +1,4 @@
-#include "C64D_Version.h"
+#include "EmulatorsConfig.h"
 #if defined(RUN_NES)
 
 #include "NstApiMachine.hpp"

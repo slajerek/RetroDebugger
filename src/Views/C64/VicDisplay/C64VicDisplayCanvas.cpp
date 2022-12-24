@@ -45,7 +45,7 @@ void C64VicDisplayCanvas::RenderGridLines()
 	RenderCanvasSpecificGridLines();
 	
 	//LOGD("scale=%f", vicDisplay->scale);
-	if (vicDisplay->scale > c64SettingsPaintGridShowValuesZoomLevel)
+	if (vicDisplay->scale > vicDisplay->gridLinesShowValuesZoomLevel)
 	{
 		RenderCanvasSpecificGridValues();
 	}

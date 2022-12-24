@@ -1287,7 +1287,7 @@ for my $mix (0..2**@i-1) {
 	 
   if (sid_model == 0)
   {
-    returnValue = (short)(f.gain[vol][f.mixer[offset + Vi]] - (1 << 15));
+	  returnValue = (short)(f.gain[vol][f.mixer[offset + Vi]] - (1 << 15));
 	  
 	  // TODO: send SID waveforms data via callback
 	  if (c64d_waveform_callback != NULL && c64d_is_receive_channels_data[chipNo])
@@ -1306,12 +1306,12 @@ for my $mix (0..2**@i-1) {
   }
   else
   {
-    // FIXME: Temporary code for MOS 8580, should use code above.
+	  // FIXME: Temporary code for MOS 8580, should use code above.
 
 	  // TODO (c64d): why this overdrives ...?
 	  // returnValue = ((Vi*vol) >> 4);
 	  
-	 returnValue = (((Vi>>1)*vol) >> 4);
+	  returnValue = (((Vi>>1)*vol) >> 4);
 	  
 	  // TODO: send SID waveforms data via callback
 	  if (c64d_waveform_callback != NULL && c64d_is_receive_channels_data[chipNo])
@@ -1323,7 +1323,6 @@ for my $mix (0..2**@i-1) {
 
 		  c64d_sid_channels_data(chipNo, vn1, vn2, vn3, returnValue);
 	  }
-
   }
 	 
 	

@@ -1,5 +1,4 @@
-
-#include "C64D_Version.h"
+#include "EmulatorsConfig.h"
 
 #include <stdint.h>
 #include <string.h>
@@ -29,7 +28,6 @@
 
 #undef uint8_t
 
-#include "C64D_Version.h"
 #include "NesWrapper.h"
 #include "CDebugInterfaceNes.h"
 #include "CAudioChannelNes.h"
@@ -1766,13 +1764,13 @@ void nesd_receive_channels_data(unsigned int valSquare1, unsigned int valSquare2
 	if (viewC64->viewNesStateAPU->IsVisible())
 	{
 		float f = 1.75f;
-		viewC64->viewNesStateAPU->AddWaveformData(0, (int)((float)valSquare1*f),
-													 (int)((float)valSquare2*f),
-													 (int)((float)valTriangle*f),
-													 (int)((float)valNoise*f),
-													 (int)((float)valDmc*f),
-													 (int)((float)valExt*f),
-													 (int)((float)valMix*f));
+		debugInterfaceNes->AddWaveformData(0,	(int)((float)valSquare1*f),
+												(int)((float)valSquare2*f),
+												(int)((float)valTriangle*f),
+												(int)((float)valNoise*f),
+												(int)((float)valDmc*f),
+												(int)((float)valExt*f),
+												(int)((float)valMix*f));
 	}
 }
 
@@ -1810,7 +1808,7 @@ void nesd_sound_resume()
 
 //static u8 nesdLockCount = 0;
 
-void nesd_sound_lock(char *whoLocked)
+void nesd_sound_lock(const char *whoLocked)
 {
 	//LOGD("nesd_sound_lock: %s (count=%d)", whoLocked, nesdLockCount);
 	audioBufferMutex->Lock();
@@ -1818,7 +1816,7 @@ void nesd_sound_lock(char *whoLocked)
 	//LOGD("nesd_sound_lock locked by %s (count=%d)", whoLocked, nesdLockCount);
 }
 
-void nesd_sound_unlock(char *whoLocked)
+void nesd_sound_unlock(const char *whoLocked)
 {
 	//LOGD("nesd_sound_unlock: %s (cound=%d)", whoLocked, nesdLockCount);
 	//nesdLockCount--;

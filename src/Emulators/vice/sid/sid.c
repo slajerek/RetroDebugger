@@ -49,6 +49,8 @@
 #include "ssi2001.h"
 #include "types.h"
 
+#include "log.h"
+
 #ifdef HAVE_MOUSE
 #include "mouse.h"
 #include "lightpen.h"
@@ -207,9 +209,10 @@ static int sid_dump_chip(int chipno)
     return -1;
 }
 
+#define C64_NUM_SID_REGISTERS 32
 void c64d_store_sid_data(BYTE *sidDataStore, int sidNum)
 {
-	memcpy(sidDataStore, siddata[sidNum], 32);
+	memcpy(sidDataStore, siddata[sidNum], C64_NUM_SID_REGISTERS);
 }
 
 /* ------------------------------------------------------------------------- */

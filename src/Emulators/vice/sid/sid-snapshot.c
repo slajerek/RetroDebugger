@@ -1054,6 +1054,8 @@ fail:
     return -1;
 }
 
+int c64d_get_sid_enable();
+
 int sid_snapshot_write_module(snapshot_t *s)
 {
     int sids = 0;

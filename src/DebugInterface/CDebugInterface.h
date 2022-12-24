@@ -2,10 +2,10 @@
 #define _CDEBUGINTERFACE_H_
 
 #include "CDebugBreakpoints.h"
-#include "CDataAdapter.h"
+#include "CDebugDataAdapter.h"
 #include "CByteBuffer.h"
 #include "DebuggerDefs.h"
-#include "C64D_Version.h"
+#include "EmulatorsConfig.h"
 
 #include <map>
 #include <list>
@@ -24,7 +24,11 @@ class CViewDisassembly;
 class CViewBreakpoints;
 class CViewDataWatch;
 
+class CDebugInterfaceMenuItem;
+
 class CDebugInterfaceTask;
+class CViewMemoryMap;
+class CViewTimeline;
 
 class CDebugInterfaceCodeMonitorCallback
 {
@@ -58,7 +62,10 @@ public:
 	unsigned int emulationFrameCounter;
 
 	virtual void RunEmulationThread();
-	
+	virtual void RestartAudio();
+	// reset a/v sync
+	virtual void RefreshSync();
+
 	virtual void InitPlugins();
 	
 	// all cycles in frame finished, vsync
@@ -66,7 +73,8 @@ public:
 
 	// frame is painted on canvas and ready to be consumed
 	virtual void DoFrame();
-	
+
+
 	// run various tasks when emulation is in defined state
 	
 	// tasks to be executed when emulation just finished rendering frame
@@ -175,10 +183,11 @@ public:
 	virtual void RunContinueEmulation();
 
 	// breakpoints
+	virtual void SupportsBreakpoints(bool *writeBreakpoint, bool *readBreakpoint);
 	bool isDebugOn;
 	virtual void SetDebugOn(bool debugOn);
 
-	virtual CDataAdapter *GetDataAdapter();
+	virtual CDebugDataAdapter *GetDataAdapter();
 		
 	// view breakpoints
 	virtual void UpdateRenderBreakpoints();
@@ -186,6 +195,8 @@ public:
 	// note: shall we move logic to create views to debug interface?
 	std::list<CGuiView *> views;
 	void AddView(CGuiView *view);
+	std::list<CDebugInterfaceMenuItem *> menuItems;
+	void AddMenuItem(CDebugInterfaceMenuItem *menuItem);
 	
 	// this is to get prompt and issue commands to native code monitor of the emulator (i.e. Vice's original monitor)
 	virtual bool IsCodeMonitorSupported();
@@ -196,7 +207,7 @@ public:
 	// @returns NULL when monitor is not supported
 	virtual CSlrString *GetCodeMonitorPrompt();
 	virtual bool ExecuteCodeMonitorCommand(CSlrString *commandStr);
-			
+
 	virtual void Shutdown();
 
 	//
@@ -206,6 +217,12 @@ public:
 	std::list<CDebuggerEmulatorPlugin *> plugins;
 	void RegisterPlugin(CDebuggerEmulatorPlugin *plugin);
 	void RemovePlugin(CDebuggerEmulatorPlugin *plugin);
+	
+	// views
+	CGuiView *viewScreen;
+	CGuiView *GetViewScreen();
+	CViewMemoryMap *GetViewMemoryMap();
+	CViewTimeline *GetViewTimeline();
 	
 	//
 	CSlrMutex *breakpointsMutex;

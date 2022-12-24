@@ -15,6 +15,7 @@ extern "C"
 #define NUM_ATARI_JOYSTICKS	4
 
 class CAudioChannelAtari;
+class CWaveformData;
 
 class CDebugInterfaceAtari : public CDebugInterface
 {
@@ -31,9 +32,11 @@ public:
 	float numEmulationFPS;
 
 	virtual void RunEmulationThread();
+	virtual void RefreshSync();
+	virtual void RestartAudio();
 
 	CAudioChannelAtari *audioChannel;
-	CDataAdapter *dataAdapter;
+	CDebugDataAdapter *dataAdapter;
 
 	void RestartEmulation();
 	//	virtual void InitKeyMap(C64KeyMap *keyMap);
@@ -86,6 +89,12 @@ public:
 	virtual void SetPokeyStereo(bool isStereo);
 	virtual bool IsPokeyStereo();
 	
+	// [pokey num][channel num]
+	CWaveformData *pokeyChannelWaveform[MAX_NUM_POKEYS][4];
+	CWaveformData *pokeyMixWaveform[MAX_NUM_POKEYS];
+	virtual void AddWaveformData(int pokeyNumber, int v1, int v2, int v3, int v4, short mix);
+	virtual void UpdateWaveforms();
+
 	//
 	virtual bool LoadFullSnapshot(char *filePath);
 	virtual void SaveFullSnapshot(char *filePath);
@@ -119,7 +128,7 @@ public:
 	// make jmp and reset CPU
 	virtual void MakeJmpAndReset(uint16 addr);
 
-	virtual CDataAdapter *GetDataAdapter();
+	virtual CDebugDataAdapter *GetDataAdapter();
 
 	// these calls should be synced with CPU IRQ so snapshot store or restore is allowed
 	// store CHIPS only snapshot, not including DISK DATA
@@ -136,6 +145,8 @@ public:
 	virtual void ClearDriveDirtyForSnapshotFlag();
 
 	virtual void StepOneCycle();
+
+	virtual void SupportsBreakpoints(bool *writeBreakpoint, bool *readBreakpoint);
 
 	
 //	virtual uint8 GetByteFromRamC64(uint16 addr);

@@ -8,6 +8,8 @@ class C64VicDisplayCanvasHiresText : public C64VicDisplayCanvas
 public:
 	C64VicDisplayCanvasHiresText(CViewC64VicDisplay *vicDisplay);
 	
+	virtual u8 GetColorAtPixel(int x, int y);
+
 	// @returns painting status (ok, replaced color, blocked)
 	virtual u8 PutColorAtPixel(bool forceColorReplace, int x, int y, u8 colorLMB, u8 colorRMB, u8 colorSource, int charValue);
 	

@@ -157,7 +157,7 @@ int vice_main_program(int argc, const char **argv, int c64model)
     textdomain(PACKAGE);
 #endif
 
-    archdep_init(&argc, argv);
+    archdep_init(&argc, (char**)argv);
 
 //    if (atexit(main_exit) < 0) {
 //        archdep_startup_log_error("atexit");
@@ -188,7 +188,7 @@ int vice_main_program(int argc, const char **argv, int c64model)
        command line somehow, so we call it before parsing the options.
        (e.g. under X11, the `-display' option is handled independently).  */
     DBG(("main:ui_init(argc:%d)\n", argc));
-    if (!console_mode && ui_init(&argc, argv) < 0) {
+    if (!console_mode && ui_init(&argc, (char**)argv) < 0) {
         archdep_startup_log_error("Cannot initialize the UI.\n");
         return -1;
     }
@@ -215,7 +215,7 @@ int vice_main_program(int argc, const char **argv, int c64model)
     }
 
     DBG(("main:initcmdline_check_args(argc:%d)\n", argc));
-    if (initcmdline_check_args(argc, argv) < 0) {
+    if (initcmdline_check_args(argc, (char**)argv) < 0) {
 		LOGError("error parsing commandline args");
 		//return -1;
     }

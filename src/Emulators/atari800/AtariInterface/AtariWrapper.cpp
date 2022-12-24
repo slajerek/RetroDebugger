@@ -12,7 +12,7 @@
 #include "CViewMemoryMap.h"
 #include "SND_SoundEngine.h"
 #include "CSnapshotsManager.h"
-#include "C64D_Version.h"
+#include "EmulatorsConfig.h"
 #include "CDebugSymbols.h"
 #include "CDebugSymbolsSegment.h"
 #include <string.h>
@@ -652,10 +652,9 @@ void atrd_pokey_channels_data(int pokeyNumber, int v1, int v2, int v3, int v4, s
 	
 //	if (pokeyNumber == 0)
 	{
-		viewC64->viewAtariStatePOKEY->AddWaveformData(pokeyNumber, v1, v2, v3, v4, mix);
+		debugInterfaceAtari->AddWaveformData(pokeyNumber, v1, v2, v3, v4, mix);
 	}
 }
-
 
 void atrd_mutex_lock()
 {

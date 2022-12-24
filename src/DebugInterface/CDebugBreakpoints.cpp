@@ -79,7 +79,7 @@ void CBreakpointMemory::Deserialize(Hjson::Value hjsonRoot)
 
 //std::map<int, CBreakpointMemory *> memoryBreakpoints;
 
-CDebugBreakpointsAddr::CDebugBreakpointsAddr(int breakpointType, const char *breakpointTypeStr, CDebugSymbolsSegment *segment, char *addressFormatStr, int minAddr, int maxAddr)
+CDebugBreakpointsAddr::CDebugBreakpointsAddr(int breakpointType, const char *breakpointTypeStr, CDebugSymbolsSegment *segment, const char *addressFormatStr, int minAddr, int maxAddr)
 {
 	this->breakpointsType = breakpointType;
 	this->breakpointsTypeStr = breakpointTypeStr;
@@ -175,7 +175,7 @@ void CDebugBreakpointsAddr::Deserialize(Hjson::Value hjsonBreakpoints)
 	}
 }
 
-CDebugBreakpointsMemory::CDebugBreakpointsMemory(int breakpointType, const char *breakpointTypeStr, CDebugSymbolsSegment *segment, char *addressFormatStr, int minAddr, int maxAddr)
+CDebugBreakpointsMemory::CDebugBreakpointsMemory(int breakpointType, const char *breakpointTypeStr, CDebugSymbolsSegment *segment, const char *addressFormatStr, int minAddr, int maxAddr)
 : CDebugBreakpointsAddr(breakpointType, breakpointTypeStr, segment, addressFormatStr, minAddr, maxAddr)
 {
 	addBreakpointPopupHeadlineStr = "Add Memory Breakpoint";
@@ -492,7 +492,7 @@ void CDebugBreakpointsAddr::RenderImGui()
 					FUN_ToUpperCaseStr(comboFilterTextBuf);
 					addBreakpointPopupAddr = FUN_HexStrToValue(comboFilterTextBuf);
 				}
-				else if (hints != NULL)
+				else if (hints != NULL && numHints > 0 && comboFilterState.activeIdx < numHints)
 				{
 					strcpy(comboFilterTextBuf, hints[comboFilterState.activeIdx]);
 				}
@@ -710,7 +710,7 @@ void CDebugBreakpointsMemory::RenderImGui()
 					FUN_ToUpperCaseStr(comboFilterTextBuf);
 					addBreakpointPopupAddr = FUN_HexStrToValue(comboFilterTextBuf);
 				}
-				else if (hints != NULL)
+				else if (hints != NULL && numHints > 0 && comboFilterState.activeIdx < numHints)
 				{
 					strcpy(comboFilterTextBuf, hints[comboFilterState.activeIdx]);
 				}

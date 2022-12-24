@@ -3,6 +3,7 @@
 
 #include "SYS_Defs.h"
 
+class CViewC64VicEditor;
 class CViewC64VicDisplay;
 
 class C64Bitmap

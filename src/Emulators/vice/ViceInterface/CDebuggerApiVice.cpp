@@ -1,13 +1,15 @@
 #include "CDebuggerApiVice.h"
 #include "CViewC64.h"
 #include "CViewMonitorConsole.h"
-#include "CViewVicEditor.h"
-#include "CViewVicEditorCreateNewPicture.h"
+#include "CViewC64VicEditor.h"
+#include "CViewC64VicEditorCreateNewPicture.h"
+#include "CViewC64VicDisplay.h"
 #include "C64VicDisplayCanvas.h"
 #include "CVicEditorLayerImage.h"
-#include "CViewVicEditorLayers.h"
+#include "CViewC64VicEditorLayers.h"
 #include "CVicEditorLayerC64Screen.h"
 #include "CViewC64Sprite.h"
+#include "CViewC64Charset.h"
 #include "CMainMenuBar.h"
 #include "SYS_KeyCodes.h"
 #include "C64Tools.h"
@@ -33,7 +35,7 @@ void CDebuggerApiVice::SwitchToVicEditor()
 {
 	LOGTODO("CDebuggerApiVice::SwitchToVicEditor: not supported");
 	return;
-//	viewC64->viewVicEditor->SwitchToVicEditor();
+//	viewC64->screenVicEditor->SwitchToVicEditor();
 }
 
 void CDebuggerApiVice::CreateNewPicture(u8 mode, u8 backgroundColor)
@@ -43,13 +45,13 @@ void CDebuggerApiVice::CreateNewPicture(u8 mode, u8 backgroundColor)
 
 void CDebuggerApiVice::ClearScreen()
 {
-	viewC64->viewVicEditor->viewVicDisplayMain->currentCanvas->ClearScreen();
+	viewC64->viewVicEditor->viewVicDisplay->currentCanvas->ClearScreen();
 }
 
 void CDebuggerApiVice::ConvertImageToScreen(char *filePath)
 {
 	CImageData *imageData = new CImageData(filePath);
-	viewC64->viewVicEditor->viewVicDisplayMain->currentCanvas->ConvertFrom(imageData);
+	viewC64->viewVicEditor->viewVicDisplay->currentCanvas->ConvertFrom(imageData);
 	delete imageData;
 }
 
@@ -99,7 +101,8 @@ CImageData *CDebuggerApiVice::GetScreenImageWithoutBorders()
 
 void CDebuggerApiVice::SetTopBarVisible(bool isVisible)
 {
-	viewC64->viewVicEditor->SetTopBarVisible(isVisible);
+	LOGTODO("CDebuggerApiVice::SetTopBarVisible: not implemented");
+//	viewC64->viewVicEditor->SetTopBarVisible(isVisible);
 }
 
 void CDebuggerApiVice::SetViewPaletteVisible(bool isVisible)
@@ -119,7 +122,8 @@ void CDebuggerApiVice::SetViewSpriteVisible(bool isVisible)
 
 void CDebuggerApiVice::SetViewPreviewVisible(bool isVisible)
 {
-	viewC64->viewVicEditor->viewVicDisplaySmall->SetVisible(isVisible);
+	LOGTODO("CDebuggerApiVice::SetViewPreviewVisible: not implemented");
+//	viewC64->viewVicEditor->viewVicDisplaySmall->SetVisible(isVisible);
 }
 
 void CDebuggerApiVice::SetViewLayersVisible(bool isVisible)
@@ -151,7 +155,7 @@ void CDebuggerApiVice::SetupVicEditorForScreenOnly()
 
 u8 CDebuggerApiVice::FindC64Color(u8 r, u8 g, u8 b)
 {
-	return ::FindC64Color(r, g, b, viewC64->viewVicEditor->viewVicDisplayMain->debugInterface);
+	return ::FindC64Color(r, g, b, viewC64->viewVicEditor->viewVicDisplay->debugInterface);
 }
 
 u8 CDebuggerApiVice::PaintPixel(int x, int y, u8 color)
@@ -424,7 +428,7 @@ bool CDebuggerApiVice::LoadKLA(const char *filePath, u16 bitmapAddress, u16 scre
 	return ret;
 }
 
-void CDebuggerApiVice::SaveExomizerPRG(u16 fromAddr, u16 toAddr, u16 jmpAddr, char *filePath)
+void CDebuggerApiVice::SaveExomizerPRG(u16 fromAddr, u16 toAddr, u16 jmpAddr, const char *filePath)
 {
 	LOGM("SaveExomizerPRG: fromAddr=%04x toAddr=%04x jmpAddr=%04x filePath='%s'", fromAddr, toAddr, jmpAddr, filePath);
 	C64SaveMemoryExomizerPRG(fromAddr, toAddr, jmpAddr, filePath);
@@ -437,18 +441,18 @@ u8 *CDebuggerApiVice::ExomizerMemoryRaw(u16 fromAddr, u16 toAddr, int *compresse
 
 
 
-void CDebuggerApiVice::SavePRG(u16 fromAddr, u16 toAddr, char *filePath)
+void CDebuggerApiVice::SavePRG(u16 fromAddr, u16 toAddr, const char *filePath)
 {
 	LOGM("SavePRG: fromAddr=%04x toAddr=%04x filePath='%s'", fromAddr, toAddr, filePath);
 	C64SaveMemory(fromAddr, toAddr, true, viewC64->debugInterfaceC64->dataAdapterC64DirectRam, filePath);
 }
 
-void CDebuggerApiVice::SaveBinary(u16 fromAddr, u16 toAddr, char *filePath)
+void CDebuggerApiVice::SaveBinary(u16 fromAddr, u16 toAddr, const char *filePath)
 {
 	C64SaveMemory(fromAddr, toAddr, false, viewC64->debugInterfaceC64->dataAdapterC64DirectRam, filePath);
 }
 
-int CDebuggerApiVice::LoadBinary(u16 fromAddr, char *filePath)
+int CDebuggerApiVice::LoadBinary(u16 fromAddr, const char *filePath)
 {
 	return C64LoadMemory(fromAddr, viewC64->debugInterfaceC64->dataAdapterC64DirectRam, filePath);
 }
@@ -610,7 +614,7 @@ void CDebuggerApiVice::GetCBMColor(u8 colorNum, u8 *r, u8 *g, u8 *b)
 
 void CDebuggerApiVice::ShowMessage(const char *text)
 {
-	viewC64->ShowMessage((char*)text);
+	viewC64->ShowMessageInfo((char*)text);
 }
 
 void CDebuggerApiVice::BlitText(const char *text, float posX, float posY, float fontSize)

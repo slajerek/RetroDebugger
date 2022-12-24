@@ -24,7 +24,8 @@
 #include "CViewKeyboardShortcuts.h"
 #include "CSnapshotsManager.h"
 #include "AtariAsap.h"
-#include "C64D_Version.h"
+#include "EmulatorsConfig.h"
+#include "CViewC64VicEditor.h"
 
 #include "CMainMenuBar.h"
 
@@ -35,8 +36,6 @@
 #include "C64SettingsStorage.h"
 
 #include "CGuiMain.h"
-#include "CViewVicEditor.h"
-
 
 #define VIEWC64SETTINGS_OPEN_NONE	0
 #define VIEWC64SETTINGS_OPEN_FILE	1
@@ -55,8 +54,6 @@ CViewMainMenu::CViewMainMenu(float posX, float posY, float posZ, float sizeX, fl
 {
 	this->name = "CViewMainMenu";
 
-	this->ThreadSetName("CViewMainMenu");
-	
 	font = viewC64->fontCBMShifted;
 	fontScale = 3;
 	fontHeight = font->GetCharHeight('@', fontScale) + 2;
@@ -136,7 +133,7 @@ CViewMainMenu::CViewMainMenu(float posX, float posY, float posZ, float sizeX, fl
 	openFileExtensions.push_back(new CSlrString("json"));
 	openFileExtensions.push_back(new CSlrString("snap"));
 	openFileExtensions.push_back(new CSlrString("vsf"));
-	openFileExtensions.push_back(new CSlrString("rdtl"));
+	openFileExtensions.push_back(new CSlrString("rtdl"));
 
 	// jukebox
 	jukeboxExtensions.push_back(new CSlrString("c64jukebox"));
@@ -331,16 +328,24 @@ void CViewMainMenu::SystemDialogFileSaveCancelled()
 // TODO: make a generic file opener
 void CViewMainMenu::LoadFile(CSlrString *path)
 {
+	LOGM("CViewMainMenu::LoadFile:");
+	path->DebugPrint();
+	
+	bool loaded = false;
+	
 	viewC64->recentlyOpenedFiles->Add(path);
 	
 	CSlrString *ext = path->GetFileExtensionComponentFromPath();
 	ext->ConvertToLowerCase();
 	
+	LOGD("ext=");
+	ext->DebugPrint();
+	
 	// c64 file formats
 	if (ext->CompareWith("prg"))
 	{
 		viewC64->StartEmulationThread(viewC64->debugInterfaceC64);
-		LoadPRG(path, true, true, true, false);
+		loaded = LoadPRG(path, true, true, true, false);
 	}
 	else if (ext->CompareWith("d64") ||
 			 ext->CompareWith("x64") ||
@@ -348,53 +353,55 @@ void CViewMainMenu::LoadFile(CSlrString *path)
 			 ext->CompareWith("p64"))
 	{
 		viewC64->StartEmulationThread(viewC64->debugInterfaceC64);
-		InsertD64(path, true, c64SettingsAutoJmpFromInsertedDiskFirstPrg, 0, true);
+		loaded = InsertD64(path, true, c64SettingsAutoJmpFromInsertedDiskFirstPrg, 0, true);
 	}
 	else if (ext->CompareWith("crt"))
 	{
 		viewC64->StartEmulationThread(viewC64->debugInterfaceC64);
-		InsertCartridge(path, true);
+		loaded = InsertCartridge(path, true);
 	}
 	else if (ext->CompareWith("reu"))
 	{
 		viewC64->StartEmulationThread(viewC64->debugInterfaceC64);
 		bool val = true;
 		C64DebuggerSetSetting("ReuEnabled", &val);
-		AttachReu(path, true, true);
+		loaded = AttachReu(path, true, true);
 	}
 	else if (ext->CompareWith("sid"))
 	{
 		viewC64->StartEmulationThread(viewC64->debugInterfaceC64);
-		LoadSID(path);
+		loaded = LoadSID(path);
 	}
 	else if (ext->CompareWith("snap") ||
 			 ext->CompareWith("vsf"))
 	{
 		viewC64->StartEmulationThread(viewC64->debugInterfaceC64);
 		viewC64->viewC64Snapshots->LoadSnapshot(path, true, viewC64->debugInterfaceC64);
+		loaded = true;
 	}
 	else if (ext->CompareWith("tap") ||
 			 ext->CompareWith("t64"))
 	{
 		viewC64->StartEmulationThread(viewC64->debugInterfaceC64);
-		LoadTape(path, true, true, true);
+		loaded = LoadTape(path, true, true, true);
 	}
 	
 	// Atari formats
 	else if (ext->CompareWith("xex"))
 	{
 		viewC64->StartEmulationThread(viewC64->debugInterfaceAtari);
-		LoadXEX(path, true, true, true);
+		loaded = LoadXEX(path, true, true, true);
 	}
 	else if (ext->CompareWith("atr"))
 	{
 		viewC64->StartEmulationThread(viewC64->debugInterfaceAtari);
-		InsertATR(path, true, c64SettingsAutoJmpFromInsertedDiskFirstPrg, 0, true);
+		loaded = InsertATR(path, true, c64SettingsAutoJmpFromInsertedDiskFirstPrg, 0, true);
 	}
 	else if (ext->CompareWith("a8s"))
 	{
 		viewC64->StartEmulationThread(viewC64->debugInterfaceAtari);
 		viewC64->viewAtariSnapshots->LoadSnapshot(path, true, viewC64->debugInterfaceAtari);
+		loaded = true;
 	}
 	//		ASAP supports the following file formats: SAP, CMC, CM3, CMR, CMS, DMC, DLT, FC, MPT, MPD, RMT, TMC/TM8, TM2, STIL
 	// TODO: we *really* need to have a generic file opener class to parse such things out of here
@@ -415,14 +422,14 @@ void CViewMainMenu::LoadFile(CSlrString *path)
 			 || ext->CompareWith("stil"))
 	{
 		viewC64->StartEmulationThread(viewC64->debugInterfaceAtari);
-		LoadASAP(path);
+		loaded = LoadASAP(path);
 	}
 
 	// NES file formats
 	else if (ext->CompareWith("nes"))
 	{
 		viewC64->StartEmulationThread(viewC64->debugInterfaceNes);
-		LoadNES(path, true);
+		loaded = LoadNES(path, true);
 	}
 	
 	// other formats
@@ -431,10 +438,17 @@ void CViewMainMenu::LoadFile(CSlrString *path)
 
 	{
 		viewC64->InitJukebox(path);
+		loaded = true;
 	}
-	else if (ext->CompareWith("rdtl"))
+	else if (ext->CompareWith("rtdl") || ext->CompareWith("rdtl"))
 	{
 		CViewTimeline::LoadTimeline(path);
+		loaded = true;
+	}
+	
+	if (loaded == false)
+	{
+		viewC64->viewVicEditor->ImportImage(path);
 	}
 	
 	viewC64->ShowMainScreen();
@@ -444,7 +458,7 @@ void CViewMainMenu::LoadFile(CSlrString *path)
 	viewC64->DefaultSymbolsRestore();
 }
 
-void CViewMainMenu::InsertD64(CSlrString *path, bool updatePathToD64, bool autoRun, int autoRunEntryNum, bool showLoadAddressInfo)
+bool CViewMainMenu::InsertD64(CSlrString *path, bool updatePathToD64, bool autoRun, int autoRunEntryNum, bool showLoadAddressInfo)
 {
 	LOGD("CViewMainMenu::InsertD64: path=%x autoRun=%s autoRunEntryNum=%d", path, STRBOOL(autoRun), autoRunEntryNum);
 	path->DebugPrint("CViewMainMenu::InsertD64: path=");
@@ -461,7 +475,7 @@ void CViewMainMenu::InsertD64(CSlrString *path, bool updatePathToD64, bool autoR
 		{
 			guiMain->ShowMessageBox("Error", "Can not open file");
 		}
-		return;
+		return false;
 	}
 	
 	if (c64SettingsPathToD64 != path)
@@ -509,6 +523,8 @@ void CViewMainMenu::InsertD64(CSlrString *path, bool updatePathToD64, bool autoR
 	{
 		viewC64->viewDrive1541FileD64->StartDiskPRGEntry(autoRunEntryNum, showLoadAddressInfo);
 	}
+	
+	return true;
 }
 
 // insert next D64 from the same folder
@@ -729,6 +745,8 @@ bool CViewMainMenu::InsertCartridge(CSlrString *path, bool updatePathToCRT)
 	LOGM("Attached new cartridge: %s", asciiPath);
 	delete [] asciiPath;
 	
+	C64DebuggerStoreSettings();
+	
 	return true;
 }
 
@@ -772,7 +790,7 @@ bool CViewMainMenu::LoadPRG(CSlrString *path, bool autoStart, bool updatePRGFold
 	if (!file->Exists())
 	{
 		delete file;
-		viewC64->ShowMessage("Error loading PRG file, no such file path:\n%s", asciiPath);
+		viewC64->ShowMessageError("Error loading PRG file, no such file path:\n%s", asciiPath);
 		return false;
 	}
 	
@@ -826,7 +844,7 @@ bool CViewMainMenu::LoadSID(CSlrString *filePath)
 	if (!file->Exists())
 	{
 		delete file;
-		viewC64->ShowMessage("Error loading SID file, no such file path:\n%s", asciiPath);
+		viewC64->ShowMessageError("Error loading SID file, no such file path:\n%s", asciiPath);
 		return false;
 	}
 	
@@ -873,9 +891,7 @@ extern "C" {
 bool CViewMainMenu::LoadTape(CSlrString *path, bool autoStart, bool updateTAPFolderPath, bool showAddressInfo)
 {
 	path->DebugPrint("CViewMainMenu::LoadTape: path=");
-	
-	viewC64->DefaultSymbolsStore();
-	
+		
 	if (SYS_FileExists(path) == false)
 	{
 		if (c64SettingsPathToTAP != NULL)
@@ -887,7 +903,10 @@ bool CViewMainMenu::LoadTape(CSlrString *path, bool autoStart, bool updateTAPFol
 	}
 
 	LOGD("   >>> LoadTape, autostart=%d", autoStart);
-	
+	guiMain->LockMutex();
+
+	viewC64->DefaultSymbolsStore();
+
 	if (c64SettingsPathToTAP != path)
 	{
 		if (c64SettingsPathToTAP != NULL)
@@ -918,25 +937,10 @@ bool CViewMainMenu::LoadTape(CSlrString *path, bool autoStart, bool updateTAPFol
 	if (!file->Exists())
 	{
 		delete file;
-		viewC64->ShowMessage("Error loading TAP file");
+		viewC64->ShowMessageError("Error loading TAP file");
+		guiMain->UnlockMutex();
 		return false;
 	}
-	
-//	// display file name in menu
-//	char *fname = SYS_GetFileNameFromFullPath(asciiPath);
-	
-	/*
-	 guiMain->LockMutex();
-	 if (menuItemLoadPRG->str2 != NULL)
-		delete menuItemLoadPRG->str2;
-	 
-	 menuItemLoadPRG->str2 = new CSlrString(fname);
-	 delete [] fname;
-	 
-	 LoadLabelsAndWatches(path);
-	 guiMain->UnlockMutex();
-	 
-	 */
 	
 	//
 	viewC64->debugInterfaceC64->AttachTape(c64SettingsPathToTAP);
@@ -955,6 +959,8 @@ bool CViewMainMenu::LoadTape(CSlrString *path, bool autoStart, bool updateTAPFol
 	//
 	viewC64->DefaultSymbolsRestore();
 	
+	guiMain->UnlockMutex();
+
 	return true;
 }
 
@@ -996,7 +1002,7 @@ bool CViewMainMenu::LoadXEX(CSlrString *path, bool autoStart, bool updateXEXFold
 	if (!file->Exists())
 	{
 		delete file;
-		viewC64->ShowMessage("Error loading XEX file");
+		viewC64->ShowMessageError("Error loading XEX file");
 		if (c64SettingsPathToXEX != NULL)
 			delete c64SettingsPathToXEX;
 		c64SettingsPathToXEX = NULL;
@@ -1084,7 +1090,7 @@ bool CViewMainMenu::LoadCAS(CSlrString *path, bool autoStart, bool updateCASFold
 	if (!file->Exists())
 	{
 		delete file;
-		viewC64->ShowMessage("Error loading CAS file");
+		viewC64->ShowMessageError("Error loading CAS file");
 		return false;
 	}
 	
@@ -1156,7 +1162,7 @@ bool CViewMainMenu::InsertAtariCartridge(CSlrString *path, bool autoStart, bool 
 	if (!file->Exists())
 	{
 		delete file;
-		viewC64->ShowMessage("Error loading AtariCartridge file");
+		viewC64->ShowMessageError("Error loading AtariCartridge file");
 		return false;
 	}
 	
@@ -1187,7 +1193,7 @@ bool CViewMainMenu::InsertAtariCartridge(CSlrString *path, bool autoStart, bool 
 }
 
 //
-void CViewMainMenu::InsertATR(CSlrString *path, bool updatePathToATR, bool autoRun, int autoRunEntryNum, bool showLoadAddressInfo)
+bool CViewMainMenu::InsertATR(CSlrString *path, bool updatePathToATR, bool autoRun, int autoRunEntryNum, bool showLoadAddressInfo)
 {
 	LOGD("CViewMainMenu::InsertATR: path=%x autoRun=%s autoRunEntryNum=%d", path, STRBOOL(autoRun), autoRunEntryNum);
 	
@@ -1200,7 +1206,7 @@ void CViewMainMenu::InsertATR(CSlrString *path, bool updatePathToATR, bool autoR
 		
 		c64SettingsPathToATR = NULL;
 		LOGError("InsertATR: file not found, skipping");
-		return;
+		return false;
 	}
 	
 	if (c64SettingsPathToATR != path)
@@ -1253,6 +1259,7 @@ void CViewMainMenu::InsertATR(CSlrString *path, bool updatePathToATR, bool autoR
 //	}
 	
 	viewC64->DefaultSymbolsRestore();
+	return true;
 }
 
 bool CViewMainMenu::LoadASAP(CSlrString *filePath)
@@ -1275,7 +1282,7 @@ bool CViewMainMenu::LoadASAP(CSlrString *filePath)
 	if (!file->Exists())
 	{
 		delete file;
-		viewC64->ShowMessage("Error loading ASAP file, no such file path:\n%s", asciiPath);
+		viewC64->ShowMessageError("Error loading ASAP file, no such file path:\n%s", asciiPath);
 		return false;
 	}
 	
@@ -1291,7 +1298,7 @@ bool CViewMainMenu::LoadASAP(CSlrString *filePath)
 
 	if (xexBuffer == NULL)
 	{
-		viewC64->ShowMessage("Error loading ASAP file, conversion to XEX failed");
+		viewC64->ShowMessageError("Error loading ASAP file, conversion to XEX failed");
 		return false;
 	}
 	
@@ -1367,7 +1374,7 @@ bool CViewMainMenu::LoadNES(CSlrString *path, bool updateNESFolderPath)
 	if (!file->Exists())
 	{
 		delete file;
-		viewC64->ShowMessage("Error loading NES file");
+		viewC64->ShowMessageError("Error loading NES file");
 		return false;
 	}
 	
@@ -1515,9 +1522,9 @@ bool CViewMainMenu::LoadPRG(CByteBuffer *byteBuffer, bool autoStart, bool showAd
 // TODO: move LoadPRG logic to C64 Tools
 void CViewMainMenu::ThreadRun(void *data)
 {
-	LOGD("CViewMainMenu::ThreadRun");
+	ThreadSetName("CViewMainMenu::LoadPRG");
 	
-	this->ThreadSetName("CViewMainMenu::LoadPRG");
+	LOGD("CViewMainMenu::ThreadRun");
 	
 	CByteBuffer *loadPrgByteBuffer = (CByteBuffer *)data;
 	
@@ -1824,7 +1831,7 @@ void CViewMainMenu::ReloadAndRestartPRG()
 		if (!file->Exists())
 		{
 			delete file;
-			viewC64->ShowMessage("Error loading PRG file, no such file path:\n%s", asciiPath);
+			viewC64->ShowMessageError("Error loading PRG file, no such file path:\n%s", asciiPath);
 			return;
 		}
 		
@@ -1844,7 +1851,7 @@ void CViewMainMenu::ReloadAndRestartPRG()
 	}
 	else
 	{
-		viewC64->ShowMessage("Select PRG first");
+		viewC64->ShowMessageError("Please select PRG file first");
 	}
 }
 

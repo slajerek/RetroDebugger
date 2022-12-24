@@ -7,6 +7,7 @@
 #include "CDebugSymbols.h"
 #include "CDebugSymbolsSegmentC64.h"
 #include "CDebugMemoryMapCell.h"
+#include "CWaveformData.h"
 
 CDebugInterfaceC64::CDebugInterfaceC64(CViewC64 *viewC64)
 : CDebugInterface(viewC64)
@@ -22,7 +23,8 @@ CDebugInterfaceC64::CDebugInterfaceC64(CViewC64 *viewC64)
 		
 	for (int i = 0; i < C64_NUM_DRIVES; i++)
 	{
-		ledState[i] = 0.0f;
+		ledGreenPwm[i] = 0.0f;
+		ledRedPwm[i] = 0.0f;
 //		this->diskImage[i] = NULL;
 	}
 }
@@ -114,6 +116,18 @@ void CDebugInterfaceC64::RunEmulationThread()
 {
 	CDebugInterface::RunEmulationThread();
 	SYS_FatalExit("CDebugInterfaceC64::RunEmulationThread");
+}
+
+void CDebugInterfaceC64::CheckLoadedRoms()
+{
+}
+
+void CDebugInterfaceC64::RestartAudio()
+{
+}
+
+void CDebugInterfaceC64::RefreshSync()
+{
 }
 
 //
@@ -455,6 +469,11 @@ void CDebugInterfaceC64::MakeJmpNoReset1541(uint16 addr)
 	SYS_FatalExit("CDebugInterfaceC64::MakeJmpNoReset1541");
 }
 
+void CDebugInterfaceC64::SupportsBreakpoints(bool *writeBreakpoint, bool *readBreakpoint)
+{
+	CDebugInterface::SupportsBreakpoints(writeBreakpoint, readBreakpoint);
+}
+
 void CDebugInterfaceC64::ClearTemporaryBreakpoint()
 {
 	if (this->GetDebugMode() == DEBUGGER_MODE_RUNNING)
@@ -691,6 +710,72 @@ void CDebugInterfaceC64::SetSIDReceiveChannelsData(int sidNumber, bool isReceivi
 	SYS_FatalExit("CDebugInterfaceC64::SetSIDReceiveChannelsData");
 }
 
+//
+void CDebugInterfaceC64::AddWaveformData(int sidNumber, int voice1, int voice2, int voice3, short mix)
+{
+	//	LOGD("CDebugInterfaceC64::AddWaveformData: sid#%d, %d %d %d %d", sidNumber, v1, v2, v3, mix);
+	
+	// sid channels
+	sidChannelWaveform[sidNumber][0]->AddSample(voice1);
+	sidChannelWaveform[sidNumber][1]->AddSample(voice2);
+	sidChannelWaveform[sidNumber][2]->AddSample(voice3);
+	
+	// mix channel
+	sidMixWaveform[sidNumber]->AddSample(mix);
+}
+
+void CDebugInterfaceC64::UpdateWaveforms()
+{
+	// copy waveform data as quickly as possible
+	LockMutex();
+	int numSids = GetNumSids();
+	for (int sidNum = 0; sidNum < numSids; sidNum++)
+	{
+		for (int i = 0; i < 3; i++)
+		{
+			sidChannelWaveform[sidNum][i]->CopySampleData();
+		}
+
+		sidMixWaveform[sidNum]->CopySampleData();
+	}
+	UnlockMutex();
+	
+	// calculate trigger pos
+	for (int sidNum = 0; sidNum < numSids; sidNum++)
+	{
+		for (int i = 0; i < 3; i++)
+		{
+			sidChannelWaveform[sidNum][i]->CalculateTriggerPos();
+		}
+
+		sidMixWaveform[sidNum]->CalculateTriggerPos();
+	}
+}
+
+void CDebugInterfaceC64::UpdateWaveformsMuteStatus()
+{
+	for (int sidNum = 0; sidNum < GetNumSids(); sidNum++)
+	{
+		SetSIDMuteChannels(sidNum,
+						   sidChannelWaveform[sidNum][0]->isMuted,
+						   sidChannelWaveform[sidNum][1]->isMuted,
+						   sidChannelWaveform[sidNum][2]->isMuted, false);
+
+		if (sidChannelWaveform[sidNum][0]->isMuted
+			&& sidChannelWaveform[sidNum][1]->isMuted
+			&& sidChannelWaveform[sidNum][2]->isMuted)
+		{
+			sidMixWaveform[sidNum]->isMuted = true;
+		}
+		else if (!sidChannelWaveform[sidNum][0]->isMuted
+				 || !sidChannelWaveform[sidNum][1]->isMuted
+				 || !sidChannelWaveform[sidNum][2]->isMuted)
+		{
+			sidMixWaveform[sidNum]->isMuted = false;
+		}
+	}
+}
+
 void CDebugInterfaceC64::SetVicRecordStateMode(uint8 recordMode)
 {
 	SYS_FatalExit("CDebugInterfaceC64::SetVicRecordStateMode");
@@ -845,7 +930,7 @@ bool CDebugInterfaceC64::IsProfilerActive()
 	return false;
 }
 
-CDataAdapter *CDebugInterfaceC64::GetDataAdapter()
+CDebugDataAdapter *CDebugInterfaceC64::GetDataAdapter()
 {
 	return this->dataAdapterC64;
 }
@@ -881,7 +966,7 @@ void CDebugInterfaceC64::DumpC64Memory(CSlrString *path)
 	FILE *fp = fopen(asciiPath, "wb");
 	if (fp == NULL)
 	{
-		viewC64->ShowMessage("Saving memory dump failed");
+		viewC64->ShowMessageError("Saving memory dump failed");
 		return;
 	}
 	
@@ -891,7 +976,7 @@ void CDebugInterfaceC64::DumpC64Memory(CSlrString *path)
 	delete [] memoryBuffer;
 	delete [] asciiPath;
 	
-	viewC64->ShowMessage("C64 memory dumped");
+	viewC64->ShowMessageSuccess("C64 memory dumped");
 }
 
 void CDebugInterfaceC64::DumpC64MemoryMarkers(CSlrString *path)
@@ -905,7 +990,7 @@ void CDebugInterfaceC64::DumpC64MemoryMarkers(CSlrString *path)
 
 	if (fp == NULL)
 	{
-		viewC64->ShowMessage("Saving memory markers failed");
+		viewC64->ShowMessageError("Saving memory markers failed");
 		return;
 	}
 	
@@ -946,7 +1031,7 @@ void CDebugInterfaceC64::DumpC64MemoryMarkers(CSlrString *path)
 
 	viewC64->debugInterfaceC64->UnlockMutex();
 
-	viewC64->ShowMessage("C64 memory markers saved");
+	viewC64->ShowMessageSuccess("C64 memory markers saved");
 }
 
 void CDebugInterfaceC64::DumpDisk1541Memory(CSlrString *path)
@@ -973,7 +1058,7 @@ void CDebugInterfaceC64::DumpDisk1541Memory(CSlrString *path)
 	FILE *fp = fopen(asciiPath, "wb");
 	if (fp == NULL)
 	{
-		viewC64->ShowMessage("Saving memory dump failed");
+		viewC64->ShowMessageError("Saving memory dump failed");
 		return;
 	}
 	
@@ -985,7 +1070,7 @@ void CDebugInterfaceC64::DumpDisk1541Memory(CSlrString *path)
 	delete [] memoryBuffer;
 	delete [] asciiPath;
 	
-	viewC64->ShowMessage("Drive 1541 memory dumped");
+	viewC64->ShowMessageSuccess("Drive 1541 memory dumped");
 }
 
 void CDebugInterfaceC64::DumpDisk1541MemoryMarkers(CSlrString *path)
@@ -999,7 +1084,7 @@ void CDebugInterfaceC64::DumpDisk1541MemoryMarkers(CSlrString *path)
 	
 	if (fp == NULL)
 	{
-		viewC64->ShowMessage("Saving memory markers failed");
+		viewC64->ShowMessageError("Saving memory markers failed");
 		return;
 	}
 	
@@ -1045,7 +1130,7 @@ void CDebugInterfaceC64::DumpDisk1541MemoryMarkers(CSlrString *path)
 	
 	viewC64->debugInterfaceC64->UnlockMutex();
 	
-	viewC64->ShowMessage("Drive 1541 memory markers saved");
+	viewC64->ShowMessageSuccess("Drive 1541 memory markers saved");
 }
 
 

@@ -21,6 +21,14 @@ CViewC64SidTrackerHistory::CViewC64SidTrackerHistory(const char *name, float pos
 {
 	this->debugInterface = debugInterface;
 	
+	imGuiNoWindowPadding = true;
+	imGuiNoScrollbar = true;
+
+	for (int i = 0; i < C64_MAX_NUM_SIDS * 3; i++)
+	{
+		pressedKeys[i] = NULL;
+	}
+
 	this->selectedNumSteps = 1;
 	this->fScrollPosition = 0;
 	this->scrollPosition = 0;
@@ -452,19 +460,37 @@ void CViewC64SidTrackerHistory::SetSidWithCurrentPositionData()
 	gSoundEngine->UnlockMutex("CViewSIDTrackerHistory::SetSidWithCurrentPositionData");
 }
 
-void CViewC64SidTrackerHistory::PianoKeyboardNotePressed(CPianoKeyboard *pianoKeyboard, u8 note)
+void CViewC64SidTrackerHistory::PianoKeyboardNotePressed(CPianoKeyboard *pianoKeyboard, CPianoKey *pianoKey)
 {
-	LOGD("CViewSIDTrackerHistory::PianoKeyboardNotePressed: note=%d", note);
+	LOGD("CViewSIDTrackerHistory::PianoKeyboardNotePressed: note=%d", pianoKey->keyNote);
+	
 	// TODO: SID SELECT
 	
 	int sidNum = 0;
 	
-	if (lstMidiIn->selectedElement < 0)
+	if (!btnJazz->IsOn() && lstMidiIn->selectedElement < 0)
 		return;
-	
-	int chanNum = lstMidiIn->selectedElement;
 
 	debugInterface->mutexSidDataHistory->Lock();
+
+	int chanNum = lstMidiIn->selectedElement;
+
+	if (btnJazz->IsOn())
+	{
+		// find available channel
+		for (int i = 0; i < 3; i++)
+		{
+			if (pressedKeys[sidNum*3 + chanNum] == NULL)
+			{
+				break;
+			}
+			
+			chanNum = (chanNum + 1) % 3;
+		}
+		
+		LOGD("jazz PRESS chanNum=%d note=%d", chanNum, pianoKey->keyNote);
+//		lstMidiIn->SetElement(chanNum, false, false);
+	}
 	
 	std::list<CSidData *>::iterator it = debugInterface->sidDataHistory.begin();
 	int sy = scrollPosition;
@@ -472,23 +498,24 @@ void CViewC64SidTrackerHistory::PianoKeyboardNotePressed(CPianoKeyboard *pianoKe
 	
 	CSidData *pSidDataCurrent  = *it;
 
-	const sid_frequency_t *sidFrequencyData = SidNoteToFrequency(note);
+	const sid_frequency_t *sidFrequencyData = SidNoteToFrequency(pianoKey->keyNote);
 	
 	int o = chanNum * 0x07;
-	pSidDataCurrent->sidData[sidNum][o + 1] = (sidFrequencyData->sidValue & 0xFF00) >> 8;
-	pSidDataCurrent->sidData[sidNum][o    ] = (sidFrequencyData->sidValue & 0x00FF);
+	pSidDataCurrent->sidRegs[sidNum][o + 1] = (sidFrequencyData->sidValue & 0xFF00) >> 8;
+	pSidDataCurrent->sidRegs[sidNum][o    ] = (sidFrequencyData->sidValue & 0x00FF);
 
 	// gate on
-	pSidDataCurrent->sidData[sidNum][o + 4] = pSidDataCurrent->sidData[sidNum][o + 4] | 0x01;
+	pSidDataCurrent->sidRegs[sidNum][o + 4] = pSidDataCurrent->sidRegs[sidNum][o + 4] | 0x01;
 
 	debugInterface->SetSid(pSidDataCurrent);
 
+	//
+	pressedKeys[sidNum * 3 + chanNum] = pianoKey;
+	
 	if (btnJazz->IsOn())
 	{
-		chanNum++;
-		if (chanNum == 3)
-			chanNum = 0;
-		
+		chanNum = (chanNum + 1) % 3;
+
 		lstMidiIn->SetElement(chanNum, false, false);
 	}
 	
@@ -509,14 +536,21 @@ void CViewC64SidTrackerHistory::UpdateHistoryWithCurrentSidData()
 	CSidData *pSidDataCurrent  = *it;
 
 	// update with current SID state
-	pSidDataCurrent->PeekFromSids();
+	if (debugInterface->sidDataToRestore)
+	{
+		pSidDataCurrent->CopyFrom(debugInterface->sidDataToRestore);
+	}
+	else
+	{
+		pSidDataCurrent->PeekFromSids();
+	}
 
 	debugInterface->mutexSidDataHistory->Unlock();
 }
 
-void CViewC64SidTrackerHistory::PianoKeyboardNoteReleased(CPianoKeyboard *pianoKeyboard, u8 note)
+void CViewC64SidTrackerHistory::PianoKeyboardNoteReleased(CPianoKeyboard *pianoKeyboard, CPianoKey *pianoKey)
 {
-	LOGD("CViewSIDTrackerHistory::PianoKeyboardNoteReleased: note=%d", note);
+	LOGD("CViewSIDTrackerHistory::PianoKeyboardNoteReleased: note=%d", pianoKey->keyNote);
 	if (lstMidiIn->selectedElement < 0)
 		return;
 	
@@ -528,7 +562,13 @@ void CViewC64SidTrackerHistory::PianoKeyboardNoteReleased(CPianoKeyboard *pianoK
 	
 	CSidData *pSidDataCurrent  = *it;
 	
-	const sid_frequency_t *sidFrequencyData = SidNoteToFrequency(note);
+	if (pSidDataCurrent == NULL)
+	{
+		debugInterface->mutexSidDataHistory->Unlock();
+		return;
+	}
+	
+//	const sid_frequency_t *sidFrequencyData = SidNoteToFrequency(pianoKey->keyNote);
 	
 	if (btnJazz->IsOn())
 	{
@@ -536,15 +576,25 @@ void CViewC64SidTrackerHistory::PianoKeyboardNoteReleased(CPianoKeyboard *pianoK
 		{
 			for (int chanNum = 0; chanNum < 3; chanNum++)
 			{
-				int o = chanNum * 0x07;
-				if (	(pSidDataCurrent->sidData[sidNum][o + 1] = (sidFrequencyData->sidValue & 0xFF00) >> 8)
-					&&	(pSidDataCurrent->sidData[sidNum][o    ] = (sidFrequencyData->sidValue & 0x00FF))
-					&& ((pSidDataCurrent->sidData[sidNum][o + 4] & 0x01) == 0x01))
+				// the below does not work:
+//				int o = chanNum * 0x07;
+//				if (	(pSidDataCurrent->sidData[sidNum][o + 1] = (sidFrequencyData->sidValue & 0xFF00) >> 8)
+//					&&	(pSidDataCurrent->sidData[sidNum][o    ] = (sidFrequencyData->sidValue & 0x00FF))
+//					&& ((pSidDataCurrent->sidData[sidNum][o + 4] & 0x01) == 0x01))
+				
+				// check pressed keys instead
+				if (pressedKeys[sidNum * 3 + chanNum] == pianoKey)
 				{
+					LOGD("jazz REL   chanNum=%d note=%d", chanNum, pianoKey->keyNote);
+
+					int o = chanNum * 0x07;
+
 					// found frequency, gate off
-					pSidDataCurrent->sidData[sidNum][o + 4] = pSidDataCurrent->sidData[sidNum][o + 4] & 0xFE;
+					pSidDataCurrent->sidRegs[sidNum][o + 4] = pSidDataCurrent->sidRegs[sidNum][o + 4] & 0xFE;
 					
 					debugInterface->SetSid(pSidDataCurrent);
+					
+					pressedKeys[sidNum * 3 + chanNum] = NULL;
 					break;
 				}
 			}
@@ -552,11 +602,12 @@ void CViewC64SidTrackerHistory::PianoKeyboardNoteReleased(CPianoKeyboard *pianoK
 	}
 	else
 	{
-		int sidNum = 0; /// TODO: FIX ME
+		int sidNum = 0; /// TODO: SELECT SID FIX ME
 		int chanNum = lstMidiIn->selectedElement;
 		int o = chanNum * 0x07;
-		pSidDataCurrent->sidData[sidNum][o + 4] = pSidDataCurrent->sidData[sidNum][o + 4] & 0xFE;
+		pSidDataCurrent->sidRegs[sidNum][o + 4] = pSidDataCurrent->sidRegs[sidNum][o + 4] & 0xFE;
 		debugInterface->SetSid(pSidDataCurrent);
+		pressedKeys[sidNum * 3 + chanNum] = NULL;
 	}
 	
 	debugInterface->mutexSidDataHistory->Unlock();
@@ -575,7 +626,10 @@ bool CViewC64SidTrackerHistory::DoMove(float x, float y, float distX, float dist
 {
 //	LOGD("CViewSIDTrackerHistory::DoMove: diffY=%f", diffY);
 	
-	MoveTracksY(diffY/4.0f);
+	if (IsInsideView(x, y))
+	{
+		MoveTracksY(diffY/4.0f);
+	}
 	return true;
 }
 
@@ -719,8 +773,8 @@ void CViewC64SidTrackerHistory::Render()
 
 		for (int sidNum = 0; sidNum < debugInterface->numSids; sidNum++)
 		{
-			u8 *sidDataCurrent = pSidDataCurrent->sidData[sidNum];
-			u8 *sidDataPrevious = pSidDataPrevious->sidData[sidNum];
+			u8 *sidDataCurrent = pSidDataCurrent->sidRegs[sidNum];
+			u8 *sidDataPrevious = pSidDataPrevious->sidRegs[sidNum];
 
 			for (int chanNum = 0; chanNum < 3; chanNum++)
 			{
@@ -1074,12 +1128,6 @@ bool CViewC64SidTrackerHistory::ButtonSwitchChanged(CGuiButtonSwitch *button)
 	}
 	
 	return false;
-}
-
-// temporary hack
-bool CViewC64SidTrackerHistory::IsFocusable()
-{
-	return true;
 }
 
 bool CViewC64SidTrackerHistory::KeyDown(u32 keyCode, bool isShift, bool isAlt, bool isControl, bool isSuper)

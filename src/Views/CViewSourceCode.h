@@ -24,7 +24,7 @@ class CViewSourceCode : public CGuiView, CGuiEditHexCallback, CGuiEditBoxTextCal
 public:
 	CViewSourceCode(const char *name, float posX, float posY, float posZ, float sizeX, float sizeY,
 					CDebugInterface *debugInterface, CDataAdapter *dataAdapter,
-					CViewMemoryMap *memoryMap, CViewDisassembly *viewDisassemble);
+					CViewMemoryMap *memoryMap, CViewDisassembly *viewDisassembly);
 	virtual ~CViewSourceCode();
 
 	virtual void Render();
@@ -39,7 +39,7 @@ public:
 	virtual bool KeyDown(u32 keyCode, bool isShift, bool isAlt, bool isControl, bool isSuper);
 	virtual bool KeyUp(u32 keyCode, bool isShift, bool isAlt, bool isControl, bool isSuper);
 	
-	CViewDisassembly *viewDisassemble;
+	CViewDisassembly *viewDisassembly;
 	CViewMemoryMap *memoryMap;
 	CDataAdapter *dataAdapter;
 	CDebugInterface *debugInterface;

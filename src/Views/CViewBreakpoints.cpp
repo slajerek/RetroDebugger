@@ -31,9 +31,6 @@ CViewBreakpoints::CViewBreakpoints(const char *name, float posX, float posY, flo
 {
 	this->symbols = symbols;
 	this->breakpointType = breakpointType;
-	
-	imGuiNoWindowPadding = false;
-	imGuiNoScrollbar = false;
 }
 
 CViewBreakpoints::~CViewBreakpoints()
@@ -83,14 +80,22 @@ bool CViewBreakpoints::DoTap(float x, float y)
 {
 	LOGG("CViewBreakpoints::DoTap:  x=%f y=%f", x, y);
 	
-	return true; //CGuiView::DoTap(x, y);
+	if (IsInsideView(x, y))
+	{
+		return true;
+	}
+	return false;
 }
 
 bool CViewBreakpoints::DoFinishTap(float x, float y)
 {
 	LOGG("CViewBreakpoints::DoFinishTap: %f %f", x, y);
 
-	return true; //CGuiView::DoFinishTap(x, y);
+	if (IsInsideView(x, y))
+	{
+		return true;
+	}
+	return false;
 }
 
 //@returns is consumed

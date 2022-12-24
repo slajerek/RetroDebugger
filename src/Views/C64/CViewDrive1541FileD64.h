@@ -91,7 +91,7 @@ public:
 	void RefreshInsertedDiskImageAsync();
 	virtual void ThreadRun(void *passData);
 
-	void SetDiskImage(char *fileName);
+	void SetDiskImage(char *fullFilePath);
 	void SetDiskImage(int deviceId);
 	
 	void StartFileEntry(DiskImageFileEntry *fileEntry, bool showLoadAddressInfo);

@@ -31,6 +31,8 @@ CDebugInterface::CDebugInterface(CViewC64 *viewC64)
 	
 	emulationFrameCounter = 0;
 	
+	viewScreen = NULL;
+	
 	this->debugMode = DEBUGGER_MODE_RUNNING;
 }
 
@@ -64,6 +66,14 @@ float CDebugInterface::GetEmulationFPS()
 }
 
 void CDebugInterface::RunEmulationThread()
+{
+}
+
+void CDebugInterface::RestartAudio()
+{
+}
+
+void CDebugInterface::RefreshSync()
 {
 }
 
@@ -165,7 +175,7 @@ CImageData *CDebugInterface::GetScreenImageData()
 	return this->screenImage;
 }
 
-CDataAdapter *CDebugInterface::GetDataAdapter()
+CDebugDataAdapter *CDebugInterface::GetDataAdapter()
 {
 	SYS_FatalExit("CDebugInterface::GetDataAdapter");
 	return NULL;
@@ -336,6 +346,12 @@ void CDebugInterface::SetDebugOn(bool debugOn)
 	this->isDebugOn = debugOn;
 }
 
+void CDebugInterface::SupportsBreakpoints(bool *writeBreakpoint, bool *readBreakpoint)
+{
+	*writeBreakpoint = false;
+	*readBreakpoint = false;
+}
+
 bool CDebugInterface::GetSettingIsWarpSpeed()
 {
 	return false;
@@ -487,6 +503,38 @@ bool CDebugInterface::IsEmulationRunning()
 void CDebugInterface::AddView(CGuiView *view)
 {
 	views.push_back(view);
+}
+
+void CDebugInterface::AddMenuItem(CDebugInterfaceMenuItem *menuItem)
+{
+	menuItems.push_back(menuItem);
+}
+
+//
+CGuiView *CDebugInterface::GetViewScreen()
+{
+	return viewScreen;
+}
+
+CViewMemoryMap *CDebugInterface::GetViewMemoryMap()
+{
+	CDebugDataAdapter *dataAdapter = GetDataAdapter();
+	if (dataAdapter == NULL)
+	{
+		LOGError("CDebugInterface::GetViewMemoryMap: dataAdapter is NULL");
+		return NULL;
+	}
+	return dataAdapter->viewMemoryMap;
+}
+
+CViewTimeline *CDebugInterface::GetViewTimeline()
+{
+	if (this->snapshotsManager == NULL)
+	{
+		LOGError("CDebugInterface::GetViewTimeline: snapshotsManager is NULL");
+		return NULL;
+	}
+	return this->snapshotsManager->viewTimeline;
 }
 
 // TODO: ADD "#define DEBUGMUTEX" and push/pull names of locks here, list to be displayed when this locks here again

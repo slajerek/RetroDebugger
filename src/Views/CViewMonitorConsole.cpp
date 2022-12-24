@@ -17,7 +17,7 @@
 #include "CDebugInterfaceNes.h"
 #include "CDebugMemoryMapCell.h"
 #include "CLayoutParameter.h"
-#include "C64D_Version.h"
+#include "EmulatorsConfig.h"
 
 #define C64DEBUGGER_MONITOR_HISTORY_FILE_VERSION	1
 
@@ -25,12 +25,12 @@
 #define C64MONITOR_DEVICE_DISK1541_8	2
 
 #define C64MONITOR_DUMP_MEMORY_STEP		0x0100
-#define C64MONITOR_DISASSEMBLE_STEP		0x0010
+#define C64MONITOR_DISASSEMBLY_STEP		0x0010
 
 enum monitorSaveFileType
 {
 	MONITOR_SAVE_FILE_MEMORY_DUMP,
-	MONITOR_SAVE_FILE_DISASSEMBLE
+	MONITOR_SAVE_FILE_DISASSEMBLY
 };
 
 CViewMonitorConsole::CViewMonitorConsole(char *name, float posX, float posY, float posZ, float sizeX, float sizeY, CDebugInterface *debugInterface)
@@ -40,6 +40,9 @@ CViewMonitorConsole::CViewMonitorConsole(char *name, float posX, float posY, flo
 	this->name = name;
 	this->debugInterface = debugInterface;
 	
+	imGuiNoWindowPadding = true;
+	imGuiNoScrollbar = true;
+
 	this->viewConsole = new CGuiViewConsole(posX, posY, posZ, sizeX, sizeY, viewC64->fontCBMShifted, 2.00f, 10, true, this);
 	
 	this->viewConsole->SetPrompt(".");
@@ -56,7 +59,7 @@ CViewMonitorConsole::CViewMonitorConsole(char *name, float posX, float posY, flo
 	
 	memoryExtensions.push_back(new CSlrString("bin"));
 	prgExtensions.push_back(new CSlrString("prg"));
-	disassembleExtensions.push_back(new CSlrString("asm"));
+	disassemblyExtensions.push_back(new CSlrString("asm"));
 	
 	debugInterface->SetCodeMonitorCallback(this);
 	
@@ -66,7 +69,10 @@ CViewMonitorConsole::CViewMonitorConsole(char *name, float posX, float posY, flo
 	this->viewConsole->SetFontScale(fontScale);
 
 	PrintInitPrompt();
-	CommandHelp();
+	if (! (c64SettingsUseNativeEmulatorMonitor && debugInterface->IsCodeMonitorSupported()))
+	{
+		CommandHelp();
+	}
 	
 	RestoreMonitorHistory();
 }
@@ -109,13 +115,19 @@ bool CViewMonitorConsole::KeyDownRepeat(u32 keyCode, bool isShift, bool isAlt, b
 
 bool CViewMonitorConsole::KeyDown(u32 keyCode, bool isShift, bool isAlt, bool isControl, bool isSuper)
 {
-	u32 upKey;
+	return this->viewConsole->KeyDown(keyCode);
+}
+
+bool CViewMonitorConsole::KeyTextInput(const char *text)
+{
+	// NOTE: this is really bad hack and does not support UTF characters
+	u32 key;
  
 	//LOGD("commandLineCursorPos=%d", viewConsole->commandLineCursorPos);
 
 	if (c64SettingsUseNativeEmulatorMonitor && debugInterface->IsCodeMonitorSupported())
 	{
-		upKey = keyCode;
+		key = text[0];
 	}
 	else
 	{
@@ -128,15 +140,15 @@ bool CViewMonitorConsole::KeyDown(u32 keyCode, bool isShift, bool isAlt, bool is
 			
 			if (viewConsole->commandLine[2] != 'P' && viewConsole->commandLineCursorPos >= 11)
 			{
-				upKey = keyCode;
+				key = text[0];
 			}
 			else if (viewConsole->commandLine[2] == 'P' && viewConsole->commandLineCursorPos >= 15)
 			{
-				upKey = keyCode;
+				key = text[0];
 			}
 			else
 			{
-				upKey = toupper(keyCode);
+				key = toupper(text[0]);
 			}
 		}
 		else if (viewConsole->commandLine[0] == 'L')
@@ -146,24 +158,28 @@ bool CViewMonitorConsole::KeyDown(u32 keyCode, bool isShift, bool isAlt, bool is
 			// L PRG filename
 			if (viewConsole->commandLine[2] != 'P' && viewConsole->commandLineCursorPos >= 6)
 			{
-				upKey = keyCode;
+				key = text[0];
 			}
 			else if (viewConsole->commandLine[2] == 'P' && viewConsole->commandLineCursorPos >= 5)
 			{
-				upKey = keyCode;
+				key = text[0];
 			}
 			else
 			{
-				upKey = toupper(keyCode);
+				key = toupper(text[0]);
 			}
 		}
 		else
 		{
-			upKey = toupper(keyCode);
+			key = toupper(text[0]);
 		}
 	}
 
-	return this->viewConsole->KeyDown(upKey);
+	// TODO: this is ugly, and not supported with UTF
+	char buf[32] = {0};
+	strncpy(buf, text, 31);
+	buf[0] = text[0];
+	return viewConsole->KeyTextInput(buf);
 }
 
 void CViewMonitorConsole::RenderImGui()
@@ -227,7 +243,7 @@ void CViewMonitorConsole::GuiViewConsoleExecuteCommand(char *commandText)
 			if ((*commandLineHistoryIt)[0] == 'D')
 			{
 				addrStart = addrEnd;
-				addrEnd = addrStart + C64MONITOR_DISASSEMBLE_STEP;
+				addrEnd = addrStart + C64MONITOR_DISASSEMBLY_STEP;
 				DoDisassembleMemory(addrStart, addrEnd, false, NULL);
 				
 				this->viewConsole->mutex->Unlock();
@@ -551,13 +567,13 @@ void CViewMonitorConsole::UpdateDataAdapters()
 		bool v;
 		v = v1;
 //		viewC64->viewC64StateCPU->SetVisible(v);
-//		viewC64->viewC64Disassemble->SetVisible(v);
+//		viewC64->viewC64Disassembly->SetVisible(v);
 //		viewC64->viewC64MemoryDataDump->SetVisible(v);
 //		viewC64->viewC64MemoryMap->SetVisible(v);
 //		viewC64->debugInterfaceC64->isDebugOn = v;
 		v = v2;
 //		viewC64->viewDriveStateCPU->SetVisible(v);
-//		viewC64->viewDrive1541Disassemble->SetVisible(v);
+//		viewC64->viewDrive1541Disassembly->SetVisible(v);
 //		viewC64->viewDrive1541MemoryDataDump->SetVisible(v);
 //		viewC64->viewDrive1541MemoryMap->SetVisible(v);
 //		viewC64->debugInterfaceC64->debugOnDrive1541 = v;
@@ -1321,7 +1337,7 @@ void CViewMonitorConsole::SystemDialogFileSaveSelected(CSlrString *filePath)
 			delete [] cPath;
 		}
 	}
-	else if (saveFileType == MONITOR_SAVE_FILE_DISASSEMBLE)
+	else if (saveFileType == MONITOR_SAVE_FILE_DISASSEMBLY)
 	{
 		
 	}
@@ -1643,7 +1659,7 @@ void CViewMonitorConsole::RestoreMonitorHistory()
 
 void CViewMonitorConsole::CommandDisassemble()
 {
-	int continueStep = C64MONITOR_DISASSEMBLE_STEP;
+	int continueStep = C64MONITOR_DISASSEMBLY_STEP;
 	
 	disassembleHexCodes = true;
 	
@@ -1652,7 +1668,7 @@ void CViewMonitorConsole::CommandDisassemble()
 	{
 		addrStart = addrEnd;
 		addrEnd = addrStart + continueStep;
-		goto viewMonitorConsoleParsedDisassemble;
+		goto viewMonitorConsoleParsedDisassembly;
 	}
 
 	// get help
@@ -1687,7 +1703,7 @@ void CViewMonitorConsole::CommandDisassemble()
 		addrEnd = addrStart + continueStep;
 	}
 	
-viewMonitorConsoleParsedDisassemble:
+viewMonitorConsoleParsedDisassembly:
 
 	if (addrEnd < 0x0000)
 	{
@@ -1715,18 +1731,18 @@ void CViewMonitorConsole::CommandDoDisassemble()
 	if (GetToken(&fileName) == false)
 	{
 //		// no file name supplied, open dialog
-//		CSlrString *defaultFileName = new CSlrString("c64disassemble");
+//		CSlrString *defaultFileName = new CSlrString("c64disassembly");
 //		
 //		CSlrString *windowTitle = new CSlrString("Disassemble C64 memory");
 //		
-//		viewC64->ShowDialogSaveFile(this, &disassembleExtensions, defaultFileName, c64SettingsDefaultMemoryDumpFolder, windowTitle);
+//		viewC64->ShowDialogSaveFile(this, &disassemblyExtensions, defaultFileName, c64SettingsDefaultMemoryDumpFolder, windowTitle);
 //		
 //		delete windowTitle;
 //		delete defaultFileName;
 		
 		if (DoDisassembleMemory(addrStart, addrEnd, false, NULL) == false)
 		{
-			this->viewConsole->PrintLine("Disassemble memory failed.");
+			this->viewConsole->PrintLine("Disassembling memory failed.");
 		}
 	}
 	else
@@ -1746,7 +1762,7 @@ void CViewMonitorConsole::CommandDoDisassemble()
 		
 		if (DoDisassembleMemory(addrStart, addrEnd, false, filePath) == false)
 		{
-			this->viewConsole->PrintLine("Disassemble memory failed.");
+			this->viewConsole->PrintLine("Disassembling memory failed.");
 		}
 	}
 }
@@ -2031,24 +2047,24 @@ void CViewMonitorConsole::DisassembleHexLine(int addr, CByteBuffer *outBuffer)
 	
 	// addr
 	sprintfHexCode16(buf, addr);
-	DisassemblePrint(outBuffer, buf);
-	DisassemblePrint(outBuffer, " ");
+	DisassemblyPrint(outBuffer, buf);
+	DisassemblyPrint(outBuffer, " ");
 
 	if (disassembleHexCodes)
 	{
 		sprintfHexCode8(buf1, op);
-		DisassemblePrint(outBuffer, buf1);
-		DisassemblePrint(outBuffer, " ");
+		DisassemblyPrint(outBuffer, buf1);
+		DisassemblyPrint(outBuffer, " ");
 	}
 	
 	if (disassembleHexCodes)
 	{
-		DisassemblePrint(outBuffer, "       ???");
+		DisassemblyPrint(outBuffer, "       ???");
 	}
 	else
 	{
 		sprintfHexCode8(buf1, op);
-		DisassemblePrint(outBuffer, buf1);
+		DisassemblyPrint(outBuffer, buf1);
 	}
 	
 //	if (addr == currentPC)
@@ -2079,7 +2095,7 @@ int CViewMonitorConsole::DisassembleLine(int addr, uint8 op, uint8 lo, uint8 hi,
 	
 	
 	// TODO:
-//	if (disassembleShowLabels)
+//	if (disassemblyShowLabels)
 //	{
 //		for (int i = 0; i < length; i++)
 //		{
@@ -2102,9 +2118,9 @@ int CViewMonitorConsole::DisassembleLine(int addr, uint8 op, uint8 lo, uint8 hi,
 	
 	// addr
 	sprintfHexCode16(buf, addr);
-	DisassemblePrint(outBuffer, buf);
+	DisassemblyPrint(outBuffer, buf);
 	
-	DisassemblePrint(outBuffer, " ");
+	DisassemblyPrint(outBuffer, " ");
 	
 	if (disassembleHexCodes)
 	{
@@ -2136,16 +2152,16 @@ int CViewMonitorConsole::DisassembleLine(int addr, uint8 op, uint8 lo, uint8 hi,
 		
 		strcpy(bufHexCodes, buf1);
 		strcat(bufHexCodes, buf2);
-		DisassemblePrint(outBuffer, bufHexCodes);
+		DisassemblyPrint(outBuffer, bufHexCodes);
 		
 		// illegal opcode?
 		if (opcodes[op].isIllegal == OP_ILLEGAL)
 		{
-			DisassemblePrint(outBuffer, "*");
+			DisassemblyPrint(outBuffer, "*");
 		}
 		else
 		{
-			DisassemblePrint(outBuffer, " ");
+			DisassemblyPrint(outBuffer, " ");
 		}
 	}
 	
@@ -2252,13 +2268,13 @@ int CViewMonitorConsole::DisassembleLine(int addr, uint8 op, uint8 lo, uint8 hi,
 	strcpy(buf, buf3);
 	strcat(buf, buf4);
 	
-	DisassemblePrint(outBuffer, buf);
+	DisassemblyPrint(outBuffer, buf);
 	
 	int numBytesPerOp = opcodes[op].addressingLength;
 	return numBytesPerOp;
 }
 
-void CViewMonitorConsole::DisassemblePrint(CByteBuffer *byteBuffer, char *text)
+void CViewMonitorConsole::DisassemblyPrint(CByteBuffer *byteBuffer, char *text)
 {
 	char *t = text;
 	while (*t != '\0')

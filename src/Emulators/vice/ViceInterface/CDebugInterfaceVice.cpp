@@ -37,8 +37,10 @@ extern "C" {
 #include "CDataAdaptersVice.h"
 #include "SYS_CommandLine.h"
 #include "CGuiMain.h"
+#include "SYS_Main.h"
 #include "SYS_KeyCodes.h"
 #include "SND_SoundEngine.h"
+#include "SYS_FileSystem.h"
 #include "C64Tools.h"
 #include "C64KeyMap.h"
 #include "C64SettingsStorage.h"
@@ -52,6 +54,10 @@ extern "C" {
 #include "CSnapshotsManager.h"
 #include "CDebugSymbolsC64.h"
 #include "CDebugSymbolsDrive1541.h"
+#include "CWaveformData.h"
+
+// 44100/50*5
+#define SID_WAVEFORM_LENGTH 4410*8
 
 extern "C" {
 	void vsync_suspend_speed_eval(void);
@@ -86,6 +92,15 @@ CDebugInterfaceVice::CDebugInterfaceVice(CViewC64 *viewC64, uint8 *c64memory, bo
 	audioChannel = NULL;
 	snapshotsManager = new CSnapshotsManager(this);
 
+	for (int sidNum = 0; sidNum < C64_MAX_NUM_SIDS; sidNum++)
+	{
+		for (int i = 0; i < 3; i++)
+		{
+			sidChannelWaveform[sidNum][i] = new CWaveformData(SID_WAVEFORM_LENGTH);
+		}
+		sidMixWaveform[sidNum] = new CWaveformData(SID_WAVEFORM_LENGTH);
+	}
+	
 	ViceWrapperInit(this);
 	
 	ReadEmbeddedRoms();
@@ -104,7 +119,6 @@ CDebugInterfaceVice::CDebugInterfaceVice(CViewC64 *viewC64, uint8 *c64memory, bo
 	numSids = 1;
 	
 	// PAL
-	screenHeight = 272;
 	machineType = MACHINE_TYPE_PAL;
 	debugInterfaceVice->numEmulationFPS = 50;
 
@@ -310,7 +324,15 @@ void CDebugInterfaceVice::UpdateSidDataHistory()
 		sidData = new CSidData();
 	}
 	
-	sidData->PeekFromSids();
+	if (sidDataToRestore)
+	{
+		sidData->CopyFrom(sidDataToRestore);
+	}
+	else
+	{
+		sidData->PeekFromSids();
+	}
+	
 	sidDataHistory.push_front(sidData);
 	
 	sidDataHistoryCurrentStep++;
@@ -345,6 +367,12 @@ void CDebugInterfaceVice::DoFrame()
 void CDebugInterfaceVice::RefreshSync()
 {
 	vsync_sync_reset();
+}
+
+void CDebugInterfaceVice::RestartAudio()
+{
+	audioChannel->Start();
+	RefreshSync();
 }
 
 CThreadViceDriveFlush::CThreadViceDriveFlush(CDebugInterfaceVice *debugInterface, int flushCheckIntervalInMS)
@@ -441,12 +469,16 @@ uint8 *CDebugInterfaceVice::GetCharRom()
 
 int CDebugInterfaceVice::GetScreenSizeX()
 {
-	return 384;
+	int screenWidth, screenHeight, gfxPosX, gfxPosY;
+	GetViciiGeometry(&screenWidth, &screenHeight, &gfxPosX, &gfxPosY);
+	return screenWidth;
 }
 
 int CDebugInterfaceVice::GetScreenSizeY()
 {
-	return screenHeight;
+	int screenWidth, screenHeight, gfxPosX, gfxPosY;
+	GetViciiGeometry(&screenWidth, &screenHeight, &gfxPosX, &gfxPosY);
+	return screenHeight; //-16;
 }
 
 bool CDebugInterfaceVice::IsCpuJam()
@@ -689,7 +721,7 @@ void CDebugInterfaceVice::InsertD64(CSlrString *path)
 	
 	if (rc == -1)
 	{
-		viewC64->ShowMessage("Inserting disk failed");
+		viewC64->ShowMessageError("Inserting disk failed");
 	}
 	
 	delete [] asciiPath;
@@ -899,6 +931,29 @@ void CDebugInterfaceVice::SetSidTypeAsync(int sidType)
 	snapshotsManager->UnlockMutex();
 }
 
+//
+void CDebugInterfaceVice::SetViciiBorderMode(int borderMode)
+{
+	LockMutex();
+	c64d_set_vicii_border_mode(borderMode);
+	UnlockMutex();
+}
+
+int CDebugInterfaceVice::GetViciiBorderMode()
+{
+	return c64d_get_vicii_border_mode();
+}
+
+extern "C" {
+void c64d_vicii_get_geometry(int *canvasWidth, int *canvasHeight, int *gfxPosX, int *gfxPosY);
+}
+
+void CDebugInterfaceVice::GetViciiGeometry(int *canvasWidth, int *canvasHeight, int *gfxPosX, int *gfxPosY)
+{
+	c64d_vicii_get_geometry(canvasWidth, canvasHeight, gfxPosX, gfxPosY);
+}
+
+
 // samplingMethod: Fast=0, Interpolating=1, Resampling=2, Fast Resampling=3
 void CDebugInterfaceVice::SetSidSamplingMethod(int samplingMethod)
 {
@@ -1086,8 +1141,6 @@ void CDebugInterfaceVice::SetC64ModelType(int modelType)
 	LOGM("CDebugInterfaceVice::SetC64ModelType: %d", modelType);
 	
 	// blank screen when machine type is changed
-	this->screenHeight = 0;
-	
 	c64d_clear_screen();
 	
 	c64d_update_c64_machine_from_model_type(c64_change_model_type);
@@ -1894,8 +1947,6 @@ void CDebugInterfaceVice::SetSIDReceiveChannelsData(int sidNumber, bool isReceiv
 	}
 }
 
-
-
 // snapshots
 bool CDebugInterfaceVice::LoadFullSnapshot(CByteBuffer *snapshotBuffer)
 {
@@ -1955,7 +2006,7 @@ void c64d_update_c64_screen_height_from_model_type(int modelType)
 		case 7:
 		case 11:
 			// PAL, 312 lines
-			debugInterfaceVice->screenHeight = 272;
+//			debugInterfaceVice->screenHeight = 272;
 			break;
 		case 3:
 		case 4:
@@ -1963,7 +2014,7 @@ void c64d_update_c64_screen_height_from_model_type(int modelType)
 		case 8:
 		case 12:
 			// NTSC, 275 lines
-			debugInterfaceVice->screenHeight = 259;
+//			debugInterfaceVice->screenHeight = 259;
 			break;
 	}
 }
@@ -1982,7 +2033,7 @@ static void load_snapshot_trap(WORD addr, void *v)
 	FILE *fp = fopen(filePath, "rb");
 	if (!fp)
 	{
-		viewC64->ShowMessage("Snapshot not found");
+		viewC64->ShowMessageError("Snapshot not found");
 		debugInterfaceVice->UnlockMutex();
 		guiMain->UnlockMutex();
 		return;
@@ -1993,11 +2044,10 @@ static void load_snapshot_trap(WORD addr, void *v)
 
 	if (c64_snapshot_read(filePath, 0, 1, 1, 1, 1) < 0)
 	{
-		viewC64->ShowMessage("Snapshot loading failed");
+		viewC64->ShowMessageError("Snapshot loading failed");
 		
 		debugInterfaceVice->machineType = MACHINE_TYPE_UNKNOWN;
 		debugInterfaceVice->numEmulationFPS = 1;
-		debugInterfaceVice->screenHeight = 0;
 		
 		c64d_clear_screen();
 	}
@@ -2471,6 +2521,7 @@ void CDebugInterfaceVice::UpdateRomsTrap()
 	
 	HardReset();
 	DiskDriveReset();
+	SetDebugMode(DEBUGGER_MODE_RUNNING);
 }
 
 void CDebugInterfaceVice::UpdateRoms()
@@ -2522,13 +2573,71 @@ void CDebugInterfaceVice::ReadEmbeddedRoms()
 	CByteBuffer::ReadFromFileOrClearBuffer(c64SettingsPathToC64Drive1541ii, drive_rom1541ii_embedded, DRIVE_ROM1541II_SIZE);
 }
 
+void CDebugInterfaceVice::CheckLoadedRoms()
+{
+	const char *sep = ""; const char *sep2 = "\n";
+	char *buf = SYS_GetCharBuf();
+	char *buf2 = SYS_GetCharBuf();
+	int n = 0;
+	
+	if (!SYS_FileExists(c64SettingsPathToC64Kernal))
+	{
+		strcat(buf, "kernal"); sep = sep2; n++;
+	}
+	if (!SYS_FileExists(c64SettingsPathToC64Basic))
+	{
+		sprintf(buf2, "%sbasic", sep); sep = sep2; n++;
+		strcat(buf, buf2);
+	}
+	if (!SYS_FileExists(c64SettingsPathToC64Chargen))
+	{
+		sprintf(buf2, "%schargen", sep); sep = sep2; n++;
+		strcat(buf, buf2);
+	}
+	if (!SYS_FileExists(c64SettingsPathToC64Drive1541))
+	{
+		sprintf(buf2, "%sdos1541", sep); sep = sep2; n++;
+		strcat(buf, buf2);
+	}
+	if (!SYS_FileExists(c64SettingsPathToC64Drive1541ii))
+	{
+		sprintf(buf2, "%sdos1541II", sep); n++;
+		strcat(buf, buf2);
+	}
+	
+	if (buf[0] != 0)
+	{
+		if (n != 5)
+		{
+			sprintf(buf2, "Failed to load C64 ROM files:\n%s", buf);
+			guiMain->ShowMessageBox("Error", buf2);
+		}
+		else
+		{
+			guiMain->ShowMessageBox("Error", "C64 ROM files are not defined. Please select C64 ROMs folder in Settings.");
+		}
+	}
+	
+	SYS_ReleaseCharBuf(buf);
+	SYS_ReleaseCharBuf(buf2);
+
+}
+
+//
+void CDebugInterfaceVice::SupportsBreakpoints(bool *writeBreakpoint, bool *readBreakpoint)
+{
+	*writeBreakpoint = true;
+	*readBreakpoint = true;
+}
+
+// SID
 CPool CSidData::poolSidData(6000, sizeof(CSidData));
 
 CSidData::CSidData()
 {
-	memset(sidData[0], 0x00, 32);
-	memset(sidData[1], 0x00, 32);
-	memset(sidData[2], 0x00, 32);
+	memset(sidRegs[0], 0x00, C64_NUM_SID_REGISTERS);
+	memset(sidRegs[1], 0x00, C64_NUM_SID_REGISTERS);
+	memset(sidRegs[2], 0x00, C64_NUM_SID_REGISTERS);
 }
 
 extern "C" {
@@ -2539,7 +2648,7 @@ void CSidData::PeekFromSids()
 {
 	for (int sidNum = 0; sidNum < debugInterfaceVice->numSids; sidNum++)
 	{
-		c64d_store_sid_data(sidData[sidNum], sidNum);
+		c64d_store_sid_data(sidRegs[sidNum], sidNum);
 	}
 }
 
@@ -2550,9 +2659,9 @@ void CSidData::RestoreSids()
 	c64d_skip_sound_run_sound_in_sound_store = TRUE;
 	for (int sidNum = 0; sidNum < debugInterfaceVice->numSids; sidNum++)
 	{
-		for (int registerNum = 0; registerNum < 32; registerNum++)
+		for (int registerNum = 0; registerNum < C64_NUM_SID_REGISTERS; registerNum++)
 		{
-			sid_store_chip(registerNum, sidData[sidNum][registerNum], sidNum);
+			sid_store_chip(registerNum, sidRegs[sidNum][registerNum], sidNum);
 		}
 	}
 	c64d_skip_sound_run_sound_in_sound_store = FALSE;
@@ -2560,6 +2669,68 @@ void CSidData::RestoreSids()
 //	LOGD("CSidData::RestoreSids done");
 }
 
+void CSidData::CopyFrom(CSidData *sidData)
+{
+	for (int sidNum = 0; sidNum < SOUND_SIDS_MAX; sidNum++)
+	{
+		for (int regNum = 0; regNum < C64_NUM_SID_REGISTERS; regNum++)
+		{
+			this->sidRegs[sidNum][regNum] = sidData->sidRegs[sidNum][regNum];
+		}
+	}
+}
+
+void CSidData::Serialize(CByteBuffer *byteBuffer)
+{
+	for (int sidNum = 0; sidNum < SOUND_SIDS_MAX; sidNum++)
+	{
+		for (int regNum = 0; regNum < C64_NUM_SID_REGISTERS; regNum++)
+		{
+			byteBuffer->PutU8(sidRegs[sidNum][regNum]);
+		}
+	}
+}
+
+bool CSidData::Deserialize(CByteBuffer *byteBuffer)
+{
+	for (int sidNum = 0; sidNum < SOUND_SIDS_MAX; sidNum++)
+	{
+		for (int regNum = 0; regNum < C64_NUM_SID_REGISTERS; regNum++)
+		{
+			if (byteBuffer->IsEof())
+				return false;
+			
+			u8 v = byteBuffer->GetU8();
+			sidRegs[sidNum][regNum] = v;
+		}
+	}
+	return true;
+}
+
+bool CSidData::SaveRegs(const char *fileName)
+{
+	FILE *fp = fopen(fileName, "wb");
+	if (!fp)
+	{
+		return false;
+	}
+	
+	fwrite(sidRegs, 1, SOUND_SIDS_MAX*C64_NUM_SID_REGISTERS, fp);
+	fclose(fp);
+	return true;
+}
+
+bool CSidData::LoadRegs(const char *fileName)
+{
+	FILE *fp = fopen(fileName, "rb");
+	if (!fp)
+	{
+		return false;
+	}
+	fread(sidRegs, 1, SOUND_SIDS_MAX*C64_NUM_SID_REGISTERS, fp);
+	fclose(fp);
+	return true;
+}
 
 /// default keymap
 void ViceKeyMapInitDefault()

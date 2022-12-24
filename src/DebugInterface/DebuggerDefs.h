@@ -83,6 +83,7 @@ enum WatchRepresentation
 //
 // C64 Debugger interface definitions go below:
 
+#define C64_MAX_NUM_SIDS	3
 #define C64_NUM_DRIVES 4
 
 enum c64ViciiRecordMode

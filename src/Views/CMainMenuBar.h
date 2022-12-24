@@ -6,6 +6,7 @@
 #include "SYS_FileSystem.h"
 #include "CGuiMain.h"
 #include "CGuiViewProgressBarWindow.h"
+#include "CGuiViewSearch.h"
 #include <vector>
 
 class CByteBuffer;
@@ -42,13 +43,15 @@ enum SystemDialogOperation : u8
 	SystemDialogOperationDumpC64MemoryMarkers,
 	SystemDialogOperationDumpDrive1541Memory,
 	SystemDialogOperationDumpDrive1541MemoryMarkers,
+	SystemDialogOperationMapMemoryToFile,
 	SystemDialogOperationC64ProfilerFile,
 	SystemDialogOperationSaveTimeline,
 	SystemDialogOperationLoadTimeline,
+	SystemDialogOperationClearSettings
 };
 
 
-class CMainMenuBar : public CSlrKeyboardShortcutCallback, public CSystemFileDialogCallback, CUiMessageBoxCallback, public CGuiViewProgressBarWindowCallback
+class CMainMenuBar : public CSlrKeyboardShortcutCallback, public CSystemFileDialogCallback, CUiMessageBoxCallback, public CGuiViewProgressBarWindowCallback, public CGuiViewSearchCallback
 {
 public:
 	CMainMenuBar();
@@ -90,8 +93,7 @@ public:
 	
 	//
 	CSlrKeyboardShortcut *kbsQuitApplication;
-	CSlrKeyboardShortcut *kbsMainMenuScreen;
-	CSlrKeyboardShortcut *kbsVicEditorScreen;
+	CSlrKeyboardShortcut *kbsCloseWindow;
 	
 	CSlrKeyboardShortcut *kbsResetCpuCycleAndFrameCounters;
 	void ResetMainCpuDebugCycleAndFrameCounters();
@@ -105,6 +107,15 @@ public:
 	CSlrKeyboardShortcut *kbsBrowseD64;
 //	CViewC64MenuItem *menuItemBrowseD64;
 	CSlrKeyboardShortcut *kbsInsertNextD64;
+
+	// C64 tape
+	CSlrKeyboardShortcut *kbsTapeAttach;
+	CSlrKeyboardShortcut *kbsTapeDetach;
+	CSlrKeyboardShortcut *kbsTapeStop;
+	CSlrKeyboardShortcut *kbsTapePlay;
+	CSlrKeyboardShortcut *kbsTapeForward;
+	CSlrKeyboardShortcut *kbsTapeRewind;
+	CSlrKeyboardShortcut *kbsTapeRecord;
 
 	CSlrKeyboardShortcut *kbsDumpC64Memory;
 	CSlrKeyboardShortcut *kbsDumpDrive1541Memory;
@@ -124,6 +135,8 @@ public:
 	CSlrKeyboardShortcut *kbsDetachCartridge;
 	CSlrKeyboardShortcut *kbsDetachDiskImage;
 	CSlrKeyboardShortcut *kbsDetachExecutable;
+
+	CSlrKeyboardShortcut *kbsCartridgeFreezeButton;
 
 	CSlrKeyboardShortcut *kbsIsWarpSpeed;
 	bool isWarpSpeed;
@@ -156,10 +169,9 @@ public:
 	// general
 	CSlrKeyboardShortcut *kbsStepOverInstruction;
 	CSlrKeyboardShortcut *kbsStepBackInstruction;
-	CSlrKeyboardShortcut *kbsStepBackMultipleInstructions;
 	CSlrKeyboardShortcut *kbsStepOneCycle;
 	CSlrKeyboardShortcut *kbsRunContinueEmulation;
-	
+
 	CSlrKeyboardShortcut *kbsIsDataDirectlyFromRam;
 	CSlrKeyboardShortcut *kbsToggleMulticolorImageDump;
 	CSlrKeyboardShortcut *kbsShowRasterBeam;
@@ -180,7 +192,31 @@ public:
 	CSlrKeyboardShortcut *kbsScrubEmulationForwardOneSecond;
 	CSlrKeyboardShortcut *kbsScrubEmulationBackMultipleFrames;
 	CSlrKeyboardShortcut *kbsScrubEmulationForwardMultipleFrames;
-	
+	CSlrKeyboardShortcut *kbsStepBackNumberOfCycles;
+	CSlrKeyboardShortcut *kbsForwardNumberOfCycles;
+	CSlrKeyboardShortcut *kbsGoToFrame;
+	CSlrKeyboardShortcut *kbsGoToCycle;
+
+	// snapshots
+	CSlrKeyboardShortcut *kbsSaveSnapshot;
+	CSlrKeyboardShortcut *kbsLoadSnapshot;
+
+	CSlrKeyboardShortcut *kbsStoreSnapshot1;
+	CSlrKeyboardShortcut *kbsStoreSnapshot2;
+	CSlrKeyboardShortcut *kbsStoreSnapshot3;
+	CSlrKeyboardShortcut *kbsStoreSnapshot4;
+	CSlrKeyboardShortcut *kbsStoreSnapshot5;
+	CSlrKeyboardShortcut *kbsStoreSnapshot6;
+	CSlrKeyboardShortcut *kbsStoreSnapshot7;
+
+	CSlrKeyboardShortcut *kbsRestoreSnapshot1;
+	CSlrKeyboardShortcut *kbsRestoreSnapshot2;
+	CSlrKeyboardShortcut *kbsRestoreSnapshot3;
+	CSlrKeyboardShortcut *kbsRestoreSnapshot4;
+	CSlrKeyboardShortcut *kbsRestoreSnapshot5;
+	CSlrKeyboardShortcut *kbsRestoreSnapshot6;
+	CSlrKeyboardShortcut *kbsRestoreSnapshot7;
+
 	// joystick
 	CSlrKeyboardShortcut *kbsJoystickUp;
 	CSlrKeyboardShortcut *kbsJoystickDown;
@@ -191,51 +227,21 @@ public:
 	CSlrKeyboardShortcut *kbsJoystickStart;
 	CSlrKeyboardShortcut *kbsJoystickSelect;
 	
-	// disassemble
+	// disassembly
 	CSlrKeyboardShortcut *kbsToggleBreakpoint;
 	CSlrKeyboardShortcut *kbsMakeJmp;
 	CSlrKeyboardShortcut *kbsStepOverJsr;
 	CSlrKeyboardShortcut *kbsToggleTrackPC;
 	
-	// memory dump & disassemble
+	// memory dump & disassembly
 	CSlrKeyboardShortcut *kbsGoToAddress;
 	
 	// c64
 	CSlrKeyboardShortcut *kbsAutoJmpFromInsertedDiskFirstPrg;
 	CSlrKeyboardShortcut *kbsAutoJmpAlwaysToLoadedPRGAddress;
 	CSlrKeyboardShortcut *kbsAutoJmpDoReset;
-
-	// vic editor
-	CSlrKeyboardShortcut *kbsVicEditorCreateNewPicture;
-	CSlrKeyboardShortcut *kbsVicEditorPreviewScale;
-	CSlrKeyboardShortcut *kbsVicEditorShowCursor;
-	CSlrKeyboardShortcut *kbsVicEditorDoUndo;
-	CSlrKeyboardShortcut *kbsVicEditorDoRedo;
-	CSlrKeyboardShortcut *kbsVicEditorOpenFile;
-	CSlrKeyboardShortcut *kbsVicEditorExportFile;
-	CSlrKeyboardShortcut *kbsVicEditorSaveVCE;
-	CSlrKeyboardShortcut *kbsVicEditorLeaveEditor;
-	CSlrKeyboardShortcut *kbsVicEditorClearScreen;
-	CSlrKeyboardShortcut *kbsVicEditorRectangleBrushSizePlus;
-	CSlrKeyboardShortcut *kbsVicEditorRectangleBrushSizeMinus;
-	CSlrKeyboardShortcut *kbsVicEditorCircleBrushSizePlus;
-	CSlrKeyboardShortcut *kbsVicEditorCircleBrushSizeMinus;
-	CSlrKeyboardShortcut *kbsVicEditorToggleAllWindows;
 	
-	CSlrKeyboardShortcut *kbsVicEditorToggleWindowPreview;
-	CSlrKeyboardShortcut *kbsVicEditorToggleWindowPalette;
-	CSlrKeyboardShortcut *kbsVicEditorToggleWindowLayers;
-	CSlrKeyboardShortcut *kbsVicEditorToggleWindowCharset;
-	CSlrKeyboardShortcut *kbsVicEditorToggleWindowSprite;
-	CSlrKeyboardShortcut *kbsVicEditorToggleSpriteFrames;
-	CSlrKeyboardShortcut *kbsVicEditorToggleTopBar;
-	CSlrKeyboardShortcut *kbsVicEditorToggleToolBox;
-
-	CSlrKeyboardShortcut *kbsVicEditorSelectNextLayer;
-	
-	//
-	CSlrKeyboardShortcut *kbsShowWatch;
-	
+		
 	//
 	void SwitchNextMaximumSpeed();
 	void SwitchPrevMaximumSpeed();
@@ -273,6 +279,11 @@ public:
 	void C64ProfilerStartStop(int runForNumCycles, bool pauseCpuWhenFinished);
 
 	//
+	void OpenDialogMapC64MemoryToFile();
+	void MapC64MemoryToFile(CSlrString *path);
+	void UnmapC64MemoryFromFile();
+
+	//
 	void OpenDialogLoadTimeline();
 	void OpenDialogSaveTimeline(CDebugInterface *debugInterface);
 	
@@ -284,10 +295,19 @@ public:
 	virtual void SystemDialogFileSaveCancelled();
 	virtual void SystemDialogPickFolderSelected(CSlrString *path);
 	virtual void SystemDialogPickFolderCancelled();
-	
+
 	virtual void MessageBoxCallback();
 
+	void ClearRecentlyOpenedFilesLists();
+	void ClearSettingsToFactoryDefault();
+	
 	CDebugInterface *selectedDebugInterface;
+	
+	// search view
+	CGuiViewSearch *viewSearchWindow;
+	CSlrKeyboardShortcut *kbsSearchWindow;
+	void OpenSearchWindow();
+	virtual void GuiViewSearchCompleted(u32 index);
 };
 
 #endif //_GUI_MAIN_MENU_BAR_

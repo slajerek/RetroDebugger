@@ -66,13 +66,13 @@ public:
 class CDebugBreakpointsAddr : public ImGui::ComboFilterCallback
 {
 public:
-	CDebugBreakpointsAddr(int breakpointType, const char *breakpointTypeStr, CDebugSymbolsSegment *segment, char *addressFormatStr, int minAddr, int maxAddr);
+	CDebugBreakpointsAddr(int breakpointType, const char *breakpointTypeStr, CDebugSymbolsSegment *segment, const char *addressFormatStr, int minAddr, int maxAddr);
 	~CDebugBreakpointsAddr();
 
 	int breakpointsType;
 	const char *breakpointsTypeStr;
 	
-	char *addressFormatStr;
+	const char *addressFormatStr;
 	int minAddr, maxAddr;
 	const char *addBreakpointPopupHeadlineStr;
 	const char *addBreakpointPopupAddrStr;
@@ -127,7 +127,7 @@ protected:
 class CDebugBreakpointsMemory : public CDebugBreakpointsAddr
 {
 public:
-	CDebugBreakpointsMemory(int breakpointType, const char *breakpointTypeStr, CDebugSymbolsSegment *segment, char *addressFormatStr, int minAddr, int maxAddr);
+	CDebugBreakpointsMemory(int breakpointType, const char *breakpointTypeStr, CDebugSymbolsSegment *segment, const char *addressFormatStr, int minAddr, int maxAddr);
 	~CDebugBreakpointsMemory();
 
 	// factory

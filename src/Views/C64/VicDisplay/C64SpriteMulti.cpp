@@ -1,11 +1,12 @@
-#include "CViewVicEditor.h"
 #include "C64SpriteMulti.h"
-#include "CViewC64VicDisplay.h"
 #include "CViewC64.h"
+#include "CDebugInterfaceC64.h"
+#include "CViewC64VicDisplay.h"
+#include "CViewC64Sprite.h"
+#include "CViewC64VicEditor.h"
 #include "C64VicDisplayCanvas.h"
 #include "CVicEditorLayerVirtualSprites.h"
-#include "CDebugInterfaceC64.h"
-#include "CViewC64Sprite.h"
+#include "CViewC64Palette.h"
 
 // 0 00 = D021
 // 1 01 = D025
@@ -28,7 +29,7 @@ C64SpriteMulti::C64SpriteMulti()
 	vicEditor = NULL;
 }
 
-C64SpriteMulti::C64SpriteMulti(CViewVicEditor *vicEditor)
+C64SpriteMulti::C64SpriteMulti(CViewC64VicEditor *vicEditor)
 : C64Sprite(vicEditor, 12, 21, true)
 {
 	pixels = new u8[this->sizeX*this->sizeY];
@@ -42,7 +43,7 @@ C64SpriteMulti::C64SpriteMulti(CViewVicEditor *vicEditor)
 }
 
 // copy from multi bitmap
-C64SpriteMulti::C64SpriteMulti(CViewVicEditor *vicEditor, int x, int y, bool isStretchedHorizontally, bool isStretchedVertically, int pointerValue, int pointerAddr)
+C64SpriteMulti::C64SpriteMulti(CViewC64VicEditor *vicEditor, int x, int y, bool isStretchedHorizontally, bool isStretchedVertically, int pointerValue, int pointerAddr)
 : C64Sprite(vicEditor, 12, 21, true)
 {
 	this->posX = x;
@@ -65,14 +66,14 @@ C64SpriteMulti::C64SpriteMulti(CViewVicEditor *vicEditor, int x, int y, bool isS
 	
 }
 
-C64SpriteMulti::C64SpriteMulti(CViewVicEditor *vicEditor, CByteBuffer *byteBuffer)
+C64SpriteMulti::C64SpriteMulti(CViewC64VicEditor *vicEditor, CByteBuffer *byteBuffer)
 : C64Sprite(vicEditor, 12, 21, true)
 {
 	pixels = new u8[sizeX*sizeY];
 	colors = new u8[4];
 	histogram = new u8[4];
 	
-	this->Deserialise(byteBuffer);
+	this->Deserialize(byteBuffer);
 }
 
 C64SpriteMulti::~C64SpriteMulti()
@@ -94,7 +95,7 @@ u8 C64SpriteMulti::GetPixel(int x, int y)
 
 void C64SpriteMulti::DebugPrint()
 {
-	LOGD(" >>  C64SpriteMulti: x=%4d y=%4d  (%3d %3d) streth %s %s", this->posX, this->posY,
+	LOGD(" >>  C64SpriteMulti: x=%4d y=%4d  (%3d %3d) stretch: %s %s", this->posX, this->posY,
 		 this->posX + 0x18, this->posY + 0x32,
 		 STRBOOL(isStretchedHorizontally), STRBOOL(isStretchedVertically));
 
@@ -380,7 +381,7 @@ u8 C64SpriteMulti::GetColorAtPixel(int x, int y)
 {
 	LOGD(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> GetColorAtPixel %d %d", x, y);
 	
-	CDebugInterfaceC64 *debugInterface = vicEditor->viewVicDisplayMain->debugInterface;
+	CDebugInterfaceC64 *debugInterface = vicEditor->debugInterface;
 	CViewC64Sprite *viewSprite = vicEditor->viewSprite;
 	
 	int addrPosXHighBits = -1;
@@ -470,7 +471,7 @@ void C64SpriteMulti::FetchSpriteData(int addr)
 	for (int i = 0; i < 63; i++)
 	{
 		u8 v;
-		v = vicEditor->viewVicDisplayMain->debugInterface->GetByteFromRamC64(a);
+		v = vicEditor->debugInterface->GetByteFromRamC64(a);
 		spriteData[i] = v;
 		
 		//LOGD("  get %04x spriteData[%d]=%02x", a, i, v);
@@ -613,7 +614,7 @@ void C64SpriteMulti::StoreSpriteData(int addr)
 	chd = spriteData;
 	for (int i = 0; i < 63; i++)
 	{
-		vicEditor->viewVicDisplayMain->debugInterface->SetByteToRamC64(a, *chd);
+		vicEditor->viewVicDisplay->debugInterface->SetByteToRamC64(a, *chd);
 		
 		//LOGD("  set %04x spriteData[%d]=%02x", a, i, *chd);
 		a++;
@@ -637,7 +638,7 @@ void C64SpriteMulti::Clear()
 }
 
 
-void C64SpriteMulti::Serialise(CByteBuffer *byteBuffer)
+void C64SpriteMulti::Serialize(CByteBuffer *byteBuffer)
 {
 	byteBuffer->PutI32(spriteId);
 	byteBuffer->PutU8(spriteColor);
@@ -654,7 +655,7 @@ void C64SpriteMulti::Serialise(CByteBuffer *byteBuffer)
 	for (int i = 0; i < 63; i++)
 	{
 		u8 v;
-		v = vicEditor->viewVicDisplayMain->debugInterface->GetByteFromRamC64(a);
+		v = vicEditor->debugInterface->GetByteFromRamC64(a);
 		spriteData[i] = v;
 		a++;
 	}
@@ -662,7 +663,7 @@ void C64SpriteMulti::Serialise(CByteBuffer *byteBuffer)
 	byteBuffer->PutBytes(spriteData, 63);
 }
 
-void C64SpriteMulti::Deserialise(CByteBuffer *byteBuffer)
+void C64SpriteMulti::Deserialize(CByteBuffer *byteBuffer)
 {
 	spriteId = byteBuffer->GetI32();
 	spriteColor = byteBuffer->GetU8();
@@ -683,7 +684,7 @@ void C64SpriteMulti::Deserialise(CByteBuffer *byteBuffer)
 		u8 *chd = spriteData;
 		for (int i = 0; i < 63; i++)
 		{
-			vicEditor->viewVicDisplayMain->debugInterface->SetByteToRamC64(a, *chd);
+			vicEditor->debugInterface->SetByteToRamC64(a, *chd);
 			a++;
 			chd++;
 		}

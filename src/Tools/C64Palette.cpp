@@ -57,6 +57,15 @@ void C64SetVicePalette(uint8 *palette)
 	c64d_set_palette_vice(palette);
 }
 
+void C64GetAvailablePalettes(std::vector<const char *> *vicPalettes)
+{
+	for (std::vector<C64PaletteData *>::iterator it = c64AvailablePalettes.begin(); it != c64AvailablePalettes.end(); it++)
+	{
+		C64PaletteData *paletteData = *it;
+		vicPalettes->push_back(paletteData->paletteName);
+	}
+}
+
 void C64GetAvailablePalettes(std::vector<CSlrString *> *vicPalettes)
 {
 	for (std::vector<C64PaletteData *>::iterator it = c64AvailablePalettes.begin(); it != c64AvailablePalettes.end(); it++)

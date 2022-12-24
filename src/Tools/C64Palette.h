@@ -19,6 +19,7 @@ void C64SetPaletteNum(uint16 paletteNum);
 void C64SetPalette(uint8 *palette);
 void C64SetVicePalette(uint8 *palette);
 void C64SetPalette(char *paletteName);
+void C64GetAvailablePalettes(std::vector<const char *> *vicPalettes);
 void C64GetAvailablePalettes(std::vector<CSlrString *> *vicPalettes);
 void C64SetPaletteOriginalColorCodes();
 

@@ -27,6 +27,7 @@
 /* #define DBGLOGGING */
 
 #include "vice.h"
+#include "ViceLogWrapper.h"
 
 #include <stdarg.h>
 #include <stdio.h>

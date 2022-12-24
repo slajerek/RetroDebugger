@@ -7,6 +7,12 @@
 
 class CDebugInterface;
 
+enum DisplayMode : int
+{
+	Frames = 0,
+	Time
+};
+
 class CTimelineIoThread : public CSlrThread
 {
 public:
@@ -61,6 +67,8 @@ public:
 	
 	CDebugInterface *debugInterface;
 	
+	DisplayMode displayMode;
+	
 	bool isScrubbing;
 	bool isLockedVisible;
 	
@@ -71,11 +79,19 @@ public:
 
 	int CalcFrameNumFromMousePos(int minFrame, int maxFrame);
 	
+	u64 GetCurrentCycleNum();
 	int GetCurrentFrameNum();
 	void GetFramesLimits(int *minFrame, int *maxFrame);
 	void ScrubToFrame(int frameNum);
 	
 	void ScrubToPos(float x);
+	
+	// TODO: Note, we would like to have go to frame value static because all timelines should remember this (for syncing purposes)
+	// This will have to be further refactored to a GetSyncedFrame for all emulators manager
+	int enteredGoToFrameNum = 0;
+	u64 enteredGoToCycleNum = 0;
+
+	void RenderMenuGoTo(bool withEmuName);
 	
 	virtual bool HasContextMenuItems();
 	virtual void RenderContextMenuItems();

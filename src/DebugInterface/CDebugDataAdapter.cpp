@@ -10,7 +10,7 @@
 #include "CDebugDataAdapter.h"
 #include "CViewMemoryMap.h"
 
-CDebugDataAdapter::CDebugDataAdapter(char *adapterID, CDebugInterface *debugInterface)
+CDebugDataAdapter::CDebugDataAdapter(const char *adapterID, CDebugInterface *debugInterface)
 : CDataAdapter(adapterID)
 {
 	this->debugInterface = debugInterface;

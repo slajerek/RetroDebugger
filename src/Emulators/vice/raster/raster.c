@@ -51,7 +51,8 @@
 #include "video.h"
 #include "videoarch.h"
 #include "viewport.h"
-
+#include "ViceWrapper.h"
+#include "DebuggerDefs.h"
 
 static int raster_calc_frame_buffer_width(raster_t *raster)
 {
@@ -364,6 +365,10 @@ void raster_set_geometry(raster_t *raster,
 {
     geometry_t *geometry;
 
+	LOGD("raster_set_geometry: canvas=%d %d screen=%d %d gfx=%d %d text=%d %d | gfx pos=%d %d gfx moves=%d | first line=%d last line=%d extra border left=%d extra border right=%d",
+		 canvas_width, canvas_height, screen_width, screen_height, gfx_width, gfx_height, text_width, text_height, gfx_position_x, gfx_position_y, gfx_area_moves,
+		 first_displayed_line, last_displayed_line, extra_offscreen_border_left, extra_offscreen_border_right);
+	
     geometry = raster->geometry;
     if (screen_height != geometry->screen_size.height
         || raster->cache == NULL) {

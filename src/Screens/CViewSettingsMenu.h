@@ -44,14 +44,6 @@ public:
 	CViewC64MenuItem *menuItemSetC64KeyboardMapping;
 	CViewC64MenuItem *menuItemSetKeyboardShortcuts;
 
-	CSlrKeyboardShortcut *kbsCartridgeFreezeButton;
-	CViewC64MenuItem *menuItemCartridgeFreeze;
-
-	//
-	CViewC64MenuItem *menuItemMapC64MemoryToFile;
-	void UpdateMapC64MemoryToFileLabels();
-
-
 	//
 	
 	CViewC64MenuItemOption *menuItemMemoryCellsColorStyle;
@@ -65,30 +57,6 @@ public:
 
 	virtual bool ProcessKeyboardShortcut(u32 zone, u8 actionType, CSlrKeyboardShortcut *keyboardShortcut);
 
-	// tape
-	CSlrKeyboardShortcut *kbsTapeAttach;
-	CViewC64MenuItem *menuItemTapeAttach;
-	CSlrKeyboardShortcut *kbsTapeDetach;
-	CViewC64MenuItem *menuItemTapeDetach;
-	CViewC64MenuItem *menuItemTapeCreate;
-
-	CSlrKeyboardShortcut *kbsTapeStop;
-	CViewC64MenuItem *menuItemTapeStop;
-	CSlrKeyboardShortcut *kbsTapePlay;
-	CViewC64MenuItem *menuItemTapePlay;
-	CSlrKeyboardShortcut *kbsTapeForward;
-	CViewC64MenuItem *menuItemTapeForward;
-	CSlrKeyboardShortcut *kbsTapeRewind;
-	CViewC64MenuItem *menuItemTapeRewind;
-	CSlrKeyboardShortcut *kbsTapeRecord;
-	CViewC64MenuItem *menuItemTapeRecord;
-	CViewC64MenuItem *menuItemTapeReset;
-
-	CViewC64MenuItemFloat *menuItemDatasetteSpeedTuning;
-	CViewC64MenuItemFloat *menuItemDatasetteZeroGapDelay;
-	CViewC64MenuItemFloat *menuItemDatasetteTapeWobble;
-	CViewC64MenuItemOption *menuItemDatasetteResetWithCPU;
-	
 	//
 	CViewC64MenuItemFloat *menuItemScreenGridLinesAlpha;
 	CViewC64MenuItemOption *menuItemScreenGridLinesColorScheme;
@@ -128,13 +96,10 @@ public:
 	
 	CViewC64MenuItemFloat *menuItemFocusBorderLineWidth;
 
-	CViewC64MenuItemOption *menuItemDisassembleExecuteAware;
-	
 	CViewC64MenuItemOption *menuItemDisassemblyBackgroundColor;
 	CViewC64MenuItemOption *menuItemDisassemblyExecuteColor;
 	CViewC64MenuItemOption *menuItemDisassemblyNonExecuteColor;
 
-	CViewC64MenuItemOption *menuItemVicPalette;
 	CViewC64MenuItemOption *menuItemRenderScreenInterpolation;
 	CViewC64MenuItemOption *menuItemRenderScreenSupersample;
 

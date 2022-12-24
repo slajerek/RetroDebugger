@@ -41,6 +41,7 @@
 #include "types.h"
 #include "uicmdline.h"
 #include "util.h"
+#include "log.h"
 
 #ifdef VICE_DEBUG_CMDLINE
 #define DBG(x)  printf x

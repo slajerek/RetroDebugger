@@ -10,7 +10,6 @@
 #include "SYS_Funct.h"
 #include <float.h>
 
-
 C64ColodoreScreen::C64ColodoreScreen(CDebugInterfaceC64 *debugInterface)
 {
 	this->debugInterface = debugInterface;

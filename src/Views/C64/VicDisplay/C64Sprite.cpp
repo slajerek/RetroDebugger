@@ -3,7 +3,7 @@
 #include "CViewC64.h"
 #include "C64VicDisplayCanvas.h"
 
-C64Sprite::C64Sprite(CViewVicEditor *vicEditor, int width, int height, bool isMulti)
+C64Sprite::C64Sprite(CViewC64VicEditor *vicEditor, int width, int height, bool isMulti)
 : C64Bitmap(width, height, isMulti)
 {
 	this->vicEditor = vicEditor;
@@ -68,12 +68,12 @@ void C64Sprite::Clear()
 	LOGError("C64Sprite::Clear");
 }
 
-void C64Sprite::Serialise(CByteBuffer *byteBuffer)
+void C64Sprite::Serialize(CByteBuffer *byteBuffer)
 {
-	LOGError("C64Sprite::Serialise");
+	LOGError("C64Sprite::Serialize");
 }
 
-void C64Sprite::Deserialise(CByteBuffer *byteBuffer)
+void C64Sprite::Deserialize(CByteBuffer *byteBuffer)
 {
-	LOGError("C64Sprite::Deserialise");
+	LOGError("C64Sprite::Deserialize");
 }

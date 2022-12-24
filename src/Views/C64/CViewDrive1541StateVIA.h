@@ -46,6 +46,8 @@ public:
 	bool renderDriveLED;
 	bool isVertical;
 	
+	float stateSizeX;
+	
 	virtual void RenderStateDrive1541(float posX, float posY, float posZ, CSlrFont *fontBytes, float fontSize,
 									  int driveId, 
 									  bool renderVia1, bool renderVia2, bool renderDriveLed, bool isVertical);

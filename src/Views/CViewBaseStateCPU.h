@@ -50,7 +50,7 @@ public:
 	virtual void RenderImGui();
 	virtual void DoLogic();
 
-	virtual bool SetFocus();
+	virtual bool WillReceiveFocus();
 
 	CDebugInterface *debugInterface;
 	

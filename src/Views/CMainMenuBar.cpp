@@ -1,7 +1,10 @@
 #include "GUI_Main.h"
 #include "SYS_DefaultConfig.h"
-#include "CMainMenuBar.h"
+#include "EmulatorsConfig.h"
+#include "CGuiViewDebugLog.h"
+#include "VID_Fonts.h"
 #include "CViewC64.h"
+#include "CMainMenuBar.h"
 #include "CDebugInterfaceVice.h"
 #include "CDebugInterfaceAtari.h"
 #include "CDebugInterfaceNes.h"
@@ -16,14 +19,17 @@
 #include "CViewC64Screen.h"
 #include "CViewAtariScreen.h"
 #include "CViewNesScreen.h"
+#include "CViewC64Palette.h"
 #include "CDebugSymbols.h"
 #include "CDebugSymbolsSegment.h"
 #include "CDebugAsmSource.h"
 #include "CViewDrive1541FileD64.h"
+#include "C64Palette.h"
 #include "CViewC64StateSID.h"
 #include "CViewDataDump.h"
 #include "CViewSnapshots.h"
 #include "CViewTimeline.h"
+#include "CViewAudioMixer.h"
 #include "CLayoutManager.h"
 #include "C64DebuggerPluginGoatTracker.h"
 #include "C64DebuggerPluginCrtMaker.h"
@@ -32,6 +38,13 @@
 #include "CViewMonitorConsole.h"
 #include "CGuiViewMessages.h"
 #include "CGuiViewUiDebug.h"
+#include "CMidiInKeyboard.h"
+#include "CDebugInterfaceMenuItem.h"
+#include "CViewTimeline.h"
+#include "CViewC64Charset.h"
+#include "CViewC64VicEditor.h"
+
+extern bool c64dSkipBogusPageOffsetReadOnSTA;
 
 #include <map>
 
@@ -40,13 +53,12 @@ void PLUGIN_GoatTrackerSetVisible(bool isVisible);
 CMainMenuBar::CMainMenuBar()
 {
 	selectedDebugInterface = NULL;
-
 	layoutData = NULL;
 	
 	audioDevices = NULL;
 	gamepads = NULL;
 	waitingForNewLayoutKeyShortcut = false;
-		
+
 	extensionsImportLabels.push_back(new CSlrString("vs"));
 	extensionsImportLabels.push_back(new CSlrString("dbg"));
 	extensionsImportLabels.push_back(new CSlrString("lbl"));
@@ -60,8 +72,14 @@ CMainMenuBar::CMainMenuBar()
 	extensionsMemory.push_back(new CSlrString("bin"));
 	extensionsCSV.push_back(new CSlrString("csv"));
 	extensionsProfiler.push_back(new CSlrString("pd"));
+	extensionsTimeline.push_back(new CSlrString("rtdl"));
 	extensionsTimeline.push_back(new CSlrString("rdtl"));
 
+	// this is Search view
+	viewSearchWindow = new CGuiViewSearch("Open Window", 200, 150, -1, 400, 200, this);
+	viewSearchWindow->hideWindowOnFocusLost = true;
+	viewSearchWindow->SetVisible(false);
+	
 	// move me to c64 tools/interface
 	CreateSidAddressOptions();
 	
@@ -88,7 +106,13 @@ CMainMenuBar::CMainMenuBar()
 #endif
 	guiMain->AddKeyboardShortcut(kbsQuitApplication);
 	
-	
+	kbsCloseWindow = new CSlrKeyboardShortcut(KBZONE_GLOBAL, "Close window", 'w', false, false, true, false, this);
+	guiMain->AddKeyboardShortcut(kbsCloseWindow);
+
+	//
+	kbsSearchWindow = new CSlrKeyboardShortcut(KBZONE_GLOBAL, "Open Window", 'o', true, false, true, false, this);
+	guiMain->AddKeyboardShortcut(kbsSearchWindow);
+
 	//
 	kbsResetCpuCycleAndFrameCounters = new CSlrKeyboardShortcut(KBZONE_GLOBAL, "Reset emulation counters", MTKEY_BACKSPACE, true, false, false, false, this);
 	guiMain->AddKeyboardShortcut(kbsResetCpuCycleAndFrameCounters);
@@ -128,13 +152,43 @@ CMainMenuBar::CMainMenuBar()
 //		kbsInsertD64 = new CSlrKeyboardShortcut(KBZONE_GLOBAL, "Insert Device #8", '8', false, false, true, false, this);
 //		guiMain->AddKeyboardShortcut(kbsInsertD64);
 		
-		//
+		// disk
 		kbsInsertNextD64 = new CSlrKeyboardShortcut(KBZONE_GLOBAL, "Insert next disk to Device #8", '8', false, true, true, false, this);
 		guiMain->AddKeyboardShortcut(kbsInsertNextD64);
 
 		kbsStartFromDisk = new CSlrKeyboardShortcut(KBZONE_GLOBAL, "Start from Device #8", MTKEY_F3, false, false, false, false, this);
 		guiMain->AddKeyboardShortcut(kbsStartFromDisk);
 		
+		kbsBrowseD64 = new CSlrKeyboardShortcut(KBZONE_GLOBAL, "Browse Device #8", MTKEY_F7, false, false, false, false, this);
+		guiMain->AddKeyboardShortcut(kbsBrowseD64);
+		
+		// cartridge
+		kbsCartridgeFreezeButton = new CSlrKeyboardShortcut(KBZONE_GLOBAL, "Cartridge freeze", 'f', false, false, true, false, this);
+		guiMain->AddKeyboardShortcut(kbsCartridgeFreezeButton);
+
+		// tape
+		kbsTapeAttach = new CSlrKeyboardShortcut(KBZONE_GLOBAL, "Tape Attach", 't', true, false, true, false, this);
+		guiMain->AddKeyboardShortcut(kbsTapeAttach);
+		
+		kbsTapeDetach = new CSlrKeyboardShortcut(KBZONE_GLOBAL, "Tape Detach", 't', true, true, true, false, this);
+		guiMain->AddKeyboardShortcut(kbsTapeDetach);
+		
+		kbsTapeStop = new CSlrKeyboardShortcut(KBZONE_GLOBAL, "Tape Stop", 's', true, true, true, false, this);
+		guiMain->AddKeyboardShortcut(kbsTapeStop);
+
+		kbsTapePlay = new CSlrKeyboardShortcut(KBZONE_GLOBAL, "Tape Play", 'p', true, true, true, false, this);
+		guiMain->AddKeyboardShortcut(kbsTapePlay);
+
+		kbsTapeForward = new CSlrKeyboardShortcut(KBZONE_GLOBAL, "Tape Forward", 'f', true, true, true, false, this);
+		guiMain->AddKeyboardShortcut(kbsTapeForward);
+
+		kbsTapeRewind = new CSlrKeyboardShortcut(KBZONE_GLOBAL, "Tape Rewind", 'r', true, true, true, false, this);
+		guiMain->AddKeyboardShortcut(kbsTapeRewind);
+
+		kbsTapeRecord = new CSlrKeyboardShortcut(KBZONE_GLOBAL, "Tape Record", 'y', true, true, true, false, this);
+		guiMain->AddKeyboardShortcut(kbsTapeRecord);
+
+		//
 		kbsSwitchNextMaximumSpeed = new CSlrKeyboardShortcut(KBZONE_GLOBAL, "Next maximum speed", ']', false, false, true, false, this);
 		guiMain->AddKeyboardShortcut(kbsSwitchNextMaximumSpeed);
 		kbsSwitchPrevMaximumSpeed = new CSlrKeyboardShortcut(KBZONE_GLOBAL, "Previous maximum speed", '[', false, false, true, false, this);
@@ -237,6 +291,45 @@ CMainMenuBar::CMainMenuBar()
 																	   MTKEY_ARROW_RIGHT, true, false, true, false, this);
 	guiMain->AddKeyboardShortcut(kbsScrubEmulationForwardMultipleFrames);
 
+	// snapshots
+	kbsSaveSnapshot = new CSlrKeyboardShortcut(KBZONE_GLOBAL, "Save snapshot", 's', false, false, true, false, this);
+	guiMain->AddKeyboardShortcut(kbsSaveSnapshot);
+		
+	kbsLoadSnapshot = new CSlrKeyboardShortcut(KBZONE_GLOBAL, "Load snapshot", 'd', false, false, true, false, this);
+	guiMain->AddKeyboardShortcut(kbsLoadSnapshot);
+
+
+	// ctrl+shift+1,2,3... store snapshot
+	kbsStoreSnapshot1 = new CSlrKeyboardShortcut(KBZONE_GLOBAL, "Store snapshot #1", '1', true, false, true, false, this);
+	guiMain->AddKeyboardShortcut(kbsStoreSnapshot1);
+	kbsStoreSnapshot2 = new CSlrKeyboardShortcut(KBZONE_GLOBAL, "Store snapshot #2", '2', true, false, true, false, this);
+	guiMain->AddKeyboardShortcut(kbsStoreSnapshot2);
+	kbsStoreSnapshot3 = new CSlrKeyboardShortcut(KBZONE_GLOBAL, "Store snapshot #3", '3', true, false, true, false, this);
+	guiMain->AddKeyboardShortcut(kbsStoreSnapshot3);
+	kbsStoreSnapshot4 = new CSlrKeyboardShortcut(KBZONE_GLOBAL, "Store snapshot #4", '4', true, false, true, false, this);
+	guiMain->AddKeyboardShortcut(kbsStoreSnapshot4);
+	kbsStoreSnapshot5 = new CSlrKeyboardShortcut(KBZONE_GLOBAL, "Store snapshot #5", '5', true, false, true, false, this);
+	guiMain->AddKeyboardShortcut(kbsStoreSnapshot5);
+	kbsStoreSnapshot6 = new CSlrKeyboardShortcut(KBZONE_GLOBAL, "Store snapshot #6", '6', true, false, true, false, this);
+	guiMain->AddKeyboardShortcut(kbsStoreSnapshot6);
+	kbsStoreSnapshot7 = new CSlrKeyboardShortcut(KBZONE_GLOBAL, "Store snapshot #7", '7', true, false, true, false, this);
+	guiMain->AddKeyboardShortcut(kbsStoreSnapshot7);
+
+	// ctrl+1,2,3,... restore snapshot
+	kbsRestoreSnapshot1 = new CSlrKeyboardShortcut(KBZONE_GLOBAL, "Restore snapshot #1", '1', false, false, true, false, this);
+	guiMain->AddKeyboardShortcut(kbsRestoreSnapshot1);
+	kbsRestoreSnapshot2 = new CSlrKeyboardShortcut(KBZONE_GLOBAL, "Restore snapshot #2", '2', false, false, true, false, this);
+	guiMain->AddKeyboardShortcut(kbsRestoreSnapshot2);
+	kbsRestoreSnapshot3 = new CSlrKeyboardShortcut(KBZONE_GLOBAL, "Restore snapshot #3", '3', false, false, true, false, this);
+	guiMain->AddKeyboardShortcut(kbsRestoreSnapshot3);
+	kbsRestoreSnapshot4 = new CSlrKeyboardShortcut(KBZONE_GLOBAL, "Restore snapshot #4", '4', false, false, true, false, this);
+	guiMain->AddKeyboardShortcut(kbsRestoreSnapshot4);
+	kbsRestoreSnapshot5 = new CSlrKeyboardShortcut(KBZONE_GLOBAL, "Restore snapshot #5", '5', false, false, true, false, this);
+	guiMain->AddKeyboardShortcut(kbsRestoreSnapshot5);
+	kbsRestoreSnapshot6 = new CSlrKeyboardShortcut(KBZONE_GLOBAL, "Restore snapshot #6", '6', false, false, true, false, this);
+	guiMain->AddKeyboardShortcut(kbsRestoreSnapshot6);
+	kbsRestoreSnapshot7 = new CSlrKeyboardShortcut(KBZONE_GLOBAL, "Restore snapshot #7", '7', false, false, true, false, this);
+	guiMain->AddKeyboardShortcut(kbsRestoreSnapshot7);
 	
 	// joystick
 	kbsJoystickUp = new CSlrKeyboardShortcut(KBZONE_SCREEN, "Joystick UP", MTKEY_ARROW_UP, false, false, false, false, this);
@@ -273,14 +366,23 @@ CMainMenuBar::CMainMenuBar()
 	kbsStepBackInstruction = new CSlrKeyboardShortcut(KBZONE_GLOBAL, "Step back instruction", MTKEY_F10, false, true, false, false, this);
 	guiMain->AddKeyboardShortcut(kbsStepBackInstruction);
 
-	kbsStepBackMultipleInstructions = new CSlrKeyboardShortcut(KBZONE_GLOBAL, "Multiple step back", MTKEY_F10, true, true, false, false, this);
-	guiMain->AddKeyboardShortcut(kbsStepBackMultipleInstructions);
+	kbsForwardNumberOfCycles = new CSlrKeyboardShortcut(KBZONE_GLOBAL, "Forward number of cycles", MTKEY_F10, true, false, true, false, this);
+	guiMain->AddKeyboardShortcut(kbsForwardNumberOfCycles);
+
+	kbsStepBackNumberOfCycles = new CSlrKeyboardShortcut(KBZONE_GLOBAL, "Step back number of cycles", MTKEY_F10, true, true, false, false, this);
+	guiMain->AddKeyboardShortcut(kbsStepBackNumberOfCycles);
 
 	kbsStepOneCycle = new CSlrKeyboardShortcut(KBZONE_GLOBAL, "Step one cycle", MTKEY_F10, true, false, false, false, this);
 	guiMain->AddKeyboardShortcut(kbsStepOneCycle);
 
 	kbsRunContinueEmulation = new CSlrKeyboardShortcut(KBZONE_GLOBAL, "Run/Continue code", MTKEY_F11, false, false, false, false, this);
 	guiMain->AddKeyboardShortcut(kbsRunContinueEmulation);
+
+	kbsGoToCycle = new CSlrKeyboardShortcut(KBZONE_GLOBAL, "Go to cycle", MTKEY_F11, true, false, false, false, this);
+	guiMain->AddKeyboardShortcut(kbsGoToCycle);
+
+	kbsGoToFrame = new CSlrKeyboardShortcut(KBZONE_GLOBAL, "Go to frame", MTKEY_F11, true, true, false, false, this);
+	guiMain->AddKeyboardShortcut(kbsGoToFrame);
 
 	//
 	
@@ -307,89 +409,7 @@ CMainMenuBar::CMainMenuBar()
 	kbsSaveScreenImageAsPNG = new CSlrKeyboardShortcut(KBZONE_GLOBAL, "Save screenshot as PNG", 'p', true, false, true, false, this);
 	guiMain->AddKeyboardShortcut(kbsSaveScreenImageAsPNG);
 
-	// disk
-	kbsBrowseD64 = new CSlrKeyboardShortcut(KBZONE_GLOBAL, "Browse Device #8", MTKEY_F7, false, false, false, false, this);
-	guiMain->AddKeyboardShortcut(kbsBrowseD64);
-	
-	kbsStartFromDisk = new CSlrKeyboardShortcut(KBZONE_GLOBAL, "Start from Device #8", MTKEY_F3, false, false, false, false, this);
-	guiMain->AddKeyboardShortcut(kbsStartFromDisk);
-	
-	// vic editor
-	kbsVicEditorCreateNewPicture = new CSlrKeyboardShortcut(KBZONE_VIC_EDITOR, "VIC Editor: New Picture", 'n', false, false, true, false, this);
-	guiMain->AddKeyboardShortcut(kbsVicEditorCreateNewPicture);
-
-	kbsVicEditorPreviewScale = new CSlrKeyboardShortcut(KBZONE_VIC_EDITOR, "VIC Editor: Preview scale", '/', false, false, false, false, this);
-	guiMain->AddKeyboardShortcut(kbsVicEditorPreviewScale);
-
-	kbsVicEditorShowCursor = new CSlrKeyboardShortcut(KBZONE_VIC_EDITOR, "Show cursor", '\'', false, false, false, false, this);
-	guiMain->AddKeyboardShortcut(kbsVicEditorShowCursor);
-
-	kbsVicEditorDoUndo = new CSlrKeyboardShortcut(KBZONE_VIC_EDITOR, "Undo", 'z', false, false, true, false, this);
-	guiMain->AddKeyboardShortcut(kbsVicEditorDoUndo);
-
-	kbsVicEditorDoRedo = new CSlrKeyboardShortcut(KBZONE_VIC_EDITOR, "Redo", 'z', true, false, true, false, this);
-	guiMain->AddKeyboardShortcut(kbsVicEditorDoRedo);
-
-	kbsVicEditorOpenFile = new CSlrKeyboardShortcut(KBZONE_VIC_EDITOR, "Open file", 'o', false, false, true, false, this);
-	guiMain->AddKeyboardShortcut(kbsVicEditorOpenFile);
-
-	kbsVicEditorExportFile = new CSlrKeyboardShortcut(KBZONE_GLOBAL, "Export screen to file", 'e', true, false, true, false, this);
-	guiMain->AddKeyboardShortcut(kbsVicEditorExportFile);
-
-	kbsVicEditorSaveVCE = new CSlrKeyboardShortcut(KBZONE_VIC_EDITOR, "Save as VCE", 's', false, false, true, false, this);
-	guiMain->AddKeyboardShortcut(kbsVicEditorSaveVCE);
-
-	kbsVicEditorLeaveEditor = new CSlrKeyboardShortcut(KBZONE_VIC_EDITOR, "Leave VIC Editor", MTKEY_ESC, false, false, false, false, this);
-	guiMain->AddKeyboardShortcut(kbsVicEditorLeaveEditor);
-
-	kbsVicEditorClearScreen = new CSlrKeyboardShortcut(KBZONE_VIC_EDITOR, "Clear screen", MTKEY_BACKSPACE, false, false, true, false, this);
-	guiMain->AddKeyboardShortcut(kbsVicEditorClearScreen);
-
-	kbsVicEditorRectangleBrushSizePlus = new CSlrKeyboardShortcut(KBZONE_VIC_EDITOR, "Rectangle brush size +", ']', false, false, true, false, this);
-	guiMain->AddKeyboardShortcut(kbsVicEditorRectangleBrushSizePlus);
-
-	kbsVicEditorRectangleBrushSizeMinus = new CSlrKeyboardShortcut(KBZONE_VIC_EDITOR, "Rectangle brush size -", '[', false, false, true, false, this);
-	guiMain->AddKeyboardShortcut(kbsVicEditorRectangleBrushSizeMinus);
-
-	kbsVicEditorCircleBrushSizePlus = new CSlrKeyboardShortcut(KBZONE_VIC_EDITOR, "Circle brush size +", ']', false, false, false, false, this);
-	guiMain->AddKeyboardShortcut(kbsVicEditorCircleBrushSizePlus);
-
-	kbsVicEditorCircleBrushSizeMinus = new CSlrKeyboardShortcut(KBZONE_VIC_EDITOR, "Circle brush size -", '[', false, false, false, false, this);
-	guiMain->AddKeyboardShortcut(kbsVicEditorCircleBrushSizeMinus);
-
-	kbsVicEditorToggleAllWindows = new CSlrKeyboardShortcut(KBZONE_VIC_EDITOR, "Toggle all windows", 'f', false, false, false, false, this);
-	guiMain->AddKeyboardShortcut(kbsVicEditorToggleAllWindows);
-
-	kbsVicEditorToggleWindowPreview = new CSlrKeyboardShortcut(KBZONE_VIC_EDITOR, "Toggle preview", 'd', false, false, false, false, this);
-	guiMain->AddKeyboardShortcut(kbsVicEditorToggleWindowPreview);
-
-	kbsVicEditorToggleWindowPalette = new CSlrKeyboardShortcut(KBZONE_VIC_EDITOR, "Toggle palette", 'p', false, false, false, false, this);
-	guiMain->AddKeyboardShortcut(kbsVicEditorToggleWindowPalette);
-
-	kbsVicEditorToggleWindowLayers = new CSlrKeyboardShortcut(KBZONE_VIC_EDITOR, "Toggle layers", 'l', false, false, false, false, this);
-	guiMain->AddKeyboardShortcut(kbsVicEditorToggleWindowLayers);
-
-	kbsVicEditorToggleWindowCharset = new CSlrKeyboardShortcut(KBZONE_VIC_EDITOR, "Toggle charset", 'c', false, false, false, false, this);
-	guiMain->AddKeyboardShortcut(kbsVicEditorToggleWindowCharset);
-
-	kbsVicEditorToggleWindowSprite = new CSlrKeyboardShortcut(KBZONE_VIC_EDITOR, "Toggle sprite", 's', false, false, false, false, this);
-	guiMain->AddKeyboardShortcut(kbsVicEditorToggleWindowSprite);
-
-	kbsVicEditorToggleSpriteFrames = new CSlrKeyboardShortcut(KBZONE_VIC_EDITOR, "Toggle sprite frames", 'g', false, false, true, false, this);
-	guiMain->AddKeyboardShortcut(kbsVicEditorToggleSpriteFrames);
-
-	kbsVicEditorToggleTopBar = NULL; //new CSlrKeyboardShortcut(KBZONE_VIC_EDITOR, "Toggle top bar", 'b', false, false, true, false, this);
-//	guiMain->AddKeyboardShortcut(kbsVicEditorToggleTopBar);
-
-	kbsVicEditorSelectNextLayer = new CSlrKeyboardShortcut(KBZONE_VIC_EDITOR, "Select next layer", '`', false, false, false, false, this);
-	guiMain->AddKeyboardShortcut(kbsVicEditorSelectNextLayer);
-
 #endif
-	
-
-	//
-	kbsShowWatch = new CSlrKeyboardShortcut(KBZONE_GLOBAL, "Show watch", 'w', false, false, true, false, this);
-	guiMain->AddKeyboardShortcut(kbsShowWatch);
 }
 
 void CMainMenuBar::UpdateGamepads()
@@ -476,10 +496,18 @@ void CMainMenuBar::RenderImGui()
 				viewC64->HardReset();
 			}
 
+			if (viewC64->debugInterfaceC64->isRunning)
+			{
+				if (ImGui::MenuItem("Cartridge Freeze", kbsCartridgeFreezeButton->cstr))
+				{
+					kbsCartridgeFreezeButton->Run();
+				}
+			}
+			
 			ImGui::Separator();
 			if (ImGui::MenuItem("Detach Everything", kbsDetachEverything->cstr))
 			{
-				DetachEverything(false, false);
+				DetachEverything(true, false);
 				C64DebuggerStoreSettings();
 			}
 
@@ -509,6 +537,8 @@ void CMainMenuBar::RenderImGui()
 				}
 			}
 			
+			////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// EMULATORS VIEWS
+
 			// Emulators
 			ImGui::Separator();
 			for (std::vector<CDebugInterface *>::iterator it = viewC64->debugInterfaces.begin(); it != viewC64->debugInterfaces.end(); it++)
@@ -533,6 +563,14 @@ void CMainMenuBar::RenderImGui()
 			
 			ImGui::Separator();
 			
+			if (ImGui::MenuItem("Open Window", kbsSearchWindow->cstr))
+			{
+				kbsSearchWindow->Run();
+			}
+			if (ImGui::MenuItem("Close Window", kbsCloseWindow->cstr))
+			{
+				kbsCloseWindow->Run();
+			}
 			if (ImGui::MenuItem("Quit", kbsQuitApplication->cstr))
 			{
 				SYS_Shutdown();
@@ -542,18 +580,32 @@ void CMainMenuBar::RenderImGui()
 		
 		if (ImGui::BeginMenu("Code"))
 		{
-			char *t = "Step Over";
-			
-			// TODO: FIXME NOW!
-			if ( (debugInterfaceVice->isRunning && debugInterfaceVice->GetDebugMode() == DEBUGGER_MODE_RUNNING)
-				|| (debugInterfaceNes->isRunning && debugInterfaceNes->GetDebugMode() == DEBUGGER_MODE_RUNNING)
-				|| (debugInterfaceAtari->isRunning && debugInterfaceAtari->GetDebugMode() == DEBUGGER_MODE_RUNNING) )
+			char *t = "Step Instruction";
+			bool isPaused = true;
+
+			for (std::vector<CDebugInterface *>::iterator it = viewC64->debugInterfaces.begin(); it != viewC64->debugInterfaces.end(); it++)
 			{
-				t = "Pause";
+				CDebugInterface *debugInterface = *it;
+				if (debugInterface->GetDebugMode() == DEBUGGER_MODE_RUNNING)
+				{
+					// if at least one emulator is not paused then change text to Pause
+					t = "Pause";
+					isPaused = false;
+					break;
+				}
 			}
+
 			if (ImGui::MenuItem(t, kbsStepOverInstruction->cstr))
 			{
 				kbsStepOverInstruction->Run();
+			}
+			
+//			if (isPaused)
+			{
+				if (ImGui::MenuItem("Step Over JSR", kbsStepOverJsr->cstr))
+				{
+					kbsStepOverJsr->Run();
+				}
 			}
 			
 			if (ImGui::MenuItem("Backstep", kbsStepBackInstruction->cstr))
@@ -584,14 +636,92 @@ void CMainMenuBar::RenderImGui()
 				{
 					kbsScrubEmulationForwardOneSecond->Run();
 				}
-				if (ImGui::MenuItem("Back 10 frames", kbsScrubEmulationBackMultipleFrames->cstr))
+
+				ImGui::Separator();
+				//
+				int stepNumberOfFrames = 10;
+				gApplicationDefaultConfig->GetInt("StepNumberOfFrames", &stepNumberOfFrames, 10);
+
+				if (ImGui::InputInt("Number of Frames", &stepNumberOfFrames, 0, 0, ImGuiInputTextFlags_EnterReturnsTrue))
+				{
+					gApplicationDefaultConfig->SetInt("StepNumberOfFrames", &stepNumberOfFrames);
+				}
+				
+				char *buf = SYS_GetCharBuf();
+				sprintf(buf, "Back %d frames", stepNumberOfFrames);
+				if (ImGui::MenuItem(buf, kbsScrubEmulationBackMultipleFrames->cstr))
 				{
 					kbsScrubEmulationBackMultipleFrames->Run();
 				}
-				if (ImGui::MenuItem("Forward 10 frames", kbsScrubEmulationForwardMultipleFrames->cstr))
+				sprintf(buf, "Forward %d frames", stepNumberOfFrames);
+				if (ImGui::MenuItem(buf, kbsScrubEmulationForwardMultipleFrames->cstr))
 				{
 					kbsScrubEmulationForwardMultipleFrames->Run();
 				}
+
+				//
+				int stepNumberOfCycles = 10;
+				gApplicationDefaultConfig->GetInt("StepNumberOfCycles", &stepNumberOfCycles, 10);
+
+				if (ImGui::InputInt("Number of Cycles", &stepNumberOfCycles, 0, 0, ImGuiInputTextFlags_EnterReturnsTrue))
+				{
+					gApplicationDefaultConfig->SetInt("StepNumberOfCycles", &stepNumberOfCycles);
+				}
+
+				sprintf(buf, "Back %d cycles", stepNumberOfCycles);
+				if (ImGui::MenuItem(buf, kbsStepBackNumberOfCycles->cstr))
+				{
+					kbsStepBackNumberOfCycles->Run();
+				}
+				sprintf(buf, "Forward %d cycles", stepNumberOfCycles);
+				if (ImGui::MenuItem(buf, kbsForwardNumberOfCycles->cstr))
+				{
+					kbsForwardNumberOfCycles->Run();
+				}
+
+				if (ImGui::MenuItem("Step 1 cycle", kbsStepOneCycle->cstr))
+				{
+					kbsStepOneCycle->Run();
+				}
+
+				//
+				int numRunningInterfaces = 0;
+				for (std::vector<CDebugInterface *>::iterator it = viewC64->debugInterfaces.begin(); it != viewC64->debugInterfaces.end(); it++)
+				{
+					CDebugInterface *debugInterface = *it;
+					if (debugInterface->isRunning)
+						numRunningInterfaces++;
+				}
+				bool showEmulatorName = numRunningInterfaces > 1 ? true : false;
+
+//				for (std::vector<CDebugInterface *>::iterator it = viewC64->debugInterfaces.begin(); it != viewC64->debugInterfaces.end(); it++)
+				{
+//					CDebugInterface *debugInterface = *it;
+					CViewTimeline *viewTimeline;
+
+					//	TODO:				CViewTimeline *viewTimeline = debugInterface->snapshotsManager->GetViewTimeline();
+					viewTimeline = viewC64->viewC64Timeline;
+					if (viewTimeline->debugInterface->isRunning)
+					{
+						ImGui::Separator();
+						viewTimeline->RenderMenuGoTo(showEmulatorName);
+					}
+
+					viewTimeline = viewC64->viewAtariTimeline;
+					if (viewTimeline->debugInterface->isRunning)
+					{
+						ImGui::Separator();
+						viewTimeline->RenderMenuGoTo(showEmulatorName);
+					}
+
+					viewTimeline = viewC64->viewNesTimeline;
+					if (viewTimeline->debugInterface->isRunning)
+					{
+						ImGui::Separator();
+						viewTimeline->RenderMenuGoTo(showEmulatorName);
+					}
+				}
+				
 				ImGui::EndMenu();
 			}
 			
@@ -603,79 +733,79 @@ void CMainMenuBar::RenderImGui()
 			
 			ImGui::Separator();
 			
-			if (ImGui::MenuItem("Load Snapshot", viewC64->viewC64Snapshots->kbsLoadSnapshot->cstr))
+			if (ImGui::MenuItem("Load Snapshot", kbsLoadSnapshot->cstr))
 			{
-				viewC64->viewC64Snapshots->kbsLoadSnapshot->Run();
+				kbsLoadSnapshot->Run();
 			}
-			if (ImGui::MenuItem("Save Snapshot", viewC64->viewC64Snapshots->kbsSaveSnapshot->cstr))
+			if (ImGui::MenuItem("Save Snapshot", kbsSaveSnapshot->cstr))
 			{
-				viewC64->viewC64Snapshots->kbsSaveSnapshot->Run();
+				kbsSaveSnapshot->Run();
 			}
 			
 			// TODO: move me, generalize me
 			if (ImGui::BeginMenu("Quick Snapshots"))
 			{
-				if (ImGui::MenuItem("Store snapshot #1", viewC64->viewC64Snapshots->kbsStoreSnapshot1->cstr))
+				if (ImGui::MenuItem("Store snapshot #1", kbsStoreSnapshot1->cstr))
 				{
-					viewC64->viewC64Snapshots->kbsStoreSnapshot1->Run();
+					kbsStoreSnapshot1->Run();
 				}
-				if (ImGui::MenuItem("Restore snapshot #1", viewC64->viewC64Snapshots->kbsRestoreSnapshot1->cstr))
+				if (ImGui::MenuItem("Restore snapshot #1", kbsRestoreSnapshot1->cstr))
 				{
-					viewC64->viewC64Snapshots->kbsRestoreSnapshot1->Run();
-				}
-
-				if (ImGui::MenuItem("Store snapshot #2", viewC64->viewC64Snapshots->kbsStoreSnapshot2->cstr))
-				{
-					viewC64->viewC64Snapshots->kbsStoreSnapshot2->Run();
-				}
-				if (ImGui::MenuItem("Restore snapshot #2", viewC64->viewC64Snapshots->kbsRestoreSnapshot2->cstr))
-				{
-					viewC64->viewC64Snapshots->kbsRestoreSnapshot2->Run();
+					kbsRestoreSnapshot1->Run();
 				}
 
-				if (ImGui::MenuItem("Store snapshot #3", viewC64->viewC64Snapshots->kbsStoreSnapshot3->cstr))
+				if (ImGui::MenuItem("Store snapshot #2", kbsStoreSnapshot2->cstr))
 				{
-					viewC64->viewC64Snapshots->kbsStoreSnapshot3->Run();
+					kbsStoreSnapshot2->Run();
 				}
-				if (ImGui::MenuItem("Restore snapshot #3", viewC64->viewC64Snapshots->kbsRestoreSnapshot3->cstr))
+				if (ImGui::MenuItem("Restore snapshot #2", kbsRestoreSnapshot2->cstr))
 				{
-					viewC64->viewC64Snapshots->kbsRestoreSnapshot3->Run();
-				}
-
-				if (ImGui::MenuItem("Store snapshot #4", viewC64->viewC64Snapshots->kbsStoreSnapshot4->cstr))
-				{
-					viewC64->viewC64Snapshots->kbsStoreSnapshot4->Run();
-				}
-				if (ImGui::MenuItem("Restore snapshot #4", viewC64->viewC64Snapshots->kbsRestoreSnapshot4->cstr))
-				{
-					viewC64->viewC64Snapshots->kbsRestoreSnapshot4->Run();
+					kbsRestoreSnapshot2->Run();
 				}
 
-				if (ImGui::MenuItem("Store snapshot #5", viewC64->viewC64Snapshots->kbsStoreSnapshot5->cstr))
+				if (ImGui::MenuItem("Store snapshot #3", kbsStoreSnapshot3->cstr))
 				{
-					viewC64->viewC64Snapshots->kbsStoreSnapshot5->Run();
+					kbsStoreSnapshot3->Run();
 				}
-				if (ImGui::MenuItem("Restore snapshot #5", viewC64->viewC64Snapshots->kbsRestoreSnapshot5->cstr))
+				if (ImGui::MenuItem("Restore snapshot #3", kbsRestoreSnapshot3->cstr))
 				{
-					viewC64->viewC64Snapshots->kbsRestoreSnapshot5->Run();
-				}
-
-				if (ImGui::MenuItem("Store snapshot #6", viewC64->viewC64Snapshots->kbsStoreSnapshot6->cstr))
-				{
-					viewC64->viewC64Snapshots->kbsStoreSnapshot6->Run();
-				}
-				if (ImGui::MenuItem("Restore snapshot #6", viewC64->viewC64Snapshots->kbsRestoreSnapshot6->cstr))
-				{
-					viewC64->viewC64Snapshots->kbsRestoreSnapshot6->Run();
+					kbsRestoreSnapshot3->Run();
 				}
 
-				if (ImGui::MenuItem("Store snapshot #7", viewC64->viewC64Snapshots->kbsStoreSnapshot7->cstr))
+				if (ImGui::MenuItem("Store snapshot #4", kbsStoreSnapshot4->cstr))
 				{
-					viewC64->viewC64Snapshots->kbsStoreSnapshot7->Run();
+					kbsStoreSnapshot4->Run();
 				}
-				if (ImGui::MenuItem("Restore snapshot #7", viewC64->viewC64Snapshots->kbsRestoreSnapshot7->cstr))
+				if (ImGui::MenuItem("Restore snapshot #4", kbsRestoreSnapshot4->cstr))
 				{
-					viewC64->viewC64Snapshots->kbsRestoreSnapshot7->Run();
+					kbsRestoreSnapshot4->Run();
+				}
+
+				if (ImGui::MenuItem("Store snapshot #5", kbsStoreSnapshot5->cstr))
+				{
+					kbsStoreSnapshot5->Run();
+				}
+				if (ImGui::MenuItem("Restore snapshot #5", kbsRestoreSnapshot5->cstr))
+				{
+					kbsRestoreSnapshot5->Run();
+				}
+
+				if (ImGui::MenuItem("Store snapshot #6", kbsStoreSnapshot6->cstr))
+				{
+					kbsStoreSnapshot6->Run();
+				}
+				if (ImGui::MenuItem("Restore snapshot #6", kbsRestoreSnapshot6->cstr))
+				{
+					kbsRestoreSnapshot6->Run();
+				}
+
+				if (ImGui::MenuItem("Store snapshot #7", kbsStoreSnapshot7->cstr))
+				{
+					kbsStoreSnapshot7->Run();
+				}
+				if (ImGui::MenuItem("Restore snapshot #7", kbsRestoreSnapshot7->cstr))
+				{
+					kbsRestoreSnapshot7->Run();
 				}
 
 				ImGui::EndMenu();
@@ -826,17 +956,18 @@ void CMainMenuBar::RenderImGui()
 						sprintf(buf, "%s Timeline", debugInterface->GetPlatformNameString());
 						if (ImGui::BeginMenu(buf, c64SettingsSnapshotsRecordIsActive))
 						{
-							if (ImGui::MenuItem("Clear timeline"))
+							if (ImGui::MenuItem("Save timeline"))
 							{
-								debugInterface->snapshotsManager->ClearSnapshotsHistory();
+								OpenDialogSaveTimeline(debugInterface);
 							}
+							ImGui::Separator();
 							if (ImGui::MenuItem("Load timeline"))
 							{
 								OpenDialogLoadTimeline();
 							}
-							if (ImGui::MenuItem("Save timeline"))
+							if (ImGui::MenuItem("Clear timeline"))
 							{
-								OpenDialogSaveTimeline(debugInterface);
+								debugInterface->snapshotsManager->ClearSnapshotsHistory();
 							}
 							ImGui::EndMenu();
 						}
@@ -877,8 +1008,6 @@ void CMainMenuBar::RenderImGui()
 				
 				emulatorNum++;
 			}
-			
-			ImGui::Separator();
 			
 			if (ImGui::BeginMenu("Keep symbols"))
 			{
@@ -923,17 +1052,12 @@ void CMainMenuBar::RenderImGui()
 			{
 				kbsClearMemoryMarkers->Run();
 			}
-
-			
-			
-//			if (ImGui::MenuItem("Save snapshot", viewC64->viewC64Snapshots->cstr))
-//			{
-//
-//			}
-								
 			
 			ImGui::EndMenu();
 		}
+		
+		
+		////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// EMULATORS MENUS
 
 		// emulators menus
 		for (std::vector<CDebugInterface *>::iterator it = viewC64->debugInterfaces.begin(); it != viewC64->debugInterfaces.end(); it++)
@@ -947,22 +1071,26 @@ void CMainMenuBar::RenderImGui()
 			
 			if (ImGui::BeginMenu(name))
 			{
-				for (std::list<CGuiView *>::iterator it = debugInterface->views.begin(); it != debugInterface->views.end(); it++)
+				for (std::list<CDebugInterfaceMenuItem *>::iterator it = debugInterface->menuItems.begin(); it != debugInterface->menuItems.end(); it++)
 				{
-					CGuiView *view = *it;
-	
-					bool isVisible = view->visible;
-					if (ImGui::MenuItem(view->name, "", &isVisible))
-					{
-						view->SetVisible(isVisible);
-						guiMain->StoreLayoutInSettingsAtEndOfThisFrame();
-						break;
-					}
+					CDebugInterfaceMenuItem *menuItem = *it;
+					menuItem->RenderImGui();
 				}
+
 				ImGui::EndMenu();
 			}
 		}
 
+//		if (viewC64->viewVicEditor->IsVisible())
+		if (viewC64->debugInterfaceC64->isRunning)
+		{
+			if (ImGui::BeginMenu("VIC Editor##MainMenuBar"))
+			{
+				viewC64->viewVicEditor->RenderContextMenuItems();
+				ImGui::EndMenu();
+			}
+		}
+		
 		if (ImGui::BeginMenu("Plugins"))
 		{
 			// TODO: generalize me
@@ -1032,12 +1160,21 @@ void CMainMenuBar::RenderImGui()
 				openPopupImGuiWorkaround = true;
 			}
 
-			if (ImGui::MenuItem("Delete Workspace", "", false, guiMain->layoutManager->currentLayout != NULL))
+			if (ImGui::MenuItem("Delete This Workspace", "", false, guiMain->layoutManager->currentLayout != NULL))
 			{
 				CLayoutData *layout = guiMain->layoutManager->currentLayout;
 				guiMain->layoutManager->RemoveAndDeleteLayout(layout);
 				guiMain->layoutManager->currentLayout = NULL;
 				guiMain->layoutManager->StoreLayouts();
+				guiMain->ShowNotification("Information", "Workspace deleted");
+			}
+			
+			ImGui::Separator();
+			
+			if (ImGui::MenuItem("Save Workspaces"))
+			{
+				guiMain->StoreLayoutInSettingsAtEndOfThisFrame();
+				guiMain->ShowNotification("Information", "Workspaces saved");
 			}
 
 			ImGui::EndMenu();
@@ -1130,8 +1267,6 @@ void CMainMenuBar::RenderImGui()
 
 					if (ImGui::BeginMenu("Memory"))
 					{
-//						ImGui::MenuItem("Map C64 memory to file");
-						
 						if (ImGui::MenuItem("Dump C64 memory", kbsDumpC64Memory->cstr))
 						{
 							OpenDialogDumpC64Memory();
@@ -1148,6 +1283,30 @@ void CMainMenuBar::RenderImGui()
 						{
 							OpenDialogDumpDrive1541MemoryMarkers();
 						}
+						ImGui::Separator();
+						
+						if (c64SettingsPathToC64MemoryMapFile == NULL)
+						{
+							if (ImGui::MenuItem("Map C64 memory to file"))
+							{
+								OpenDialogMapC64MemoryToFile();
+							}
+						}
+						else
+						{
+							char *buf = SYS_GetCharBuf();
+							char *asciiPath = c64SettingsPathToC64MemoryMapFile->GetStdASCII();
+							
+							// display file name in menu
+							char *fname = SYS_GetFileNameWithExtensionFromFullPath(asciiPath);
+							sprintf(buf, "Unmap C64 memory from file: %s", fname);
+							if (ImGui::MenuItem(buf))
+							{
+								UnmapC64MemoryFromFile();
+							}
+							SYS_ReleaseCharBuf(buf);
+						}
+
 						ImGui::EndMenu();
 					}
 					
@@ -1193,53 +1352,96 @@ void CMainMenuBar::RenderImGui()
 						}
 						ImGui::EndMenu();
 					}
-					
-					ImGui::Separator();
-					
-					if (ImGui::BeginMenu("Emulation speed"))
+					if (ImGui::BeginMenu("Code monitor"))
 					{
-						if (ImGui::MenuItem("Next maximum speed", kbsSwitchNextMaximumSpeed->cstr))
+						bool b = !c64SettingsUseNativeEmulatorMonitor;
+						if (ImGui::MenuItem("Default", NULL, &b))
 						{
-							SwitchNextMaximumSpeed();
+							c64SettingsUseNativeEmulatorMonitor = false;
+							viewC64->viewC64MonitorConsole->PrintInitPrompt();
+							C64DebuggerStoreSettings();
 						}
-						if (ImGui::MenuItem("Previous maximum speed", kbsSwitchPrevMaximumSpeed->cstr))
+						b = c64SettingsUseNativeEmulatorMonitor;
+						if (ImGui::MenuItem("VICE", NULL, &b))
 						{
-							SwitchPrevMaximumSpeed();
-						}
-						ImGui::Separator();
-						std::vector<const char *> optionsNames;
-						std::vector<int> optionsValues;
-						optionsNames.push_back("10%");
-						optionsValues.push_back(10);
-						optionsNames.push_back("20%");
-						optionsValues.push_back(20);
-						optionsNames.push_back("50%");
-						optionsValues.push_back(50);
-						optionsNames.push_back("100%");
-						optionsValues.push_back(100);
-						optionsNames.push_back("200%");
-						optionsValues.push_back(200);
-						optionsNames.push_back("300%");
-						optionsValues.push_back(300);
-						optionsNames.push_back("400%");
-						optionsValues.push_back(400);
-
-						std::vector<int>::iterator itValue = optionsValues.begin();
-						for (std::vector<const char *>::iterator itName = optionsNames.begin(); itName != optionsNames.end(); itName++)
-						{
-							const char *optStr = *itName;
-							int val = *itValue;
-							bool selected = (val == c64SettingsEmulationMaximumSpeed);
-							if (ImGui::MenuItem(optStr, NULL, &selected))
-							{
-								SetEmulationMaximumSpeed(val);
-							}
-							itValue++;
+							c64SettingsUseNativeEmulatorMonitor = true;
+							viewC64->viewC64MonitorConsole->PrintInitPrompt();
+							C64DebuggerStoreSettings();
 						}
 						ImGui::EndMenu();
 					}
+					ImGui::Separator();
 					
 					/////
+					if (ImGui::BeginMenu("VIC"))
+					{
+						if (ImGui::BeginMenu("VIC Palette"))
+						{
+							viewC64->viewC64Palette->RenderMenuItemsAvailablePalettes();
+							ImGui::EndMenu();
+						}
+						
+						if (ImGui::BeginMenu("VIC Border mode"))
+						{
+							std::vector<const char *> borderModes;
+							borderModes.push_back("Normal");		// 0
+							borderModes.push_back("Full");			// 1
+							borderModes.push_back("Debug");			// 2
+							borderModes.push_back("No borders");	// 3
+							
+							int currentBorderMode = 0;
+							viewC64->config->GetInt("viceViciiBorderMode", &currentBorderMode, 0);
+							
+							for (int i = 0; i < borderModes.size(); i++)
+							{
+								if (ImGui::MenuItem(borderModes[i], NULL, (i == currentBorderMode)))
+								{
+									currentBorderMode = i;
+									viewC64->config->SetInt("viceViciiBorderMode", &currentBorderMode);
+									debugInterfaceVice->SetViciiBorderMode(currentBorderMode);
+								}
+							}
+							ImGui::EndMenu();
+						}
+						
+						if (ImGui::BeginMenu("VIC Display recording"))
+						{
+							bool b = (c64SettingsVicStateRecordingMode == C64D_VICII_RECORD_MODE_NONE);
+							if (ImGui::MenuItem("None", NULL, &b))
+							{
+								c64SettingsVicStateRecordingMode = C64D_VICII_RECORD_MODE_NONE;
+								viewC64->debugInterfaceC64->SetVicRecordStateMode(c64SettingsVicStateRecordingMode);
+								C64DebuggerStoreSettings();
+							}
+							
+							b = (c64SettingsVicStateRecordingMode == C64D_VICII_RECORD_MODE_EVERY_LINE);
+							if (ImGui::MenuItem("Each raster line", NULL, &b))
+							{
+								c64SettingsVicStateRecordingMode = C64D_VICII_RECORD_MODE_EVERY_LINE;
+								viewC64->debugInterfaceC64->SetVicRecordStateMode(c64SettingsVicStateRecordingMode);
+								C64DebuggerStoreSettings();
+							}
+							
+							b = (c64SettingsVicStateRecordingMode == C64D_VICII_RECORD_MODE_EVERY_CYCLE);
+							if (ImGui::MenuItem("Each VIC cycle", NULL, &b))
+							{
+								c64SettingsVicStateRecordingMode = C64D_VICII_RECORD_MODE_EVERY_CYCLE;
+								viewC64->debugInterfaceC64->SetVicRecordStateMode(c64SettingsVicStateRecordingMode);
+								C64DebuggerStoreSettings();
+							}
+
+							ImGui::EndMenu();
+						}
+						
+						if (ImGui::MenuItem("Skip drawing sprites", NULL, &c64SettingsVicSkipDrawingSprites))
+						{
+							viewC64->debugInterfaceC64->SetSkipDrawingSprites(c64SettingsVicSkipDrawingSprites);
+							C64DebuggerStoreSettings();
+						}
+						
+						ImGui::EndMenu();
+					}
+					
 					if (ImGui::BeginMenu("SID"))
 					{
 						if (ImGui::SliderInt("VICE audio volume", &c64SettingsViceAudioVolume, 0, 100))
@@ -1286,7 +1488,7 @@ void CMainMenuBar::RenderImGui()
 						if (ImGui::BeginMenu("SID stereo"))
 						{
 							std::vector<const char *> options;
-							options.push_back("None");
+							options.push_back("No");
 							options.push_back("Two SIDs");
 							options.push_back("Three SIDs");
 
@@ -1428,7 +1630,7 @@ void CMainMenuBar::RenderImGui()
 					
 
 					*/
-						
+					
 					if (ImGui::BeginMenu("REU"))
 					{
 						if (ImGui::MenuItem("Enabled", "", &c64SettingsReuEnabled))
@@ -1475,54 +1677,89 @@ void CMainMenuBar::RenderImGui()
 						ImGui::EndMenu();
 					}
 
-					if (ImGui::BeginMenu("Code monitor"))
+					///
+					if (ImGui::BeginMenu("Datasette##c64"))
 					{
-						bool b = !c64SettingsUseNativeEmulatorMonitor;
-						if (ImGui::MenuItem("Default", NULL, &b))
+						if (ImGui::MenuItem("Insert Tape##c64Datasette", kbsTapeAttach->cstr))
 						{
-							c64SettingsUseNativeEmulatorMonitor = false;
-							viewC64->viewC64MonitorConsole->PrintInitPrompt();
+							kbsTapeAttach->Run();
+						}
+						if (ImGui::MenuItem("Remove Tape##c64Datasette", kbsTapeDetach->cstr))
+						{
+							kbsTapeDetach->Run();
+						}
+						ImGui::Separator();
+//						if (ImGui::MenuItem("Create Tape##c64"))
+//						{
+//							TODO
+//						}
+						if (ImGui::MenuItem("Play##c64Datasette", kbsTapePlay->cstr))
+						{
+							kbsTapePlay->Run();
+						}
+						if (ImGui::MenuItem("Stop##c64Datasette", kbsTapeStop->cstr))
+						{
+							kbsTapeStop->Run();
+						}
+						if (ImGui::MenuItem("Forward##c64Datasette", kbsTapeForward->cstr))
+						{
+							kbsTapeForward->Run();
+						}
+						if (ImGui::MenuItem("Rewind##c64Datasette", kbsTapeRewind->cstr))
+						{
+							kbsTapeRewind->Run();
+						}
+						if (ImGui::MenuItem("Record##c64Datasette", kbsTapeRecord->cstr))
+						{
+							kbsTapeRecord->Run();
+						}
+						ImGui::Separator();
+						if (ImGui::MenuItem("Reset Datasette##c64Datasette"))
+						{
+							viewC64->debugInterfaceC64->DatasetteReset();
+							viewC64->ShowMessage("Datasette RESET");
+						}
+						ImGui::Separator();
+						
+						if (ImGui::InputInt("Speed tuning##c64Datasette", &c64SettingsDatasetteSpeedTuning))
+						{
+							if (c64SettingsDatasetteSpeedTuning < 0)
+								c64SettingsDatasetteSpeedTuning = 0;
+							if (c64SettingsDatasetteSpeedTuning > 100)
+								c64SettingsDatasetteSpeedTuning = 100;
+							viewC64->debugInterfaceC64->DatasetteSetSpeedTuning(c64SettingsDatasetteSpeedTuning);
 							C64DebuggerStoreSettings();
 						}
-						b = c64SettingsUseNativeEmulatorMonitor;
-						if (ImGui::MenuItem("VICE", NULL, &b))
+						if (ImGui::InputInt("Zero-gap delay##c64Datasette", &c64SettingsDatasetteZeroGapDelay))
 						{
-							c64SettingsUseNativeEmulatorMonitor = true;
-							viewC64->viewC64MonitorConsole->PrintInitPrompt();
+							if (c64SettingsDatasetteZeroGapDelay < 0)
+								c64SettingsDatasetteZeroGapDelay = 0;
+							if (c64SettingsDatasetteZeroGapDelay > 50000)
+								c64SettingsDatasetteZeroGapDelay = 50000;
+							viewC64->debugInterfaceC64->DatasetteSetZeroGapDelay(c64SettingsDatasetteZeroGapDelay);
 							C64DebuggerStoreSettings();
 						}
+						if (ImGui::InputInt("Tape wobble##c64Datasette", &c64SettingsDatasetteTapeWobble))
+						{
+							if (c64SettingsDatasetteTapeWobble < 0)
+								c64SettingsDatasetteTapeWobble = 0;
+							if (c64SettingsDatasetteTapeWobble > 100)
+								c64SettingsDatasetteTapeWobble = 100;
+							viewC64->debugInterfaceC64->DatasetteSetTapeWobble(c64SettingsDatasetteTapeWobble);
+							C64DebuggerStoreSettings();
+						}
+						if (ImGui::MenuItem("Reset with CPU##c64Datasette", NULL, &c64SettingsDatasetteResetWithCPU))
+						{
+							viewC64->debugInterfaceC64->DatasetteSetResetWithCPU(c64SettingsDatasetteResetWithCPU);
+							C64DebuggerStoreSettings();
+						}
+
 						ImGui::EndMenu();
 					}
+
+					ImGui::Separator();
 					
-					if (ImGui::BeginMenu("VIC Display recording"))
-					{
-						bool b = (c64SettingsVicStateRecordingMode == C64D_VICII_RECORD_MODE_NONE);
-						if (ImGui::MenuItem("None", NULL, &b))
-						{
-							c64SettingsVicStateRecordingMode = C64D_VICII_RECORD_MODE_NONE;
-							viewC64->debugInterfaceC64->SetVicRecordStateMode(c64SettingsVicStateRecordingMode);
-							C64DebuggerStoreSettings();
-						}
-						
-						b = (c64SettingsVicStateRecordingMode == C64D_VICII_RECORD_MODE_EVERY_LINE);
-						if (ImGui::MenuItem("Each raster line", NULL, &b))
-						{
-							c64SettingsVicStateRecordingMode = C64D_VICII_RECORD_MODE_EVERY_LINE;
-							viewC64->debugInterfaceC64->SetVicRecordStateMode(c64SettingsVicStateRecordingMode);
-							C64DebuggerStoreSettings();
-						}
-						
-						b = (c64SettingsVicStateRecordingMode == C64D_VICII_RECORD_MODE_EVERY_CYCLE);
-						if (ImGui::MenuItem("Each VIC cycle", NULL, &b))
-						{
-							c64SettingsVicStateRecordingMode = C64D_VICII_RECORD_MODE_EVERY_CYCLE;
-							viewC64->debugInterfaceC64->SetVicRecordStateMode(c64SettingsVicStateRecordingMode);
-							C64DebuggerStoreSettings();
-						}
-
-						ImGui::EndMenu();
-					}
-
+					///
 					if (ImGui::BeginMenu("Machine model"))
 					{
 						std::vector<const char *>::iterator itMachineModelName = c64ModelTypeNames->begin();
@@ -1546,22 +1783,63 @@ void CMainMenuBar::RenderImGui()
 						}
 						ImGui::EndMenu();
 					}
-										
+					if (ImGui::BeginMenu("Emulation speed"))
+					{
+						if (ImGui::MenuItem("Next maximum speed", kbsSwitchNextMaximumSpeed->cstr))
+						{
+							SwitchNextMaximumSpeed();
+						}
+						if (ImGui::MenuItem("Previous maximum speed", kbsSwitchPrevMaximumSpeed->cstr))
+						{
+							SwitchPrevMaximumSpeed();
+						}
+						ImGui::Separator();
+						std::vector<const char *> optionsNames;
+						std::vector<int> optionsValues;
+						optionsNames.push_back("10%");
+						optionsValues.push_back(10);
+						optionsNames.push_back("20%");
+						optionsValues.push_back(20);
+						optionsNames.push_back("50%");
+						optionsValues.push_back(50);
+						optionsNames.push_back("100%");
+						optionsValues.push_back(100);
+						optionsNames.push_back("200%");
+						optionsValues.push_back(200);
+						optionsNames.push_back("300%");
+						optionsValues.push_back(300);
+						optionsNames.push_back("400%");
+						optionsValues.push_back(400);
+
+						std::vector<int>::iterator itValue = optionsValues.begin();
+						for (std::vector<const char *>::iterator itName = optionsNames.begin(); itName != optionsNames.end(); itName++)
+						{
+							const char *optStr = *itName;
+							int val = *itValue;
+							bool selected = (val == c64SettingsEmulationMaximumSpeed);
+							if (ImGui::MenuItem(optStr, NULL, &selected))
+							{
+								SetEmulationMaximumSpeed(val);
+							}
+							itValue++;
+						}
+						ImGui::EndMenu();
+					}
+					
 					if (ImGui::MenuItem("Fast boot kernal patch", NULL, &c64SettingsFastBootKernalPatch))
 					{
 						debugInterfaceVice->SetPatchKernalFastBoot(c64SettingsFastBootKernalPatch);
 						C64DebuggerStoreSettings();
 					}
 
-					if (ImGui::MenuItem("Skip drawing sprites", NULL, &c64SettingsVicSkipDrawingSprites))
-					{
-						viewC64->debugInterfaceC64->SetSkipDrawingSprites(c64SettingsVicSkipDrawingSprites);
-						C64DebuggerStoreSettings();
-					}
-					
 					if (ImGui::MenuItem("Emulate VSP bug", NULL, &c64SettingsEmulateVSPBug))
 					{
 						viewC64->debugInterfaceC64->SetVSPBugEmulation(c64SettingsEmulateVSPBug);
+						C64DebuggerStoreSettings();
+					}
+					
+					if (ImGui::MenuItem("Skip dummy read on STA", NULL, &c64dSkipBogusPageOffsetReadOnSTA))
+					{
 						C64DebuggerStoreSettings();
 					}
 					
@@ -1803,6 +2081,24 @@ void CMainMenuBar::RenderImGui()
 					C64DebuggerSetSetting("ShowPositionsInHex", &c64SettingsShowPositionsInHex);
 					C64DebuggerStoreSettings();
 				}
+				
+				if (ImGui::BeginMenu("Disassembly"))
+				{
+					if (ImGui::MenuItem("Execute-aware disassembly", NULL, &c64SettingsExecuteAwareDisassembly))
+					{
+						C64DebuggerStoreSettings();
+					}
+#if defined(MACOS)
+					if (ImGui::MenuItem("Press CMD to set breakpoint", NULL, &c64SettingsPressCtrlToSetBreakpoint))
+#else
+					if (ImGui::MenuItem("Press CTRL to set breakpoint", NULL, &c64SettingsPressCtrlToSetBreakpoint))
+#endif
+					{
+						C64DebuggerStoreSettings();
+					}
+					ImGui::EndMenu();
+				}
+				
 				ImGui::Separator();
 
 				if (ImGui::BeginMenu("Theme style"))
@@ -1836,68 +2132,68 @@ void CMainMenuBar::RenderImGui()
 
 				if (ImGui::BeginMenu("Default font"))
 				{
-					if (ImGui::InputFloat("Font size", &(viewC64->defaultFontSize), 0.5, 1, "%.1f", ImGuiInputTextFlags_EnterReturnsTrue))
+					if (ImGui::InputFloat("Font size", &(gDefaultFontSize), 0.5, 1, "%.1f", ImGuiInputTextFlags_EnterReturnsTrue))
 					{
-						viewC64->defaultFontSize = URANGE(4, viewC64->defaultFontSize, 64);
-						viewC64->config->SetFloat("uiDefaultFontSize", &(viewC64->defaultFontSize));
+						gDefaultFontSize = URANGE(4, gDefaultFontSize, 64);
+						viewC64->config->SetFloat("uiDefaultFontSize", &(gDefaultFontSize));
 						viewC64->UpdateDefaultUIFontFromSettings();
 					}
 
-					if (ImGui::InputInt("Oversampling", &(viewC64->defaultFontOversampling)))
+					if (ImGui::InputInt("Oversampling", &(gDefaultFontOversampling)))
 					{
-						viewC64->defaultFontOversampling = URANGE(1, viewC64->defaultFontOversampling, 8);
-						viewC64->config->SetInt("uiDefaultFontOversampling", &(viewC64->defaultFontOversampling));
+						gDefaultFontOversampling = URANGE(1, gDefaultFontOversampling, 8);
+						viewC64->config->SetInt("uiDefaultFontOversampling", &(gDefaultFontOversampling));
 						viewC64->UpdateDefaultUIFontFromSettings();
 					}
 
 					ImGui::Separator();
 					
-					if (ImGui::MenuItem("Cousine Regular", "", !strcmp(viewC64->defaultFontPath, "CousineRegular")))
+					if (ImGui::MenuItem("Cousine Regular", "", !strcmp(gDefaultFontPath, "CousineRegular")))
 					{
-						viewC64->defaultFontPath = "CousineRegular";
-						viewC64->config->SetString("uiDefaultFont", &(viewC64->defaultFontPath));
+						gDefaultFontPath = "CousineRegular";
+						viewC64->config->SetString("uiDefaultFont", &(gDefaultFontPath));
 						viewC64->UpdateDefaultUIFontFromSettings();
 					}
 
-					if (ImGui::MenuItem("Sweet16", "", !strcmp(viewC64->defaultFontPath, "Sweet16")))
+					if (ImGui::MenuItem("Sweet16", "", !strcmp(gDefaultFontPath, "Sweet16")))
 					{
-						viewC64->defaultFontPath = "Sweet16";
-						viewC64->config->SetString("uiDefaultFont", &(viewC64->defaultFontPath));
+						gDefaultFontPath = "Sweet16";
+						viewC64->config->SetString("uiDefaultFont", &(gDefaultFontPath));
 						viewC64->UpdateDefaultUIFontFromSettings();
 					}
 
-					if (ImGui::MenuItem("Proggy Clean", "", !strcmp(viewC64->defaultFontPath, "ProggyClean")))
+					if (ImGui::MenuItem("Proggy Clean", "", !strcmp(gDefaultFontPath, "ProggyClean")))
 					{
-						viewC64->defaultFontPath = "ProggyClean";
-						viewC64->config->SetString("uiDefaultFont", &(viewC64->defaultFontPath));
+						gDefaultFontPath = "ProggyClean";
+						viewC64->config->SetString("uiDefaultFont", &(gDefaultFontPath));
 						viewC64->UpdateDefaultUIFontFromSettings();
 					}
 
-					if (ImGui::MenuItem("ProFontIIx", "", !strcmp(viewC64->defaultFontPath, "ProFontIIx")))
+					if (ImGui::MenuItem("ProFontIIx", "", !strcmp(gDefaultFontPath, "ProFontIIx")))
 					{
-						viewC64->defaultFontPath = "ProFontIIx";
-						viewC64->config->SetString("uiDefaultFont", &(viewC64->defaultFontPath));
+						gDefaultFontPath = "ProFontIIx";
+						viewC64->config->SetString("uiDefaultFont", &(gDefaultFontPath));
 						viewC64->UpdateDefaultUIFontFromSettings();
 					}
 
-					if (ImGui::MenuItem("Droid Sans", "", !strcmp(viewC64->defaultFontPath, "DroidSans")))
+					if (ImGui::MenuItem("Droid Sans", "", !strcmp(gDefaultFontPath, "DroidSans")))
 					{
-						viewC64->defaultFontPath = "DroidSans";
-						viewC64->config->SetString("uiDefaultFont", &(viewC64->defaultFontPath));
+						gDefaultFontPath = "DroidSans";
+						viewC64->config->SetString("uiDefaultFont", &(gDefaultFontPath));
 						viewC64->UpdateDefaultUIFontFromSettings();
 					}
 
-					if (ImGui::MenuItem("Karla Regular", "", !strcmp(viewC64->defaultFontPath, "KarlaRegular")))
+					if (ImGui::MenuItem("Karla Regular", "", !strcmp(gDefaultFontPath, "KarlaRegular")))
 					{
-						viewC64->defaultFontPath = "KarlaRegular";
-						viewC64->config->SetString("uiDefaultFont", &(viewC64->defaultFontPath));
+						gDefaultFontPath = "KarlaRegular";
+						viewC64->config->SetString("uiDefaultFont", &(gDefaultFontPath));
 						viewC64->UpdateDefaultUIFontFromSettings();
 					}
 
-					if (ImGui::MenuItem("Roboto Medium", "", !strcmp(viewC64->defaultFontPath, "RobotoMedium")))
+					if (ImGui::MenuItem("Roboto Medium", "", !strcmp(gDefaultFontPath, "RobotoMedium")))
 					{
-						viewC64->defaultFontPath = "RobotoMedium";
-						viewC64->config->SetString("uiDefaultFont", &(viewC64->defaultFontPath));
+						gDefaultFontPath = "RobotoMedium";
+						viewC64->config->SetString("uiDefaultFont", &(gDefaultFontPath));
 						viewC64->UpdateDefaultUIFontFromSettings();
 					}
 
@@ -1913,11 +2209,21 @@ void CMainMenuBar::RenderImGui()
 				
 				ImGui::Separator();
 				
-				bool viewportsEnable = VID_GetViewportsEnable();
+				bool viewportsEnable = VID_IsViewportsEnable();
 				if (ImGui::MenuItem("Enable floating windows", NULL, &viewportsEnable))
 				{
 					viewC64->SetViewportsEnable(viewportsEnable);
 				}
+				bool uiDockingWithShift = true;
+				viewC64->config->GetBool("uiDockingWithShift", &uiDockingWithShift, true);
+				if (ImGui::MenuItem("Docking with shift", NULL, &uiDockingWithShift))
+				{
+					viewC64->config->SetBool("uiDockingWithShift", &uiDockingWithShift);
+					ImGuiIO& io = ImGui::GetIO();
+					io.ConfigDockingWithShift = uiDockingWithShift;
+				}
+				
+				ImGui::Separator();
 
 				if (ImGui::InputFloat("Mouse wheel X scale", &guiMain->mouseScrollWheelScaleX, 0.1, 1))
 				{
@@ -1927,6 +2233,24 @@ void CMainMenuBar::RenderImGui()
 				if (ImGui::InputFloat("Mouse wheel Y scale", &guiMain->mouseScrollWheelScaleY, 0.1, 1))
 				{
 					viewC64->config->SetFloat("mouseScrollWheelScaleY", &guiMain->mouseScrollWheelScaleY);
+				}
+				ImGui::Separator();
+				
+				bool uiRaiseWindowOnPass = true;
+				viewC64->config->GetBool("uiRaiseWindowOnPass", &uiRaiseWindowOnPass, true);
+				if (ImGui::MenuItem("Raise on command line pass", NULL, &uiRaiseWindowOnPass))
+				{
+					viewC64->config->SetBool("uiRaiseWindowOnPass", &uiRaiseWindowOnPass);
+				}
+				
+				ImGui::Separator();
+				if (ImGui::MenuItem("Clear recently opened files lists"))
+				{
+					ClearRecentlyOpenedFilesLists();
+				}
+				if (ImGui::MenuItem("Clear Settings to factory default"))
+				{
+					ClearSettingsToFactoryDefault();
 				}
 				
 				ImGui::EndMenu();
@@ -1965,10 +2289,18 @@ void CMainMenuBar::RenderImGui()
 					C64DebuggerSetSetting("SnapshotsManagerLimit", &c64SettingsSnapshotsLimit);
 					C64DebuggerStoreSettings();
 				}
+				int level = (int)c64SettingsTimelineSaveZlibCompressionLevel;
+				if (ImGui::InputInt("Save timeline compression level", &level))
+				{
+					c64SettingsTimelineSaveZlibCompressionLevel = URANGE(1, level, 9);
+					C64DebuggerStoreSettings();
+				}
 				
 				ImGui::EndMenu();
 			}
 			
+			ImGui::Separator();
+
 			// TODO: fix me, create func to do menu %d
 			if (ImGui::BeginMenu("Joystick #1"))
 			{
@@ -2085,42 +2417,89 @@ void CMainMenuBar::RenderImGui()
 			
 			// TODO: copypasted code ^^^^^^
 			
-			if (ImGui::BeginMenu("Audio device"))
+			ImGui::Separator();
+			
+			if (ImGui::BeginMenu("Audio"))
 			{
-				if (audioDevices == NULL)
+				bool isVisibleAudioMixer = viewC64->viewAudioMixer->visible;
+				if (ImGui::MenuItem(viewC64->viewAudioMixer->name, "", &isVisibleAudioMixer))
 				{
-					audioDevices = gSoundEngine->EnumerateAvailableOutputDevices();
+					viewC64->viewAudioMixer->SetFocus();
+					guiMain->StoreLayoutInSettingsAtEndOfThisFrame();
 				}
-				
-				char *cSelectedDevice = NULL;
-				if (c64SettingsAudioOutDevice == NULL)
-				{
-					cSelectedDevice = STRALLOC("Default");
-				}
-				else
-				{
-					cSelectedDevice = c64SettingsAudioOutDevice->GetStdASCII();
-				}
-				
-				int i = 0;
-				for (std::list<const char *>::iterator it = audioDevices->begin(); it != audioDevices->end(); it++)
-				{
-					const char *audioDevice = *it;
-					bool selected = !strcmp(cSelectedDevice, audioDevice);
-					if (ImGui::MenuItem(audioDevice, "", &selected))
-					{
-						CSlrString *deviceName = new CSlrString(audioDevice);
-						C64DebuggerSetSetting("AudioOutDevice", deviceName);
-						C64DebuggerStoreSettings();
-						delete deviceName;
-					}
-					i++;
-				}
-				STRFREE(cSelectedDevice);
 
+				if (ImGui::BeginMenu("Audio Device"))
+				{
+					if (audioDevices == NULL)
+					{
+						audioDevices = gSoundEngine->EnumerateAvailableOutputDevices();
+					}
+					
+					char *cSelectedDevice = NULL;
+					if (c64SettingsAudioOutDevice == NULL)
+					{
+						cSelectedDevice = STRALLOC("Default");
+					}
+					else
+					{
+						cSelectedDevice = c64SettingsAudioOutDevice->GetStdASCII();
+					}
+					
+					int i = 0;
+					for (std::list<const char *>::iterator it = audioDevices->begin(); it != audioDevices->end(); it++)
+					{
+						const char *audioDevice = *it;
+						bool selected = !strcmp(cSelectedDevice, audioDevice);
+						if (ImGui::MenuItem(audioDevice, "", &selected))
+						{
+							CSlrString *deviceName = new CSlrString(audioDevice);
+							C64DebuggerSetSetting("AudioOutDevice", deviceName);
+							C64DebuggerStoreSettings();
+							delete deviceName;
+						}
+						i++;
+					}
+					STRFREE(cSelectedDevice);
+
+					ImGui::EndMenu();
+				}
+				
+				int bufferNumSamples = 512;
+				const char* bufferSizeSamplesStr[] = { "16", "32", "64", "128", "256", "512", "1024", "2048", "4096" };
+				const int   bufferSizeSamples[]    = {  16,   32,   64,   128,   256,   512,   1024,   2048,   4096  };
+				gApplicationDefaultConfig->GetInt("AudioBufferNumSamples", &bufferNumSamples, 512);
+				
+				int currentItem = 5;
+				for (int i = 0; i < 9; i++)
+				{
+					if (bufferSizeSamples[i] == bufferNumSamples)
+					{
+						currentItem = i;
+						break;
+					}
+				}
+
+				if (ImGui::BeginCombo("Buffer samples", bufferSizeSamplesStr[currentItem]))
+				{
+					for (int i = 0; i < 9; i++)
+					{
+						bool isSelected = (currentItem == i);
+						if (ImGui::Selectable(bufferSizeSamplesStr[i], isSelected))
+						{
+							bufferNumSamples = bufferSizeSamples[i];
+							gApplicationDefaultConfig->SetInt("AudioBufferNumSamples", &bufferNumSamples);
+							gSoundEngine->RestartAudioDevice();
+						}
+						
+						if (isSelected)
+							ImGui::SetItemDefaultFocus();
+					}
+					ImGui::EndCombo();
+				}
+				
 				ImGui::EndMenu();
 			}
-						
+			
 			ImGui::EndMenu();
 		}
 		else
@@ -2179,23 +2558,25 @@ void CMainMenuBar::RenderImGui()
 			ImGui::Separator();
 			if (ImGui::MenuItem("MTEngineSDL test", "", &(viewC64->viewUiDebug->visible)))
 			{
-				if (viewC64->viewUiDebug->visible == false)
-				{
-					guiMain->RemoveView(viewC64->viewUiDebug);
-				}
-				else
-				{
-					guiMain->AddView(viewC64->viewUiDebug);
-				}
+				guiMain->AddViewSkippingLayout(viewC64->viewUiDebug);
+				viewC64->viewUiDebug->SetFocus();
 			}
 
 			bool isVisible = viewC64->viewMessages->visible;
-			if (ImGui::MenuItem("Log messages", "", &isVisible))
+			if (ImGui::MenuItem("App Messages", "", &isVisible))
 			{
-				viewC64->viewMessages->SetVisible(isVisible);
+				viewC64->viewMessages->SetFocus();
 				guiMain->StoreLayoutInSettingsAtEndOfThisFrame();
 			}
 
+#if !defined(GLOBAL_DEBUG_OFF)
+			isVisible = guiViewDebugLog->visible;
+			if (ImGui::MenuItem("Debug Log", "", &isVisible))
+			{
+				guiViewDebugLog->SetFocus();
+				guiMain->StoreLayoutInSettingsAtEndOfThisFrame();
+			}
+#endif
 			// end Help menu
 			ImGui::EndMenu();
 		}
@@ -2203,7 +2584,7 @@ void CMainMenuBar::RenderImGui()
 		if (show_retro_debugger_about)
 		{
 			ImGui::Begin("Retro Debugger v" RETRODEBUGGER_VERSION_STRING " About", &show_retro_debugger_about);
-			ImGui::Text("Retro Debugger is a multiplatform debugger APIs host with simple ImGui implementation.");
+			ImGui::Text("Retro Debugger is a multiplatform debugger APIs host with ImGui implementation.");
 			ImGui::Text("(C) 2016-2022 Marcin 'slajerek' Skoczylas, see README for libraries copyright.");
 			ImGui::Separator();
 			ImGui::Text("");
@@ -2224,7 +2605,9 @@ void CMainMenuBar::RenderImGui()
 				STRFREE(cVersionString);
 				delete versionString;
 			}
-			
+
+//			ImGui::Separator();
+
 			ImGui::End();
 		}
 		if (show_app_metrics)       { ImGui::ShowMetricsWindow(&show_app_metrics); }
@@ -2296,17 +2679,20 @@ void CMainMenuBar::RenderImGui()
 					layoutData->layoutName = STRALLOC(layoutName);
 					layoutData->doNotUpdateViewsPositions = doNotUpdateViewsPosition;
 					
+					char *buf = SYS_GetCharBuf();
 					if (layoutData->keyShortcut)
 					{
-						char *buf = SYS_GetCharBuf();
 						sprintf(buf, "Workspace %s", layoutName);
 						layoutData->keyShortcut->SetName(buf);
-						SYS_ReleaseCharBuf(buf);
 					}
 					
 					guiMain->layoutManager->AddLayout(layoutData);
 					guiMain->layoutManager->currentLayout = layoutData;
 					guiMain->layoutManager->StoreLayouts();
+					
+					sprintf(buf, "Created new workspace: %s", layoutName);
+					guiMain->ShowNotification("Information", buf);
+					SYS_ReleaseCharBuf(buf);
 				}
 				else
 				{
@@ -2334,9 +2720,10 @@ void CMainMenuBar::RenderImGui()
 
 bool CMainMenuBar::KeyDown(u32 keyCode, bool isShift, bool isAlt, bool isControl, bool isSuper)
 {
+	LOGI("CMainMenuBar::KeyDown: keyCode=%d %s %s %s %s\n", keyCode, STRBOOL(isShift), STRBOOL(isAlt), STRBOOL(isControl), STRBOOL(isSuper));
 	if (keyCode == MTKEY_ESC && guiMain->IsViewFullScreen())
 	{
-		guiMain->SetViewFullScreen(NULL);
+		guiMain->SetViewFullScreen(SetFullScreenMode::ViewLeaveFullScreen, NULL);
 		return true;
 	}
 	
@@ -2369,6 +2756,10 @@ bool CMainMenuBar::KeyDown(u32 keyCode, bool isShift, bool isAlt, bool isControl
 		waitingForNewLayoutKeyShortcut = false;
 		return true;
 	}
+	
+	if (guiMain->CheckKeyboardShortcut(keyCode))
+		return true;
+	
 	return false;
 }
 
@@ -2391,6 +2782,18 @@ bool CMainMenuBar::ProcessKeyboardShortcut(u32 zone, u8 actionType, CSlrKeyboard
 	if (viewC64->debugInterfaceNes)
 	{
 		viewC64->viewNesScreen->KeyUpModifierKeys(shortcut->isShift, shortcut->isAlt, shortcut->isControl);
+	}
+	
+	if (shortcut == kbsCloseWindow)
+	{
+		guiMain->CloseCurrentImGuiWindow();
+		return true;
+	}
+	
+	if (shortcut == kbsSearchWindow)
+	{
+		OpenSearchWindow();
+		return true;
 	}
 	
 	if (shortcut == kbsOpenFile)
@@ -2427,6 +2830,12 @@ bool CMainMenuBar::ProcessKeyboardShortcut(u32 zone, u8 actionType, CSlrKeyboard
 		return true;
 	}
 
+	if (shortcut == kbsCartridgeFreezeButton)
+	{
+		viewC64->debugInterfaceC64->CartridgeFreezeButtonPressed();
+		return true;
+	}
+
 	if (shortcut == kbsIsWarpSpeed)
 	{
 		isWarpSpeed = !isWarpSpeed;
@@ -2451,6 +2860,86 @@ bool CMainMenuBar::ProcessKeyboardShortcut(u32 zone, u8 actionType, CSlrKeyboard
 		return true;
 	}
 
+	// snapshots
+	if (shortcut == kbsSaveSnapshot)
+	{
+		viewC64->viewC64Snapshots->OpenDialogSaveSnapshot();
+	}
+	else if (shortcut == kbsLoadSnapshot)
+	{
+		viewC64->viewC64Snapshots->OpenDialogLoadSnapshot();
+	}
+	else if (shortcut == kbsStoreSnapshot1)
+	{
+		viewC64->viewC64Snapshots->QuickStoreFullSnapshot(0);
+		return true;
+	}
+	else if (shortcut == kbsRestoreSnapshot1)
+	{
+		viewC64->viewC64Snapshots->QuickRestoreFullSnapshot(0);
+		return true;
+	}
+	else if (shortcut == kbsStoreSnapshot2)
+	{
+		viewC64->viewC64Snapshots->QuickStoreFullSnapshot(1);
+		return true;
+	}
+	else if (shortcut == kbsRestoreSnapshot2)
+	{
+		viewC64->viewC64Snapshots->QuickRestoreFullSnapshot(1);
+		return true;
+	}
+	else if (shortcut == kbsStoreSnapshot3)
+	{
+		viewC64->viewC64Snapshots->QuickStoreFullSnapshot(2);
+		return true;
+	}
+	else if (shortcut == kbsRestoreSnapshot3)
+	{
+		viewC64->viewC64Snapshots->QuickRestoreFullSnapshot(2);
+		return true;
+	}
+	else if (shortcut == kbsStoreSnapshot4)
+	{
+		viewC64->viewC64Snapshots->QuickStoreFullSnapshot(3);
+		return true;
+	}
+	else if (shortcut == kbsRestoreSnapshot4)
+	{
+		viewC64->viewC64Snapshots->QuickRestoreFullSnapshot(3);
+		return true;
+	}
+	else if (shortcut == kbsStoreSnapshot5)
+	{
+		viewC64->viewC64Snapshots->QuickStoreFullSnapshot(4);
+		return true;
+	}
+	else if (shortcut == kbsRestoreSnapshot5)
+	{
+		viewC64->viewC64Snapshots->QuickRestoreFullSnapshot(4);
+		return true;
+	}
+	else if (shortcut == kbsStoreSnapshot6)
+	{
+		viewC64->viewC64Snapshots->QuickStoreFullSnapshot(5);
+		return true;
+	}
+	else if (shortcut == kbsRestoreSnapshot6)
+	{
+		viewC64->viewC64Snapshots->QuickRestoreFullSnapshot(5);
+		return true;
+	}
+	else if (shortcut == kbsStoreSnapshot7)
+	{
+		viewC64->viewC64Snapshots->QuickStoreFullSnapshot(6);
+		return true;
+	}
+	else if (shortcut == kbsRestoreSnapshot7)
+	{
+		viewC64->viewC64Snapshots->QuickRestoreFullSnapshot(6);
+		return true;
+	}
+	
 	if (viewC64->debugInterfaceC64)
 	{
 		//
@@ -2462,9 +2951,15 @@ bool CMainMenuBar::ProcessKeyboardShortcut(u32 zone, u8 actionType, CSlrKeyboard
 		
 		if (shortcut == kbsBrowseD64)
 		{
-			// TODO: viewFileD64
+			// TODO: workaround for broken scroll to selected item, fix me in viewMenuItem
+			bool wasVisible = viewC64->viewDrive1541FileD64->IsVisible();
+			
 			viewC64->viewDrive1541FileD64->StartBrowsingD64(0);
-			viewC64->viewDrive1541FileD64->visible = true;
+			if (!viewC64->viewC64Screen->HasFocus())
+			{
+				guiMain->SetFocus(viewC64->viewDrive1541FileD64);
+			}
+			
 			return true;
 		}
 		
@@ -2507,6 +3002,43 @@ bool CMainMenuBar::ProcessKeyboardShortcut(u32 zone, u8 actionType, CSlrKeyboard
 			{
 				viewC64->viewC64MainMenu->LoadFile(filePath);
 			}
+			return true;
+		}
+		
+		// datasette
+		if (shortcut == kbsTapeAttach)
+		{
+			viewC64->viewC64MainMenu->OpenDialogInsertTape();
+			return true;
+		}
+		else if (shortcut == kbsTapeDetach)
+		{
+			viewC64->debugInterfaceC64->DetachTape();
+			viewC64->ShowMessageInfo("Tape detached");
+			return true;
+		}
+		else if (shortcut == kbsTapeStop)
+		{
+			viewC64->debugInterfaceC64->DatasetteStop();
+			viewC64->ShowMessageInfo("Datasette STOP");
+			return true;
+		}
+		else if (shortcut == kbsTapePlay)
+		{
+			viewC64->debugInterfaceC64->DatasettePlay();
+			viewC64->ShowMessageInfo("Datasette PLAY");
+			return true;
+		}
+		else if (shortcut == kbsTapeForward)
+		{
+			viewC64->debugInterfaceC64->DatasetteForward();
+			viewC64->ShowMessageInfo("Datasette FORWARD");
+			return true;
+		}
+		else if (shortcut == kbsTapeRewind)
+		{
+			viewC64->debugInterfaceC64->DatasetteRewind();
+			viewC64->ShowMessageInfo("Datasette REWIND");
 			return true;
 		}
 		
@@ -2630,18 +3162,18 @@ bool CMainMenuBar::ProcessKeyboardShortcut(u32 zone, u8 actionType, CSlrKeyboard
 		return true;
 	}
 
-	float scrubMultipleNumSeconds = 10;
 	if (shortcut == kbsScrubEmulationBackMultipleFrames)
 	{
-		LOGD(">>>>>>>>>................ REWIND -%fs", scrubMultipleNumSeconds);
+		int scrubNumberOfFrames = 10;
+		gApplicationDefaultConfig->GetInt("StepNumberOfFrames", &scrubNumberOfFrames, 10);
+		LOGD(">>>>>>>>>................ REWIND -%d frames", scrubNumberOfFrames);
 		guiMain->LockMutex();
 		for (std::vector<CDebugInterface *>::iterator it = viewC64->debugInterfaces.begin(); it != viewC64->debugInterfaces.end(); it++)
 		{
 			CDebugInterface *debugInterface = *it;
 			if (debugInterface->snapshotsManager->isPerformingSnapshotRestore == false)
 			{
-				float emulationFPS = debugInterface->GetEmulationFPS();
-				debugInterface->snapshotsManager->RestoreSnapshotByNumFramesOffset(-emulationFPS*scrubMultipleNumSeconds);
+				debugInterface->snapshotsManager->RestoreSnapshotByNumFramesOffset(-scrubNumberOfFrames);
 			}
 		}
 		guiMain->UnlockMutex();
@@ -2650,7 +3182,9 @@ bool CMainMenuBar::ProcessKeyboardShortcut(u32 zone, u8 actionType, CSlrKeyboard
 	
 	if (shortcut == kbsScrubEmulationForwardMultipleFrames)
 	{
-		LOGD(">>>>>>>>>................ FORWARD +%fs", scrubMultipleNumSeconds);
+		int scrubNumberOfFrames = 10;
+		gApplicationDefaultConfig->GetInt("StepNumberOfFrames", &scrubNumberOfFrames, 10);
+		LOGD(">>>>>>>>>................ FORWARD +%d frames", scrubNumberOfFrames);
 		guiMain->LockMutex();
 		for (std::vector<CDebugInterface *>::iterator it = viewC64->debugInterfaces.begin(); it != viewC64->debugInterfaces.end(); it++)
 		{
@@ -2658,7 +3192,7 @@ bool CMainMenuBar::ProcessKeyboardShortcut(u32 zone, u8 actionType, CSlrKeyboard
 			if (debugInterface->snapshotsManager->isPerformingSnapshotRestore == false)
 			{
 				float emulationFPS = debugInterface->GetEmulationFPS();
-				debugInterface->snapshotsManager->RestoreSnapshotByNumFramesOffset(+emulationFPS*scrubMultipleNumSeconds);
+				debugInterface->snapshotsManager->RestoreSnapshotByNumFramesOffset(+scrubNumberOfFrames);
 			}
 		}
 		guiMain->UnlockMutex();
@@ -2700,7 +3234,7 @@ bool CMainMenuBar::ProcessKeyboardShortcut(u32 zone, u8 actionType, CSlrKeyboard
 				char *buf2 = debugInterface->symbols->currentSegment->name->GetStdASCII();
 				sprintf(buf, "Segment: %s", buf2);
 				delete [] buf2;
-				viewC64->ShowMessage(buf);
+				viewC64->ShowMessageInfo(buf);
 				SYS_ReleaseCharBuf(buf);
 				 */
 			}
@@ -2736,11 +3270,32 @@ bool CMainMenuBar::ProcessKeyboardShortcut(u32 zone, u8 actionType, CSlrKeyboard
 		viewC64->StepBackInstruction();
 		return true;
 	}
-	else if (shortcut == kbsStepBackMultipleInstructions)
+	else if (shortcut == kbsForwardNumberOfCycles)
 	{
-		// TODO: kbsStepBackMultipleInstructions is not finished yet
-		// TODO: scale me by number of cycles per frame
-		int numCycles = 666;
+		int numCycles = 10;
+		gApplicationDefaultConfig->GetInt("StepNumberOfCycles", &numCycles, 10);
+		
+		guiMain->LockMutex();
+		for (std::vector<CDebugInterface *>::iterator it = viewC64->debugInterfaces.begin(); it != viewC64->debugInterfaces.end(); it++)
+		{
+			CDebugInterface *debugInterface = *it;
+			if (debugInterface->GetDebugMode() == DEBUGGER_MODE_RUNNING
+				&& !debugInterface->snapshotsManager->IsPerformingSnapshotRestore())
+			{
+				debugInterface->SetDebugMode(DEBUGGER_MODE_PAUSED);
+			}
+
+			u64 currentCycle = debugInterface->GetCurrentCpuInstructionCycleCounter();
+			debugInterface->snapshotsManager->RestoreSnapshotByCycle(currentCycle + numCycles);
+
+		}
+		guiMain->UnlockMutex();
+		return true;
+	}
+	else if (shortcut == kbsStepBackNumberOfCycles)
+	{
+		int numCycles = 10;
+		gApplicationDefaultConfig->GetInt("StepNumberOfCycles", &numCycles, 10);
 		
 		guiMain->LockMutex();
 		for (std::vector<CDebugInterface *>::iterator it = viewC64->debugInterfaces.begin(); it != viewC64->debugInterfaces.end(); it++)
@@ -2770,6 +3325,27 @@ bool CMainMenuBar::ProcessKeyboardShortcut(u32 zone, u8 actionType, CSlrKeyboard
 		viewC64->RunContinueEmulation();
 		return true;
 	}
+	else if (shortcut == kbsGoToFrame)
+	{
+		for (std::vector<CDebugInterface *>::iterator it = viewC64->debugInterfaces.begin(); it != viewC64->debugInterfaces.end(); it++)
+		{
+			CDebugInterface *debugInterface = *it;
+			CViewTimeline *viewTimeline = debugInterface->GetViewTimeline();
+			int enteredGoToFrameNum = viewTimeline->enteredGoToFrameNum;
+			debugInterface->snapshotsManager->RestoreSnapshotByFrame(enteredGoToFrameNum);
+		}
+	}
+	else if (shortcut == kbsGoToCycle)
+	{
+		for (std::vector<CDebugInterface *>::iterator it = viewC64->debugInterfaces.begin(); it != viewC64->debugInterfaces.end(); it++)
+		{
+			CDebugInterface *debugInterface = *it;
+			CViewTimeline *viewTimeline = debugInterface->GetViewTimeline();
+			int enteredGoToCycleNum = viewTimeline->enteredGoToCycleNum;
+			debugInterface->snapshotsManager->RestoreSnapshotByCycle(enteredGoToCycleNum);
+		}
+	}
+
 	else if (shortcut == kbsIsDataDirectlyFromRam)
 	{
 		viewC64->SwitchIsDataDirectlyFromRam();
@@ -2796,49 +3372,9 @@ bool CMainMenuBar::ProcessKeyboardShortcut(u32 zone, u8 actionType, CSlrKeyboard
 		viewC64->MoveFocusToPrevView();
 		return true;
 	}
-
-	
-	// TODO: VIC EDITOR, MOVE ME
-	
-//	if (shortcut == mainMenuBar->kbsSaveScreenImageAsPNG)
-//	{
-//		viewVicEditor->SaveScreenshotAsPNG();
-//		return true;
-//	}
-	
-	
-
-	else if (shortcut == kbsShowWatch)
+	else if (shortcut == kbsSaveScreenImageAsPNG)
 	{
-		LOGTODO("bksShowWatch!!!!!");
-		
-		/*
-		// TODO: make generic
-		if (viewC64->debugInterfaceC64)
-		{
-			if (viewC64->viewC64MemoryDataDump->visible == true)
-			{
-				SetWatchVisible(true);
-			}
-			else
-			{
-				SetWatchVisible(false);
-			}
-		}
-
-		if (viewC64->debugInterfaceAtari)
-		{
-			if (viewC64->viewAtariMemoryDataDump->visible == true)
-			{
-				SetWatchVisible(true);
-			}
-			else
-			{
-				SetWatchVisible(false);
-			}
-		}
-		 */
-		
+		viewC64->viewVicEditor->SaveScreenshotAsPNG();
 		return true;
 	}
 
@@ -3017,11 +3553,11 @@ void CMainMenuBar::ToggleAutoLoadFromInsertedDisk()
 {
 	if (c64SettingsAutoJmpFromInsertedDiskFirstPrg)
 	{
-		viewC64->ShowMessage("Auto load from disk is OFF");
+		viewC64->ShowMessageInfo("Auto load from disk is OFF");
 	}
 	else
 	{
-		viewC64->ShowMessage("Auto load from disk is ON");
+		viewC64->ShowMessageInfo("Auto load from disk is ON");
 	}
 }
 
@@ -3029,11 +3565,11 @@ void CMainMenuBar::ToggleAutoJmpAlwaysToLoadedPRGAddress()
 {
 	if (c64SettingsAutoJmpAlwaysToLoadedPRGAddress)
 	{
-		viewC64->ShowMessage("Auto JMP to loaded address is OFF");
+		viewC64->ShowMessageInfo("Auto JMP to loaded address is OFF");
 	}
 	else
 	{
-		viewC64->ShowMessage("Auto JMP to loaded address is ON");
+		viewC64->ShowMessageInfo("Auto JMP to loaded address is ON");
 	}
 }
 
@@ -3041,15 +3577,15 @@ void CMainMenuBar::ToggleAutoJmpDoReset()
 {
 	if (c64SettingsAutoJmpDoReset == MACHINE_RESET_HARD)
 	{
-		viewC64->ShowMessage("Do not Reset before PRG load");
+		viewC64->ShowMessageInfo("Do not Reset before PRG load");
 	}
 	else if (c64SettingsAutoJmpDoReset == MACHINE_RESET_NONE)
 	{
-		viewC64->ShowMessage("Soft Reset before PRG load");
+		viewC64->ShowMessageInfo("Soft Reset before PRG load");
 	}
 	else if (c64SettingsAutoJmpDoReset == MACHINE_RESET_SOFT)
 	{
-		viewC64->ShowMessage("Hard Reset before PRG load");
+		viewC64->ShowMessageInfo("Hard Reset before PRG load");
 	}
 }
 
@@ -3086,7 +3622,7 @@ void CMainMenuBar::SetEmulationMaximumSpeed(int maximumSpeed)
 	
 	char *buf = SYS_GetCharBuf();
 	sprintf(buf, "Emulation speed set to %d", maximumSpeed);
-	viewC64->ShowMessage(buf);
+	viewC64->ShowMessageInfo(buf);
 	SYS_ReleaseCharBuf(buf);
 }
 
@@ -3209,7 +3745,7 @@ void CMainMenuBar::DetachEverything(bool showMessage, bool storeSettings)
 	
 	if (showMessage)
 	{
-		viewC64->ShowMessage("Detached everything");
+		viewC64->ShowMessageInfo("Detached everything");
 	}
 }
 
@@ -3251,7 +3787,7 @@ void CMainMenuBar::DetachDiskImage(bool showMessage)
 	
 	if (showMessage)
 	{
-		viewC64->ShowMessage("Drive image detached");
+		viewC64->ShowMessageInfo("Drive image detached");
 	}
 }
 
@@ -3286,7 +3822,7 @@ void CMainMenuBar::DetachCartridge(bool showMessage)
 	
 	if (showMessage)
 	{
-		viewC64->ShowMessage("Cartridge detached");
+		viewC64->ShowMessageInfo("Cartridge detached");
 	}
 }
 
@@ -3309,7 +3845,7 @@ void CMainMenuBar::DetachTape(bool showMessage)
 	
 	if (showMessage)
 	{
-		viewC64->ShowMessage("Tape detached");
+		viewC64->ShowMessageInfo("Tape detached");
 	}
 }
 
@@ -3333,7 +3869,7 @@ void CMainMenuBar::DetachC64PRG(bool showMessage)
 	
 	if (showMessage)
 	{
-		viewC64->ShowMessage("C64 PRG detached");
+		viewC64->ShowMessageInfo("C64 PRG detached");
 	}
 }
 
@@ -3355,7 +3891,7 @@ void CMainMenuBar::DetachAtariXEX(bool showMessage)
 	
 	if (showMessage)
 	{
-		viewC64->ShowMessage("Atari XEX detached");
+		viewC64->ShowMessageInfo("Atari XEX detached");
 	}
 }
 // profiler
@@ -3378,13 +3914,13 @@ void CMainMenuBar::C64ProfilerStartStop(int runForNumCycles, bool pauseCpuWhenFi
 	if (viewC64->debugInterfaceC64->IsProfilerActive())
 	{
 		viewC64->debugInterfaceC64->ProfilerDeactivate();
-		viewC64->ShowMessage("C64 Profiler stopped");
+		viewC64->ShowMessageInfo("C64 Profiler stopped");
 		return;
 	}
 	
 	if (c64SettingsC64ProfilerFileOutputPath == NULL)
 	{
-		viewC64->ShowMessage("Please set the C64 profiler output file first");
+		viewC64->ShowMessageError("Please set the C64 profiler output file first");
 		return;
 	}
 	
@@ -3392,13 +3928,13 @@ void CMainMenuBar::C64ProfilerStartStop(int runForNumCycles, bool pauseCpuWhenFi
 	FILE *fp = fopen(path, "wb");
 	if (fp == NULL)
 	{
-		viewC64->ShowMessage("C64 Profiler can't write to selected file");
+		viewC64->ShowMessageError("C64 Profiler can't write to selected file");
 		return;
 	}
 	fclose(fp);
 	
 	viewC64->debugInterfaceC64->ProfilerActivate(path, runForNumCycles, pauseCpuWhenFinished);
-	viewC64->ShowMessage("C64 Profiler started");
+	viewC64->ShowMessageInfo("C64 Profiler started");
 }
 
 void CMainMenuBar::OpenDialogSetC64ProfilerFileOutputPath()
@@ -3457,6 +3993,52 @@ void CMainMenuBar::OpenDialogDumpDrive1541MemoryMarkers()
 	delete defaultFileName;
 }
 
+void CMainMenuBar::OpenDialogMapC64MemoryToFile()
+{
+	systemDialogOperation = SystemDialogOperationMapMemoryToFile;
+
+	CSlrString *defaultFileName = new CSlrString("c64memory");
+	
+	CSlrString *windowTitle = new CSlrString("Map C64 memory to file");
+	viewC64->ShowDialogSaveFile(this, &extensionsMemory, defaultFileName, c64SettingsDefaultMemoryDumpFolder, windowTitle);
+	delete windowTitle;
+	delete defaultFileName;
+}
+
+void CMainMenuBar::MapC64MemoryToFile(CSlrString *path)
+{
+	//path->DebugPrint("CMainMenuBar::MapC64MemoryToFile, path=");
+	
+	if (c64SettingsPathToC64MemoryMapFile != path)
+	{
+		if (c64SettingsPathToC64MemoryMapFile != NULL)
+			delete c64SettingsPathToC64MemoryMapFile;
+		c64SettingsPathToC64MemoryMapFile = new CSlrString(path);
+	}
+	
+	if (c64SettingsDefaultMemoryDumpFolder != NULL)
+		delete c64SettingsDefaultMemoryDumpFolder;
+	c64SettingsDefaultMemoryDumpFolder = path->GetFilePathWithoutFileNameComponentFromPath();
+	
+	C64DebuggerStoreSettings();
+	guiMain->ShowMessageBox("Information", "Please restart Retro Debugger to map memory", this);
+}
+
+void CMainMenuBar::UnmapC64MemoryFromFile()
+{
+	if (c64SettingsPathToC64MemoryMapFile != NULL)
+	{
+		systemDialogOperation = SystemDialogOperationMapMemoryToFile;
+
+		delete c64SettingsPathToC64MemoryMapFile;
+		c64SettingsPathToC64MemoryMapFile = NULL;
+		
+		C64DebuggerStoreSettings();
+		guiMain->ShowMessageBox("Information", "Please restart Retro Debugger to unmap memory from file", this);
+	}
+}
+
+//
 void CMainMenuBar::OpenDialogSaveTimeline(CDebugInterface *debugInterface)
 {
 	systemDialogOperation = SystemDialogOperationSaveTimeline;
@@ -3601,6 +4183,9 @@ void CMainMenuBar::SystemDialogFileSaveSelected(CSlrString *path)
 		case SystemDialogOperationExportBreakpoints:
 			selectedDebugInterface->symbols->SaveBreakpointsRetroDebuggerFormat(path);
 			break;
+		case SystemDialogOperationMapMemoryToFile:
+			MapC64MemoryToFile(path);
+			break;
 		case SystemDialogOperationSaveTimeline:
 			CViewTimeline::SaveTimeline(path, selectedDebugInterface);
 			break;
@@ -3652,6 +4237,43 @@ void CMainMenuBar::SystemDialogPickFolderCancelled()
 {
 }
 
+void CMainMenuBar::ClearRecentlyOpenedFilesLists()
+{
+	viewC64->recentlyOpenedFiles->Clear();
+	viewC64->viewC64Charset->recentlyOpened->Clear();
+	viewC64->viewC64StateSID->recentlyOpened->Clear();
+	viewC64->viewVicEditor->recentlyOpened->Clear();
+}
+
+void CMainMenuBar::ClearSettingsToFactoryDefault()
+{
+	CByteBuffer *byteBuffer = new CByteBuffer();
+	
+	CSlrString *fileName = new CSlrString(C64D_SETTINGS_FILE_PATH);
+	byteBuffer->storeToSettings(fileName);
+	
+	fileName->Set(C64D_KEYBOARD_SHORTCUTS_FILE_PATH);
+	byteBuffer->storeToSettings(fileName);
+	
+	fileName->Set(C64D_KEYMAP_FILE_PATH);
+	byteBuffer->storeToSettings(fileName);
+
+	fileName->Set(C64D_LAYOUTS_FILE_NAME);
+	byteBuffer->storeToSettings(fileName);
+	
+	fileName->Set(C64D_RECENTS_FILE_NAME);
+	byteBuffer->storeToSettings(fileName);
+	
+	fileName->Set(APPLICATION_DEFAULT_CONFIG_HJSON_FILE_PATH);
+	byteBuffer->storeToSettings(fileName);
+	
+	delete fileName;
+	delete byteBuffer;
+		
+	guiMain->ShowMessageBox("Information", "Settings cleared, please restart Retro Debugger", this);
+
+}
+
 void CMainMenuBar::MessageBoxCallback()
 {
 	if (systemDialogOperation == SystemDialogOperationAtari800RomsFolder)
@@ -3659,5 +4281,61 @@ void CMainMenuBar::MessageBoxCallback()
 		LOGD("CMainMenuBar::MessageBoxCallback: SystemDialogOperationAtari800RomsFolder selected, shutdown app");
 		SYS_RestartApplication();
 	}
+
+	if (systemDialogOperation == SystemDialogOperationMapMemoryToFile)
+	{
+		LOGD("CMainMenuBar::MessageBoxCallback: SystemDialogOperationMapMemoryToFile selected, shutdown app");
+		SYS_RestartApplication();
+	}
+
+	if (systemDialogOperation == SystemDialogOperationClearSettings)
+	{
+		LOGD("CMainMenuBar::MessageBoxCallback: SystemDialogOperationClearSettings selected, shutdown app");
+		SYS_RestartApplication();
+	}
+}
+
+//
+void CMainMenuBar::OpenSearchWindow()
+{
+	guiMain->LockMutex();
+	
+	viewSearchWindow->ClearItems();
+	for (std::list<CGuiView *>::iterator it = guiMain->views.begin(); it != guiMain->views.end(); it++)
+	{
+		CGuiView *view = *it;
+		if (view != viewSearchWindow)
+			viewSearchWindow->items.push_back(view->name);
+	}
+
+	if (!viewSearchWindow->IsVisible())
+	{
+		guiMain->AddViewSkippingLayout(viewSearchWindow);
+	}
+	
+	viewSearchWindow->SetVisible(true);
+	viewSearchWindow->ActivateView();
+	
+	guiMain->UnlockMutex();
+}
+
+void CMainMenuBar::GuiViewSearchCompleted(u32 index)
+{
+	LOGD("CMainMenuBar::GuiViewSearchCompleted, index=%d");
+	
+	guiMain->LockMutex();
+	int i = 0;
+	for (std::list<CGuiView *>::iterator it = guiMain->views.begin(); it != guiMain->views.end(); it++)
+	{
+		if (i == index)
+		{
+			CGuiView *view = *it;
+			view->SetFocus();
+			break;
+		}
+		i++;
+	}
+	viewSearchWindow->SetVisible(false);
+	guiMain->UnlockMutex();
 }
 

@@ -1,4 +1,4 @@
-#include "C64D_Version.h"
+#include "EmulatorsConfig.h"
 #include "CViewNesStateCPU.h"
 #include "SYS_Main.h"
 #include "CSlrFont.h"

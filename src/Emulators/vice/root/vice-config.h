@@ -924,9 +924,19 @@
 #endif
 
 #if defined(__linux__)
+
+#ifndef HAVE_STRTOK_R
 #define HAVE_STRTOK_R
+#endif
+
+#ifndef HAVE_VSNPRINTF
 #define HAVE_VSNPRINTF
+#endif
+
+#ifndef HAVE_SNPRINTF
 #define HAVE_SNPRINTF
+#endif
+
 #endif
 
 

@@ -1,4 +1,4 @@
-#include "C64D_Version.h"
+#include "EmulatorsConfig.h"
 
 #include "NstApiMachine.hpp"
 #include "NstMachine.hpp"

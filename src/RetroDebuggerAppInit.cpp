@@ -19,12 +19,13 @@ const char *MT_GetSettingsFolderName()
 	return "RetroDebugger";
 }
 
-void MT_GetDefaultWindowPositionAndSize(int *defaultWindowPosX, int *defaultWindowPosY, int *defaultWindowWidth, int *defaultWindowHeight)
+void MT_GetDefaultWindowPositionAndSize(int *defaultWindowPosX, int *defaultWindowPosY, int *defaultWindowWidth, int *defaultWindowHeight, bool *maximized)
 {
-	*defaultWindowPosX = 0; //SDL_WINDOWPOS_CENTERED;
-	*defaultWindowPosY = 55; //SDL_WINDOWPOS_CENTERED;
+	*defaultWindowPosX = 50; //SDL_WINDOWPOS_CENTERED;
+	*defaultWindowPosY = 125; //SDL_WINDOWPOS_CENTERED;
 	*defaultWindowWidth = 510;
-	*defaultWindowHeight = 24;
+	*defaultWindowHeight = 510*9/16;
+	*maximized = true;
 }
 
 void MT_PreInit()

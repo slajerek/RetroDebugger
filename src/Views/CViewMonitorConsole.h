@@ -26,6 +26,7 @@ public:
 	
 	virtual bool KeyDown(u32 keyCode, bool isShift, bool isAlt, bool isControl, bool isSuper);
 	virtual bool KeyDownRepeat(u32 keyCode, bool isShift, bool isAlt, bool isControl, bool isSuper);
+	virtual bool KeyTextInput(const char *text); // utf text input entered
 	virtual bool DoScrollWheel(float deltaX, float deltaY);
 
 	virtual void Render();
@@ -77,7 +78,7 @@ public:
 	bool DoDisassembleMemory(int addrStart, int addrEnd, bool withLabels, CSlrString *filePath);
 	void DisassembleHexLine(int addr, CByteBuffer *buffer);
 	int DisassembleLine(int addr, uint8 op, uint8 lo, uint8 hi, CByteBuffer *buffer);
-	void DisassemblePrint(CByteBuffer *byteBuffer, char *text);
+	void DisassemblyPrint(CByteBuffer *byteBuffer, char *text);
 	bool disassembleHexCodes;
 	bool disassembleShowLabels;
 	
@@ -94,7 +95,7 @@ public:
 	
 	std::list<CSlrString *> memoryExtensions;
 	std::list<CSlrString *> prgExtensions;
-	std::list<CSlrString *> disassembleExtensions;
+	std::list<CSlrString *> disassemblyExtensions;
 	
 	virtual void SystemDialogFileSaveSelected(CSlrString *path);
 	virtual void SystemDialogFileSaveCancelled();

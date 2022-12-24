@@ -49,6 +49,9 @@ CViewDisassembly::CViewDisassembly(const char *name, float posX, float posY, flo
 								   CDebugSymbols *symbols, CViewDataDump *viewDataDump, CViewMemoryMap *viewMemoryMap)
 : CGuiView(name, posX, posY, posZ, sizeX, sizeY)
 {
+	imGuiNoWindowPadding = true;
+	imGuiNoScrollbar = true;
+
 	this->prevFrameSizeY = 0;
 	this->addrPositions = NULL;
 	this->numberOfLinesBack = 0;
@@ -105,8 +108,8 @@ CViewDisassembly::CViewDisassembly(const char *name, float posX, float posY, flo
 	AddLayoutParameter(new CLayoutParameterBool("Show argument labels", &showArgumentLabels));
 	AddLayoutParameter(new CLayoutParameterInt("Label num characters", &labelNumCharacters));
 	
-	// for testing purposes: render execute-aware version of disassemble?
-	//c64SettingsRenderDisassembleExecuteAware = true;
+	// for testing purposes: render execute-aware version of disassembly?
+	//c64SettingsExecuteAwareDisassembly = true;
 }
 
 CViewDisassembly::~CViewDisassembly()
@@ -245,7 +248,7 @@ void CViewDisassembly::EditBoxTextFinished(CGuiEditBoxText *editBox, char *text)
 		
 		this->cursorAddress += opcodes[op].addressingLength;
 
-		UpdateDisassemble(this->cursorAddress, this->cursorAddress + 0x0100);
+		UpdateDisassembly(this->cursorAddress, this->cursorAddress + 0x0100);
 	
 		// start editing next mnemonic
 		StartEditingAtCursorPosition(EDIT_CURSOR_POS_MNEMONIC, true);
@@ -269,7 +272,7 @@ void CViewDisassembly::SetViewParameters(float posX, float posY, float posZ, flo
 {
 	CGuiView::SetPosition(posX, posY, posZ, sizeX, sizeY);
 	
-	this->fontDisassemble = font;
+	this->fontDisassembly = font;
 	this->fontSize = fontSize;
 	this->mnemonicsDisplayOffsetX = mnemonicsDisplayOffsetX;
 	this->mnemonicsOffsetX = fontSize*mnemonicsDisplayOffsetX;
@@ -366,12 +369,12 @@ void CViewDisassembly::UpdateLocalMemoryCopy(int startAddress, int endAddress)
 // bytes contain hex data that resembles a correct op.
 //
 // HOWEVER in some circumstances the backwards-started code does not 'hit' proper address
-//         to fix this we need a workaround when such situation is detected then simply a classic back-disassemble
+//         to fix this we need a workaround when such situation is detected then simply a classic back-disassembly
 //         is done (just analyse -2, -3 bytes per line and render lines backwards)
 //
-void CViewDisassembly::CalcDisassembleStart(int startAddress, int *newStart, int *renderLinesBefore)
+void CViewDisassembly::CalcDisassemblyStart(int startAddress, int *newStart, int *renderLinesBefore)
 {
-	//	LOGD("====================================== CalcDisassembleStart startAddress=%4.4x", startAddress);
+	//	LOGD("====================================== CalcDisassemblyStart startAddress=%4.4x", startAddress);
 	
 	uint8 opcode;
 	
@@ -530,7 +533,7 @@ void CViewDisassembly::RenderDisassembly(int startAddress, int endAddress)
 	UpdateLocalMemoryCopy(startAddress, endAddress);
 	
 	
-	CalcDisassembleStart(startAddress, &renderAddress, &renderLinesBefore);
+	CalcDisassemblyStart(startAddress, &renderAddress, &renderLinesBefore);
 	
 	
 	//LOGD("startAddress=%4.4x numberOfLinesBack=%d | renderAddress=%4.4x  renderLinesBefore=%d", startAddress, numberOfLinesBack, renderAddress, renderLinesBefore);
@@ -588,7 +591,7 @@ void CViewDisassembly::RenderDisassembly(int startAddress, int endAddress)
 			if (cell0->isExecuteCode)
 			{
 				opcode = memory[addr];
-				renderAddress += RenderDisassembleLine(px, py, renderAddress, op[0], op[1], op[2]);
+				renderAddress += RenderDisassemblyLine(px, py, renderAddress, op[0], op[1], op[2]);
 				py += fontSize;
 			}
 			else
@@ -601,7 +604,7 @@ void CViewDisassembly::RenderDisassembly(int startAddress, int endAddress)
 					opcode = memory[ (renderAddress) ];
 					if (opcodes[opcode].addressingLength == 1)
 					{
-						RenderDisassembleLine(px, py, renderAddress, op[0], op[1], op[2]);
+						RenderDisassemblyLine(px, py, renderAddress, op[0], op[1], op[2]);
 					}
 					else
 					{
@@ -623,7 +626,7 @@ void CViewDisassembly::RenderDisassembly(int startAddress, int endAddress)
 					}
 					
 					opcode = memory[ (renderAddress) ];
-					renderAddress += RenderDisassembleLine(px, py, renderAddress, op[0], op[1], op[2]);
+					renderAddress += RenderDisassemblyLine(px, py, renderAddress, op[0], op[1], op[2]);
 					py += fontSize;
 				}
 				else
@@ -636,7 +639,7 @@ void CViewDisassembly::RenderDisassembly(int startAddress, int endAddress)
 						opcode = memory[ (renderAddress) ];
 						if (opcodes[opcode].addressingLength == 2)
 						{
-							renderAddress += RenderDisassembleLine(px, py, renderAddress, op[0], op[1], op[2]);
+							renderAddress += RenderDisassemblyLine(px, py, renderAddress, op[0], op[1], op[2]);
 							py += fontSize;
 						}
 						else
@@ -662,7 +665,7 @@ void CViewDisassembly::RenderDisassembly(int startAddress, int endAddress)
 						}
 
 						opcode = memory[ (renderAddress) ];
-						renderAddress += RenderDisassembleLine(px, py, renderAddress, op[0], op[1], op[2]);
+						renderAddress += RenderDisassemblyLine(px, py, renderAddress, op[0], op[1], op[2]);
 						py += fontSize;
 					}
 					else
@@ -670,7 +673,7 @@ void CViewDisassembly::RenderDisassembly(int startAddress, int endAddress)
 						if (cell0->isExecuteArgument == false)
 						{
 							// execute not found, just render line
-							renderAddress += RenderDisassembleLine(px, py, renderAddress, op[0], op[1], op[2]);
+							renderAddress += RenderDisassemblyLine(px, py, renderAddress, op[0], op[1], op[2]);
 							py += fontSize;
 						}
 						else
@@ -696,7 +699,7 @@ void CViewDisassembly::RenderDisassembly(int startAddress, int endAddress)
 
 	if (skipLines > 0)
 	{
-		//LOGD("disassembleUP: %04x y=%5.2f", startRenderAddr, startRenderY);
+		//LOGD("disassemble UP: %04x y=%5.2f", startRenderAddr, startRenderY);
 		
 		py = startRenderY;
 		renderAddress = startRenderAddr;
@@ -726,7 +729,7 @@ void CViewDisassembly::RenderDisassembly(int startAddress, int endAddress)
 					op = memory[addr];
 					if (opcodes[op].addressingLength == 1)
 					{
-						RenderDisassembleLine(px, py, addr, op, 0x00, 0x00);
+						RenderDisassemblyLine(px, py, addr, op, 0x00, 0x00);
 						renderAddress = addr;
 						continue;
 					}
@@ -744,7 +747,7 @@ void CViewDisassembly::RenderDisassembly(int startAddress, int endAddress)
 					if (opcodes[op].addressingLength == 2)
 					{
 						lo = memory[renderAddress-1];
-						RenderDisassembleLine(px, py, addr, op, lo, 0x00);
+						RenderDisassemblyLine(px, py, addr, op, lo, 0x00);
 						renderAddress = addr;
 						continue;
 					}
@@ -768,7 +771,7 @@ void CViewDisassembly::RenderDisassembly(int startAddress, int endAddress)
 					{
 						lo = memory[renderAddress-2];
 						hi = memory[renderAddress-1];
-						RenderDisassembleLine(px, py, addr, op, lo, hi);
+						RenderDisassemblyLine(px, py, addr, op, lo, hi);
 						renderAddress = addr;
 						continue;
 					}
@@ -780,7 +783,7 @@ void CViewDisassembly::RenderDisassembly(int startAddress, int endAddress)
 						skipLines--;
 						
 						lo = memory[renderAddress-2];
-						RenderDisassembleLine(px, py, addr, op, lo, 0x00);
+						RenderDisassemblyLine(px, py, addr, op, lo, 0x00);
 						
 						renderAddress = addr;
 						continue;
@@ -814,7 +817,7 @@ void CViewDisassembly::RenderDisassembly(int startAddress, int endAddress)
 					{
 						lo = memory[renderAddress-2];
 						hi = memory[renderAddress-1];
-						RenderDisassembleLine(px, py, renderAddress-3, op, lo, hi);
+						RenderDisassemblyLine(px, py, renderAddress-3, op, lo, hi);
 						
 						renderAddress -= 3;
 						continue;
@@ -837,7 +840,7 @@ void CViewDisassembly::RenderDisassembly(int startAddress, int endAddress)
 					if (length == 2)
 					{
 						lo = memory[renderAddress-1];
-						RenderDisassembleLine(px, py, renderAddress-2, op, lo, lo);
+						RenderDisassemblyLine(px, py, renderAddress-2, op, lo, lo);
 						
 						renderAddress -= 2;
 						continue;
@@ -857,7 +860,7 @@ void CViewDisassembly::RenderDisassembly(int startAddress, int endAddress)
 					
 					if (length == 1)
 					{
-						RenderDisassembleLine(px, py, renderAddress-1, op, 0x00, 0x00);
+						RenderDisassemblyLine(px, py, renderAddress-1, op, 0x00, 0x00);
 						
 						renderAddress -= 1;
 						continue;
@@ -892,7 +895,7 @@ const float breakpointActiveColorR = 0.78f; const float breakpointActiveColorG =
 const float breakpointNotActiveColorR = 0.28f; const float breakpointNotActiveColorG = 0.07f; const float breakpointNotActiveColorB = 0.07f; const float breakpointNotActiveColorA = 0.7f;
 
 // Disassemble one instruction, return length
-int CViewDisassembly::RenderDisassembleLine(float px, float py, int addr, uint8 op, uint8 lo, uint8 hi)
+int CViewDisassembly::RenderDisassemblyLine(float px, float py, int addr, uint8 op, uint8 lo, uint8 hi)
 {
 //	LOGD("adr=%4.4x op=%2.2x", adr, op);
 	
@@ -970,7 +973,7 @@ int CViewDisassembly::RenderDisassembleLine(float px, float py, int addr, uint8 
 			int l = strlen(labelText)+1;
 			float labelX = pxe - l*fontSize;
 
-			fontDisassemble->BlitTextColor(labelText, labelX, py, -1, fontSize, cr, cg, cb, ca);
+			fontDisassembly->BlitTextColor(labelText, labelX, py, -1, fontSize, cr, cg, cb, ca);
 		}
 	}
 	
@@ -978,18 +981,18 @@ int CViewDisassembly::RenderDisassembleLine(float px, float py, int addr, uint8 
 	if (editCursorPos != EDIT_CURSOR_POS_ADDR)
 	{
 		sprintfHexCode16(buf, addr);
-		fontDisassemble->BlitTextColor(buf, px, py, -1, fontSize, cr, cg, cb, ca);
+		fontDisassembly->BlitTextColor(buf, px, py, -1, fontSize, cr, cg, cb, ca);
 	}
 	else
 	{
 		if (addr == this->cursorAddress)
 		{
-			fontDisassemble->BlitTextColor(editHex->textWithCursor, px, py, posZ, fontSize, cr, cg, cb, ca);
+			fontDisassembly->BlitTextColor(editHex->textWithCursor, px, py, posZ, fontSize, cr, cg, cb, ca);
 		}
 		else
 		{
 			sprintfHexCode16(buf, addr);
-			fontDisassemble->BlitTextColor(buf, px, py, -1, fontSize, cr, cg, cb, ca);
+			fontDisassembly->BlitTextColor(buf, px, py, -1, fontSize, cr, cg, cb, ca);
 		}
 	}
 	
@@ -1016,12 +1019,12 @@ int CViewDisassembly::RenderDisassembleLine(float px, float py, int addr, uint8 
 			{
 				if (cp == i)
 				{
-					fontDisassemble->BlitTextColor(editHex->textWithCursor, rx, py, posZ, fontSize, cr, cg, cb, ca);
+					fontDisassembly->BlitTextColor(editHex->textWithCursor, rx, py, posZ, fontSize, cr, cg, cb, ca);
 				}
 				else
 				{
 					sprintfHexCode8(buf1, o[i]);
-					fontDisassemble->BlitTextColor(buf1, rx, py, posZ, fontSize, cr, cg, cb, ca);
+					fontDisassembly->BlitTextColor(buf1, rx, py, posZ, fontSize, cr, cg, cb, ca);
 				}
 				
 				rx += fontSize3;
@@ -1057,7 +1060,7 @@ int CViewDisassembly::RenderDisassembleLine(float px, float py, int addr, uint8 
 			
 			strcpy(bufHexCodes, buf1);
 			strcat(bufHexCodes, buf2);
-			fontDisassemble->BlitTextColor(bufHexCodes, px, py, posZ, fontSize, cr, cg, cb, ca);
+			fontDisassembly->BlitTextColor(bufHexCodes, px, py, posZ, fontSize, cr, cg, cb, ca);
 		}
 
 		px += fontSize9;
@@ -1065,7 +1068,7 @@ int CViewDisassembly::RenderDisassembleLine(float px, float py, int addr, uint8 
 		// illegal opcode?
 		if (opcodes[op].isIllegal == OP_ILLEGAL)
 		{
-			fontDisassemble->BlitTextColor("*", px, py, posZ, fontSize, cr, cg, cb, ca);
+			fontDisassembly->BlitTextColor("*", px, py, posZ, fontSize, cr, cg, cb, ca);
 		}
 		
 		px += fontSize;
@@ -1081,7 +1084,7 @@ int CViewDisassembly::RenderDisassembleLine(float px, float py, int addr, uint8 
 		if (opcodes[op].addressingMode != ADDR_REL)
 		{
 			sprintfHexCode4(buf3, opcodes[op].numCycles);
-			fontDisassemble->BlitTextColor(buf3, px2, py, -1, fontSize, cr*cfNot, cg*cfNot, cb*cfActive, ca);
+			fontDisassembly->BlitTextColor(buf3, px2, py, -1, fontSize, cr*cfNot, cg*cfNot, cb*cfActive, ca);
 		}
 		else
 		{
@@ -1091,12 +1094,12 @@ int CViewDisassembly::RenderDisassembleLine(float px, float py, int addr, uint8 
 			if ((addr & 0xFF00) == (baddr & 0xFF00))
 			{
 				sprintfHexCode4(buf3, opcodes[op].numCycles);
-				fontDisassemble->BlitTextColor(buf3, px2, py, -1, fontSize, cr*cfNot, cg*cfNot, cb*cfActive, ca);
+				fontDisassembly->BlitTextColor(buf3, px2, py, -1, fontSize, cr*cfNot, cg*cfNot, cb*cfActive, ca);
 			}
 			else
 			{
 				sprintfHexCode4(buf3, opcodes[op].numCycles + 1);
-				fontDisassemble->BlitTextColor(buf3, px2, py, -1, fontSize, cr*cfActive, cg*cfNot, cb*cfNot, ca);
+				fontDisassembly->BlitTextColor(buf3, px2, py, -1, fontSize, cr*cfActive, cg*cfNot, cb*cfNot, ca);
 			}
 		}
 		
@@ -1109,7 +1112,7 @@ int CViewDisassembly::RenderDisassembleLine(float px, float py, int addr, uint8 
 	
 	if (editCursorPos != EDIT_CURSOR_POS_MNEMONIC)
 	{
-		fontDisassemble->BlitTextColor(buf, px, py, -1, fontSize, cr, cg, cb, ca);
+		fontDisassembly->BlitTextColor(buf, px, py, -1, fontSize, cr, cg, cb, ca);
 	}
 	else
 	{
@@ -1117,16 +1120,16 @@ int CViewDisassembly::RenderDisassembleLine(float px, float py, int addr, uint8 
 		{
 			if (editBoxText->textBuffer[0] == 0x00)
 			{
-				fontDisassemble->BlitTextColor(strCodeLine, px, py, -1, fontSize,
+				fontDisassembly->BlitTextColor(strCodeLine, px, py, -1, fontSize,
 											   colorExecuteR,
 											   colorExecuteG,
 											   colorExecuteB,
 											   colorExecuteA);
-				fontDisassemble->BlitTextColor(buf, px, py, -1, fontSize, cr*0.5f, cg*0.5f, cb*0.5f, ca*0.5f);
+				fontDisassembly->BlitTextColor(buf, px, py, -1, fontSize, cr*0.5f, cg*0.5f, cb*0.5f, ca*0.5f);
 			}
 			else
 			{
-				fontDisassemble->BlitTextColor(strCodeLine, px, py, -1, fontSize,
+				fontDisassembly->BlitTextColor(strCodeLine, px, py, -1, fontSize,
 											   colorExecuteR,
 											   colorExecuteG,
 											   colorExecuteB,
@@ -1136,7 +1139,7 @@ int CViewDisassembly::RenderDisassembleLine(float px, float py, int addr, uint8 
 		}
 		else
 		{
-			fontDisassemble->BlitTextColor(buf, px, py, -1, fontSize, cr, cg, cb, ca);
+			fontDisassembly->BlitTextColor(buf, px, py, -1, fontSize, cr, cg, cb, ca);
 		}
 	}
 
@@ -1148,7 +1151,7 @@ int CViewDisassembly::RenderDisassembleLine(float px, float py, int addr, uint8 
 
 	int numBytesPerOp = opcodes[op].addressingLength;
 
-	if (c64SettingsRenderDisassembleExecuteAware)
+	if (c64SettingsExecuteAwareDisassembly)
 	{
 		int newAddress = addr + numBytesPerOp;
 		if (newAddress == renderStartAddress)
@@ -1585,7 +1588,7 @@ void CViewDisassembly::RenderHexLine(float px, float py, int addr)
 	uint8 op = memory[ (addr) % memoryLength];
 	if (opcodes[op].addressingLength == 1)
 	{
-		RenderDisassembleLine(px, py, addr, op, 0x00, 0x00);
+		RenderDisassemblyLine(px, py, addr, op, 0x00, 0x00);
 		return;
 	}
 
@@ -1656,7 +1659,7 @@ void CViewDisassembly::RenderHexLine(float px, float py, int addr)
 			int l = strlen(label->GetLabelText())+1;
 			float labelX = pxe - l*fontSize;
 
-			fontDisassemble->BlitTextColor(label->GetLabelText(), labelX, py, -1, fontSize, cr, cg, cb, ca);
+			fontDisassembly->BlitTextColor(label->GetLabelText(), labelX, py, -1, fontSize, cr, cg, cb, ca);
 		}
 	}
 
@@ -1664,18 +1667,18 @@ void CViewDisassembly::RenderHexLine(float px, float py, int addr)
 	if (editCursorPos != EDIT_CURSOR_POS_ADDR)
 	{
 		sprintfHexCode16(buf, addr);
-		fontDisassemble->BlitTextColor(buf, px, py, -1, fontSize, cr, cg, cb, ca);
+		fontDisassembly->BlitTextColor(buf, px, py, -1, fontSize, cr, cg, cb, ca);
 	}
 	else
 	{
 		if (addr == this->cursorAddress)
 		{
-			fontDisassemble->BlitTextColor(editHex->textWithCursor, px, py, posZ, fontSize, cr, cg, cb, ca);
+			fontDisassembly->BlitTextColor(editHex->textWithCursor, px, py, posZ, fontSize, cr, cg, cb, ca);
 		}
 		else
 		{
 			sprintfHexCode16(buf, addr);
-			fontDisassemble->BlitTextColor(buf, px, py, -1, fontSize, cr, cg, cb, ca);
+			fontDisassembly->BlitTextColor(buf, px, py, -1, fontSize, cr, cg, cb, ca);
 		}
 	}
 	
@@ -1686,12 +1689,12 @@ void CViewDisassembly::RenderHexLine(float px, float py, int addr)
 		// check if editing
 		if (addr == this->cursorAddress && editCursorPos == EDIT_CURSOR_POS_HEX1)
 		{
-			fontDisassemble->BlitTextColor(editHex->textWithCursor, px, py, posZ, fontSize, cr, cg, cb, ca);
+			fontDisassembly->BlitTextColor(editHex->textWithCursor, px, py, posZ, fontSize, cr, cg, cb, ca);
 		}
 		else
 		{
 			sprintfHexCode8(buf1, op);
-			fontDisassemble->BlitTextColor(buf1, px, py, posZ, fontSize, cr, cg, cb, ca);
+			fontDisassembly->BlitTextColor(buf1, px, py, posZ, fontSize, cr, cg, cb, ca);
 		}
 		
 		px += fontSize9;
@@ -1704,12 +1707,12 @@ void CViewDisassembly::RenderHexLine(float px, float py, int addr)
 	{
 		if (showHexCodes)
 		{
-			fontDisassemble->BlitTextColor("???", px, py, -1, fontSize, cr, cg, cb, ca);
+			fontDisassembly->BlitTextColor("???", px, py, -1, fontSize, cr, cg, cb, ca);
 		}
 		else
 		{
 			sprintfHexCode8(buf1, op);			
-			fontDisassemble->BlitTextColor(buf1, px, py, -1, fontSize, cr, cg, cb, ca);
+			fontDisassembly->BlitTextColor(buf1, px, py, -1, fontSize, cr, cg, cb, ca);
 		}
 	}
 	else
@@ -1718,7 +1721,7 @@ void CViewDisassembly::RenderHexLine(float px, float py, int addr)
 		{
 			if (editBoxText->textBuffer[0] == 0x00)
 			{
-				fontDisassemble->BlitTextColor(strCodeLine, px, py, -1, fontSize,
+				fontDisassembly->BlitTextColor(strCodeLine, px, py, -1, fontSize,
 											   colorExecuteR,
 											   colorExecuteG,
 											   colorExecuteB,
@@ -1726,17 +1729,17 @@ void CViewDisassembly::RenderHexLine(float px, float py, int addr)
 				
 				if (showHexCodes)
 				{
-					fontDisassemble->BlitTextColor("???", px, py, -1, fontSize, cr, cg, cb, ca);
+					fontDisassembly->BlitTextColor("???", px, py, -1, fontSize, cr, cg, cb, ca);
 				}
 				else
 				{
 					sprintfHexCode8(buf1, op);
-					fontDisassemble->BlitTextColor(buf1, px, py, -1, fontSize, cr, cg, cb, ca);
+					fontDisassembly->BlitTextColor(buf1, px, py, -1, fontSize, cr, cg, cb, ca);
 				}
 			}
 			else
 			{
-				fontDisassemble->BlitTextColor(strCodeLine, px, py, -1, fontSize,
+				fontDisassembly->BlitTextColor(strCodeLine, px, py, -1, fontSize,
 											   colorExecuteR,
 											   colorExecuteG,
 											   colorExecuteB,
@@ -1747,12 +1750,12 @@ void CViewDisassembly::RenderHexLine(float px, float py, int addr)
 		{
 			if (showHexCodes)
 			{
-				fontDisassemble->BlitTextColor("???", px, py, -1, fontSize, cr, cg, cb, ca);
+				fontDisassembly->BlitTextColor("???", px, py, -1, fontSize, cr, cg, cb, ca);
 			}
 			else
 			{
 				sprintfHexCode8(buf1, op);
-				fontDisassemble->BlitTextColor(buf1, px, py, -1, fontSize, cr, cg, cb, ca);
+				fontDisassembly->BlitTextColor(buf1, px, py, -1, fontSize, cr, cg, cb, ca);
 			}
 		}
 	}
@@ -1763,7 +1766,7 @@ void CViewDisassembly::RenderHexLine(float px, float py, int addr)
 							markerSizeX, fontSize, cr, cg, cb, 0.3f);
 	}
 	
-	if (c64SettingsRenderDisassembleExecuteAware)
+	if (c64SettingsExecuteAwareDisassembly)
 	{
 		int newAddress = addr + 1;
 		if (newAddress == renderStartAddress)
@@ -1782,13 +1785,13 @@ void CViewDisassembly::RenderHexLine(float px, float py, int addr)
 
 ///////////
 
-int CViewDisassembly::UpdateDisassembleOpcodeLine(float py, int addr, uint8 op, uint8 lo, uint8 hi)
+int CViewDisassembly::UpdateDisassemblyOpcodeLine(float py, int addr, uint8 op, uint8 lo, uint8 hi)
 {
 	int numBytesPerOp = opcodes[op].addressingLength;
 
 	if (numAddrPositions < 2)
 	{
-		LOGError("CViewDisassembly::UpdateDisassembleOpcodeLine: numAddrPositions < 1");
+		LOGError("CViewDisassembly::UpdateDisassemblyOpcodeLine: numAddrPositions < 1");
 		return numBytesPerOp;
 	}
 	if (addrPositionCounter >= numAddrPositions)
@@ -1814,11 +1817,11 @@ int CViewDisassembly::UpdateDisassembleOpcodeLine(float py, int addr, uint8 op, 
 	return numBytesPerOp;
 }
 
-void CViewDisassembly::UpdateDisassembleHexLine(float py, int addr)
+void CViewDisassembly::UpdateDisassemblyHexLine(float py, int addr)
 {
 	if (numAddrPositions < 2)
 	{
-		LOGError("CViewDisassembly::UpdateDisassembleOpcodeLine: numAddrPositions < 1");
+		LOGError("CViewDisassembly::UpdateDisassemblyHexLine: numAddrPositions < 1");
 		return;
 	}
 	if (addrPositionCounter >= numAddrPositions)
@@ -1832,7 +1835,7 @@ void CViewDisassembly::UpdateDisassembleHexLine(float py, int addr)
 	uint8 op = memory[ (addr) % memoryLength];
 	if (opcodes[op].addressingLength == 1)
 	{
-		UpdateDisassembleOpcodeLine(py, addr, op, 0x00, 0x00);
+		UpdateDisassemblyOpcodeLine(py, addr, op, 0x00, 0x00);
 		return;
 	}
 	
@@ -1848,11 +1851,11 @@ void CViewDisassembly::UpdateDisassembleHexLine(float py, int addr)
 	}
 }
 
-void CViewDisassembly::UpdateDisassemble(int startAddress, int endAddress)
+void CViewDisassembly::UpdateDisassembly(int startAddress, int endAddress)
 {
-	if (c64SettingsRenderDisassembleExecuteAware == false)
+	if (c64SettingsExecuteAwareDisassembly == false)
 	{
-		UpdateDisassembleNotExecuteAware(startAddress, endAddress);
+		UpdateDisassemblyNotExecuteAware(startAddress, endAddress);
 		return;
 	}
 	
@@ -1879,7 +1882,7 @@ void CViewDisassembly::UpdateDisassemble(int startAddress, int endAddress)
 	UpdateLocalMemoryCopy(startAddress, endAddress);
 	
 	
-	CalcDisassembleStart(startAddress, &renderAddress, &renderLinesBefore);
+	CalcDisassemblyStart(startAddress, &renderAddress, &renderLinesBefore);
 	
 	renderSkipLines = numberOfLinesBack - renderLinesBefore;
 	int skipLines = renderSkipLines;
@@ -1910,7 +1913,7 @@ void CViewDisassembly::UpdateDisassemble(int startAddress, int endAddress)
 		
 		if (renderAddress == memoryLength-1)
 		{
-			UpdateDisassembleHexLine(py, renderAddress);
+			UpdateDisassemblyHexLine(py, renderAddress);
 			break;
 		}
 		
@@ -1934,7 +1937,7 @@ void CViewDisassembly::UpdateDisassemble(int startAddress, int endAddress)
 			if (cell0->isExecuteCode)
 			{
 				opcode = memory[addr];	//% memoryLength
-				renderAddress += UpdateDisassembleOpcodeLine(py, renderAddress, op[0], op[1], op[2]);
+				renderAddress += UpdateDisassemblyOpcodeLine(py, renderAddress, op[0], op[1], op[2]);
 				py += fontSize;
 			}
 			else
@@ -1947,11 +1950,11 @@ void CViewDisassembly::UpdateDisassemble(int startAddress, int endAddress)
 					opcode = memory[ (renderAddress) ]; //% memoryLength
 					if (opcodes[opcode].addressingLength == 1)
 					{
-						UpdateDisassembleOpcodeLine(py, renderAddress, op[0], op[1], op[2]);
+						UpdateDisassemblyOpcodeLine(py, renderAddress, op[0], op[1], op[2]);
 					}
 					else
 					{
-						UpdateDisassembleHexLine(py, renderAddress);
+						UpdateDisassemblyHexLine(py, renderAddress);
 					}
 					
 					renderAddress += 1;
@@ -1969,7 +1972,7 @@ void CViewDisassembly::UpdateDisassemble(int startAddress, int endAddress)
 					}
 					
 					opcode = memory[ (renderAddress) ];	//% memoryLength
-					renderAddress += UpdateDisassembleOpcodeLine(py, renderAddress, op[0], op[1], op[2]);
+					renderAddress += UpdateDisassemblyOpcodeLine(py, renderAddress, op[0], op[1], op[2]);
 					py += fontSize;
 				}
 				else
@@ -1982,16 +1985,16 @@ void CViewDisassembly::UpdateDisassemble(int startAddress, int endAddress)
 						opcode = memory[ (renderAddress) ];	//% memoryLength
 						if (opcodes[opcode].addressingLength == 2)
 						{
-							renderAddress += UpdateDisassembleOpcodeLine(py, renderAddress, op[0], op[1], op[2]);
+							renderAddress += UpdateDisassemblyOpcodeLine(py, renderAddress, op[0], op[1], op[2]);
 							py += fontSize;
 						}
 						else
 						{
-							UpdateDisassembleHexLine(py, renderAddress);
+							UpdateDisassemblyHexLine(py, renderAddress);
 							renderAddress += 1;
 							py += fontSize;
 							
-							UpdateDisassembleHexLine(py, renderAddress);
+							UpdateDisassemblyHexLine(py, renderAddress);
 							renderAddress += 1;
 							py += fontSize;
 						}
@@ -2008,7 +2011,7 @@ void CViewDisassembly::UpdateDisassemble(int startAddress, int endAddress)
 						}
 						
 						opcode = memory[ (renderAddress) ];	//% memoryLength
-						renderAddress += UpdateDisassembleOpcodeLine(py, renderAddress, op[0], op[1], op[2]);
+						renderAddress += UpdateDisassemblyOpcodeLine(py, renderAddress, op[0], op[1], op[2]);
 						py += fontSize;
 					}
 					else
@@ -2016,13 +2019,13 @@ void CViewDisassembly::UpdateDisassemble(int startAddress, int endAddress)
 						if (cell0->isExecuteArgument == false)
 						{
 							// execute not found, just render line
-							renderAddress += UpdateDisassembleOpcodeLine(py, renderAddress, op[0], op[1], op[2]);
+							renderAddress += UpdateDisassemblyOpcodeLine(py, renderAddress, op[0], op[1], op[2]);
 							py += fontSize;
 						}
 						else
 						{
 							// it is argument
-							UpdateDisassembleHexLine(py, renderAddress);
+							UpdateDisassemblyHexLine(py, renderAddress);
 							renderAddress++;
 							py += fontSize;
 						}
@@ -2042,7 +2045,7 @@ void CViewDisassembly::UpdateDisassemble(int startAddress, int endAddress)
 	
 	if (skipLines > 0)
 	{
-		//LOGD("disassembleUP: %04x y=%5.2f", startRenderAddr, startRenderY);
+		//LOGD("disassemble UP: %04x y=%5.2f", startRenderAddr, startRenderY);
 		
 		py = startRenderY;
 		renderAddress = startRenderAddr;
@@ -2072,12 +2075,12 @@ void CViewDisassembly::UpdateDisassemble(int startAddress, int endAddress)
 					op = memory[addr];
 					if (opcodes[op].addressingLength == 1)
 					{
-						UpdateDisassembleOpcodeLine(py, addr, op, 0x00, 0x00);
+						UpdateDisassemblyOpcodeLine(py, addr, op, 0x00, 0x00);
 						renderAddress = addr;
 						continue;
 					}
 					
-					UpdateDisassembleHexLine(py, addr);
+					UpdateDisassemblyHexLine(py, addr);
 					renderAddress = addr;
 					continue;
 				}
@@ -2090,17 +2093,17 @@ void CViewDisassembly::UpdateDisassemble(int startAddress, int endAddress)
 					if (opcodes[op].addressingLength == 2)
 					{
 						lo = memory[renderAddress-1];
-						UpdateDisassembleOpcodeLine(py, addr, op, lo, 0x00);
+						UpdateDisassemblyOpcodeLine(py, addr, op, lo, 0x00);
 						renderAddress = addr;
 						continue;
 					}
 					
 					renderAddress--;
-					UpdateDisassembleHexLine(py, renderAddress);
+					UpdateDisassemblyHexLine(py, renderAddress);
 					py -= fontSize;
 					skipLines--;
 					renderAddress--;
-					UpdateDisassembleHexLine(py, renderAddress);
+					UpdateDisassemblyHexLine(py, renderAddress);
 					continue;
 				}
 				
@@ -2114,36 +2117,36 @@ void CViewDisassembly::UpdateDisassemble(int startAddress, int endAddress)
 					{
 						lo = memory[renderAddress-2];
 						hi = memory[renderAddress-1];
-						UpdateDisassembleOpcodeLine(py, addr, op, lo, hi);
+						UpdateDisassemblyOpcodeLine(py, addr, op, lo, hi);
 						renderAddress = addr;
 						continue;
 					}
 					else if (opLen == 2)
 					{
-						UpdateDisassembleHexLine(py, renderAddress-1);
+						UpdateDisassemblyHexLine(py, renderAddress-1);
 						
 						py -= fontSize;
 						skipLines--;
 						
 						lo = memory[renderAddress-2];
-						UpdateDisassembleOpcodeLine(py, addr, op, lo, 0x00);
+						UpdateDisassemblyOpcodeLine(py, addr, op, lo, 0x00);
 						
 						renderAddress = addr;
 						continue;
 					}
 					
 					renderAddress--;
-					UpdateDisassembleHexLine(py, renderAddress);
+					UpdateDisassemblyHexLine(py, renderAddress);
 					py -= fontSize;
 					skipLines--;
 					
 					renderAddress--;
-					UpdateDisassembleHexLine(py, renderAddress);
+					UpdateDisassemblyHexLine(py, renderAddress);
 					py -= fontSize;
 					skipLines--;
 					
 					renderAddress--;
-					UpdateDisassembleHexLine(py, renderAddress);
+					UpdateDisassemblyHexLine(py, renderAddress);
 					continue;
 				}
 				
@@ -2160,7 +2163,7 @@ void CViewDisassembly::UpdateDisassemble(int startAddress, int endAddress)
 					{
 						lo = memory[renderAddress-2];
 						hi = memory[renderAddress-1];
-						UpdateDisassembleOpcodeLine(py, renderAddress-3, op, lo, hi);
+						UpdateDisassemblyOpcodeLine(py, renderAddress-3, op, lo, hi);
 						
 						renderAddress -= 3;
 						continue;
@@ -2183,7 +2186,7 @@ void CViewDisassembly::UpdateDisassemble(int startAddress, int endAddress)
 					if (length == 2)
 					{
 						lo = memory[renderAddress-1];
-						UpdateDisassembleOpcodeLine(py, renderAddress-2, op, lo, lo);
+						UpdateDisassemblyOpcodeLine(py, renderAddress-2, op, lo, lo);
 						
 						renderAddress -= 2;
 						continue;
@@ -2203,7 +2206,7 @@ void CViewDisassembly::UpdateDisassemble(int startAddress, int endAddress)
 					
 					if (length == 1)
 					{
-						UpdateDisassembleOpcodeLine(py, renderAddress-1, op, 0x00, 0x00);
+						UpdateDisassemblyOpcodeLine(py, renderAddress-1, op, 0x00, 0x00);
 						
 						renderAddress -= 1;
 						continue;
@@ -2215,7 +2218,7 @@ void CViewDisassembly::UpdateDisassemble(int startAddress, int endAddress)
 			if (renderAddress > 0)
 			{
 				renderAddress -= 1;
-				UpdateDisassembleHexLine(py, renderAddress);
+				UpdateDisassemblyHexLine(py, renderAddress);
 			}
 		}
 	}
@@ -2316,6 +2319,9 @@ void CViewDisassembly::Render()
 	
 //	LOGD("=============================== CViewDisassembly::Render");
 
+	if (symbols == NULL || symbols->currentSegment == NULL)
+		return;
+	
 	if (prevFrameSizeY != sizeY)
 	{
 		UpdateNumberOfVisibleLines();
@@ -2328,7 +2334,7 @@ void CViewDisassembly::Render()
 	VID_SetClipping(this->posX, this->posY, this->sizeX, this->sizeY);
 	
 	CDebugBreakpointsAddr *breakpoints = symbols->currentSegment->breakpointsPC;
-
+	
 	breakpoints->renderBreakpointsMutex->Lock();
 	
 	float colorBackgroundR, colorBackgroundG, colorBackgroundB;
@@ -2343,7 +2349,7 @@ void CViewDisassembly::Render()
 		this->cursorAddress = this->currentPC;
 	}
 	
-	if (c64SettingsRenderDisassembleExecuteAware)
+	if (c64SettingsExecuteAwareDisassembly)
 	{
 		this->RenderDisassembly(this->cursorAddress, this->cursorAddress + 0x0100);
 	}
@@ -2411,9 +2417,17 @@ void CViewDisassembly::TogglePCBreakpoint(int addr)
 bool CViewDisassembly::DoTap(float x, float y)
 {
 	LOGG("CViewDisassembly::DoTap:  x=%f y=%f", x, y);
-	
-	//if (hasFocus == false)
+
+	// set breakpoint?
+	if (c64SettingsPressCtrlToSetBreakpoint)
 	{
+		// no ctrl pressed, skip this tap
+		if (!guiMain->isControlPressed)
+			return false;
+	}
+	else
+	{
+		// check if pressed on address field
 		float numChars = 4.0f;
 		if (showLabels == true)
 		{
@@ -2426,9 +2440,10 @@ bool CViewDisassembly::DoTap(float x, float y)
 		}
 	}
 
-	UpdateDisassemble(this->cursorAddress, this->cursorAddress + 0x0100);
+	UpdateDisassembly(this->cursorAddress, this->cursorAddress + 0x0100);
 	
-	if (c64SettingsRenderDisassembleExecuteAware == false)
+	// set the breakpoint
+	if (c64SettingsExecuteAwareDisassembly == false)
 	{
 		return DoTapNotExecuteAware(x, y);
 	}
@@ -3009,7 +3024,7 @@ void CViewDisassembly::ScrollDown()
 	
 	//LOGD("            set cursorAddress=%4.4x", cursorAddress);
 	
-	UpdateDisassemble(this->cursorAddress, this->cursorAddress + 0x0100);
+	UpdateDisassembly(this->cursorAddress, this->cursorAddress + 0x0100);
 }
 
 void CViewDisassembly::ScrollUp()
@@ -3032,7 +3047,7 @@ void CViewDisassembly::ScrollUp()
 	
 	//LOGD("          set cursorAddress=%4.4x", cursorAddress);
 	
-	UpdateDisassemble(this->cursorAddress, this->cursorAddress + 0x0100);
+	UpdateDisassembly(this->cursorAddress, this->cursorAddress + 0x0100);
 }
 
 bool CViewDisassembly::DoScrollWheel(float deltaX, float deltaY)
@@ -3184,6 +3199,12 @@ void CViewDisassembly::Assemble(int assembleAddress)
 		return;
 	}
 	
+	// allow JMP <enter>, with no arguments
+	if (!strcasecmp(lineBuffer, "JMP") || !strcasecmp(lineBuffer, "JMP*") || !strcasecmp(lineBuffer, "JMP *"))
+	{
+		sprintf(lineBuffer, "JMP %04x", cursorAddress);
+	}
+	
 	Assemble(assembleAddress, lineBuffer, true);
 	
 	SYS_ReleaseCharBuf(lineBuffer);
@@ -3203,7 +3224,7 @@ int CViewDisassembly::Assemble(int assembleAddress, char *lineBuffer, bool showM
 		// error
 		if (showMessage)
 		{
-			viewC64->ShowMessage(errorMessage);
+			viewC64->ShowMessageError(errorMessage);
 		}
 		SYS_ReleaseCharBuf(errorMessage);
 		return -1;
@@ -3236,7 +3257,7 @@ int CViewDisassembly::Assemble(int assembleAddress, char *lineBuffer, bool showM
 			
 		default:
 			// should never happen
-			viewC64->ShowMessage(("Assemble failed"));
+			viewC64->ShowMessageError(("Assemble failed"));
 			LOGError("CViewDisassembly::error: %s", ("Assemble failed"));
 			isErrorCode = true;
 			SYS_ReleaseCharBuf(errorMessage);
@@ -3756,7 +3777,7 @@ void CViewDisassembly::RenderDisassemblyNotExecuteAware(int startAddress, int en
 				renderStartAddress = renderAddress;
 				//LOGD("renderStartAddress=%4.4x", renderStartAddress);
 			}
-			int numBytesPerOp = RenderDisassembleLine(px, py, renderAddress, op[0], op[1], op[2]);
+			int numBytesPerOp = RenderDisassemblyLine(px, py, renderAddress, op[0], op[1], op[2]);
 			
 			int newAddress = renderAddress + numBytesPerOp;
 			if (newAddress == startAddress)
@@ -3809,7 +3830,7 @@ void CViewDisassembly::RenderDisassemblyNotExecuteAware(int startAddress, int en
 				{
 					lo = memory[renderAddress-2];
 					hi = memory[renderAddress-1];
-					RenderDisassembleLine(px, py, renderAddress-3, op, lo, hi);
+					RenderDisassemblyLine(px, py, renderAddress-3, op, lo, hi);
 					
 					renderAddress -= 3;
 					continue;
@@ -3826,7 +3847,7 @@ void CViewDisassembly::RenderDisassemblyNotExecuteAware(int startAddress, int en
 				if (length == 2)
 				{
 					lo = memory[renderAddress-1];
-					RenderDisassembleLine(px, py, renderAddress-2, op, lo, lo);
+					RenderDisassemblyLine(px, py, renderAddress-2, op, lo, lo);
 					
 					renderAddress -= 2;
 					continue;
@@ -3841,7 +3862,7 @@ void CViewDisassembly::RenderDisassemblyNotExecuteAware(int startAddress, int en
 				
 				if (length == 1)
 				{
-					RenderDisassembleLine(px, py, renderAddress-1, op, 0x00, 0x00);
+					RenderDisassemblyLine(px, py, renderAddress-1, op, 0x00, 0x00);
 					
 					renderAddress -= 1;
 					continue;
@@ -3869,7 +3890,7 @@ void CViewDisassembly::RenderDisassemblyNotExecuteAware(int startAddress, int en
 	
 }
 
-void CViewDisassembly::UpdateDisassembleNotExecuteAware(int startAddress, int endAddress)
+void CViewDisassembly::UpdateDisassemblyNotExecuteAware(int startAddress, int endAddress)
 {
 	bool done = false;
 	short i;
@@ -4122,7 +4143,7 @@ void CViewDisassembly::CopyAssemblyToClipboard()
 	char *buf2 = SYS_GetCharBuf();
 
 	sprintf(buf2, "Copied %s", buf);
-	viewC64->ShowMessage(buf2);
+	viewC64->ShowMessageInfo(buf2);
 	
 	SYS_ReleaseCharBuf(buf);
 	SYS_ReleaseCharBuf(buf2);
@@ -4140,7 +4161,7 @@ void CViewDisassembly::CopyHexAddressToClipboard()
 	delete str;
 	
 	sprintf(buf, "Copied $%04X", this->cursorAddress);
-	viewC64->ShowMessage(buf);
+	viewC64->ShowMessageInfo(buf);
 	
 	SYS_ReleaseCharBuf(buf);
 }
@@ -4330,6 +4351,12 @@ void CViewDisassembly::RenderContextMenuItems()
 		}
 	}
 	
+	CGuiView::RenderContextMenuLayoutParameters(false);
+
+//	if (ImGui::MenuItem("Execute-aware disassembly", NULL, &c64SettingsExecuteAwareDisassembly))
+//	{
+//		C64DebuggerStoreSettings();
+//	}
 	
 	SYS_ReleaseCharBuf(buf);
 }

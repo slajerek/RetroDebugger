@@ -24,13 +24,18 @@ extern "C" {
 #include "C64Tools.h"
 #include "C64SettingsStorage.h"
 #include "CLayoutParameter.h"
+#include "VID_Main.h"
 
 CViewC64StateVIC::CViewC64StateVIC(const char *name, float posX, float posY, float posZ, float sizeX, float sizeY, CDebugInterfaceC64 *debugInterface)
 : CGuiView(name, posX, posY, posZ, sizeX, sizeY)
 {
 	this->debugInterface = debugInterface;
 
+	imGuiNoWindowPadding = true;
+	imGuiNoScrollbar = true;
+
 	isLockedState = false;
+	previousIsLockedStateFrameNum = 0;
 
 	fontSize = 7.0f;
 	AddLayoutParameter(new CLayoutParameterFloat("Font Size", &fontSize));
@@ -1110,6 +1115,35 @@ void CViewC64StateVIC::RenderFocusBorder()
 	//
 //	CGuiView::RenderFocusBorder();
 	return;
+}
+
+u64 previousIsLockedStateFrameNum;
+
+void CViewC64StateVIC::SetIsLockedState(bool newIsLockedState)
+{
+	u64 currentFrameNum = VID_GetCurrentFrameNumber();
+	
+//	LOGD("PRE  SetIsLockedState isLockedState=%s previousIsLockedStateFrameNum=%d currentFrameNum=%d newIsLockedState=%s", STRBOOL(isLockedState), previousIsLockedStateFrameNum, currentFrameNum, STRBOOL(newIsLockedState));
+	if (newIsLockedState == false)
+	{
+		if (previousIsLockedStateFrameNum < currentFrameNum)
+		{
+			previousIsLockedStateFrameNum = currentFrameNum;
+			isLockedState = newIsLockedState;
+		}
+	}
+	else
+	{
+		previousIsLockedStateFrameNum = currentFrameNum;
+		isLockedState = newIsLockedState;
+	}
+//	LOGD("POST SetIsLockedState isLockedState=%s previousIsLockedStateFrameNum=%d currentFrameNum=%d newIsLockedState=%s", STRBOOL(isLockedState), previousIsLockedStateFrameNum, currentFrameNum, STRBOOL(newIsLockedState));
+}
+
+bool CViewC64StateVIC::GetIsLockedState()
+{
+//	LOGD("GetIsLockedState: %s", STRBOOL(isLockedState));
+	return isLockedState;
 }
 
 // Layout

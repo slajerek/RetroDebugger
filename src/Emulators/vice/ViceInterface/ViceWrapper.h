@@ -10,8 +10,6 @@
 #define VICII_NUM_SPRITES      8
 #endif
 
-#define MAX_NUM_SIDS	3
-
 struct vicii_sprite_state_s {
 	uint16 data;
 	uint8 mc;
@@ -106,6 +104,9 @@ void c64d_refresh_previous_lines();
 void c64d_refresh_dbuf();
 void c64d_refresh_cia();
 
+int c64d_set_vicii_border_mode(int borderMode);
+int c64d_get_vicii_border_mode();
+
 void c64d_c64_set_vicii_record_state_mode(uint8 recordMode);
 
 void c64d_vicii_copy_state(vicii_cycle_state_t *viciiCopy);
@@ -154,7 +155,7 @@ void c64d_debug_pause_check(int allowRestore);
 void c64d_show_message(char *message);
 
 // SID
-extern int c64d_is_receive_channels_data[MAX_NUM_SIDS];
+extern int c64d_is_receive_channels_data[C64_MAX_NUM_SIDS];
 void c64d_sid_receive_channels_data(int sidNum, int isOn);
 void c64d_sid_channels_data(int sidNum, int v1, int v2, int v3, short mix);
 void c64d_set_volume(float volume);

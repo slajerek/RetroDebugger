@@ -18,20 +18,27 @@ extern "C" {
 #include "VID_ImageBinding.h"
 #include "CLayoutParameter.h"
 
+#define VIA_STATE_DEFAULT_SIZE_X 142.0f
+
 CViewDrive1541StateVIA::CViewDrive1541StateVIA(const char *name, float posX, float posY, float posZ, float sizeX, float sizeY, CDebugInterfaceC64 *debugInterface)
 : CGuiView(name, posX, posY, posZ, sizeX, sizeY)
 {
 	this->debugInterface = debugInterface;
 
+	imGuiNoWindowPadding = true;
+	imGuiNoScrollbar = true;
+
 	fontBytes = viewC64->fontDisassembly;
 
-	fontSize = 7.0f;
-	AddLayoutParameter(new CLayoutParameterFloat("Font Size", &fontSize));
-	
 	renderVIA1 = true;
 	renderVIA2 = true;
 	renderDriveLED = true;
 	isVertical = false;
+
+	fontSize = 7.0f;
+//	AddLayoutParameter(new CLayoutParameterFloat("Font Size", &fontSize));
+	AddLayoutParameter(new CLayoutParameterBool("Vertical layout", &isVertical));
+	AddLayoutParameter(new CLayoutParameterBool("Show Drive led", &renderDriveLED));
 	
 	showRegistersOnly = false;
 	editHex = new CGuiEditHex(this);
@@ -45,6 +52,9 @@ CViewDrive1541StateVIA::CViewDrive1541StateVIA(const char *name, float posX, flo
 void CViewDrive1541StateVIA::SetPosition(float posX, float posY, float posZ, float sizeX, float sizeY)
 {
 	CGuiView::SetPosition(posX, posY, posZ, sizeX, sizeY);
+	
+	float sx = VIA_STATE_DEFAULT_SIZE_X * (isVertical ? 1.0f : 2.0f);
+	fontSize = 7.0f/sx * sizeX;
 }
 
 void CViewDrive1541StateVIA::LayoutParameterChanged(CLayoutParameter *layoutParameter)
@@ -105,6 +115,8 @@ void CViewDrive1541StateVIA::RenderStateDrive1541(float posX, float posY, float 
 {
 	drive_context_t *drivectx = drive_context[driveId];
 
+	float stateSizeX = VIA_STATE_DEFAULT_SIZE_X*fontSize/7.0f;
+	
 	char buf[256];
 	float px = posX;
 	float py = posY;
@@ -152,11 +164,13 @@ void CViewDrive1541StateVIA::RenderStateDrive1541(float posX, float posY, float 
 			
 			if (isVertical)
 			{
+				py = ply + fontSize * 1.5f;
+				px = posX;
 			}
 			else
 			{
 				py = posY;
-				px = posX + 120;
+				px = posX + stateSizeX;
 			}
 		}
 
@@ -247,11 +261,12 @@ void CViewDrive1541StateVIA::RenderStateDrive1541(float posX, float posY, float 
 			
 			if (isVertical)
 			{
+				py += fontSize/2.0f;
 			}
 			else
 			{
 				py = posY;
-				px = posX + 120;
+				px = posX + stateSizeX;
 			}
 		}
 		
@@ -315,7 +330,7 @@ void CViewDrive1541StateVIA::RenderStateDrive1541(float posX, float posY, float 
 		else
 		{
 			px = posX;
-			py += fontSize * 2.25f;
+			py += fontSize * 0.50f;
 			fontBytes->BlitText("Drive LED: ", px, py, posZ, fontSize);
 		}
 		
@@ -326,10 +341,11 @@ void CViewDrive1541StateVIA::RenderStateDrive1541(float posX, float posY, float 
 		float ledX = px + fontSize * 12.0f;
 		float ledY = py - gap;
 		
-		float color = viewC64->debugInterfaceC64->ledState[driveId];
-		
+		float colorGreen = viewC64->debugInterfaceC64->ledGreenPwm[driveId];
+		float colorRed = viewC64->debugInterfaceC64->ledRedPwm[driveId];
+
 		BlitFilledRectangle(ledX, ledY, posZ, ledSizeX, ledSizeY,
-							0.0f, color, 0.0f, 1.0f);
+							colorRed, colorGreen, 0.0f, 1.0f);
 		BlitRectangle(ledX, py - gap, posZ, ledSizeX, ledSizeY,
 					  0.3f, 0.3f, 0.3f, 1.0f, gap);
 	}
@@ -392,11 +408,13 @@ bool CViewDrive1541StateVIA::DoTap(float x, float y)
 			
 			if (isVertical)
 			{
+				py = ply + fontSize * 1.5f;
+				px = posX;
 			}
 			else
 			{
 				py = posY + fontSize;
-				px = posX + 120;
+				px = posX + stateSizeX;
 			}
 		}
 		

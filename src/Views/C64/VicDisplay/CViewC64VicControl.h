@@ -156,6 +156,9 @@ public:
 	virtual void Serialize(CByteBuffer *byteBuffer);
 	virtual void Deserialize(CByteBuffer *byteBuffer);
 
+	// data
+	virtual void SerializeState(CByteBuffer *byteBuffer);
+	virtual void DeserializeState(CByteBuffer *byteBuffer);
 };
 
 #endif //_CViewC64VicControl_H_

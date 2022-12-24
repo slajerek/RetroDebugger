@@ -11,9 +11,9 @@ extern "C" {
 #include "CAudioChannelVice.h"
 
 CAudioChannelVice::CAudioChannelVice(CDebugInterfaceVice *debugInterface)
+: CAudioChannel("C64")
 {
 	this->debugInterface = debugInterface;
-	sprintf(this->name, "c64");
 }
 
 void CAudioChannelVice::FillBuffer(int *mixBuffer, u32 numSamples)

@@ -197,17 +197,17 @@ void CGuiLockableList::SetListLocked(bool isLocked)
 	}
 }
 
-bool CGuiLockableList::IsFocusable()
+bool CGuiLockableList::IsFocusableElement()
 {
 	return allowFocus;
 }
 
 
-bool CGuiLockableList::SetFocus()
+bool CGuiLockableList::WillReceiveFocus()
 {
 	if (allowFocus)
 	{
-		return CGuiList::SetFocus();
+		return CGuiList::WillReceiveFocus();
 	}
 	
 	return false;
