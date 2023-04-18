@@ -196,7 +196,7 @@ add_library(Plugins STATIC
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Plugins/C64DebuggerPluginTemplate.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Plugins/C64DebuggerPluginDummy.cpp"
 
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/Plugins/ShowPic/C64DebuggerPluginShowPic.cpp"
+#    "${CMAKE_CURRENT_SOURCE_DIR}/src/Plugins/ShowPic/C64DebuggerPluginShowPic.cpp"
 
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Plugins/GoatTracker/CAudioChannelGoatTracker.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Plugins/GoatTracker/CViewC64GoatTracker.cpp"
