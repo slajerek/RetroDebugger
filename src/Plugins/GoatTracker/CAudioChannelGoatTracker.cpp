@@ -13,9 +13,9 @@ extern "C" {
 };
 
 CAudioChannelGoatTracker::CAudioChannelGoatTracker(C64DebuggerPluginGoatTracker *plugin)
+: CAudioChannel("GT2")
 {
 	this->plugin = plugin;
-	sprintf(this->name, "gt2");
 	this->bypass = true;
 	
 	stereoBuffer = new i32[GT2_AUDIO_BUFFER_FRAMES];
