@@ -29,9 +29,6 @@
 		4110D86C262BE2A400CF6F36 /* gt-membufio.c in Sources */ = {isa = PBXBuildFile; fileRef = 4110D7EE262BE2A400CF6F36 /* gt-membufio.c */; };
 		4110D86D262BE2A400CF6F36 /* gt-parse.c in Sources */ = {isa = PBXBuildFile; fileRef = 4110D7F0262BE2A400CF6F36 /* gt-parse.c */; };
 		4110D86E262BE2A400CF6F36 /* gt-expr.c in Sources */ = {isa = PBXBuildFile; fileRef = 4110D7F4262BE2A400CF6F36 /* gt-expr.c */; };
-		4110D86F262BE2A400CF6F36 /* cursor.lbm in Resources */ = {isa = PBXBuildFile; fileRef = 4110D7F7262BE2A400CF6F36 /* cursor.lbm */; };
-		4110D87A262BE2A400CF6F36 /* chargen.bin in Resources */ = {isa = PBXBuildFile; fileRef = 4110D80C262BE2A400CF6F36 /* chargen.bin */; };
-		4110D87B262BE2A400CF6F36 /* cursor.bin in Resources */ = {isa = PBXBuildFile; fileRef = 4110D80D262BE2A400CF6F36 /* cursor.bin */; };
 		4110D87C262BE2A400CF6F36 /* gfile.c in Sources */ = {isa = PBXBuildFile; fileRef = 4110D80F262BE2A400CF6F36 /* gfile.c */; };
 		4110D88F262BE2A400CF6F36 /* gconsole.c in Sources */ = {isa = PBXBuildFile; fileRef = 4110D82F262BE2A400CF6F36 /* gconsole.c */; };
 		4110D892262BE2A400CF6F36 /* greloc.c in Sources */ = {isa = PBXBuildFile; fileRef = 4110D834262BE2A400CF6F36 /* greloc.c */; };
@@ -54,6 +51,7 @@
 		4111C8BD262EE4380092E150 /* C64DebuggerPluginGoatTracker.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4111C8BC262EE4370092E150 /* C64DebuggerPluginGoatTracker.cpp */; };
 		4113CE9825F8AF2000FB1236 /* TextEditor.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4113CE9625F8AF2000FB1236 /* TextEditor.cpp */; };
 		4113CE9B25F8AF6900FB1236 /* TestTextEditor.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4113CE9A25F8AF6900FB1236 /* TestTextEditor.cpp */; };
+		4113F62629E2C5B7002FE970 /* CViewC64KeyMap.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4113F62429E2C5B7002FE970 /* CViewC64KeyMap.cpp */; };
 		412085D323C76BFC00FBD7C3 /* CMainMenuBar.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 412085D123C76BFC00FBD7C3 /* CMainMenuBar.cpp */; };
 		41348955260FA37C001F9D41 /* CViewInputEvents.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 41348952260FA37C001F9D41 /* CViewInputEvents.cpp */; };
 		4134B5E2276384DD00830012 /* CoreHaptics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4134B5E0276384DD00830012 /* CoreHaptics.framework */; };
@@ -61,7 +59,6 @@
 		4134B5EA2763851A00830012 /* libiconv.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 4134B5E82763851A00830012 /* libiconv.tbd */; };
 		413EC7D1266E76CC00CB24D2 /* CViewBreakpoints.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 413EC7CE266E76CB00CB24D2 /* CViewBreakpoints.cpp */; };
 		414AD73928797F1200244453 /* CViewC64ScreenViewfinder.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 414AD73728797F1200244453 /* CViewC64ScreenViewfinder.cpp */; };
-		414BE0052784F08E00166AE2 /* TODO.txt in Resources */ = {isa = PBXBuildFile; fileRef = 414BE0042784F08D00166AE2 /* TODO.txt */; };
 		4155B3242681DA9A00110009 /* CDebugSymbols.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4155B31D2681D8B600110009 /* CDebugSymbols.cpp */; };
 		4155B3262681DAAB00110009 /* CDebugAsmSource.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4155B31F2681D8B600110009 /* CDebugAsmSource.cpp */; };
 		4155B3282681DABA00110009 /* CDebugSymbolsSegment.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4155B3222681D91700110009 /* CDebugSymbolsSegment.cpp */; };
@@ -115,7 +112,6 @@
 		419703EC28D36FD100DDD728 /* AtariAsap.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 419703EA28D36F6000DDD728 /* AtariAsap.cpp */; };
 		419703ED28D36FD100DDD728 /* asap.c in Sources */ = {isa = PBXBuildFile; fileRef = 419703E728D36E0A00DDD728 /* asap.c */; };
 		4198907E2684A40900B1AE5C /* CDebugSymbolsSegmentC64.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4198907B2684A40900B1AE5C /* CDebugSymbolsSegmentC64.cpp */; };
-		41B403AE25FFA28D00C271F3 /* CViewC64MemoryDebuggerLayoutToolbar.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 41B403AD25FFA28D00C271F3 /* CViewC64MemoryDebuggerLayoutToolbar.cpp */; };
 		41B403BD2600EF6B00C271F3 /* ApplicationServices.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 41B403BB2600EF6B00C271F3 /* ApplicationServices.framework */; };
 		41BBDFB326BFF541006ADD98 /* C64DebuggerPluginTemplate.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 41BBDFB226BFF541006ADD98 /* C64DebuggerPluginTemplate.cpp */; };
 		41C84A2E23C61830007C0889 /* C64D_InitPlugins.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 41D4A5C923AA0F0F00A54EB2 /* C64D_InitPlugins.cpp */; };
@@ -448,7 +444,6 @@
 		41C84B7D23C61830007C0889 /* ViceWrapper.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 41D4AD8A23AA0F1100A54EB2 /* ViceWrapper.cpp */; };
 		41C84B7F23C61830007C0889 /* CViewAbout.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 41D4ADDC23AA0F1100A54EB2 /* CViewAbout.cpp */; };
 		41C84B8023C61830007C0889 /* CViewBreakpointsOLD.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 41D4ADDE23AA0F1100A54EB2 /* CViewBreakpointsOLD.cpp */; };
-		41C84B8123C61830007C0889 /* CViewC64KeyMap.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 41D4ADE223AA0F1100A54EB2 /* CViewC64KeyMap.cpp */; };
 		41C84B8223C61830007C0889 /* CViewColodore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 41D4ADE423AA0F1100A54EB2 /* CViewColodore.cpp */; };
 		41C84B8423C61830007C0889 /* CViewKeyboardShortcuts.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 41D4ADE823AA0F1100A54EB2 /* CViewKeyboardShortcuts.cpp */; };
 		41C84B8523C61830007C0889 /* CViewMainMenu.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 41D4ADEA23AA0F1100A54EB2 /* CViewMainMenu.cpp */; };
@@ -1321,6 +1316,8 @@
 		4113CE9625F8AF2000FB1236 /* TextEditor.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = TextEditor.cpp; sourceTree = "<group>"; };
 		4113CE9725F8AF2000FB1236 /* TextEditor.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TextEditor.h; sourceTree = "<group>"; };
 		4113CE9A25F8AF6900FB1236 /* TestTextEditor.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = TestTextEditor.cpp; sourceTree = "<group>"; };
+		4113F62429E2C5B7002FE970 /* CViewC64KeyMap.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = CViewC64KeyMap.cpp; sourceTree = "<group>"; };
+		4113F62529E2C5B7002FE970 /* CViewC64KeyMap.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CViewC64KeyMap.h; sourceTree = "<group>"; };
 		412085D123C76BFC00FBD7C3 /* CMainMenuBar.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = CMainMenuBar.cpp; sourceTree = "<group>"; };
 		412085D223C76BFC00FBD7C3 /* CMainMenuBar.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CMainMenuBar.h; sourceTree = "<group>"; };
 		41348952260FA37C001F9D41 /* CViewInputEvents.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = CViewInputEvents.cpp; sourceTree = "<group>"; };
@@ -1486,8 +1483,6 @@
 		41B403A825FF96B100C271F3 /* icon_small_close_gfx.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = icon_small_close_gfx.h; sourceTree = "<group>"; };
 		41B403A925FF96B100C271F3 /* icon_tool_on_top_off_gfx.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = icon_tool_on_top_off_gfx.h; sourceTree = "<group>"; };
 		41B403AA25FF96B100C271F3 /* icon_tool_on_top_on_gfx.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = icon_tool_on_top_on_gfx.h; sourceTree = "<group>"; };
-		41B403AC25FFA28D00C271F3 /* CViewC64MemoryDebuggerLayoutToolbar.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CViewC64MemoryDebuggerLayoutToolbar.h; sourceTree = "<group>"; };
-		41B403AD25FFA28D00C271F3 /* CViewC64MemoryDebuggerLayoutToolbar.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = CViewC64MemoryDebuggerLayoutToolbar.cpp; sourceTree = "<group>"; };
 		41B403B426009F7C00C271F3 /* FontSweet16mono.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = FontSweet16mono.h; sourceTree = "<group>"; };
 		41B403BB2600EF6B00C271F3 /* ApplicationServices.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ApplicationServices.framework; path = System/Library/Frameworks/ApplicationServices.framework; sourceTree = SDKROOT; };
 		41B5298823992DCB0084F0DB /* MTEngineSDL.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = MTEngineSDL.xcodeproj; path = ../../../MTEngineSDL/platform/MacOS/MTEngineSDL.xcodeproj; sourceTree = "<group>"; };
@@ -3449,8 +3444,6 @@
 		41D4ADDF23AA0F1100A54EB2 /* CViewBreakpointsOLD.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CViewBreakpointsOLD.h; sourceTree = "<group>"; };
 		41D4ADE023AA0F1100A54EB2 /* CViewC64.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CViewC64.cpp; path = ../../src/Screens/CViewC64.cpp; sourceTree = "<group>"; };
 		41D4ADE123AA0F1100A54EB2 /* CViewC64.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = CViewC64.h; path = ../../src/Screens/CViewC64.h; sourceTree = "<group>"; };
-		41D4ADE223AA0F1100A54EB2 /* CViewC64KeyMap.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = CViewC64KeyMap.cpp; sourceTree = "<group>"; };
-		41D4ADE323AA0F1100A54EB2 /* CViewC64KeyMap.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CViewC64KeyMap.h; sourceTree = "<group>"; };
 		41D4ADE423AA0F1100A54EB2 /* CViewColodore.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = CViewColodore.cpp; sourceTree = "<group>"; };
 		41D4ADE523AA0F1100A54EB2 /* CViewColodore.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CViewColodore.h; sourceTree = "<group>"; };
 		41D4ADE823AA0F1100A54EB2 /* CViewKeyboardShortcuts.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = CViewKeyboardShortcuts.cpp; sourceTree = "<group>"; };
@@ -4090,11 +4083,11 @@
 		41884F2F25E9BA6100D7E116 /* C64 */ = {
 			isa = PBXGroup;
 			children = (
+				4113F62429E2C5B7002FE970 /* CViewC64KeyMap.cpp */,
+				4113F62529E2C5B7002FE970 /* CViewC64KeyMap.h */,
 				41FD533C293CB7070051A851 /* AllGraphics */,
 				416FDA8428D5FF41003DAB13 /* VicEditor */,
 				41E94FF526442910008A842C /* VicDisplay */,
-				41B403AD25FFA28D00C271F3 /* CViewC64MemoryDebuggerLayoutToolbar.cpp */,
-				41B403AC25FFA28D00C271F3 /* CViewC64MemoryDebuggerLayoutToolbar.h */,
 				41D4AEBA23AA0F1100A54EB2 /* CViewDrive1541StateVIA.cpp */,
 				41D4AEBB23AA0F1100A54EB2 /* CViewDrive1541StateVIA.h */,
 				41732EC02919654A00F212AC /* CViewDrive1541Led.cpp */,
@@ -6746,8 +6739,6 @@
 				41D4ADDD23AA0F1100A54EB2 /* CViewAbout.h */,
 				41D4ADDE23AA0F1100A54EB2 /* CViewBreakpointsOLD.cpp */,
 				41D4ADDF23AA0F1100A54EB2 /* CViewBreakpointsOLD.h */,
-				41D4ADE223AA0F1100A54EB2 /* CViewC64KeyMap.cpp */,
-				41D4ADE323AA0F1100A54EB2 /* CViewC64KeyMap.h */,
 				41D4ADE423AA0F1100A54EB2 /* CViewColodore.cpp */,
 				41D4ADE523AA0F1100A54EB2 /* CViewColodore.h */,
 				41D4ADE823AA0F1100A54EB2 /* CViewKeyboardShortcuts.cpp */,
@@ -7183,11 +7174,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				414BE0052784F08E00166AE2 /* TODO.txt in Resources */,
-				4110D87A262BE2A400CF6F36 /* chargen.bin in Resources */,
 				416EDA4A23C63406006C57B7 /* Assets.xcassets in Resources */,
-				4110D87B262BE2A400CF6F36 /* cursor.bin in Resources */,
-				4110D86F262BE2A400CF6F36 /* cursor.lbm in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -7426,7 +7413,6 @@
 				41C84CA323C6183B007C0889 /* daa.c in Sources */,
 				41C84CA423C6183B007C0889 /* debugcart.c in Sources */,
 				410918F8295274A900EBD5CA /* C64DebuggerPluginPicFader.cpp in Sources */,
-				41B403AE25FFA28D00C271F3 /* CViewC64MemoryDebuggerLayoutToolbar.cpp in Sources */,
 				41C84CA523C6183B007C0889 /* delaep256.c in Sources */,
 				417F88EC271AD326008F5E1B /* CDebuggerApiNestopia.cpp in Sources */,
 				41C84CA623C6183B007C0889 /* delaep64.c in Sources */,
@@ -8294,7 +8280,6 @@
 				41C84B7D23C61830007C0889 /* ViceWrapper.cpp in Sources */,
 				41C84B7F23C61830007C0889 /* CViewAbout.cpp in Sources */,
 				41C84B8023C61830007C0889 /* CViewBreakpointsOLD.cpp in Sources */,
-				41C84B8123C61830007C0889 /* CViewC64KeyMap.cpp in Sources */,
 				41C84B8223C61830007C0889 /* CViewColodore.cpp in Sources */,
 				41C84B8423C61830007C0889 /* CViewKeyboardShortcuts.cpp in Sources */,
 				41C84B8523C61830007C0889 /* CViewMainMenu.cpp in Sources */,
@@ -8348,6 +8333,7 @@
 				41C84BC123C61830007C0889 /* CViewC64EmulationCounters.cpp in Sources */,
 				41C84BC223C61830007C0889 /* CViewC64Screen.cpp in Sources */,
 				41C84BC323C61830007C0889 /* CViewC64ScreenWrapper.cpp in Sources */,
+				4113F62629E2C5B7002FE970 /* CViewC64KeyMap.cpp in Sources */,
 				41C84BC423C61830007C0889 /* CViewC64StateCIA.cpp in Sources */,
 				4110D89C262BE2A400CF6F36 /* bme_snd.c in Sources */,
 				41E5CE6324363BA90018F049 /* CViewEmulationCounters.cpp in Sources */,
@@ -8491,7 +8477,7 @@
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 0.64.62;
 				DEVELOPMENT_TEAM = APV7Y7Q9JY;
-				ENABLE_HARDENED_RUNTIME = NO;
+				ENABLE_HARDENED_RUNTIME = YES;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					MACOS,
 					"$(inherited)",
@@ -8510,7 +8496,7 @@
 				);
 				MACOSX_DEPLOYMENT_TARGET = 10.12;
 				MARKETING_VERSION = 0.64.62;
-				ONLY_ACTIVE_ARCH = NO;
+				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = "-Wno-implicit-function-declaration";
 				OTHER_CODE_SIGN_FLAGS = "--deep";
 				OTHER_CPLUSPLUSFLAGS = (
@@ -8535,7 +8521,7 @@
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 0.64.62;
 				DEVELOPMENT_TEAM = APV7Y7Q9JY;
-				ENABLE_HARDENED_RUNTIME = NO;
+				ENABLE_HARDENED_RUNTIME = YES;
 				GCC_PREPROCESSOR_DEFINITIONS = MACOS;
 				HEADER_SEARCH_PATHS = (
 					"$(PROJECT_DIR)/../../../MTEngineSDL/platform/MacOS/src.MacOS/**",
@@ -8551,7 +8537,7 @@
 				);
 				MACOSX_DEPLOYMENT_TARGET = 10.12;
 				MARKETING_VERSION = 0.64.62;
-				ONLY_ACTIVE_ARCH = NO;
+				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = "-Wno-implicit-function-declaration";
 				OTHER_CODE_SIGN_FLAGS = "--deep";
 				OTHER_CPLUSPLUSFLAGS = (

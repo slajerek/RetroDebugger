@@ -589,7 +589,7 @@ void CDebugBreakpointsMemory::RenderImGui()
 	CBreakpointAddr *deleteBreakpoint = NULL;
 
 	// active | address | <= | FF | symbol | delete
-	if (ImGui::BeginTable(buf, 6, ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable | ImGuiTableFlags_Hideable | ImGuiTableFlags_Sortable | ImGuiTableFlags_Borders))
+	if (ImGui::BeginTable(buf, 6, ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable | ImGuiTableFlags_Hideable | ImGuiTableFlags_Borders))	//| ImGuiTableFlags_Sortable  TODO
 	{
 		u32 i = 0;
 		

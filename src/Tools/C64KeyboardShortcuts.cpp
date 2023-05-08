@@ -5,6 +5,9 @@ C64KeyboardShortcuts::C64KeyboardShortcuts()
 {
 	// keyboard shortcuts
 
+	// C64FileDataAdapter
+	// CConfigStorageHjson
+	
 
 
 };

@@ -43,6 +43,7 @@
 #include "CViewTimeline.h"
 #include "CViewC64Charset.h"
 #include "CViewC64VicEditor.h"
+#include "CViewC64KeyMap.h"
 
 extern bool c64dSkipBogusPageOffsetReadOnSTA;
 
@@ -1845,6 +1846,13 @@ void CMainMenuBar::RenderImGui()
 					
 					ImGui::Separator();
 					
+					bool isVisible = viewC64->viewC64KeyMap->visible;
+					if (ImGui::MenuItem("Keyboard mapping##c64", "", &isVisible))
+					{
+						viewC64->viewC64KeyMap->SetFocus();
+						guiMain->StoreLayoutInSettingsAtEndOfThisFrame();
+					}
+
 					if (ImGui::MenuItem("Select C64 ROMs folder"))
 					{
 						systemDialogOperation = SystemDialogOperationC64RomsFolder;

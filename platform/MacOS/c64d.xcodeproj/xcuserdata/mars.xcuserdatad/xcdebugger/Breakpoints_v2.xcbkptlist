@@ -50,6 +50,38 @@
             endingLineNumber = "152"
             landmarkName = "CViewC64CrtMaker::ReadConfigFromFile(hjsonFilePath)"
             landmarkType = "7">
+            <Locations>
+               <Location
+                  uuid = "5272BBC5-3957-47F4-BBF2-2D8581DD797E - a0c6ea702c4ff772"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "CViewC64CrtMaker::ReadConfigFromFile(char*)"
+                  moduleName = "Retro Debugger"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/mars/develop/c64d/src/Plugins/CrtMaker/CViewC64CrtMaker.cpp"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "153"
+                  endingLineNumber = "153"
+                  offsetFromSymbolStart = "1624">
+               </Location>
+               <Location
+                  uuid = "5272BBC5-3957-47F4-BBF2-2D8581DD797E - a0c6ea702c4ff772"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "CViewC64CrtMaker::ReadConfigFromFile(char*)"
+                  moduleName = "Retro Debugger"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/mars/develop/c64d/src/Plugins/CrtMaker/CViewC64CrtMaker.cpp"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "153"
+                  endingLineNumber = "153"
+                  offsetFromSymbolStart = "1700">
+               </Location>
+            </Locations>
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -66,6 +98,38 @@
             endingLineNumber = "145"
             landmarkName = "CViewC64CrtMaker::ReadConfigFromFile(hjsonFilePath)"
             landmarkType = "7">
+            <Locations>
+               <Location
+                  uuid = "873BE6B6-A0A7-45E5-A0E6-69407AF87CB1 - a0c6ea702c4ff695"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "CViewC64CrtMaker::ReadConfigFromFile(char*)"
+                  moduleName = "Retro Debugger"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/mars/develop/c64d/src/Plugins/CrtMaker/CViewC64CrtMaker.cpp"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "146"
+                  endingLineNumber = "146"
+                  offsetFromSymbolStart = "1676">
+               </Location>
+               <Location
+                  uuid = "873BE6B6-A0A7-45E5-A0E6-69407AF87CB1 - a0c6ea702c4ff695"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "CViewC64CrtMaker::ReadConfigFromFile(char*)"
+                  moduleName = "Retro Debugger"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/mars/develop/c64d/src/Plugins/CrtMaker/CViewC64CrtMaker.cpp"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "146"
+                  endingLineNumber = "146"
+                  offsetFromSymbolStart = "1812">
+               </Location>
+            </Locations>
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -82,6 +146,38 @@
             endingLineNumber = "820"
             landmarkName = "CDebugSymbols::ParseWatches(byteBuffer)"
             landmarkType = "7">
+            <Locations>
+               <Location
+                  uuid = "37BCD30E-CCF2-4A98-9EB4-52ACD433C046 - ad534d0afd0e1771"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "CDebugSymbols::ParseWatches(CByteBuffer*)"
+                  moduleName = "Retro Debugger"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/mars/develop/c64d/src/DebugInterface/Symbols/CDebugSymbols.cpp"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "826"
+                  endingLineNumber = "826"
+                  offsetFromSymbolStart = "864">
+               </Location>
+               <Location
+                  uuid = "37BCD30E-CCF2-4A98-9EB4-52ACD433C046 - ad534d0afd0e18dc"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "CDebugSymbols::ParseWatches(CByteBuffer*)"
+                  moduleName = "Retro Debugger"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/mars/develop/c64d/src/DebugInterface/Symbols/CDebugSymbols.cpp"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "823"
+                  endingLineNumber = "823"
+                  offsetFromSymbolStart = "1368">
+               </Location>
+            </Locations>
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -187,7 +283,7 @@
                   endingColumnNumber = "9223372036854775807"
                   startingLineNumber = "30"
                   endingLineNumber = "30"
-                  offsetFromSymbolStart = "20">
+                  offsetFromSymbolStart = "24">
                </Location>
                <Location
                   uuid = "13500DBF-190B-43D0-9000-670F2E73BECB - 503f87d8f6e5c6d3"
@@ -270,16 +366,6 @@
                   offsetFromSymbolStart = "0">
                </Location>
                <Location
-                  uuid = "13500DBF-190B-43D0-9000-670F2E73BECB - d7284e40dd683faf"
-                  shouldBeEnabled = "Yes"
-                  ignoreCount = "0"
-                  continueAfterRunningActions = "No"
-                  symbolName = "-[_NSDocumentBasicAsyncOperation main]"
-                  moduleName = "AppKit"
-                  usesParentBreakpointCondition = "Yes"
-                  offsetFromSymbolStart = "0">
-               </Location>
-               <Location
                   uuid = "13500DBF-190B-43D0-9000-670F2E73BECB - 70b2621ad844c1de"
                   shouldBeEnabled = "Yes"
                   ignoreCount = "0"
@@ -350,6 +436,26 @@
                   offsetFromSymbolStart = "0">
                </Location>
                <Location
+                  uuid = "13500DBF-190B-43D0-9000-670F2E73BECB - d672edd3cf0319bf"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "__C.NSOperationQueue.DelayReadyOperation.main() -&gt; ()"
+                  moduleName = "Foundation"
+                  usesParentBreakpointCondition = "Yes"
+                  offsetFromSymbolStart = "0">
+               </Location>
+               <Location
+                  uuid = "13500DBF-190B-43D0-9000-670F2E73BECB - 1bb78baf6733f683"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "@objc __C.NSOperationQueue.DelayReadyOperation.main() -&gt; ()"
+                  moduleName = "Foundation"
+                  usesParentBreakpointCondition = "Yes"
+                  offsetFromSymbolStart = "0">
+               </Location>
+               <Location
                   uuid = "13500DBF-190B-43D0-9000-670F2E73BECB - 84fd3d4f6ced471c"
                   shouldBeEnabled = "Yes"
                   ignoreCount = "0"
@@ -366,6 +472,26 @@
                   continueAfterRunningActions = "No"
                   symbolName = "Security::OSXCode::main()"
                   moduleName = "Security"
+                  usesParentBreakpointCondition = "Yes"
+                  offsetFromSymbolStart = "0">
+               </Location>
+               <Location
+                  uuid = "13500DBF-190B-43D0-9000-670F2E73BECB - c31c9eea9e326ed1"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "main"
+                  moduleName = "CarbonCore"
+                  usesParentBreakpointCondition = "Yes"
+                  offsetFromSymbolStart = "0">
+               </Location>
+               <Location
+                  uuid = "13500DBF-190B-43D0-9000-670F2E73BECB - 61a9c8a438da9b3e"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "-[EXFrameworkScanner main]"
+                  moduleName = "ExtensionFoundation"
                   usesParentBreakpointCondition = "Yes"
                   offsetFromSymbolStart = "0">
                </Location>
@@ -410,6 +536,16 @@
                   offsetFromSymbolStart = "0">
                </Location>
                <Location
+                  uuid = "13500DBF-190B-43D0-9000-670F2E73BECB - f019cb5b6ac59d36"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "+[BSServiceQuality main]"
+                  moduleName = "BoardServices"
+                  usesParentBreakpointCondition = "Yes"
+                  offsetFromSymbolStart = "0">
+               </Location>
+               <Location
                   uuid = "13500DBF-190B-43D0-9000-670F2E73BECB - 330cc485e2230afe"
                   shouldBeEnabled = "Yes"
                   ignoreCount = "0"
@@ -440,32 +576,62 @@
                   offsetFromSymbolStart = "0">
                </Location>
                <Location
-                  uuid = "13500DBF-190B-43D0-9000-670F2E73BECB - ebb535275fc88e3"
+                  uuid = "13500DBF-190B-43D0-9000-670F2E73BECB - 26de227474754965"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "CSCppExceptionSafeThread::main()"
+                  moduleName = "CoreSymbolication"
+                  usesParentBreakpointCondition = "Yes"
+                  offsetFromSymbolStart = "0">
+               </Location>
+               <Location
+                  uuid = "13500DBF-190B-43D0-9000-670F2E73BECB - f548c7fbed8b63b4"
                   shouldBeEnabled = "Yes"
                   ignoreCount = "0"
                   continueAfterRunningActions = "No"
                   symbolName = "-[AVWaitForNotificationOrDeallocationOperation main]"
-                  moduleName = "AVFoundation"
+                  moduleName = "AVFCore"
                   usesParentBreakpointCondition = "Yes"
                   offsetFromSymbolStart = "0">
                </Location>
                <Location
-                  uuid = "13500DBF-190B-43D0-9000-670F2E73BECB - d453880ef657e87f"
+                  uuid = "13500DBF-190B-43D0-9000-670F2E73BECB - 7e95757a9fa2b197"
                   shouldBeEnabled = "Yes"
                   ignoreCount = "0"
                   continueAfterRunningActions = "No"
-                  symbolName = "-[GEOAnalyticsPipelineReportMapKitCountOperation main]"
-                  moduleName = "GeoServices"
+                  symbolName = "-[MSVArtworkServiceResizeOperation main]"
+                  moduleName = "MediaServices"
                   usesParentBreakpointCondition = "Yes"
                   offsetFromSymbolStart = "0">
                </Location>
                <Location
-                  uuid = "13500DBF-190B-43D0-9000-670F2E73BECB - 253e3c26308fda8"
+                  uuid = "13500DBF-190B-43D0-9000-670F2E73BECB - 62217a424a92946f"
                   shouldBeEnabled = "Yes"
                   ignoreCount = "0"
                   continueAfterRunningActions = "No"
-                  symbolName = "-[GEOAnalyticsPipelineReportEventOperation main]"
-                  moduleName = "GeoServices"
+                  symbolName = "-[MSVArtworkServiceConversionOperation main]"
+                  moduleName = "MediaServices"
+                  usesParentBreakpointCondition = "Yes"
+                  offsetFromSymbolStart = "0">
+               </Location>
+               <Location
+                  uuid = "13500DBF-190B-43D0-9000-670F2E73BECB - 19951d60869aba4f"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "-[MSVArtworkServiceColorAnalysisOperation main]"
+                  moduleName = "MediaServices"
+                  usesParentBreakpointCondition = "Yes"
+                  offsetFromSymbolStart = "0">
+               </Location>
+               <Location
+                  uuid = "13500DBF-190B-43D0-9000-670F2E73BECB - ef116190e2cfb8c2"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "-[DDOperation main]"
+                  moduleName = "DataDetectors"
                   usesParentBreakpointCondition = "Yes"
                   offsetFromSymbolStart = "0">
                </Location>
@@ -570,16 +736,6 @@
                   offsetFromSymbolStart = "0">
                </Location>
                <Location
-                  uuid = "13500DBF-190B-43D0-9000-670F2E73BECB - df1c5fe88487ff58"
-                  shouldBeEnabled = "Yes"
-                  ignoreCount = "0"
-                  continueAfterRunningActions = "No"
-                  symbolName = "-[_AB_PeopleSorting_Operation main]"
-                  moduleName = "AddressBookCore"
-                  usesParentBreakpointCondition = "Yes"
-                  offsetFromSymbolStart = "0">
-               </Location>
-               <Location
                   uuid = "13500DBF-190B-43D0-9000-670F2E73BECB - 166b2c1506714287"
                   shouldBeEnabled = "Yes"
                   ignoreCount = "0"
@@ -620,22 +776,292 @@
                   offsetFromSymbolStart = "0">
                </Location>
                <Location
-                  uuid = "13500DBF-190B-43D0-9000-670F2E73BECB - e7ba33209a0a6db"
+                  uuid = "13500DBF-190B-43D0-9000-670F2E73BECB - fc1aeb7613fc5c23"
                   shouldBeEnabled = "Yes"
                   ignoreCount = "0"
                   continueAfterRunningActions = "No"
-                  symbolName = "-[CKOperation main]"
-                  moduleName = "CloudKit"
+                  symbolName = "-[FPFetchAppLibraryIconsOperation main]"
+                  moduleName = "FileProvider"
                   usesParentBreakpointCondition = "Yes"
                   offsetFromSymbolStart = "0">
                </Location>
                <Location
-                  uuid = "13500DBF-190B-43D0-9000-670F2E73BECB - 3aaa7f574e2d834d"
+                  uuid = "13500DBF-190B-43D0-9000-670F2E73BECB - 53bac5bbf0876d57"
                   shouldBeEnabled = "Yes"
                   ignoreCount = "0"
                   continueAfterRunningActions = "No"
-                  symbolName = "-[CKPlaceholderOperation main]"
-                  moduleName = "CloudKit"
+                  symbolName = "-[FPFetchRegularItemThumbnailsOperation main]"
+                  moduleName = "FileProvider"
+                  usesParentBreakpointCondition = "Yes"
+                  offsetFromSymbolStart = "0">
+               </Location>
+               <Location
+                  uuid = "13500DBF-190B-43D0-9000-670F2E73BECB - 6441310c1c364b3"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "-[FPFetchThumbnailsOperation main]"
+                  moduleName = "FileProvider"
+                  usesParentBreakpointCondition = "Yes"
+                  offsetFromSymbolStart = "0">
+               </Location>
+               <Location
+                  uuid = "13500DBF-190B-43D0-9000-670F2E73BECB - ce3e9a2b2dd25348"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "-[FPMoveOperation main]"
+                  moduleName = "FileProvider"
+                  usesParentBreakpointCondition = "Yes"
+                  offsetFromSymbolStart = "0">
+               </Location>
+               <Location
+                  uuid = "13500DBF-190B-43D0-9000-670F2E73BECB - 8252526371f5f456"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "-[FPSpotlightDropIndexOperation main]"
+                  moduleName = "FileProvider"
+                  usesParentBreakpointCondition = "Yes"
+                  offsetFromSymbolStart = "0">
+               </Location>
+               <Location
+                  uuid = "13500DBF-190B-43D0-9000-670F2E73BECB - 58b8f92255ed57f2"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "-[FPSpotlightFetchClientStateOperation main]"
+                  moduleName = "FileProvider"
+                  usesParentBreakpointCondition = "Yes"
+                  offsetFromSymbolStart = "0">
+               </Location>
+               <Location
+                  uuid = "13500DBF-190B-43D0-9000-670F2E73BECB - 723179a69dd8bba2"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "-[FPSpotlightFetchOneBatchFromWorkingSetOperation main]"
+                  moduleName = "FileProvider"
+                  usesParentBreakpointCondition = "Yes"
+                  offsetFromSymbolStart = "0">
+               </Location>
+               <Location
+                  uuid = "13500DBF-190B-43D0-9000-670F2E73BECB - 22902d405bd4a203"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "-[FPSpotlightIndexOneBatchOperation main]"
+                  moduleName = "FileProvider"
+                  usesParentBreakpointCondition = "Yes"
+                  offsetFromSymbolStart = "0">
+               </Location>
+               <Location
+                  uuid = "13500DBF-190B-43D0-9000-670F2E73BECB - ebe2906976ae5a80"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "-[FPListRemoteVersionsOperation main]"
+                  moduleName = "FileProvider"
+                  usesParentBreakpointCondition = "Yes"
+                  offsetFromSymbolStart = "0">
+               </Location>
+               <Location
+                  uuid = "13500DBF-190B-43D0-9000-670F2E73BECB - 9ceabab62eb5dabf"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "-[FPActionOperation main]"
+                  moduleName = "FileProvider"
+                  usesParentBreakpointCondition = "Yes"
+                  offsetFromSymbolStart = "0">
+               </Location>
+               <Location
+                  uuid = "13500DBF-190B-43D0-9000-670F2E73BECB - a71abb9052142cf0"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "-[_CPPowerAssertionThread main]"
+                  moduleName = "AppSupport"
+                  usesParentBreakpointCondition = "Yes"
+                  offsetFromSymbolStart = "0">
+               </Location>
+               <Location
+                  uuid = "13500DBF-190B-43D0-9000-670F2E73BECB - ecee245eab7b8811"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "-[CPDistributedMessagingAsyncOperation main]"
+                  moduleName = "AppSupport"
+                  usesParentBreakpointCondition = "Yes"
+                  offsetFromSymbolStart = "0">
+               </Location>
+               <Location
+                  uuid = "13500DBF-190B-43D0-9000-670F2E73BECB - 253e3c26308fda8"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "-[GEOAnalyticsPipelineReportEventOperation main]"
+                  moduleName = "GeoServices"
+                  usesParentBreakpointCondition = "Yes"
+                  offsetFromSymbolStart = "0">
+               </Location>
+               <Location
+                  uuid = "13500DBF-190B-43D0-9000-670F2E73BECB - efcc912ac608e3c7"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "-[GEOAnalyticsPipelineDailyUsageCountsOperation main]"
+                  moduleName = "GeoServices"
+                  usesParentBreakpointCondition = "Yes"
+                  offsetFromSymbolStart = "0">
+               </Location>
+               <Location
+                  uuid = "13500DBF-190B-43D0-9000-670F2E73BECB - fa4d7c95fbe000cd"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "-[GEOAnalyticsPipelineMonthlyUsageCountsOperation main]"
+                  moduleName = "GeoServices"
+                  usesParentBreakpointCondition = "Yes"
+                  offsetFromSymbolStart = "0">
+               </Location>
+               <Location
+                  uuid = "13500DBF-190B-43D0-9000-670F2E73BECB - 98859f09a6b07ee8"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "-[GEOAnalyticsPipelineCuratedCollectionActionOperation main]"
+                  moduleName = "GeoServices"
+                  usesParentBreakpointCondition = "Yes"
+                  offsetFromSymbolStart = "0">
+               </Location>
+               <Location
+                  uuid = "13500DBF-190B-43D0-9000-670F2E73BECB - 520f3a29484d36e0"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "-[GEOAnalyticsPipelineDailySettingsOperation main]"
+                  moduleName = "GeoServices"
+                  usesParentBreakpointCondition = "Yes"
+                  offsetFromSymbolStart = "0">
+               </Location>
+               <Location
+                  uuid = "13500DBF-190B-43D0-9000-670F2E73BECB - 42b4ffa7bfb99d6f"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "-[GEOAnalyticsPipelineUpdateSharedStateOperation main]"
+                  moduleName = "GeoServices"
+                  usesParentBreakpointCondition = "Yes"
+                  offsetFromSymbolStart = "0">
+               </Location>
+               <Location
+                  uuid = "13500DBF-190B-43D0-9000-670F2E73BECB - 2f4e56acfce791a4"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "SafeBrowsing::Service::main()"
+                  moduleName = "SafariSafeBrowsing"
+                  usesParentBreakpointCondition = "Yes"
+                  offsetFromSymbolStart = "0">
+               </Location>
+               <Location
+                  uuid = "13500DBF-190B-43D0-9000-670F2E73BECB - c80c12a1a6af283c"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "WTF::RunLoop::main()"
+                  moduleName = "JavaScriptCore"
+                  usesParentBreakpointCondition = "Yes"
+                  offsetFromSymbolStart = "0">
+               </Location>
+               <Location
+                  uuid = "13500DBF-190B-43D0-9000-670F2E73BECB - 52700c62b02c1903"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "WTF::WorkQueue::main()"
+                  moduleName = "JavaScriptCore"
+                  usesParentBreakpointCondition = "Yes"
+                  offsetFromSymbolStart = "0">
+               </Location>
+               <Location
+                  uuid = "13500DBF-190B-43D0-9000-670F2E73BECB - c4ae4e5576861461"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "-[QLThumbnailRequestOperation main]"
+                  moduleName = "QuickLookThumbnailing"
+                  usesParentBreakpointCondition = "Yes"
+                  offsetFromSymbolStart = "0">
+               </Location>
+               <Location
+                  uuid = "13500DBF-190B-43D0-9000-670F2E73BECB - 92981cd8a3b8c708"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "-[QLThumbnailStoreRetrievalOperation main]"
+                  moduleName = "QuickLookThumbnailing"
+                  usesParentBreakpointCondition = "Yes"
+                  offsetFromSymbolStart = "0">
+               </Location>
+               <Location
+                  uuid = "13500DBF-190B-43D0-9000-670F2E73BECB - 9168ac3490243d85"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "-[QLExtensionHostContextThumbnailOperation main]"
+                  moduleName = "QuickLookThumbnailing"
+                  usesParentBreakpointCondition = "Yes"
+                  offsetFromSymbolStart = "0">
+               </Location>
+               <Location
+                  uuid = "13500DBF-190B-43D0-9000-670F2E73BECB - 767832cd8154f4dd"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "-[QLThumbnailQueueOperation main]"
+                  moduleName = "QuickLook"
+                  usesParentBreakpointCondition = "Yes"
+                  offsetFromSymbolStart = "0">
+               </Location>
+               <Location
+                  uuid = "13500DBF-190B-43D0-9000-670F2E73BECB - 1eccaeb85c77dcbc"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "-[IKThumbnailOperation main]"
+                  moduleName = "ImageKit"
+                  usesParentBreakpointCondition = "Yes"
+                  offsetFromSymbolStart = "0">
+               </Location>
+               <Location
+                  uuid = "13500DBF-190B-43D0-9000-670F2E73BECB - d41a508d4e91388f"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "-[IKTaskAsyncOperation main]"
+                  moduleName = "ImageKit"
+                  usesParentBreakpointCondition = "Yes"
+                  offsetFromSymbolStart = "0">
+               </Location>
+               <Location
+                  uuid = "13500DBF-190B-43D0-9000-670F2E73BECB - 7c69c9d23e53f507"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "-[IKSlideshowItemLoadOperation main]"
+                  moduleName = "ImageKit"
+                  usesParentBreakpointCondition = "Yes"
+                  offsetFromSymbolStart = "0">
+               </Location>
+               <Location
+                  uuid = "13500DBF-190B-43D0-9000-670F2E73BECB - 216faf9d8355e992"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "-[IKSlideshowItemLoadThumbnailOperation main]"
+                  moduleName = "ImageKit"
                   usesParentBreakpointCondition = "Yes"
                   offsetFromSymbolStart = "0">
                </Location>
@@ -645,6 +1071,26 @@
                   ignoreCount = "0"
                   continueAfterRunningActions = "No"
                   symbolName = "-[BRiWorkWebShareMigrateOperation main]"
+                  moduleName = "CloudDocs"
+                  usesParentBreakpointCondition = "Yes"
+                  offsetFromSymbolStart = "0">
+               </Location>
+               <Location
+                  uuid = "13500DBF-190B-43D0-9000-670F2E73BECB - e2fa77ba9626c225"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "-[BRShareCreateShareOperation main]"
+                  moduleName = "CloudDocs"
+                  usesParentBreakpointCondition = "Yes"
+                  offsetFromSymbolStart = "0">
+               </Location>
+               <Location
+                  uuid = "13500DBF-190B-43D0-9000-670F2E73BECB - b16a4f5a352ac79"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "-[BRShareCopyCurrentUserNameAndDisplayHandleOperation main]"
                   moduleName = "CloudDocs"
                   usesParentBreakpointCondition = "Yes"
                   offsetFromSymbolStart = "0">
@@ -790,16 +1236,6 @@
                   offsetFromSymbolStart = "0">
                </Location>
                <Location
-                  uuid = "13500DBF-190B-43D0-9000-670F2E73BECB - 6e426623ce8870f5"
-                  shouldBeEnabled = "Yes"
-                  ignoreCount = "0"
-                  continueAfterRunningActions = "No"
-                  symbolName = "-[BRShareCleanSubitems main]"
-                  moduleName = "CloudDocs"
-                  usesParentBreakpointCondition = "Yes"
-                  offsetFromSymbolStart = "0">
-               </Location>
-               <Location
                   uuid = "13500DBF-190B-43D0-9000-670F2E73BECB - 1d39927bfcb87175"
                   shouldBeEnabled = "Yes"
                   ignoreCount = "0"
@@ -815,6 +1251,16 @@
                   ignoreCount = "0"
                   continueAfterRunningActions = "No"
                   symbolName = "-[BRShareProcessSubitems main]"
+                  moduleName = "CloudDocs"
+                  usesParentBreakpointCondition = "Yes"
+                  offsetFromSymbolStart = "0">
+               </Location>
+               <Location
+                  uuid = "13500DBF-190B-43D0-9000-670F2E73BECB - 879cbeded5417dd9"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "-[BRShareAcceptOperation main]"
                   moduleName = "CloudDocs"
                   usesParentBreakpointCondition = "Yes"
                   offsetFromSymbolStart = "0">
@@ -880,192 +1326,22 @@
                   offsetFromSymbolStart = "0">
                </Location>
                <Location
-                  uuid = "13500DBF-190B-43D0-9000-670F2E73BECB - c4ae4e5576861461"
+                  uuid = "13500DBF-190B-43D0-9000-670F2E73BECB - 63d2dc0d213aa45a"
                   shouldBeEnabled = "Yes"
                   ignoreCount = "0"
                   continueAfterRunningActions = "No"
-                  symbolName = "-[QLThumbnailRequestOperation main]"
-                  moduleName = "QuickLookThumbnailing"
+                  symbolName = "DgnThreadWorker::main()"
+                  moduleName = "SDAPI"
                   usesParentBreakpointCondition = "Yes"
                   offsetFromSymbolStart = "0">
                </Location>
                <Location
-                  uuid = "13500DBF-190B-43D0-9000-670F2E73BECB - 92981cd8a3b8c708"
+                  uuid = "13500DBF-190B-43D0-9000-670F2E73BECB - 47937eec6b88a9fd"
                   shouldBeEnabled = "Yes"
                   ignoreCount = "0"
                   continueAfterRunningActions = "No"
-                  symbolName = "-[QLThumbnailStoreRetrievalOperation main]"
-                  moduleName = "QuickLookThumbnailing"
-                  usesParentBreakpointCondition = "Yes"
-                  offsetFromSymbolStart = "0">
-               </Location>
-               <Location
-                  uuid = "13500DBF-190B-43D0-9000-670F2E73BECB - 9168ac3490243d85"
-                  shouldBeEnabled = "Yes"
-                  ignoreCount = "0"
-                  continueAfterRunningActions = "No"
-                  symbolName = "-[QLExtensionHostContextThumbnailOperation main]"
-                  moduleName = "QuickLookThumbnailing"
-                  usesParentBreakpointCondition = "Yes"
-                  offsetFromSymbolStart = "0">
-               </Location>
-               <Location
-                  uuid = "13500DBF-190B-43D0-9000-670F2E73BECB - a71abb9052142cf0"
-                  shouldBeEnabled = "Yes"
-                  ignoreCount = "0"
-                  continueAfterRunningActions = "No"
-                  symbolName = "-[_CPPowerAssertionThread main]"
-                  moduleName = "AppSupport"
-                  usesParentBreakpointCondition = "Yes"
-                  offsetFromSymbolStart = "0">
-               </Location>
-               <Location
-                  uuid = "13500DBF-190B-43D0-9000-670F2E73BECB - ecee245eab7b8811"
-                  shouldBeEnabled = "Yes"
-                  ignoreCount = "0"
-                  continueAfterRunningActions = "No"
-                  symbolName = "-[CPDistributedMessagingAsyncOperation main]"
-                  moduleName = "AppSupport"
-                  usesParentBreakpointCondition = "Yes"
-                  offsetFromSymbolStart = "0">
-               </Location>
-               <Location
-                  uuid = "13500DBF-190B-43D0-9000-670F2E73BECB - fc1aeb7613fc5c23"
-                  shouldBeEnabled = "Yes"
-                  ignoreCount = "0"
-                  continueAfterRunningActions = "No"
-                  symbolName = "-[FPFetchAppLibraryIconsOperation main]"
-                  moduleName = "FileProvider"
-                  usesParentBreakpointCondition = "Yes"
-                  offsetFromSymbolStart = "0">
-               </Location>
-               <Location
-                  uuid = "13500DBF-190B-43D0-9000-670F2E73BECB - 53bac5bbf0876d57"
-                  shouldBeEnabled = "Yes"
-                  ignoreCount = "0"
-                  continueAfterRunningActions = "No"
-                  symbolName = "-[FPFetchRegularItemThumbnailsOperation main]"
-                  moduleName = "FileProvider"
-                  usesParentBreakpointCondition = "Yes"
-                  offsetFromSymbolStart = "0">
-               </Location>
-               <Location
-                  uuid = "13500DBF-190B-43D0-9000-670F2E73BECB - 6441310c1c364b3"
-                  shouldBeEnabled = "Yes"
-                  ignoreCount = "0"
-                  continueAfterRunningActions = "No"
-                  symbolName = "-[FPFetchThumbnailsOperation main]"
-                  moduleName = "FileProvider"
-                  usesParentBreakpointCondition = "Yes"
-                  offsetFromSymbolStart = "0">
-               </Location>
-               <Location
-                  uuid = "13500DBF-190B-43D0-9000-670F2E73BECB - 5e18652571e3e3ed"
-                  shouldBeEnabled = "Yes"
-                  ignoreCount = "0"
-                  continueAfterRunningActions = "No"
-                  symbolName = "-[FPXDropSpotlightIndexOperation main]"
-                  moduleName = "FileProvider"
-                  usesParentBreakpointCondition = "Yes"
-                  offsetFromSymbolStart = "0">
-               </Location>
-               <Location
-                  uuid = "13500DBF-190B-43D0-9000-670F2E73BECB - 9b2ae0b4691598f0"
-                  shouldBeEnabled = "Yes"
-                  ignoreCount = "0"
-                  continueAfterRunningActions = "No"
-                  symbolName = "-[FPXFetchClientStateOperation main]"
-                  moduleName = "FileProvider"
-                  usesParentBreakpointCondition = "Yes"
-                  offsetFromSymbolStart = "0">
-               </Location>
-               <Location
-                  uuid = "13500DBF-190B-43D0-9000-670F2E73BECB - f0c58f9fd68581d0"
-                  shouldBeEnabled = "Yes"
-                  ignoreCount = "0"
-                  continueAfterRunningActions = "No"
-                  symbolName = "-[FPXFetchOneBatchFromWorkingSetOperation main]"
-                  moduleName = "FileProvider"
-                  usesParentBreakpointCondition = "Yes"
-                  offsetFromSymbolStart = "0">
-               </Location>
-               <Location
-                  uuid = "13500DBF-190B-43D0-9000-670F2E73BECB - bf66c3ccab2be5e5"
-                  shouldBeEnabled = "Yes"
-                  ignoreCount = "0"
-                  continueAfterRunningActions = "No"
-                  symbolName = "-[FPXIndexOneBatchOperation main]"
-                  moduleName = "FileProvider"
-                  usesParentBreakpointCondition = "Yes"
-                  offsetFromSymbolStart = "0">
-               </Location>
-               <Location
-                  uuid = "13500DBF-190B-43D0-9000-670F2E73BECB - 9ceabab62eb5dabf"
-                  shouldBeEnabled = "Yes"
-                  ignoreCount = "0"
-                  continueAfterRunningActions = "No"
-                  symbolName = "-[FPActionOperation main]"
-                  moduleName = "FileProvider"
-                  usesParentBreakpointCondition = "Yes"
-                  offsetFromSymbolStart = "0">
-               </Location>
-               <Location
-                  uuid = "13500DBF-190B-43D0-9000-670F2E73BECB - 2aa1ea7f21732727"
-                  shouldBeEnabled = "Yes"
-                  ignoreCount = "0"
-                  continueAfterRunningActions = "No"
-                  symbolName = "-[EKRequestAvailabilityOperation main]"
-                  moduleName = "EventKit"
-                  usesParentBreakpointCondition = "Yes"
-                  offsetFromSymbolStart = "0">
-               </Location>
-               <Location
-                  uuid = "13500DBF-190B-43D0-9000-670F2E73BECB - f7c468e03ad186ad"
-                  shouldBeEnabled = "Yes"
-                  ignoreCount = "0"
-                  continueAfterRunningActions = "No"
-                  symbolName = "-[CalTruthFileOperation main]"
-                  moduleName = "CalendarPersistence"
-                  usesParentBreakpointCondition = "Yes"
-                  offsetFromSymbolStart = "0">
-               </Location>
-               <Location
-                  uuid = "13500DBF-190B-43D0-9000-670F2E73BECB - 65d66155bbd373d7"
-                  shouldBeEnabled = "Yes"
-                  ignoreCount = "0"
-                  continueAfterRunningActions = "No"
-                  symbolName = "-[CalTruthFileCreateDirectory main]"
-                  moduleName = "CalendarPersistence"
-                  usesParentBreakpointCondition = "Yes"
-                  offsetFromSymbolStart = "0">
-               </Location>
-               <Location
-                  uuid = "13500DBF-190B-43D0-9000-670F2E73BECB - 919d163cd8439841"
-                  shouldBeEnabled = "Yes"
-                  ignoreCount = "0"
-                  continueAfterRunningActions = "No"
-                  symbolName = "-[CalTruthFileDataWrite main]"
-                  moduleName = "CalendarPersistence"
-                  usesParentBreakpointCondition = "Yes"
-                  offsetFromSymbolStart = "0">
-               </Location>
-               <Location
-                  uuid = "13500DBF-190B-43D0-9000-670F2E73BECB - 18f278bc991a5ae5"
-                  shouldBeEnabled = "Yes"
-                  ignoreCount = "0"
-                  continueAfterRunningActions = "No"
-                  symbolName = "-[CalTruthFileICSWrite main]"
-                  moduleName = "CalendarPersistence"
-                  usesParentBreakpointCondition = "Yes"
-                  offsetFromSymbolStart = "0">
-               </Location>
-               <Location
-                  uuid = "13500DBF-190B-43D0-9000-670F2E73BECB - 592d71676e65486b"
-                  shouldBeEnabled = "Yes"
-                  ignoreCount = "0"
-                  continueAfterRunningActions = "No"
-                  symbolName = "-[CalTruthFileRemove main]"
-                  moduleName = "CalendarPersistence"
+                  symbolName = "main"
+                  moduleName = "IOPlatformPluginFamily"
                   usesParentBreakpointCondition = "Yes"
                   offsetFromSymbolStart = "0">
                </Location>
@@ -1170,104 +1446,19 @@
                   offsetFromSymbolStart = "0">
                </Location>
                <Location
-                  uuid = "13500DBF-190B-43D0-9000-670F2E73BECB - 2f4e56acfce791a4"
+                  uuid = "13500DBF-190B-43D0-9000-670F2E73BECB - 40672c7b96b334f7"
                   shouldBeEnabled = "Yes"
                   ignoreCount = "0"
                   continueAfterRunningActions = "No"
-                  symbolName = "SafeBrowsing::Service::main()"
-                  moduleName = "SafariSafeBrowsing"
+                  symbolName = "main"
+                  moduleName = "Retro Debugger"
                   usesParentBreakpointCondition = "Yes"
-                  offsetFromSymbolStart = "0">
-               </Location>
-               <Location
-                  uuid = "13500DBF-190B-43D0-9000-670F2E73BECB - c80c12a1a6af283c"
-                  shouldBeEnabled = "Yes"
-                  ignoreCount = "0"
-                  continueAfterRunningActions = "No"
-                  symbolName = "WTF::RunLoop::main()"
-                  moduleName = "JavaScriptCore"
-                  usesParentBreakpointCondition = "Yes"
-                  offsetFromSymbolStart = "0">
-               </Location>
-               <Location
-                  uuid = "13500DBF-190B-43D0-9000-670F2E73BECB - 1eccaeb85c77dcbc"
-                  shouldBeEnabled = "Yes"
-                  ignoreCount = "0"
-                  continueAfterRunningActions = "No"
-                  symbolName = "-[IKThumbnailOperation main]"
-                  moduleName = "ImageKit"
-                  usesParentBreakpointCondition = "Yes"
-                  offsetFromSymbolStart = "0">
-               </Location>
-               <Location
-                  uuid = "13500DBF-190B-43D0-9000-670F2E73BECB - d41a508d4e91388f"
-                  shouldBeEnabled = "Yes"
-                  ignoreCount = "0"
-                  continueAfterRunningActions = "No"
-                  symbolName = "-[IKTaskAsyncOperation main]"
-                  moduleName = "ImageKit"
-                  usesParentBreakpointCondition = "Yes"
-                  offsetFromSymbolStart = "0">
-               </Location>
-               <Location
-                  uuid = "13500DBF-190B-43D0-9000-670F2E73BECB - 7c69c9d23e53f507"
-                  shouldBeEnabled = "Yes"
-                  ignoreCount = "0"
-                  continueAfterRunningActions = "No"
-                  symbolName = "-[IKSlideshowItemLoadOperation main]"
-                  moduleName = "ImageKit"
-                  usesParentBreakpointCondition = "Yes"
-                  offsetFromSymbolStart = "0">
-               </Location>
-               <Location
-                  uuid = "13500DBF-190B-43D0-9000-670F2E73BECB - 216faf9d8355e992"
-                  shouldBeEnabled = "Yes"
-                  ignoreCount = "0"
-                  continueAfterRunningActions = "No"
-                  symbolName = "-[IKSlideshowItemLoadThumbnailOperation main]"
-                  moduleName = "ImageKit"
-                  usesParentBreakpointCondition = "Yes"
-                  offsetFromSymbolStart = "0">
-               </Location>
-               <Location
-                  uuid = "13500DBF-190B-43D0-9000-670F2E73BECB - 767832cd8154f4dd"
-                  shouldBeEnabled = "Yes"
-                  ignoreCount = "0"
-                  continueAfterRunningActions = "No"
-                  symbolName = "-[QLThumbnailQueueOperation main]"
-                  moduleName = "QuickLook"
-                  usesParentBreakpointCondition = "Yes"
-                  offsetFromSymbolStart = "0">
-               </Location>
-               <Location
-                  uuid = "13500DBF-190B-43D0-9000-670F2E73BECB - a5c889845364bbb0"
-                  shouldBeEnabled = "Yes"
-                  ignoreCount = "0"
-                  continueAfterRunningActions = "No"
-                  symbolName = "-[MPArtworkResizeOperation main]"
-                  moduleName = "MediaPlayer"
-                  usesParentBreakpointCondition = "Yes"
-                  offsetFromSymbolStart = "0">
-               </Location>
-               <Location
-                  uuid = "13500DBF-190B-43D0-9000-670F2E73BECB - 7e95757a9fa2b197"
-                  shouldBeEnabled = "Yes"
-                  ignoreCount = "0"
-                  continueAfterRunningActions = "No"
-                  symbolName = "-[MSVArtworkServiceResizeOperation main]"
-                  moduleName = "MediaServices"
-                  usesParentBreakpointCondition = "Yes"
-                  offsetFromSymbolStart = "0">
-               </Location>
-               <Location
-                  uuid = "13500DBF-190B-43D0-9000-670F2E73BECB - 62217a424a92946f"
-                  shouldBeEnabled = "Yes"
-                  ignoreCount = "0"
-                  continueAfterRunningActions = "No"
-                  symbolName = "-[MSVArtworkServiceConversionOperation main]"
-                  moduleName = "MediaServices"
-                  usesParentBreakpointCondition = "Yes"
-                  offsetFromSymbolStart = "0">
+                  urlString = "file:///Users/mars/develop/MTEngineSDL/platform/MacOS/src.MacOS/main.mm"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "30"
+                  endingLineNumber = "30"
+                  offsetFromSymbolStart = "28">
                </Location>
             </Locations>
          </BreakpointContent>
@@ -1302,6 +1493,38 @@
             endingLineNumber = "157"
             landmarkName = "SYS_AssertCrash(fmt)"
             landmarkType = "9">
+            <Locations>
+               <Location
+                  uuid = "08E7E3DF-86C9-4D17-B128-94777A72D8AD - db228fd73d68a52d"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "SYS_AssertCrash(char const*, ...)"
+                  moduleName = "Retro Debugger"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/mars/develop/MTEngineSDL/src/Engine/Core/SYS_Main.cpp"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "158"
+                  endingLineNumber = "158"
+                  offsetFromSymbolStart = "56">
+               </Location>
+               <Location
+                  uuid = "08E7E3DF-86C9-4D17-B128-94777A72D8AD - db228fd73d68a50e"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "SYS_AssertCrash(char const*, ...)"
+                  moduleName = "Retro Debugger"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/mars/develop/MTEngineSDL/src/Engine/Core/SYS_Main.cpp"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "157"
+                  endingLineNumber = "157"
+                  offsetFromSymbolStart = "60">
+               </Location>
+            </Locations>
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -1390,6 +1613,38 @@
             endingLineNumber = "1834"
             landmarkName = "CViewMainMenu::ReloadAndRestartPRG()"
             landmarkType = "7">
+            <Locations>
+               <Location
+                  uuid = "93EB9CE9-003E-4CBD-99FA-70947EFF65E8 - 1ef81aad8e5589a7"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "CViewMainMenu::ReloadAndRestartPRG()"
+                  moduleName = "Retro Debugger"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/mars/develop/c64d/src/Screens/CViewMainMenu.cpp"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "1834"
+                  endingLineNumber = "1834"
+                  offsetFromSymbolStart = "324">
+               </Location>
+               <Location
+                  uuid = "93EB9CE9-003E-4CBD-99FA-70947EFF65E8 - 1ef81aad8e5589a7"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "CViewMainMenu::ReloadAndRestartPRG()"
+                  moduleName = "Retro Debugger"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/mars/develop/c64d/src/Screens/CViewMainMenu.cpp"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "1834"
+                  endingLineNumber = "1834"
+                  offsetFromSymbolStart = "400">
+               </Location>
+            </Locations>
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -1406,6 +1661,38 @@
             endingLineNumber = "847"
             landmarkName = "CViewMainMenu::LoadSID(filePath)"
             landmarkType = "7">
+            <Locations>
+               <Location
+                  uuid = "67B5002A-E3E8-48D3-9B80-32ACA4110D06 - 21879a45a7b595b4"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "CViewMainMenu::LoadSID(CSlrString*)"
+                  moduleName = "Retro Debugger"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/mars/develop/c64d/src/Screens/CViewMainMenu.cpp"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "847"
+                  endingLineNumber = "847"
+                  offsetFromSymbolStart = "280">
+               </Location>
+               <Location
+                  uuid = "67B5002A-E3E8-48D3-9B80-32ACA4110D06 - 21879a45a7b595b4"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "CViewMainMenu::LoadSID(CSlrString*)"
+                  moduleName = "Retro Debugger"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/mars/develop/c64d/src/Screens/CViewMainMenu.cpp"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "847"
+                  endingLineNumber = "847"
+                  offsetFromSymbolStart = "320">
+               </Location>
+            </Locations>
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -1470,6 +1757,38 @@
             endingLineNumber = "81"
             landmarkName = "C64SpriteHires::DebugPrint()"
             landmarkType = "7">
+            <Locations>
+               <Location
+                  uuid = "252F7537-C336-42CA-BBEF-D012D4D3BC67 - 713d47d4e65809a4"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "C64SpriteHires::DebugPrint()"
+                  moduleName = "Retro Debugger"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/mars/develop/c64d/src/Views/C64/VicDisplay/C64SpriteHires.cpp"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "85"
+                  endingLineNumber = "85"
+                  offsetFromSymbolStart = "40">
+               </Location>
+               <Location
+                  uuid = "252F7537-C336-42CA-BBEF-D012D4D3BC67 - 713d47d4e6580e20"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "C64SpriteHires::DebugPrint()"
+                  moduleName = "Retro Debugger"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/mars/develop/c64d/src/Views/C64/VicDisplay/C64SpriteHires.cpp"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "81"
+                  endingLineNumber = "81"
+                  offsetFromSymbolStart = "48">
+               </Location>
+            </Locations>
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -1482,10 +1801,42 @@
             filePath = "../../src/Screens/CViewC64.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "2599"
-            endingLineNumber = "2599"
+            startingLineNumber = "2636"
+            endingLineNumber = "2636"
             landmarkName = "CViewC64::DoFinishTap(x, y)"
             landmarkType = "7">
+            <Locations>
+               <Location
+                  uuid = "2E2675A9-77F2-4B97-B591-69715E1CCB47 - 916d4344980c95e"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "CViewC64::DoFinishTap(float, float)"
+                  moduleName = "Retro Debugger"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/mars/develop/c64d/src/Screens/CViewC64.cpp"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "2640"
+                  endingLineNumber = "2640"
+                  offsetFromSymbolStart = "28">
+               </Location>
+               <Location
+                  uuid = "2E2675A9-77F2-4B97-B591-69715E1CCB47 - 916d4344980c8da"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "CViewC64::DoFinishTap(float, float)"
+                  moduleName = "Retro Debugger"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/mars/develop/c64d/src/Screens/CViewC64.cpp"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "2636"
+                  endingLineNumber = "2636"
+                  offsetFromSymbolStart = "28">
+               </Location>
+            </Locations>
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -1518,6 +1869,38 @@
             endingLineNumber = "287"
             landmarkName = "CDebugSymbolsSegment::AddWatch(address, name, representation, numberOfValues)"
             landmarkType = "7">
+            <Locations>
+               <Location
+                  uuid = "ABEAE9DE-1FE9-4B25-AD6F-55B757C347D5 - ed40de00d2be2c30"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "CDebugSymbolsSegment::AddWatch(int, char*, unsigned char, int)"
+                  moduleName = "Retro Debugger"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/mars/develop/c64d/src/DebugInterface/Symbols/CDebugSymbolsSegment.cpp"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "289"
+                  endingLineNumber = "289"
+                  offsetFromSymbolStart = "56">
+               </Location>
+               <Location
+                  uuid = "ABEAE9DE-1FE9-4B25-AD6F-55B757C347D5 - ed40de00d2be2ffe"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "CDebugSymbolsSegment::AddWatch(int, char*, unsigned char, int)"
+                  moduleName = "Retro Debugger"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/mars/develop/c64d/src/DebugInterface/Symbols/CDebugSymbolsSegment.cpp"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "287"
+                  endingLineNumber = "287"
+                  offsetFromSymbolStart = "56">
+               </Location>
+            </Locations>
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -1534,6 +1917,38 @@
             endingLineNumber = "67"
             landmarkName = "SND_Shutdown()"
             landmarkType = "9">
+            <Locations>
+               <Location
+                  uuid = "1A54DA79-4A19-43FE-B1EF-6A1D97E2D9B9 - bf378ca1f2ada091"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "SND_Shutdown()"
+                  moduleName = "Retro Debugger"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/mars/develop/MTEngineSDL/src/Engine/Audio/SND_SoundEngine.cpp"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "68"
+                  endingLineNumber = "68"
+                  offsetFromSymbolStart = "12">
+               </Location>
+               <Location
+                  uuid = "1A54DA79-4A19-43FE-B1EF-6A1D97E2D9B9 - bf378ca1f2ada0b0"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "SND_Shutdown()"
+                  moduleName = "Retro Debugger"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/mars/develop/MTEngineSDL/src/Engine/Audio/SND_SoundEngine.cpp"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "67"
+                  endingLineNumber = "67"
+                  offsetFromSymbolStart = "12">
+               </Location>
+            </Locations>
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -1550,22 +1965,38 @@
             endingLineNumber = "731"
             landmarkName = "CViewDrive1541FileD64::StartDiskPRGEntry(entryNum, showLoadAddressInfo)"
             landmarkType = "7">
-         </BreakpointContent>
-      </BreakpointProxy>
-      <BreakpointProxy
-         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
-         <BreakpointContent
-            uuid = "753A8354-321B-4E8F-818B-139F3DC2E2A5"
-            shouldBeEnabled = "Yes"
-            ignoreCount = "0"
-            continueAfterRunningActions = "No"
-            filePath = "../../src/Views/C64/VicEditor/Layers/CVicEditorLayerC64Canvas.cpp"
-            startingColumnNumber = "9223372036854775807"
-            endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "98"
-            endingLineNumber = "98"
-            landmarkName = "CVicEditorLayerC64Canvas::Serialize(byteBuffer)"
-            landmarkType = "7">
+            <Locations>
+               <Location
+                  uuid = "AD475777-0570-42CE-A879-900A083F586C - 8cc7396537f57de3"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "CViewDrive1541FileD64::StartDiskPRGEntry(int, bool)"
+                  moduleName = "Retro Debugger"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/mars/develop/c64d/src/Views/C64/CViewDrive1541FileD64.cpp"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "731"
+                  endingLineNumber = "731"
+                  offsetFromSymbolStart = "88">
+               </Location>
+               <Location
+                  uuid = "AD475777-0570-42CE-A879-900A083F586C - 8cc7396537f57de3"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "CViewDrive1541FileD64::StartDiskPRGEntry(int, bool)"
+                  moduleName = "Retro Debugger"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/mars/develop/c64d/src/Views/C64/CViewDrive1541FileD64.cpp"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "731"
+                  endingLineNumber = "731"
+                  offsetFromSymbolStart = "140">
+               </Location>
+            </Locations>
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -1598,6 +2029,38 @@
             endingLineNumber = "283"
             landmarkName = "CRenderBackendOpenGL3::ReBindTexture(image)"
             landmarkType = "7">
+            <Locations>
+               <Location
+                  uuid = "057E4FDC-164C-4D43-9979-B9BE73D83CF2 - 2884d90713f3edda"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "CRenderBackendOpenGL3::ReBindTexture(CSlrImage*)"
+                  moduleName = "Retro Debugger"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/mars/develop/MTEngineSDL/src/Engine/Core/Render/CRenderBackendOpenGL3.cpp"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "284"
+                  endingLineNumber = "284"
+                  offsetFromSymbolStart = "276">
+               </Location>
+               <Location
+                  uuid = "057E4FDC-164C-4D43-9979-B9BE73D83CF2 - 2884d90713f3edfb"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "CRenderBackendOpenGL3::ReBindTexture(CSlrImage*)"
+                  moduleName = "Retro Debugger"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/mars/develop/MTEngineSDL/src/Engine/Core/Render/CRenderBackendOpenGL3.cpp"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "283"
+                  endingLineNumber = "283"
+                  offsetFromSymbolStart = "256">
+               </Location>
+            </Locations>
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -1614,6 +2077,101 @@
             endingLineNumber = "257"
             landmarkName = "CRenderBackendOpenGL3::UpdateTextureLinearScaling(image)"
             landmarkType = "7">
+            <Locations>
+               <Location
+                  uuid = "6E2E3200-562B-4AC7-B7A8-40C5FFAC8977 - 79b7f3bf76b77c0d"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "CRenderBackendOpenGL3::UpdateTextureLinearScaling(CSlrImage*)"
+                  moduleName = "Retro Debugger"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/mars/develop/MTEngineSDL/src/Engine/Core/Render/CRenderBackendOpenGL3.cpp"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "261"
+                  endingLineNumber = "261"
+                  offsetFromSymbolStart = "24">
+               </Location>
+               <Location
+                  uuid = "6E2E3200-562B-4AC7-B7A8-40C5FFAC8977 - 79b7f3bf76b77c89"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "CRenderBackendOpenGL3::UpdateTextureLinearScaling(CSlrImage*)"
+                  moduleName = "Retro Debugger"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/mars/develop/MTEngineSDL/src/Engine/Core/Render/CRenderBackendOpenGL3.cpp"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "257"
+                  endingLineNumber = "257"
+                  offsetFromSymbolStart = "100">
+               </Location>
+            </Locations>
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "4842B127-9EDD-4843-998B-32702FAD92C3"
+            shouldBeEnabled = "Yes"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "../../src/Views/CMainMenuBar.cpp"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "3011"
+            endingLineNumber = "3011"
+            landmarkName = "CMainMenuBar::ProcessKeyboardShortcut(zone, actionType, shortcut)"
+            landmarkType = "7">
+            <Locations>
+               <Location
+                  uuid = "4842B127-9EDD-4843-998B-32702FAD92C3 - 2aab60475cee0ec9"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "CMainMenuBar::ProcessKeyboardShortcut(unsigned int, unsigned char, CSlrKeyboardShortcut*)"
+                  moduleName = "Retro Debugger"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/mars/develop/c64d/src/Views/CMainMenuBar.cpp"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "3003"
+                  endingLineNumber = "3003"
+                  offsetFromSymbolStart = "2440">
+               </Location>
+               <Location
+                  uuid = "4842B127-9EDD-4843-998B-32702FAD92C3 - 2aab60475cee0dc1"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "CMainMenuBar::ProcessKeyboardShortcut(unsigned int, unsigned char, CSlrKeyboardShortcut*)"
+                  moduleName = "Retro Debugger"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/mars/develop/c64d/src/Views/CMainMenuBar.cpp"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "3011"
+                  endingLineNumber = "3011"
+                  offsetFromSymbolStart = "2708">
+               </Location>
+               <Location
+                  uuid = "4842B127-9EDD-4843-998B-32702FAD92C3 - 2aab60475cee0dc1"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "CMainMenuBar::ProcessKeyboardShortcut(unsigned int, unsigned char, CSlrKeyboardShortcut*)"
+                  moduleName = "Retro Debugger"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/mars/develop/c64d/src/Views/CMainMenuBar.cpp"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "3011"
+                  endingLineNumber = "3011"
+                  offsetFromSymbolStart = "2712">
+               </Location>
+            </Locations>
          </BreakpointContent>
       </BreakpointProxy>
    </Breakpoints>

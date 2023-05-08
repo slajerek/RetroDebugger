@@ -68,7 +68,6 @@ extern "C"{
 #include "CViewC64ColorRamScreen.h"
 
 #include "CViewC64SidPianoKeyboard.h"
-#include "CViewC64MemoryDebuggerLayoutToolbar.h"
 #include "CViewDrive1541FileD64.h"
 #include "CViewC64StateCPU.h"
 #include "CViewInputEvents.h"
@@ -401,7 +400,8 @@ CViewC64::CViewC64(float posX, float posY, float posZ, float sizeX, float sizeY)
 //		guiMain->AddGuiElement(viewC64Snapshots);
 		
 		viewC64KeyMap = new CViewC64KeyMap(0, 0, -3.0, SCREEN_WIDTH, SCREEN_HEIGHT);
-//		guiMain->AddGuiElement(viewC64KeyMap);
+		this->viewC64KeyMap->visible = false;
+		guiMain->AddView(this->viewC64KeyMap);
 
 //		viewColodore = new CViewColodore(0, 0, -3.0, SCREEN_WIDTH, SCREEN_HEIGHT);
 //		guiMain->AddGuiElement(viewColodore);
@@ -580,10 +580,6 @@ CViewC64::CViewC64(float posX, float posY, float posZ, float sizeX, float sizeY)
 	
 	// attach disks, cartridges etc
 	C64DebuggerPerformStartupTasks();
-	
-	// restore selected layout
-	CLayoutData *layoutData = guiMain->layoutManager->currentLayout;
-	guiMain->layoutManager->SetLayoutAsync(layoutData, false);
 	
 	// and settings
 	guiMain->fntConsole->image->SetLinearScaling(c64SettingsInterpolationOnDefaultFont);
@@ -2185,6 +2181,36 @@ extern "C" {
 	void machine_drive_flush(void);
 }
 
+bool CViewC64::KeyDownRepeat(u32 keyCode, bool isShift, bool isAlt, bool isControl, bool isSuper)
+{
+	LOGI("CViewC64::KeyDownRepeat, keyCode=%4.4x (%d) %c", keyCode, keyCode, keyCode);
+	
+#if defined(LOG_KEYBOARD_PRESS_KEY_NAME)
+	CSlrString *keyCodeStr = SYS_KeyCodeToString(keyCode);
+	char *str = keyCodeStr->GetStdASCII();
+	LOGI("                   KeyDown=%s", str);
+	delete [] str;
+	delete keyCodeStr;
+#endif
+	
+	// if emulator screen has focus then it takes precedence
+	for (CDebugInterface *debugInterface : debugInterfaces)
+	{
+		CGuiView *view = debugInterface->GetViewScreen();
+		if (view && view->HasFocus())
+		{
+			view->KeyDownRepeat(keyCode, isShift, isAlt, isControl, isSuper);
+			return true;
+		}
+	}
+
+	// then key shortcuts
+//	if (mainMenuBar->KeyDownRepeat(keyCode, isShift, isAlt, isControl, isSuper))
+//		return true;
+	
+	return false;
+}
+
 bool CViewC64::KeyDown(u32 keyCode, bool isShift, bool isAlt, bool isControl, bool isSuper)
 {
 	LOGI("CViewC64::KeyDown, keyCode=%4.4x (%d) %c", keyCode, keyCode, keyCode);
@@ -2210,10 +2236,26 @@ bool CViewC64::KeyDown(u32 keyCode, bool isShift, bool isAlt, bool isControl, bo
 	delete keyCodeStr;
 #endif
 	
+	// if emulator screen has focus then it takes precedence
+	for (CDebugInterface *debugInterface : debugInterfaces)
+	{
+		CGuiView *view = debugInterface->GetViewScreen();
+		if (view && view->HasFocus())
+		{
+			view->KeyDown(keyCode, isShift, isAlt, isControl, isSuper);
+			return true;
+		}
+	}
+	
+	// then key shortcuts
 	if (mainMenuBar->KeyDown(keyCode, isShift, isAlt, isControl, isSuper))
 		return true;
 	
 	return false;
+	
+	
+	
+	
 	
 //#if defined(DEBUG_TEST_CODE)
 //	if (keyCode == 'a' && isControl)
@@ -2493,11 +2535,6 @@ bool CViewC64::KeyUp(u32 keyCode, bool isShift, bool isAlt, bool isControl, bool
 	}
 
 	// key not cosumed
-	return false;
-}
-
-bool CViewC64::KeyDownRepeat(u32 keyCode, bool isShift, bool isAlt, bool isControl, bool isSuper)
-{
 	return false;
 }
 
