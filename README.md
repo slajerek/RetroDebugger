@@ -4,7 +4,7 @@ This is Commodore 64, Atari XL/XE and NES code and memory debugger
 that works in real time. It is quick prototyping tool where you 
 can play with 8-bit machine and its internals.
 
-Note that this is not ready product, this is alpha version 0.64.60.04E.
+Note that this is not ready product, this is still beta version.
 
 If you are starting this for the first time and looking for Atari or
 Commodore, then you first need to setup your own ROMs of these retro
