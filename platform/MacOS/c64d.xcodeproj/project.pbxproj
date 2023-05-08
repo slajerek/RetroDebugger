@@ -11,7 +11,6 @@
 		410273122685EF1800890E34 /* CDebugSymbolsC64.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4102730D2685EF1700890E34 /* CDebugSymbolsC64.cpp */; };
 		410273132685EF1800890E34 /* CDebugSymbolsDrive1541.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4102730F2685EF1700890E34 /* CDebugSymbolsDrive1541.cpp */; };
 		4107417A28352763008BCF84 /* CViewC64Disassembly.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4107417828352763008BCF84 /* CViewC64Disassembly.cpp */; };
-		410918F8295274A900EBD5CA /* C64DebuggerPluginPicFader.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 410918F7295274A900EBD5CA /* C64DebuggerPluginPicFader.cpp */; };
 		410E2B3027737A5700F8FD87 /* CDebugSymbolsDataWatch.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 410E2B2F27737A5700F8FD87 /* CDebugSymbolsDataWatch.cpp */; };
 		4110D85E262BE2A400CF6F36 /* ghelp.c in Sources */ = {isa = PBXBuildFile; fileRef = 4110D7D6262BE2A400CF6F36 /* ghelp.c */; };
 		4110D85F262BE2A400CF6F36 /* gpattern.c in Sources */ = {isa = PBXBuildFile; fileRef = 4110D7D8262BE2A400CF6F36 /* gpattern.c */; };
@@ -1228,8 +1227,6 @@
 		410273102685EF1700890E34 /* CDebugSymbolsDrive1541.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CDebugSymbolsDrive1541.h; sourceTree = "<group>"; };
 		4107417828352763008BCF84 /* CViewC64Disassembly.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = CViewC64Disassembly.cpp; sourceTree = "<group>"; };
 		4107417928352763008BCF84 /* CViewC64Disassembly.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CViewC64Disassembly.h; sourceTree = "<group>"; };
-		410918F6295274A900EBD5CA /* C64DebuggerPluginPicFader.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = C64DebuggerPluginPicFader.h; sourceTree = "<group>"; };
-		410918F7295274A900EBD5CA /* C64DebuggerPluginPicFader.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = C64DebuggerPluginPicFader.cpp; sourceTree = "<group>"; };
 		410E2B2D27737A5700F8FD87 /* CDebugSymbolsDataWatch.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CDebugSymbolsDataWatch.h; sourceTree = "<group>"; };
 		410E2B2F27737A5700F8FD87 /* CDebugSymbolsDataWatch.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = CDebugSymbolsDataWatch.cpp; sourceTree = "<group>"; };
 		4110D7D5262BE2A400CF6F36 /* gorder.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = gorder.h; sourceTree = "<group>"; };
@@ -1329,7 +1326,6 @@
 		413EC7D0266E76CB00CB24D2 /* CViewBreakpoints.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CViewBreakpoints.h; sourceTree = "<group>"; };
 		414AD73728797F1200244453 /* CViewC64ScreenViewfinder.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = CViewC64ScreenViewfinder.cpp; sourceTree = "<group>"; };
 		414AD73828797F1200244453 /* CViewC64ScreenViewfinder.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CViewC64ScreenViewfinder.h; sourceTree = "<group>"; };
-		414BE0042784F08D00166AE2 /* TODO.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = TODO.txt; path = ../../src/TODO.txt; sourceTree = "<group>"; };
 		414DD3EA2601F8B900138569 /* gamecontrollerdb_txt_zlib.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = gamecontrollerdb_txt_zlib.h; sourceTree = "<group>"; };
 		4155B31D2681D8B600110009 /* CDebugSymbols.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = CDebugSymbols.cpp; sourceTree = "<group>"; };
 		4155B31E2681D8B600110009 /* CDebugSymbols.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CDebugSymbols.h; sourceTree = "<group>"; };
@@ -3775,15 +3771,6 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		410918F5295274A900EBD5CA /* PicFader */ = {
-			isa = PBXGroup;
-			children = (
-				410918F6295274A900EBD5CA /* C64DebuggerPluginPicFader.h */,
-				410918F7295274A900EBD5CA /* C64DebuggerPluginPicFader.cpp */,
-			);
-			path = PicFader;
-			sourceTree = "<group>";
-		};
 		4110D7D4262BE2A400CF6F36 /* GoatTracker */ = {
 			isa = PBXGroup;
 			children = (
@@ -4160,7 +4147,6 @@
 		41B5299123992DCF0084F0DB /* src */ = {
 			isa = PBXGroup;
 			children = (
-				414BE0042784F08D00166AE2 /* TODO.txt */,
 				41D4A5C823AA0F0F00A54EB2 /* Plugins */,
 				41D4A5D323AA0F0F00A54EB2 /* Embedded */,
 				41D4A5EC23AA0F0F00A54EB2 /* DebugInterface */,
@@ -4204,7 +4190,6 @@
 		41D4A5C823AA0F0F00A54EB2 /* Plugins */ = {
 			isa = PBXGroup;
 			children = (
-				410918F5295274A900EBD5CA /* PicFader */,
 				415E3E362775FDD2000BFA07 /* CrtMaker */,
 				41FC0F8A272808B4003DEE0A /* DNDK */,
 				4110D7D4262BE2A400CF6F36 /* GoatTracker */,
@@ -7412,7 +7397,6 @@
 				41C84CA223C6183B007C0889 /* cs8900io.c in Sources */,
 				41C84CA323C6183B007C0889 /* daa.c in Sources */,
 				41C84CA423C6183B007C0889 /* debugcart.c in Sources */,
-				410918F8295274A900EBD5CA /* C64DebuggerPluginPicFader.cpp in Sources */,
 				41C84CA523C6183B007C0889 /* delaep256.c in Sources */,
 				417F88EC271AD326008F5E1B /* CDebuggerApiNestopia.cpp in Sources */,
 				41C84CA623C6183B007C0889 /* delaep64.c in Sources */,
