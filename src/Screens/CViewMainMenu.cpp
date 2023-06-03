@@ -134,6 +134,7 @@ CViewMainMenu::CViewMainMenu(float posX, float posY, float posZ, float sizeX, fl
 	openFileExtensions.push_back(new CSlrString("snap"));
 	openFileExtensions.push_back(new CSlrString("vsf"));
 	openFileExtensions.push_back(new CSlrString("rtdl"));
+	openFileExtensions.push_back(new CSlrString("rdtl"));
 
 	// jukebox
 	jukeboxExtensions.push_back(new CSlrString("c64jukebox"));
@@ -504,7 +505,8 @@ bool CViewMainMenu::InsertD64(CSlrString *path, bool updatePathToD64, bool autoR
 	
 	// display file name in menu
 	char *fname = SYS_GetFileNameWithExtensionFromFullPath(asciiPath);
-
+	viewC64->ShowMessage("Inserted %s", fname);
+	
 	guiMain->LockMutex();
 
 //	if (menuItemInsertD64->str2 != NULL)

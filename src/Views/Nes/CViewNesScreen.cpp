@@ -726,6 +726,24 @@ void CViewNesScreen::RenderContextMenuItems()
 {
 	CGuiView::RenderContextMenuItems();
 
+	if (VID_IsViewportsEnable())
+	{
+		if (VID_IsWindowAlwaysOnTop(this))
+		{
+			if (ImGui::MenuItem("Remove always on top"))
+			{
+				VID_SetWindowAlwaysOnTop(this, false);
+			}
+		}
+		else
+		{
+			if (ImGui::MenuItem("Set always on top"))
+			{
+				VID_SetWindowAlwaysOnTop(this, true);
+			}
+		}
+	}
+	
 	if (guiMain->IsViewFullScreen())
 	{
 		if (ImGui::MenuItem("Leave fullscreen"))

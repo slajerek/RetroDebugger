@@ -12,8 +12,6 @@ C64DebuggerPluginDNDK::C64DebuggerPluginDNDK(float posX, float posY, float posZ,
 : CGuiView(posX, posY, posZ, sizeX, sizeY)
 {
 	InitImGuiView("NES Dungeons and Doomknights plugin");
-
-	this->SetEmulatorType(EMULATOR_TYPE_NESTOPIA);
 	
 //	InitConfig("PluginDNDK");
 }

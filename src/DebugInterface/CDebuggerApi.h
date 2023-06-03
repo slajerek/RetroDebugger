@@ -93,11 +93,12 @@ public:
 	//
 	virtual void ResetEmulationCounters();
 	
-	//
+	// shortcuts to the Engine
 	virtual void ShowMessage(const char *text);
 	virtual void BlitText(const char *text, float posX, float posY, float fontSize);
 	virtual void Sleep(long milliseconds);
 	virtual long GetCurrentTimeInMilliseconds();
+	virtual long GetCurrentFrameNumber();
 	
 	//
 	virtual void AddView(CGuiView *view);

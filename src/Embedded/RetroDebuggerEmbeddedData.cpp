@@ -85,7 +85,7 @@ ImFont* AddEmbeddedImGuiFont(float fontSize, int oversample, const unsigned int 
 	}
 	
 	font_cfg.FontBuilderFlags = ImGuiFreeTypeBuilderFlags_LightHinting; //ImGuiFreeTypeBuilderFlags_NoHinting;
-	font_cfg.EllipsisChar = (ImWchar)0x0085;
+//	font_cfg.EllipsisChar = (ImWchar)0x0085;
 	
 	ImGuiIO& io = ImGui::GetIO();
 //	const ImWchar* glyph_ranges = io.Fonts->GetGlyphRangesDefault();

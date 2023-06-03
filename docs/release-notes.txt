@@ -1,0 +1,100 @@
+Retro Debugger v0.64.64 The X Party release!
+This is just a maintenance update to fix these bugs from December last year :)
+
+Bug fixed: Setting profile file now miraculously fixed
+Bug fixed: Layout and mouse position problems when resizing are maybe fixed
+Bug fixed: Key shortcuts were consuming emulator screen events, hopefully they don't do this anymore
+Bug fixed: Exporting memory save might be possibly fixed
+Bugs fixed: Vic editor fixes
+Added: Always on top setting is back!
+Added: C64 keyboard layout editor
+Upgrade macOS: Fixes for gamepads not working in macOS Ventura due to Apple APIs changes are completed
+Upgrade macOS: Proper macOS binary notarization
+
+
+Retro Debugger v0.64.62
+
+Since the last release of the Retro Debugger I experienced the temporal end of two beings that were with me for a very long time. Hopefully, coding this tool helped me understand how we overlook simple things. Such as being lucky to have loved ones next to you. Simple waiting when the unsurpassed is expected. Guessing about eternity when the code compiles and watching them decay quickly in endless days at the same time. This code is far from complete even though I wished I had still time to finalize it. But actually, that does not matter. What matters is that definitely, that luck of coding is just as important as the luck of your observation and that flow with the infinite summoning microseconds.
+
+Thanks to Bacchus/Fairlight, Euan Gamble, and Isildur/Samar for continuous testing and support
+Thanks to Tebe for the great motivation to fix bugs in Stereo Pokey :)
+Special Thanks for last-minute bug reports: Linus Nielsen Boogaloo/Horizon, zero211, Mr.Mouse/XeNTaX/Genesis Project, Isildur/Samar
+
+- Vic Editor
+- Fixed bug: when d011 was off then screen boundaries rectangle when the grid is on was not shown
+- Select the C64 palette, also in menu of C64 Palette view
+- C64 Palette show hex values option
+- Fullscreen mode for Emulation screens (Alt+Enter on the emulation window, or from the context menu). You can leave fullscreen using the ESC key.
+- Added missing ROMs error on startup (still some issues though)
+- Recently opened files: automatically scan file paths to check if they are still available and refresh (e.g. when reconnected external storage). Keep ALT pressed to see full paths.
+- Add recently opened Files menu to Import/Export in Vic Editor and Charset view
+- Code/Rewind menu (run N instructions, rewind to cycle, etc.)
+- Save/Load Timeline
+- Settings for Save Timeline compression level
+- Created a new view "Drive Led"
+- Fixed bug: UI fixes, like implementing own events in the timeline. Note: timeline still has some reloading problems (especially in Atari800), although should be working when scrubbed
+- 'Open Window' Ctrl+Shift+O to quickly open or find a window on the screen
+- D64 file browser with key shortcut F7
+- Fixed bug: VicDisplay locked cursor was still updating even though it was outside the view
+- MIDI config for Piano Keyboard and playing SID notes using MIDI keyboard (with Resid-fp only)
+- MIDI key jazz supports multiple pressed notes (chords), sent to multiple SID channels
+- UX improvements in Vic Control
+- Select the theme in Settings menu
+- Drag'n'drop png onto Vic Editor to import files
+- Keep aspect of the png image when imported using Vic Editor
+- Setting to skip bogus (dummy) page offset read breakpoint on indexed STA (requested by me and Bacchus/Fairlight)
+- JMP <enter> in Disassembly view now does JMP *
+- Setting to Enable/Disable floating windows (ImGui's viewports enable, experimental)
+- Detach the PRG file in the File menu to get rid of PRG (suggested by Bacchus/Fairlight)
+- Setting to set memory mapping directly to defined OS file (real-time access to memory via OS file handle, read/write in Linux/macOS, read-only in Windows)
+- Added Step Over JSR to menu Code/
+- Another nasty UX workaround for memory map was generalized
+- Right-click the context menu on the Emulation screen to set 100% 50% screen window size.
+- VIC Debug borders (selectable in Settings)
+- C64 Screen viewfinder view (note, there's a bug when debug borders are changed from the default and this view is off. Hopefully I'll have another nice evening to fix that one)
+- Keep aspect ratios for all emulation screens
+- Added Setting for Stereo SID, SID params, etc.
+- Added Setting for Stereo Pokey
+- Added Setting for Memory map UI, dump memory, machine model, C64/Monitor type, C64 Profiler, maximum speed,
+- Added C64 profiler to Settings: Settings/Profiler (not tested carefully, does it work?)
+- Fixed bug related to maximum speed key shortcut that did not work in Disassembly & Piano
+- Added simple ImGui view with log and debug log messages (only in DEBUG mode)! (ShowMessage...)
+- Show notifications in the right-bottom (thanks to the imgui-notify library and my fixes)
+- Show red background in Disassembly when VicDisplay locked cursor
+- Change Code/ menu text "Step instruction" to "Pause" when emulation is running
+- Added Emulators/EmuConfig.h
+- C64 Color RAM view
+- Add watch and breakpoint are now also accepted by the OK button
+- Improved framework for plugins
+- Fixed bug: When editing value in memory dump or editing disassembly code, the Ctrl+G key shortcut should cancel edit and move to edit goto address
+- Run a selected number of instructions/cycles: add an option in the menu to run emulation for selected number of cycles/frames
+- Fixed bug: View SID in Stereo was broken
+- Fixed bug: Save XL/XE timeline always displayed no filename instead of properly showing what's being saved
+- Keep aspect ratio when docked (added black bars around)
+- Ctrl+W close window, not quit the app
+- New event created: you can now play on Piano Keyboards using the mouse button
+- SHOW PC FOR in Vic Control view is now a proper button
+- Fixed bug: I was able to add a label with the same name in the disassembly label edit
+- Option to keep breakpoints, watches, or labels after file reload (Cmd+L). Breakpoints and watches are stored by labels and when the code file is reloaded they are recreated based on new label addresses, if the breakpoint/watch is not associated with label, then the address is restored
+- Charset context menu added option to show Hires/Multi
+- New view "Audio Mixer": Ksubi's saying that the volume is quite a lot lower for him than with other emulators..? So he needs to turn up his laptop volume quite a bit ... Ksubi: "The sound issue I had was resid vs fastsid, resid is quieter for some strange reason..."  (note, this is not fixed, but can be tweaked using Audio Mixer)
+- Select audio latency: added a selectable number of samples for audio player callback in Settings
+- Vice monitor help prompt bug reported by Bacchus/Firelight
+- Set by default keep watches and keep breakpoints option on
+- Fixed Engine bug: FindTopWindow(x,y) finds a window even though the main app window is not visible (under other macOS windows), note this may not work when the floating windows setting is on
+- Timeline frame num is now properly centered
+- Changed behavior of docking, now you can select in Settings if that's done automatically or by pressing SHIFT. The default is not docking as that created a bit messy sometimes.
+- A small but annoying bug in VicEditor: when the grid was off and I moved an image with a space, the grid turned on by itself. That behavior is now a Setting with configurable parameters.
+- Reported by Bacchus/Fairlight, this is now a Setting: Today clicking the address part of disassembly sets a breakpoint. I would very much like to see that clicking any part just selected that row and that you needed a qualifier to toggle the breakpoint  (like CTRL+Click).
+- Workspaces/Save Layouts to immediately store all layouts (note, exporting/importing layout is still to be done)
+- Sprite view scale
+- Bring window app to the front on command line -pass, configurable in Settings (requested by Jetboy/Elysium)
+- Refactoring of default UI settings in all views
+- Fixed bug: view VIA was broken
+- Generalized scope waveforms views, scope waves are now synced on rising edge trigger
+- Fixed bug: the cartridge is not inserted at startup
+- Timeline context menu added switch display: frames, seconds
+- Upgraded NestopiaUE to 1.51.1
+- Fixed bug: SID/VIC/... clicking outside the interior of the view (i.e. window bar) changed states
+- Change the default 'block painting' mode in Vic Editor, default should be "NOT BLOCK"
+- Store/restore breakpoints to hjson

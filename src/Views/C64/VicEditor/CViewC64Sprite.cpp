@@ -233,6 +233,8 @@ void CViewC64Sprite::Render()
 	float px = posX + 3.0f*scale;
 	float py = posY + 3.0f*scale;
 	
+//	LOGD("spriteRasterX=%d spriteRasterY=%d", spriteRasterX, spriteRasterY);
+	
 	C64Sprite *sprite = vicEditor->layerVirtualSprites->FindSpriteByRasterPos(spriteRasterX, spriteRasterY);
 	
 	int spriteId = 0;

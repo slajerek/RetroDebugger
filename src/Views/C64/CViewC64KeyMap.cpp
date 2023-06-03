@@ -33,7 +33,7 @@ extern "C"{
 CViewC64KeyMap::CViewC64KeyMap(float posX, float posY, float posZ, float sizeX, float sizeY)
 : CGuiView(posX, posY, posZ, sizeX, sizeY)
 {
-	this->name = "CViewC64KeyMap";
+	this->name = "C64 Key mapping";
 	
 	extKeyMap.push_back(new CSlrString("c64kbm"));
 
@@ -50,15 +50,16 @@ CViewC64KeyMap::CViewC64KeyMap(float posX, float posY, float posZ, float sizeX, 
 	float px = startX;
 	float py = startY;
 	
-	float buttonSizeX = 88.3f;
-	float buttonSizeY = fontHeight + 4;
+	float buttonSizeX = 128.3f;
+	float buttonSizeY = fontHeight + 8;
 	float buttonGap = 8.0f;
 	float buttonGapY = 5.0f;
+	float textOffsetY = 4.5f;
 	
 	btnBack = new CGuiButton(NULL, NULL,
 								   px, py, posZ, buttonSizeX, buttonSizeY,
-								   new CSlrString("<< SAVE"),
-								   FONT_ALIGN_CENTER, buttonSizeX/2, 3.5,
+								   new CSlrString("SET AS DEFAULT"),
+								   FONT_ALIGN_CENTER, buttonSizeX/2, textOffsetY,
 								   font, fontScale,
 								   1.0, 1.0, 1.0, 1.0,
 								   0.3, 0.3, 0.3, 1.0,
@@ -70,7 +71,7 @@ CViewC64KeyMap::CViewC64KeyMap(float posX, float posY, float posZ, float sizeX, 
 	btnImportKeyMap = new CGuiButton(NULL, NULL,
 							 px, py, posZ, buttonSizeX, buttonSizeY,
 							 new CSlrString("IMPORT"),
-							 FONT_ALIGN_CENTER, buttonSizeX/2, 3.5,
+							 FONT_ALIGN_CENTER, buttonSizeX/2, textOffsetY,
 							 font, fontScale,
 							 1.0, 1.0, 1.0, 1.0,
 							 0.3, 0.3, 0.3, 1.0,
@@ -82,20 +83,20 @@ CViewC64KeyMap::CViewC64KeyMap(float posX, float posY, float posZ, float sizeX, 
 	btnExportKeyMap = new CGuiButton(NULL, NULL,
 							 px, py, posZ, buttonSizeX, buttonSizeY,
 							 new CSlrString("EXPORT"),
-							 FONT_ALIGN_CENTER, buttonSizeX/2, 3.5,
+							 FONT_ALIGN_CENTER, buttonSizeX/2, textOffsetY,
 							 font, fontScale,
 							 1.0, 1.0, 1.0, 1.0,
 							 0.3, 0.3, 0.3, 1.0,
 							 this);
 	this->AddGuiElement(btnExportKeyMap);
 
-	px = 126;
+	px = 166;
 	py = 51 + buttonSizeY + buttonGapY;
 	
 	btnAssignKey = new CGuiButton(NULL, NULL,
 									 px, py, posZ, buttonSizeX, buttonSizeY,
 									 new CSlrString("ASSIGN KEY"),
-									 FONT_ALIGN_CENTER, buttonSizeX/2, 3.5,
+									 FONT_ALIGN_CENTER, buttonSizeX/2, textOffsetY,
 									 font, fontScale,
 									 1.0, 1.0, 1.0, 1.0,
 									 0.3, 0.3, 0.3, 1.0,
@@ -107,7 +108,7 @@ CViewC64KeyMap::CViewC64KeyMap(float posX, float posY, float posZ, float sizeX, 
 	btnRemoveKey = new CGuiButton(NULL, NULL,
 									 px, py, posZ, buttonSizeX, buttonSizeY,
 									 new CSlrString("REMOVE KEY"),
-									 FONT_ALIGN_CENTER, buttonSizeX/2, 3.5,
+									 FONT_ALIGN_CENTER, buttonSizeX/2, textOffsetY,
 									 font, fontScale,
 									 1.0, 1.0, 1.0, 1.0,
 									 0.3, 0.3, 0.3, 1.0,
@@ -337,6 +338,44 @@ CViewC64KeyMap::~CViewC64KeyMap()
 {
 }
 
+// Note, this is deprecated, we need to finally correct in Engine. This below is legacy code transformed to new MTEngineSDL
+void CViewC64KeyMap::SetPosition(float posX, float posY, float posZ, float sizeX, float sizeY)
+{
+	CGuiView::SetPosition(posX, posY, posZ, sizeX, sizeY);
+
+	// buttons
+	float startX = 30 + posX;
+	float startY = 47 + posY;
+	
+	float px = startX;
+	float py = startY;
+	
+	float buttonSizeX = 128.3f;
+	float buttonSizeY = fontHeight + 8;
+	float buttonGap = 8.0f;
+	float buttonGapY = 5.0f;
+	
+	btnBack->SetPosition(px, py, posZ, buttonSizeX, buttonSizeY);
+	
+	px += buttonSizeX + buttonGap;
+
+	btnImportKeyMap->SetPosition(px, py, posZ, buttonSizeX, buttonSizeY);
+
+	px += buttonSizeX + buttonGap;
+
+	btnExportKeyMap->SetPosition(px, py, posZ, buttonSizeX, buttonSizeY);
+
+	px = 166 + posX;
+	py = 51 + buttonSizeY + buttonGapY + posY;
+	
+	btnAssignKey->SetPosition(px, py, posZ, buttonSizeX, buttonSizeY);
+	
+	px += buttonSizeX + buttonGap;
+	
+	btnRemoveKey->SetPosition(px, py, posZ, buttonSizeX, buttonSizeY);
+}
+
+
 bool CViewC64KeyMap::ButtonClicked(CGuiButton *button)
 {
 	if (button == btnBack)
@@ -377,8 +416,8 @@ void CViewC64KeyMap::SaveAndGoBack()
 	
 	viewC64->debugInterfaceC64->InitKeyMap(keyMap);
 	
-//	viewC64->SwitchToScreenLayout(viewC64->currentScreenLayoutId);
-	guiMain->SetView(viewC64->viewC64SettingsMenu);
+////	viewC64->SwitchToScreenLayout(viewC64->currentScreenLayoutId);
+//	guiMain->SetView(viewC64->viewC64SettingsMenu);
 }
 
 void CViewC64KeyMap::OpenDialogImportKeyMap()
@@ -498,7 +537,7 @@ void CViewC64KeyMap::Render()
 	float scry = posY + sb;
 	float scrsx = sizeX - sb*2.0f;
 	float scrsy = sizeY - sb*2.0f;
-	float cx = posX + scrsx/4.0f + sb*2;
+	float cx = posX + scrsx/2.0f + sb*1.3;
 	
 	BlitFilledRectangle(scrx, scry, -1, scrsx, scrsy,
 						viewC64->colorsTheme->colorBackgroundR,
@@ -657,16 +696,16 @@ void CViewC64KeyMap::Render()
 		}
 	}
 	
+	// render UI
+	CGuiView::Render();
 	
-	CGuiView::Render(posX, posY);
-
 	this->font->BlitText("Host key:", posX + 35, posY + 75, posZ, 2.0f);
 	
 	if (isAssigningKey)
 	{
 		BlitFilledRectangle(posX, posY, posZ, sizeX, sizeY, 0, 0, 0, 0.7);
 		
-		float px = sizeX/2;
+		float px = posX + sizeX/2 - 60;
 		float py = posY + 150;
 		font->BlitTextColor("Enter key", px, py, posZ, 2.5f, 1.0f, 1.0f, 1.0f, 1.0f); //, FONT_ALIGN_CENTER);
 		

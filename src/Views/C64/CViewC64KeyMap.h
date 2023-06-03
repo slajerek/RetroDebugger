@@ -61,6 +61,8 @@ public:
 	
 	virtual void ActivateView();
 	virtual void DeactivateView();
+
+	virtual void SetPosition(float posX, float posY, float posZ, float sizeX, float sizeY);
 	
 	CSlrFont *font;
 	float fontScale;

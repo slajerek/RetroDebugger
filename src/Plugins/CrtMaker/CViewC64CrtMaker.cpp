@@ -54,9 +54,6 @@ CViewC64CrtMaker::CViewC64CrtMaker(float posX, float posY, float posZ, float siz
 //	imageScreen->LoadImage(imageDataScreen, RESOURCE_PRIORITY_STATIC, false);
 //	imageScreen->resourceType = RESOURCE_TYPE_IMAGE_DYNAMIC;
 //	VID_PostImageBinding(imageScreen, NULL);
-	
-	// this is real imgui window
-	imGuiNoWindowPadding = false;
 }
 
 CViewC64CrtMaker::~CViewC64CrtMaker()

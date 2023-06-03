@@ -25,6 +25,7 @@ include_directories(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Plugins"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Plugins/CrtMaker"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Plugins/DNDK"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Plugins/Commando"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Plugins/ShowPic"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Plugins/GoatTracker"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Plugins/GoatTracker/gt2"

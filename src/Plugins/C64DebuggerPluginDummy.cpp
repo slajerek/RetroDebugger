@@ -1,5 +1,7 @@
 #include "C64DebuggerPluginDummy.h"
 #include "GFX_Types.h"
+#include "CViewC64.h"
+#include "CViewC64VicEditor.h"
 #include <map>
 
 #define ASSEMBLE(fmt, ...) sprintf(buf, fmt, ## __VA_ARGS__); this->Assemble(buf);
@@ -59,6 +61,10 @@ void C64DebuggerPluginDummy::ThreadRun(void *data)
 	api->SetReferenceImageLayerVisible(true);
 
 	api->SetupVicEditorForScreenOnly();
+	
+//		frame = 0;
+//		viewC64->viewVicEditor->SetVicModeRegsOnly(true, true, false);
+//		viewC64->viewVicEditor->SetVicAddresses(0, 0x0C00, 0x0000, 0x2000);
 
 	api->Sleep(500);
 	
@@ -68,26 +74,32 @@ void C64DebuggerPluginDummy::ThreadRun(void *data)
 void C64DebuggerPluginDummy::DoFrame()
 {
 	// do anything you need after each emulation frame, vsync is here:
-	
-	static float cr = 0;	float sr = 3.21f;
-	static float cg = 64;	float sg = 1.73f;
-	static float cb = 128;	float sb = 2.66f;
-	
-	for (int y = 50; y < 150; y++)
+	if (api->GetCurrentFrameNumber() > 25)
 	{
-		for (int x = 80; x < 240; x++)
+		static float cr = 0;	float sr = 0.21f;
+		static float cg = 64;	float sg = 0.73f;
+		static float cb = 128;	float sb = 0.66f;
+
+		for (int y = 50; y < 150; y++)
 		{
-			u8 r = (u8)((y/200.0f) * 255 + cr) % 255;
-			u8 g = (u8)((x/320.0f) * 255 + cg) % 255;
-			u8 b = (u8)cb % 255;
-			u8 color = api->FindC64Color(r, g, b);
-			api->PaintPixel(x, y, color);
-//			api->PaintReferenceImagePixel(x, y, color);
-//			api->PaintReferenceImagePixel(x, y, r, g, b, 255);
+			for (int x = 80; x < 240; x++)
+			{
+				u8 r = (u8)((y/200.0f) * 255 + cr) % 255;
+				u8 g = (u8)((x/320.0f) * 255 + cg) % 255;
+				u8 b = (u8)cb % 255;
+//				LOGD("r=%d g=%d b=%d", r, g, b);
+				u8 color = api->FindC64Color(r, g, b);
+				api->PaintPixel(x, y, color);
+	//			api->PaintReferenceImagePixel(x, y, color);
+	//			api->PaintReferenceImagePixel(x, y, r, g, b, 255);
+			}
 		}
+
+		cr += sr;
+		cg += sg;
+		cb += sb;
 	}
 	
-	cr += sr; cg += sg; cb += sb;
 	
 //	LOGD("C64DebuggerPluginDummy::DoFrame finished");
 }

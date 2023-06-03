@@ -2486,6 +2486,12 @@ void CDebugInterfaceVice::ScanFolderForRoms(const char *folderPath)
 	SYS_ReleaseCharBuf(buf);
 	
 	UpdateRoms();
+	
+	if (GetDebugMode() == DEBUGGER_MODE_PAUSED
+		&& foundKernal && foundBasic && foundChargen)
+	{
+		SetDebugMode(DEBUGGER_MODE_RUNNING);
+	}
 }
 
 extern "C" {

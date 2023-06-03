@@ -2021,9 +2021,6 @@
     <ClCompile Include="..\..\..\src\Screens\CViewC64.cpp">
       <Filter>Source Files\src\Screens</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\src\Screens\CViewC64KeyMap.cpp">
-      <Filter>Source Files\src\Screens</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\..\src\Screens\CViewColodore.cpp">
       <Filter>Source Files\src\Screens</Filter>
     </ClCompile>
@@ -3311,9 +3308,6 @@
     <ClCompile Include="..\..\..\src\Tools\TextEditor\TextEditor.cpp">
       <Filter>Source Files\src\Tools\TextEditor</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\src\Views\C64\CViewC64MemoryDebuggerLayoutToolbar.cpp">
-      <Filter>Source Files\src\Views\C64</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\..\src\Plugins\GoatTracker\C64DebuggerPluginGoatTracker.cpp">
       <Filter>Source Files\src\Plugins\GoatTracker</Filter>
     </ClCompile>
@@ -3784,6 +3778,9 @@
     </ClCompile>
     <ClCompile Include="..\..\..\src\Views\C64\AllGraphics\CViewC64AllGraphicsSpritesControl.cpp">
       <Filter>Source Files\src\Views\C64\AllGraphics</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Views\C64\CViewC64KeyMap.cpp">
+      <Filter>Source Files\src\Views</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -5800,9 +5797,6 @@
     <ClInclude Include="..\..\..\src\Screens\CViewC64.h">
       <Filter>Source Files\src\Screens</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\src\Screens\CViewC64KeyMap.h">
-      <Filter>Source Files\src\Screens</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\..\src\Screens\CViewColodore.h">
       <Filter>Source Files\src\Screens</Filter>
     </ClInclude>
@@ -7291,9 +7285,6 @@
     <ClInclude Include="..\..\..\src\Embedded\icon_tool_on_top_on_gfx.h">
       <Filter>Source Files\src\Embedded</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\src\Views\C64\CViewC64MemoryDebuggerLayoutToolbar.h">
-      <Filter>Source Files\src\Views\C64</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\..\src\Plugins\GoatTracker\C64DebuggerPluginGoatTracker.h">
       <Filter>Source Files\src\Plugins\GoatTracker</Filter>
     </ClInclude>
@@ -7794,6 +7785,9 @@
     </ClInclude>
     <ClInclude Include="..\..\..\src\Views\C64\AllGraphics\CViewC64AllGraphicsSpritesControl.h">
       <Filter>Source Files\src\Views\C64\AllGraphics</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Views\C64\CViewC64KeyMap.h">
+      <Filter>Source Files\src\Views</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

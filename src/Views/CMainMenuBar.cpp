@@ -44,6 +44,10 @@
 #include "CViewC64Charset.h"
 #include "CViewC64VicEditor.h"
 #include "CViewC64KeyMap.h"
+#include "imgui.h"
+#include "imgui_internal.h"
+#include "implot.h"
+#include "implot_internal.h"
 
 extern bool c64dSkipBogusPageOffsetReadOnSTA;
 
@@ -1374,6 +1378,8 @@ void CMainMenuBar::RenderImGui()
 					ImGui::Separator();
 					
 					/////
+					ImGui::PushItemFlag(ImGuiItemFlags_SelectableDontClosePopup, true);
+
 					if (ImGui::BeginMenu("VIC"))
 					{
 						if (ImGui::BeginMenu("VIC Palette"))
@@ -1827,6 +1833,9 @@ void CMainMenuBar::RenderImGui()
 						ImGui::EndMenu();
 					}
 					
+//					was above ImGui::PushItemFlag(ImGuiItemFlags_SelectableDontClosePopup, true);
+					ImGui::PopItemFlag();
+					
 					if (ImGui::MenuItem("Fast boot kernal patch", NULL, &c64SettingsFastBootKernalPatch))
 					{
 						debugInterfaceVice->SetPatchKernalFastBoot(c64SettingsFastBootKernalPatch);
@@ -2000,6 +2009,8 @@ void CMainMenuBar::RenderImGui()
 
 			if (ImGui::BeginMenu("UI"))
 			{
+				ImGui::PushItemFlag(ImGuiItemFlags_SelectableDontClosePopup, true);
+								
 				if (ImGui::BeginMenu("Memory map"))
 				{
 					if (ImGui::BeginMenu("Memory map values color"))
@@ -2217,6 +2228,12 @@ void CMainMenuBar::RenderImGui()
 				
 				ImGui::Separator();
 				
+				bool mainWindowAlwaysOnTop = VID_IsMainWindowAlwaysOnTop();
+				if (ImGui::MenuItem("Main window always on top", NULL, &mainWindowAlwaysOnTop))
+				{
+					guiMain->SetApplicationWindowAlwaysOnTop(mainWindowAlwaysOnTop);
+				}
+				
 				bool viewportsEnable = VID_IsViewportsEnable();
 				if (ImGui::MenuItem("Enable floating windows", NULL, &viewportsEnable))
 				{
@@ -2260,6 +2277,8 @@ void CMainMenuBar::RenderImGui()
 				{
 					ClearSettingsToFactoryDefault();
 				}
+				
+				ImGui::PopItemFlag();
 				
 				ImGui::EndMenu();
 			}
@@ -2593,7 +2612,7 @@ void CMainMenuBar::RenderImGui()
 		{
 			ImGui::Begin("Retro Debugger v" RETRODEBUGGER_VERSION_STRING " About", &show_retro_debugger_about);
 			ImGui::Text("Retro Debugger is a multiplatform debugger APIs host with ImGui implementation.");
-			ImGui::Text("(C) 2016-2022 Marcin 'slajerek' Skoczylas, see README for libraries copyright.");
+			ImGui::Text("(C) 2016-2023 Marcin 'slajerek' Skoczylas, see README for libraries copyright.");
 			ImGui::Separator();
 			ImGui::Text("");
 			ImGui::Text("If you like this tool and you feel that you would like to share with me some beers,");
@@ -4169,44 +4188,30 @@ void CMainMenuBar::SystemDialogFileOpenSelected(CSlrString *path)
 		viewC64->recentlyOpenedFiles->Add(path);
 		CViewTimeline::LoadTimeline(path);
 	}
-}
-
-void CMainMenuBar::SystemDialogFileOpenCancelled()
-{
-}
-
-void CMainMenuBar::SystemDialogFileSaveSelected(CSlrString *path)
-{
-	
-	//^^^^^^^^^^ TODO join these above into one event
-	
-	switch(systemDialogOperation)
+	// save
+	else if (systemDialogOperation == SystemDialogOperationExportLabels)
 	{
-		case SystemDialogOperationExportLabels:
-			selectedDebugInterface->symbols->SaveLabelsRetroDebuggerFormat(path);
-			break;
-		case SystemDialogOperationExportWatches:
-			selectedDebugInterface->symbols->SaveWatchesRetroDebuggerFormat(path);
-			break;
-		case SystemDialogOperationExportBreakpoints:
-			selectedDebugInterface->symbols->SaveBreakpointsRetroDebuggerFormat(path);
-			break;
-		case SystemDialogOperationMapMemoryToFile:
-			MapC64MemoryToFile(path);
-			break;
-		case SystemDialogOperationSaveTimeline:
-			CViewTimeline::SaveTimeline(path, selectedDebugInterface);
-			break;
+		selectedDebugInterface->symbols->SaveLabelsRetroDebuggerFormat(path);
 	}
-}
-
-void CMainMenuBar::SystemDialogFileSaveCancelled()
-{
-}
-
-void CMainMenuBar::SystemDialogPickFolderSelected(CSlrString *path)
-{
-	if (systemDialogOperation == SystemDialogOperationC64RomsFolder)
+	else if (systemDialogOperation == SystemDialogOperationExportWatches)
+	{
+		selectedDebugInterface->symbols->SaveWatchesRetroDebuggerFormat(path);
+	}
+	else if (systemDialogOperation == SystemDialogOperationExportBreakpoints)
+	{
+		selectedDebugInterface->symbols->SaveBreakpointsRetroDebuggerFormat(path);
+	}
+	else if (systemDialogOperation == SystemDialogOperationMapMemoryToFile)
+	{
+		MapC64MemoryToFile(path);
+	}
+	else if (systemDialogOperation == SystemDialogOperationSaveTimeline)
+	{
+		CViewTimeline::SaveTimeline(path, selectedDebugInterface);
+	}
+	
+	// pick folder
+	else if (systemDialogOperation == SystemDialogOperationC64RomsFolder)
 	{
 		if (c64SettingsPathToC64Roms)
 			delete c64SettingsPathToC64Roms;
@@ -4214,7 +4219,7 @@ void CMainMenuBar::SystemDialogPickFolderSelected(CSlrString *path)
 		
 		CDebugInterfaceVice *vice = (CDebugInterfaceVice*)viewC64->debugInterfaceC64;
 		char *p = path->GetStdASCII();
-		vice->ScanFolderForRoms(p);		
+		vice->ScanFolderForRoms(p);
 		STRFREE(p);
 		
 		C64DebuggerStoreSettings();
@@ -4239,6 +4244,24 @@ void CMainMenuBar::SystemDialogPickFolderSelected(CSlrString *path)
 		
 		guiMain->UnlockMutex();*/
 	}
+}
+
+void CMainMenuBar::SystemDialogFileOpenCancelled()
+{
+}
+
+void CMainMenuBar::SystemDialogFileSaveSelected(CSlrString *path)
+{
+	SystemDialogFileOpenSelected(path);
+}
+
+void CMainMenuBar::SystemDialogFileSaveCancelled()
+{
+}
+
+void CMainMenuBar::SystemDialogPickFolderSelected(CSlrString *path)
+{
+	SystemDialogFileOpenSelected(path);
 }
 
 void CMainMenuBar::SystemDialogPickFolderCancelled()

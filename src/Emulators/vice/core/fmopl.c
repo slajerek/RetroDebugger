@@ -82,6 +82,8 @@ Revision History:
 #include "lib.h"
 #include "snapshot.h"
 
+#include "log.h"
+
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
 #endif
@@ -333,7 +335,7 @@ static signed int tl_tab[TL_TAB_LEN];
 
 /* sin waveform table in 'decibel' scale */
 /* four waveforms on OPL2 type chips */
-static unsigned int sin_tab[SIN_LEN * 4];
+static unsigned int sin_tab[SIN_LEN * 16];
 
 /* LFO Amplitude Modulation table (verified on real YM3812)
    27 output levels (triangle waveform); 1 level takes one of: 192, 256 or 448 samples
@@ -988,7 +990,19 @@ static int init_tables(void)
         if (i & (1 << (SIN_BITS - 2))) {
             sin_tab[3 * SIN_LEN + i] = TL_TAB_LEN;
         } else {
-            sin_tab[3 * SIN_LEN + i] = sin_tab[i & (SIN_MASK >> 2)];
+			signed int v1 = 3 * SIN_LEN + i;
+			signed int v2 = i & (SIN_MASK >> 2);
+			
+//			printf("SIN_LEN=%d", SIN_LEN);
+//			printf("sin_tab size=%d %d", sizeof(sin_tab), SIN_LEN * 16);
+//			printf("v1=%d v2=%d\n", v1, v2);
+//
+//			unsigned int s1 = sin_tab[v1];
+//			unsigned int s2 = sin_tab[v2];
+
+			// crashes with error that index "i & (SIN_MASK >> 2)" is -128:
+//			sin_tab[3 * SIN_LEN + i] = sin_tab[i & (SIN_MASK >> 2)];
+			sin_tab[v1] = sin_tab[v2];
         }
     }
 

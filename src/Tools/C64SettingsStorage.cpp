@@ -1679,8 +1679,7 @@ void C64DebuggerSetSetting(const char *name, void *value)
 	{
 		bool v = *((bool*)value);
 		c64SettingsWindowAlwaysOnTop = v;
-		
-		VID_SetWindowAlwaysOnTop(c64SettingsWindowAlwaysOnTop);
+		guiMain->SetApplicationWindowAlwaysOnTop(c64SettingsWindowAlwaysOnTop);
 		return;
 	}
 	

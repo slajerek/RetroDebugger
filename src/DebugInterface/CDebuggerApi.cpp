@@ -161,6 +161,11 @@ long CDebuggerApi::GetCurrentTimeInMilliseconds()
 	return SYS_GetCurrentTimeInMillis();
 }
 
+long CDebuggerApi::GetCurrentFrameNumber()
+{
+	return debugInterface->GetEmulationFrameNumber();
+}
+
 void CDebuggerApi::ResetMachine()
 {
 	SYS_FatalExit("CDebuggerApi::ResetMachine: not implemented");

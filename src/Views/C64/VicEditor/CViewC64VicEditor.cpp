@@ -1260,7 +1260,6 @@ bool CViewC64VicEditor::DoNotTouchedMove(float x, float y)
 		return true;
 	}
 	
-	/*
 	if (IsInsideView(x, y))
 	{
 		CGuiView *view = guiMain->FindTopWindow(x, y);
@@ -1291,11 +1290,12 @@ bool CViewC64VicEditor::DoNotTouchedMove(float x, float y)
 //				{
 //					PaintUsingLeftMouseButton(x, y);
 //				}
-				
+
+				/*
 				if (guiMain->isRightMouseButtonPressed)
 				{
 					PaintUsingRightMouseButton(x, y);
-				}
+				}*/
 			}
 		}
 		else
@@ -1303,8 +1303,8 @@ bool CViewC64VicEditor::DoNotTouchedMove(float x, float y)
 //			LOGD("FindTopWindow NULL");
 		}
 	}
-	 return true;
-	 */
+//	 return true;
+//
 	
 	return false;
 }
@@ -1889,8 +1889,11 @@ bool CViewC64VicEditor::DoMove(float x, float y, float distX, float distY, float
 
 bool CViewC64VicEditor::DoRightClick(float x, float y)
 {
-	LOGI("CViewVicEditor::DoRightClick");
+	LOGD("CViewVicEditor::DoRightClick: %f %f", x, y);
 	
+	LOGD("IsInsideView: %s", STRBOOL(IsInsideView(x,y)));
+	LOGD("viewVicDisplay->IsInside: %s", STRBOOL(viewVicDisplay->IsInside(x, y)));
+
 	if (IsInsideView(x, y) && viewVicDisplay->IsInside(x, y))
 	{
 		return PaintUsingRightMouseButton(x, y);

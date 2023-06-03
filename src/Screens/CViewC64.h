@@ -25,6 +25,7 @@
 #include "CGlobalDropFileCallback.h"
 #include "CRecentlyOpenedFiles.h"
 #include "CGuiViewProgressBarWindow.h"
+#include "SYS_Threading.h"
 
 extern "C"
 {
@@ -158,7 +159,8 @@ class CEmulationThreadNes : public CSlrThread
 
 class CViewC64 : public CGuiView, CGuiButtonCallback, CApplicationPauseResumeListener,
 				 public CSharedMemorySignalCallback, public CGuiViewSelectFileCallback, public CGuiViewSaveFileCallback,
-				 public CSlrKeyboardShortcutCallback, public CGlobalDropFileCallback, public CRecentlyOpenedFilesCallback
+				 public CSlrKeyboardShortcutCallback, public CGlobalDropFileCallback, public CRecentlyOpenedFilesCallback,
+				 public CSlrThread
 {
 public:
 	CViewC64(float posX, float posY, float posZ, float sizeX, float sizeY);
@@ -194,6 +196,7 @@ public:
 	virtual void FinishTouches();
 
 	virtual bool KeyDown(u32 keyCode, bool isShift, bool isAlt, bool isControl, bool isSuper);
+	virtual bool PostKeyDown(u32 keyCode, bool isShift, bool isAlt, bool isControl, bool isSuper);
 	virtual bool KeyDownRepeat(u32 keyCode, bool isShift, bool isAlt, bool isControl, bool isSuper);
 	virtual bool KeyUp(u32 keyCode, bool isShift, bool isAlt, bool isControl, bool isSuper);
 	virtual bool KeyPressed(u32 keyCode, bool isShift, bool isAlt, bool isControl, bool isSuper);	// repeats
@@ -205,6 +208,9 @@ public:
 	virtual void DeactivateView();
 
 	volatile bool isInitialized;
+
+	// post-startup tasks
+	virtual void ThreadRun(void *passData);
 
 	// Note: this is new hjson-style config that will replace existing CConfigStorage
 	CConfigStorageHjson *config;

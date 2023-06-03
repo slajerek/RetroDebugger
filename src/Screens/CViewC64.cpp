@@ -399,7 +399,7 @@ CViewC64::CViewC64(float posX, float posY, float posZ, float sizeX, float sizeY)
 		viewC64Snapshots = new CViewSnapshots(0, 0, -3.0, SCREEN_WIDTH, SCREEN_HEIGHT);
 //		guiMain->AddGuiElement(viewC64Snapshots);
 		
-		viewC64KeyMap = new CViewC64KeyMap(0, 0, -3.0, SCREEN_WIDTH, SCREEN_HEIGHT);
+		viewC64KeyMap = new CViewC64KeyMap(150, 50, -3.0, 600, 400);
 		this->viewC64KeyMap->visible = false;
 		guiMain->AddView(this->viewC64KeyMap);
 
@@ -426,18 +426,18 @@ CViewC64::CViewC64(float posX, float posY, float posZ, float sizeX, float sizeY)
 //		guiMain->AddGuiElement(viewNesSnapshots);
 	}
 
-	viewKeyboardShortcuts = new CViewKeyboardShortcuts(0, 0, -3.0, SCREEN_WIDTH, SCREEN_HEIGHT);
+	viewKeyboardShortcuts = new CViewKeyboardShortcuts(100, 100, -3.0, 400, 300);
 //	guiMain->AddGuiElement(viewKeyboardShortcuts);
 
-	viewAbout = new CViewAbout(0, 0, -3.0, SCREEN_WIDTH, SCREEN_HEIGHT);
+	viewAbout = new CViewAbout(100, 100, -3.0, 400, 300);
 //	guiMain->AddGuiElement(viewAbout);
 	
 	// open/save file dialogs replacement
-	viewSelectFile = new CGuiViewSelectFile(0, 0, posZ, SCREEN_WIDTH-80.0, SCREEN_HEIGHT, false, this);
+	viewSelectFile = new CGuiViewSelectFile(100, 100, -3.0, 400, 300, false, this);
 	viewSelectFile->SetFont(fontCBMShifted, 2.0f);
 //	guiMain->AddGuiElement(viewSelectFile);
 
-	viewSaveFile = new CGuiViewSaveFile(0, 0, posZ, SCREEN_WIDTH-80.0, SCREEN_HEIGHT, this);
+	viewSaveFile = new CGuiViewSaveFile(100, 100, -3.0, 400, 300, this);
 	viewSaveFile->SetFont(fontCBMShifted, 2.0f);
 //	guiMain->AddGuiElement(viewSaveFile);
 		
@@ -591,7 +591,31 @@ CViewC64::CViewC64(float posX, float posY, float posZ, float sizeX, float sizeY)
 	// restore open recent menu items
 	recentlyOpenedFiles = new CRecentlyOpenedFiles(new CSlrString(C64D_RECENTS_FILE_NAME), this);
 
+	// start post-init ui tasks
+	SYS_StartThread(this);
+	
 //	TEST_Editor();
+}
+
+void CViewC64::ThreadRun(void *passData)
+{
+	ThreadSetName("CViewC64");
+	SYS_Sleep(500);
+	
+	// set focus to emulator screen
+	for (CDebugInterface *debugInterface : debugInterfaces)
+	{
+		if (debugInterface->isRunning)
+		{
+			CGuiView *view = debugInterface->GetViewScreen();
+			if (view && view->IsVisible())
+			{
+				CUiThreadTaskSetViewFocus *task = new CUiThreadTaskSetViewFocus(view);
+				guiMain->AddUiThreadTask(task);
+				return;
+			}
+		}
+	}
 }
 
 void CViewC64::ShowMainScreen()
@@ -828,15 +852,15 @@ void CViewC64::InitViceViews()
 	viewC64MemoryMap->SetDataDumpView(viewC64MemoryDataDump);
 	
 	//
-	viewC64BreakpointsPC = new CViewBreakpoints("C64 PC Breakpoints", 10, 40, posZ, SCREEN_WIDTH, SCREEN_HEIGHT, this->debugInterfaceC64->symbols, BREAKPOINT_TYPE_CPU_PC);
+	viewC64BreakpointsPC = new CViewBreakpoints("C64 PC Breakpoints", 10, 40, posZ, 400, 300, this->debugInterfaceC64->symbols, BREAKPOINT_TYPE_CPU_PC);
 
-	viewC64BreakpointsMemory = new CViewBreakpoints("C64 Memory Breakpoints", 30, 50, posZ, SCREEN_WIDTH, SCREEN_HEIGHT, this->debugInterfaceC64->symbols, BREAKPOINT_TYPE_MEMORY);
+	viewC64BreakpointsMemory = new CViewBreakpoints("C64 Memory Breakpoints", 30, 50, posZ, 400, 300, this->debugInterfaceC64->symbols, BREAKPOINT_TYPE_MEMORY);
 
-	viewC64BreakpointsRaster = new CViewBreakpoints("C64 Raster Breakpoints", 40, 40, posZ, SCREEN_WIDTH, SCREEN_HEIGHT, this->debugInterfaceC64->symbols, BREAKPOINT_TYPE_RASTER_LINE);
+	viewC64BreakpointsRaster = new CViewBreakpoints("C64 Raster Breakpoints", 40, 40, posZ, 400, 300, this->debugInterfaceC64->symbols, BREAKPOINT_TYPE_RASTER_LINE);
 	
-	viewC64BreakpointsDrive1541PC = new CViewBreakpoints("1541 PC Breakpoints", 50, 50, posZ, SCREEN_WIDTH, SCREEN_HEIGHT, this->debugInterfaceC64->symbolsDrive1541, BREAKPOINT_TYPE_CPU_PC);
+	viewC64BreakpointsDrive1541PC = new CViewBreakpoints("1541 PC Breakpoints", 50, 50, posZ, 400, 300, this->debugInterfaceC64->symbolsDrive1541, BREAKPOINT_TYPE_CPU_PC);
 	
-	viewC64BreakpointsDrive1541Memory = new CViewBreakpoints("1541 Memory Breakpoints", 60, 60, posZ, SCREEN_WIDTH, SCREEN_HEIGHT, this->debugInterfaceC64->symbolsDrive1541, BREAKPOINT_TYPE_MEMORY);
+	viewC64BreakpointsDrive1541Memory = new CViewBreakpoints("1541 Memory Breakpoints", 60, 60, posZ, 400, 300, this->debugInterfaceC64->symbolsDrive1541, BREAKPOINT_TYPE_MEMORY);
 	
 	//
 	viewC64CartridgeMemoryMap = new CViewMemoryMap("C64 Cartridge memory map", 40, 70, posZ, 400, 300,
@@ -907,7 +931,7 @@ void CViewC64::InitViceViews()
 	viewDrive1541MemoryMap->SetDataDumpView(viewDrive1541MemoryDataDump);
 	
 	//
-	viewDrive1541FileD64 = new CViewDrive1541FileD64("1541 Disk directory", 120, 120, posZ, SCREEN_WIDTH, SCREEN_HEIGHT);
+	viewDrive1541FileD64 = new CViewDrive1541FileD64("1541 Disk directory", 120, 120, posZ, 400, 300);
 	
 
 	//
@@ -941,6 +965,7 @@ void CViewC64::InitViceViews()
 	// add sorted views
 	AddEmulatorMenuItemView(debugInterfaceC64, viewC64Screen);
 	AddEmulatorMenuItemView(debugInterfaceC64, viewC64ScreenViewfinder);
+	viewC64ScreenViewfinder->visible = false;
 	AddEmulatorMenuItemView(debugInterfaceC64, viewC64StateCPU);
 	AddEmulatorMenuItemView(debugInterfaceC64, viewC64Disassembly);
 	AddEmulatorMenuItemView(debugInterfaceC64, viewC64Disassembly2);
@@ -2242,15 +2267,15 @@ bool CViewC64::KeyDown(u32 keyCode, bool isShift, bool isAlt, bool isControl, bo
 		CGuiView *view = debugInterface->GetViewScreen();
 		if (view && view->HasFocus())
 		{
-			view->KeyDown(keyCode, isShift, isAlt, isControl, isSuper);
-			return true;
+			if (view->KeyDown(keyCode, isShift, isAlt, isControl, isSuper))
+				return true;
 		}
 	}
 	
 	// then key shortcuts
 	if (mainMenuBar->KeyDown(keyCode, isShift, isAlt, isControl, isSuper))
 		return true;
-	
+		
 	return false;
 	
 	
@@ -2435,6 +2460,21 @@ bool CViewC64::KeyDown(u32 keyCode, bool isShift, bool isAlt, bool isControl, bo
 //	}
 	
 	return false; //CGuiView::KeyDown(keyCode, isShift, isAlt, isControl, isSuper);
+}
+
+bool CViewC64::PostKeyDown(u32 keyCode, bool isShift, bool isAlt, bool isControl, bool isSuper)
+{
+	// not consumed key send to screen
+	for (CDebugInterface *debugInterface : debugInterfaces)
+	{
+		CGuiView *view = debugInterface->GetViewScreen();
+		if (view->IsVisible())
+		{
+			if (view->KeyDown(keyCode, isShift, isAlt, isControl, isSuper))
+				return true;
+		}
+	}
+	return false;
 }
 
 bool CViewC64::KeyUp(u32 keyCode, bool isShift, bool isAlt, bool isControl, bool isSuper)

@@ -628,6 +628,10 @@ bool CViewAtariScreen::KeyDown(u32 keyCode, bool isShift, bool isAlt, bool isCon
 		return true;
 	}
 	
+	// debugger keys, not used in atari
+	if (keyCode == MTKEY_F7 || keyCode == MTKEY_F8 || keyCode == MTKEY_F9 || keyCode == MTKEY_F10 || keyCode == MTKEY_F11 || keyCode == MTKEY_F12 || keyCode == MTKEY_F13 || keyCode == MTKEY_F14 || keyCode == MTKEY_F15 || keyCode == MTKEY_F16)
+		return false;
+
 	if (viewC64->mainMenuBar->selectedJoystick1 == SelectedJoystick::SelectedJoystickKeyboard
 		|| viewC64->mainMenuBar->selectedJoystick2 == SelectedJoystick::SelectedJoystickKeyboard)
 	{
@@ -767,6 +771,24 @@ bool CViewAtariScreen::HasContextMenuItems()
 void CViewAtariScreen::RenderContextMenuItems()
 {
 	CGuiView::RenderContextMenuItems();
+
+	if (VID_IsViewportsEnable())
+	{
+		if (VID_IsWindowAlwaysOnTop(this))
+		{
+			if (ImGui::MenuItem("Remove always on top"))
+			{
+				VID_SetWindowAlwaysOnTop(this, false);
+			}
+		}
+		else
+		{
+			if (ImGui::MenuItem("Set always on top"))
+			{
+				VID_SetWindowAlwaysOnTop(this, true);
+			}
+		}
+	}
 
 	if (guiMain->IsViewFullScreen())
 	{
