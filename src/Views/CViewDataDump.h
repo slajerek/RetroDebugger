@@ -8,12 +8,13 @@
 #include <list>
 
 class CSlrFont;
+class CSlrMutex;
 class CDataAdapter;
 class CViewMemoryMap;
-class CSlrMutex;
 class CDebugInterface;
 class CViewDisassembly;
 class CDebugSymbols;
+class CDebugMemory;
 
 class CViewDataDump : public CGuiView, CGuiEditHexCallback
 {
@@ -31,6 +32,7 @@ public:
 	virtual bool DoRightClick(float x, float y);
 
 	CDebugSymbols *symbols;
+	CDebugMemory *debugMemory;
 	CDebugInterface *debugInterface;
 	
 	CSlrFont *fontBytes;

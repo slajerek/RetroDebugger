@@ -13,6 +13,9 @@
 #include "CDebugSymbols.h"
 #include "CDebugSymbolsSegment.h"
 #include "CDebugSymbolsSegmentC64.h"
+#include "CDebugMemory.h"
+#include "CDebugMemoryCell.h"
+#include "CDebugEventsHistory.h"
 #include "CSlrDate.h"
 
 #include <fstream>
@@ -30,11 +33,17 @@ CDebugSymbols::CDebugSymbols(CDebugInterface *debugInterface, CDataAdapter *data
 	this->asmSource = NULL;
 	this->currentSegment = NULL;
 	this->currentSegmentNum = -1;
+	
+	this->memory = this->CreateNewDebugMemoryMap();
+	
+	this->debugEventsHistory = new CDebugEventsHistory(this);
 }
 
 CDebugSymbols::~CDebugSymbols()
 {
 	this->DeactivateSegment();
+
+	delete debugEventsHistory;
 
 	while (!segments.empty())
 	{
@@ -43,6 +52,8 @@ CDebugSymbols::~CDebugSymbols()
 		
 		// TODO: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA THE BUG!
 		//       observation: on macOS when here segment is deleted then POKEY wavetables stop receiving channels data
+		//		 this is memory leak on purpose, because in other way it breaks debugger
+		//		 ... I guess we have some dangling pointers somewhere ...
 		//delete segment;
 	}
 }
@@ -1554,6 +1565,11 @@ CDebugSymbolsSegment *CDebugSymbols::CreateNewDebugSymbolsSegment(CSlrString *na
 int CDebugSymbols::GetCurrentExecuteAddr()
 {
 	return debugInterface->GetCpuPC();
+}
+
+CDebugMemory *CDebugSymbols::CreateNewDebugMemoryMap()
+{
+	return new CDebugMemory(this);
 }
 
 void CDebugSymbols::LockMutex()

@@ -13,6 +13,8 @@ extern "C" {
 #include "SND_SoundEngine.h"
 #include "CLayoutParameter.h"
 #include "CViewC64SidPianoKeyboard.h"
+#include "C64SIDDump.h"
+#include "SYS_DefaultConfig.h"
 
 // TODO: load tracker font from MG Tracker
 
@@ -33,6 +35,18 @@ CViewC64SidTrackerHistory::CViewC64SidTrackerHistory(const char *name, float pos
 	this->fScrollPosition = 0;
 	this->scrollPosition = 0;
 	
+	// sid dump settings
+	viewC64->config->GetInt ("ViewC64SidTrackerHistorySidDumpBaseFreq", &basefreq, 0);
+	viewC64->config->GetInt ("ViewC64SidTrackerHistorySidDumpBaseNote", &basenote, 0xB0);
+	viewC64->config->GetBool("ViewC64SidTrackerHistorySidDumpTimeSeconds", &timeseconds, false);
+	viewC64->config->GetInt ("ViewC64SidTrackerHistorySidDumpOldNoteFactor", &oldnotefactor, 1);
+	viewC64->config->GetInt ("ViewC64SidTrackerHistorySidDumpPattSpacing", &pattspacing, 0);
+	viewC64->config->GetInt ("ViewC64SidTrackerHistorySidDumpSpacing", &spacing, 0);
+	viewC64->config->GetBool("ViewC64SidTrackerHistorySidDumpLowResolution", &lowres, false);
+
+	siddumpFileExtensions.push_back(new CSlrString("txt"));
+	csvFileExtensions.push_back(new CSlrString("csv"));
+
 	// this value is calculated automatically
 	this->numVisibleTrackLines = 1;
 	
@@ -246,20 +260,6 @@ CViewC64SidTrackerHistory::CViewC64SidTrackerHistory(const char *name, float pos
 		
 		px += buttonSizeX;
 
-		btnShowPWM = new CGuiButtonSwitch(NULL, NULL, NULL,
-												  px, py, posZ, buttonSizeX, buttonSizeY,
-												  new CSlrString("PWM"),
-												  FONT_ALIGN_CENTER, buttonSizeX/2, textButtonOffsetY,
-												  fontButton, fontScale,
-												  1.0, 1.0, 1.0, 1.0,
-												  1.0, 1.0, 1.0, 1.0,
-												  0.3, 0.3, 0.3, 1.0,
-												  this);
-		btnShowPWM->SetOn(true);
-		this->AddGuiElement(btnShowPWM);
-		
-		px += buttonSizeX;
-
 		btnShowAdsr = new CGuiButtonSwitch(NULL, NULL, NULL,
 										  px, py, posZ, buttonSizeX, buttonSizeY,
 										  new CSlrString("ADSR"),
@@ -271,6 +271,20 @@ CViewC64SidTrackerHistory::CViewC64SidTrackerHistory(const char *name, float pos
 										  this);
 		btnShowAdsr->SetOn(true);
 		this->AddGuiElement(btnShowAdsr);
+		
+		px += buttonSizeX;
+
+		btnShowPWM = new CGuiButtonSwitch(NULL, NULL, NULL,
+												  px, py, posZ, buttonSizeX, buttonSizeY,
+												  new CSlrString("PWM"),
+												  FONT_ALIGN_CENTER, buttonSizeX/2, textButtonOffsetY,
+												  fontButton, fontScale,
+												  1.0, 1.0, 1.0, 1.0,
+												  1.0, 1.0, 1.0, 1.0,
+												  0.3, 0.3, 0.3, 1.0,
+												  this);
+		btnShowPWM->SetOn(true);
+		this->AddGuiElement(btnShowPWM);
 		
 		px += buttonSizeX;
 
@@ -902,29 +916,6 @@ void CViewC64SidTrackerHistory::Render()
 					}
 				}
 				
-				if (btnShowPWM->IsOn())
-				{
-					u16 pwCurrent  = (sidDataCurrent[chanAddr + 3] << 8)  | sidDataCurrent[chanAddr + 2];
-					u16 pwPrevious = (sidDataPrevious[chanAddr + 3] << 8) | sidDataPrevious[chanAddr + 2];
-					
-					if (pwCurrent == pwPrevious)
-					{
-						if (stepNum == 0)
-						{
-							buf[pos] = e; buf[pos + 1] = e; buf[pos + 2] = e; buf[pos + 3] = e;
-						}
-					}
-					else
-					{
-						if (buf[pos] == 0x20 || buf[pos] == e)
-						{
-							sprintfHexCode16WithoutZeroEnding(buf + pos, pwCurrent);
-						}
-					}
-					
-					pos += 5;
-				}
-				
 				if (btnShowAdsr->IsOn())
 				{
 					u16 adsrCurrent  = (sidDataCurrent[chanAddr + 5] << 8)  | sidDataCurrent[chanAddr + 6];
@@ -946,13 +937,36 @@ void CViewC64SidTrackerHistory::Render()
 					}
 					pos += 5;
 				}
+
+				if (btnShowPWM->IsOn())
+				{
+					u16 pwCurrent  = (sidDataCurrent[chanAddr + 3] << 8)  | sidDataCurrent[chanAddr + 2];
+					u16 pwPrevious = (sidDataPrevious[chanAddr + 3] << 8) | sidDataPrevious[chanAddr + 2];
+					
+					if (pwCurrent == pwPrevious)
+					{
+						if (stepNum == 0)
+						{
+							buf[pos] = e; buf[pos + 1] = e; buf[pos + 2] = e;
+						}
+					}
+					else
+					{
+						if (buf[pos] == 0x20 || buf[pos] == e)
+						{
+							sprintfHexCode12WithoutZeroEnding(buf + pos, pwCurrent);
+						}
+					}
+					
+					pos += 4;
+				}
 			}
 			
 			if (btnShowFilterCutoff->IsOn())
 			{
 				// filt cutoff
-				u16 filtCurrent  = (sidDataCurrent[0x15] << 8)  | sidDataCurrent[0x16];
-				u16 filtPrevious = (sidDataPrevious[0x15] << 8) | sidDataPrevious[0x16];
+				u16 filtCurrent  = (sidDataCurrent[0x16] << 8)  | sidDataCurrent[0x15];
+				u16 filtPrevious = (sidDataPrevious[0x16] << 8) | sidDataPrevious[0x15];
 				
 				if (filtCurrent == filtPrevious)
 				{
@@ -1232,4 +1246,122 @@ void CViewC64SidTrackerHistory::RenderFocusBorder()
 //	}
 }
 
+bool CViewC64SidTrackerHistory::HasContextMenuItems()
+{
+   return true;
+}
+
+void CViewC64SidTrackerHistory::RenderContextMenuItems()
+{
+	if (ImGui::MenuItem("Clear history"))
+	{
+		debugInterface->mutexSidDataHistory->Lock();
+		while(!debugInterfaceVice->sidDataHistory.empty())
+		{
+			CSidData *sidData = debugInterfaceVice->sidDataHistory.front();
+			debugInterfaceVice->sidDataHistory.pop_front();
+			delete sidData;
+		}
+		debugInterface->mutexSidDataHistory->Unlock();
+	}
+	
+	ImGui::Separator();
+	if (ImGui::BeginMenu("Save SID history to file"))
+	{
+		if (ImGui::MenuItem("SidDump format"))
+		{
+			sidDumpFormat = SID_HISTORY_FORMAT_SIDDUMP;
+			CSlrString *defaultFileName = new CSlrString("sid-history");
+			
+			CSlrString *windowTitle = new CSlrString("Export SID history as SidDump");
+			CSlrString *defaultFolder;
+			viewC64->config->GetSlrString("ViewC64SidTrackerHistorySidDumpFolder", &defaultFolder, gUTFPathToDocuments);
+			viewC64->ShowDialogSaveFile(this, &siddumpFileExtensions, defaultFileName, defaultFolder, windowTitle);
+			delete windowTitle;
+			delete defaultFileName;
+		}
+		if (ImGui::MenuItem("CSV format"))
+		{
+			sidDumpFormat = SID_HISTORY_FORMAT_CSV;
+			CSlrString *defaultFileName = new CSlrString("sid-history");
+			
+			CSlrString *windowTitle = new CSlrString("Export SID history as CSV");
+			CSlrString *defaultFolder;
+			viewC64->config->GetSlrString("ViewC64SidTrackerHistorySidDumpFolder", &defaultFolder, gUTFPathToDocuments);
+			viewC64->ShowDialogSaveFile(this, &csvFileExtensions, defaultFileName, defaultFolder, windowTitle);
+			delete windowTitle;
+			delete defaultFileName;
+		}
+		ImGui::EndMenu();
+	}
+
+	if (ImGui::Checkbox("Dump SID time in minutes:seconds:frame format", &timeseconds))
+	{
+		viewC64->config->SetBool("ViewC64SidTrackerHistorySidDumpTimeSeconds", &timeseconds);
+	}
+	
+	if (ImGui::InputInt("Note spacing, default 0 (none)", &spacing))
+	{
+		viewC64->config->SetInt ("ViewC64SidTrackerHistorySidDumpSpacing", &spacing);
+	}
+	
+	if (ImGui::InputInt("Pattern spacing, default 0 (none)", &pattspacing))
+	{
+		viewC64->config->SetInt ("ViewC64SidTrackerHistorySidDumpPattSpacing", &pattspacing);
+	}
+	
+	if (ImGui::InputInt("\"Oldnote-sticky\" factor. Default 1, increase for better vibrato display", &oldnotefactor))
+	{
+		viewC64->config->SetInt ("ViewC64SidTrackerHistorySidDumpOldNoteFactor", &oldnotefactor);
+	}
+	
+	if (ImGui::Checkbox("Low-resolution mode (only display 1 row per note)", &lowres))
+	{
+		viewC64->config->SetBool("ViewC64SidTrackerHistorySidDumpLowResolution", &lowres);
+	}
+	
+	if (ImGui::InputScalar("Frequency recalibration (in hex)", ImGuiDataType_U16, &basefreq, NULL, NULL, "%04X"))
+	{
+		viewC64->config->SetInt ("ViewC64SidTrackerHistorySidDumpBaseFreq", &basefreq);
+	}
+	
+	if (ImGui::InputScalar("Calibration note (abs.notation 80-DF). Default middle-C (B0)", ImGuiDataType_U8, &basenote, NULL, NULL, "%02X"))
+	{
+		viewC64->config->SetInt ("ViewC64SidTrackerHistorySidDumpBaseNote", &basenote);
+	}
+	
+	ImGui::Separator();
+}
+
+void CViewC64SidTrackerHistory::SystemDialogFileSaveSelected(CSlrString *path)
+{
+	LOGD("CViewC64SidTrackerHistory: save");
+//	path->DebugPrint();
+	CByteBuffer *byteBuffer = new CByteBuffer();
+	
+	debugInterface->mutexSidDataHistory->Lock();
+
+	C64SIDHistoryToByteBuffer(&debugInterfaceVice->sidDataHistory, byteBuffer, sidDumpFormat,
+						   basefreq, basenote, spacing ? 1:0, oldnotefactor, pattspacing, timeseconds ? 1:0, lowres);
+
+	debugInterface->mutexSidDataHistory->Unlock();
+	
+	byteBuffer->storeToFile(path);
+	delete byteBuffer;
+	
+	CSlrString *str = path->GetFileNameComponentFromPath();
+	str->Concatenate(" saved");
+	viewC64->ShowMessageInfo(str);
+	delete str;
+	
+	path->DebugPrint();
+	str = path->GetFilePathWithoutFileNameComponentFromPath();
+	viewC64->config->SetSlrString("ViewC64SidTrackerHistorySidDumpFolder", &str);
+	delete str;
+}
+
+void CViewC64SidTrackerHistory::SystemDialogFileSaveCancelled()
+{
+	
+}
 

@@ -13,14 +13,15 @@ extern int win_fullscreen;
 extern unsigned char win_keytable[MAX_KEYS];
 extern unsigned char win_keystate[MAX_KEYS];
 extern unsigned char win_asciikey;
-extern unsigned win_mousexpos;
-extern unsigned win_mouseypos;
+extern volatile unsigned int win_mousexpos;
+extern volatile unsigned int win_mouseypos;
 //extern unsigned win_mousexrel;
 //extern unsigned win_mouseyrel;
-extern unsigned win_mousebuttons;
+extern volatile unsigned int win_mousebuttons;
 extern int win_mousemode;
 //SDL_Joystick *gtjoy[MAX_JOYSTICKS];
 //extern Sint16 joyx[MAX_JOYSTICKS];
 //extern Sint16 joyy[MAX_JOYSTICKS];
 //extern Uint32 joybuttons[MAX_JOYSTICKS];
 
+void gt2SetMousePosition(unsigned int x, unsigned int y);

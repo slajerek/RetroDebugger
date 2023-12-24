@@ -127,6 +127,7 @@ void C64KeyMapCreateDefault()
 	if (defaultKeyMap != NULL)
 	{
 		delete defaultKeyMap;
+		defaultKeyMap = NULL;
 	}
 	
 	defaultKeyMap = new C64KeyMap();
@@ -170,7 +171,7 @@ void C64KeyMapLoadFromSettings()
 	LOGD("C64KeyMapLoadFromSettings: done");
 }
 
-void C64KeyMapStoreToSettings()
+bool C64KeyMapStoreToSettings()
 {
 	LOGD("C64KeyMapStoreToSettings");
 	CByteBuffer *byteBuffer = new CByteBuffer();
@@ -178,13 +179,13 @@ void C64KeyMapStoreToSettings()
 	defaultKeyMap->SaveKeyMapToBuffer(byteBuffer);
 	
 	CSlrString *fileName = new CSlrString(C64D_KEYMAP_FILE_PATH);
-	byteBuffer->storeToSettings(fileName);
+	bool ret = byteBuffer->storeToSettings(fileName);
 	delete fileName;
 	
 	delete byteBuffer;
 	
 	LOGD("C64KeyMapStoreToSettings: done");
-
+	return ret;
 }
 
 bool C64KeyMapLoadFromFile(CSlrString *filePath)

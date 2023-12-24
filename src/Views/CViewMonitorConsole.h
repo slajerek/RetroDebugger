@@ -8,6 +8,7 @@
 #include "CDebugInterface.h"
 
 class CDataAdapter;
+class CDebugSymbols;
 
 class CViewMonitorConsole : public CGuiView, CGuiViewConsoleCallback, CSystemFileDialogCallback, CDebugInterfaceCodeMonitorCallback
 {
@@ -91,7 +92,7 @@ public:
 	int addrStart, addrEnd;
 	uint8 *memory;
 	int memoryLength;
-	CViewMemoryMap *memoryMap;
+	CDebugSymbols *debugSymbols;
 	
 	std::list<CSlrString *> memoryExtensions;
 	std::list<CSlrString *> prgExtensions;

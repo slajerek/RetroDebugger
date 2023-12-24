@@ -25,6 +25,7 @@ extern "C" {
 #include "CViewDisassembly.h"
 #include "CViewC64VicControl.h"
 #include "CDebugSymbols.h"
+#include "CDebugMemory.h"
 #include "CDebugSymbolsSegmentC64.h"
 #include "C64CharMulti.h"
 #include "C64CharHires.h"
@@ -35,8 +36,8 @@ extern "C" {
 #include "C64VicDisplayCanvasHiresBitmap.h"
 #include "C64VicDisplayCanvasMultiBitmap.h"
 #include "CMainMenuBar.h"
-#include "CDebugMemoryMap.h"
-#include "CDebugMemoryMapCell.h"
+#include "CDebugMemory.h"
+#include "CDebugMemoryCell.h"
 #include "CViewC64VicEditor.h"
 
 #include "C64KeyboardShortcuts.h"
@@ -2051,7 +2052,7 @@ bool CViewC64VicDisplay::ScrollMemoryAndDisassemblyToRasterPosition(float rx, fl
 			viewC64->viewC64Disassembly->changedByUser = false;
 		}
 		
-		CDebugMemoryMapCell *cell = viewC64->viewC64MemoryMap->memoryCells[addr];
+		CDebugMemoryCell *cell = viewC64->debugInterfaceC64->symbols->memory->memoryCells[addr];
 		if (cell->writePC != -1)
 		{
 			//LOGD(".... isForced=%d changed=%d", isForced, viewC64->viewC64Disassembly->changedByUser);

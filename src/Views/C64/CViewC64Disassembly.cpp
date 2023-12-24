@@ -4,8 +4,8 @@
 #include "C64SettingsStorage.h"
 
 CViewC64Disassembly::CViewC64Disassembly(const char *name, float posX, float posY, float posZ, float sizeX, float sizeY,
-				 CDebugSymbols *symbols, CViewDataDump *viewDataDump, CViewMemoryMap *viewMemoryMap)
-: CViewDisassembly(name, posX, posY, posZ, sizeX, sizeY, symbols, viewDataDump, viewMemoryMap)
+				 CDebugSymbols *symbols, CViewDataDump *viewDataDump)
+: CViewDisassembly(name, posX, posY, posZ, sizeX, sizeY, symbols, viewDataDump)
 {
 	imGuiNoWindowPadding = true;
 	imGuiNoScrollbar = true;
@@ -23,6 +23,5 @@ void CViewC64Disassembly::GetDisassemblyBackgroundColor(float *colorR, float *co
 	{
 		GetColorsFromScheme(c64SettingsDisassemblyBackgroundColor, colorR, colorG, colorB);
 	}
-
 }
 

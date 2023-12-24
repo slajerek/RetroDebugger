@@ -16,7 +16,8 @@ void Log_flushlog(void);
 
 void atari_wrapper_mt_log_main(const char *format, ...);
 void atari_wrapper_mt_log_debug(const char *format, ...);
-void LOGTODO(const char *format, ...);
-void LOGError(const char *format, ...);
+
+#define LOGTODO ViceLOGTODO
+#define LOGError ViceLOGError
 
 #endif /* LOG_H_ */

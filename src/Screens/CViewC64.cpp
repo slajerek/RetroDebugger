@@ -40,12 +40,15 @@ extern "C"{
 #include "RetroDebuggerEmbeddedData.h"
 #include "CGuiViewUiDebug.h"
 #include "CGuiViewMessages.h"
+#include "CViewFileBrowser.h"
 
 #include "CDebugDataAdapter.h"
 #include "imgui_freetype.h"
 
 #include "SYS_KeyCodes.h"
 #include "CViewDataDump.h"
+#include "CViewDataMonitor.h"
+#include "CViewDataPlot.h"
 #include "CViewDataWatch.h"
 #include "CViewMemoryMap.h"
 #include "CViewDisassembly.h"
@@ -68,10 +71,11 @@ extern "C"{
 #include "CViewC64ColorRamScreen.h"
 
 #include "CViewC64SidPianoKeyboard.h"
-#include "CViewDrive1541FileD64.h"
+#include "CViewDrive1541Browser.h"
 #include "CViewC64StateCPU.h"
 #include "CViewInputEvents.h"
 #include "CViewBreakpoints.h"
+#include "CViewDebugEventsHistory.h"
 #include "CViewTimeline.h"
 #include "CViewDrive1541StateCPU.h"
 
@@ -101,7 +105,8 @@ extern "C"{
 #include "CViewMainMenu.h"
 #include "CViewSettingsMenu.h"
 
-#include "CViewDrive1541FileD64.h"
+#include "CViewDrive1541Browser.h"
+#include "CViewDrive1541DiskData.h"
 #include "CViewC64KeyMap.h"
 #include "CViewC64AllGraphicsBitmaps.h"
 #include "CViewC64AllGraphicsBitmapsControl.h"
@@ -127,8 +132,8 @@ extern "C"{
 #include "CViewAbout.h"
 #include "CViewJukeboxPlaylist.h"
 #include "CMainMenuBar.h"
-#include "CDebugMemoryMap.h"
-#include "CDebugMemoryMapCell.h"
+#include "CDebugMemory.h"
+#include "CDebugMemoryCell.h"
 
 #include "CJukeboxPlaylist.h"
 #include "C64FileDataAdapter.h"
@@ -171,8 +176,11 @@ unsigned long c64dStartupTime = 0;
 #define TEXT_ADDR	0x0400
 #define COLOR_ADDR	0xD800
 
+// remove me:
 void TEST_Editor();
 void TEST_Editor_Render();
+
+const ImGuiInputTextFlags defaultHexInputFlags = ImGuiInputTextFlags_CharsHexadecimal | ImGuiInputTextFlags_CharsUppercase | ImGuiInputTextFlags_EnterReturnsTrue;
 
 // TODO: refactor this. after transition to ImGui the CViewC64 is no longer a view, it is just a application holder of other views.
 CViewC64::CViewC64(float posX, float posY, float posZ, float sizeX, float sizeY)
@@ -452,6 +460,12 @@ CViewC64::CViewC64(float posX, float posY, float posZ, float sizeX, float sizeY)
 	this->viewMessages = new CGuiViewMessages("Log messages", 155, 200, -1, 500, 400);
 	this->viewMessages->visible = false;
 	guiMain->AddView(this->viewMessages);
+	
+	// File browser
+	set<string> supportedExtensions = GetSupportedFileExtensions();
+	viewFileBrowser = new CViewFileBrowser("File browser", 200, 100, -1, 500, 400, supportedExtensions, this);
+	viewFileBrowser->visible = true;
+	guiMain->AddView(viewFileBrowser);
 	
 	//
 	// RESTORE settings that need to be set when emulation is initialized
@@ -804,6 +818,8 @@ void CViewC64::InitViceViews()
 	
 	// note: views are created first to have dependencies fulfilled. They are added later to have them sorted.
 	
+	// TODO: refactor: move to CreateViews and AddViews in emulators ui (to debugInterface or ->ui). Note, it is desired to shorten path, thus why viewC64->viewNesMem vs masterView->nes->viewNesMem...  global viewC64 is left for a purpose here as it is a shortcut when coding new functionalities and letter c is near shift, anyway - we can leave it for now here
+	
 	// this is regular c64 screen
 	viewC64Screen = new CViewC64Screen("C64 Screen", 510, 40, posZ, 540, 402, debugInterfaceC64);
 
@@ -817,24 +833,30 @@ void CViewC64::InitViceViews()
 	
 	// views
 	viewC64MemoryMap = new CViewMemoryMap("C64 Memory map", 190, 20, posZ, 320, 280,
-										  debugInterfaceC64, debugInterfaceC64->dataAdapterC64,
-										  256, 256, 0x10000, true, false);	// 256x256 = 64kB
+										  debugInterfaceC64, debugInterfaceC64->symbols,
+										  256, 256, true, false);	// 256x256 = 64kB
 
 	viewDrive1541MemoryMap = new CViewMemoryMap("1541 Memory map", 120, 80, posZ, 200, 200,
-												debugInterfaceC64, debugInterfaceC64->dataAdapterDrive1541,
-												64, 1024, 0x10000, true, true);
+												debugInterfaceC64, debugInterfaceC64->symbolsDrive1541,
+												64, 1024, true, true);
 
 	
 	viewC64Disassembly = new CViewC64Disassembly("C64 Disassembly", 0, 20, posZ, 190, 420,
-											  debugInterfaceC64->symbols, NULL, viewC64MemoryMap);
+											  debugInterfaceC64->symbols, NULL);
 	
 	viewC64Disassembly2 = new CViewC64Disassembly("C64 Disassembly 2", 100, 100, posZ, 200, 300,
-												 debugInterfaceC64->symbols, NULL, viewC64MemoryMap);
+												 debugInterfaceC64->symbols, NULL);
 
 	viewC64MemoryDataDump = new CViewDataDump("C64 Memory", 190, 300, posZ, 320, 140,
 											  debugInterfaceC64->symbols, viewC64MemoryMap, viewC64Disassembly);
 	viewC64Disassembly->SetViewDataDump(viewC64MemoryDataDump);
 
+	viewC64MemoryMonitor = new CViewDataMonitor("C64 Memory Monitor", 290, 350, posZ, 400, 200,
+												debugInterfaceC64->symbols, debugInterfaceC64->dataAdapterC64DirectRam,
+												viewC64MemoryMap, viewC64Disassembly);
+
+	viewC64MemoryPlot = new CViewDataPlot("C64 Memory Plot", 230, 275, posZ, 400, 200,
+												debugInterfaceC64->symbols, debugInterfaceC64->dataAdapterC64);
 
 	viewC64MemoryDataWatch = new CViewDataWatch("C64 Data watch", 140, 140, posZ, 300, 300,
 												debugInterfaceC64->symbols, viewC64MemoryMap);
@@ -862,10 +884,12 @@ void CViewC64::InitViceViews()
 	
 	viewC64BreakpointsDrive1541Memory = new CViewBreakpoints("1541 Memory Breakpoints", 60, 60, posZ, 400, 300, this->debugInterfaceC64->symbolsDrive1541, BREAKPOINT_TYPE_MEMORY);
 	
+	viewC64DebugEventsHistory = new CViewDebugEventsHistory("C64 Debug Events History", 180, 60, posZ, 400, 200, this->debugInterfaceC64);
+	
 	//
 	viewC64CartridgeMemoryMap = new CViewMemoryMap("C64 Cartridge memory map", 40, 70, posZ, 400, 300,
-										  debugInterfaceC64, debugInterfaceC64->dataAdapterCartridgeC64,
-										  512, 1024, 512*1024, true, false);	// 512*1024 = 512kB
+										  debugInterfaceC64, debugInterfaceC64->symbolsCartridgeC64,
+										  512, 1024, true, false);	// 512*1024 = 512kB
 	viewC64CartridgeMemoryMap->updateMapNumberOfFps = 1.0f;
 	viewC64CartridgeMemoryMap->updateMapIsAnimateEvents = false;
 	viewC64CartridgeMemoryMap->showCurrentExecutePC = false;
@@ -876,7 +900,7 @@ void CViewC64::InitViceViews()
 
 	//
 	viewC64SourceCode = new CViewSourceCode("C64 Assembler source", 40, 70, posZ, 500, 350,
-											debugInterfaceC64, debugInterfaceC64->dataAdapterC64, viewC64MemoryMap, viewC64Disassembly);
+											debugInterfaceC64, debugInterfaceC64->symbols, viewC64Disassembly);
 	//
 	viewC64StateCIA = new CViewC64StateCIA("C64 CIA", 10, 40, posZ, 400, 200, debugInterfaceC64);
 
@@ -901,10 +925,10 @@ void CViewC64::InitViceViews()
 	viewDrive1541StateCPU = new CViewDrive1541StateCPU("1541 CPU", 20, 50, posZ, 300, 35, debugInterfaceC64);
 	
 	viewDrive1541Disassembly = new CViewC64Disassembly("1541 Disassembly", 110, 110, posZ, 200, 300,
-													debugInterfaceC64->symbolsDrive1541, NULL, viewDrive1541MemoryMap);
+													debugInterfaceC64->symbolsDrive1541, NULL);
 	
 	viewDrive1541Disassembly2 = new CViewC64Disassembly("1541 Disassembly 2", 120, 120, posZ, 200, 300,
-													debugInterfaceC64->symbolsDrive1541, NULL, viewDrive1541MemoryMap);
+													debugInterfaceC64->symbolsDrive1541, NULL);
 
 	viewDrive1541StateVIA = new CViewDrive1541StateVIA("1541 VIA", 10, 40, posZ, 300, 200, debugInterfaceC64);
 	
@@ -914,6 +938,10 @@ void CViewC64::InitViceViews()
 													debugInterfaceC64->symbolsDrive1541,
 													viewDrive1541MemoryMap, viewDrive1541Disassembly);
 	viewDrive1541Disassembly->SetViewDataDump(viewDrive1541MemoryDataDump);
+
+	viewDrive1541MemoryMonitor = new CViewDataMonitor("1541 Memory Monitor", 120, 50, posZ, 400, 200,
+												debugInterfaceC64->symbolsDrive1541, debugInterfaceC64->dataAdapterDrive1541DirectRam,
+													  viewDrive1541MemoryMap, viewDrive1541Disassembly);
 
 	viewDrive1541MemoryDataWatch = new CViewDataWatch("1541 Data watch", 40, 40, posZ, 300, 300,
 													  debugInterfaceC64->symbolsDrive1541,
@@ -931,8 +959,9 @@ void CViewC64::InitViceViews()
 	viewDrive1541MemoryMap->SetDataDumpView(viewDrive1541MemoryDataDump);
 	
 	//
-	viewDrive1541FileD64 = new CViewDrive1541FileD64("1541 Disk directory", 120, 120, posZ, 400, 300);
-	
+	viewDrive1541FileD64 = new CViewDrive1541Browser("1541 Disk directory", 120, 120, posZ, 400, 300);
+	viewDrive1541DiskData = new CViewDrive1541DiskData("1541 Disk data", 200, 200, posZ, 350, 350);
+
 
 	//
 	viewC64AllGraphicsBitmapsControl = new CViewC64AllGraphicsBitmapsControl("C64 All Bitmaps Control", 200, 100, posZ, 400, 400, debugInterfaceC64);
@@ -977,6 +1006,10 @@ void CViewC64::InitViceViews()
 	viewC64MemoryDataDump2->visible = false;
 	AddEmulatorMenuItemView(debugInterfaceC64, viewC64MemoryDataDump3);
 	viewC64MemoryDataDump3->visible = false;
+	AddEmulatorMenuItemView(debugInterfaceC64, viewC64MemoryMonitor);
+	viewC64MemoryMonitor->visible = false;
+	AddEmulatorMenuItemView(debugInterfaceC64, viewC64MemoryPlot);
+	viewC64MemoryPlot->visible = false;
 	AddEmulatorMenuItemView(debugInterfaceC64, viewC64MemoryDataWatch);
 	viewC64MemoryDataWatch->visible = false;
 	AddEmulatorMenuItemView(debugInterfaceC64, viewC64MemoryMap);
@@ -987,7 +1020,9 @@ void CViewC64::InitViceViews()
 	viewC64BreakpointsMemory->visible = false;
 	AddEmulatorMenuItemView(debugInterfaceC64, viewC64BreakpointsRaster);
 	viewC64BreakpointsRaster->visible = false;
-	
+	AddEmulatorMenuItemView(debugInterfaceC64, viewC64DebugEventsHistory);
+	viewC64DebugEventsHistory->visible = false;
+
 	AddEmulatorMenuItemView(debugInterfaceC64, viewC64CartridgeMemoryDataDump);
 	viewC64CartridgeMemoryDataDump->visible = false;
 	AddEmulatorMenuItemView(debugInterfaceC64, viewC64CartridgeMemoryMap);
@@ -1061,6 +1096,8 @@ void CViewC64::InitViceViews()
 	viewDrive1541MemoryDataDump2->visible = false;
 	AddEmulatorMenuItemViewToFolder(debugInterfaceC64, folderDrive1541, viewDrive1541MemoryDataDump3);
 	viewDrive1541MemoryDataDump3->visible = false;
+	AddEmulatorMenuItemViewToFolder(debugInterfaceC64, folderDrive1541, viewDrive1541MemoryMonitor);
+	viewDrive1541MemoryMonitor->visible = false;
 	AddEmulatorMenuItemViewToFolder(debugInterfaceC64, folderDrive1541, viewDrive1541MemoryDataWatch);
 	viewDrive1541MemoryDataWatch->visible = false;
 	AddEmulatorMenuItemViewToFolder(debugInterfaceC64, folderDrive1541, viewDrive1541MemoryMap);
@@ -1075,6 +1112,9 @@ void CViewC64::InitViceViews()
 	viewDrive1541Led->visible = false;
 	AddEmulatorMenuItemViewToFolder(debugInterfaceC64, folderDrive1541, viewDrive1541FileD64);
 	viewDrive1541FileD64->visible = false;
+	AddEmulatorMenuItemViewToFolder(debugInterfaceC64, folderDrive1541, viewDrive1541DiskData);
+	viewDrive1541DiskData->visible = false;
+	
 
 	AddEmulatorMenuItemView(debugInterfaceC64, viewC64MonitorConsole);
 	viewC64MonitorConsole->visible = false;
@@ -1105,11 +1145,11 @@ void CViewC64::InitAtari800Views()
 	//
 	
 	viewAtariMemoryMap = new CViewMemoryMap("Atari Memory map", 190, 20, posZ, 320, 280,
-											debugInterfaceAtari, debugInterfaceAtari->dataAdapter,
-											256, 256, 0x10000, true, false);	// 256x256 = 64kB
+											debugInterfaceAtari, debugInterfaceAtari->symbols,
+											256, 256, true, false);	// 256x256 = 64kB
 
 	viewAtariDisassembly = new CViewDisassembly("Atari Disassembly", 0, 20, posZ, 190, 420,
-												debugInterfaceAtari->symbols, NULL, viewAtariMemoryMap);
+												debugInterfaceAtari->symbols, NULL);
 
 	//
 	viewAtariBreakpointsPC = new CViewBreakpoints("Atari PC Breakpoints", 70, 70, posZ, 200, 300, this->debugInterfaceAtari->symbols, BREAKPOINT_TYPE_CPU_PC);
@@ -1118,11 +1158,18 @@ void CViewC64::InitAtari800Views()
 
 	//
 	viewAtariSourceCode = new CViewSourceCode("Atari Assembler source", 40, 70, posZ, 500, 350,
-											  debugInterfaceAtari, debugInterfaceAtari->dataAdapter, viewAtariMemoryMap, viewAtariDisassembly);
+											  debugInterfaceAtari, debugInterfaceAtari->symbols, viewAtariDisassembly);
 
 	viewAtariMemoryDataDump = new CViewDataDump("Atari Memory", 190, 300, posZ, 320, 140,
 												debugInterfaceAtari->symbols, viewAtariMemoryMap, viewAtariDisassembly);
 	viewAtariMemoryDataDump->selectedCharset = 2;
+
+	viewAtariMemoryMonitor = new CViewDataMonitor("Atari Memory Monitor", 290, 350, posZ, 400, 200,
+												  debugInterfaceAtari->symbols, debugInterfaceAtari->dataAdapter,
+												  viewAtariMemoryMap, viewAtariDisassembly);
+
+	viewAtariMemoryPlot = new CViewDataPlot("Atari Memory Plot", 230, 275, posZ, 400, 200,
+												debugInterfaceAtari->symbols, debugInterfaceAtari->dataAdapter);
 
 	//
 	viewAtariDisassembly->SetViewDataDump(viewAtariMemoryDataDump);
@@ -1155,6 +1202,10 @@ void CViewC64::InitAtari800Views()
 	AddEmulatorMenuItemView(debugInterfaceAtari, viewAtariSourceCode);
 	viewAtariSourceCode->visible = false;
 	AddEmulatorMenuItemView(debugInterfaceAtari, viewAtariMemoryDataDump);
+	AddEmulatorMenuItemView(debugInterfaceAtari, viewAtariMemoryMonitor);
+	viewAtariMemoryMonitor->visible = false;
+	AddEmulatorMenuItemView(debugInterfaceAtari, viewAtariMemoryPlot);
+	viewAtariMemoryPlot->visible = false;
 	AddEmulatorMenuItemView(debugInterfaceAtari, viewAtariMemoryDataWatch);
 	viewAtariMemoryDataWatch->visible = false;
 	AddEmulatorMenuItemView(debugInterfaceAtari, viewAtariMemoryMap);
@@ -1191,11 +1242,11 @@ void CViewC64::InitNestopiaViews()
 	viewNesStateCPU = new CViewNesStateCPU("NES CPU", 510, 5, posZ, 290, 35, debugInterfaceNes);
 
 	viewNesMemoryMap = new CViewMemoryMap("NES Memory map", 190, 20, posZ, 320, 280,
-										  debugInterfaceNes, debugInterfaceNes->dataAdapter,
-										  256, 256, 0x10000, true, false);	// 256x256 = 64kB
+										  debugInterfaceNes, debugInterfaceNes->symbols,
+										  256, 256, true, false);	// 256x256 = 64kB
 
 	viewNesDisassembly = new CViewDisassembly("NES Disassembly", 0, 20, posZ, 190, 424,
-												debugInterfaceNes->symbols, NULL, viewNesMemoryMap);
+												debugInterfaceNes->symbols, NULL);
 		
 	//
 	viewNesBreakpointsPC = new CViewBreakpoints("NES PC Breakpoints", 70, 70, posZ, 200, 300, this->debugInterfaceNes->symbols, BREAKPOINT_TYPE_CPU_PC);
@@ -1204,12 +1255,19 @@ void CViewC64::InitNestopiaViews()
 
 	//
 	viewNesSourceCode = new CViewSourceCode("NES Assembler source", 40, 70, posZ, 500, 350,
-											  debugInterfaceNes, debugInterfaceNes->dataAdapter, viewNesMemoryMap, viewNesDisassembly);
+											  debugInterfaceNes, debugInterfaceNes->symbols, viewNesDisassembly);
 
 
 	viewNesMemoryDataDump = new CViewDataDump("NES Memory", 190, 300, posZ, 320, 144,
 											  debugInterfaceNes->symbols, viewNesMemoryMap, viewNesDisassembly);
 	viewNesDisassembly->SetViewDataDump(viewNesMemoryDataDump);
+
+	viewNesMemoryMonitor = new CViewDataMonitor("NES Memory Monitor", 290, 350, posZ, 400, 200,
+												debugInterfaceNes->symbols, debugInterfaceNes->dataAdapter,
+												viewNesMemoryMap, viewNesDisassembly);
+
+	viewNesMemoryPlot = new CViewDataPlot("NES Memory Plot", 230, 275, posZ, 400, 200,
+												debugInterfaceNes->symbols, debugInterfaceNes->dataAdapter);
 
 	viewNesMemoryDataWatch = new CViewDataWatch("NES Watches", 140, 140, posZ, 300, 300,
 												  debugInterfaceNes->symbols, viewNesMemoryMap);
@@ -1217,7 +1275,7 @@ void CViewC64::InitNestopiaViews()
 	viewNesPpuNametables = new CViewNesPpuNametables("NES Nametables", 10, 40, posZ, 400, 200, debugInterfaceNes);
 
 	viewNesPpuNametableMemoryMap = new CViewMemoryMap("NES Nametables Memory map", 140, 140, posZ, 300, 300, debugInterfaceNes,
-													  debugInterfaceNes->dataAdapterPpuNmt, 64, 64, 0x1000, false, false);
+													  debugInterfaceNes->symbolsPpuNmt, 64, 64, false, false);
 
 	viewNesPpuNametableMemoryDataDump = new CViewDataDump("NES Nametables Memory", 140, 250, posZ, 300, 150,
 													debugInterfaceNes->symbolsPpuNmt, viewNesPpuNametableMemoryMap, viewNesDisassembly);
@@ -1254,6 +1312,10 @@ void CViewC64::InitNestopiaViews()
 	AddEmulatorMenuItemView(debugInterfaceNes, viewNesSourceCode);
 	viewNesSourceCode->visible = false;
 	AddEmulatorMenuItemView(debugInterfaceNes, viewNesMemoryDataDump);
+	AddEmulatorMenuItemView(debugInterfaceNes, viewNesMemoryMonitor);
+	viewNesMemoryMonitor->visible = false;
+	AddEmulatorMenuItemView(debugInterfaceNes, viewNesMemoryPlot);
+	viewNesMemoryPlot->visible = false;
 	AddEmulatorMenuItemView(debugInterfaceNes, viewNesMemoryDataWatch);
 	viewNesMemoryDataWatch->visible = false;
 	AddEmulatorMenuItemView(debugInterfaceNes, viewNesMemoryMap);
@@ -1364,7 +1426,7 @@ void CViewC64::StartViceC64EmulationThread()
 			// TODO: move me to debuginterface
 			// restart emulation
 			debugInterfaceC64->isRunning = true;
-//			debugInterfaceC64->snapshotsManager->ClearSnapshotsHistory();
+//			debugInterfaceC64->ClearHistory();
 //			debugInterfaceC64->HardReset();
 			debugInterfaceC64->SetDebugMode(DEBUGGER_MODE_RUNNING);
 			debugInterfaceC64->RestartAudio();
@@ -1399,7 +1461,7 @@ void CViewC64::StartAtari800EmulationThread()
 			// TODO: move me to debuginterface
 			// restart emulation
 			debugInterfaceAtari->isRunning = true;
-//			debugInterfaceAtari->snapshotsManager->ClearSnapshotsHistory();
+//			debugInterfaceAtari->ClearHistory();
 //			debugInterfaceAtari->HardReset();
 			debugInterfaceAtari->SetDebugMode(DEBUGGER_MODE_RUNNING);
 			debugInterfaceAtari->RestartAudio();
@@ -1434,7 +1496,7 @@ void CViewC64::StartNestopiaEmulationThread()
 			// TODO: move me to debuginterface
 			// restart emulation
 			debugInterfaceNes->isRunning = true;
-//			debugInterfaceNes->snapshotsManager->ClearSnapshotsHistory();
+//			debugInterfaceNes->ClearHistory();
 //			debugInterfaceNes->HardReset();
 			debugInterfaceNes->SetDebugMode(DEBUGGER_MODE_RUNNING);
 			debugInterfaceNes->audioChannel->Start();
@@ -1479,7 +1541,7 @@ void CViewC64::StopViceC64EmulationThread()
 	guiMain->LockMutex();
 	debugInterfaceC64->LockMutex();
 	debugInterfaceC64->SetDebugMode(DEBUGGER_MODE_PAUSED);
-	debugInterfaceC64->snapshotsManager->ClearSnapshotsHistory();
+//	debugInterfaceC64->ClearHistory();
 	debugInterfaceC64->isRunning = false;
 	((CDebugInterfaceVice *)debugInterfaceC64)->audioChannel->Stop();
 
@@ -1498,7 +1560,7 @@ void CViewC64::StopAtari800EmulationThread()
 	guiMain->LockMutex();
 	debugInterfaceAtari->LockMutex();
 	debugInterfaceAtari->SetDebugMode(DEBUGGER_MODE_PAUSED);
-	debugInterfaceAtari->snapshotsManager->ClearSnapshotsHistory();
+//	debugInterfaceAtari->ClearHistory();
 	debugInterfaceAtari->isRunning = false;
 	debugInterfaceAtari->audioChannel->Stop();
 
@@ -1517,7 +1579,7 @@ void CViewC64::StopNestopiaEmulationThread()
 	guiMain->LockMutex();
 	debugInterfaceNes->LockMutex();
 	debugInterfaceNes->SetDebugMode(DEBUGGER_MODE_PAUSED);
-	debugInterfaceNes->snapshotsManager->ClearSnapshotsHistory();
+//	debugInterfaceNes->ClearHistory();
 	debugInterfaceNes->isRunning = false;
 	debugInterfaceNes->audioChannel->Stop();
 
@@ -1952,25 +2014,34 @@ void CViewC64::HardReset()
 		// TODO: gSoundEngine->RestartAudioUnit();
 	}
 	
+	if (c64SettingsAlwaysUnpauseEmulationAfterReset)
+	{
+		for (std::vector<CDebugInterface *>::iterator it = debugInterfaces.begin();
+			 it != debugInterfaces.end(); it++)
+		{
+			CDebugInterface *debugInterface = *it;
+			debugInterface->SetDebugMode(DEBUGGER_MODE_RUNNING);
+		}
+			 
+	}
+	
 	// TODO: CViewC64::HardReset  make generic & move execute markers to debug interface
 	if (debugInterfaceC64)
 	{
 		debugInterfaceC64->HardReset();
-		viewC64MemoryMap->ClearExecuteMarkers();
-		viewC64->viewDrive1541MemoryMap->ClearExecuteMarkers();
+		debugInterfaceC64->ClearDebugMarkers();
 	}
 	
 	if (debugInterfaceAtari)
 	{
 		debugInterfaceAtari->HardReset();
-		viewAtariMemoryMap->ClearExecuteMarkers();
+		debugInterfaceAtari->ClearDebugMarkers();
 	}
 	
 	if (debugInterfaceNes)
 	{
+		debugInterfaceNes->ClearDebugMarkers();
 		debugInterfaceNes->HardReset();
-		LOGTODO("                           viewNesMemoryMap                     !!!!!!!!!! ");
-		//				viewNesMemoryMap->ClearExecuteMarkers();
 	}
 	
 	if (c64SettingsIsInVicEditor)
@@ -2881,6 +2952,7 @@ void CViewC64::CreateDefaultUIFont()
 	gDefaultFontSize = URANGE(4, gDefaultFontSize, 64);
 	gDefaultFontOversampling = URANGE(1, gDefaultFontOversampling, 8);
 
+	// TODO: refactor and generalize font names to allow easy fonts adding
 	if (!strcmp(gDefaultFontPath, "ProFontIIx"))
 	{
 		imFontDefault = AddProFontIIx(gDefaultFontSize, gDefaultFontOversampling);
@@ -2901,9 +2973,33 @@ void CViewC64::CreateDefaultUIFont()
 	{
 		imFontDefault = AddKarlaRegularFont(gDefaultFontSize, gDefaultFontOversampling);
 	}
-	else if (!strcmp(gDefaultFontPath, "RobotoMedium"))
+	else if (!strcmp(gDefaultFontPath, "Unifont"))
 	{
-		imFontDefault = AddRobotoMediumFont(gDefaultFontSize, gDefaultFontOversampling);
+		imFontDefault = AddUnifont(gDefaultFontSize, gDefaultFontOversampling);
+	}
+	else if (!strcmp(gDefaultFontPath, "PTMono"))
+	{
+		imFontDefault = AddPTMono(gDefaultFontSize, gDefaultFontOversampling);
+	}
+	else if (!strcmp(gDefaultFontPath, "PlexSans"))
+	{
+		imFontDefault = AddPlexSans(gDefaultFontSize, gDefaultFontOversampling);
+	}
+	else if (!strcmp(gDefaultFontPath, "PlexMono"))
+	{
+		imFontDefault = AddPlexMono(gDefaultFontSize, gDefaultFontOversampling);
+	}
+	else if (!strcmp(gDefaultFontPath, "Monoki"))
+	{
+		imFontDefault = AddMonoki(gDefaultFontSize, gDefaultFontOversampling);
+	}
+	else if (!strcmp(gDefaultFontPath, "LiberationSans"))
+	{
+		imFontDefault = AddLiberationSans(gDefaultFontSize, gDefaultFontOversampling);
+	}
+	else if (!strcmp(gDefaultFontPath, "ExoMedium"))
+	{
+		imFontDefault = AddExoMedium(gDefaultFontSize, gDefaultFontOversampling);
 	}
 
 	else
@@ -3257,6 +3353,7 @@ void CViewC64::SerializeAllEmulatorsSymbols(Hjson::Value hjsonRoot, bool storeLa
 	hjsonRoot["Emulators"] = hjsonEmulators;
 }
 
+// note, this method should not start with already locked debug interface mutex as this may cause endless lock when gui waits for debug interface
 void CViewC64::DefaultSymbolsRestore()
 {
 	LOGD("CViewC64::DefaultSymbolsRestore");
@@ -3266,6 +3363,8 @@ void CViewC64::DefaultSymbolsRestore()
 	{
 		return;
 	}
+
+	guiMain->LockMutex();
 
 	CSlrString *fileName = new CSlrString(DEFAULT_SYMBOLS_FILE_NAME);
 	CByteBuffer *byteBuffer = new CByteBuffer();
@@ -3297,6 +3396,8 @@ void CViewC64::DefaultSymbolsRestore()
 		}
 	}
 	
+	guiMain->UnlockMutex();
+
 	delete byteBuffer;
 	delete fileName;
 
@@ -3649,6 +3750,19 @@ void CViewC64::ApplicationShutdown()
 //	SYS_Sleep(100);
 }
 
+std::set<std::string> CViewC64::GetSupportedFileExtensions()
+{
+	std::set<std::string> extensions = {
+		u8"prg", u8"d64", u8"x64", u8"g64", u8"p64", u8"crt", u8"reu", u8"sid", u8"snap", u8"vsf", u8"tap", u8"t64",
+		u8"xex", u8"obx", u8"atr", u8"a8s",
+		u8"sap", u8"cmc", u8"cm3", u8"cmr", u8"cms", u8"dmc", u8"dlt", u8"fc", u8"mpt", u8"mpd", u8"rmt", u8"tmc", u8"tm8", u8"tm2", u8"stil",
+		u8"nes",
+		u8"c64jukebox", u8"rtdl", u8"rdtl",
+		u8"png", u8"jpg", u8"jpeg", u8"bmp", u8"gif", u8"psd", u8"pic", u8"hdr", u8"tga", u8"kla", u8"dd", u8"ddl", u8"aas", u8"art", u8"vce"
+	};
+	return extensions;
+}
+
 void CViewC64::GlobalDropFileCallback(char *filePath, bool consumedByView)
 {
 	// Note: drop event is also routed to a window on which the file is dropped, so we can define how the drop is exactly consumed. if not consumed by window then this is just a global callback to open a file.
@@ -3674,3 +3788,20 @@ void CViewC64::RecentlyOpenedFilesCallbackSelectedMenuItem(CSlrString *filePath)
 	viewC64->viewC64MainMenu->LoadFile(filePath);
 }
 
+void CViewC64::ViewFileBrowserCallbackOpenFile(fs::path path)
+{
+	LOGD("CViewC64::ViewFileBrowserCallbackOpenFile: %s", path.string().c_str());
+	CSlrString *str = new CSlrString(path.string().c_str());
+	viewC64->OpenFile(str);
+	delete str;
+}
+
+void CViewC64::OpenFile(CSlrString *path)
+{
+	viewC64->viewC64MainMenu->LoadFile(path);
+}
+
+void CViewC64::OpenFileDialog()
+{
+	viewC64->viewC64MainMenu->OpenDialogOpenFile();
+}

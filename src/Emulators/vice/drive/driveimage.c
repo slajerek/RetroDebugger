@@ -185,6 +185,7 @@ int drive_image_attach(disk_image_t *image, unsigned int unit)
 		LOGD("GCR_image_loaded drive=%x", drive);
         drive->GCR_image_loaded = 1;
 		drive->GCR_dirty_track_for_snapshot = 1;
+		drive->GCR_dirty_track_needs_refresh = 1;
     }
     drive->complicated_image_loaded = ((drive->image->type == DISK_IMAGE_TYPE_P64)
                                        || (drive->image->type == DISK_IMAGE_TYPE_G64)
@@ -242,6 +243,7 @@ int drive_image_detach(disk_image_t *image, unsigned int unit)
     drive->GCR_image_loaded = 0;
     drive->P64_image_loaded = 0;
 	drive->GCR_dirty_track_for_snapshot = 1;
+	drive->GCR_dirty_track_needs_refresh = 1;
 	drive->P64_dirty_for_snapshot = 1;
     drive->read_only = 0;
     drive->image = NULL;

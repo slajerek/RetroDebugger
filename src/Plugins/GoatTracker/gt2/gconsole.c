@@ -8,6 +8,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include "goattrk2.h"
+#include "log.h"
+
 
 int gfxinitted = 0;
 unsigned *scrbuffer = NULL;
@@ -20,12 +22,12 @@ int shiftpressed = 0;
 int cursorflashdelay = 0;
 int mouseb = 0;
 int prevmouseb = 0;
-unsigned mousex = 0;
-unsigned mousey = 0;
-unsigned mousepixelx = 0;
-unsigned mousepixely = 0;
-unsigned oldmousepixelx = 0xffffffff;
-unsigned oldmousepixely = 0xffffffff;
+unsigned int mousex = 0;
+unsigned int mousey = 0;
+unsigned int mousepixelx = 0;
+unsigned int mousepixely = 0;
+unsigned int oldmousepixelx = 0xffffffff;
+unsigned int oldmousepixely = 0xffffffff;
 int mouseheld = 0;
 int region[MAX_ROWS];
 int altpressed = 0;
@@ -613,10 +615,14 @@ void getkey(void)
   prevmouseb = mouseb;
 
   mou_getpos(&mousepixelx, &mousepixely);
+//	LOGD("mousepixelx=%d mousepixely=%d", mousepixelx, mousepixely);
+	
   mouseb = mou_getbuttons();
   mousex = mousepixelx / 8;
   mousey = mousepixely / 16;
 
+//	LOGD("mousex=%d mousey=%d", mousex, mousey);
+	
   if (mouseb) mouseheld++;
   else mouseheld = 0;
 

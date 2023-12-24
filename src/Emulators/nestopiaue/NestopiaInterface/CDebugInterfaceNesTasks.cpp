@@ -74,7 +74,7 @@ void CDebugInterfaceNesTaskInsertCartridge::ExecuteTask()
 	
 	debugInterface->ResetEmulationFrameCounter();
 	debugInterface->ResetClockCounters();
-	debugInterface->snapshotsManager->ClearSnapshotsHistory();
+	debugInterface->ClearHistory();
 }
 
 //
@@ -100,6 +100,6 @@ void CDebugInterfaceNesTaskHardReset::ExecuteTask()
 	
 	debugInterface->ResetEmulationFrameCounter();
 	debugInterface->ResetClockCounters();
-	debugInterface->snapshotsManager->ClearSnapshotsHistory();
+	debugInterface->ClearHistory();
 }
 

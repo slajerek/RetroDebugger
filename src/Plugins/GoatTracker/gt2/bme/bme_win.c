@@ -14,6 +14,8 @@
 #include "bme_err.h"
 #include "bme_cfg.h"
 
+#include "log.h"
+
 //SDL_Joystick *gtjoy[MAX_JOYSTICKS] = {NULL};
 //Sint16 joyx[MAX_JOYSTICKS];
 //Sint16 joyy[MAX_JOYSTICKS];
@@ -35,11 +37,11 @@ int win_windowinitted = 0;
 int win_quitted = 0;
 unsigned char win_keytable[MAX_KEYS] = {0};
 unsigned char win_asciikey = 0;
-unsigned win_mousexpos = 0;
-unsigned win_mouseypos = 0;
+volatile unsigned int win_mousexpos = 0;
+volatile unsigned int win_mouseypos = 0;
 //unsigned win_mousexrel = 0;
 //unsigned win_mouseyrel = 0;
-unsigned win_mousebuttons = 0;
+volatile unsigned int win_mousebuttons = 0;
 int win_mousemode = MOUSE_FULLSCREEN_HIDDEN;
 unsigned char win_keystate[MAX_KEYS] = {0};
 
@@ -50,9 +52,15 @@ static int win_currenttime = 0;
 static int win_framecounter = 0;
 static int win_activateclick = 0;
 
+void gt2SetMousePosition(unsigned int x, unsigned int y)
+{
+//	LOGD("gt2SetMousePosition: x=%d y=%d", x, y);
+	win_mousexpos = x;
+	win_mouseypos = y;
+}
+
 int win_openwindow(char *appname, char *icon)
 {
-	
 	LOGD("gt win_openwindow");
 	
 	/*
@@ -240,7 +248,7 @@ void win_checkmessages(void)
 
 void win_setmousemode(int mode)
 {
-	LOGD("win_setmousemode !!!!!!!!!!!!!!!!!");
+	printf("win_setmousemode !!!!!!!!!!!!!!!!!\n");
 	
 	/*
     win_mousemode = mode;

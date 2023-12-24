@@ -19,10 +19,10 @@ public:
 	virtual void AdapterReadBlockDirect(uint8 *buffer, int pointerStart, int pointerEnd);
 };
 
-class CDirectRamDataAdapterVice : public CDebugDataAdapter
+class CDataAdapterViceDirectRam : public CDebugDataAdapter
 {
 public:
-	CDirectRamDataAdapterVice(CDebugInterfaceVice *debugInterfaceVice);
+	CDataAdapterViceDirectRam(CDebugInterfaceVice *debugInterfaceVice);
 	CDebugInterfaceVice *debugInterfaceVice;
 	
 	virtual int AdapterGetDataLength();
@@ -33,10 +33,10 @@ public:
 	virtual void AdapterReadBlockDirect(uint8 *buffer, int pointerStart, int pointerEnd);
 };
 
-class CDiskDataAdapterVice : public CDebugDataAdapter
+class CDataAdapterViceDisk : public CDebugDataAdapter
 {
 public:
-	CDiskDataAdapterVice(CDebugInterfaceVice *debugInterfaceVice);
+	CDataAdapterViceDisk(CDebugInterfaceVice *debugInterfaceVice);
 	CDebugInterfaceVice *debugInterfaceVice;
 	
 	virtual int AdapterGetDataLength();
@@ -47,10 +47,10 @@ public:
 	virtual void AdapterReadBlockDirect(uint8 *buffer, int pointerStart, int pointerEnd);
 };
 
-class CDiskDirectRamDataAdapterVice : public CDebugDataAdapter
+class CDataAdapterViceDiskDirectRam : public CDebugDataAdapter
 {
 public:
-	CDiskDirectRamDataAdapterVice(CDebugInterfaceVice *debugInterfaceVice);
+	CDataAdapterViceDiskDirectRam(CDebugInterfaceVice *debugInterfaceVice);
 	CDebugInterfaceVice *debugInterfaceVice;
 	
 	virtual int AdapterGetDataLength();
@@ -69,10 +69,10 @@ enum CCartridgeDataAdapterViceType : u8
 	C64CartridgeDataAdapterViceTypeRamL
 };
 
-class CCartridgeDataAdapterVice : public CDebugDataAdapter
+class CDataAdapterViceCartridge : public CDebugDataAdapter
 {
 public:
-	CCartridgeDataAdapterVice(CDebugInterfaceVice *debugInterfaceVice, CCartridgeDataAdapterViceType memoryType);
+	CDataAdapterViceCartridge(CDebugInterfaceVice *debugInterfaceVice, CCartridgeDataAdapterViceType memoryType);
 	CDebugInterfaceVice *debugInterfaceVice;
 	CCartridgeDataAdapterViceType memoryType;
 	
@@ -85,10 +85,10 @@ public:
 };
 
 //
-class CReuDataAdapterVice : public CDebugDataAdapter
+class CDataAdapterViceReu : public CDebugDataAdapter
 {
 public:
-	CReuDataAdapterVice(CDebugInterfaceVice *debugInterfaceVice);
+	CDataAdapterViceReu(CDebugInterfaceVice *debugInterfaceVice);
 	CDebugInterfaceVice *debugInterfaceVice;
 	
 	virtual int AdapterGetDataLength();

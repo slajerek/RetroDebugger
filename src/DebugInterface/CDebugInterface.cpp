@@ -8,6 +8,7 @@
 #include "CSnapshotsManager.h"
 #include "CDebuggerEmulatorPlugin.h"
 #include "CViewDisassembly.h"
+#include "CDebugEventsHistory.h"
 
 CDebugInterface::CDebugInterface(CViewC64 *viewC64)
 {
@@ -136,6 +137,8 @@ u64 CDebugInterface::GetPreviousCpuInstructionCycleCounter()
 void CDebugInterface::ResetEmulationFrameCounter()
 {
 	this->emulationFrameCounter = 0;
+	if (symbols)
+		symbols->debugEventsHistory->DeleteAllEvents();
 }
 
 
@@ -179,6 +182,18 @@ CDebugDataAdapter *CDebugInterface::GetDataAdapter()
 {
 	SYS_FatalExit("CDebugInterface::GetDataAdapter");
 	return NULL;
+}
+
+void CDebugInterface::ClearDebugMarkers()
+{
+	LOGError("CDebugInterface::ClearDebugMarkers: not implemented for emulator %s", GetEmulatorVersionString());
+}
+
+void CDebugInterface::ClearHistory()
+{
+	ClearDebugMarkers();
+	snapshotsManager->ClearSnapshotsHistory();
+	symbols->debugEventsHistory->DeleteAllEvents();
 }
 
 bool CDebugInterface::LoadExecutable(char *fullFilePath)

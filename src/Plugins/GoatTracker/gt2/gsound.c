@@ -9,6 +9,7 @@
 #endif
 
 #include "goattrk2.h"
+#include "log.h"
 
 // General / reSID output
 int playspeed;

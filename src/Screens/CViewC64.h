@@ -20,6 +20,7 @@
 #include "SYS_SharedMemory.h"
 #include "CGuiViewSaveFile.h"
 #include "CGuiViewSelectFile.h"
+#include "CViewFileBrowser.h"
 #include "CSlrKeyboardShortcuts.h"
 #include "CConfigStorageHjson.h"
 #include "CGlobalDropFileCallback.h"
@@ -35,6 +36,8 @@ extern "C"
 #include <list>
 #include <vector>
 #include <map>
+#include <string>
+#include <set>
 
 class ImFont;
 
@@ -56,6 +59,7 @@ class CC64DiskDirectRamDataAdapter;
 class CDebugSymbols;
 
 class CGuiViewMessages;
+class CViewFileBrowser;
 
 class CDebugInterfaceMenuItemFolder;
 class CDebugInterfaceMenuItemView;
@@ -66,8 +70,11 @@ class CViewC64ScreenViewfinder;
 
 class CViewMemoryMap;
 class CViewDataDump;
+class CViewDataMonitor;
+class CViewDataPlot;
 class CViewDataWatch;
 class CViewBreakpoints;
+class CViewDebugEventsHistory;
 class CViewDisassembly;
 class CViewSourceCode;
 class CViewC64StateCPU;
@@ -82,7 +89,8 @@ class CViewC64MemoryDebuggerLayoutToolbar;
 class CViewDrive1541StateCPU;
 class CViewDrive1541StateVIA;
 class CViewDrive1541Led;
-class CViewDrive1541FileD64;
+class CViewDrive1541Browser;
+class CViewDrive1541DiskData;
 class CViewC64StateREU;
 class CViewC64AllGraphicsBitmaps;
 class CViewC64AllGraphicsBitmapsControl;
@@ -129,7 +137,7 @@ class CViewNesPianoKeyboard;
 class CViewJukeboxPlaylist;
 class CViewMainMenu;
 class CViewSettingsMenu;
-class CViewDrive1541FileD64;
+class CViewDrive1541Browser;
 class CViewC64KeyMap;
 class CViewKeyboardShortcuts;
 class CViewSnapshots;
@@ -156,10 +164,10 @@ class CEmulationThreadNes : public CSlrThread
 	void ThreadRun(void *data);
 };
 
-
 class CViewC64 : public CGuiView, CGuiButtonCallback, CApplicationPauseResumeListener,
 				 public CSharedMemorySignalCallback, public CGuiViewSelectFileCallback, public CGuiViewSaveFileCallback,
 				 public CSlrKeyboardShortcutCallback, public CGlobalDropFileCallback, public CRecentlyOpenedFilesCallback,
+				 public CViewFileBrowserCallback,
 				 public CSlrThread
 {
 public:
@@ -239,6 +247,7 @@ public:
 	
 	CMainMenuBar *mainMenuBar;
 	CGuiViewMessages *viewMessages;
+	CViewFileBrowser *viewFileBrowser;
 	
 	CViewMainMenu *viewC64MainMenu;
 	CViewSettingsMenu *viewC64SettingsMenu;
@@ -265,8 +274,12 @@ public:
 	
 	CViewDataDump *viewC64MemoryDataDump;
 	CViewDataWatch *viewC64MemoryDataWatch;
+	CViewDataMonitor *viewC64MemoryMonitor;
+	CViewDataPlot *viewC64MemoryPlot;
+
 	CViewDataDump *viewDrive1541MemoryDataDump;
 	CViewDataWatch *viewDrive1541MemoryDataWatch;
+	CViewDataMonitor *viewDrive1541MemoryMonitor;
 
 	CViewDataDump *viewC64MemoryDataDump2;
 	CViewDataDump *viewC64MemoryDataDump3;
@@ -287,6 +300,8 @@ public:
 	CViewBreakpoints *viewC64BreakpointsRaster;
 	CViewBreakpoints *viewC64BreakpointsDrive1541PC;
 	CViewBreakpoints *viewC64BreakpointsDrive1541Memory;
+	
+	CViewDebugEventsHistory *viewC64DebugEventsHistory;
 
 	CViewSourceCode *viewC64SourceCode;
 	
@@ -321,7 +336,8 @@ public:
 	CViewC64StateCPU *viewC64StateCPU;
 	CViewDrive1541StateCPU *viewDrive1541StateCPU;
 	
-	CViewDrive1541FileD64 *viewDrive1541FileD64;
+	CViewDrive1541Browser *viewDrive1541FileD64;
+	CViewDrive1541DiskData *viewDrive1541DiskData;
 	
 	// VIC Editor
 	CViewC64VicEditor *viewVicEditor;
@@ -340,8 +356,13 @@ public:
 	CViewBreakpoints *viewAtariBreakpointsPC;
 	CViewBreakpoints *viewAtariBreakpointsMemory;
 //	CViewBreakpoints *viewAtariBreakpointsRaster;
+
+//	CViewBreakpointsHistory *viewAtariBreakpointsHistory;
+
 	CViewSourceCode *viewAtariSourceCode;
 	CViewDataDump *viewAtariMemoryDataDump;
+	CViewDataMonitor *viewAtariMemoryMonitor;
+	CViewDataPlot *viewAtariMemoryPlot;
 	CViewDataWatch *viewAtariMemoryDataWatch;
 	CViewMemoryMap *viewAtariMemoryMap;
 	CViewAtariStateCPU *viewAtariStateCPU;
@@ -367,11 +388,16 @@ public:
 	CViewNesPpuOam *viewNesPpuOam;
 	CViewNesPpuPalette *viewNesPpuPalette;
 	CViewDisassembly *viewNesDisassembly;
+
 	CViewBreakpoints *viewNesBreakpointsPC;
 	CViewBreakpoints *viewNesBreakpointsMemory;
+	CViewDebugEventsHistory *viewNesBreakpointsHistory;
+
 	CViewSourceCode *viewNesSourceCode;
 	CViewMemoryMap *viewNesMemoryMap;
 	CViewDataDump *viewNesMemoryDataDump;
+	CViewDataMonitor *viewNesMemoryMonitor;
+	CViewDataPlot *viewNesMemoryPlot;
 	CViewDataWatch *viewNesMemoryDataWatch;
 	CViewMemoryMap *viewNesPpuNametableMemoryMap;
 	CViewDataDump *viewNesPpuNametableMemoryDataDump;
@@ -584,14 +610,21 @@ public:
 	void ShowMessageInfo(CSlrString *showMessage);
 
 	//
+	virtual std::set<std::string> GetSupportedFileExtensions();
 	virtual void GlobalDropFileCallback(char *filePath, bool consumedByView);
 	
 	//
 	CRecentlyOpenedFiles *recentlyOpenedFiles;
 	virtual void RecentlyOpenedFilesCallbackSelectedMenuItem(CSlrString *filePath);
 	
+	//
+	virtual void ViewFileBrowserCallbackOpenFile(fs::path path);
+
 	char *ATRD_GetPathForRoms_IMPL();
 
+	//
+	void OpenFileDialog();
+	void OpenFile(CSlrString *path);
 };
 
 extern CViewC64 *viewC64;
@@ -611,5 +644,7 @@ public:
 	bool viewportsEnable;
 	virtual void RunUIThreadTask();
 };
+
+extern const ImGuiInputTextFlags defaultHexInputFlags;
 
 #endif //_GUI_C64DEMO_

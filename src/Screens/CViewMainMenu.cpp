@@ -15,12 +15,13 @@
 #include "CSlrFileFromOS.h"
 #include "C64D_Version.h"
 #include "CDebugSymbols.h"
+#include "CDebugMemory.h"
 #include "C64KeyboardShortcuts.h"
 #include "CViewSnapshots.h"
 #include "CViewTimeline.h"
 #include "CViewAbout.h"
 #include "CViewMemoryMap.h"
-#include "CViewDrive1541FileD64.h"
+#include "CViewDrive1541Browser.h"
 #include "CViewKeyboardShortcuts.h"
 #include "CSnapshotsManager.h"
 #include "AtariAsap.h"
@@ -100,6 +101,7 @@ CViewMainMenu::CViewMainMenu(float posX, float posY, float posZ, float sizeX, fl
 		crtExtensions.push_back(new CSlrString("car"));
 
 		openFileExtensions.push_back(new CSlrString("xex"));
+		openFileExtensions.push_back(new CSlrString("obx"));
 		openFileExtensions.push_back(new CSlrString("atr"));
 		openFileExtensions.push_back(new CSlrString("a8s"));
 		openFileExtensions.push_back(new CSlrString("cas"));
@@ -388,7 +390,8 @@ void CViewMainMenu::LoadFile(CSlrString *path)
 	}
 	
 	// Atari formats
-	else if (ext->CompareWith("xex"))
+	else if (ext->CompareWith("xex")
+			 || ext->CompareWith("obx"))
 	{
 		viewC64->StartEmulationThread(viewC64->debugInterfaceAtari);
 		loaded = LoadXEX(path, true, true, true);
@@ -474,7 +477,7 @@ bool CViewMainMenu::InsertD64(CSlrString *path, bool updatePathToD64, bool autoR
 		
 		if (showLoadAddressInfo)
 		{
-			guiMain->ShowMessageBox("Error", "Can not open file");
+			guiMain->ShowMessageBox("Error", "Unable to open the D64 file. Please check its location, permissions, and ensure it's a valid format.");
 		}
 		return false;
 	}
@@ -495,7 +498,8 @@ bool CViewMainMenu::InsertD64(CSlrString *path, bool updatePathToD64, bool autoR
 		
 		c64SettingsDefaultD64Folder->DebugPrint("c64SettingsDefaultD64Folder=");
 	}
-	
+	C64DebuggerStoreSettings();
+
 	// insert D64
 	viewC64->debugInterfaceC64->InsertD64(path);
 
@@ -625,7 +629,8 @@ bool CViewMainMenu::AttachReu(CSlrString *path, bool updatePathToReu, bool showD
 		
 		c64SettingsDefaultReuFolder->DebugPrint("c64SettingsDefaultReuFolder=");
 	}
-	
+	C64DebuggerStoreSettings();
+
 	// insert REU
 	char *asciiPath = c64SettingsPathToReu->GetStdASCII();
 	
@@ -668,6 +673,7 @@ bool CViewMainMenu::SaveReu(CSlrString *path, bool updatePathToReu, bool showDet
 		c64SettingsDefaultReuFolder = path->GetFilePathWithoutFileNameComponentFromPath();
 		
 		c64SettingsDefaultReuFolder->DebugPrint("c64SettingsDefaultReuFolder=");
+		C64DebuggerStoreSettings();
 	}
 	
 	// save REU
@@ -723,7 +729,8 @@ bool CViewMainMenu::InsertCartridge(CSlrString *path, bool updatePathToCRT)
 		
 		c64SettingsDefaultCartridgeFolder->DebugPrint("strDefaultCartridgeFolder=");
 	}
-	
+	C64DebuggerStoreSettings();
+
 	// insert CRT
 	viewC64->debugInterfaceC64->AttachCartridge(path);
 	
@@ -778,7 +785,8 @@ bool CViewMainMenu::LoadPRG(CSlrString *path, bool autoStart, bool updatePRGFold
 		
 		c64SettingsDefaultPRGFolder->DebugPrint("c64SettingsDefaultPRGFolder=");
 	}
-	
+	C64DebuggerStoreSettings();
+
 	LOGD("... LoadPRG (2)");
 	
 	c64SettingsPathToPRG->DebugPrint("c64SettingsPathToPRG=");
@@ -925,7 +933,8 @@ bool CViewMainMenu::LoadTape(CSlrString *path, bool autoStart, bool updateTAPFol
 		
 		c64SettingsDefaultTAPFolder->DebugPrint("c64SettingsDefaultTAPFolder=");
 	}
-	
+	C64DebuggerStoreSettings();
+
 	LOGD("... LoadTAP (2)");
 	
 	c64SettingsPathToTAP->DebugPrint("c64SettingsPathToTAP=");
@@ -990,7 +999,8 @@ bool CViewMainMenu::LoadXEX(CSlrString *path, bool autoStart, bool updateXEXFold
 		
 		c64SettingsDefaultXEXFolder->DebugPrint("c64SettingsDefaultXEXFolder=");
 	}
-	
+	C64DebuggerStoreSettings();
+
 	LOGD("... LoadXEX (2)");
 	
 	c64SettingsPathToXEX->DebugPrint("c64SettingsPathToXEX=");
@@ -1033,15 +1043,16 @@ bool CViewMainMenu::LoadXEX(CSlrString *path, bool autoStart, bool updateXEXFold
 	
 	//
 	debugInterfaceAtari->LockMutex();
-	debugInterfaceAtari->LoadExecutable(asciiPath);
 	
 	if (c64SettingsResetCountersOnAutoRun)
 	{
 		debugInterfaceAtari->ResetMainCpuDebugCycleCounter();
 		debugInterfaceAtari->ResetEmulationFrameCounter();
 	}
+	debugInterfaceAtari->ClearHistory();
 
-	debugInterfaceAtari->snapshotsManager->ClearSnapshotsHistory();
+	debugInterfaceAtari->LoadExecutable(asciiPath);
+	
 
 	debugInterfaceAtari->UnlockMutex();
 	
@@ -1078,7 +1089,8 @@ bool CViewMainMenu::LoadCAS(CSlrString *path, bool autoStart, bool updateCASFold
 		
 		c64SettingsDefaultCASFolder->DebugPrint("c64SettingsDefaultCASFolder=");
 	}
-	
+	C64DebuggerStoreSettings();
+
 	LOGD("... LoadCAS (2)");
 	
 	c64SettingsPathToCAS->DebugPrint("c64SettingsPathToCAS=");
@@ -1150,7 +1162,8 @@ bool CViewMainMenu::InsertAtariCartridge(CSlrString *path, bool autoStart, bool 
 		
 		c64SettingsDefaultAtariCartridgeFolder->DebugPrint("c64SettingsDefaultAtariCartridgeFolder=");
 	}
-	
+	C64DebuggerStoreSettings();
+
 	LOGD("... LoadAtariCartridge (2)");
 	
 	c64SettingsPathToAtariCartridge->DebugPrint("c64SettingsPathToAtariCartridge=");
@@ -1227,7 +1240,8 @@ bool CViewMainMenu::InsertATR(CSlrString *path, bool updatePathToATR, bool autoR
 		
 		c64SettingsDefaultATRFolder->DebugPrint("c64SettingsDefaultATRFolder=");
 	}
-	
+	C64DebuggerStoreSettings();
+
 	char *asciiPath = c64SettingsPathToATR->GetStdASCII();
 
 	debugInterfaceAtari->LockMutex();
@@ -1316,15 +1330,15 @@ bool CViewMainMenu::LoadASAP(CSlrString *filePath)
 	
 	// load xex
 	debugInterfaceAtari->LockMutex();
-	debugInterfaceAtari->LoadExecutable(xexTempFilePath);
 	
 	if (c64SettingsResetCountersOnAutoRun)
 	{
 		debugInterfaceAtari->ResetMainCpuDebugCycleCounter();
 		debugInterfaceAtari->ResetEmulationFrameCounter();
 	}
+	debugInterfaceAtari->ClearHistory();
 
-	debugInterfaceAtari->snapshotsManager->ClearSnapshotsHistory();
+	debugInterfaceAtari->LoadExecutable(xexTempFilePath);
 
 	debugInterfaceAtari->UnlockMutex();
 	
@@ -1362,7 +1376,8 @@ bool CViewMainMenu::LoadNES(CSlrString *path, bool updateNESFolderPath)
 		
 		c64SettingsDefaultNESFolder->DebugPrint("c64SettingsDefaultNESFolder=");
 	}
-	
+	C64DebuggerStoreSettings();
+
 	LOGD("... LoadNES (2)");
 	
 	c64SettingsPathToNES->DebugPrint("c64SettingsPathToNES=");
@@ -1511,8 +1526,8 @@ bool CViewMainMenu::LoadPRG(CByteBuffer *byteBuffer, bool autoStart, bool showAd
 	this->loadPrgShowAddressInfo = showAddressInfo;
 	this->loadPrgForceFastReset = forceFastReset;
 	
-	viewC64->viewC64MemoryMap->ClearExecuteMarkers();
-	viewC64->viewDrive1541MemoryMap->ClearExecuteMarkers();
+	viewC64->debugInterfaceC64->symbols->memory->ClearDebugMarkers();
+	viewC64->debugInterfaceC64->symbolsDrive1541->memory->ClearDebugMarkers();
 
 	if (!this->isRunning)
 	{
@@ -1575,6 +1590,7 @@ void CViewMainMenu::ThreadRun(void *data)
 
 void CViewMainMenu::SetBasicEndAddr(int endAddr)
 {
+	LOGD("CViewMainMenu::SetBasicEndAddr: %x", endAddr);
 	// some decrunchers need correct basic pointers
 	
 	// set beginning of BASIC area
@@ -1602,10 +1618,12 @@ void CViewMainMenu::SetBasicEndAddr(int endAddr)
 	// stop cursor flash
 	viewC64->debugInterfaceC64->SetByteC64(0x00CC, 0x01);
 
+	viewC64->viewDrive1541FileD64->UpdateDriveDiskID();
 }
 
 bool CViewMainMenu::LoadPRGNotThreaded(CByteBuffer *byteBuffer, bool autoStart, bool showAddressInfo)
 {
+	LOGD("CViewMainMenu::LoadPRGNotThreaded: byteBuffer=%x autoStart=%s showAddressInfo=%s", byteBuffer, STRBOOL(autoStart), STRBOOL(showAddressInfo));
 	viewC64->debugInterfaceC64->LockMutex();
 
 	u16 startAddr;
@@ -1630,8 +1648,8 @@ bool CViewMainMenu::LoadPRGNotThreaded(CByteBuffer *byteBuffer, bool autoStart, 
 				// new "RUN"
 				SetBasicEndAddr(endAddr);
 				
-				viewC64->viewC64MemoryMap->ClearReadWriteMarkers();
-				viewC64->viewDrive1541MemoryMap->ClearReadWriteMarkers();
+				viewC64->debugInterfaceC64->symbols->memory->ClearReadWriteDebugMarkers();
+				viewC64->debugInterfaceC64->symbolsDrive1541->memory->ClearReadWriteDebugMarkers();
 				
 				viewC64->debugInterfaceC64->MakeBasicRunC64();
 
@@ -1782,12 +1800,15 @@ bool CViewMainMenu::LoadPRGNotThreaded(CByteBuffer *byteBuffer, bool autoStart, 
 	
 	viewC64->debugInterfaceC64->UnlockMutex();
 	
+	LOGD("CViewMainMenu::LoadPRGNotThreaded COMPLETED");
+
 	return true;
 }
 
 
 void CViewMainMenu::LoadPRG(CByteBuffer *byteBuffer, u16 *startAddr, u16 *endAddr)
 {
+	LOGD("ViewMainMenu::LoadPRG: byteBuffer=%x");
 	u16 b1 = byteBuffer->GetByte();
 	u16 b2 = byteBuffer->GetByte();
 	

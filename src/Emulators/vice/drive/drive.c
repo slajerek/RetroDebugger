@@ -209,6 +209,7 @@ int drive_init(void)
         drive->byte_ready_edge = 1;
         drive->GCR_dirty_track = 0;
 		drive->GCR_dirty_track_for_snapshot = 0;
+		drive->GCR_dirty_track_needs_refresh = 0;
         drive->GCR_write_value = 0x55;
         drive->GCR_track_start_ptr = NULL;
         drive->GCR_current_track_size = 0;

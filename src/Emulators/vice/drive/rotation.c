@@ -239,6 +239,7 @@ inline static void write_next_bit(drive_t *dptr, int value)
     }
     dptr->GCR_dirty_track = 1;
 	dptr->GCR_dirty_track_for_snapshot = 1;
+	dptr->GCR_dirty_track_needs_refresh = 1;
     if (value) {
         dptr->GCR_track_start_ptr[byte_offset] |= 1 << bit;
     } else {

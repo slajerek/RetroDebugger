@@ -1,11 +1,22 @@
 extern "C" {
 #include "diskimage.h"
+#include "vdrive.h"
+#include "vdrive-command.h"
+#include "vdrive-iec.h"
+#include "charset.h"
+#include "driveimage.h"
+#include "lib.h"
+#include "fileio.h"
+#include "cbmimage.h"
 };
 
 #include "CGuiMain.h"
 #include "CDiskImageD64.h"
 #include "SYS_Main.h"
 #include "SYS_Funct.h"
+#include "CViewC64.h"
+#include "CDebugInterfaceC64.h"
+#include "CViewDrive1541Browser.h"
 
 extern "C" {
 	disk_image_t *c64d_read_disk_image(char *fileName);
@@ -30,12 +41,33 @@ void CDiskImageD64::SetDiskImage(int driveId)
 {
 	isFromFile = false;
 	
-	this->diskImage = c64d_get_drive_disk_image(driveId);
+	diskImage = c64d_get_drive_disk_image(driveId);
+	
+	// note, the below code will crash as fsimage (i.e. file) is NULL, and Vice needs fsimage to load file
+//	if (diskImage == NULL)
+//	{
+//		diskImage = disk_image_create();
+//
+//		viewC64->debugInterfaceC64->LockMutex();
+//		drive_image_attach(this->diskImage, 8);
+//		viewC64->debugInterfaceC64->UnlockMutex();
+//	}
 
 	if (this->diskImage != NULL)
 	{
 		this->ReadImage();
 	}
+}
+
+void CDiskImageD64::RefreshImage()
+{
+	if (isFromFile)
+	{
+		LOGError("CDiskImageD64::RefreshImage: isFromFile not supported");
+		return;
+	}
+	
+	this->ReadImage();
 }
 
 void CDiskImageD64::SetDiskImage(char *fileName)
@@ -65,8 +97,6 @@ DiskImageFileEntry *CDiskImageD64::FindDiskPRGEntry(int entryNum)
 	
 	return NULL;
 }
-
-
 
 CDiskImageD64::~CDiskImageD64()
 {
@@ -241,7 +271,7 @@ bool CDiskImageD64::ReadEntry(DiskImageFileEntry *fileEntry, CByteBuffer *byteBu
 			LOGError("Broken file entry");
 		
 			char *buf = SYS_GetCharBuf();
-			sprintf(buf, "File entry is larger than 64kB:\n%s.%s (size %d)", fileEntry->fileName, FileEntryTypeToStr(fileEntry->fileType), fileEntry->fileSize);
+			sprintf(buf, "Failed to load D64 due to a broken file entry. File entry is larger than 64kB:\n%s.%s (size %d). Ensure the file's integrity and try loading again or use a valid D64 file.", fileEntry->fileName, FileEntryTypeToStr(fileEntry->fileType), fileEntry->fileSize);
 			guiMain->ShowMessageBox("Broken D64 file entry", buf);
 			SYS_ReleaseCharBuf(buf);
 			return false;
@@ -299,7 +329,173 @@ const char *CDiskImageD64::FileEntryTypeToStr(u8 fileType)
 	return "?";
 }
 
+// disk operations on vdrive
 
+bool CDiskImageD64::CreateDiskImage(const char *cPath)
+{
+	int ret = cbmimage_create_image(cPath, DISK_IMAGE_TYPE_D64);
+	if (ret == 0)
+	{
+		return true;
+	}
+	
+	return false;
+}
+
+void CDiskImageD64::FormatDisk(const char *diskName, const char *diskId)
+{
+	LOGD("CDiskImageD64::FormatDisk: %s %s", diskName, diskId);
+
+	if (diskImage == NULL)
+	{
+		LOGError("CDiskImageD64::FormatDisk: diskImage is NULL");
+		return;
+	}
+	
+	vdrive_t *vdrive = (vdrive_t*)lib_calloc(1, sizeof(vdrive_t));
+
+	vdrive_device_setup(vdrive, 8);
+	vdrive->image = this->diskImage;
+	vdrive_attach_image(this->diskImage, 8, vdrive);
+	
+	char *commandBuf = SYS_GetCharBuf();
+	
+	sprintf(commandBuf, "n:%s,%s", diskName, diskId);
+	charset_petconvstring((u8 *)commandBuf, 0);
+
+	vdrive_command_execute(vdrive, (u8 *)commandBuf,
+			(unsigned int)strlen(commandBuf));
+
+	SYS_ReleaseCharBuf(commandBuf);
+
+	vdrive_detach_image(this->diskImage, (unsigned int)8, vdrive);
+	drive_image_attach(this->diskImage, 8);
+	
+	lib_free(vdrive);
+}
+
+int CDiskImageD64::InsertFile(std::filesystem::path filePath, bool alwaysReplace)
+{
+	if (diskImage == NULL)
+	{
+		LOGError("CDiskImageD64::InsertFile: diskImage is NULL");
+		return RET_STATUS_FAILED;
+	}
+	
+	vdrive_t *vdrive = (vdrive_t*)lib_calloc(1, sizeof(vdrive_t));
+
+	vdrive_device_setup(vdrive, 8);
+	vdrive->image = this->diskImage;
+	vdrive_attach_image(this->diskImage, 8, vdrive);
+
+	fileio_info_t *finfo;
+	finfo = fileio_open(filePath.string().c_str(), NULL, FILEIO_FORMAT_RAW | FILEIO_FORMAT_P00,
+						FILEIO_COMMAND_READ | FILEIO_COMMAND_FSNAME,
+						FILEIO_TYPE_PRG);
+	if (finfo == NULL)
+	{
+		LOGError("CDiskImageD64::FormatDisk: file not found %s", filePath.string().c_str());
+		return RET_STATUS_FAILED;
+	}
+	
+	CSlrString *fileName = new CSlrString((char *)(finfo->name));
+	CSlrString *fileNameNoExt = fileName->GetFileNameWithoutExtensionAndPath();
+	char *cFileNameNoExt = fileNameNoExt->GetStdASCII();
+		
+//	char *dest_name = lib_stralloc((char *)filePath.filename().string().c_str()); //(finfo->name));
+	char *dest_name = cFileNameNoExt;
+	unsigned int dest_len = strlen(cFileNameNoExt); //finfo->length;
+	
+	bool replaced = false;
+	if (vdrive_iec_open(vdrive, (BYTE *)dest_name, (unsigned int)dest_len, 1, NULL))
+	{
+		LOGError("CDiskImageD64::FormatDisk: cannot open `%s' for writing on image", finfo->name);
+		
+		if (!alwaysReplace)
+		{
+			fileio_close(finfo);
+			lib_free(dest_name);
+			return RET_STATUS_FAILED;
+		}
+		else
+		{
+			char *bufCommand = SYS_GetCharBuf();
+
+			sprintf(bufCommand, "s:");
+			charset_petconvstring((BYTE *)bufCommand, 0);
+			strcat(bufCommand, dest_name);
+
+			LOGD("replacing file: %s", bufCommand);
+			int status = vdrive_command_execute(vdrive, (BYTE *)bufCommand,
+											(unsigned int)strlen(bufCommand));
+			LOGD("%02d, %s, 00, 00", status, cbmdos_errortext((unsigned int)status));
+			
+//			// vdrive_command_execute() returns CBMDOS_IPE_DELETED even if no
+//			// files where actually scratched, so just display error messages that
+//			// actual mean something, not "ERRORCODE 1" */
+//
+//			// the below does not work?
+//			//			if (status != CBMDOS_IPE_OK && status != CBMDOS_IPE_DELETED)
+//			{
+//				// pad with spaces
+//				char buf[0x11] = "                ";
+//				for (int i = 0; i < strlen(dest_name); i++)
+//				{
+//					buf[i] = dest_name[i];
+//					if (i == 0x10)
+//						break;
+//				}
+//
+//				sprintf(bufCommand, "s:");
+//				charset_petconvstring((BYTE *)bufCommand, 0);
+//				strcat(bufCommand, dest_name);
+//
+//				LOGD("replacing file: %s", bufCommand);
+//				status = vdrive_command_execute(vdrive, (BYTE *)bufCommand,
+//												(unsigned int)strlen(bufCommand));
+//				LOGD("%02d, %s, 00, 00", status, cbmdos_errortext((unsigned int)status));
+//			}
+
+			SYS_ReleaseCharBuf(bufCommand);
+			
+			if (vdrive_iec_open(vdrive, (BYTE *)dest_name, (unsigned int)dest_len, 1, NULL))
+			{
+				LOGError("CDiskImageD64::FormatDisk: cannot open `%s' for writing on image", finfo->name);
+				
+				fileio_close(finfo);
+				lib_free(dest_name);
+				return RET_STATUS_FAILED;
+			}
+			
+			replaced = true;
+		}
+	}
+	
+	while (1) {
+		BYTE c;
+
+		if (fileio_read(finfo, &c, 1) != 1) {
+			break;
+		}
+
+		if (vdrive_iec_write(vdrive, c, 1)) {
+			LOGError("CDiskImageD64::FormatDisk: no space on image?");
+			break;
+		}
+	}
+
+	fileio_close(finfo);
+	vdrive_iec_close(vdrive, 1);
+
+//	lib_free(dest_name);
+	STRFREE(cFileNameNoExt);
+	
+	vdrive_detach_image(this->diskImage, (unsigned int)8, vdrive);
+	drive_image_attach(this->diskImage, 8);
+	
+	lib_free(vdrive);
+	return replaced ? RET_STATUS_REPLACED : RET_STATUS_OK;
+}
 
 /*
  this is pure u8 *data version:

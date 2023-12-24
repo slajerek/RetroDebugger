@@ -329,7 +329,7 @@ int CViewC64Charset::ImportCharset(CSlrString *path)
 	{
 		if (byteBuffer->IsEof())
 		{
-			guiMain->ShowMessageBox("Error", "Import charset failed. End of file reached.");
+			guiMain->ShowMessageBox("Error", "Importing charset failed. Unexpected end of file reached. Ensure the file is complete and not corrupted.");
 			return -1;
 		}
 		

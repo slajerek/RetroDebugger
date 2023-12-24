@@ -308,6 +308,9 @@ public:
 	CSlrKeyboardShortcut *kbsSearchWindow;
 	void OpenSearchWindow();
 	virtual void GuiViewSearchCompleted(u32 index);
+	
+	//
+	
 };
 
 #endif //_GUI_MAIN_MENU_BAR_

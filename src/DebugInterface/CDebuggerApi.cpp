@@ -416,17 +416,25 @@ u8 *CDebuggerApi::ExomizerMemoryRaw(u16 fromAddr, u16 toAddr, int *compressedSiz
 	return C64ExomizeMemoryRaw(fromAddr, toAddr, compressedSize);
 }
 
+// TODO: fixme!
 void CDebuggerApi::SaveBinary(u16 fromAddr, u16 toAddr, char *filePath)
 {
 	// TODO: we can implement this generic via SetRam(...
 	SYS_FatalExit("CDebuggerApi::SaveBinary: not implemented");
 }
 
+// TODO: fixme!
 int CDebuggerApi::LoadBinary(u16 fromAddr, char *filePath)
 {
 	// TODO: we can implement this generic via SetRam(...
 	SYS_FatalExit("CDebuggerApi::LoadBinary: not implemented");
 	return -1;
+}
+
+void CDebuggerApi::LoadSnapshot(const char *fileName)
+{
+	// TODO: fixme!
+	debugInterface->LoadFullSnapshot((char*)fileName);
 }
 
 void CDebuggerApi::ResetEmulationCounters()

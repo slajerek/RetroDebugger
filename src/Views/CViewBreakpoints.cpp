@@ -62,9 +62,14 @@ void CViewBreakpoints::RenderImGui()
 //
 	PreRenderImGui();
 	
-	CDebugBreakpointsAddr *breakpoints = symbols->currentSegment->breakpointsByType[breakpointType];
-	breakpoints->RenderImGui();
-	
+	symbols->LockMutex();
+	if (symbols->currentSegment)
+	{
+		CDebugBreakpointsAddr *breakpoints = symbols->currentSegment->breakpointsByType[breakpointType];
+		breakpoints->RenderImGui();
+	}
+	symbols->UnlockMutex();
+
 	PostRenderImGui();
 	
 //	LOGD("CViewBreakpoints::RenderImGui done");

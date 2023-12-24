@@ -5,6 +5,7 @@
 #include "CGuiMain.h"
 #include "CViewC64.h"
 #include "CMainMenuBar.h"
+#include "CGuiLockableList.h"
 
 CViewTimeline::CViewTimeline(const char *name, float posX, float posY, float posZ, float sizeX, float sizeY, CDebugInterface *debugInterface)
 : CGuiView(name, posX, posY, posZ, sizeX, sizeY)
@@ -214,6 +215,9 @@ void CViewTimeline::ScrubToPos(float x)
 bool CViewTimeline::DoTap(float x, float y)
 {
 	LOGG("CViewTimeline::DoTap:  x=%f y=%f", x, y);
+	
+	if (!debugInterface->isRunning)
+		return false;
 	
 	if (!IsInsideView(x, y))
 		return false;

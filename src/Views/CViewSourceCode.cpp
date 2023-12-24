@@ -18,11 +18,12 @@
 #include "CViewDataDump.h"
 #include "CViewDisassembly.h"
 #include "CDebugSymbols.h"
+#include "CDebugMemory.h"
 #include "CDebugAsmSource.h"
 #include "CDebugSymbolsSegment.h"
 
 CViewSourceCode::CViewSourceCode(const char *name, float posX, float posY, float posZ, float sizeX, float sizeY,
-								 CDebugInterface *debugInterface, CDataAdapter *dataAdapter, CViewMemoryMap *memoryMap,
+								 CDebugInterface *debugInterface, CDebugSymbols *debugSymbols, 
 								 CViewDisassembly *viewDisassembly)
 : CGuiView(name, posX, posY, posZ, sizeX, sizeY)
 {
@@ -30,8 +31,8 @@ CViewSourceCode::CViewSourceCode(const char *name, float posX, float posY, float
 	imGuiNoScrollbar = true;
 
 	this->viewDisassembly = viewDisassembly;
-	this->memoryMap = memoryMap;
-	this->dataAdapter = dataAdapter;
+	this->debugSymbols = debugSymbols;
+	this->dataAdapter = debugSymbols->dataAdapter;
 	this->memoryLength = dataAdapter->AdapterGetDataLength();
 	this->memory = new uint8[memoryLength];
 	
@@ -368,7 +369,7 @@ void CViewSourceCode::SetCursorToNearExecuteCodeAddress(int newCursorAddress)
 //	
 	for (int addr = newCursorAddress; addr > newCursorAddress-3; addr--)
 	{
-		if (viewC64->viewC64MemoryMap->IsExecuteCodeAddress(addr))
+		if (debugSymbols->memory->IsExecuteCodeAddress(addr))
 		{
 			cursorAddress = addr;
 			return;
@@ -377,7 +378,7 @@ void CViewSourceCode::SetCursorToNearExecuteCodeAddress(int newCursorAddress)
 	
 	for (int addr = newCursorAddress; addr < newCursorAddress+3; addr++)
 	{
-		if (viewC64->viewC64MemoryMap->IsExecuteCodeAddress(addr))
+		if (debugSymbols->memory->IsExecuteCodeAddress(addr))
 		{
 			cursorAddress = addr;
 			return;

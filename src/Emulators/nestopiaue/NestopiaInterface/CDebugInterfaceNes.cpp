@@ -33,7 +33,10 @@
 #include "SND_Main.h"
 #include "CSlrFileFromOS.h"
 #include "CDebugSymbols.h"
+#include "CDebugMemory.h"
 #include "CDebuggerEmulatorPlugin.h"
+#include "CViewMemoryMap.h"
+#include "CDebugEventsHistory.h"
 
 #include "CDataAdapterNesRam.h"
 #include "NesWrapper.h"
@@ -433,6 +436,11 @@ void CDebugInterfaceNes::ReplayInputEventsFromSnapshotsManager(CByteBuffer *inpu
 
 		ProcessJoystickEventSynced(port, axis, buttonState);
 	}
+}
+
+void CDebugInterfaceNes::ClearDebugMarkers()
+{
+	symbols->memory->ClearDebugMarkers();
 }
 
 void CDebugInterfaceNes::Reset()

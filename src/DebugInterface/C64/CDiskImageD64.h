@@ -12,6 +12,7 @@
 
 #include "SYS_Defs.h"
 #include "CByteBuffer.h"
+#include <filesystem>
 
 #define D64_SIZE		174848
 #define D64_MAX_FILES	144
@@ -23,6 +24,12 @@
 
 #define D64_BAM_TRACK	18
 #define D64_BAM_SECTOR	0
+
+#define VDRIVE_COUNT	4
+
+#define RET_STATUS_OK		0
+#define RET_STATUS_FAILED	1
+#define RET_STATUS_REPLACED	2
 
 typedef struct DiskImageTrack_s {
 	int sectorNum;
@@ -44,6 +51,9 @@ typedef struct DiskImageFileEntry_s {
 struct disk_image_s;
 typedef struct disk_image_s disk_image_t;
 
+struct vdrive_s;
+typedef struct vdrive_s vdrive_t;
+
 class CDiskImageD64
 {
 public:
@@ -57,6 +67,7 @@ public:
 	
 	void SetDiskImage(int driveId);
 	void SetDiskImage(char *fileName);
+	void RefreshImage();
 
 	disk_image_t *diskImage;
 	bool isFromFile;
@@ -75,6 +86,11 @@ public:
 	DiskImageFileEntry *FindDiskPRGEntry(int entryNum);
 
 	static const char *FileEntryTypeToStr(u8 fileType);
+	
+	// for disk operations
+	bool CreateDiskImage(const char *cPath);
+	void FormatDisk(const char *diskName, const char *diskId);
+	int InsertFile(std::filesystem::path filePath, bool alwaysReplace);
 };
 
 #endif

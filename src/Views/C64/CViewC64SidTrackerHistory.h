@@ -7,10 +7,11 @@
 #include "CGuiLabel.h"
 #include "CPianoKeyboard.h"
 #include "DebuggerDefs.h"
+#include "SYS_FileSystem.h"
 
 class CDebugInterfaceVice;
 
-class CViewC64SidTrackerHistory : public CGuiView, CGuiButtonSwitchCallback, CGuiListCallback, public CPianoKeyboardCallback
+class CViewC64SidTrackerHistory : public CGuiView, CGuiButtonSwitchCallback, CGuiListCallback, public CPianoKeyboardCallback, CSystemFileDialogCallback
 {
 public:
 	CViewC64SidTrackerHistory(const char *name, float posX, float posY, float posZ, float sizeX, float sizeY, CDebugInterfaceVice *debugInterface);
@@ -94,6 +95,24 @@ public:
 	bool showController;
 	bool showChannels;
 	bool isScrub;
+	
+	virtual bool HasContextMenuItems();
+	virtual void RenderContextMenuItems();
+	
+	// sid dump settings
+	int basefreq;
+	int basenote;
+	bool timeseconds;	// show time as seconds or frames
+	int oldnotefactor;
+	int pattspacing;
+	int spacing;
+	bool lowres;
+
+	std::list<CSlrString *> siddumpFileExtensions;
+	std::list<CSlrString *> csvFileExtensions;
+	virtual void SystemDialogFileSaveSelected(CSlrString *path);
+	virtual void SystemDialogFileSaveCancelled();
+	u8 sidDumpFormat;
 };
 
 #endif

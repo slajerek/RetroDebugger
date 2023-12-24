@@ -38,9 +38,10 @@ public:
 	CAudioChannelAtari *audioChannel;
 	CDebugDataAdapter *dataAdapter;
 
-	void RestartEmulation();
+	virtual void RestartEmulation();
 	//	virtual void InitKeyMap(C64KeyMap *keyMap);
 	
+	virtual void ClearDebugMarkers();
 
 	virtual void DoFrame();
 	virtual int GetScreenSizeX();

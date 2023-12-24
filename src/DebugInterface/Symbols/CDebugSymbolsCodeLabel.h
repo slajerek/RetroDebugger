@@ -30,7 +30,7 @@ public:
 	virtual void Deserialize(Hjson::Value hjsonCodeLabel);
 	
 private:
-	char labelText[MAX_LABEL_TEXT_BUFFER_SIZE];
+	char labelText[MAX_STRING_LENGTH];
 
 };
 

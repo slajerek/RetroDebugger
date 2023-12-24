@@ -6,20 +6,22 @@
 #include "SYS_Threading.h"
 
 class CDebugInterface;
+class CDebugSymbols;
+class CDebugMemory;
 class CDataAdapter;
 class CImageData;
 class CSlrImage;
 class CViewDataDump;
 class CDebugInterface;
 class CSlrFont;
-class CDebugMemoryMapCell;
+class CDebugMemoryCell;
 
 class CViewMemoryMap : public CGuiView, CSlrThread
 {
 public:
 	CViewMemoryMap(const char *name, float posX, float posY, float posZ, float sizeX, float sizeY,
-				   CDebugInterface *debugInterface, CDataAdapter *dataAdapter,
-				   int imageWidth, int imageHeight, int ramSize, bool showCurrentExecutePC,
+				   CDebugInterface *debugInterface, CDebugSymbols *debugSymbols,
+				   int imageWidth, int imageHeight, bool showCurrentExecutePC,
 				   bool isFromDisk);
 	~CViewMemoryMap();
 	
@@ -69,8 +71,9 @@ public:
 	void MoveMap(float diffX, float diffY);
 	
 	CDebugInterface *debugInterface;
+	CDebugSymbols *debugSymbols;
+	CDebugMemory *debugMemory;
 	
-	CDebugMemoryMapCell **memoryCells;
 	int ramSize;
 	int imageWidth;
 	int imageHeight;
@@ -85,7 +88,7 @@ public:
 	
 	void CellsAnimationLogic(double targetFPS);
 	void DriveROMCellsAnimationLogic();
-	void UpdateMapColorsForCell(CDebugMemoryMapCell *cell);
+	void UpdateMapColorsForCell(CDebugMemoryCell *cell);
 	
 	CImageData *imageDataMemoryMap;
 	CSlrImage *imageMemoryMap;
@@ -101,10 +104,6 @@ public:
 	
 	CDataAdapter *dataAdapter;
 	void SetDataAdapter(CDataAdapter *newDataAdapter);
-
-	bool IsExecuteCodeAddress(int address);
-	void ClearExecuteMarkers();
-	void ClearReadWriteMarkers();
 	
 	void UpdateTexturePosition(float newStartX, float newStartY, float newEndX, float newEndY);
 	

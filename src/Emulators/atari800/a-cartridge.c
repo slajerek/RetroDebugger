@@ -28,6 +28,7 @@
 #include <string.h>
 
 #include "atari.h"
+#include "a-log.h"
 #include "binload.h" /* BINLOAD_loading_basic */
 #include "a-cartridge.h"
 #include "memory.h"

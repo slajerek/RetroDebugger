@@ -6,7 +6,7 @@
 #include "C64DebuggerPluginCrtMaker.h"
 //#include "C64DebuggerPluginGoatTracker.h"
 //#include "C64DebuggerPluginDNDK.h"
-#include "C64DebuggerPluginCommando.h"
+//#include "C64DebuggerPluginCommando.h"
 //#include "C64DebuggerPluginShowPic.h"
 //#include "C64DebuggerPluginMapper.h"
 //#include "C64DebuggerPluginRasterBars.h"

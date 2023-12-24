@@ -152,8 +152,8 @@ void c64PrintCommandLineHelp()
 
 	printHelp("-soundout <\"device name\" | device number>\n");
 	printHelp("     set sound out device by name or number\n");
-	printHelp("-fullscreen");
-	printHelp("     start in full screen mode");
+	printHelp("-fullscreen\n");
+	printHelp("     start in full screen mode\n");
 	printHelp("-playlist <file>\n");
 	printHelp("     load and start jukebox playlist from json file\n");
 	printHelp("\n");

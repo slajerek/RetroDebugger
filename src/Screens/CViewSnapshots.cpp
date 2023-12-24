@@ -462,21 +462,8 @@ void CViewSnapshots::LoadSnapshot(CSlrString *path, bool showMessage, CDebugInte
 	
 	bool ret = debugInterface->LoadFullSnapshot(asciiPath);
 	
-	// TODO: generalize this
-	if (debugInterface->GetEmulatorType() == EMULATOR_TYPE_C64_VICE)
-	{
-		viewC64->viewC64MemoryMap->ClearExecuteMarkers();
-		viewC64->viewDrive1541MemoryMap->ClearExecuteMarkers();
-	}
-	else if (debugInterface->GetEmulatorType() == EMULATOR_TYPE_ATARI800)
-	{
-		viewC64->viewAtariMemoryMap->ClearExecuteMarkers();
-	}
-	else if (debugInterface->GetEmulatorType() == EMULATOR_TYPE_NESTOPIA)
-	{
-		viewC64->viewNesMemoryMap->ClearExecuteMarkers();
-	}
-
+	debugInterface->ClearDebugMarkers();
+	
 	if (showMessage)
 	{
 		if (ret == true)
@@ -485,7 +472,7 @@ void CViewSnapshots::LoadSnapshot(CSlrString *path, bool showMessage, CDebugInte
 		}
 		else
 		{
-			viewC64->ShowMessageError("Snapshot file is not supported");
+			viewC64->ShowMessageError("The provided snapshot file format is not supported.");
 			return;
 		}
 	}

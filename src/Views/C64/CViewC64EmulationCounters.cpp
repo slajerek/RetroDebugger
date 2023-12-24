@@ -18,6 +18,8 @@ extern "C" {
 #include "CLayoutParameter.h"
 #include "VID_ImageBinding.h"
 
+// TODO: IS THIS USED AT ALL? WHY WE NEED THIS? REMOVE ME?
+
 CViewC64EmulationCounters::CViewC64EmulationCounters(const char *name, float posX, float posY, float posZ, float sizeX, float sizeY, CDebugInterfaceC64 *debugInterface)
 : CGuiView(name, posX, posY, posZ, sizeX, sizeY)
 {

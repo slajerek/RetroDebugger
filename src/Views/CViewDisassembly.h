@@ -16,9 +16,9 @@ class CDebugBreakpointsAddr;
 class CSlrMutex;
 class CSlrString;
 class CBreakpointAddr;
-class CViewMemoryMap;
 class CViewDataDump;
 class CDebugSymbols;
+class CDebugMemory;
 class CSlrKeyboardShortcut;
 
 enum AssembleToken : uint8
@@ -44,7 +44,7 @@ class CViewDisassembly : public CGuiView, CGuiEditHexCallback, CGuiEditBoxTextCa
 {
 public:
 	CViewDisassembly(const char *name, float posX, float posY, float posZ, float sizeX, float sizeY,
-					 CDebugSymbols *symbols, CViewDataDump *viewDataDump, CViewMemoryMap *viewMemoryMap);
+					 CDebugSymbols *symbols, CViewDataDump *viewDataDump);
 	virtual ~CViewDisassembly();
 
 	virtual void Render();
@@ -61,14 +61,11 @@ public:
 
 	virtual bool KeyUp(u32 keyCode, bool isShift, bool isAlt, bool isControl, bool isSuper);
 	
-	CViewMemoryMap *viewMemoryMap;
 	CViewDataDump *viewDataDump;
 	CDataAdapter *dataAdapter;
 	CDebugInterface *debugInterface;
 	
-	
 	void SetViewDataDump(CViewDataDump *viewDataDump);
-	void SetViewMemoryMap(CViewMemoryMap *viewMemoryMap);
 
 	CSlrFont *fontDisassembly;
 	float fontSize;
@@ -97,6 +94,9 @@ public:
 	void UpdateDisassemblyNotExecuteAware(int startAddress, int endAddress);
 	bool DoTapNotExecuteAware(float x, float y);
 	
+	bool FindLabelText(u8 op, u16 addr, char *buf);
+	std::map<u8, u8> jumpOpcodes;
+	
 	void TogglePCBreakpoint(int addr);
 	
 	void ScrollDown();
@@ -108,7 +108,8 @@ public:
 
 	// these point to real breakpoints via symbols->currentSegment (emulation mutex will be locked when these are edited)
 	CDebugSymbols *symbols;
-	 
+	CDebugMemory *debugMemory;
+	
 	int previousOpAddr;
 	int nextOpAddr;
 	

@@ -22,8 +22,8 @@
 #include "CViewC64KeyMap.h"
 #include "CViewKeyboardShortcuts.h"
 #include "CViewMonitorConsole.h"
-#include "CDebugMemoryMap.h"
-#include "CDebugMemoryMapCell.h"
+#include "CDebugMemory.h"
+#include "CDebugMemoryCell.h"
 #include "MTH_Random.h"
 #include "C64Palette.h"
 

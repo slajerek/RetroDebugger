@@ -35,6 +35,7 @@ extern "C" {
 #include "CDebugSymbols.h"
 #include "CDebugSymbolsSegmentC64.h"
 #include "CDebugSymbolsSegmentDrive1541.h"
+#include "CDebugEventsHistory.h"
 #include "SND_SoundEngine.h"
 
 volatile int c64d_debug_mode = DEBUGGER_MODE_RUNNING;
@@ -149,9 +150,11 @@ void c64d_mark_c64_cell_read(uint16 addr)
 		if (segment)
 		{
 			u8 value = c64d_peek_c64(addr);
-			if (segment->breakpointsMemory->EvaluateBreakpoint(addr, value, MEMORY_BREAKPOINT_ACCESS_READ) != NULL)
+			CBreakpointMemory *breakpoint = segment->breakpointsMemory->EvaluateBreakpoint(addr, value, MEMORY_BREAKPOINT_ACCESS_READ);
+			if (breakpoint != NULL)
 			{
 				debugInterfaceVice->SetDebugMode(DEBUGGER_MODE_PAUSED);
+				segment->symbols->debugEventsHistory->CreateEventBreakpoint(breakpoint, MEMORY_BREAKPOINT_ACCESS_READ, segment);
 			}
 		}
 		debugInterfaceVice->UnlockMutex();
@@ -171,9 +174,11 @@ void c64d_mark_c64_cell_write(uint16 addr, uint8 value)
 	CDebugSymbolsSegment *segment = debugInterfaceVice->symbols->currentSegment;
 	if (segment)
 	{
-		if (segment->breakpointsMemory->EvaluateBreakpoint(addr, value, MEMORY_BREAKPOINT_ACCESS_WRITE) != NULL)
+		CBreakpointMemory *breakpoint = segment->breakpointsMemory->EvaluateBreakpoint(addr, value, MEMORY_BREAKPOINT_ACCESS_WRITE);
+		if (breakpoint != NULL)
 		{
 			debugInterfaceVice->SetDebugMode(DEBUGGER_MODE_PAUSED);
+			segment->symbols->debugEventsHistory->CreateEventBreakpoint(breakpoint, MEMORY_BREAKPOINT_ACCESS_WRITE, segment);
 		}
 	}
 	debugInterfaceVice->UnlockMutex();
@@ -205,9 +210,11 @@ void c64d_mark_disk_cell_read(uint16 addr)
 	
 		u8 value = c64d_peek_drive(segment->driveNum, addr);
 
-		if (segment->breakpointsMemory->EvaluateBreakpoint(addr, value, MEMORY_BREAKPOINT_ACCESS_READ))
+		CBreakpointMemory *breakpoint = segment->breakpointsMemory->EvaluateBreakpoint(addr, value, MEMORY_BREAKPOINT_ACCESS_READ);
+		if (breakpoint)
 		{
 			debugInterfaceVice->SetDebugMode(DEBUGGER_MODE_PAUSED);
+			segment->symbols->debugEventsHistory->CreateEventBreakpoint(breakpoint, MEMORY_BREAKPOINT_ACCESS_READ, segment);
 		}
 		
 		debugInterfaceVice->UnlockMutex();
@@ -229,9 +236,11 @@ void c64d_mark_disk_cell_write(uint16 addr, uint8 value)
 	{
 		debugInterfaceVice->LockMutex();
 		
-		if (segment->breakpointsMemory->EvaluateBreakpoint(addr, value, MEMORY_BREAKPOINT_ACCESS_WRITE))
+		CBreakpointMemory *breakpoint = segment->breakpointsMemory->EvaluateBreakpoint(addr, value, MEMORY_BREAKPOINT_ACCESS_WRITE);
+		if (breakpoint)
 		{
 			debugInterfaceVice->SetDebugMode(DEBUGGER_MODE_PAUSED);
+			segment->symbols->debugEventsHistory->CreateEventBreakpoint(breakpoint, MEMORY_BREAKPOINT_ACCESS_WRITE, segment);
 		}
 		
 		debugInterfaceVice->UnlockMutex();
@@ -707,12 +716,12 @@ void c64d_c64_check_pc_breakpoint(uint16 pc)
 				// val = c64d_peek_c64(0xD021) + 1;
 				// if (val == 0x10)
 				//		val = 0x00;
-				
 			}
 
 			if (IS_SET(addrBreakpoint->actions, ADDR_BREAKPOINT_ACTION_STOP))
 			{
 				debugInterfaceVice->SetDebugMode(DEBUGGER_MODE_PAUSED);
+				segment->symbols->debugEventsHistory->CreateEventBreakpoint(addrBreakpoint, ADDR_BREAKPOINT_ACTION_STOP, segment);
 			}
 		}
 		debugInterfaceVice->UnlockMutex();
@@ -736,9 +745,14 @@ void c64d_drive1541_check_pc_breakpoint(uint16 pc)
 	else if (segment->breakOnPC)
 	{
 		debugInterfaceVice->LockMutex();
-		if (segment->breakpointsPC->EvaluateBreakpoint(pc) != NULL)
+		CBreakpointAddr *addrBreakpoint = segment->breakpointsPC->EvaluateBreakpoint(pc);
+		if (addrBreakpoint != NULL)
 		{
-			debugInterfaceVice->SetDebugMode(DEBUGGER_MODE_PAUSED);
+			if (IS_SET(addrBreakpoint->actions, ADDR_BREAKPOINT_ACTION_STOP))
+			{
+				debugInterfaceVice->SetDebugMode(DEBUGGER_MODE_PAUSED);
+				segment->symbols->debugEventsHistory->CreateEventBreakpoint(addrBreakpoint, ADDR_BREAKPOINT_ACTION_STOP, segment);
+			}
 		}
 		debugInterfaceVice->UnlockMutex();
 	}
@@ -1117,9 +1131,11 @@ void c64d_c64_check_raster_breakpoint(uint16 rasterLine)
 	debugInterfaceVice->LockMutex();
 	if (segment && segment->breakOnRaster)
 	{
-		if (segment->breakpointsRasterLine->EvaluateBreakpoint(rasterLine) != NULL)
+		CBreakpointAddr *breakpoint = segment->breakpointsRasterLine->EvaluateBreakpoint(rasterLine);
+		if (breakpoint != NULL)
 		{
 			debugInterfaceVice->SetDebugMode(DEBUGGER_MODE_PAUSED);
+			segment->symbols->debugEventsHistory->CreateEventBreakpoint(breakpoint, ADDR_BREAKPOINT_ACTION_STOP_ON_RASTER, segment);
 			//			TheCPU->lastValidPC = TheCPU->pc;
 		}
 	}
@@ -1436,6 +1452,27 @@ void c64d_clear_drive_dirty_for_snapshot()
 	}
 }
 
+int c64d_is_drive_dirty_and_needs_refresh(int driveNum)
+{
+	drive_s *drive = drive_context[driveNum]->drive;
+	if (drive->GCR_dirty_track_needs_refresh)
+	{
+		return 1;
+	}
+	if (drive->P64_dirty_needs_refresh)
+	{
+		return 1;
+	}
+	return 0;
+}
+
+void c64d_clear_drive_dirty_needs_refresh_flag(int driveNum)
+{
+	drive_s *drive = drive_context[driveNum]->drive;
+	drive->GCR_dirty_track_needs_refresh = 0;
+	drive->P64_dirty_needs_refresh = 0;
+}
+
 //
 #define C64D_SNAPSHOT_VER_MAJOR   0
 #define C64D_SNAPSHOT_VER_MINOR   1
@@ -1594,6 +1631,7 @@ int c64d_snapshot_read_module(snapshot_t *s)
 
 unsigned int c64d_get_vice_maincpu_clk()
 {
+//	LOGD("c64d_get_vice_maincpu_clk: %d", maincpu_clk);
 	return maincpu_clk;
 }
 

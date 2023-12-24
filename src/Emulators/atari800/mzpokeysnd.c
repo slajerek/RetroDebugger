@@ -31,6 +31,7 @@
 #else
 #include "atari.h"
 #endif
+#include "a-log.h"
 #include "mzpokeysnd.h"
 #include "pokeysnd.h"
 #include "remez.h"

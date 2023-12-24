@@ -1310,3 +1310,31 @@ int ConvertSdlAxisToJoystickAxis(int sdlAxis)
 	}
 	return JOYPAD_IDLE;
 }
+
+void GetC64VicAddrFromState(vicii_cycle_state_t *viciiState, int *screenAddr, int *charsetAddr, int *bitmapBank)
+{
+	u16 screen_addr;            // Screen start address.
+	int charset_addr, bitmap_bank;
+	
+	if (viciiState == NULL)
+	{
+		LOGError("viciiState can't be NULL!");
+		return;
+	}
+	
+	screen_addr = viciiState->vbank_phi2 + ((viciiState->regs[0x18] & 0xf0) << 6);
+	screen_addr = (screen_addr & viciiState->vaddr_mask_phi2) | viciiState->vaddr_offset_phi2;
+	
+	charset_addr = (viciiState->regs[0x18] & 0xe) << 10;
+	charset_addr = (charset_addr + viciiState->vbank_phi1);
+	charset_addr &= viciiState->vaddr_mask_phi1;
+	charset_addr |= viciiState->vaddr_offset_phi1;
+	
+	bitmap_bank = charset_addr & 0xe000;
+	
+	*screenAddr = screen_addr;
+	*charsetAddr = charset_addr;
+	*bitmapBank = bitmap_bank;
+	
+
+}

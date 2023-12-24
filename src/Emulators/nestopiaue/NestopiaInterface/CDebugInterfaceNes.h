@@ -65,6 +65,9 @@ public:
 	virtual void ReplayInputEventsFromSnapshotsManager(CByteBuffer *inputEventsBuffer);
 
 	//
+	virtual void ClearDebugMarkers();
+
+	//
 	virtual void SetDebugMode(uint8 debugMode);
 	virtual uint8 GetDebugMode();
 

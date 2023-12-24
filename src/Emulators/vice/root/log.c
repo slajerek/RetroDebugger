@@ -481,7 +481,7 @@ void log_enable(int on)
 
 ///
 
-void LOGD(const char *format, ...)
+void ViceLOGD(const char *format, ...)
 {
 	char buffer[8192];
 	va_list args;
@@ -493,7 +493,7 @@ void LOGD(const char *format, ...)
 	vice_wrapper_mt_debug(buffer);
 }
 
-void LOGM(const char *format, ...)
+void ViceLOGM(const char *format, ...)
 {
 	char buffer[8192];
 	va_list args;
@@ -505,7 +505,7 @@ void LOGM(const char *format, ...)
 	vice_wrapper_mt_main(buffer);
 }
 
-void LOGTODO(const char *format, ...)
+void ViceLOGTODO(const char *format, ...)
 {
 	char buffer[8192];
 	va_list args;
@@ -517,7 +517,7 @@ void LOGTODO(const char *format, ...)
 	vice_wrapper_mt_todo(buffer);
 }
 
-void LOGError(const char *format, ...)
+void ViceLOGError(const char *format, ...)
 {
 	char buffer[8192];
 	va_list args;

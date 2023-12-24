@@ -5,6 +5,7 @@
 #define GSONG_C
 
 #include "goattrk2.h"
+#include "log.h"
 
 INSTR ginstr[MAX_INSTR];
 unsigned char ltable[MAX_TABLES][MAX_TABLELEN];

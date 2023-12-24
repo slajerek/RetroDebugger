@@ -1,3 +1,5 @@
+// TODO: rewrite fonts to support font names and avoid `strcmp(fontname, settings) and then run selected function to add font`
+
 #include "RetroDebuggerEmbeddedData.h"
 #include "RES_ResourceManager.h"
 #include "GUI_Main.h"
@@ -28,12 +30,21 @@
 #include "icon_raw_export_gfx.h"
 #include "icon_raw_import_gfx.h"
 #include "gamecontrollerdb_txt_zlib.h"
+
+// fonts
 #include "FontProFontIIx.h"
 #include "FontSweet16mono.h"
 #include "FontCousineRegular.h"
 #include "FontDroidSans.h"
 #include "FontKarlaRegular.h"
 #include "FontRobotoMedium.h"
+#include "FontUnifont.h"	// these fonts were borrowed from Furnace sources:
+#include "FontPTMono.h"
+#include "FontPlexSans.h"
+#include "FontPlexMono.h"
+#include "FontMonoki.h"
+#include "FontLiberationSans.h"
+#include "FontExoMedium.h"
 
 void RetroDebuggerEmbeddedAddData()
 {
@@ -149,4 +160,39 @@ ImFont* AddKarlaRegularFont(float fontSize, int oversample)
 ImFont* AddRobotoMediumFont(float fontSize, int oversample)
 {
 	return AddEmbeddedImGuiFont(fontSize, oversample, RobotoMediumFont_compressed_data, RobotoMediumFont_compressed_size, "Roboto Medium, %dpx");
+}
+
+ImFont* AddUnifont(float fontSize, int oversample)
+{
+	return AddEmbeddedImGuiFont(fontSize, oversample, font_unifont_compressed_data, font_unifont_compressed_size, "Unifont, %dpx");
+}
+
+ImFont* AddPTMono(float fontSize, int oversample)
+{
+	return AddEmbeddedImGuiFont(fontSize, oversample, font_ptMono_compressed_data, font_ptMono_compressed_size, "PTMono, %dpx");
+}
+
+ImFont* AddPlexSans(float fontSize, int oversample)
+{
+	return AddEmbeddedImGuiFont(fontSize, oversample, font_plexSans_compressed_data, font_plexSans_compressed_size, "Plex Sans, %dpx");
+}
+
+ImFont* AddPlexMono(float fontSize, int oversample)
+{
+	return AddEmbeddedImGuiFont(fontSize, oversample, font_plexMono_compressed_data, font_plexMono_compressed_size, "Plex Mono, %dpx");
+}
+
+ImFont* AddMonoki(float fontSize, int oversample)
+{
+	return AddEmbeddedImGuiFont(fontSize, oversample, font_mononoki_compressed_data, font_mononoki_compressed_size, "Monoki, %dpx");
+}
+
+ImFont* AddLiberationSans(float fontSize, int oversample)
+{
+	return AddEmbeddedImGuiFont(fontSize, oversample, font_liberationSans_compressed_data, font_liberationSans_compressed_size, "Liberation Sans, %dpx");
+}
+
+ImFont* AddExoMedium(float fontSize, int oversample)
+{
+	return AddEmbeddedImGuiFont(fontSize, oversample, font_exo_compressed_data, font_exo_compressed_size, "Exo Medium, %dpx");
 }

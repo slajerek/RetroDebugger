@@ -3052,7 +3052,7 @@ static void *assemble_64tass_userData;
 
 void buffer_putc(int c)
 {
-	unsigned char *v = c;
+	unsigned char v = c;
 	assemble_64tass_bufferOut[assemble_64tass_bufferOutIndex++] = v;
 }
 

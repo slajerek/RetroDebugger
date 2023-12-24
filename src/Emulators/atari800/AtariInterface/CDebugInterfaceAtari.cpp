@@ -37,6 +37,9 @@ extern "C" {
 #include "CSnapshotsManager.h"
 #include "CDebuggerEmulatorPlugin.h"
 #include "CDebugSymbols.h"
+#include "CViewMemoryMap.h"
+#include "CDebugEventsHistory.h"
+#include "CDebugMemory.h"
 
 #include "CAudioChannelAtari.h"
 
@@ -188,10 +191,10 @@ CDebugDataAdapter *CDebugInterfaceAtari::GetDataAdapter()
 
 void ADI_VIDEO_BlitNormal32(Uint32 *dest, Uint8 *src, int pitch, int width, int height, Uint32 *palette32)
 {
-		register Uint32 quad;
-		register Uint32 *start32 = dest;
-		register Uint8 c;
-		register int pos;
+		/*register*/ Uint32 quad;
+		/*register*/ Uint32 *start32 = dest;
+		/*register*/ Uint8 c;
+		/*register*/ int pos;
 		while (height > 0) {
 			pos = width;
 			do {
@@ -913,6 +916,12 @@ void CDebugInterfaceAtari::JoystickUp(int port, uint32 axis)
 }
 
 //
+void CDebugInterfaceAtari::ClearDebugMarkers()
+{
+	symbols->memory->ClearDebugMarkers();
+}
+
+//
 extern "C" {
 	void CPU_Reset(void);
 	void Colours_SetVideoSystem(int mode);
@@ -930,7 +939,7 @@ void CDebugInterfaceAtari::HardReset()
 	LOGM("CDebugInterfaceAtari::HardReset");
 	
 	this->ResetEmulationFrameCounter();
-	this->snapshotsManager->ClearSnapshotsHistory();
+	this->ClearHistory();
 	
 	atrdMainCpuCycle = 0;
 	atrdMainCpuDebugCycle = 0;
@@ -952,7 +961,7 @@ bool CDebugInterfaceAtari::LoadExecutable(char *fullFilePath)
 	LOGM("CDebugInterfaceAtari::LoadExecutable: %s", fullFilePath);
 
 	int ret = BINLOAD_Loader(fullFilePath);
-	if (ret != 0)
+	if (ret == 0)
 		return false;
 	
 //	Colours_SetVideoSystem(Atari800_tv_mode);
@@ -1270,7 +1279,7 @@ void CDebugInterfaceAtari::SetMachineType(u8 machineType)
 		Atari800_keyboard_detached = FALSE;
 	Atari800_InitialiseMachine();
 
-//	snapshotsManager->ClearSnapshotsHistory();
+//	ClearHistory();
 	this->ResetEmulationFrameCounter();
 	this->ResetMainCpuDebugCycleCounter();
 	
@@ -1353,7 +1362,7 @@ void CDebugInterfaceAtari::SetRamSizeOption(u8 ramSizeOption)
 
 	Atari800_InitialiseMachine();
 
-//	snapshotsManager->ClearSnapshotsHistory();
+//	ClearHistory();
 	this->ResetEmulationFrameCounter();
 	this->ResetMainCpuDebugCycleCounter();
 	

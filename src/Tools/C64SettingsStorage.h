@@ -58,6 +58,8 @@ extern int c64SettingsDefaultScreenLayoutId;
 extern bool c64SettingsIsInVicEditor;
 
 extern int c64SettingsScreenSupersampleFactor;
+// emu screens should consume key shortcuts? Emulator Screen Input: Bypass App Shortcuts
+extern bool c64SettingsEmulatorScreenBypassKeyboardShortcuts;
 
 extern bool c64SettingsUsePipeIntegration;
 
@@ -198,6 +200,8 @@ extern u8 c64SettingsC64SidImportMode;
 extern CSlrString *c64SettingsAudioOutDevice;
 extern bool c64SettingsRestartAudioOnEmulationReset;
 
+extern bool c64SettingsAlwaysUnpauseEmulationAfterReset;
+
 extern int c64SettingsJmpOnStartupAddr;
 
 extern bool c64SettingsAutoJmpAlwaysToLoadedPRGAddress;
@@ -239,6 +243,9 @@ extern u8 c64SettingsVicEditorDefaultBackgroundColor;
 extern int c64SettingsDisassemblyBackgroundColor;
 extern int c64SettingsDisassemblyExecuteColor;
 extern int c64SettingsDisassemblyNonExecuteColor;
+extern bool c64SettingsDisassemblyUseNearLabels;
+extern bool c64SettingsDisassemblyUseNearLabelsForJumps;
+extern int c64SettingsDisassemblyNearLabelMaxOffset;
 
 extern int c64SettingsMenusColorTheme;
 

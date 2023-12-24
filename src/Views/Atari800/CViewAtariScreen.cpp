@@ -622,6 +622,12 @@ bool CViewAtariScreen::KeyDown(u32 keyCode, bool isShift, bool isAlt, bool isCon
 {
 	LOGI(".......... CViewAtariScreen::KeyDown: keyCode=%d", keyCode);
 	
+	if (c64SettingsEmulatorScreenBypassKeyboardShortcuts == false)
+	{
+		if (guiMain->CheckKeyboardShortcut(keyCode))
+			return true;
+	}
+
 	if (keyCode == MTKEY_ENTER && isAlt)
 	{
 		viewC64->ToggleFullScreen(this);
@@ -768,6 +774,7 @@ bool CViewAtariScreen::HasContextMenuItems()
 	return true;
 }
 
+// TODO: Generalize me to CViewScreen
 void CViewAtariScreen::RenderContextMenuItems()
 {
 	CGuiView::RenderContextMenuItems();
@@ -825,7 +832,7 @@ void CViewAtariScreen::RenderContextMenuItems()
 				if (ImGui::MenuItem(name))
 				{
 					float f = *itSize;
-					this->SetNewImGuiWindowSize(sx * f, sy * f);
+					this->SetNewImGuiWindowSize( (sx * f) + 1, (sy * f) + 1);
 				}
 				
 				itSize++;
@@ -833,6 +840,12 @@ void CViewAtariScreen::RenderContextMenuItems()
 			
 			ImGui::EndMenu();
 		}
+	}
+	
+	ImGui::Separator();
+	if (ImGui::MenuItem("Bypass keyboard shortcuts", NULL, &c64SettingsEmulatorScreenBypassKeyboardShortcuts))
+	{
+		C64DebuggerStoreSettings();
 	}
 }
 

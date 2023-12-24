@@ -120,7 +120,11 @@ bool CViewC64GoatTracker::DoTap(float x, float y)
 	float xp = ((x - posX) / sizeX) * (float)(MAX_COLUMNS*8);
 	float yp = ((y - posY) / sizeY) * (float)(MAX_ROWS*16);
 
-	CGuiEventMouse *eventMouse = new CGuiEventMouse(GUI_EVENT_MOUSE_LEFT_BUTTON_DOWN, xp, yp);
+	unsigned int xi = (unsigned int)xp;
+	unsigned int yi = (unsigned int)yp;
+	LOGD("xp=%f yp=%f xi=%d yi=%d", xp, yp, xi, yi);
+
+	CGuiEventMouse *eventMouse = new CGuiEventMouse(GUI_EVENT_MOUSE_LEFT_BUTTON_DOWN, xi, yi);
 	AddEvent(eventMouse);
 
 	return true; //CGuiView::DoTap(x, y);
@@ -133,7 +137,11 @@ bool CViewC64GoatTracker::DoFinishTap(float x, float y)
 	float xp = ((x - posX) / sizeX) * (float)(MAX_COLUMNS*8);
 	float yp = ((y - posY) / sizeY) * (float)(MAX_ROWS*16);
 
-	CGuiEventMouse *eventMouse = new CGuiEventMouse(GUI_EVENT_MOUSE_LEFT_BUTTON_UP, xp, yp);
+	unsigned int xi = (unsigned int)xp;
+	unsigned int yi = (unsigned int)yp;
+	LOGD("xp=%f yp=%f xi=%d yi=%d", xp, yp, xi, yi);
+
+	CGuiEventMouse *eventMouse = new CGuiEventMouse(GUI_EVENT_MOUSE_LEFT_BUTTON_UP, xi, yi);
 	AddEvent(eventMouse);
 
 	return true; //CGuiView::DoFinishTap(x, y);
@@ -152,10 +160,16 @@ bool CViewC64GoatTracker::DoFinishDoubleTap(float x, float y)
 	return CGuiView::DoFinishDoubleTap(x, y);
 }
 
-
 bool CViewC64GoatTracker::DoMove(float x, float y, float distX, float distY, float diffX, float diffY)
 {
-	CGuiEventMouse *eventMouse = new CGuiEventMouse(GUI_EVENT_MOUSE_MOVE, x, y);
+	float xp = ((x - posX) / sizeX) * (float)(MAX_COLUMNS*8);
+	float yp = ((y - posY) / sizeY) * (float)(MAX_ROWS*16);
+
+	unsigned int xi = (unsigned int)xp;
+	unsigned int yi = (unsigned int)yp;
+	LOGD("xp=%f yp=%f xi=%d yi=%d", xp, yp, xi, yi);
+
+	CGuiEventMouse *eventMouse = new CGuiEventMouse(GUI_EVENT_MOUSE_MOVE, xi, yi);
 	AddEvent(eventMouse);
 
 	return CGuiView::DoMove(x, y, distX, distY, diffX, diffY);
@@ -164,6 +178,21 @@ bool CViewC64GoatTracker::DoMove(float x, float y, float distX, float distY, flo
 bool CViewC64GoatTracker::FinishMove(float x, float y, float distX, float distY, float accelerationX, float accelerationY)
 {
 	return CGuiView::FinishMove(x, y, distX, distY, accelerationX, accelerationY);
+}
+
+bool CViewC64GoatTracker::DoNotTouchedMove(float x, float y)
+{
+	float xp = ((x - posX) / sizeX) * (float)(MAX_COLUMNS*8);
+	float yp = ((y - posY) / sizeY) * (float)(MAX_ROWS*16);
+
+	unsigned int xi = (unsigned int)xp;
+	unsigned int yi = (unsigned int)yp;
+	LOGD("xp=%f yp=%f xi=%d yi=%d", xp, yp, xi, yi);
+
+	CGuiEventMouse *eventMouse = new CGuiEventMouse(GUI_EVENT_MOUSE_MOVE, xi, yi);
+	AddEvent(eventMouse);
+
+	return CGuiView::DoNotTouchedMove(x, y);
 }
 
 bool CViewC64GoatTracker::InitZoom()
@@ -237,22 +266,34 @@ void CViewC64GoatTracker::ForwardEvents()
 		CGuiEvent *event = events.front();
 		events.pop_front();
 		
+		LOGD("event type=%d", event->type);
 		if (event->type == GUI_EVENT_TYPE_MOUSE)
 		{
 			CGuiEventMouse *eventMouse = (CGuiEventMouse *)event;
+			
+			LOGD("CGuiEventMouse mouseState=%d x=%d y=%d", eventMouse->mouseState, eventMouse->x, eventMouse->y);
+			
+			gt2SetMousePosition(eventMouse->x, eventMouse->y);
+
 			if (eventMouse->mouseState == GUI_EVENT_MOUSE_MOVE)
 			{
-				win_mousexpos = eventMouse->x;
-				win_mouseypos = eventMouse->y;
 			}
 			else if (eventMouse->mouseState == GUI_EVENT_MOUSE_LEFT_BUTTON_DOWN)
 			{
+				LOGD("GUI_EVENT_MOUSE_LEFT_BUTTON_DOWN");
 				win_mousebuttons |= MOUSEB_LEFT;
+				
+				// that's all in this loop, as we may consume button up in next iteration
+				break;
 			}
 			else if (eventMouse->mouseState == GUI_EVENT_MOUSE_LEFT_BUTTON_UP)
 			{
+				LOGD("GUI_EVENT_MOUSE_LEFT_BUTTON_UP");
 				win_mousebuttons &= ~MOUSEB_LEFT;
 			}
+			
+			LOGD("eventMouse->x=%d eventMouse->y=%d win_mousexpos=%d win_mouseypos=%d",
+				 eventMouse->x, eventMouse->y, win_mousexpos, win_mouseypos);
 		}
 		else if (event->type == GUI_EVENT_TYPE_KEYBOARD)
 		{
@@ -286,6 +327,9 @@ void CViewC64GoatTracker::ForwardEvents()
 //						gfx_reinit();
 //					}
 				}
+				
+				// that's all in this loop as we may consume key up in next iteration
+				break;
 			}
 			else if (eventKeyboard->keyboardState == GUI_EVENT_KEYBOARD_KEY_UP)
 			{

@@ -100,6 +100,7 @@
 #include "hardsid.h"
 #include "hs-win32.h"
 #include "types.h"
+#include "log.h"
 
 static int use_hs_isa = 0;
 static int use_hs_pci = 0;

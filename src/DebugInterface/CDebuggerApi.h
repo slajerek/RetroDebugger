@@ -87,6 +87,9 @@ public:
 	//
 	virtual void SaveBinary(u16 fromAddr, u16 toAddr, char *fileName);
 	virtual int LoadBinary(u16 fromAddr, char *filePath);
+	
+	//
+	virtual void LoadSnapshot(const char *fileName);
 
 	virtual u8 *ExomizerMemoryRaw(u16 fromAddr, u16 toAddr, int *compressedSize);
 	

@@ -79,6 +79,8 @@ public:
 	virtual int GetScreenSizeX();
 	virtual int GetScreenSizeY();
 	
+	virtual void ClearDebugMarkers();
+
 	virtual void Reset();
 	virtual void HardReset();
 	virtual void DiskDriveReset();
@@ -221,7 +223,10 @@ public:
 
 	virtual bool IsDriveDirtyForSnapshot();
 	virtual void ClearDriveDirtyForSnapshotFlag();
-	
+
+	virtual bool IsDriveDirtyForRefresh();
+	virtual void ClearDriveDirtyForRefreshFlag();
+
 	virtual void SetDebugMode(uint8 debugMode);
 	virtual uint8 GetDebugMode();
 	

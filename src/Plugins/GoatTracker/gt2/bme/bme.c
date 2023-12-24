@@ -2,6 +2,7 @@
 // BME (Blasphemous Multimedia Engine) main module
 //
 #include <SDL.h>
+#include "log.h"
 #include "bme_err.h"
 #include "bme_cfg.h"
 #include "bme_main.h"

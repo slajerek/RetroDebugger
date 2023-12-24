@@ -113,7 +113,9 @@ public:
 	
 	CGuiButton *btnAssignKey;
 	CGuiButton *btnRemoveKey;
-	
+
+	CGuiButton *btnReset;
+
 	bool ButtonClicked(CGuiButton *button);
 	
 	void SaveAndGoBack();
@@ -128,6 +130,8 @@ public:
 	
 	void RemoveSelectedKey();
 
+	void ResetKeyboardMappingToFactoryDefault();
+	
 	CViewC64KeyMapKeyData *keyLeftShift;
 	CViewC64KeyMapKeyData *keyRightShift;
 	

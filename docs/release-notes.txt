@@ -1,3 +1,46 @@
+Retro Debugger v0.64.66 (Xmas release)
+Added: Debug Events History view (e.g. past breakpoints), you can now rewind 
+       code to specific breakpoint (suggested by Brush/Elysium). 
+       See demo: https://youtu.be/v_sunlK6_wo
+Added: Memory Monitor view to track memory changes. 
+       See demo: https://youtu.be/0r-z36Lk6TQ
+Added: Memory Plot view (suggested by Digger/Elysium). 
+       See demo: https://youtu.be/qqALSiTesHc
+Added: File browser view (suggested by Chash/Caution^Fraction). 
+       See demo: https://youtu.be/ctYunZSYzsU
+Added: SidDump-style export in SID Tracker history view context menu
+Added: New flags to memory markers dump: 
+       VicScreen, VicSpritePointer, VicCharset, VicBitmap, VicColorRam 
+       (suggested by Wacek/Arise)
+Added: show labels with offsets in disassembly when label is not found 
+       (e.g. label+1, label+2, etc.), configurable in Settings 
+       (suggested by Brush/Elysium)
+Added: Reset keymap to default 
+       (issue https://github.com/slajerek/RetroDebugger/issues/22)
+Added: 1541 disk directory view: format new disk image, add prg to disk image
+Added: Context menu in the Memory map with an option to select CPU, or RAM 
+       (suggested by Bacchus/Fairlight)
+Added: Reset can now start emulation and continue running automatically, 
+       configurable in Settings
+Added: Borrowed opensource fonts from Furnace tracker
+Fixed: Setting emulator's screen zoom to 25%, 50%, 100% was off one pixel due 
+       to recent refactorings (thanks to Jetboy/Elysium for reporting)
+Fixed: mouse position and clicks were not properly forwarded to GoatTracker2 plugin 
+       (thanks to Linus for reporting)
+Fixed: sometimes invisible views could consume mouse clicks and other events 
+       (thanks to Tom Telmo for additional testing)
+Fixed: sometimes layout could not load all views parameters when run on older 
+       RetroDebugger version and thus destroing unknown parameters on layout save
+Changed MS Windows: Upgrading settings path, moving settings from 
+        C:\ProgramData\RetroDebugger to C:\Users\mars\AppData\Local\RetroDebugger
+
+... and a lot of refactoring and other various bug fixes.
+
+Big shoutout to Bacchus/Fairlight, Tom Telmo and Jetboy/Elysium for their 
+last-minute eagle eyes! Just moments before release, these heroes stepped in 
+to report bugs and conduct extra testing.
+
+
 Retro Debugger v0.64.64 The X Party release!
 This is just a maintenance update to fix these bugs from December last year :)
 

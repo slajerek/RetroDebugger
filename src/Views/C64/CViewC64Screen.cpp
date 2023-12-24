@@ -16,6 +16,8 @@
 
 #include "CViewAtariScreen.h"
 
+// TODO: create CViewScreen generic and CViewC64Screen derivative
+
 CViewC64Screen::CViewC64Screen(const char *name, float posX, float posY, float posZ, float sizeX, float sizeY, CDebugInterfaceC64 *debugInterface)
 : CGuiView(name, posX, posY, posZ, sizeX, sizeY)
 {
@@ -727,6 +729,13 @@ bool CViewC64Screen::KeyDown(u32 keyCode, bool isShift, bool isAlt, bool isContr
 	LOGG(".......... CViewC64Screen::KeyDown: keyCode=%d isShift=%s isAlt=%s isControl=%s", keyCode,
 		 STRBOOL(isShift), STRBOOL(isAlt), STRBOOL(isControl));
 	
+	if (c64SettingsEmulatorScreenBypassKeyboardShortcuts == false)
+	{
+		if (guiMain->CheckKeyboardShortcut(keyCode))
+			return true;
+	}
+	
+	// shall we keep this always working key shortcut? for now yes, but this is due to UX, anyway UI BUG:
 	if (keyCode == MTKEY_ENTER && isAlt)
 	{
 		viewC64->ToggleFullScreen(this);
@@ -1022,7 +1031,7 @@ void CViewC64Screen::RenderContextMenuItems()
 				if (ImGui::MenuItem(name))
 				{
 					float f = *itSize;
-					this->SetNewImGuiWindowSize(sx * f, sy * f);
+					this->SetNewImGuiWindowSize( (sx * f) + 1, (sy * f) + 1);
 				}
 				
 				itSize++;
@@ -1030,6 +1039,12 @@ void CViewC64Screen::RenderContextMenuItems()
 			
 			ImGui::EndMenu();
 		}
+	}
+	
+	ImGui::Separator();
+	if (ImGui::MenuItem("Bypass keyboard shortcuts", NULL, &c64SettingsEmulatorScreenBypassKeyboardShortcuts))
+	{
+		C64DebuggerStoreSettings();
 	}
 }
 

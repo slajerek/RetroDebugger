@@ -277,7 +277,7 @@ void CDebugAsmSource::ParseXML(CByteBuffer *byteBuffer, CDebugInterface *debugIn
 							{
 								segment->codeSourceLineByMemoryAddress[addr] = asmSourceLine;
 //								block->codeSourceLineByMemoryAddress[addr] = asmSourceLine;
-								LOGD("added segment=%x code at %x asmSourceLine=%x", segment, addr, asmSourceLine);
+								LOGD("added code segment=%x at %x asmSourceLine=%x", segment, addr, asmSourceLine);
 							}
 							else
 							{

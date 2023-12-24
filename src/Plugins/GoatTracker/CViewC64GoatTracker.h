@@ -31,6 +31,8 @@ public:
 	virtual bool DoMove(float x, float y, float distX, float distY, float diffX, float diffY);
 	virtual bool FinishMove(float x, float y, float distX, float distY, float accelerationX, float accelerationY);
 	
+	virtual bool DoNotTouchedMove(float x, float y);
+
 	virtual bool InitZoom();
 	virtual bool DoZoomBy(float x, float y, float zoomValue, float difference);
 	

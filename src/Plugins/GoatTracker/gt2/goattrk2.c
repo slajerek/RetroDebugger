@@ -24,6 +24,7 @@
 
 #include "goattrk2.h"
 #include "bme.h"
+#include "log.h"
 
 int menu = 0;
 int editmode = EDIT_PATTERN;
@@ -158,7 +159,7 @@ int gtmain(int argc, const char **argv)
     #endif
   #endif
 	
-	LOGD("open config filename=%s", filename);
+	LOGD("open config filename=%s\n", filename);
 	
   configfile = fopen(filename, "rt");
   if (configfile)

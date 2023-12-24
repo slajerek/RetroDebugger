@@ -157,6 +157,7 @@ typedef struct drive_s {
 	
 	/* Flag: does the current track need to be written out in next snapshot interval?  */
 	int GCR_dirty_track_for_snapshot;
+	int GCR_dirty_track_needs_refresh;
 
     /* GCR value being written to the disk.  */
     BYTE GCR_write_value;
@@ -238,6 +239,7 @@ typedef struct drive_s {
 
 	/* Is P64 image dirty and should be stored in next snapshot interval?  */
 	int P64_dirty_for_snapshot;
+	int P64_dirty_needs_refresh;
 	
     /* is this disk read only?  */
     int read_only;

@@ -79,8 +79,8 @@ void CViewEmulationCounters::RenderEmulationCounters(float px, float py, float p
 	sprintf(buf, " TIME:%4.0f:%05.2f", mins, secs);
 	fontBytes->BlitText(buf, px, py, posZ, fontSize); py += fontSize;
 
-//	sprintf(buf, "CYCLE: %9lld", debugInterface->GetMainCpuCycleCounter());
-	sprintf(buf, "CYCLE: %9lld", debugInterface->GetMainCpuDebugCycleCounter());
+	sprintf(buf, "CYCLE: %9lld", debugInterface->GetMainCpuCycleCounter());
+//	sprintf(buf, "CYCLE: %9lld", debugInterface->GetMainCpuDebugCycleCounter());
 	fontBytes->BlitText(buf, px, py, posZ, fontSize); py += fontSize;
 	
 //	py += fontSize;

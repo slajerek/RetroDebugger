@@ -14,9 +14,11 @@
 #include "bme_io.h"
 #include "bme_err.h"
 
+#include "log.h"
+
 void mou_init(void);
 void mou_uninit(void);
-void mou_getpos(unsigned *x, unsigned *y);
+void mou_getpos(unsigned int *x, unsigned int *y);
 //void mou_getmove(int *dx, int *dy);
 unsigned mou_getbuttons(void);
 
@@ -29,18 +31,24 @@ void mou_uninit(void)
 {
 }
 
-void mou_getpos(unsigned *x, unsigned *y)
+void mou_getpos(unsigned int *x, unsigned int *y)
 {
-    if (!gfx_initted)
-    {
-        *x = win_mousexpos;
-        *y = win_mouseypos;
-    }
-    else
-    {
-        *x = win_mousexpos * gfx_virtualxsize / gfx_windowxsize;
-        *y = win_mouseypos * gfx_virtualysize / gfx_windowysize;
-    }
+//	LOGD("mou_getpos: win_mousexpos=%d win_mouseypos=%d", win_mousexpos, win_mouseypos);
+	*x = win_mousexpos;
+	*y = win_mouseypos;
+
+//	LOGD("mou_getpos: *x=%d *y=%d", *x, *y);
+
+//	if (!gfx_initted)
+//    {
+//        *x = win_mousexpos;
+//        *y = win_mouseypos;
+//    }
+//    else
+//    {
+//		*x = win_mousexpos; //* gfx_virtualxsize / gfx_windowxsize;
+//		*y = win_mouseypos; //* gfx_virtualysize / gfx_windowysize;
+//    }
 }
 
 //void mou_getmove(int *dx, int *dy)

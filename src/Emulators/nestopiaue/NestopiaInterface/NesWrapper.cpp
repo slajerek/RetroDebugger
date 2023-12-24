@@ -45,6 +45,7 @@
 #include "CViewNesStateAPU.h"
 #include "CDebugSymbols.h"
 #include "CDebugSymbolsSegment.h"
+#include "CDebugEventsHistory.h"
 #include <string.h>
 
 // TODO: considering that Nestopia is C++ we need to move this below to CDebugInterfaceNes and access nesEmulator through interface
@@ -1556,9 +1557,11 @@ void nesd_mark_cell_read(uint16 addr)
 	if (segment)
 	{
 		u8 value = nesd_peek_safe_io(addr);
-		if (segment->breakpointsMemory->EvaluateBreakpoint(addr, value, MEMORY_BREAKPOINT_ACCESS_READ) != NULL)
+		CBreakpointMemory *breakpoint = segment->breakpointsMemory->EvaluateBreakpoint(addr, value, MEMORY_BREAKPOINT_ACCESS_READ);
+		if (breakpoint != NULL)
 		{
 			debugInterfaceNes->SetDebugMode(DEBUGGER_MODE_PAUSED);
+			segment->symbols->debugEventsHistory->CreateEventBreakpoint(breakpoint, MEMORY_BREAKPOINT_ACCESS_READ, segment);
 		}
 	}
 			
@@ -1579,9 +1582,11 @@ void nesd_mark_cell_write(uint16 addr, uint8 value)
 	CDebugSymbolsSegment *segment = debugInterfaceNes->symbols->currentSegment;
 	if (segment)
 	{
-		if (segment->breakpointsMemory->EvaluateBreakpoint(addr, value, MEMORY_BREAKPOINT_ACCESS_WRITE) != NULL)
+		CBreakpointMemory *breakpoint = segment->breakpointsMemory->EvaluateBreakpoint(addr, value, MEMORY_BREAKPOINT_ACCESS_WRITE);
+		if (breakpoint != NULL)
 		{
 			debugInterfaceNes->SetDebugMode(DEBUGGER_MODE_PAUSED);
+			segment->symbols->debugEventsHistory->CreateEventBreakpoint(breakpoint, MEMORY_BREAKPOINT_ACCESS_WRITE, segment);
 		}
 	}
 			
@@ -1628,6 +1633,7 @@ void nesd_check_pc_breakpoint(uint16 pc)
 			if (IS_SET(addrBreakpoint->actions, ADDR_BREAKPOINT_ACTION_STOP))
 			{
 				debugInterface->SetDebugMode(DEBUGGER_MODE_PAUSED);
+				segment->symbols->debugEventsHistory->CreateEventBreakpoint(addrBreakpoint, ADDR_BREAKPOINT_ACTION_STOP, segment);
 			}
 		}
 		debugInterface->UnlockMutex();

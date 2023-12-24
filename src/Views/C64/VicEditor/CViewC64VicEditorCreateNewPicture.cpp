@@ -123,7 +123,7 @@ CViewC64VicEditorCreateNewPicture::CViewC64VicEditorCreateNewPicture(const char 
 	py += fontHeight;
 
 	//
-	float sp = 1.25f;
+	float sp = 1.9f;
 	viewPalette = new CViewC64Palette("Palette", px, py, posZ, 150*sp, 30*sp, this);
 	viewPalette->visible = false; // we will render this by ourselves
 	this->AddGuiElement(viewPalette);

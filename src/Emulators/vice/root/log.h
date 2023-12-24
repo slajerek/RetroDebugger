@@ -71,9 +71,14 @@ extern int log_verbose(const char *format, ...);
 // MT-style logging to not let confuse me (Slajerek) ;)
 // these logs have different tags than Vice's
 
-void LOGD(const char *format, ...);
-void LOGM(const char *format, ...);
-void LOGTODO(const char *format, ...);
-void LOGError(const char *format, ...);
+void ViceLOGD(const char *format, ...);
+void ViceLOGM(const char *format, ...);
+void ViceLOGTODO(const char *format, ...);
+void ViceLOGError(const char *format, ...);
+
+#define LOGD ViceLOGD
+#define LOGM ViceLOGM
+#define LOGTODO ViceLOGTODO
+#define LOGError ViceLOGError
 
 #endif

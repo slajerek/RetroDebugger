@@ -11,6 +11,7 @@
 #include "SYS_Threading.h"
 #include "CGuiEditHex.h"
 #include "VID_ImageBinding.h"
+#include "CDataAdapter.h"
 #include "CViewDisassembly.h"
 #include "CDebugInterface.h"
 #include "C64SettingsStorage.h"
@@ -20,8 +21,8 @@
 #include "CSnapshotsManager.h"
 #include "CLayoutParameter.h"
 #include "CMainMenuBar.h"
-#include "CDebugMemoryMap.h"
-#include "CDebugMemoryMapCell.h"
+#include "CDebugMemory.h"
+#include "CDebugMemoryCell.h"
 #include "CDebugSymbols.h"
 #include "CDebugSymbolsSegment.h"
 #include "CDebugSymbolsCodeLabel.h"
@@ -41,12 +42,16 @@ CViewDataDump::CViewDataDump(const char *name, float posX, float posY, float pos
 	imGuiNoScrollbar = true;
 
 	this->symbols = symbols;
+	this->debugMemory = symbols->memory;
 	this->debugInterface = symbols->debugInterface;
 	this->dataAdapter = symbols->dataAdapter;
 	this->viewMemoryMap = viewMemoryMap;
 	this->viewDisassembly = viewDisassembly;
 	
-	this->viewMemoryMap->SetDataDumpView(this);
+	if (this->viewMemoryMap)
+	{
+		this->viewMemoryMap->SetDataDumpView(this);
+	}
 	
 	fontAtari = viewC64->fontAtari;
 	fontCBM1 = viewC64->fontCBM1;
@@ -375,7 +380,7 @@ void CViewDataDump::Render()
 			dataAdapter->AdapterReadByte(a, &value, &isAvailable);
 			if (isAvailable)
 			{
-				CDebugMemoryMapCell *cell = viewMemoryMap->memoryCells[a];
+				CDebugMemoryCell *cell = debugMemory->memoryCells[a];
 				
 				if (cell->isExecuteCode)
 				{
@@ -391,6 +396,7 @@ void CViewDataDump::Render()
 								
 				//BlitTextColor(CSlrString *text, float posX, float posY, float posZ, float scale, float colorR, float colorG, float colorB, float alpha)
 				
+				// TODO: refactor me
 				if (this->viewMemoryMap->visible == false)
 				{
 					this->viewMemoryMap->UpdateMapColorsForCell(cell);
@@ -405,7 +411,7 @@ void CViewDataDump::Render()
 					{
 						sprintfHexCode8(buf, value);
 
-						CDebugMemoryMapCell *cell = viewMemoryMap->memoryCells[this->dataAddr];
+						CDebugMemoryCell *cell = debugMemory->memoryCells[this->dataAddr];
 //						fontBytes->BlitTextColor(buf, px, py, posZ, fontBytesSize,
 
 //						fontBytesSize*2.0f, fontCharactersWidth, 0.3f,  1.0f, 0.3f, 0.5f, 1.3f);
@@ -762,7 +768,7 @@ bool CViewDataDump::DoTap(float x, float y)
 
 	if (guiMain->isControlPressed)
 	{
-		CDebugMemoryMapCell *cell = viewMemoryMap->memoryCells[dataPositionAddr];
+		CDebugMemoryCell *cell = debugMemory->memoryCells[dataPositionAddr];
 		
 		if (guiMain->isShiftPressed)
 		{
@@ -1423,7 +1429,7 @@ void CViewDataDump::CopyHexValuesToClipboard()
 	}
 	else
 	{
-		viewC64->ShowMessageError("Data not available for copy");
+		viewC64->ShowMessageError("No data available for copying.");
 	}
 }
 
@@ -1480,7 +1486,7 @@ void CViewDataDump::RenderContextMenuItems()
 {
 	CGuiView::RenderContextMenuItems();
 	
-	CDebugMemoryMapCell *cell = viewMemoryMap->memoryCells[dataAddr];
+	CDebugMemoryCell *cell = debugMemory->memoryCells[dataAddr];
 	
 	u8 val;
 	dataAdapter->AdapterReadByte(dataAddr, &val);
@@ -1488,9 +1494,9 @@ void CViewDataDump::RenderContextMenuItems()
 	localLabelText[0] = 0;
 	CDebugSymbolsSegment *currentSegment = NULL;
 	CDebugSymbolsCodeLabel *label = NULL;
-	if (debugInterface->symbols && debugInterface->symbols->currentSegment)
+	if (symbols && symbols->currentSegment)
 	{
-		currentSegment = debugInterface->symbols->currentSegment;
+		currentSegment = symbols->currentSegment;
 		label = currentSegment->FindLabel(dataAddr);
 		if (label)
 		{
@@ -1570,7 +1576,7 @@ void CViewDataDump::RenderContextMenuItems()
 			if (currentSegment->breakpointsMemory)
 			{
 				bool supportsWriteBreakpoint, supportsReadBreakpoint;
-				debugInterface->SupportsBreakpoints(&supportsWriteBreakpoint, &supportsReadBreakpoint);
+				currentSegment->symbols->debugInterface->SupportsBreakpoints(&supportsWriteBreakpoint, &supportsReadBreakpoint);
 				
 				if (supportsWriteBreakpoint || supportsReadBreakpoint)
 				{

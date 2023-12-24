@@ -57,6 +57,9 @@ public:
 	virtual CDebugSymbolsCodeLabel *CreateCodeLabel(int address, char *text);
 	virtual CDebugSymbolsCodeLabel *FindLabel(int address);
 	virtual CDebugSymbolsCodeLabel *FindLabelByText(const char *text);
+	virtual CDebugSymbolsCodeLabel *FindNearLabel(int address, int *offset);
+	virtual bool FindLabelText(int address, char *labelText);
+	virtual bool FindNearLabelText(int address, char *labelText);
 	virtual void DeleteCodeLabels();
 	virtual void UpdateCodeLabelsArray();
 	const char **codeLabelsArray;

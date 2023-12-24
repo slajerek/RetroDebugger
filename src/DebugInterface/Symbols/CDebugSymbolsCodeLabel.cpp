@@ -34,13 +34,13 @@ void CDebugSymbolsCodeLabel::SetText(char *txt)
 
 void CDebugSymbolsCodeLabel::UpdateHashCode()
 {
-	char *buf = SYS_GetCharBuf();
-	strncpy(buf, labelText, MAX_STRING_LENGTH-1);
-	FUN_ToUpperCaseStr(buf);
+//	char *buf = SYS_GetCharBuf();
+//	strncpy(buf, labelText, MAX_STRING_LENGTH-1);
+//	FUN_ToUpperCaseStr(buf);
 	
-	textHashCode = GetHashCode64(buf);
+	textHashCode = GetHashCode64(labelText);
 	
-	SYS_ReleaseCharBuf(buf);
+//	SYS_ReleaseCharBuf(buf);
 }
 
 void CDebugSymbolsCodeLabel::Serialize(Hjson::Value hjsonCodeLabel)

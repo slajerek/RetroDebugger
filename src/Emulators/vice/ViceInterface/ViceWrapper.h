@@ -194,8 +194,13 @@ void c64d_check_snapshot_interval();
 // returns 1 if snapshot was restored
 int c64d_check_snapshot_restore();
 
+// check if disk image changed, required for snapshots manager
 int c64d_is_drive_dirty_for_snapshot();
 void c64d_clear_drive_dirty_for_snapshot();
+
+// check if disk image changed, required for disk browser
+int c64d_is_drive_dirty_and_needs_refresh(int driveNum);
+void c64d_clear_drive_dirty_needs_refresh_flag(int driveNum);
 
 void c64d_uimon_print(char *p);
 void c64d_uimon_print_line(char *p);

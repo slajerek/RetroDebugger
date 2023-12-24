@@ -32,6 +32,7 @@ extern "C" {
 
 #include "RES_ResourceManager.h"
 #include "CDebugInterfaceVice.h"
+#include "CDebugMemory.h"
 #include "CByteBuffer.h"
 #include "CSlrString.h"
 #include "CDataAdaptersVice.h"
@@ -48,13 +49,15 @@ extern "C" {
 #include "CViewC64.h"
 #include "CViewC64StateSID.h"
 #include "CViewC64SidTrackerHistory.h"
-#include "CViewDrive1541FileD64.h"
+#include "CViewDrive1541Browser.h"
 #include "CAudioChannelVice.h"
 #include "CDebuggerEmulatorPlugin.h"
 #include "CSnapshotsManager.h"
 #include "CDebugSymbolsC64.h"
 #include "CDebugSymbolsDrive1541.h"
 #include "CWaveformData.h"
+#include "CViewMemoryMap.h"
+#include "CDebugEventsHistory.h"
 
 // 44100/50*5
 #define SID_WAVEFORM_LENGTH 4410*8
@@ -144,10 +147,10 @@ CDebugInterfaceVice::CDebugInterfaceVice(CViewC64 *viewC64, uint8 *c64memory, bo
 	InitViceMainProgram();
 	
 	this->dataAdapterC64 = new CDataAdapterVice(this);
-	this->dataAdapterC64DirectRam = new CDirectRamDataAdapterVice(this);
-	this->dataAdapterDrive1541 = new CDiskDataAdapterVice(this);
-	this->dataAdapterDrive1541DirectRam = new CDiskDirectRamDataAdapterVice(this);
-	this->dataAdapterCartridgeC64 = new CCartridgeDataAdapterVice(this, CCartridgeDataAdapterViceType::C64CartridgeDataAdapterViceTypeRamL);
+	this->dataAdapterC64DirectRam = new CDataAdapterViceDirectRam(this);
+	this->dataAdapterDrive1541 = new CDataAdapterViceDisk(this);
+	this->dataAdapterDrive1541DirectRam = new CDataAdapterViceDiskDirectRam(this);
+	this->dataAdapterCartridgeC64 = new CDataAdapterViceCartridge(this, CCartridgeDataAdapterViceType::C64CartridgeDataAdapterViceTypeRamL);
 	
 	// for loading breakpoints and symbols
 	this->symbols = new CDebugSymbolsC64(this, this->dataAdapterC64);
@@ -497,6 +500,12 @@ void CDebugInterfaceVice::ForceRunAndUnJamCpu()
 	this->SetDebugMode(DEBUGGER_MODE_RUNNING);
 }
 
+void CDebugInterfaceVice::ClearDebugMarkers()
+{
+	symbols->memory->ClearDebugMarkers();
+	symbolsDrive1541->memory->ClearDebugMarkers();
+	symbolsCartridgeC64->memory->ClearDebugMarkers();
+}
 
 void CDebugInterfaceVice::Reset()
 {
@@ -598,7 +607,7 @@ extern "C" {
 
 void CDebugInterfaceVice::ResetEmulationFrameCounter()
 {
-	this->snapshotsManager->ClearSnapshotsHistory();
+	this->ClearHistory();
 	CDebugInterfaceC64::ResetEmulationFrameCounter();
 }
 
@@ -1702,7 +1711,7 @@ void CDebugInterfaceVice::GetFloatCBMColor(uint8 colorNum, float *r, float *g, f
 
 void CDebugInterfaceVice::SetDebugMode(uint8 debugMode)
 {
-	LOGD("CDebugInterfaceVice::SetDebugMode: %d", debugMode);
+	LOGD("CDebugInterfaceVice::SetDebugMode: %d (cycle=%d)", debugMode, GetMainCpuCycleCounter());
 	
 	c64d_set_debug_mode(debugMode);
 	
@@ -2083,7 +2092,7 @@ static void load_snapshot_trap(WORD addr, void *v)
 	
 	SYS_ReleaseCharBuf(filePath);
 	
-	debugInterfaceVice->snapshotsManager->ClearSnapshotsHistory();
+	debugInterfaceVice->ClearHistory();
 
 	debugInterfaceVice->UnlockMutex();
 	guiMain->UnlockMutex();
@@ -2259,6 +2268,17 @@ void CDebugInterfaceVice::ClearDriveDirtyForSnapshotFlag()
 {
 	c64d_clear_drive_dirty_for_snapshot();
 }
+
+bool CDebugInterfaceVice::IsDriveDirtyForRefresh()
+{
+	return c64d_is_drive_dirty_and_needs_refresh(0) == 0 ? false : true;
+}
+
+void CDebugInterfaceVice::ClearDriveDirtyForRefreshFlag()
+{
+	c64d_clear_drive_dirty_needs_refresh_flag(0);
+}
+
 
 // Profiler
 extern "C"
@@ -2616,11 +2636,11 @@ void CDebugInterfaceVice::CheckLoadedRoms()
 		if (n != 5)
 		{
 			sprintf(buf2, "Failed to load C64 ROM files:\n%s", buf);
-			guiMain->ShowMessageBox("Error", buf2);
+			viewC64->ShowMessageError(buf2);
 		}
 		else
 		{
-			guiMain->ShowMessageBox("Error", "C64 ROM files are not defined. Please select C64 ROMs folder in Settings.");
+			viewC64->ShowMessageError("C64 ROM files are undefined. Please navigate to Settings and select the appropriate C64 ROMs folder to proceed.");
 		}
 	}
 	

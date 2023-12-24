@@ -11,7 +11,11 @@
 
 const char *MT_GetMainWindowTitle()
 {
+#if defined(GLOBAL_DEBUG_OFF)
 	return "Retro Debugger v" RETRODEBUGGER_VERSION_STRING;
+#else
+	return "Retro Debugger v" RETRODEBUGGER_VERSION_STRING " (compiled on " __DATE__ " " __TIME__ ")";
+#endif
 }
 
 const char *MT_GetSettingsFolderName()

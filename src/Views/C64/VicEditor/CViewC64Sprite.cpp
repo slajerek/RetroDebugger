@@ -883,7 +883,7 @@ int CViewC64Sprite::ImportSprite(CSlrString *path)
 		{
 			if (byteBuffer->IsEof())
 			{
-				viewC64->ShowMessageError("Sprite file is corrupted");
+				viewC64->ShowMessageError("Importing Sprite failed. Unexpected end of file reached. Ensure the file is complete and not corrupted.");
 				delete byteBuffer;
 				delete file;
 				guiMain->UnlockMutex();

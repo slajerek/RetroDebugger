@@ -19,8 +19,8 @@
 #include "CSnapshotsManager.h"
 #include "C64Palette.h"
 #include "CMainMenuBar.h"
-#include "CDebugMemoryMap.h"
-#include "CDebugMemoryMapCell.h"
+#include "CDebugMemory.h"
+#include "CDebugMemoryCell.h"
 #include "CViewAtariScreen.h"
 #include "CViewNesScreen.h"
 #include "CDebugInterfaceC64.h"
@@ -76,6 +76,7 @@ bool c64SettingsSkipConfig = false;
 bool c64SettingsPassConfigToRunningInstance = false;
 
 int c64SettingsScreenSupersampleFactor = 4;
+bool c64SettingsEmulatorScreenBypassKeyboardShortcuts = true;
 
 bool c64SettingsUsePipeIntegration = true;
 
@@ -213,6 +214,9 @@ CSlrString *c64SettingsC64ProfilerFileOutputPath = NULL;
 CSlrString *c64SettingsAudioOutDevice = NULL;
 bool c64SettingsRestartAudioOnEmulationReset = false;
 
+bool c64SettingsAlwaysUnpauseEmulationAfterReset = true;
+
+
 float c64SettingsScreenGridLinesAlpha = 0.3f;
 uint8 c64SettingsScreenGridLinesColorScheme = 0;	// 0=red, 1=green, 2=blue, 3=black, 4=dark gray 5=light gray 6=white 7=yellow
 float c64SettingsScreenRasterViewfinderScale = 1.5f; //5.0f; //1.5f;	// TODO: remove c64SettingsScreenRasterViewfinderScale and add variable setting in CViewC64Screen
@@ -267,6 +271,9 @@ float c64SettingsFocusBorderLineWidth = 0.7f;
 int c64SettingsDisassemblyBackgroundColor = C64D_COLOR_BLACK;
 int c64SettingsDisassemblyExecuteColor = C64D_COLOR_WHITE;
 int c64SettingsDisassemblyNonExecuteColor = C64D_COLOR_LIGHT_GRAY;
+bool c64SettingsDisassemblyUseNearLabels = true;
+bool c64SettingsDisassemblyUseNearLabelsForJumps = false;
+int c64SettingsDisassemblyNearLabelMaxOffset = 6;
 
 int c64SettingsMenusColorTheme = 0;
 
@@ -293,6 +300,7 @@ bool c64SettingsInterpolationOnDefaultFont = true;
 u8 c64SettingsAtariVideoSystem = ATARI_VIDEO_SYSTEM_PAL;
 u8 c64SettingsAtariMachineType = 4;
 u8 c64SettingsAtariRamSizeOption = 9;
+
 
 void storeSettingBlock(CByteBuffer *byteBuffer, u8 value)
 {
@@ -550,6 +558,10 @@ void C64DebuggerStoreSettings()
 	storeSettingU8(byteBuffer, "DisassemblyBackgroundColor", c64SettingsDisassemblyBackgroundColor);
 	storeSettingU8(byteBuffer, "DisassemblyExecuteColor", c64SettingsDisassemblyExecuteColor);
 	storeSettingU8(byteBuffer, "DisassemblyNonExecuteColor", c64SettingsDisassemblyNonExecuteColor);
+	viewC64->config->SetBoolSkipConfigSave("DisassemblyUseNearLabels", &c64SettingsDisassemblyUseNearLabels);
+	viewC64->config->SetBoolSkipConfigSave("DisassemblyUseNearLabelsForJumps", &c64SettingsDisassemblyUseNearLabelsForJumps);
+	viewC64->config->SetIntSkipConfigSave("DisassemblyNearLabelMaxOffset", &c64SettingsDisassemblyNearLabelMaxOffset);
+
 	storeSettingU8(byteBuffer, "MenusColorTheme", c64SettingsMenusColorTheme);
 	
 	//
@@ -573,7 +585,10 @@ void C64DebuggerStoreSettings()
 	
 	storeSettingBlock(byteBuffer, C64DEBUGGER_BLOCK_EOF);
 
+	// new settings
 	gApplicationDefaultConfig->SetBoolSkipConfigSave("DisassemblyPressCtrlToSetBreakpoint", &c64SettingsPressCtrlToSetBreakpoint);
+	gApplicationDefaultConfig->SetBoolSkipConfigSave("AlwaysUnpauseEmulationAfterReset", &c64SettingsAlwaysUnpauseEmulationAfterReset);
+	gApplicationDefaultConfig->SetBoolSkipConfigSave("EmulatorScreenBypassKeyboardShortcuts", &c64SettingsEmulatorScreenBypassKeyboardShortcuts);
 	
 #if !defined(DEBUG_SETTINGS_FILE_PATH)
 	LOGD("C64D_SETTINGS_FILE_PATH is set to=%s", C64D_SETTINGS_FILE_PATH);
@@ -586,8 +601,12 @@ void C64DebuggerStoreSettings()
 #endif
 	
 	delete byteBuffer;
+	
+	gApplicationDefaultConfig->SaveConfig();
 }
 
+/// Note: the old style settings are being deprecated, they will be replaced by viewC64->config
+/// We have now a mixture of both, although the old settings will be gradually replaced with new config, thus the preferred method of storing and restoring setting now is by viewC64->config object
 void C64DebuggerRestoreSettings(uint8 settingsBlockType)
 {
 	LOGD("C64DebuggerRestoreSettings: settingsBlockType=%d", settingsBlockType);
@@ -600,19 +619,19 @@ void C64DebuggerRestoreSettings(uint8 settingsBlockType)
 	}
 	
 	CByteBuffer *byteBuffer = new CByteBuffer();
-
+	
 #if !defined(DEBUG_SETTINGS_FILE_PATH)
 	CSlrString *fileName = new CSlrString(C64D_SETTINGS_FILE_PATH);
 	byteBuffer->loadFromSettings(fileName);
 	delete fileName;
 #else
 	LOGWarning("Restoring settings from DEBUG_SETTINGS_FILE_PATH defined as '%s'", DEBUG_SETTINGS_FILE_PATH);
-
+	
 	CSlrString *fileName = new CSlrString(DEBUG_SETTINGS_FILE_PATH);
 	byteBuffer->readFromFile(fileName);
 	delete fileName;
 #endif
-
+	
 	
 	if (byteBuffer->length == 0)
 	{
@@ -638,10 +657,19 @@ void C64DebuggerRestoreSettings(uint8 settingsBlockType)
 		delete byteBuffer;
 		return;
 	}
-
+	
 	C64DebuggerReadSettingsValues(byteBuffer, settingsBlockType);
 	
 	delete byteBuffer;
+	
+	// restore new style settings:
+	gApplicationDefaultConfig->GetBool("DisassemblyPressCtrlToSetBreakpoint", &c64SettingsPressCtrlToSetBreakpoint, false);
+	gApplicationDefaultConfig->GetBool("AlwaysUnpauseEmulationAfterReset", &c64SettingsAlwaysUnpauseEmulationAfterReset, true);
+	gApplicationDefaultConfig->GetBool("EmulatorScreenBypassKeyboardShortcuts", &c64SettingsEmulatorScreenBypassKeyboardShortcuts, true);
+
+	gApplicationDefaultConfig->GetBool("DisassemblyUseNearLabels", &c64SettingsDisassemblyUseNearLabels, true);
+	gApplicationDefaultConfig->GetBool("DisassemblyUseNearLabelsForJumps", &c64SettingsDisassemblyUseNearLabelsForJumps, false);
+	gApplicationDefaultConfig->GetInt("DisassemblyNearLabelMaxOffset", &c64SettingsDisassemblyNearLabelMaxOffset, 6);
 }
 
 void C64DebuggerReadSettingsValues(CByteBuffer *byteBuffer, uint8 settingsBlockType)
@@ -733,9 +761,6 @@ void C64DebuggerReadSettingsValues(CByteBuffer *byteBuffer, uint8 settingsBlockT
 			delete (CSlrString*)value;
 		}
 	}
-	
-	// TODO: the settings binary file will be replaced with hjson soon
-	gApplicationDefaultConfig->GetBool("DisassemblyPressCtrlToSetBreakpoint", &c64SettingsPressCtrlToSetBreakpoint, false);
 }
 
 void C64DebuggerReadSettingCustom(char *name, CByteBuffer *byteBuffer)

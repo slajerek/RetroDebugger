@@ -32,17 +32,17 @@ void vice_wrapper_log_verbose(char *message)
 
 void vice_wrapper_mt_debug(char *message)
 {
-	LOGD(message);
+	LOGD("%s", message);
 }
 
 void vice_wrapper_mt_main(char *message)
 {
-	LOGM(message);
+	LOGM("%s", message);
 }
 
 void vice_wrapper_mt_todo(char *message)
 {
-	LOGTODO(message);
+	LOGTODO("%s", message);
 }
 
 void atari_wrapper_mt_log_main(char *message)

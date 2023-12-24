@@ -90,6 +90,18 @@ CViewC64KeyMap::CViewC64KeyMap(float posX, float posY, float posZ, float sizeX, 
 							 this);
 	this->AddGuiElement(btnExportKeyMap);
 
+	px += buttonSizeX + buttonGap;
+
+	btnReset = new CGuiButton(NULL, NULL,
+							 px, py, posZ, buttonSizeX, buttonSizeY,
+							 new CSlrString("RESET"),
+							 FONT_ALIGN_CENTER, buttonSizeX/2, textOffsetY,
+							 font, fontScale,
+							 1.0, 1.0, 1.0, 1.0,
+							 0.3, 0.3, 0.3, 1.0,
+							 this);
+	this->AddGuiElement(btnReset);
+
 	px = 166;
 	py = 51 + buttonSizeY + buttonGapY;
 	
@@ -114,7 +126,6 @@ CViewC64KeyMap::CViewC64KeyMap(float posX, float posY, float posZ, float sizeX, 
 									 0.3, 0.3, 0.3, 1.0,
 									 this);
 	this->AddGuiElement(btnRemoveKey);
-
 	
 	
 	// keyboard
@@ -365,6 +376,10 @@ void CViewC64KeyMap::SetPosition(float posX, float posY, float posZ, float sizeX
 
 	btnExportKeyMap->SetPosition(px, py, posZ, buttonSizeX, buttonSizeY);
 
+	px += buttonSizeX + buttonGap;
+
+	btnReset->SetPosition(px, py, posZ, buttonSizeX, buttonSizeY);
+
 	px = 166 + posX;
 	py = 51 + buttonSizeY + buttonGapY + posY;
 	
@@ -406,19 +421,45 @@ bool CViewC64KeyMap::ButtonClicked(CGuiButton *button)
 		OpenDialogImportKeyMap();
 		return true;
 	}
+	else if (button == btnReset)
+	{
+		ResetKeyboardMappingToFactoryDefault();
+		return true;
+		return true;
+	}
 	
 	return false;
 }
 
 void CViewC64KeyMap::SaveAndGoBack()
 {
-	C64KeyMapStoreToSettings();
-	
+	viewC64->debugInterfaceC64->LockMutex();
+	bool ret = C64KeyMapStoreToSettings();
 	viewC64->debugInterfaceC64->InitKeyMap(keyMap);
-	
-////	viewC64->SwitchToScreenLayout(viewC64->currentScreenLayoutId);
-//	guiMain->SetView(viewC64->viewC64SettingsMenu);
+	viewC64->debugInterfaceC64->UnlockMutex();
+
+	if (ret)
+	{
+		viewC64->ShowMessage("Keyboard mapping has been successfully saved and set as the new default. Your custom configurations are now the standard settings.");
+	}
+	else
+	{
+		viewC64->ShowMessageError("Failed to save keyboard mapping. Please try again or check for potential issues with your configuration.");
+	}
 }
+
+void CViewC64KeyMap::ResetKeyboardMappingToFactoryDefault()
+{
+	viewC64->debugInterfaceC64->LockMutex();
+	C64KeyMapCreateDefault();
+	C64KeyMapStoreToSettings();
+	UpdateFromKeyMap(C64KeyMapGetDefault());
+	viewC64->debugInterfaceC64->InitKeyMap(keyMap);
+	viewC64->debugInterfaceC64->UnlockMutex();
+	
+	viewC64->ShowMessage("Keyboard mapping has been reset to factory defaults. Default configuration is now the standard setting.");
+}
+
 
 void CViewC64KeyMap::OpenDialogImportKeyMap()
 {

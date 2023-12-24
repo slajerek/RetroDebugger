@@ -2,6 +2,7 @@
 #define _CC64TOOLS_H_
 
 #include "SYS_Defs.h"
+#include "ViceWrapper.h"
 
 #define CBMSHIFTEDFONT_INVERT	0x80
 
@@ -63,6 +64,8 @@ bool C64SaveMemory(int fromAddr, int toAddr, bool isPRG, CDataAdapter *dataAdapt
 int C64LoadMemory(int fromAddr, CDataAdapter *dataAdapter, const char *filePath);
 bool C64SaveMemoryExomizerPRG(int fromAddr, int toAddr, int jmpAddr, const char *filePath);
 u8 *C64ExomizeMemoryRaw(int fromAddr, int toAddr, int *compressedSize);
+
+void GetC64VicAddrFromState(vicii_cycle_state_t *viciiState, int *screenAddr, int *charsetAddr, int *bitmapBank);
 
 int ConvertSdlAxisToJoystickAxis(int sdlAxis);
 

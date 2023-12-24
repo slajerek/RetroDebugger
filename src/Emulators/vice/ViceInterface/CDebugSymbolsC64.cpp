@@ -10,6 +10,7 @@ CDebugSymbolsC64::CDebugSymbolsC64(CDebugInterface *debugInterface, CDataAdapter
 CDebugSymbolsSegment *CDebugSymbolsC64::CreateNewDebugSymbolsSegment(CSlrString *name, int segmentNum)
 {
 	LOGD("CDebugSymbolsC64::CreateNewDebugSymbolsSegment");
+	name->DebugPrint();
 	CDebugSymbolsSegmentC64 *segment = new CDebugSymbolsSegmentC64(this, name, segmentNum);
 	segment->Init();
 	

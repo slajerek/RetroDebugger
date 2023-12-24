@@ -77,5 +77,4 @@ extern volatile unsigned int atrdMainCpuDebugCycle;
 extern volatile unsigned int atrdMainCpuCycle;
 extern volatile unsigned int atrdMainCpuPreviousInstructionCycle;
 
-
 #endif

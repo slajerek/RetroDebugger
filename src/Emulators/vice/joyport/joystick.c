@@ -237,7 +237,7 @@ static void joystick_process_latch(void)
 
 void joystick_set_value_absolute(unsigned int joyport, BYTE value)
 {
-	LOGD("joystick_set_value_absolute: value=%d joyport=%d", value, joyport);
+//	LOGD("joystick_set_value_absolute: value=%d joyport=%d", value, joyport);
     if (event_playback_active()) {
         return;
     }
@@ -797,7 +797,7 @@ void c64d_joystick_key_up(int key, unsigned int joyport)
 	int value;
 	int column = 0;
 
-	LOGD("c64d_joystick_key_up: key=%x joyport=%d", key, joyport);
+//	LOGD("c64d_joystick_key_up: key=%x joyport=%d", key, joyport);
 	
 	// TODO: this is strange and needs proper debug why c64 joystick is switched
 	if (key == JOYPAD_E)
@@ -853,7 +853,7 @@ void c64d_joystick_key_up(int key, unsigned int joyport)
 
 void c64d_joystick_key_down(int key, unsigned int joyport)
 {
-	LOGD("c64d_joystick_key_down: key=%d joyport=%d", key, joyport);
+//	LOGD("c64d_joystick_key_down: key=%d joyport=%d", key, joyport);
 	
 	// TODO: this is strange and needs proper debug why c64 joystick is switched
 	if (key == JOYPAD_E)

@@ -353,7 +353,6 @@ void CViewC64VicEditor::Render()
 	viewPalette->colorD020 = viciiState->regs[0x20];
 	viewPalette->colorD021 = viciiState->regs[0x21];
 	
-
 	viewVicDisplay->RefreshScreen(viciiState);
 
 //	if (toolIsActive)
@@ -2592,6 +2591,13 @@ void CViewC64VicEditor::SystemDialogFileOpenSelected(CSlrString *filePath)
 
 void CViewC64VicEditor::ImportImage(CSlrString *filePath)
 {
+	LockMutex();
+	debugInterface->LockMutex();
+	vicii_cycle_state_t *viciiState = &(viewC64->viciiStateToShow);
+	viewVicDisplay->RefreshScreen(viciiState);
+	debugInterface->UnlockMutex();
+	UnlockMutex();
+
 	ImportImage(filePath, true);
 }
 
@@ -4100,15 +4106,6 @@ bool CViewC64VicEditor::HasContextMenuItems()
 void CViewC64VicEditor::RenderContextMenuItems()
 {
 	isShowingContextMenu = true;
-	
-	if (!IsVisible())
-	{
-		if (ImGui::MenuItem("Show VIC Editor"))
-		{
-			this->SetVisible(true);
-		}
-		ImGui::Separator();
-	}
 	
 	if (ImGui::MenuItem("Create New Picture"))
 	{

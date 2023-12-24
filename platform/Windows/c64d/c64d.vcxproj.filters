@@ -246,6 +246,9 @@
     <Filter Include="Source Files\src\Views\C64\AllGraphics">
       <UniqueIdentifier>{f74b295e-af56-4718-a9c6-008a7ce63ea0}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\src\Plugins\Commando">
+      <UniqueIdentifier>{e70f7495-151a-4eeb-b549-f3504bf5e8c4}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\src\Emulators\atari800\a-cartridge.c">
@@ -3509,12 +3512,6 @@
     <ClCompile Include="..\..\..\src\DebugInterface\Symbols\CDebugAsmSource.cpp">
       <Filter>Source Files\src\DebugInterface\Symbols</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\src\DebugInterface\Symbols\CDebugMemoryMap.cpp">
-      <Filter>Source Files\src\DebugInterface\Symbols</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\DebugInterface\Symbols\CDebugMemoryMapCell.cpp">
-      <Filter>Source Files\src\DebugInterface\Symbols</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\..\src\DebugInterface\Symbols\CDebugSymbols.cpp">
       <Filter>Source Files\src\DebugInterface\Symbols</Filter>
     </ClCompile>
@@ -3656,9 +3653,6 @@
     <ClCompile Include="..\..\..\src\DebugInterface\C64\CDiskImageD64.cpp">
       <Filter>Source Files\src\DebugInterface\C64</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\src\Views\C64\CViewDrive1541FileD64.cpp">
-      <Filter>Source Files\src\Views\C64</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\..\src\Views\C64\CViewDrive1541StateCPU.cpp">
       <Filter>Source Files\src\Views\C64</Filter>
     </ClCompile>
@@ -3781,6 +3775,42 @@
     </ClCompile>
     <ClCompile Include="..\..\..\src\Views\C64\CViewC64KeyMap.cpp">
       <Filter>Source Files\src\Views</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Views\CViewDataMonitor.cpp">
+      <Filter>Source Files\src\Views</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Tools\C64SIDDump.cpp">
+      <Filter>Source Files\src\Tools</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Views\CViewDataPlot.cpp">
+      <Filter>Source Files\src\Views</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\DebugInterface\CDebugEventsHistory.cpp">
+      <Filter>Source Files\src\DebugInterface</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Emulators\vice\diskimage\c1541.c">
+      <Filter>Source Files\src\Emulators\vice\diskimage</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Views\CViewDebugEventsHistory.cpp">
+      <Filter>Source Files\src\Views</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Views\CViewFileBrowser.cpp">
+      <Filter>Source Files\src\Views</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Plugins\Commando\C64DebuggerPluginCommandoTrainer.cpp">
+      <Filter>Source Files\src\Plugins\Commando</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Views\C64\CViewDrive1541Browser.cpp">
+      <Filter>Source Files\src\Views\C64</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Views\C64\CViewDrive1541DiskData.cpp">
+      <Filter>Source Files\src\Views\C64</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\DebugInterface\Symbols\CDebugMemoryCell.cpp">
+      <Filter>Source Files\src\DebugInterface\Symbols</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\DebugInterface\Symbols\CDebugMemory.cpp">
+      <Filter>Source Files\src\DebugInterface\Symbols</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -7489,12 +7519,6 @@
     <ClInclude Include="..\..\..\src\DebugInterface\Symbols\CDebugAsmSource.h">
       <Filter>Source Files\src\DebugInterface\Symbols</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\src\DebugInterface\Symbols\CDebugMemoryMap.h">
-      <Filter>Source Files\src\DebugInterface\Symbols</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\src\DebugInterface\Symbols\CDebugMemoryMapCell.h">
-      <Filter>Source Files\src\DebugInterface\Symbols</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\..\src\DebugInterface\Symbols\CDebugSymbols.h">
       <Filter>Source Files\src\DebugInterface\Symbols</Filter>
     </ClInclude>
@@ -7660,9 +7684,6 @@
     <ClInclude Include="..\..\..\src\DebugInterface\C64\CDiskImageD64.h">
       <Filter>Source Files\src\DebugInterface\C64</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\src\Views\C64\CViewDrive1541FileD64.h">
-      <Filter>Source Files\src\Views\C64</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\..\src\Views\C64\CViewDrive1541StateCPU.h">
       <Filter>Source Files\src\Views\C64</Filter>
     </ClInclude>
@@ -7788,6 +7809,66 @@
     </ClInclude>
     <ClInclude Include="..\..\..\src\Views\C64\CViewC64KeyMap.h">
       <Filter>Source Files\src\Views</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Embedded\FontExoMedium.h">
+      <Filter>Source Files\src\Embedded</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Embedded\FontLiberationSans.h">
+      <Filter>Source Files\src\Embedded</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Embedded\FontMonoki.h">
+      <Filter>Source Files\src\Embedded</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Embedded\FontPlexMono.h">
+      <Filter>Source Files\src\Embedded</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Embedded\FontPlexSans.h">
+      <Filter>Source Files\src\Embedded</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Embedded\FontPTMono.h">
+      <Filter>Source Files\src\Embedded</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Embedded\FontUnifont.h">
+      <Filter>Source Files\src\Embedded</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Embedded\gamecontrollerdb_txt_zlib.h">
+      <Filter>Source Files\src\Embedded</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Embedded\icon_small_close_gfx.h">
+      <Filter>Source Files\src\Embedded</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Views\CViewDataMonitor.h">
+      <Filter>Source Files\src\Views</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Tools\C64SIDDump.h">
+      <Filter>Source Files\src\Tools</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Views\CViewDataPlot.h">
+      <Filter>Source Files\src\Views</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\DebugInterface\CDebugEventsHistory.h">
+      <Filter>Source Files\src\DebugInterface</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Views\CViewDebugEventsHistory.h">
+      <Filter>Source Files\src\Views</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Views\CViewFileBrowser.h">
+      <Filter>Source Files\src\Views</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Plugins\Commando\C64DebuggerPluginCommandoTrainer.h">
+      <Filter>Source Files\src\Plugins\Commando</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Views\C64\CViewDrive1541Browser.h">
+      <Filter>Source Files\src\Views\C64</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Views\C64\CViewDrive1541DiskData.h">
+      <Filter>Source Files\src\Views\C64</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\DebugInterface\Symbols\CDebugMemoryCell.h">
+      <Filter>Source Files\src\DebugInterface\Symbols</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\DebugInterface\Symbols\CDebugMemory.h">
+      <Filter>Source Files\src\DebugInterface\Symbols</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

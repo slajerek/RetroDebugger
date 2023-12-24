@@ -1,13 +1,16 @@
 #include "CDebugInterfaceC64.h"
 #include "CViewC64.h"
+#include "CDebugMemory.h"
 #include "CViewMemoryMap.h"
 #include "CViewMainMenu.h"
 #include "CViewC64StateSID.h"
 #include "CByteBuffer.h"
 #include "CDebugSymbols.h"
 #include "CDebugSymbolsSegmentC64.h"
-#include "CDebugMemoryMapCell.h"
+#include "CDebugMemoryCell.h"
 #include "CWaveformData.h"
+#include "CViewC64VicDisplay.h"
+#include "C64Tools.h"
 
 CDebugInterfaceC64::CDebugInterfaceC64(CViewC64 *viewC64)
 : CDebugInterface(viewC64)
@@ -966,7 +969,7 @@ void CDebugInterfaceC64::DumpC64Memory(CSlrString *path)
 	FILE *fp = fopen(asciiPath, "wb");
 	if (fp == NULL)
 	{
-		viewC64->ShowMessageError("Saving memory dump failed");
+		viewC64->ShowMessageError("Unable to save memory dump. Ensure sufficient storage and permissions, then try again.");
 		return;
 	}
 	
@@ -990,7 +993,7 @@ void CDebugInterfaceC64::DumpC64MemoryMarkers(CSlrString *path)
 
 	if (fp == NULL)
 	{
-		viewC64->ShowMessageError("Saving memory markers failed");
+		viewC64->ShowMessageError("Unable to save memory markers. Ensure sufficient storage and permissions, then try again.");
 		return;
 	}
 	
@@ -1011,19 +1014,79 @@ void CDebugInterfaceC64::DumpC64MemoryMarkers(CSlrString *path)
 	// BUG: this below will read value from RAM, but $0000 and $0001 are a special case which is already handled by GetWholeMemoryMapFromRam
 //	memoryBuffer[0x0000] = GetByteFromRamC64(0x0000);
 //	memoryBuffer[0x0001] = GetByteFromRamC64(0x0001);
-
-	fprintf(fp, "Address,Value,Read,Write,Execute,Argument\n");
 	
+	vicii_cycle_state_t viciiState = viewC64->currentViciiState;
+	int screenAddr, charsetAddr, bitmapBank;
+	GetC64VicAddrFromState(&viciiState, &screenAddr, &charsetAddr, &bitmapBank);
+
+	int screenAddrEnd = screenAddr + 0x03E8;
+	int spritePointerAddr = screenAddr + 0x03E8;
+	int spritePointerAddrEnd = spritePointerAddr + 8;
+	int charsetAddrEnd = charsetAddr + 0x07FF;
+	int bitmapAddrEnd = bitmapBank + 0x1F40;
+	
+	u8 mc = (viciiState.regs[0x16] & 0x10) >> 4;
+	u8 eb = (viciiState.regs[0x11] & 0x40) >> 6;
+	u8 bm = (viciiState.regs[0x11] & 0x20) >> 5;
+	u8 blank = (viciiState.regs[0x11] & 0x10) >> 4;
+
+	bool isMultiColor = mc;
+	bool isBitmap = bm;
+	bool isExtColor = eb;
+	bool isBlank = !blank;
+	
+	fprintf(fp, "Address,Value,Read,Write,Execute,Argument,Flag\n");
+	
+	char *flagStr = SYS_GetCharBuf();
 	for (int i = 0; i < 0x10000; i++)
 	{
-		CDebugMemoryMapCell *cell = viewC64->viewC64MemoryMap->memoryCells[i];
+		CDebugMemoryCell *cell = symbols->memory->memoryCells[i];
 		
-		fprintf(fp, "%04x,%02x,%s,%s,%s,%s\n", i, memoryBuffer[i],
+		flagStr[0] = 0x00;
+		
+		if (i == 0x0400)
+		{
+			LOGD("d");
+		}
+		if (!isBlank)
+		{
+			if (i >= screenAddr && i < screenAddrEnd)
+			{
+				strcat(flagStr, "VicScreen ");
+			}
+			if (i >= spritePointerAddr && i < spritePointerAddrEnd)
+			{
+				strcat(flagStr, "VicSpritePointer ");
+			}
+			if (!isBitmap && charsetAddr != 0x1000 && charsetAddr != 0x1800 && i >= charsetAddr && i < charsetAddrEnd)
+			{
+				strcat(flagStr, "VicCharset ");
+			}
+			if (isBitmap && i >= bitmapBank && i < bitmapAddrEnd)
+			{
+				strcat(flagStr, "VicBitmap ");
+			}
+			if (i >= 0xD800 && i < 0xDBE8)
+			{
+				strcat(flagStr, "VicColorRam ");
+			}
+			if (flagStr[0] != 0x00)
+			{
+				flagStr[strlen(flagStr)-1] = 0x00;
+			}
+		}
+		
+		LOGD("i=%04x isBlank=%s flagStr=%s", i, STRBOOL(isBlank), flagStr);
+
+		fprintf(fp, "%04x,%02x,%s,%s,%s,%s,%s\n", i, memoryBuffer[i],
 				cell->isRead ? "read" : "",
 				cell->isWrite ? "write" : "",
 				cell->isExecuteCode ? "execute" : "",
-				cell->isExecuteArgument ? "argument" : "");
+				cell->isExecuteArgument ? "argument" : "",
+				flagStr);
 	}
+	
+	SYS_ReleaseCharBuf(flagStr);
 	
 	fclose(fp);
 
@@ -1115,7 +1178,7 @@ void CDebugInterfaceC64::DumpDisk1541MemoryMarkers(CSlrString *path)
 	
 	for (int i = 0; i < 0x10000; i++)
 	{
-		CDebugMemoryMapCell *cell = viewC64->viewDrive1541MemoryMap->memoryCells[i];
+		CDebugMemoryCell *cell = symbolsDrive1541->memory->memoryCells[i];
 		
 		fprintf(fp, "%04x,%02x,%s,%s,%s,%s\n", i, memoryBuffer[i],
 				cell->isRead ? "read" : "",

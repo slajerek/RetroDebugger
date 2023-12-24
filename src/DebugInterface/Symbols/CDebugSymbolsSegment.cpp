@@ -7,6 +7,7 @@
 #include "CViewDataWatch.h"
 #include "CDebugSymbolsCodeLabel.h"
 #include "CDebugSymbolsDataWatch.h"
+#include "C64SettingsStorage.h"
 
 CDebugSymbolsSegment::CDebugSymbolsSegment(CDebugSymbols *debugSymbols, CSlrString *name, int segmentNum)
 {
@@ -258,6 +259,88 @@ CDebugSymbolsCodeLabel *CDebugSymbolsSegment::FindLabel(int address)
 	
 //	LOGD(".. return NULL");
 	return NULL;
+}
+
+// searches for label, if not found searches for -1, -2, -3, etc. and +1, +2, +3, ...
+CDebugSymbolsCodeLabel *CDebugSymbolsSegment::FindNearLabel(int address, int *offset)
+{
+	CDebugSymbolsCodeLabel *label = FindLabel(address);
+	if (label)
+	{
+		*offset = 0;
+		return label;
+	}
+	
+	// scan labels to find most near
+	const int maxLabelAddrOffset = c64SettingsDisassemblyNearLabelMaxOffset;
+;
+	for (int i = 0; i < maxLabelAddrOffset; i++)
+	{
+		// scan right
+		int addrR = address + i;
+		if (addrR < symbols->dataAdapter->AdapterGetDataLength())
+		{
+			label = FindLabel(addrR);
+			if (label)
+			{
+				*offset = -i;
+				return label;
+			}
+		}
+		// scan left
+		int addrL = address - i;
+		if (addrL >= 0)
+		{
+			label = FindLabel(addrL);
+			if (label)
+			{
+				*offset = +i;
+				return label;
+			}
+		}
+	}
+	return NULL;
+}
+
+bool CDebugSymbolsSegment::FindLabelText(int address, char *labelText)
+{
+	CDebugSymbolsCodeLabel *label = FindLabel(address);
+	if (label)
+	{
+		strcpy(labelText, label->GetLabelText());
+		return true;
+	}
+	// return empty label text
+	labelText[0] = 0;
+	return false;
+}
+
+bool CDebugSymbolsSegment::FindNearLabelText(int address, char *labelText)
+{
+	int offset;
+	CDebugSymbolsCodeLabel *label = FindNearLabel(address, &offset);
+	if (label)
+	{
+		strcpy(labelText, label->GetLabelText());
+		if (offset == 0)
+		{
+			return true;
+		}
+		
+		if (offset > 0)
+		{
+			strcat(labelText, "+");
+		}
+		
+		char offsetStr[16];
+		sprintf(offsetStr, "%d", offset);
+		strcat(labelText, offsetStr);
+		return true;
+	}
+	
+	// return empty label text
+	labelText[0] = 0;
+	return false;
 }
 
 CDebugSymbolsCodeLabel *CDebugSymbolsSegment::FindLabelByText(const char *text)

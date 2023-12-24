@@ -15,6 +15,7 @@
 #include "EmulatorsConfig.h"
 #include "CDebugSymbols.h"
 #include "CDebugSymbolsSegment.h"
+#include "CDebugEventsHistory.h"
 #include <string.h>
 
 extern "C" {
@@ -57,9 +58,11 @@ void atrd_mark_atari_cell_read(uint16 addr)
 	if (segment)
 	{
 		u8 value = MEMORY_SafeGetByte(addr);
-		if (segment->breakpointsMemory->EvaluateBreakpoint(addr, value, MEMORY_BREAKPOINT_ACCESS_READ) != NULL)
+		CBreakpointMemory *breakpoint = segment->breakpointsMemory->EvaluateBreakpoint(addr, value, MEMORY_BREAKPOINT_ACCESS_READ);
+		if (breakpoint != NULL)
 		{
 			debugInterfaceAtari->SetDebugMode(DEBUGGER_MODE_PAUSED);
+			segment->symbols->debugEventsHistory->CreateEventBreakpoint(breakpoint, MEMORY_BREAKPOINT_ACCESS_READ, segment);
 		}
 	}
 	
@@ -80,9 +83,11 @@ void atrd_mark_atari_cell_write(uint16 addr, uint8 value)
 	CDebugSymbolsSegment *segment = debugInterfaceAtari->symbols->currentSegment;
 	if (segment)
 	{
-		if (segment->breakpointsMemory->EvaluateBreakpoint(addr, value, MEMORY_BREAKPOINT_ACCESS_WRITE) != NULL)
+		CBreakpointMemory *breakpoint = segment->breakpointsMemory->EvaluateBreakpoint(addr, value, MEMORY_BREAKPOINT_ACCESS_WRITE);
+		if (breakpoint != NULL)
 		{
 			debugInterfaceAtari->SetDebugMode(DEBUGGER_MODE_PAUSED);
+			segment->symbols->debugEventsHistory->CreateEventBreakpoint(breakpoint, MEMORY_BREAKPOINT_ACCESS_WRITE, segment);
 		}
 	}
 	
@@ -139,6 +144,7 @@ void atrd_check_pc_breakpoint(uint16 pc)
 			if (IS_SET(addrBreakpoint->actions, ADDR_BREAKPOINT_ACTION_STOP))
 			{
 				debugInterface->SetDebugMode(DEBUGGER_MODE_PAUSED);
+				segment->symbols->debugEventsHistory->CreateEventBreakpoint(addrBreakpoint, ADDR_BREAKPOINT_ACTION_STOP, segment);
 			}
 		}
 		debugInterface->UnlockMutex();
@@ -448,7 +454,7 @@ void atrd_sync_load_snapshot(char *filePath)
 		LOGError("atrd_sync_load_snapshot: failed");
 	}
 	
-	debugInterfaceAtari->snapshotsManager->ClearSnapshotsHistory();
+	debugInterfaceAtari->ClearHistory();
 	debugInterfaceAtari->ResetEmulationFrameCounter();
 	debugInterfaceAtari->ResetMainCpuDebugCycleCounter();
 

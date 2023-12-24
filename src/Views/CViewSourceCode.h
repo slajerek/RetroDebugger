@@ -18,13 +18,14 @@ class CBreakpointAddr;
 class CViewMemoryMap;
 class CSlrKeyboardShortcut;
 class CViewDisassembly;
+class CDebugSymbols;
 
 class CViewSourceCode : public CGuiView, CGuiEditHexCallback, CGuiEditBoxTextCallback
 {
 public:
 	CViewSourceCode(const char *name, float posX, float posY, float posZ, float sizeX, float sizeY,
-					CDebugInterface *debugInterface, CDataAdapter *dataAdapter,
-					CViewMemoryMap *memoryMap, CViewDisassembly *viewDisassembly);
+					CDebugInterface *debugInterface, CDebugSymbols *debugSymbols,
+					CViewDisassembly *viewDisassembly);
 	virtual ~CViewSourceCode();
 
 	virtual void Render();
@@ -40,7 +41,7 @@ public:
 	virtual bool KeyUp(u32 keyCode, bool isShift, bool isAlt, bool isControl, bool isSuper);
 	
 	CViewDisassembly *viewDisassembly;
-	CViewMemoryMap *memoryMap;
+	CDebugSymbols *debugSymbols;
 	CDataAdapter *dataAdapter;
 	CDebugInterface *debugInterface;
 	

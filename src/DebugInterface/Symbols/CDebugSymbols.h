@@ -14,6 +14,9 @@ class CDebugAsmSource;
 class CDebugSymbolsSegment;
 class CDebugSymbolsCodeLabel;
 class CDataAdapter;
+class CDebugEventsHistory;
+class CDebugMemoryCell;
+class CDebugMemory;
 
 #define MAX_LABEL_TEXT_BUFFER_SIZE	512
 
@@ -28,7 +31,8 @@ public:
 	
 	CDebugInterface *debugInterface;
 	CDataAdapter *dataAdapter;
-	
+	CDebugEventsHistory *debugEventsHistory;
+
 	CDebugAsmSource *asmSource;
 	
 	std::vector<CDebugSymbolsSegment *> segments;
@@ -99,6 +103,10 @@ public:
 	// virtual method to create specific symbols segment (for C64 including raster line, VIC, CIA, NMI irqs, for Drive including VIA irqs, etc.)
 	virtual CDebugSymbolsSegment *CreateNewDebugSymbolsSegment(CSlrString *name);
 	virtual CDebugSymbolsSegment *CreateNewDebugSymbolsSegment(CSlrString *name, int segmentNum);
+	
+	// memory cells for memory events and coloring
+	virtual CDebugMemory *CreateNewDebugMemoryMap();
+	CDebugMemory *memory;
 };
 
 #endif

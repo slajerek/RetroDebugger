@@ -49,7 +49,7 @@ C64KeyMap *C64KeyMapGetDefault();
 
 void C64KeyMapCreateDefault();
 void C64KeyMapLoadFromSettings();
-void C64KeyMapStoreToSettings();
+bool C64KeyMapStoreToSettings();
 
 bool C64KeyMapLoadFromFile(CSlrString *filePath);
 void C64KeyMapStoreToFile(CSlrString *filePath);

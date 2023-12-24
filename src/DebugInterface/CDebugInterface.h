@@ -29,6 +29,7 @@ class CDebugInterfaceMenuItem;
 class CDebugInterfaceTask;
 class CViewMemoryMap;
 class CViewTimeline;
+class CDebugEventsHistory;
 
 class CDebugInterfaceCodeMonitorCallback
 {
@@ -73,7 +74,10 @@ public:
 
 	// frame is painted on canvas and ready to be consumed
 	virtual void DoFrame();
-
+	
+	//
+	virtual void ClearDebugMarkers();
+	virtual void ClearHistory();
 
 	// run various tasks when emulation is in defined state
 	
