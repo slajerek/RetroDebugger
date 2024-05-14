@@ -37,9 +37,11 @@ public:
 	
 	std::vector<CDebugSymbolsSegment *> segments;
 	CDebugSymbolsSegment *currentSegment;
+	CSlrString *previousSegmentName;
 	int currentSegmentNum;
 	CDebugSymbolsSegment *FindSegment(CSlrString *segmentName);
 	
+	void ActivateSelectedSegment();
 	void ActivateSegment(CDebugSymbolsSegment *segment);
 	void DeactivateSegment();
 	
