@@ -225,9 +225,6 @@
     <Filter Include="Source Files\src\Plugins\DNDK">
       <UniqueIdentifier>{e4d4b877-3cfa-4be8-9c25-6a126d9c5052}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source Files\src\Plugins\ShowPic">
-      <UniqueIdentifier>{7c3e62b9-daae-4208-a5ee-25db0dd086c6}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Source Files\src\DebugInterface\C64">
       <UniqueIdentifier>{0690dda0-2e4f-4e5d-a2d5-5373b635933e}</UniqueIdentifier>
     </Filter>
@@ -3643,9 +3640,6 @@
     </ClCompile>
     <ClCompile Include="..\..\..\src\DebugInterface\Symbols\CDebugSymbolsDataWatch.cpp">
       <Filter>Source Files\src\DebugInterface\Symbols</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\Plugins\ShowPic\C64DebuggerPluginShowPic.cpp">
-      <Filter>Source Files\src\Plugins\ShowPic</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\DebugInterface\C64\CDebugInterfaceC64.cpp">
       <Filter>Source Files\src\DebugInterface\C64</Filter>
@@ -7674,9 +7668,6 @@
     </ClInclude>
     <ClInclude Include="..\..\..\src\DebugInterface\Symbols\CDebugSymbolsDataWatch.h">
       <Filter>Source Files\src\DebugInterface\Symbols</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\src\Plugins\ShowPic\C64DebuggerPluginShowPic.h">
-      <Filter>Source Files\src\Plugins\ShowPic</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\src\DebugInterface\C64\CDebugInterfaceC64.h">
       <Filter>Source Files\src\DebugInterface\C64</Filter>

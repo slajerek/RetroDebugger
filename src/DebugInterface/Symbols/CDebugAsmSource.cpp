@@ -676,8 +676,8 @@ void CDebugAsmSource::ParseXML(CByteBuffer *byteBuffer, CDebugInterface *debugIn
 		}
 	}
 	
-	// activate first segment
-	symbols->ActivateSegment(symbols->segments[0]);
+	// activate first or selected segment
+	symbols->ActivateSelectedSegment();
 	
 	LOGM("CDebugAsmSource::ParseXML: symbols loaded");
 }

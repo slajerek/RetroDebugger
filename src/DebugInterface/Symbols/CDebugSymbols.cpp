@@ -33,6 +33,7 @@ CDebugSymbols::CDebugSymbols(CDebugInterface *debugInterface, CDataAdapter *data
 	this->asmSource = NULL;
 	this->currentSegment = NULL;
 	this->currentSegmentNum = -1;
+	this->previousSegmentName = NULL;
 	
 	this->memory = this->CreateNewDebugMemoryMap();
 	
@@ -1422,8 +1423,8 @@ bool CDebugSymbols::DeserializeBreakpointsFromHjson(Hjson::Value hjsonRoot)
 		Hjson::Value hjsonBreakpointsTypes = hjsonSegment["Breakpoints"];
 		segment->DeserializeBreakpoints(hjsonBreakpointsTypes);
 	}
-	return true;}
-
+	return true;
+}
 
 CDebugSymbolsSegment *CDebugSymbols::FindSegment(CSlrString *segmentName)
 {
@@ -1443,6 +1444,20 @@ CDebugSymbolsSegment *CDebugSymbols::FindSegment(CSlrString *segmentName)
 	return NULL;
 }
 
+void CDebugSymbols::ActivateSelectedSegment()
+{
+	CDebugSymbolsSegment *segment = segments[0];
+	if (this->previousSegmentName != NULL)
+	{
+		CDebugSymbolsSegment* selectedSegment = FindSegment(this->previousSegmentName);
+		if (selectedSegment != NULL)
+		{
+			segment = selectedSegment;
+		}
+	}
+	ActivateSegment(segment);
+}
+
 void CDebugSymbols::ActivateSegment(CDebugSymbolsSegment *segment)
 {
 	LOGD("CDebugSymbols::ActivateSegment: segment=%x", segment);
@@ -1458,6 +1473,7 @@ void CDebugSymbols::ActivateSegment(CDebugSymbolsSegment *segment)
 
 	this->currentSegment = segment;
 	this->currentSegmentNum = segment->segmentNum;
+	this->previousSegmentName = segment->name;
 
 	segment->Activate();
 	
@@ -1480,6 +1496,11 @@ void CDebugSymbols::DeactivateSegment()
 	debugInterface->LockMutex();
 	
 	this->currentSegment = NULL;
+
+	if (previousSegmentName != NULL)
+	{
+		delete previousSegmentName;
+	}
 	
 	debugInterface->UnlockMutex();
 	guiMain->UnlockMutex();

@@ -923,6 +923,11 @@ int CViewDisassembly::RenderDisassemblyLine(float px, float py, int addr, uint8 
 	char buf4[16];
 	char bufHexCodes[16];
 	int length;
+
+	if (symbols->currentSegment == NULL)
+	{
+		return 0;
+	}
 	
 	CDebugBreakpointsAddr *breakpoints = symbols->currentSegment->breakpointsPC;
 	
