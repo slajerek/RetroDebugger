@@ -1361,7 +1361,7 @@ add_executable(retrodebugger
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Views/C64/CViewC64StateCPU.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Views/JukeboxPlaylist/CViewJukeboxPlaylist.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Views/JukeboxPlaylist/CJukeboxPlaylist.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/Screens/CViewC64KeyMap.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Views/C64/CViewC64KeyMap.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Screens/CViewKeyboardShortcuts.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Screens/VicEditor/C64DisplayListCodeGenerator.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Screens/VicEditor/CVicEditorTool.cpp"
