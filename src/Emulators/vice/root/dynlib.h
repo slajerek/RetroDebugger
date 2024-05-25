@@ -27,7 +27,7 @@
 #ifndef VICE_DYNLIB_H
 #define VICE_DYNLIB_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 void *vice_dynlib_open(const char *name);
 void *vice_dynlib_symbol(void *handle, const char *name);

@@ -31,7 +31,7 @@
 #ifndef VICE_CS8900_H
 #define VICE_CS8900_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 struct snapshot_s;
 extern int cs8900_snapshot_read_module(struct snapshot_s *s);

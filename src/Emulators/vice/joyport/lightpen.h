@@ -28,7 +28,7 @@
 #ifndef VICE_LIGHTPEN_H
 #define VICE_LIGHTPEN_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 extern int lightpen_resources_init(void);
 extern void lightpen_init(void);

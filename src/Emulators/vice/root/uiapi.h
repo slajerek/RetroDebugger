@@ -29,7 +29,7 @@
 #ifndef VICE_UIAPI
 #define VICE_UIAPI
 
-#include "types.h"
+#include "vicetypes.h"
 
 typedef enum {
     UI_JAM_RESET, UI_JAM_HARD_RESET, UI_JAM_MONITOR, UI_JAM_NONE

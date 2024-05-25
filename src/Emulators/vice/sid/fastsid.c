@@ -43,7 +43,7 @@
 #include "sid.h"
 #include "sound.h"
 #include "snapshot.h"
-#include "types.h"
+#include "vicetypes.h"
 
 
 #include "fixpoint.h"

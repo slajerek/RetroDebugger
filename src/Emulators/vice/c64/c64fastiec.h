@@ -27,7 +27,7 @@
 #ifndef VICE_C64FASTIEC_H
 #define VICE_C64FASTIEC_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 #define BURST_MOD_NONE 0
 #define BURST_MOD_CIA1 1

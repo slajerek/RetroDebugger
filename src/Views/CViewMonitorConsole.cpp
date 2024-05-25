@@ -9,13 +9,15 @@
 #include "CDebugMemory.h"
 #include "CGuiMain.h"
 #include "CViewDisassembly.h"
-#include "CViewMemoryMap.h"
+#include "CViewDataMap.h"
 #include "CViewC64StateCPU.h"
 #include "CViewDrive1541StateCPU.h"
 #include "C64Tools.h"
 #include "CDebugInterfaceC64.h"
 #include "CDebugInterfaceAtari.h"
 #include "CDebugInterfaceNes.h"
+#include "CDebugSymbolsC64.h"
+#include "CDebugSymbolsDrive1541.h"
 #include "CDebugMemoryCell.h"
 #include "CLayoutParameter.h"
 #include "EmulatorsConfig.h"
@@ -527,11 +529,11 @@ void CViewMonitorConsole::CommandDevice()
 		return;
 	}
 	
-	if (token->CompareWith("C"))
+	if (token->CompareWith("C") || token->CompareWith("c"))
 	{
 		this->device = C64MONITOR_DEVICE_C64;
 	}
-	else if (token->CompareWith("D") || token->CompareWith("8"))
+	else if (token->CompareWith("D") || token->CompareWith("d") || token->CompareWith("8"))
 	{
 		this->device = C64MONITOR_DEVICE_DISK1541_8;
 	}
@@ -1234,7 +1236,7 @@ void CViewMonitorConsole::CommandMemorySave()
 	
 	if (addrEnd <= addrStart)
 	{
-		this->viewConsole->PrintLine("Usage: S [PRG] <from address> <to address> [file name]");
+		this->viewConsole->PrintLine("'to' address must be lower that 'from' address>");
 		return;
 	}
 	
@@ -1271,7 +1273,7 @@ void CViewMonitorConsole::CommandMemorySavePRG()
 	
 	if (addrEnd <= addrStart)
 	{
-		this->viewConsole->PrintLine("Usage: S [PRG] <from address> <to address> [file name]");
+		this->viewConsole->PrintLine("'to' address must be lower that 'from' address>");
 		return;
 	}
 	
@@ -1865,7 +1867,7 @@ bool CViewMonitorConsole::DoDisassembleMemory(int startAddress, int endAddress, 
 			addr = renderAddress;
 			
 			// +0
-			CDebugMemoryCell *cell0 = debugMemory->memoryCells[addr];	//% memoryLength
+			CDebugMemoryCell *cell0 = debugMemory->GetMemoryCell(addr);	//% memoryLength
 			if (cell0->isExecuteCode)
 			{
 				opcode = memory[addr ];	//% memoryLength
@@ -1875,7 +1877,7 @@ bool CViewMonitorConsole::DoDisassembleMemory(int startAddress, int endAddress, 
 			else
 			{
 				// +1
-				CDebugMemoryCell *cell1 = debugMemory->memoryCells[ (addr+1) ];	//% memoryLength
+				CDebugMemoryCell *cell1 = debugMemory->GetMemoryCell( addr+1 );	//% memoryLength
 				if (cell1->isExecuteCode)
 				{
 					// check if at addr is 1-length opcode
@@ -1911,7 +1913,7 @@ bool CViewMonitorConsole::DoDisassembleMemory(int startAddress, int endAddress, 
 				else
 				{
 					// +2
-					CDebugMemoryCell *cell2 = debugMemory->memoryCells[ (addr+2) ];	//% memoryLength
+					CDebugMemoryCell *cell2 = debugMemory->GetMemoryCell( addr+2 );	//% memoryLength
 					if (cell2->isExecuteCode)
 					{
 						// check if at addr is 2-length opcode

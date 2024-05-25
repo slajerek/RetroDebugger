@@ -32,7 +32,7 @@
 
 #include "clkguard.h"
 #include "lib.h"
-#include "types.h"
+#include "vicetypes.h"
 
 
 clk_guard_t *clk_guard_new(CLOCK *init_clk_ptr, CLOCK init_clk_max_value)

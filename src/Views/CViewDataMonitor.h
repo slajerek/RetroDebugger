@@ -6,7 +6,7 @@
 class CSlrFont;
 class CSlrMutex;
 class CDataAdapter;
-class CViewMemoryMap;
+class CViewDataMap;
 class CDebugInterface;
 class CViewDisassembly;
 class CDebugSymbols;
@@ -27,7 +27,7 @@ class CViewDataMonitor : public CGuiView
 {
 public:
 	CViewDataMonitor(const char *name, float posX, float posY, float posZ, float sizeX, float sizeY,
-					 CDebugSymbols *symbols, CDataAdapter *dataAdapter, CViewMemoryMap *viewMemoryMap, CViewDisassembly *viewDisassembly);
+					 CDebugSymbols *symbols, CDataAdapter *dataAdapter, CViewDataMap *viewMemoryMap, CViewDisassembly *viewDisassembly);
 	virtual ~CViewDataMonitor();
 
 	virtual void RenderImGui();
@@ -42,7 +42,7 @@ public:
 	CDebugInterface *debugInterface;
 	CDataAdapter *dataAdapter;
 	CDataAdapter *dataAdapterCode;
-	CViewMemoryMap *viewMemoryMap;
+	CViewDataMap *viewMemoryMap;
 	CViewDisassembly *viewDisassembly;
 	
 	// cycle#, u8 *data

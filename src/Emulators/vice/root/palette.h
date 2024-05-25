@@ -28,7 +28,7 @@
 #ifndef VICE_PALETTE_H
 #define VICE_PALETTE_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 typedef struct palette_entry_s {
     char *name;

@@ -96,7 +96,7 @@ void usleep(__int64 usec)
 #include "hardsid.h"
 #include "log.h"
 #include "sid-resources.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "wininpoutp.h"
 
 #define HARDSID_BASE 0x300

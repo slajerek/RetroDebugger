@@ -21,7 +21,7 @@ extern "C"{
 #include "CDebugInterfaceC64.h"
 #include "MTH_Random.h"
 
-#include "CViewMemoryMap.h"
+#include "CViewDataMap.h"
 
 #include "CGuiMain.h"
 

@@ -27,7 +27,7 @@
 #ifndef VICE_RAWIMAGE_H
 #define VICE_RAWIMAGE_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 struct disk_image_s;
 struct disk_addr_s;

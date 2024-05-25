@@ -65,7 +65,7 @@
 #ifdef HAS_TRANSLATION
 #include "translate.h"
 #endif
-#include "types.h"
+#include "vicetypes.h"
 #include "uiapi.h"
 #include "version.h"
 #include "video.h"

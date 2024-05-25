@@ -27,7 +27,7 @@
 #ifndef VICE_SNAPSHOT64_H
 #define VICE_SNAPSHOT64_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 extern BYTE snapshot64_roml_read(WORD addr);
 extern BYTE snapshot64_romh_read(WORD addr);

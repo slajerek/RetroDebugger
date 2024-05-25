@@ -13,6 +13,7 @@
 #include "CDebugSymbols.h"
 #include "CDebugSymbolsSegment.h"
 #include "CDebugSymbolsSegmentC64.h"
+#include "CDebugDataAdapter.h"
 #include "CDebugMemory.h"
 #include "CDebugMemoryCell.h"
 #include "CDebugEventsHistory.h"
@@ -26,17 +27,25 @@
 #include "utf8.h"
 #include "std_membuf.h"
 
-CDebugSymbols::CDebugSymbols(CDebugInterface *debugInterface, CDataAdapter *dataAdapter)
+CDebugSymbols::CDebugSymbols(CDebugInterface *debugInterface, bool supportBreakpoints)
 {
 	this->debugInterface = debugInterface;
-	this->dataAdapter = dataAdapter;
+	this->supportBreakpoints = supportBreakpoints;
+	
 	this->asmSource = NULL;
 	this->currentSegment = NULL;
 	this->currentSegmentNum = -1;
 	this->previousSegmentName = NULL;
-	
+
+	this->dataAdapter = NULL;
+	this->memory = NULL;
+	this->debugEventsHistory = NULL;
+}
+
+void CDebugSymbols::SetDataAdapter(CDebugDataAdapter *dataAdapter)
+{
+	this->dataAdapter = dataAdapter;
 	this->memory = this->CreateNewDebugMemoryMap();
-	
 	this->debugEventsHistory = new CDebugEventsHistory(this);
 }
 
@@ -304,13 +313,13 @@ void CDebugSymbols::ParseSymbols(CByteBuffer *byteBuffer)
 			else
 			{
 				LOGError("ParseSymbols: error in line %d (unknown label type)", lineNum);
-				break;
+				break;	// TODO: fix memory leak below
 			}
 		}
 		else
 		{
 			LOGError("ParseSymbols: error in line %d (unknown label type)", lineNum);
-			break;
+			break;	// TODO: fix memory leak below
 		}
 		
 		delete str;
@@ -1409,7 +1418,7 @@ bool CDebugSymbols::DeserializeBreakpointsFromHjson(Hjson::Value hjsonRoot)
 	{
 		Hjson::Value hjsonSegment = hjsonSegmentsArray[i];
 		const char *cName = hjsonSegment["Name"];
-
+		
 		CSlrString *name = new CSlrString(cName);
 		CDebugSymbolsSegment *segment = FindSegment(name);
 		
@@ -1419,7 +1428,7 @@ bool CDebugSymbols::DeserializeBreakpointsFromHjson(Hjson::Value hjsonRoot)
 			segments.push_back(segment);
 		}
 		delete name;
-
+		
 		Hjson::Value hjsonBreakpointsTypes = hjsonSegment["Breakpoints"];
 		segment->DeserializeBreakpoints(hjsonBreakpointsTypes);
 	}
@@ -1473,7 +1482,10 @@ void CDebugSymbols::ActivateSegment(CDebugSymbolsSegment *segment)
 
 	this->currentSegment = segment;
 	this->currentSegmentNum = segment->segmentNum;
-	this->previousSegmentName = segment->name;
+	
+	if (this->previousSegmentName != NULL)
+		delete this->previousSegmentName;
+	this->previousSegmentName = new CSlrString(segment->name);
 
 	segment->Activate();
 	
@@ -1496,12 +1508,12 @@ void CDebugSymbols::DeactivateSegment()
 	debugInterface->LockMutex();
 	
 	this->currentSegment = NULL;
-
+	
 	if (previousSegmentName != NULL)
 	{
 		delete previousSegmentName;
 	}
-	
+
 	debugInterface->UnlockMutex();
 	guiMain->UnlockMutex();
 }
@@ -1576,7 +1588,7 @@ CDebugSymbolsSegment *CDebugSymbols::CreateNewDebugSymbolsSegment(CSlrString *na
 {
 	LOGD("CDebugSymbols::CreateNewDebugSymbolsSegment");
 	
-	CDebugSymbolsSegment *segment = new CDebugSymbolsSegment(this, name, segmentNum);
+	CDebugSymbolsSegment *segment = new CDebugSymbolsSegment(this, name, segmentNum, supportBreakpoints);
 	segment->Init();
 	
 	return segment;

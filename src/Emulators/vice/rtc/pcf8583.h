@@ -30,7 +30,7 @@
 #include <time.h>
 
 #include "snapshot.h"
-#include "types.h"
+#include "vicetypes.h"
 
 #define PCF8583_IDLE               0
 #define PCF8583_GET_ADDRESS        1

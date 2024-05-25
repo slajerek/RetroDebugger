@@ -30,7 +30,7 @@
 #include <time.h>
 
 #include "snapshot.h"
-#include "types.h"
+#include "vicetypes.h"
 
 typedef struct rtc_58321a_s {
     int stop;

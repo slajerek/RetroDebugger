@@ -28,7 +28,7 @@
 #define VICE_DRIVEMEM_H
 
 #include "drivetypes.h"
-#include "types.h"
+#include "vicetypes.h"
 
 struct drive_context_s;
 struct drivecpud_context_s;

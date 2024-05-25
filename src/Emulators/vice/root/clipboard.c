@@ -33,7 +33,7 @@
 #include "charset.h"
 #include "lib.h"
 #include "mem.h"
-#include "types.h"
+#include "vicetypes.h"
 
 char *clipboard_read_screen_output(const char *line_ending)
 {

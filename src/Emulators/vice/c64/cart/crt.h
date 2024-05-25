@@ -28,7 +28,7 @@
 #ifndef VICE_CRT_H
 #define VICE_CRT_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 typedef struct crt_header_s {
     WORD version;             /* version */

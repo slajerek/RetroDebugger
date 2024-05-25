@@ -50,7 +50,7 @@
 #include "log.h"
 #include "monitor.h"
 #include "snapshot.h"
-#include "types.h"
+#include "vicetypes.h"
 
 #include "c64.h"	// c64d
 

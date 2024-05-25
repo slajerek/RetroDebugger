@@ -39,7 +39,7 @@
 #include "iecdrive.h"
 #include "log.h"
 #include "maincpu.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "via.h"
 
 #ifdef C64PAR_DEBUG

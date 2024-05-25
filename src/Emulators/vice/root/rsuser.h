@@ -27,7 +27,7 @@
 #ifndef VICE_RSUSER_H_
 #define VICE_RSUSER_H_
 
-#include "types.h"
+#include "vicetypes.h"
 
 #define RTS_OUT         0x02
 #define DTR_OUT         0x04

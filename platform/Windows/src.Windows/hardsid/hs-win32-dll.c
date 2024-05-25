@@ -60,7 +60,7 @@
 #include "log.h"
 #include "maincpu.h"
 #include "sid-resources.h"
-#include "types.h"
+#include "vicetypes.h"
 
 #define HARDSID_FLUSH_CYCLES 1000
 #define HARDSID_FLUSH_MS 50

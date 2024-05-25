@@ -45,7 +45,7 @@
 #include "mem.h"
 #include "resources.h"
 #include "translate.h"
-#include "types.h"
+#include "vicetypes.h"
 
 
 /* Maximum number of characters we can queue.  */

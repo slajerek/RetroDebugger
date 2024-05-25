@@ -27,7 +27,7 @@
 #ifndef VICE_SAMPLER2BIT_H
 #define VICE_SAMPLER2BIT_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 extern int joyport_sampler2bit_resources_init(void);
 

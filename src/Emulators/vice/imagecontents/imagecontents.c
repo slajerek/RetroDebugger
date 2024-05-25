@@ -44,7 +44,7 @@
 #include "imagecontents.h"
 #include "lib.h"
 #include "tapecontents.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "util.h"
 
 

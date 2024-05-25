@@ -46,7 +46,7 @@
 #include "raster-sprite.h"
 #include "raster.h"
 #include "screenshot.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "util.h"
 #include "video.h"
 #include "videoarch.h"

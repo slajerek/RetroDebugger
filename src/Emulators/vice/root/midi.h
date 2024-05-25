@@ -30,7 +30,7 @@
 #ifndef VICE_MIDI_H
 #define VICE_MIDI_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 struct midi_interface_s {
     /* Name of the interface */

@@ -39,7 +39,7 @@
 #include "log.h"
 #include "m93c86.h"
 #include "snapshot.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "util.h"
 
 #ifdef M93C86DEBUG

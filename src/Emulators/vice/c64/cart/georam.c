@@ -44,7 +44,7 @@
 #include "georam.h"
 #include "snapshot.h"
 #include "translate.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "util.h"
 
 /*

@@ -50,7 +50,7 @@
 #ifndef VICE_PLATFORM_CPU_TYPE_H
 #define VICE_PLATFORM_CPU_TYPE_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 #include <string.h>
 

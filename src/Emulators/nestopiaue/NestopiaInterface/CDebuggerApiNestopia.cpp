@@ -8,7 +8,7 @@
 #include "CDebugSymbols.h"
 #include "CDebugSymbolsSegment.h"
 #include "CDebugInterfaceNes.h"
-#include "CViewMemoryMap.h"
+#include "CViewDataMap.h"
 #include "CViewDataWatch.h"
 
 CDebuggerApiNestopia::CDebuggerApiNestopia(CDebugInterface *debugInterface)
@@ -32,14 +32,16 @@ void CDebuggerApiNestopia::ClearScreen()
 	SYS_FatalExit("CDebuggerApiNestopia::ClearScreen: not implemented");
 }
 
-void CDebuggerApiNestopia::ConvertImageToScreen(char *filePath)
+bool CDebuggerApiNestopia::ConvertImageToScreen(char *filePath)
 {
 	SYS_FatalExit("CDebuggerApiNestopia::ConvertImageToScreen: not implemented");
+	return false;
 }
 
-void CDebuggerApiNestopia::ConvertImageToScreen(CImageData *imageData)
+bool CDebuggerApiNestopia::ConvertImageToScreen(CImageData *imageData)
 {
 	SYS_FatalExit("CDebuggerApiNestopia::ConvertImageToScreen: not implemented");
+	return false;
 }
 
 void CDebuggerApiNestopia::ClearReferenceImage()

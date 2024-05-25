@@ -132,15 +132,19 @@ void CJukeboxPlaylist::InitFromJSON(char *json)
 						char *buf = FUN_SafeConvertStdStringToCharArray(str);
 						if (!strcmp(buf, "hard"))
 						{
-							playlistEntry->resetMode = MACHINE_RESET_HARD;
+							playlistEntry->resetMode = MACHINE_LOADPRG_RESET_MODE_HARD;
 						}
 						else if (!strcmp(buf, "soft"))
 						{
-							playlistEntry->resetMode = MACHINE_RESET_SOFT;
+							playlistEntry->resetMode = MACHINE_LOADPRG_RESET_MODE_SOFT;
+						}
+						else if (!strcmp(buf, "basic"))
+						{
+							playlistEntry->resetMode = MACHINE_LOADPRG_RESET_MODE_LOAD_SNAPSHOT_BASIC;
 						}
 						else if (!strcmp(buf, "none"))
 						{
-							playlistEntry->resetMode = MACHINE_RESET_NONE;
+							playlistEntry->resetMode = MACHINE_LOADPRG_RESET_MODE_NONE;
 						}
 						LOGD("                       Reset = %d", playlistEntry->resetMode);
 						delete [] buf;
@@ -402,7 +406,7 @@ CJukeboxPlaylistEntry::CJukeboxPlaylistEntry()
 	
 	autoRun = false;
 	runFileNum = 0;
-	resetMode = MACHINE_RESET_NONE;
+	resetMode = MACHINE_LOADPRG_RESET_MODE_LOAD_SNAPSHOT_BASIC;
 	
 	waitTime = -1;
 	fadeInTime = -1;

@@ -33,7 +33,7 @@
 #include "log.h"
 #include "sound.h"
 #include "resources.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "archdep.h"
 #include "soundmovie.h"
 

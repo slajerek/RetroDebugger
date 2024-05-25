@@ -28,7 +28,7 @@
 #ifndef VICE_CHARSET_H
 #define VICE_CHARSET_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 #define a2p(c) charset_petconvstring(c, 0)
 #define p2a(c) charset_petconvstring(c, 1)

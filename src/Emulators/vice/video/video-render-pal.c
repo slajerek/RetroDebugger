@@ -42,7 +42,7 @@
 #include "render2x2ntsc.h"
 #include "renderscale2x.h"
 #include "resources.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "video-render.h"
 #include "video.h"
 

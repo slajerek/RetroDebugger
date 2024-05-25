@@ -32,7 +32,7 @@
 #include "fsdrive.h"
 #include "log.h"
 #include "serial.h"
-#include "types.h"
+#include "vicetypes.h"
 
 #define SERIAL_NAMELENGTH 255
 

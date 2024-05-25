@@ -30,7 +30,7 @@
 #ifndef VICE_MIDIDRV_H
 #define VICE_MIDIDRV_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 extern void mididrv_init(void);
 

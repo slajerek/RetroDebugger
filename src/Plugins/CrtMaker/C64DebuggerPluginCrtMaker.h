@@ -19,6 +19,16 @@ enum CCrtMakerFileType : u8
 	TypeASM
 };
 
+enum CCrtMakerFileStatus : u8
+{
+	StatusPending = 0,
+	StatusLoad,
+	StatusAssemble,
+	StatusExomize,
+	StatusOK,
+	StatusFailed
+};
+
 class CCrtMakerFile
 {
 public:
@@ -37,6 +47,7 @@ public:
 	char *exoFilePath;
 	
 	CCrtMakerFileType type;
+	CCrtMakerFileStatus status;
 
 	u8 *data;
 	int size;
@@ -63,7 +74,7 @@ public:
 	virtual u32 KeyDown(u32 keyCode);
 	virtual u32 KeyUp(u32 keyCode);
 
-	CViewC64CrtMaker *view;
+	CViewC64CrtMaker *crtMaker;
 	
 	int tuneLoadAddr;
 	

@@ -28,7 +28,7 @@
 #define VICE_DS1602_H
 
 #include "snapshot.h"
-#include "types.h"
+#include "vicetypes.h"
 
 #include <time.h>
 

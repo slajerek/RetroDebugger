@@ -2,9 +2,9 @@
 #include "CViewDisassembly.h"
 #include "CColorsTheme.h"
 #include "CGuiMain.h"
-#include "CDataAdapter.h"
+#include "CDebugDataAdapter.h"
 #include "CViewC64.h"
-#include "CViewMemoryMap.h"
+#include "CViewDataMap.h"
 #include "SYS_KeyCodes.h"
 #include "CDebugInterface.h"
 #include "CGuiEditBoxText.h"
@@ -295,7 +295,6 @@ void CViewDisassembly::SetViewParameters(float posX, float posY, float posZ, flo
 	
 	CreateAddrPositions();
 	
-	this->markerSizeX = sizeX*3; //fontSize * 15.3f;
 	this->showHexCodes = showHexCodes;
 	this->showCodeCycles = showCodeCycles;
 	this->showLabels = showLabels;
@@ -334,8 +333,6 @@ void CViewDisassembly::LayoutParameterChanged(CLayoutParameter *layoutParameter)
 	this->fontSize9 = fontSize*9;
 
 	UpdateNumberOfVisibleLines();
-	
-	this->markerSizeX = sizeX*3; //fontSize * 15.3f;
 }
 
 void CViewDisassembly::UpdateNumberOfVisibleLines()
@@ -412,68 +409,93 @@ void CViewDisassembly::CalcDisassemblyStart(int startAddress, int *newStart, int
 			// check if cells marked as execute
 
 			// +0
-			CDebugMemoryCell *cell0 = debugMemory->memoryCells[addr % memoryLength];
-			if (cell0->isExecuteCode)
+			CDebugMemoryCell *cell0 = debugMemory->GetMemoryCell( addr % memoryLength );
+			if (cell0)
 			{
-				opcode = memory[addr % memoryLength];
-				checkAddress += opcodes[opcode].addressingLength;
-				numRenderLines++;
-			}
-			else
-			{
-				// +1
-				CDebugMemoryCell *cell1 = debugMemory->memoryCells[ (addr+1) % memoryLength];
-				if (cell1->isExecuteCode)
+				if (cell0->isExecuteCode)
 				{
-					checkAddress += 1;
-					numRenderLines++;  // just hex code or 1-length opcode
-					
-					opcode = memory[ (checkAddress) % memoryLength];
+					opcode = memory[addr % memoryLength];
 					checkAddress += opcodes[opcode].addressingLength;
 					numRenderLines++;
 				}
 				else
 				{
-					// +2
-					CDebugMemoryCell *cell2 = debugMemory->memoryCells[ (addr+2) % memoryLength];
-					if (cell2->isExecuteCode)
+					// +1
+					CDebugMemoryCell *cell1 = debugMemory->GetMemoryCell( (addr+1) % memoryLength );
+					if (cell1)
 					{
-						// check if at addr is 2-length opcode
-						opcode = memory[ (checkAddress) % memoryLength];
-						if (opcodes[opcode].addressingLength == 2)
+						if (cell1->isExecuteCode)
 						{
-							checkAddress += 2;
-							numRenderLines++;  // 2-length opcode
-						}
-						else
-						{
-							checkAddress += 2;
-							numRenderLines++;  // just 1st hex code
-							numRenderLines++;  // just 2nd hex code
-						}
-						
-						opcode = memory[ (checkAddress) % memoryLength];
-						checkAddress += opcodes[opcode].addressingLength;
-						numRenderLines++;
-					}
-					else
-					{
-						if (cell0->isExecuteArgument == false)
-						{
-							// execute not found
-							opcode = memory[addr % memoryLength];
+							checkAddress += 1;
+							numRenderLines++;  // just hex code or 1-length opcode
+							
+							opcode = memory[ (checkAddress) % memoryLength];
 							checkAddress += opcodes[opcode].addressingLength;
 							numRenderLines++;
 						}
 						else
 						{
-							// render hex
-							checkAddress += 1;
-							numRenderLines++;
+							// +2
+							CDebugMemoryCell *cell2 = debugMemory->GetMemoryCell( (addr+2) % memoryLength );
+							if (cell2)
+							{
+								if (cell2->isExecuteCode)
+								{
+									// check if at addr is 2-length opcode
+									opcode = memory[ (checkAddress) % memoryLength];
+									if (opcodes[opcode].addressingLength == 2)
+									{
+										checkAddress += 2;
+										numRenderLines++;  // 2-length opcode
+									}
+									else
+									{
+										checkAddress += 2;
+										numRenderLines++;  // just 1st hex code
+										numRenderLines++;  // just 2nd hex code
+									}
+									
+									opcode = memory[ (checkAddress) % memoryLength];
+									checkAddress += opcodes[opcode].addressingLength;
+									numRenderLines++;
+								}
+								else
+								{
+									if (cell0->isExecuteArgument == false)
+									{
+										// execute not found
+										opcode = memory[addr % memoryLength];
+										checkAddress += opcodes[opcode].addressingLength;
+										numRenderLines++;
+									}
+									else
+									{
+										// render hex
+										checkAddress += 1;
+										numRenderLines++;
+									}
+								}
+							}
+							else
+							{
+								numRenderLines++;
+							}
 						}
+					} // cell1
+					else
+					{
+						numRenderLines++;
 					}
+					
 				}
+			} // cell0
+			else
+			{
+				numRenderLines++;
 			}
+			
+			
+			
 			
 			//			LOGD("  new checkAddress=%4.4x", adr);
 			
@@ -596,105 +618,127 @@ void CViewDisassembly::RenderDisassembly(int startAddress, int endAddress)
 			addr = renderAddress;
 			
 			// +0
-			CDebugMemoryCell *cell0 = debugMemory->memoryCells[addr];
-			if (cell0->isExecuteCode)
+			CDebugMemoryCell *cell0 = debugMemory->GetMemoryCell(addr);
+			if (cell0)
 			{
-				opcode = memory[addr];
-				renderAddress += RenderDisassemblyLine(px, py, renderAddress, op[0], op[1], op[2]);
-				py += fontSize;
-			}
-			else
-			{
-				// +1
-				CDebugMemoryCell *cell1 = debugMemory->memoryCells[ (addr+1) ];
-				if (cell1->isExecuteCode)
+				if (cell0->isExecuteCode)
 				{
-					// check if at addr is 1-length opcode
-					opcode = memory[ (renderAddress) ];
-					if (opcodes[opcode].addressingLength == 1)
-					{
-						RenderDisassemblyLine(px, py, renderAddress, op[0], op[1], op[2]);
-					}
-					else
-					{
-						RenderHexLine(px, py, renderAddress);
-					}
-
-					renderAddress += 1;
-					py += fontSize;
-					
-					addr = renderAddress;
-					for (i=0; i<3; i++, addr++)
-					{
-						if (addr == endAddress)
-						{
-							done = true;
-						}
-						
-						op[i] = memory[addr];
-					}
-					
-					opcode = memory[ (renderAddress) ];
+					opcode = memory[addr];
 					renderAddress += RenderDisassemblyLine(px, py, renderAddress, op[0], op[1], op[2]);
 					py += fontSize;
 				}
 				else
 				{
-					// +2
-					CDebugMemoryCell *cell2 = debugMemory->memoryCells[ (addr+2) ];
-					if (cell2->isExecuteCode)
+					// +1
+					CDebugMemoryCell *cell1 = debugMemory->GetMemoryCell( addr+1 );
+					if (cell1)
 					{
-						// check if at addr is 2-length opcode
-						opcode = memory[ (renderAddress) ];
-						if (opcodes[opcode].addressingLength == 2)
+						if (cell1->isExecuteCode)
 						{
-							renderAddress += RenderDisassemblyLine(px, py, renderAddress, op[0], op[1], op[2]);
-							py += fontSize;
-						}
-						else
-						{
-							RenderHexLine(px, py, renderAddress);
-							renderAddress += 1;
-							py += fontSize;
-
-							RenderHexLine(px, py, renderAddress);
-							renderAddress += 1;
-							py += fontSize;
-						}
-						
-						addr = renderAddress;
-						for (i=0; i<3; i++, addr++)
-						{
-							if (addr == endAddress)
+							// check if at addr is 1-length opcode
+							opcode = memory[ (renderAddress) ];
+							if (opcodes[opcode].addressingLength == 1)
 							{
-								done = true;
+								RenderDisassemblyLine(px, py, renderAddress, op[0], op[1], op[2]);
+							}
+							else
+							{
+								RenderHexLine(px, py, renderAddress);
+							}
+
+							renderAddress += 1;
+							py += fontSize;
+							
+							addr = renderAddress;
+							for (i=0; i<3; i++, addr++)
+							{
+								if (addr == endAddress)
+								{
+									done = true;
+								}
+								
+								op[i] = memory[addr];
 							}
 							
-							op[i] = memory[addr];
-						}
-
-						opcode = memory[ (renderAddress) ];
-						renderAddress += RenderDisassemblyLine(px, py, renderAddress, op[0], op[1], op[2]);
-						py += fontSize;
-					}
-					else
-					{
-						if (cell0->isExecuteArgument == false)
-						{
-							// execute not found, just render line
+							opcode = memory[ (renderAddress) ];
 							renderAddress += RenderDisassemblyLine(px, py, renderAddress, op[0], op[1], op[2]);
 							py += fontSize;
 						}
 						else
 						{
-							// it is argument
-							RenderHexLine(px, py, renderAddress);
-							renderAddress++;
-							py += fontSize;
+							// +2
+							CDebugMemoryCell *cell2 = debugMemory->GetMemoryCell( addr+2 );
+							if (cell2)
+							{
+								if (cell2->isExecuteCode)
+								{
+									// check if at addr is 2-length opcode
+									opcode = memory[ (renderAddress) ];
+									if (opcodes[opcode].addressingLength == 2)
+									{
+										renderAddress += RenderDisassemblyLine(px, py, renderAddress, op[0], op[1], op[2]);
+										py += fontSize;
+									}
+									else
+									{
+										RenderHexLine(px, py, renderAddress);
+										renderAddress += 1;
+										py += fontSize;
+
+										RenderHexLine(px, py, renderAddress);
+										renderAddress += 1;
+										py += fontSize;
+									}
+									
+									addr = renderAddress;
+									for (i=0; i<3; i++, addr++)
+									{
+										if (addr == endAddress)
+										{
+											done = true;
+										}
+										
+										op[i] = memory[addr];
+									}
+
+									opcode = memory[ (renderAddress) ];
+									renderAddress += RenderDisassemblyLine(px, py, renderAddress, op[0], op[1], op[2]);
+									py += fontSize;
+								}
+								else
+								{
+									if (cell0->isExecuteArgument == false)
+									{
+										// execute not found, just render line
+										renderAddress += RenderDisassemblyLine(px, py, renderAddress, op[0], op[1], op[2]);
+										py += fontSize;
+									}
+									else
+									{
+										// it is argument
+										RenderHexLine(px, py, renderAddress);
+										renderAddress++;
+										py += fontSize;
+									}
+								}
+							}	// cell2
+							else
+							{
+								py += fontSize;
+							}
 						}
+					} // cell1
+					else
+					{
+						py += fontSize;
 					}
 				}
+			} // cell0
+			else
+			{
+				py += fontSize;
 			}
+
 
 			if (py > pEndY)
 				break;
@@ -732,7 +776,7 @@ void CViewDisassembly::RenderDisassembly(int startAddress, int endAddress)
 				int addr;
 				
 				addr = renderAddress-1;
-				CDebugMemoryCell *cell1 = debugMemory->memoryCells[addr];
+				CDebugMemoryCell *cell1 = debugMemory->GetMemoryCell(addr);
 				if (cell1->isExecuteCode)
 				{
 					op = memory[addr];
@@ -749,7 +793,7 @@ void CViewDisassembly::RenderDisassembly(int startAddress, int endAddress)
 				}
 				
 				addr = renderAddress-2;
-				CDebugMemoryCell *cell2 = debugMemory->memoryCells[addr];
+				CDebugMemoryCell *cell2 = debugMemory->GetMemoryCell(addr);
 				if (cell2->isExecuteCode)
 				{
 					op = memory[addr];
@@ -771,7 +815,7 @@ void CViewDisassembly::RenderDisassembly(int startAddress, int endAddress)
 				}
 				
 				addr = renderAddress-3;
-				CDebugMemoryCell *cell3 = debugMemory->memoryCells[addr];
+				CDebugMemoryCell *cell3 = debugMemory->GetMemoryCell(addr);
 				if (cell3->isExecuteCode)
 				{
 					op = memory[addr];
@@ -837,8 +881,8 @@ void CViewDisassembly::RenderDisassembly(int startAddress, int endAddress)
 			// check -2
 			if (renderAddress > 1)
 			{
-				CDebugMemoryCell *cell1 = debugMemory->memoryCells[renderAddress-1];
-				CDebugMemoryCell *cell2 = debugMemory->memoryCells[renderAddress-2];
+				CDebugMemoryCell *cell1 = debugMemory->GetMemoryCell(renderAddress-1);
+				CDebugMemoryCell *cell2 = debugMemory->GetMemoryCell(renderAddress-2);
 				if (cell1->isExecuteArgument == false
 					&& cell2->isExecuteArgument == false)
 				{
@@ -860,7 +904,7 @@ void CViewDisassembly::RenderDisassembly(int startAddress, int endAddress)
 			// check -1
 			if (renderAddress > 0)
 			{
-				CDebugMemoryCell *cell1 = debugMemory->memoryCells[renderAddress-1];
+				CDebugMemoryCell *cell1 = debugMemory->GetMemoryCell(renderAddress-1);
 
 				if (cell1->isExecuteArgument == false)
 				{
@@ -891,8 +935,7 @@ void CViewDisassembly::RenderDisassembly(int startAddress, int endAddress)
 	if (isTrackingPC == false)
 	{
 		py = numberOfLinesBack * fontSize + posY;
-//		LOGD("markerSizeX=%f", markerSizeX);
-		BlitRectangle(px, py, -1.0f, markerSizeX*4.0f, fontSize, 0.3, 1.0, 0.3, 0.5f, 0.7f);
+		BlitRectangle(px, py, -1.0f, sizeX*4.0f, fontSize, 0.3, 1.0, 0.3, 0.5f, 0.7f);
 	}
 	
 //	LOGD("previousOpAddr=%4.4x nextOpAddr=%4.4x", previousOpAddr, nextOpAddr);
@@ -916,19 +959,19 @@ int CViewDisassembly::RenderDisassemblyLine(float px, float py, int addr, uint8 
 	GetColorsFromScheme(c64SettingsDisassemblyExecuteColor, &colorExecuteR, &colorExecuteG, &colorExecuteB);
 	GetColorsFromScheme(c64SettingsDisassemblyNonExecuteColor, &colorNonExecuteR, &colorNonExecuteG, &colorNonExecuteB);
 	
-	char buf[128];
+	char *buf = SYS_GetCharBuf();
 	char buf1[16];
 	char buf2[2] = {0};
 	char buf3[16];
 	char buf4[16];
 	char bufHexCodes[16];
 	int length;
-
+	
 	if (symbols->currentSegment == NULL)
 	{
 		return 0;
 	}
-	
+
 	CDebugBreakpointsAddr *breakpoints = symbols->currentSegment->breakpointsPC;
 	
 	std::map<int, CBreakpointAddr *>::iterator it = breakpoints->renderBreakpoints.find(addr);
@@ -940,16 +983,16 @@ int CViewDisassembly::RenderDisassemblyLine(float px, float py, int addr, uint8 
 		if (breakpoint->isActive)
 		{
 			BlitFilledRectangle(posX, py, -1.0f,
-								markerSizeX, fontSize, breakpointActiveColorR, breakpointActiveColorG, breakpointActiveColorB, breakpointActiveColorA);
+								sizeX, fontSize, breakpointActiveColorR, breakpointActiveColorG, breakpointActiveColorB, breakpointActiveColorA);
 		}
 		else
 		{
 			BlitFilledRectangle(posX, py, -1.0f,
-								markerSizeX, fontSize, breakpointNotActiveColorR, breakpointNotActiveColorG, breakpointNotActiveColorB, breakpointNotActiveColorA);
+								sizeX, fontSize, breakpointNotActiveColorR, breakpointNotActiveColorG, breakpointNotActiveColorB, breakpointNotActiveColorA);
 		}
 	}
 
-	CDebugMemoryCell *cell = debugMemory->memoryCells[addr];
+	CDebugMemoryCell *cell = debugMemory->GetMemoryCell(addr);
 	
 	float cr, cg, cb, ca;
 	
@@ -992,25 +1035,32 @@ int CViewDisassembly::RenderDisassemblyLine(float px, float py, int addr, uint8 
 	}
 	
 	// addr
+	int len = 0;
 	if (editCursorPos != EDIT_CURSOR_POS_ADDR)
 	{
-		sprintfHexCode16(buf, addr);
+		dataAdapter->GetAddressStringForCell(addr, buf, MAX_STRING_LENGTH);
+		len = strlen(buf);
 		fontDisassembly->BlitTextColor(buf, px, py, -1, fontSize, cr, cg, cb, ca);
 	}
 	else
 	{
 		if (addr == this->cursorAddress)
 		{
+			// TODO: fixme and replace with editbox from adapter and length
+			dataAdapter->GetAddressStringForCell(addr, buf, MAX_STRING_LENGTH);
+			len = strlen(buf);
+
 			fontDisassembly->BlitTextColor(editHex->textWithCursor, px, py, posZ, fontSize, cr, cg, cb, ca);
 		}
 		else
 		{
-			sprintfHexCode16(buf, addr);
+			dataAdapter->GetAddressStringForCell(addr, buf, MAX_STRING_LENGTH);
+			len = strlen(buf);
 			fontDisassembly->BlitTextColor(buf, px, py, -1, fontSize, cr, cg, cb, ca);
 		}
 	}
 	
-	px += fontSize5;
+	px += ((float)(len+1))*fontSize; //fontSize5;
 
 
 	if (showHexCodes)
@@ -1160,7 +1210,7 @@ int CViewDisassembly::RenderDisassemblyLine(float px, float py, int addr, uint8 
 	if (addr == currentPC)
 	{
 		BlitFilledRectangle(posX, py, -1.0f,
-							markerSizeX, fontSize, cr, cg, cb, 0.3f);
+							sizeX, fontSize, cr, cg, cb, 0.3f);
 	}
 
 	int numBytesPerOp = opcodes[op].addressingLength;
@@ -1180,6 +1230,8 @@ int CViewDisassembly::RenderDisassemblyLine(float px, float py, int addr, uint8 
 			//		LOGD("(M) nextOpAddr=%04x", nextOpAddr);
 		}
 	}
+	
+	SYS_ReleaseCharBuf(buf);
 	
 	return numBytesPerOp;
 	
@@ -1649,16 +1701,16 @@ void CViewDisassembly::RenderHexLine(float px, float py, int addr)
 		if (breakpoint->isActive == true)
 		{
 			BlitFilledRectangle(posX, py, -1.0f,
-								markerSizeX, fontSize, breakpointActiveColorR, breakpointActiveColorG, breakpointActiveColorB, breakpointActiveColorA);
+								sizeX, fontSize, breakpointActiveColorR, breakpointActiveColorG, breakpointActiveColorB, breakpointActiveColorA);
 		}
 		else
 		{
 			BlitFilledRectangle(posX, py, -1.0f,
-								markerSizeX, fontSize, breakpointNotActiveColorR, breakpointNotActiveColorG, breakpointNotActiveColorB, breakpointNotActiveColorA);
+								sizeX, fontSize, breakpointNotActiveColorR, breakpointNotActiveColorG, breakpointNotActiveColorB, breakpointNotActiveColorA);
 		}
 	}
 	
-	CDebugMemoryCell *cell = debugMemory->memoryCells[addr];
+	CDebugMemoryCell *cell = debugMemory->GetMemoryCell(addr);
 	
 	float cr, cg, cb, ca;
 	
@@ -1798,7 +1850,7 @@ void CViewDisassembly::RenderHexLine(float px, float py, int addr)
 	if (addr == currentPC)
 	{
 		BlitFilledRectangle(posX, py, -1.0f,
-							markerSizeX, fontSize, cr, cg, cb, 0.3f);
+							sizeX, fontSize, cr, cg, cb, 0.3f);
 	}
 	
 	if (c64SettingsExecuteAwareDisassembly)
@@ -1968,7 +2020,7 @@ void CViewDisassembly::UpdateDisassembly(int startAddress, int endAddress)
 			addr = renderAddress;
 			
 			// +0
-			CDebugMemoryCell *cell0 = debugMemory->memoryCells[addr];	//% memoryLength
+			CDebugMemoryCell *cell0 = debugMemory->GetMemoryCell(addr);	//% memoryLength
 			if (cell0->isExecuteCode)
 			{
 				opcode = memory[addr];	//% memoryLength
@@ -1978,7 +2030,7 @@ void CViewDisassembly::UpdateDisassembly(int startAddress, int endAddress)
 			else
 			{
 				// +1
-				CDebugMemoryCell *cell1 = debugMemory->memoryCells[ (addr+1) ];	//% memoryLength
+				CDebugMemoryCell *cell1 = debugMemory->GetMemoryCell( addr+1 );	//% memoryLength
 				if (cell1->isExecuteCode)
 				{
 					// check if at addr is 1-length opcode
@@ -2013,7 +2065,7 @@ void CViewDisassembly::UpdateDisassembly(int startAddress, int endAddress)
 				else
 				{
 					// +2
-					CDebugMemoryCell *cell2 = debugMemory->memoryCells[ (addr+2) ];	//% memoryLength
+					CDebugMemoryCell *cell2 = debugMemory->GetMemoryCell( addr+2 );	//% memoryLength
 					if (cell2->isExecuteCode)
 					{
 						// check if at addr is 2-length opcode
@@ -2104,7 +2156,7 @@ void CViewDisassembly::UpdateDisassembly(int startAddress, int endAddress)
 				int addr;
 				
 				addr = renderAddress-1;
-				CDebugMemoryCell *cell1 = debugMemory->memoryCells[addr];
+				CDebugMemoryCell *cell1 = debugMemory->GetMemoryCell(addr);
 				if (cell1->isExecuteCode)
 				{
 					op = memory[addr];
@@ -2121,7 +2173,7 @@ void CViewDisassembly::UpdateDisassembly(int startAddress, int endAddress)
 				}
 				
 				addr = renderAddress-2;
-				CDebugMemoryCell *cell2 = debugMemory->memoryCells[addr];
+				CDebugMemoryCell *cell2 = debugMemory->GetMemoryCell(addr);
 				if (cell2->isExecuteCode)
 				{
 					op = memory[addr];
@@ -2143,7 +2195,7 @@ void CViewDisassembly::UpdateDisassembly(int startAddress, int endAddress)
 				}
 				
 				addr = renderAddress-3;
-				CDebugMemoryCell *cell3 = debugMemory->memoryCells[addr];
+				CDebugMemoryCell *cell3 = debugMemory->GetMemoryCell(addr);
 				if (cell3->isExecuteCode)
 				{
 					op = memory[addr];
@@ -2209,8 +2261,8 @@ void CViewDisassembly::UpdateDisassembly(int startAddress, int endAddress)
 			// check -2
 			if (renderAddress > 1)
 			{
-				CDebugMemoryCell *cell1 = debugMemory->memoryCells[renderAddress-1];
-				CDebugMemoryCell *cell2 = debugMemory->memoryCells[renderAddress-2];
+				CDebugMemoryCell *cell1 = debugMemory->GetMemoryCell(renderAddress-1);
+				CDebugMemoryCell *cell2 = debugMemory->GetMemoryCell(renderAddress-2);
 				if (cell1->isExecuteArgument == false
 					&& cell2->isExecuteArgument == false)
 				{
@@ -2232,7 +2284,7 @@ void CViewDisassembly::UpdateDisassembly(int startAddress, int endAddress)
 			// check -1
 			if (renderAddress > 0)
 			{
-				CDebugMemoryCell *cell1 = debugMemory->memoryCells[renderAddress-1];
+				CDebugMemoryCell *cell1 = debugMemory->GetMemoryCell(renderAddress-1);
 				
 				if (cell1->isExecuteArgument == false)
 				{
@@ -2589,101 +2641,50 @@ bool CViewDisassembly::KeyDown(u32 keyCode, bool isShift, bool isAlt, bool isCon
 	
 	if (isShift && keyCode == MTKEY_ARROW_DOWN)
 	{
-		// TODO: make generic
-		if (viewC64->debugInterfaceC64)
-		{
-			viewC64->viewC64Screen->KeyUpModifierKeys(isShift, isAlt, isControl);
-		}
-		else if (viewC64->viewAtariScreen)
-		{
-//			viewC64->viewAtariScreen->KeyUpModifierKeys(isShift, isAlt, isControl);
-		}
-		if (viewC64->debugInterfaceNes)
-		{
-			viewC64->viewNesScreen->KeyUpModifierKeys(isShift, isAlt, isControl);
-		}
+		viewC64->KeyUpModifierKeys(isShift, isAlt, isControl);
+		
+		// TODO: check why KeyUpModifierKeys should not be run on Atari?
+//		else if (viewC64->viewAtariScreen)
+//		{
+		// do not keyup for Atari  ---> TODO: WHY?
+////			viewC64->viewAtariScreen->KeyUpModifierKeys(isShift, isAlt, isControl);
+//		}
 
 		keyCode = MTKEY_PAGE_DOWN;
 	}
 
 	if (isShift && keyCode == MTKEY_ARROW_UP)
 	{
-		// TODO: make generic
-		if (viewC64->debugInterfaceC64)
-		{
-			viewC64->viewC64Screen->KeyUpModifierKeys(isShift, isAlt, isControl);
-		}
+		viewC64->KeyUpModifierKeys(isShift, isAlt, isControl);
+		
+		// TODO: check why KeyUpModifierKeys should not be run on Atari?
 //		else if (viewC64->viewAtariScreen)
 //		{
+		// do not keyup for Atari  ---> TODO: WHY?
 ////			viewC64->viewAtariScreen->KeyUpModifierKeys(isShift, isAlt, isControl);
 //		}
-		if (viewC64->debugInterfaceNes)
-		{
-			viewC64->viewNesScreen->KeyUpModifierKeys(isShift, isAlt, isControl);
-		}
+
 		keyCode = MTKEY_PAGE_UP;
 	}
 	
 	if (keyboardShortcut == viewC64->mainMenuBar->kbsToggleBreakpoint)
 	{
 		TogglePCBreakpoint(cursorAddress);
-		
-		// TODO: refactor, generalize this below:
-		// TODO: make generic and iterate over interfaces
-		if (viewC64->debugInterfaceC64)
-		{
-			viewC64->viewC64Screen->KeyUpModifierKeys(isShift, isAlt, isControl);
-		}
-		if (viewC64->debugInterfaceAtari)
-		{
-			viewC64->viewAtariScreen->KeyUpModifierKeys(isShift, isAlt, isControl);
-		}
-		if (viewC64->debugInterfaceNes)
-		{
-			viewC64->viewNesScreen->KeyUpModifierKeys(isShift, isAlt, isControl);
-		}
-
+		viewC64->KeyUpModifierKeys(isShift, isAlt, isControl);
 		return true;
 	}
 	
 	if (keyboardShortcut == viewC64->mainMenuBar->kbsStepOverJsr)
 	{
 		StepOverJsr();
-		
-		// TODO: make generic and iterate over interfaces
-		if (viewC64->debugInterfaceC64)
-		{
-			viewC64->viewC64Screen->KeyUpModifierKeys(isShift, isAlt, isControl);
-		}
-		if (viewC64->debugInterfaceAtari)
-		{
-			viewC64->viewAtariScreen->KeyUpModifierKeys(isShift, isAlt, isControl);
-		}
-		if (viewC64->debugInterfaceNes)
-		{
-			viewC64->viewNesScreen->KeyUpModifierKeys(isShift, isAlt, isControl);
-		}
-
+		viewC64->KeyUpModifierKeys(isShift, isAlt, isControl);
 		return true;
 	}
 	
 	if (keyboardShortcut == viewC64->mainMenuBar->kbsMakeJmp)
 	{
 		MakeJMPToCursor();
-		
-		// TODO: make generic and iterate over interfaces
-		if (viewC64->debugInterfaceC64)
-		{
-			viewC64->viewC64Screen->KeyUpModifierKeys(isShift, isAlt, isControl);
-		}
-		if (viewC64->debugInterfaceAtari)
-		{
-			viewC64->viewAtariScreen->KeyUpModifierKeys(isShift, isAlt, isControl);
-		}
-		if (viewC64->debugInterfaceNes)
-		{
-			viewC64->viewNesScreen->KeyUpModifierKeys(isShift, isAlt, isControl);
-		}
+		viewC64->KeyUpModifierKeys(isShift, isAlt, isControl);
 		return true;
 	}
 
@@ -2701,19 +2702,7 @@ bool CViewDisassembly::KeyDown(u32 keyCode, bool isShift, bool isAlt, bool isCon
 			changedByUser = true;
 		}
 
-		// TODO: make generic and iterate over interfaces
-		if (viewC64->debugInterfaceC64)
-		{
-			viewC64->viewC64Screen->KeyUpModifierKeys(isShift, isAlt, isControl);
-		}
-		if (viewC64->debugInterfaceAtari)
-		{
-			viewC64->viewAtariScreen->KeyUpModifierKeys(isShift, isAlt, isControl);
-		}
-		if (viewC64->debugInterfaceNes)
-		{
-			viewC64->viewNesScreen->KeyUpModifierKeys(isShift, isAlt, isControl);
-		}
+		viewC64->KeyUpModifierKeys(isShift, isAlt, isControl);
 		return true;
 	}
 	
@@ -2721,20 +2710,7 @@ bool CViewDisassembly::KeyDown(u32 keyCode, bool isShift, bool isAlt, bool isCon
 	{
 		isEnteringGoto = true;
 		StartEditingAtCursorPosition(EDIT_CURSOR_POS_ADDR, true);
-		
-		// TODO: make generic and iterate over interfaces
-		if (viewC64->debugInterfaceC64)
-		{
-			viewC64->viewC64Screen->KeyUpModifierKeys(isShift, isAlt, isControl);
-		}
-		if (viewC64->debugInterfaceAtari)
-		{
-			viewC64->viewAtariScreen->KeyUpModifierKeys(isShift, isAlt, isControl);
-		}
-		if (viewC64->debugInterfaceNes)
-		{
-			viewC64->viewNesScreen->KeyUpModifierKeys(isShift, isAlt, isControl);
-		}
+		viewC64->KeyUpModifierKeys(isShift, isAlt, isControl);
 		return true;
 	}
 
@@ -3270,25 +3246,34 @@ int CViewDisassembly::Assemble(int assembleAddress, char *lineBuffer, bool showM
 	switch (opcodes[instructionOpcode].addressingLength)
 	{
 		case 1:
+		{
 			dataAdapter->AdapterWriteByte(assembleAddress, instructionOpcode, &isDataAvailable);
-			debugMemory->memoryCells[assembleAddress]->isExecuteCode = true;
+			CDebugMemoryCell *cell = debugMemory->GetMemoryCell(assembleAddress);
+			cell->isExecuteCode = true;
 			break;
+		}
 			
 		case 2:
+		{
 			dataAdapter->AdapterWriteByte(assembleAddress, instructionOpcode, &isDataAvailable);
-			debugMemory->memoryCells[assembleAddress]->isExecuteCode = true;
+			CDebugMemoryCell *cell = debugMemory->GetMemoryCell(assembleAddress);
+			cell->isExecuteCode = true;
 			assembleAddress++;
 			dataAdapter->AdapterWriteByte(assembleAddress, (instructionValue & 0xFFFF), &isDataAvailable);
 			break;
+		}
 			
 		case 3:
+		{
 			dataAdapter->AdapterWriteByte(assembleAddress, instructionOpcode, &isDataAvailable);
-			debugMemory->memoryCells[assembleAddress]->isExecuteCode = true;
+			CDebugMemoryCell *cell = debugMemory->GetMemoryCell(assembleAddress);
+			cell->isExecuteCode = true;
 			assembleAddress++;
 			dataAdapter->AdapterWriteByte(assembleAddress, (instructionValue & 0x00FF), &isDataAvailable);
 			assembleAddress++;
 			dataAdapter->AdapterWriteByte(assembleAddress, ((instructionValue >> 8) & 0x00FF), &isDataAvailable);
 			break;
+		}
 			
 		default:
 			// should never happen
@@ -3918,7 +3903,7 @@ void CViewDisassembly::RenderDisassemblyNotExecuteAware(int startAddress, int en
 	if (isTrackingPC == false)
 	{
 		py = numberOfLinesBack * fontSize + posY;
-		BlitRectangle(px, py, -1.0f, markerSizeX, fontSize, 0.3, 1.0, 0.3, 0.5f, 0.7f);
+		BlitRectangle(px, py, -1.0f, sizeX, fontSize, 0.3, 1.0, 0.3, 0.5f, 0.7f);
 	}
 	
 	//	LOGD("previousOpAddr=%4.4x nextOpAddr=%4.4x", previousOpAddr, nextOpAddr);
@@ -4238,7 +4223,7 @@ void CViewDisassembly::RenderContextMenuItems()
 //	LOGD("=============================== CViewDisassembly::RenderContextMenuItems: %s", this->name);
 	CGuiView::RenderContextMenuItems();
 	
-	CDebugMemoryCell *cell = debugMemory->memoryCells[cursorAddress];
+	CDebugMemoryCell *cell = debugMemory->GetMemoryCell(cursorAddress);
 	
 	localLabelText[0] = 0;
 	CDebugSymbolsSegment *currentSegment = NULL;

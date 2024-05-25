@@ -14,15 +14,24 @@
 #include "CViewSnapshots.h"
 #include "CViewAbout.h"
 #include "CDebugInterfaceC64.h"
-#include "CViewMemoryMap.h"
+#include "CViewDataMap.h"
 #include "C64SettingsStorage.h"
 #include "CGuiMain.h"
 
 #include "CDiskImageD64.h"
 
+extern "C" {
+struct disk_image_s;
+typedef struct disk_image_s disk_image_t;
+
+disk_image_t *c64d_get_drive_disk_image(int driveId);
+};
+
 CViewDrive1541Browser::CViewDrive1541Browser(const char *name, float posX, float posY, float posZ, float sizeX, float sizeY)
 : CGuiView(name, posX, posY, posZ, sizeX, sizeY)
 {
+	int driveId = 0;
+	
 	imGuiNoWindowPadding = true;
 	imGuiNoScrollbar = true;
 
@@ -46,6 +55,18 @@ CViewDrive1541Browser::CViewDrive1541Browser(const char *name, float posX, float
 	
 	/// menu
 	viewMenu = new CGuiViewMenu(posX+35, posY+56, -1, sizeX-70, sizeY-76, this);
+
+	// TODO: get from media file?
+	this->fullFilePath = "";
+	//	CSlrString *filePath = new CSlrString(fullFilePath);
+	//	CSlrString *fileName = filePath->GetFileNameComponentFromPath();
+	
+	if (strHeader != NULL)
+		delete strHeader;
+	
+	strHeader = new CSlrString("Device #8");
+	
+	this->diskImage = new CDiskImageD64((CDebugInterfaceVice*)viewC64->debugInterfaceC64, driveId);
 
 	
 	threadRefreshDiskImage = new CViewDrive1541FileD64RefreshDiskImageThread(this);
@@ -120,6 +141,12 @@ void CViewDrive1541Browser::StartFileEntry(DiskImageFileEntry *fileEntry, bool s
 
 }
 
+extern "C" {
+void c64d_set_drive_disk_memory(int driveId, BYTE *diskId, unsigned int track, unsigned int sector);
+void c64d_set_drive_half_track(int driveId, int halfTrack);
+};
+
+// TODO: move me
 void CViewDrive1541Browser::UpdateDriveDiskID()
 {
 	LOGD("CViewDrive1541FileD64::UpdateDriveDiskID, diskImage=%x", diskImage);
@@ -129,13 +156,20 @@ void CViewDrive1541Browser::UpdateDriveDiskID()
 		// see $F3F6 in 1541 ROM: http://unusedino.de/ec64/technical/misc/c1541/romlisting.html#FDD3
 		//
 		LOGD("...diskId= %02x %02x", diskImage->diskId[2], diskImage->diskId[3]);
+		BYTE diskId[2];
+		diskId[0] = diskImage->diskId[2];
+		diskId[1] = diskImage->diskId[3];
+		c64d_set_drive_disk_memory(0, diskId, 6, 17);
 		
-		LOGD("...SetBytes to zp");
-		viewC64->debugInterfaceC64->SetByte1541(0x0012, diskImage->diskId[2]);
-		viewC64->debugInterfaceC64->SetByte1541(0x0013, diskImage->diskId[3]);
-		
-		viewC64->debugInterfaceC64->SetByte1541(0x0016, diskImage->diskId[2]);
-		viewC64->debugInterfaceC64->SetByte1541(0x0017, diskImage->diskId[3]);
+//		NOTE: this breaks Samar NGC1277 100% loader and it seems is not required actually as other loaders work ok
+		//c64d_set_drive_half_track(0, 12);
+
+		// NOTE: this is handled by c64d_set_drive_disk_memory
+//		viewC64->debugInterfaceC64->SetByte1541(0x0012, diskImage->diskId[2]);
+//		viewC64->debugInterfaceC64->SetByte1541(0x0013, diskImage->diskId[3]);
+//		
+//		viewC64->debugInterfaceC64->SetByte1541(0x0016, diskImage->diskId[2]);
+//		viewC64->debugInterfaceC64->SetByte1541(0x0017, diskImage->diskId[3]);
 	}
 	LOGD("CViewDrive1541FileD64::UpdateDriveDiskID completed");
 }
@@ -206,10 +240,17 @@ void CViewDrive1541Browser::Render()
 	
 	py += lSizeY + gap + 4.0f;
 
-	viewMenu->Render();
+	if (diskImage->IsDiskAttached())
+	{
+		viewMenu->Render();
+	}
+	// just leave empty
+//	else
+//	{
+//		// disk is not attached
+//		font->BlitTextColor("DISK NOT ATTACHED", px, py, -1, fontScale, tr, tg, tb, 1);
+//	}
 	
-//	font->BlitTextColor("1541 Device 8...", px, py, -1, fontScale, tr, tg, tb, 1);
-//	font->BlitTextColor("Alt+8", ax, py, -1, fontScale, tr, tg, tb, 1);
 	CGuiView::Render();
 }
 
@@ -241,8 +282,13 @@ bool CViewDrive1541Browser::DoTap(float x, float y)
 {
 	LOGG("CViewDrive1541FileD64::DoTap:  x=%f y=%f", x, y);
 	
+	guiMain->LockMutex();
 	if (viewMenu->DoTap(x, y))
+	{
+		guiMain->UnlockMutex();
 		return true;
+	}
+	guiMain->UnlockMutex();
 
 	return CGuiView::DoTap(x, y);
 }
@@ -251,8 +297,13 @@ bool CViewDrive1541Browser::DoFinishTap(float x, float y)
 {
 	LOGG("CViewDrive1541FileD64::DoFinishTap: %f %f", x, y);
 
+	guiMain->LockMutex();
 	if (viewMenu->DoFinishTap(x, y))
+	{
+		guiMain->UnlockMutex();
 		return true;
+	}
+	guiMain->UnlockMutex();
 
 	return CGuiView::DoFinishTap(x, y);
 }
@@ -262,8 +313,13 @@ bool CViewDrive1541Browser::DoDoubleTap(float x, float y)
 {
 	LOGG("CViewDrive1541FileD64::DoDoubleTap:  x=%f y=%f", x, y);
 	
+	guiMain->LockMutex();
 	if (viewMenu->DoDoubleTap(x, y))
+	{
+		guiMain->UnlockMutex();
 		return true;
+	}
+	guiMain->UnlockMutex();
 
 	return CGuiView::DoDoubleTap(x, y);
 }
@@ -272,8 +328,13 @@ bool CViewDrive1541Browser::DoFinishDoubleTap(float x, float y)
 {
 	LOGG("CViewDrive1541FileD64::DoFinishTap: %f %f", x, y);
 	
+	guiMain->LockMutex();
 	if (viewMenu->DoFinishDoubleTap(x, y))
+	{
+		guiMain->UnlockMutex();
 		return true;
+	}
+	guiMain->UnlockMutex();
 
 	return CGuiView::DoFinishDoubleTap(x, y);
 }
@@ -316,6 +377,7 @@ bool CViewDrive1541Browser::DoMultiFinishTap(COneTouchData *touch, float x, floa
 
 void CViewDrive1541Browser::StartBrowsingD64(char *fullFilePath)
 {
+	SYS_FatalExit("StartBrowsingD64 NOT SUPPORTED");
 	this->SetDiskImage(fullFilePath);
 	
 	this->StartSelectedDiskImageBrowsing();
@@ -323,6 +385,7 @@ void CViewDrive1541Browser::StartBrowsingD64(char *fullFilePath)
 
 void CViewDrive1541Browser::SetDiskImage(char *fullFilePath)
 {
+	SYS_FatalExit("SetDiskImage NOT SUPPORTED");
 	if (this->diskImage != NULL)
 	{
 		delete this->diskImage;
@@ -356,7 +419,7 @@ void CViewDrive1541Browser::StartBrowsingD64(int deviceId)
 {
 	this->SetDiskImage(deviceId);
 
-	if (this->diskImage->diskImage != NULL)
+	if (this->diskImage->IsDiskAttached())
 	{
 		this->StartSelectedDiskImageBrowsing();
 	}
@@ -368,23 +431,14 @@ void CViewDrive1541Browser::StartBrowsingD64(int deviceId)
 
 void CViewDrive1541Browser::SetDiskImage(int deviceId)
 {
-	if (this->diskImage != NULL)
-	{
-		delete this->diskImage;
-		this->diskImage = NULL;
-	}
+	
+//	if (this->diskImage != NULL)
+//	{
+//		delete this->diskImage;
+//		this->diskImage = NULL;
+//	}
 
-	// TODO: get from media file?
-	this->fullFilePath = "";
-	//	CSlrString *filePath = new CSlrString(fullFilePath);
-	//	CSlrString *fileName = filePath->GetFileNameComponentFromPath();
-	
-	if (strHeader != NULL)
-		delete strHeader;
-	
-	strHeader = new CSlrString("Device #8");
-	
-	this->diskImage = new CDiskImageD64(deviceId);
+	this->diskImage->RefreshImage();
 }
 
 void CViewDrive1541Browser::StartSelectedDiskImageBrowsing()
@@ -426,6 +480,7 @@ void CViewDrive1541Browser::RefreshDiskImageMenu()
 	}
 	
 	guiMain->LockMutex();
+	debugInterfaceVice->LockMutex();
 	
 	//
 	/// colors
@@ -450,6 +505,13 @@ void CViewDrive1541Browser::RefreshDiskImageMenu()
 	}
 	
 	viewMenu = new CGuiViewMenu(posX+35, posY+56, -1, sizeX-70, sizeY-76, this);
+	
+	if (diskImage->IsDiskAttached() == false)
+	{
+		debugInterfaceVice->UnlockMutex();
+		guiMain->UnlockMutex();
+		return;
+	}
 
 	CViewDrive1541FileD64EntryItem *menuItem = NULL;
 	
@@ -547,6 +609,10 @@ void CViewDrive1541Browser::RefreshDiskImageMenu()
 	for (std::vector<DiskImageFileEntry *>::iterator it = diskImage->fileEntries.begin(); it != diskImage->fileEntries.end(); it++)
 	{
 		DiskImageFileEntry *fileEntry = *it;
+		
+		// TODO: check who is adding these NULLs
+		if (!fileEntry)
+			continue;
 	
 		CSlrString *strFileEntry = new CSlrString();
 		
@@ -614,7 +680,7 @@ void CViewDrive1541Browser::RefreshDiskImageMenu()
 			strFileEntry->Concatenate((u16)0x3F);
 		}
 
-		strFileEntry->DebugPrint("DiskImageFileEntry: ");
+//		strFileEntry->DebugPrint("DiskImageFileEntry: ");
 		
 		menuItem = new CViewDrive1541FileD64EntryItem(fontHeight, strFileEntry, tr, tg, tb);
 		if (fileEntry->fileType == 0x02) // && fileEntry->fileSize > 0)
@@ -711,9 +777,8 @@ void CViewDrive1541Browser::RefreshDiskImageMenu()
 			viewMenu->SelectNext();
 		}
 	}
-
-
 	
+	debugInterfaceVice->UnlockMutex();
 	guiMain->UnlockMutex();
 
 	LOGD("CViewDrive1541FileD64::RefreshDiskImageMenu completed");
@@ -744,8 +809,13 @@ bool CViewDrive1541Browser::KeyDown(u32 keyCode, bool isShift, bool isAlt, bool 
 		return true;
 	}
 	
-	if (viewMenu->KeyDown(keyCode, isShift, isAlt, isControl, isSuper))
+	guiMain->LockMutex();
+	if (viewMenu && viewMenu->KeyDown(keyCode, isShift, isAlt, isControl, isSuper))
+	{
+		guiMain->UnlockMutex();
 		return true;
+	}
+	guiMain->UnlockMutex();
 
 	if (keyCode == MTKEY_ESC)
 	{
@@ -759,25 +829,30 @@ bool CViewDrive1541Browser::KeyDown(u32 keyCode, bool isShift, bool isAlt, bool 
 bool CViewDrive1541Browser::DoScrollWheel(float deltaX, float deltaY)
 {
 	LOGD("CViewDrive1541FileD64::DoScrollWheel");
-	float f = 0.5f;
-	float nt = 0.0f;
-	
-	nt = fabs(deltaY) * f;
+	guiMain->LockMutex();
+	if (viewMenu)
+	{
+		float f = 0.5f;
+		float nt = 0.0f;
+		
+		nt = fabs(deltaY) * f;
 
-	if (deltaY < 0)
-	{
-		for (float v = 0.0f; v < nt; v += 1.0f)
+		if (deltaY < 0)
 		{
-			viewMenu->SelectNext();
+			for (float v = 0.0f; v < nt; v += 1.0f)
+			{
+				viewMenu->SelectNext();
+			}
+		}
+		else
+		{
+			for (float v = 0.0f; v < nt; v += 1.0f)
+			{
+				viewMenu->SelectPrev();
+			}
 		}
 	}
-	else
-	{
-		for (float v = 0.0f; v < nt; v += 1.0f)
-		{
-			viewMenu->SelectPrev();
-		}
-	}
+	guiMain->UnlockMutex();
 	
 	return true;
 }
@@ -785,9 +860,14 @@ bool CViewDrive1541Browser::DoScrollWheel(float deltaX, float deltaY)
 
 bool CViewDrive1541Browser::KeyUp(u32 keyCode, bool isShift, bool isAlt, bool isControl, bool isSuper)
 {
-	if (viewMenu->KeyUp(keyCode, isShift, isAlt, isControl, isSuper))
+	guiMain->LockMutex();
+	if (viewMenu && viewMenu->KeyUp(keyCode, isShift, isAlt, isControl, isSuper))
+	{
+		guiMain->UnlockMutex();
 		return true;
-	
+	}
+	guiMain->UnlockMutex();
+
 	return CGuiView::KeyUp(keyCode, isShift, isAlt, isControl, isSuper);
 }
 
@@ -814,7 +894,7 @@ void CViewDrive1541Browser::StartDiskPRGEntry(int entryNum, bool showLoadAddress
 	
 	this->SetDiskImage(0);
 	
-	if (this->diskImage->diskImage == NULL)
+	if (!this->diskImage->IsDiskAttached())
 	{
 		viewC64->ShowMessageError("No disk");
 		return;
@@ -879,15 +959,18 @@ void CViewDrive1541Browser::RenderContextMenuItems()
 			fileName = c64SettingsPathToD64->GetFileNameComponentFromPath();
 		}
 		char *cFileName = fileName->GetUTF8();
-		ImGui::Text("%s", cFileName);
+		ImGui::TextDisabled("%s", cFileName);
 		STRFREE(cFileName);
 		delete fileName;
 	}
 
 //	if (diskImage->diskImage != NULL)
+	disk_image_t *viceDiskImage = c64d_get_drive_disk_image(0);
+	bool diskAvailable = viceDiskImage != NULL;
+	
 	if (c64SettingsPathToD64 != NULL)
 	{
-		if (ImGui::BeginMenu("Format"))
+		if (ImGui::BeginMenu("Format", diskAvailable))
 		{
 	//		bool ImGui::InputText(const char* label, char* buf, size_t buf_size, ImGuiInputTextFlags flags, ImGuiInputTextCallback callback, void* user_data)
 			
@@ -925,7 +1008,7 @@ void CViewDrive1541Browser::RenderContextMenuItems()
 			ImGui::EndMenu();
 		}
 
-		if (ImGui::MenuItem("Insert file"))
+		if (ImGui::MenuItem("Insert file", NULL, false, diskAvailable))
 		{
 			CSlrString *windowTitle = new CSlrString("Select File to Insert into Disk Image");
 			dialogOperation = ViewDrive1541FileD64Dialog_InsertFile;
@@ -934,8 +1017,7 @@ void CViewDrive1541Browser::RenderContextMenuItems()
 		}
 	}
 	
-	ImGui::Separator();
-
+//	ImGui::Separator();
 //	if (ImGui::MenuItem("Refresh"))
 //	{
 //		this->RefreshInsertedDiskImageAsync();
@@ -1046,11 +1128,11 @@ void CViewDrive1541FileD64RefreshDiskImageThread::ThreadRun(void *passData)
 		if (viewDrive1541FileD64->IsVisible())
 		{
 			CDebugInterfaceVice *debugInterface = (CDebugInterfaceVice*)viewC64->debugInterfaceC64;
-			if (debugInterface->IsDriveDirtyForRefresh())
+			if (debugInterface->IsDriveDirtyForRefresh(0))
 			{
 				debugInterface->LockMutex();
 				viewDrive1541FileD64->SetDiskImage(0);
-				debugInterface->ClearDriveDirtyForRefreshFlag();
+				debugInterface->ClearDriveDirtyForRefreshFlag(0);
 				debugInterface->UnlockMutex();
 				
 				viewDrive1541FileD64->keepScrollPositionOnRefreshDiskImage = true;

@@ -97,7 +97,7 @@ bit0    ?
 #include "mc6821core.h"
 #include "formel64.h"
 #include "snapshot.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "util.h"
 #include "crt.h"
 

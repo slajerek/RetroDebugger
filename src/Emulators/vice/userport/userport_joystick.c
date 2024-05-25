@@ -37,7 +37,7 @@
 #include "resources.h"
 #include "snapshot.h"
 #include "translate.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "userport.h"
 #include "userport_joystick.h"
 

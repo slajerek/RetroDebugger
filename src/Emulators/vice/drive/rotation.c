@@ -29,12 +29,13 @@
  */
 
 #include "vice.h"
+#include "log.h"
 
 #include "drive.h"
 #include "drivetypes.h"
 #include "lib.h"
 #include "rotation.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "p64.h"
 
 #include <stdlib.h>
@@ -42,7 +43,6 @@
 #define ACCUM_MAX 0x10000
 
 #define ROTATION_TABLE_SIZE 0x1000
-
 
 struct rotation_s {
     DWORD accum;
@@ -216,6 +216,8 @@ void rotation_overflow_callback(CLOCK sub, unsigned int dnr)
     rotation[dnr].rotation_last_clk -= sub;
 }
 
+void c64d_mark_drive1541_contents_track_dirty(unsigned short track);
+
 inline static void write_next_bit(drive_t *dptr, int value)
 {
     int off = dptr->GCR_head_offset;
@@ -240,11 +242,22 @@ inline static void write_next_bit(drive_t *dptr, int value)
     dptr->GCR_dirty_track = 1;
 	dptr->GCR_dirty_track_for_snapshot = 1;
 	dptr->GCR_dirty_track_needs_refresh = 1;
+	
+	LOGD("before GCR_track_start_ptr %x offset %5d %x", dptr->GCR_track_start_ptr, byte_offset, dptr->GCR_track_start_ptr[byte_offset]);
+	
     if (value) {
         dptr->GCR_track_start_ptr[byte_offset] |= 1 << bit;
     } else {
         dptr->GCR_track_start_ptr[byte_offset] &= ~(1 << bit);
     }
+
+	LOGD("after  GCR_track_start_ptr %x offset %5d %x", dptr->GCR_track_start_ptr, byte_offset, dptr->GCR_track_start_ptr[byte_offset]);
+
+	// TODO: add driveId
+	// note, the below does not include sides: int tmp = (dptr->image && dptr->image->type == DISK_IMAGE_TYPE_G71) ? DRIVE_HALFTRACKS_1571 : 70;
+	int current_track = (dptr->current_half_track-2)/2;
+	LOGD("write_next_bit: dptr->current_half_track=%d current_track=%d", dptr->current_half_track, current_track);
+	c64d_mark_drive1541_contents_track_dirty(current_track);
 }
 
 inline static int read_next_bit(drive_t *dptr)

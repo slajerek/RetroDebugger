@@ -28,7 +28,7 @@
 #ifndef VICE_SUPERSNAPSHOT4_H
 #define VICE_SUPERSNAPSHOT4_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 extern BYTE supersnapshot_v4_roml_read(WORD addr);
 extern void supersnapshot_v4_roml_store(WORD addr, BYTE value);

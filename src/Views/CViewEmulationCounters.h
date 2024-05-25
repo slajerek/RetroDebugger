@@ -9,7 +9,7 @@
 
 class CSlrFont;
 class CDataAdapter;
-class CViewMemoryMap;
+class CViewDataMap;
 class CSlrMutex;
 class CDebugInterface;
 
@@ -41,9 +41,8 @@ public:
 	//
 	virtual void RenderEmulationCounters(float px, float py, float posZ, CSlrFont *fontBytes, float fontSize);
 	
-	
-	//
-	virtual void RenderFocusBorder();
+	virtual bool HasContextMenuItems();
+	virtual void RenderContextMenuItems();
 
 };
 

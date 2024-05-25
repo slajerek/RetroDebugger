@@ -28,7 +28,7 @@
 #define VICE_DS1202_1302_H
 
 #include "snapshot.h"
-#include "types.h"
+#include "vicetypes.h"
 
 typedef struct rtc_ds1202_1302_s rtc_ds1202_1302_t;
 

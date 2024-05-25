@@ -29,7 +29,7 @@
 #ifndef VICE_KEYBOARD_H
 #define VICE_KEYBOARD_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 #ifndef COMMON_KBD
 #include "kbd.h"

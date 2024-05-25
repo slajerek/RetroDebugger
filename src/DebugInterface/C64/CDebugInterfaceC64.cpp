@@ -1,12 +1,13 @@
 #include "CDebugInterfaceC64.h"
 #include "CViewC64.h"
 #include "CDebugMemory.h"
-#include "CViewMemoryMap.h"
+#include "CViewDataMap.h"
 #include "CViewMainMenu.h"
 #include "CViewC64StateSID.h"
 #include "CByteBuffer.h"
 #include "CDebugSymbols.h"
 #include "CDebugSymbolsSegmentC64.h"
+#include "CDebugSymbolsDrive1541.h"
 #include "CDebugMemoryCell.h"
 #include "CWaveformData.h"
 #include "CViewC64VicDisplay.h"
@@ -20,6 +21,20 @@ CDebugInterfaceC64::CDebugInterfaceC64(CViewC64 *viewC64)
 	emulationSpeed = 0;
 	emulationFrameRate = 0;	
 
+	symbolsC64 = NULL;
+	dataAdapterC64 = NULL;
+	dataAdapterC64DirectRam = NULL;
+	
+	symbolsDrive1541 = NULL;
+	dataAdapterDrive1541 = NULL;
+	dataAdapterDrive1541DirectRam = NULL;
+
+	symbolsDrive1541DiskContents = NULL;
+	dataAdapterDrive1541DiskContents = NULL;
+
+	symbolsCartridgeC64 = NULL;
+	dataAdapterCartridgeC64 = NULL;
+	
 	debugMode = DEBUGGER_MODE_RUNNING;
 	isDebugOn = true;
 	debugOnDrive1541 = false;
@@ -297,7 +312,7 @@ void CDebugInterfaceC64::DetachDriveDisk()
 	SYS_FatalExit("CDebugInterfaceC64::DetachDriveDisk");
 }
 
-void CDebugInterfaceC64::MakeBasicRunC64()
+void CDebugInterfaceC64::MakeJMPToBasicRunC64()
 {
 	SYS_FatalExit("CDebugInterfaceC64::MakeBasicRunC64");
 }
@@ -1040,7 +1055,7 @@ void CDebugInterfaceC64::DumpC64MemoryMarkers(CSlrString *path)
 	char *flagStr = SYS_GetCharBuf();
 	for (int i = 0; i < 0x10000; i++)
 	{
-		CDebugMemoryCell *cell = symbols->memory->memoryCells[i];
+		CDebugMemoryCell *cell = symbols->memory->GetMemoryCell(i);
 		
 		flagStr[0] = 0x00;
 		
@@ -1178,7 +1193,7 @@ void CDebugInterfaceC64::DumpDisk1541MemoryMarkers(CSlrString *path)
 	
 	for (int i = 0; i < 0x10000; i++)
 	{
-		CDebugMemoryCell *cell = symbolsDrive1541->memory->memoryCells[i];
+		CDebugMemoryCell *cell = symbolsDrive1541->memory->GetMemoryCell(i);
 		
 		fprintf(fp, "%04x,%02x,%s,%s,%s,%s\n", i, memoryBuffer[i],
 				cell->isRead ? "read" : "",

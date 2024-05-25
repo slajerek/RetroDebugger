@@ -27,7 +27,7 @@
 #ifndef VICE_IEC_H
 #define VICE_IEC_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 struct disk_image_s;
 struct drive_context_s;

@@ -9,7 +9,7 @@
 #include <list>
 #include <vector>
 
-class CDataAdapter;
+class CDebugDataAdapter;
 class CSlrFont;
 class CDebugInterface;
 class CDebugBreakpointsAddr;
@@ -62,7 +62,7 @@ public:
 	virtual bool KeyUp(u32 keyCode, bool isShift, bool isAlt, bool isControl, bool isSuper);
 	
 	CViewDataDump *viewDataDump;
-	CDataAdapter *dataAdapter;
+	CDebugDataAdapter *dataAdapter;
 	CDebugInterface *debugInterface;
 	
 	void SetViewDataDump(CViewDataDump *viewDataDump);
@@ -112,8 +112,6 @@ public:
 	
 	int previousOpAddr;
 	int nextOpAddr;
-	
-	float markerSizeX;
 	
 	int numberOfLinesBack;
 	int numberOfLinesBack3;

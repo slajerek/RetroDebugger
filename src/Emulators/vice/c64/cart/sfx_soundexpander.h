@@ -27,7 +27,7 @@
 #ifndef VICE_SFX_SOUNDEXPANDER_H
 #define VICE_SFX_SOUNDEXPANDER_H
 
-#include "types.h"
+#include "vicetypes.h"
 #include "sound.h"
 
 extern int sfx_soundexpander_cart_enabled(void);

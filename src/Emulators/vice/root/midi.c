@@ -46,7 +46,7 @@
 #include "snapshot.h"
 #include "resources.h"
 #include "translate.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "util.h"
 
 #undef DEBUG

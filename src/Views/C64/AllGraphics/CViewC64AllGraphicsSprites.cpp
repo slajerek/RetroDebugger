@@ -1,11 +1,12 @@
 #include "CViewC64AllGraphicsSprites.h"
+#include "ViewC64AllGraphicsDefs.h"
 #include "VID_Main.h"
 #include "VID_ImageBinding.h"
 #include "CDebugInterfaceC64.h"
 #include "CViewC64VicDisplay.h"
 #include "CViewC64VicControl.h"
 #include "CViewDataDump.h"
-#include "CViewMemoryMap.h"
+#include "CViewDataMap.h"
 #include "C64Tools.h"
 #include "CGuiMain.h"
 #include "CViewDataDump.h"
@@ -13,7 +14,7 @@
 #include "CSlrString.h"
 #include "CViewC64StateVIC.h"
 #include "CViewC64.h"
-#include "CViewC64AllGraphics.h"
+#include "CViewC64AllGraphicsSpritesControl.h"
 
 CViewC64AllGraphicsSprites::CViewC64AllGraphicsSprites(const char *name, float posX, float posY, float posZ, float sizeX, float sizeY, CDebugInterfaceC64 *debugInterface)
 : CGuiViewMovingPane(name, posX, posY, posZ, sizeX, sizeY,
@@ -410,6 +411,19 @@ bool CViewC64AllGraphicsSprites::DoFinishDoubleTap(float x, float y)
 	return CGuiView::DoFinishDoubleTap(x, y);
 }
 
+bool CViewC64AllGraphicsSprites::HasContextMenuItems()
+{
+	return true;
+}
+
+void CViewC64AllGraphicsSprites::RenderContextMenuItems()
+{
+	bool isVisible = viewC64->viewC64AllGraphicsSpritesControl->visible;
+	if (ImGui::MenuItem("All Sprites controller", NULL, &isVisible))
+	{
+		viewC64->viewC64AllGraphicsSpritesControl->SetVisible(isVisible);
+	}
+}
 
 // bug: this event is not called when layout is set, and button state is updated on keyboard shortcut only
 void CViewC64AllGraphicsSprites::ActivateView()

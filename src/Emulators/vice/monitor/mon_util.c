@@ -40,7 +40,7 @@
 #include "mon_util.h"
 #include "monitor.h"
 #include "monitor_network.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "uimon.h"
 
 

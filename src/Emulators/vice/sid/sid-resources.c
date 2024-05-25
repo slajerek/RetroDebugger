@@ -43,7 +43,7 @@
 #include "sid.h"
 #include "ssi2001.h"
 #include "sound.h"
-#include "types.h"
+#include "vicetypes.h"
 
 /* Resource handling -- Added by Ettore 98-04-26.  */
 

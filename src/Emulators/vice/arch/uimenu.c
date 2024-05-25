@@ -40,7 +40,7 @@
 #include "resources.h"
 #include "screenshot.h"
 #include "sound.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "ui.h"
 #include "uihotkey.h"
 #include "uimenu.h"

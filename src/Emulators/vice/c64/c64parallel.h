@@ -27,7 +27,7 @@
 #ifndef VICE_C64PARALLEL_H
 #define VICE_C64PARALLEL_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 extern void parallel_cable_cpu_execute(int type);
 extern void parallel_cable_cpu_write(int type, BYTE data);

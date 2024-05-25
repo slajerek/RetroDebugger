@@ -28,7 +28,7 @@
 #ifndef VICE_CATWEASELMKIII_H
 #define VICE_CATWEASELMKIII_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 #include "sid-snapshot.h"
 

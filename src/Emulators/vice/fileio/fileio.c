@@ -32,7 +32,7 @@
 #include "fileio.h"
 #include "lib.h"
 #include "p00.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "util.h"
 
 

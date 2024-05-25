@@ -28,7 +28,7 @@
 #ifndef VICE_CARTRIDGE_H
 #define VICE_CARTRIDGE_H
 
-#include "types.h"
+#include "vicetypes.h"
 #include "sound.h"
 
 /*

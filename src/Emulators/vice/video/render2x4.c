@@ -28,7 +28,7 @@
 #include "vice.h"
 
 #include "render2x4.h"
-#include "types.h"
+#include "vicetypes.h"
 #include <string.h>
 
 /* 16 color 2x2 renderers */

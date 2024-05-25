@@ -28,7 +28,7 @@
 #include "C64Palette.h"
 
 #include "CViewC64StateSID.h"
-#include "CViewMemoryMap.h"
+#include "CViewDataMap.h"
 
 #include "CGuiMain.h"
 #include "CLayoutManager.h"

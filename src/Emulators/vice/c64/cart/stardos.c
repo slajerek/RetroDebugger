@@ -45,7 +45,7 @@
 #include "resources.h"
 #include "snapshot.h"
 #include "stardos.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "util.h"
 #include "crt.h"
 

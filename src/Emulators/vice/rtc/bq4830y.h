@@ -30,7 +30,7 @@
 #include <time.h>
 
 #include "snapshot.h"
-#include "types.h"
+#include "vicetypes.h"
 
 #define BQ4830Y_RAM_SIZE   0x8000
 #define BQ4830Y_REG_SIZE   8

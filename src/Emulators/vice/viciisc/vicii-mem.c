@@ -33,7 +33,7 @@
 #include <string.h>
 
 #include "debug.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "vicii-chip-model.h"
 #include "vicii-fetch.h"
 #include "vicii-irq.h"

@@ -27,7 +27,7 @@
 #ifndef VICE_SSI2001_H
 #define VICE_SSI2001_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 #include "sid-snapshot.h"
 

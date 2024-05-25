@@ -28,7 +28,7 @@
 #ifndef VICE_SID_SNAPSHOT_H
 #define VICE_SID_SNAPSHOT_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 struct snapshot_s;
 

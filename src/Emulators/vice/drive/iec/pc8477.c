@@ -34,7 +34,7 @@
 #include "drivetypes.h"
 #include "log.h"
 #include "lib.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "pc8477.h"
 #include "alarm.h"
 #include "drivesync.h"

@@ -39,7 +39,7 @@
 #ifndef VICE_RS232_H
 #define VICE_RS232_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 #include "rs232drv.h"
 

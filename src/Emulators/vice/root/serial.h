@@ -29,7 +29,7 @@
 #ifndef VICE_SERIAL_H
 #define VICE_SERIAL_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 #define SERIAL_MAXDEVICES 16
 

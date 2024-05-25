@@ -33,7 +33,7 @@
 #ifndef VICE_ISEPIC_H
 #define VICE_ISEPIC_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 extern int isepic_cart_enabled(void);
 extern int isepic_cart_active(void);

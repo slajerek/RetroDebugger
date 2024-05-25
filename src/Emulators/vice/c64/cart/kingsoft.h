@@ -29,7 +29,7 @@
 
 #include <stdio.h>
 
-#include "types.h"
+#include "vicetypes.h"
 
 extern void kingsoft_config_init(void);
 extern void kingsoft_config_setup(BYTE *rawcart);

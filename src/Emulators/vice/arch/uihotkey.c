@@ -25,7 +25,7 @@
  */
 
 #include "vice.h"
-#include "types.h"
+#include "vicetypes.h"
 
 #include "joy.h"
 #include "lib.h"

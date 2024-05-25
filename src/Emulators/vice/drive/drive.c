@@ -66,7 +66,7 @@
 #include "maincpu.h"
 #include "resources.h"
 #include "rotation.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "uiapi.h"
 #include "ds1216e.h"
 #include "drive-sound.h"
@@ -580,6 +580,8 @@ void drive_set_half_track(int num, int side, drive_t *dptr)
 
     dptr->GCR_track_start_ptr = dptr->gcr->tracks[dptr->current_half_track - 2 + (dptr->side * tmp)].data;
 
+//	LOGD("drive_set_half_track: %x %d track: %x", dptr, num, dptr->GCR_track_start_ptr);
+
     if (dptr->GCR_current_track_size != 0) {
         dptr->GCR_head_offset = (dptr->GCR_head_offset
                                  * dptr->gcr->tracks[dptr->current_half_track - 2 + (dptr->side * tmp)].size)
@@ -605,7 +607,7 @@ void drive_move_head(int step, drive_t *drive)
 
 void drive_gcr_data_writeback(drive_t *drive)
 {
-//	LOGD("drive_gcr_data_writeback");
+//	LOGD("drive_gcr_data_writeback, drive->image=%x", drive->image);
 	
     int extend;
     unsigned int half_track, track;
@@ -628,7 +630,7 @@ void drive_gcr_data_writeback(drive_t *drive)
         return;
     }
 	
-//	LOGD("drive_gcr_data_writeback: DIRTY TRACK");
+	LOGD("drive_gcr_data_writeback: DIRTY TRACK: current_half_track=%d half_track=%d", drive->current_half_track, half_track);
 
     if ((drive->image->type == DISK_IMAGE_TYPE_G64)
         || (drive->image->type == DISK_IMAGE_TYPE_G71)) {
@@ -894,13 +896,78 @@ void drive_setup_context(void)
 //////
 
 /// c64 debugger
+drive_context_t *c64d_get_drive_context(int driveId)
+{
+	return drive_context[driveId];
+}
+
+int c64d_get_drive_current_halftrack(int driveId)
+{
+	drive_context_t *drv = drive_context[driveId];
+	if (drv == NULL || drv->drive == NULL)
+		return 0;
+	
+	return drv->drive->current_half_track;
+}
 
 disk_image_t *c64d_get_drive_disk_image(int driveId)
 {
+//	if (drive_context == NULL)	// this is static, no need to check
+//		return NULL;
+	
 	drive_context_t *drv = drive_context[driveId];
+	if (drv == NULL || drv->drive == NULL)
+		return NULL;
+	
+//	LOGD("c64d_get_drive_disk_image: attach_clk=%d", drv->drive->attach_clk);
+//	LOGD("c64d_get_drive_disk_image: detach_clk=%d", drv->drive->detach_clk);
+
 	disk_image_t *diskImage = drv->drive->image;
+//	LOGD("diskImage=%x di->gcr=%x gcr=%x", diskImage, diskImage ? diskImage->gcr : 0, drv->drive->gcr);
 
 	return diskImage;
+}
+
+unsigned int c64d_get_drive_is_disk_attached(int driveId)
+{
+	drive_context_t *drv = drive_context[driveId];
+	if (drv == NULL || drv->drive == NULL)
+	{
+		LOGError("c64d_get_drive_is_disk_attached: no drive context");
+		return 0;
+	}
+	
+	if (drv->drive->GCR_image_loaded || drv->drive->P64_image_loaded)
+		return 1;
+	
+	return 0;
+}
+
+void c64d_set_drive_half_track(int driveId, int halfTrack)
+{
+	drive_context_t *drv = drive_context[driveId];
+	drive_set_half_track(halfTrack, 0, drv->drive);
+}
+
+void c64d_set_drive_disk_memory(int driveId, BYTE *id, unsigned int track, unsigned int sector)
+{
+	drive_context_t *drv = drive_context[driveId];
+	drive_set_disk_memory(id, track, sector, drv);
+}
+
+gcr_t *c64d_get_drive_disk_gcr(int driveId)
+{
+//	if (drive_context == NULL)	// this is static, no need to check
+//		return NULL;
+	
+	drive_context_t *drv = drive_context[driveId];
+	if (drv == NULL || drv->drive == NULL)
+		return NULL;
+	
+	gcr_t *diskGCR = drv->drive->gcr;
+//	LOGD("gcr=%x", drv->drive->gcr);
+	
+	return diskGCR;
 }
 
 

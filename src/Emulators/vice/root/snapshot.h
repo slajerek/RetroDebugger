@@ -28,7 +28,7 @@
 #ifndef SNAPSHOT_H
 #define SNAPSHOT_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 #define SNAPSHOT_MACHINE_NAME_LEN       16
 #define SNAPSHOT_MODULE_NAME_LEN        16

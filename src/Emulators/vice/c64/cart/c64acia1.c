@@ -126,7 +126,7 @@ extern int acia1_set_mode(int mode);
 #include "rs232drv.h"
 #include "snapshot.h"
 #include "translate.h"
-#include "types.h"
+#include "vicetypes.h"
 
 
 #undef  DEBUG   /*!< define if you want "normal" debugging output */

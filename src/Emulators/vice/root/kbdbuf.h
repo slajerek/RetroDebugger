@@ -28,7 +28,7 @@
 #ifndef VICE_KBDBUF_H
 #define VICE_KBDBUF_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 extern int kbdbuf_is_empty(void);
 extern void kbdbuf_init(int location, int plocation, int buffer_size, CLOCK mincycles);

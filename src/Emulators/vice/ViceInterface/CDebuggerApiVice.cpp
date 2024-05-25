@@ -17,7 +17,7 @@
 #include "CDebugInterfaceC64.h"
 #include "CDebugInterfaceAtari.h"
 #include "CSlrFileFromOS.h"
-#include "CViewMemoryMap.h"
+#include "CViewDataMap.h"
 #include "CDebugAsmSource.h"
 #include "CDebugSymbols.h"
 #include "CDebugSymbolsSegment.h"
@@ -48,16 +48,21 @@ void CDebuggerApiVice::ClearScreen()
 	viewC64->viewVicEditor->viewVicDisplay->currentCanvas->ClearScreen();
 }
 
-void CDebuggerApiVice::ConvertImageToScreen(char *filePath)
+bool CDebuggerApiVice::ConvertImageToScreen(char *filePath)
 {
 	CImageData *imageData = new CImageData(filePath);
-	viewC64->viewVicEditor->viewVicDisplay->currentCanvas->ConvertFrom(imageData);
+	if (imageData->resultData == NULL)
+		return false;
+	
+//	viewC64->viewVicEditor->viewVicDisplay->currentCanvas->ConvertFrom(imageData);
+	viewC64->viewVicEditor->ImportImage(imageData);
 	delete imageData;
+	return true;
 }
 
-void CDebuggerApiVice::ConvertImageToScreen(CImageData *imageData)
+bool CDebuggerApiVice::ConvertImageToScreen(CImageData *imageData)
 {
-	viewC64->viewVicEditor->ImportImage(imageData);
+	return viewC64->viewVicEditor->ImportImage(imageData);
 }
 
 void CDebuggerApiVice::ClearReferenceImage()

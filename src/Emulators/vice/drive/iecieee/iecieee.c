@@ -29,7 +29,7 @@
 #include "drive.h"
 #include "drivetypes.h"
 #include "iecieee.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "via.h"
 #include "viad.h"
 #include "drive-sound.h"

@@ -31,7 +31,7 @@
 
 #include "render1x2.h"
 #include "render1x2crt.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "video-color.h"
 
 /*

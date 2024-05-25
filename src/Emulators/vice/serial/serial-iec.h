@@ -27,7 +27,7 @@
 #ifndef VICE_SERIAL_IEC_H
 #define VICE_SERIAL_IEC_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 extern int serial_iec_open(unsigned int unit, unsigned int secondary, const char *name, unsigned int length);
 extern int serial_iec_close(unsigned int unit, unsigned int secondary);

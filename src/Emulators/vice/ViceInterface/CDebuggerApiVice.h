@@ -54,9 +54,10 @@ public:
 	void ClearScreen();
 	
 	// load from png file
-	void ConvertImageToScreen(char *filePath);
-
-	void ConvertImageToScreen(CImageData *imageData);
+	virtual bool ConvertImageToScreen(char *filePath);
+	
+	// load from CImageData
+	virtual bool ConvertImageToScreen(CImageData *imageData);
 	
 	CImageData *GetScreenImage(int *width, int *height);
 	

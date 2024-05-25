@@ -28,7 +28,7 @@
 #ifndef VICE_VIEWPORT_H
 #define VICE_VIEWPORT_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 /* A simple convenience type for defining rectangular areas.  */
 struct rectangle_s {

@@ -37,7 +37,7 @@
 #include "parallel.h"
 #include "riot.h"
 #include "riotd.h"
-#include "types.h"
+#include "vicetypes.h"
 
 
 typedef struct driveriot2_context_s {

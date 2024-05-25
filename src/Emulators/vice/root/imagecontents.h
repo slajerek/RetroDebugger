@@ -32,7 +32,7 @@
 #ifndef VICE_IMAGE_CONTENTS_H
 #define VICE_IMAGE_CONTENTS_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 #define IMAGE_CONTENTS_NAME_LEN         16  /**< standard length of container
                                                  names, such as D64 */

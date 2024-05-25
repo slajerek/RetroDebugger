@@ -38,7 +38,7 @@
 #include "parallel.h"
 #include "riot.h"
 #include "riotd.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "via.h"
 #include "via1d2031.h"
 

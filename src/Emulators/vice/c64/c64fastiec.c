@@ -34,7 +34,7 @@
 #include "drivetypes.h"
 #include "iecdrive.h"
 #include "maincpu.h"
-#include "types.h"
+#include "vicetypes.h"
 
 
 /* Fast IEC for C64 with burst mod */

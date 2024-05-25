@@ -40,7 +40,7 @@
 #include "lib.h"
 #include "log.h"
 #include "snapshot.h"
-#include "types.h"
+#include "vicetypes.h"
 
 
 #undef FDC_DEBUG

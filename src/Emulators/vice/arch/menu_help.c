@@ -26,7 +26,7 @@
  */
 
 #include "vice.h"
-#include "types.h"
+#include "vicetypes.h"
 
 #include <stdlib.h>
 #include "vice_sdl.h"

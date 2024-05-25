@@ -38,7 +38,7 @@
 #include "lib.h"
 #include "log.h"
 #include "t64.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "zfile.h"
 
 

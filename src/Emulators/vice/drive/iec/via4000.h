@@ -31,7 +31,7 @@
 #ifndef VICE_VIA4000_H
 #define VICE_VIA4000_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 struct drive_context_s;
 struct via_context_s;

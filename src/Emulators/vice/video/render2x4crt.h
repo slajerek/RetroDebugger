@@ -27,7 +27,7 @@
 #ifndef VICE_RENDER2X4CRT_H
 #define VICE_RENDER2X4CRT_H
 
-#include "types.h"
+#include "vicetypes.h"
 #include "viewport.h"
 
 extern void render_UYVY_2x4_crt(video_render_color_tables_t *colortab,

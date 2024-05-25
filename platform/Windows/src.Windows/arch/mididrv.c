@@ -46,7 +46,7 @@
 
 #include "resources.h"
 #include "translate.h"
-#include "types.h"
+#include "vicetypes.h"
 
 #ifndef DWORD_PTR
 #define DWORD_PTR unsigned long

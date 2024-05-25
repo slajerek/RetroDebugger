@@ -8,7 +8,7 @@
 #include "CDebugSymbols.h"
 #include "CDebugSymbolsSegment.h"
 #include "CDebugInterfaceNes.h"
-#include "CViewMemoryMap.h"
+#include "CViewDataMap.h"
 #include "CViewDataWatch.h"
 
 CDebuggerApiAtari::CDebuggerApiAtari(CDebugInterface *debugInterface)
@@ -32,14 +32,16 @@ void CDebuggerApiAtari::ClearScreen()
 	SYS_FatalExit("CDebuggerApiAtari::ClearScreen: not implemented");
 }
 
-void CDebuggerApiAtari::ConvertImageToScreen(char *filePath)
+bool CDebuggerApiAtari::ConvertImageToScreen(char *filePath)
 {
 	SYS_FatalExit("CDebuggerApiAtari::ConvertImageToScreen: not implemented");
+	return false;
 }
 
-void CDebuggerApiAtari::ConvertImageToScreen(CImageData *imageData)
+bool CDebuggerApiAtari::ConvertImageToScreen(CImageData *imageData)
 {
 	SYS_FatalExit("CDebuggerApiAtari::ConvertImageToScreen: not implemented");
+	return false;
 }
 
 void CDebuggerApiAtari::ClearReferenceImage()

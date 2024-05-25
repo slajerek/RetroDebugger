@@ -78,6 +78,7 @@ CDebugEvent::CDebugEvent(u8 eventType, CDebugSymbolsSegment *segment, u64 cycle,
 	this->segment = segment;
 	this->cycle = cycle;
 	this->frame = frame;
+	this->comment[0] = 0;
 }
 
 CDebugEvent::~CDebugEvent()

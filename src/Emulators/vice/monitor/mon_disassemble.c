@@ -37,7 +37,7 @@
 #include "mon_disassemble.h"
 #include "mon_util.h"
 #include "monitor.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "uimon.h"
 
 #define SKIP_PREFIX() remove_6809_prefix(&prefix, opc)

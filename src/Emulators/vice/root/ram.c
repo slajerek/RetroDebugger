@@ -35,7 +35,7 @@
 #include "ram.h"
 #include "resources.h"
 #include "translate.h"
-#include "types.h"
+#include "vicetypes.h"
 
 static int start_value = 0;
 static int value_invert = 64;

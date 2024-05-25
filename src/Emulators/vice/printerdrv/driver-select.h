@@ -27,7 +27,7 @@
 #ifndef VICE_DRIVER_SELECT_H
 #define VICE_DRIVER_SELECT_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 struct driver_select_s {
     const char *drv_name;

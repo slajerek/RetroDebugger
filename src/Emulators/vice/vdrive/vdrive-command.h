@@ -27,7 +27,7 @@
 #ifndef VICE_VDRIVE_COMMAND_H
 #define VICE_VDRIVE_COMMAND_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 struct vdrive_s;
 

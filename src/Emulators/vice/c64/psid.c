@@ -43,7 +43,7 @@
 #include "psid.h"
 #include "resources.h"
 #include "translate.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "uiapi.h"
 #include "vsidui.h"
 #include "vsync.h"

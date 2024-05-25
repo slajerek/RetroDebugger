@@ -150,7 +150,7 @@ extern char *alloca();
 #include "mon_util.h"
 #include "montypes.h"
 #include "resources.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "uimon.h"
 
 

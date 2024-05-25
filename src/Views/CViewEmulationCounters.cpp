@@ -9,7 +9,7 @@ extern "C" {
 #include "CSlrString.h"
 #include "SYS_KeyCodes.h"
 #include "CViewC64.h"
-#include "CViewMemoryMap.h"
+#include "CViewDataMap.h"
 #include "C64Tools.h"
 #include "CViewC64Screen.h"
 #include "CDebugInterface.h"
@@ -17,6 +17,7 @@ extern "C" {
 #include "CGuiEditHex.h"
 #include "VID_ImageBinding.h"
 #include "CLayoutParameter.h"
+#include "CMainMenuBar.h"
 
 CViewEmulationCounters::CViewEmulationCounters(char *name, float posX, float posY, float posZ, float sizeX, float sizeY,
 													 CDebugInterface *debugInterface)
@@ -90,9 +91,8 @@ void CViewEmulationCounters::RenderEmulationCounters(float px, float py, float p
 
 bool CViewEmulationCounters::DoTap(float x, float y)
 {
-	guiMain->LockMutex();
-	
-	guiMain->UnlockMutex();
+//	guiMain->LockMutex();
+//	guiMain->UnlockMutex();
 	return false;
 }
 
@@ -107,10 +107,18 @@ bool CViewEmulationCounters::KeyUp(u32 keyCode, bool isShift, bool isAlt, bool i
 	return false;
 }
 
-void CViewEmulationCounters::RenderFocusBorder()
+bool CViewEmulationCounters::HasContextMenuItems()
 {
-//	CGuiView::RenderFocusBorder();
-	//
+	return true;
+}
+
+void CViewEmulationCounters::RenderContextMenuItems()
+{
+	if (ImGui::MenuItem("Reset counters", viewC64->mainMenuBar->kbsResetCpuCycleAndFrameCounters->cstr, false))
+	{
+		viewC64->mainMenuBar->kbsResetCpuCycleAndFrameCounters->Run();
+	}
+	ImGui::Separator();
 }
 
 void CViewEmulationCounters::LayoutParameterChanged(CLayoutParameter *layoutParameter)

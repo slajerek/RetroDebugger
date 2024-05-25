@@ -54,6 +54,12 @@ public:
 	
 	CSlrString *strHeader;
 	void SwitchAboutScreen();
+	
+//	void SetupScreenColodore();
+//	C64ColodoreScreen *colodoreScreen;
+//	void RefreshScreenColodore();
+//	
+
 };
 
 

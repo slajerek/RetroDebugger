@@ -50,7 +50,7 @@
 #include "log.h"
 #include "rawimage.h"
 #include "realimage.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "p64.h"
 
 

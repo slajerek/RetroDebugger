@@ -28,7 +28,7 @@
 
 #include <stdio.h>
 
-#include "types.h"
+#include "vicetypes.h"
 #include "c64cart.h"
 
 struct snapshot_s;

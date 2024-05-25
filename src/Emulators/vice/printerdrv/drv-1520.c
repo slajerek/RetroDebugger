@@ -40,7 +40,7 @@
 #include "output-select.h"
 #include "output.h"
 #include "palette.h"
-#include "types.h"
+#include "vicetypes.h"
 
 /*#define DEBUG1520       1*/
 /*#define DEBUG1520_A   1*/

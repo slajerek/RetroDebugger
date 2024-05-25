@@ -13,7 +13,7 @@ class CDebugInterface;
 class CDebugAsmSource;
 class CDebugSymbolsSegment;
 class CDebugSymbolsCodeLabel;
-class CDataAdapter;
+class CDebugDataAdapter;
 class CDebugEventsHistory;
 class CDebugMemoryCell;
 class CDebugMemory;
@@ -26,11 +26,15 @@ class CDebugMemory;
 class CDebugSymbols
 {
 public:
-	CDebugSymbols(CDebugInterface *debugInterface, CDataAdapter *dataAdapter);
+	CDebugSymbols(CDebugInterface *debugInterface, bool supportBreakpoints);
 	virtual ~CDebugSymbols();
 	
 	CDebugInterface *debugInterface;
-	CDataAdapter *dataAdapter;
+	virtual void SetDataAdapter(CDebugDataAdapter *dataAdapter);
+	
+	bool supportBreakpoints;
+
+	CDebugDataAdapter *dataAdapter;
 	CDebugEventsHistory *debugEventsHistory;
 
 	CDebugAsmSource *asmSource;

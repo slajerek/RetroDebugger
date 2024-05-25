@@ -32,7 +32,7 @@
 #include "raster-cache.h"
 #include "raster-modes.h"
 #include "raster.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "vicii-draw.h"
 #include "viciitypes.h"
 #include "viewport.h"

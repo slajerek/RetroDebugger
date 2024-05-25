@@ -30,7 +30,7 @@
 
 #include <stdio.h>
 
-#include "types.h"
+#include "vicetypes.h"
 
 
 #define TAPE_TYPE_T64 0

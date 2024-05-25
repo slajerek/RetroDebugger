@@ -27,7 +27,7 @@
 #ifndef VICE_C64_CIA_H
 #define VICE_C64_CIA_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 struct cia_context_s;
 struct machine_context_s;

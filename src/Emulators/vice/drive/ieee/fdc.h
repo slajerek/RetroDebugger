@@ -27,7 +27,7 @@
 #ifndef VICE_FDC_H
 #define VICE_FDC_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 struct disk_image_s;
 struct drive_context_s;

@@ -93,9 +93,11 @@ void c64d_mark_c64_cell_write(uint16 addr, uint8 value);
 void c64d_mark_c64_cell_execute(uint16 addr, uint8 opcode);
 
 // TODO: add device num
-void c64d_mark_disk_cell_read(uint16 addr);
-void c64d_mark_disk_cell_write(uint16 addr, uint8 value);
-void c64d_mark_disk_cell_execute(uint16 addr, uint8 opcode);
+void c64d_mark_drive1541_cell_read(uint16 addr);
+void c64d_mark_drive1541_cell_write(uint16 addr, uint8 value);
+void c64d_mark_drive1541_cell_execute(uint16 addr, uint8 opcode);
+
+void c64d_mark_drive1541_contents_track_dirty(uint16 track);
 
 void c64d_clear_screen();
 void c64d_refresh_screen_no_callback();
@@ -200,7 +202,10 @@ void c64d_clear_drive_dirty_for_snapshot();
 
 // check if disk image changed, required for disk browser
 int c64d_is_drive_dirty_and_needs_refresh(int driveNum);
+void c64d_set_drive_dirty_needs_refresh_flag(int driveNum);
 void c64d_clear_drive_dirty_needs_refresh_flag(int driveNum);
+
+unsigned int c64d_get_drive_is_disk_attached(int driveId);
 
 void c64d_uimon_print(char *p);
 void c64d_uimon_print_line(char *p);

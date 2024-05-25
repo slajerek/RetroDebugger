@@ -1,14 +1,14 @@
 #ifndef _CDataAdapterNesPpuOam_H_
 #define _CDataAdapterNesPpuOam_H_
 
-#include "CDataAdapter.h"
+#include "CDebugDataAdapter.h"
 
 class CDebugInterfaceNes;
 
-class CDataAdapterNesPpuOam : public CDataAdapter
+class CDataAdapterNesPpuOam : public CDebugDataAdapter
 {
 public:
-	CDataAdapterNesPpuOam(CDebugInterfaceNes *debugInterfaceNes);
+	CDataAdapterNesPpuOam(CDebugSymbols *debugSymbols);
 	CDebugInterfaceNes *debugInterfaceNes;
 	
 	virtual int AdapterGetDataLength();

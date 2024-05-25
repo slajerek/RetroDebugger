@@ -29,7 +29,7 @@
 #define VICE_HARDSID_H
 
 #include "sid-snapshot.h"
-#include "types.h"
+#include "vicetypes.h"
 
 #define HS_MAXSID 2
 

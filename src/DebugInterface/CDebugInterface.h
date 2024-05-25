@@ -27,7 +27,7 @@ class CViewDataWatch;
 class CDebugInterfaceMenuItem;
 
 class CDebugInterfaceTask;
-class CViewMemoryMap;
+class CViewDataMap;
 class CViewTimeline;
 class CDebugEventsHistory;
 
@@ -107,7 +107,7 @@ public:
 	virtual int GetScreenSizeX();
 	virtual int GetScreenSizeY();
 	
-	CImageData *screenImage;
+	CImageData *screenImageData;
 	virtual void CreateScreenData();
 	int screenSupersampleFactor;
 	virtual void SetSupersampleFactor(int factor);
@@ -124,7 +124,10 @@ public:
 	virtual void MouseDown(float x, float y);
 	virtual void MouseMove(float x, float y);
 	virtual void MouseUp(float x, float y);
-		
+	
+	// force key up modifier keys when processing keyboard shortcut
+	virtual void KeyUpModifierKeys(bool isShift, bool isAlt, bool isControl);
+
 	// state
 	virtual int GetCpuPC();
 	
@@ -135,6 +138,7 @@ public:
 	virtual void SetDebugMode(uint8 debugMode);
 	virtual uint8 SetDebugModeBlockedWait(uint8 debugMode);
 	virtual uint8 GetDebugMode();
+	virtual void PauseEmulationBlockedWait();
 
 	//
 	virtual void Reset();
@@ -215,6 +219,8 @@ public:
 	virtual void Shutdown();
 
 	//
+	void ShowNotificationInfo(const char *message);
+	void ShowNotificationError(const char *message);
 	void ShowMessageBox(const char *title, const char *message);
 	
 	//
@@ -224,9 +230,10 @@ public:
 	
 	// views
 	CGuiView *viewScreen;
-	CGuiView *GetViewScreen();
-	CViewMemoryMap *GetViewMemoryMap();
-	CViewTimeline *GetViewTimeline();
+	virtual CGuiView *GetViewScreen();
+	std::vector<CViewDataMap *> viewsMemoryMap;
+	virtual void AddViewMemoryMap(CViewDataMap *viewMemoryMap);
+	virtual CViewTimeline *GetViewTimeline();
 	
 	//
 	CSlrMutex *breakpointsMutex;

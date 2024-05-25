@@ -34,7 +34,7 @@
 #include <stdarg.h>
 #include <stdio.h>
 
-#include "types.h"
+#include "vicetypes.h"
 
 #define UTIL_FILE_LOAD_RAW          0
 #define UTIL_FILE_LOAD_SKIP_ADDRESS 1

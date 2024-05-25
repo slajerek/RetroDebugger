@@ -36,7 +36,7 @@
 #include "parallel-trap.h"
 #include "parallel.h"
 #include "serial.h"
-#include "types.h"
+#include "vicetypes.h"
 
 
 #define SERIAL_NAMELENGTH 255

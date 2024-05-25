@@ -27,7 +27,7 @@
 #ifndef VICE_RAWFILE_H
 #define VICE_RAWFILE_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 struct rawfile_info_s;
 

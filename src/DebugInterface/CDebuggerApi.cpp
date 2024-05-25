@@ -13,7 +13,7 @@
 #include "CDebugInterfaceC64.h"
 #include "CDebugInterfaceAtari.h"
 #include "CSlrFileFromOS.h"
-#include "CViewMemoryMap.h"
+#include "CViewDataMap.h"
 #include "CDebugAsmSource.h"
 #include "CDebugSymbols.h"
 #include "CDebugSymbolsSegment.h"
@@ -80,14 +80,16 @@ void CDebuggerApi::ClearScreen()
 	SYS_FatalExit("CDebuggerApi::ClearScreen: not implemented");
 }
 
-void CDebuggerApi::ConvertImageToScreen(char *filePath)
+bool CDebuggerApi::ConvertImageToScreen(char *filePath)
 {
 	SYS_FatalExit("CDebuggerApi::ConvertImageToScreen: not implemented");
+	return false;
 }
 
-void CDebuggerApi::ConvertImageToScreen(CImageData *imageData)
+bool CDebuggerApi::ConvertImageToScreen(CImageData *imageData)
 {
 	SYS_FatalExit("CDebuggerApi::ConvertImageToScreen: not implemented");
+	return false;
 }
 
 void CDebuggerApi::ClearReferenceImage()
@@ -433,7 +435,6 @@ int CDebuggerApi::LoadBinary(u16 fromAddr, char *filePath)
 
 void CDebuggerApi::LoadSnapshot(const char *fileName)
 {
-	// TODO: fixme!
 	debugInterface->LoadFullSnapshot((char*)fileName);
 }
 

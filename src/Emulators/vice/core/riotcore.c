@@ -35,7 +35,7 @@
 #include "log.h"
 #include "riot.h"
 #include "snapshot.h"
-#include "types.h"
+#include "vicetypes.h"
 
 
 static const int divider[] = {

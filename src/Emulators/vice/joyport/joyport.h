@@ -28,7 +28,7 @@
 #define VICE_JOYPORT_H
 
 #include "snapshot.h"
-#include "types.h"
+#include "vicetypes.h"
 
 #define JOYPORT_ID_JOY1               -1
 #define JOYPORT_ID_JOY2               -2

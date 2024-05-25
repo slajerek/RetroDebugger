@@ -28,7 +28,7 @@
 #ifndef VICE_EASYFLASH_H
 #define VICE_EASYFLASH_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 extern int easyflash_resources_init(void);
 extern void easyflash_resources_shutdown(void);

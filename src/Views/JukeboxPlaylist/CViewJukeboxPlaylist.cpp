@@ -265,7 +265,7 @@ void CViewJukeboxPlaylist::ThreadRun(void *data)
 	CJukeboxPlaylistEntry *entry = (CJukeboxPlaylistEntry *)data;
 	entry->DebugPrint();
 	
-	if (entry->resetMode == MACHINE_RESET_HARD)
+	if (entry->resetMode == MACHINE_LOADPRG_RESET_MODE_HARD)
 	{
 		viewC64->debugInterfaceC64->HardReset();
 		
@@ -278,7 +278,7 @@ void CViewJukeboxPlaylist::ThreadRun(void *data)
 			SYS_Sleep(entry->delayAfterResetTime);
 		}
 	}
-	else if (entry->resetMode == MACHINE_RESET_SOFT)
+	else if (entry->resetMode == MACHINE_LOADPRG_RESET_MODE_SOFT)
 	{
 		viewC64->debugInterfaceC64->Reset();
 		

@@ -27,7 +27,7 @@
 #ifndef VICE_WDC65816_H
 #define VICE_WDC65816_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 /* Struct for the WDC65816 registers.  */
 /* This contains some redundancy to make it compatible with the way registers

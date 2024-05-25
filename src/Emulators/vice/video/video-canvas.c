@@ -40,7 +40,7 @@
 #include "lib.h"
 #include "log.h"
 #include "machine.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "video-canvas.h"
 #include "video-color.h"
 #include "video-render.h"

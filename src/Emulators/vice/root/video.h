@@ -27,7 +27,7 @@
 #ifndef VICE_VIDEO_H
 #define VICE_VIDEO_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 /* video filter type, resource "CHIPFilter" */
 #define VIDEO_FILTER_NONE         0

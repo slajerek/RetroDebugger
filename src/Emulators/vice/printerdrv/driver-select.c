@@ -38,7 +38,7 @@
 #include "log.h"
 #include "resources.h"
 #include "translate.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "util.h"
 
 static log_t driver_select_log = LOG_ERR;

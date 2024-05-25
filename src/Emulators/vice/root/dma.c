@@ -31,7 +31,7 @@
 #include "dma.h"
 #include "interrupt.h"
 #include "log.h"
-#include "types.h"
+#include "vicetypes.h"
 
 
 /* Asynchronously steal `num' cycles from the CPU, starting from cycle

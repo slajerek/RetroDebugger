@@ -29,7 +29,7 @@
 
 #include <stdio.h>
 
-#include "types.h"
+#include "vicetypes.h"
 
 extern void delaep7x8_config_init(void);
 extern void delaep7x8_config_setup(BYTE *rawcart);

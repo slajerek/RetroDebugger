@@ -27,7 +27,7 @@
 #ifndef VICE_PSID_H
 #define VICE_PSID_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 extern int psid_resources_init(void);
 extern int psid_cmdline_options_init(void);

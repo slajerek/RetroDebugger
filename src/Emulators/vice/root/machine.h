@@ -28,7 +28,7 @@
 #ifndef VICE_MACHINE_H
 #define VICE_MACHINE_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 /* The following stuff must be defined once per every emulated CBM machine.  */
 

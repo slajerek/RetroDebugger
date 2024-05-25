@@ -27,7 +27,7 @@
 #ifndef VICE_CLOCKPORT_H
 #define VICE_CLOCKPORT_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 #define CLOCKPORT_DEVICE_NONE            0
 #define CLOCKPORT_DEVICE_ETH64_II        1

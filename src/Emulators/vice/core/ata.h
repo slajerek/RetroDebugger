@@ -27,7 +27,7 @@
 #ifndef VICE_ATA
 #define VICE_ATA
 
-#include "types.h"
+#include "vicetypes.h"
 
 typedef enum ata_drive_type_e {
     ATA_DRIVE_NONE, ATA_DRIVE_HDD, ATA_DRIVE_FDD, ATA_DRIVE_CD, ATA_DRIVE_CF

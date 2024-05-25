@@ -54,7 +54,7 @@ extern "C" {
 #include "resid-fp.h"
 #include "resources.h"
 #include "sid-snapshot.h"
-#include "types.h"
+#include "vicetypes.h"
 
 struct sound_s
 {

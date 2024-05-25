@@ -9,7 +9,7 @@
 
 class CSlrFont;
 class CDataAdapter;
-class CViewMemoryMap;
+class CViewDataMap;
 class CSlrMutex;
 class CDebugInterfaceAtari;
 

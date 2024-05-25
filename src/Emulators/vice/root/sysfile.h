@@ -29,7 +29,7 @@
 
 #include <stdio.h>
 
-#include "types.h"
+#include "vicetypes.h"
 
 extern int sysfile_init(const char *emu_id);
 extern void sysfile_shutdown(void);

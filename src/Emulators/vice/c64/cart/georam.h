@@ -27,7 +27,7 @@
 #ifndef VICE_GEORAM_H
 #define VICE_GEORAM_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 struct snapshot_s;
 

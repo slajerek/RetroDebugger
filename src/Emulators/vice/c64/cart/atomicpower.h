@@ -29,7 +29,7 @@
 
 #include <stdio.h>
 
-#include "types.h"
+#include "vicetypes.h"
 
 extern BYTE atomicpower_roml_read(WORD addr);
 extern void atomicpower_roml_store(WORD addr, BYTE value);

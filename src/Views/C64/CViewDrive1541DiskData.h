@@ -3,6 +3,12 @@
 
 #include "CGuiView.h"
 #include "CDiskImageD64.h"
+#include "imgui_memory_editor.h"
+
+extern "C" {
+struct disk_image_s;
+typedef struct disk_image_s disk_image_t;
+}
 
 class CViewDrive1541DiskData : public CGuiView
 {
@@ -62,6 +68,8 @@ public:
 	//
 	disk_image_t *diskImage;
 
+	MemoryEditor memoryEditorSector;
+	MemoryEditor memoryEditorGCR;
 };
 
 #endif //_GUI_VIEW_DUMMY_

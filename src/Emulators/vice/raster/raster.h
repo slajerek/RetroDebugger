@@ -33,7 +33,7 @@
 
 #include "vice.h"
 
-#include "types.h"
+#include "vicetypes.h"
 
 
 struct canvas_refresh_s;

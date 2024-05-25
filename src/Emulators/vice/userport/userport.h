@@ -28,7 +28,7 @@
 #define VICE_USERPORT_H
 
 #include "snapshot.h"
-#include "types.h"
+#include "vicetypes.h"
 
 #define USERPORT_COLLISION_METHOD_DETACH_ALL    0
 #define USERPORT_COLLISION_METHOD_DETACH_LAST   1

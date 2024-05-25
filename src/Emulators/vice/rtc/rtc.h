@@ -27,7 +27,7 @@
 #ifndef VICE_RTC_H
 #define VICE_RTC_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 //#ifdef HAVE_TIME_T_IN_TIME_H
 #include <time.h>

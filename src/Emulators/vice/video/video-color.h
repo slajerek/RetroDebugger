@@ -28,7 +28,7 @@
 #define VICE_VIDEO_COLOR_H
 
 #include "palette.h"
-#include "types.h"
+#include "vicetypes.h"
 
 /* shared gamma table for renderers */
 extern DWORD gamma_red[256 * 3];

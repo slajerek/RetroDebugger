@@ -45,7 +45,7 @@
 #include "svnversion.h"
 #endif
 #include "translate.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "uiapi.h"
 #include "version.h"
 #include "vsync.h"

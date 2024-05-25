@@ -27,7 +27,7 @@
 #ifndef VICE_RAM_H
 #define VICE_RAM_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 extern int ram_resources_init(void);
 extern int ram_cmdline_options_init(void);

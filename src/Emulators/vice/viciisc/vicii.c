@@ -44,7 +44,7 @@
 #include "raster-modes.h"
 #include "resources.h"
 #include "screenshot.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "vicii-chip-model.h"
 #include "vicii-cmdline-options.h"
 #include "vicii-color.h"

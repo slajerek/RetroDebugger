@@ -28,7 +28,7 @@
 #ifndef VICE_VIA1D1541_H
 #define VICE_VIA1D1541_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 struct drive_context_s;
 struct via_context_s;

@@ -31,7 +31,7 @@
 #ifndef VICE_MOUSE_H
 #define VICE_MOUSE_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 typedef struct mouse_func_s {
     void (*mbl)(int pressed);

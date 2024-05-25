@@ -41,7 +41,7 @@
 #endif
 #include "sound.h"
 #include "translate.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "uiapi.h"
 
 /* ------------------------------------------------------------------------- */

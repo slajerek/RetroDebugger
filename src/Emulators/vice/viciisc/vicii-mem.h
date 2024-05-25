@@ -28,7 +28,7 @@
 #ifndef VICE_VICII_MEM_H
 #define VICE_VICII_MEM_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 extern void vicii_store(WORD addr, BYTE value);
 extern BYTE vicii_read(WORD addr);

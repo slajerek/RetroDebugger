@@ -27,7 +27,7 @@
 #ifndef VICE_PC8477_H
 #define VICE_PC8477_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 struct disk_image_s;
 struct drive_context_s;

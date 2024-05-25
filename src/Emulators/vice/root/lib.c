@@ -51,7 +51,7 @@
 #endif
 #endif
 
-#include "types.h"
+#include "vicetypes.h"
 #include "debug.h"
 
 #if (defined(sun) || defined(__sun)) && !(defined(__SVR4) || defined(__svr4__))

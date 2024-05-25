@@ -29,7 +29,7 @@
 
 #include <stdio.h>
 
-#include "types.h"
+#include "vicetypes.h"
 
 extern void simon_config_setup(BYTE *rawcart);
 extern int simon_bin_attach(const char *filename, BYTE *rawcart);

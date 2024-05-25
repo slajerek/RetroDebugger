@@ -27,7 +27,7 @@
 #ifndef VICE_PRINTER_H
 #define VICE_PRINTER_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 /* Generic interface.  */
 extern int printer_resources_init(void);

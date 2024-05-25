@@ -33,7 +33,7 @@
 
 #include "debug.h"
 #include "log.h"
-#include "types.h"
+#include "vicetypes.h"
 
 /* Define the number of cycles needed by the CPU to detect the NMI or IRQ.  */
 #define INTERRUPT_DELAY 2

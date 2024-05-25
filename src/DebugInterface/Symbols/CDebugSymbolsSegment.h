@@ -17,7 +17,7 @@ class CSlrString;
 class CDebugSymbolsSegment
 {
 public:
-	CDebugSymbolsSegment(CDebugSymbols *debugSymbols, CSlrString *name, int segmentNum);
+	CDebugSymbolsSegment(CDebugSymbols *debugSymbols, CSlrString *name, int segmentNum, bool supportBreakpoints);
 	virtual ~CDebugSymbolsSegment();
 	
 	int segmentNum;
@@ -42,6 +42,7 @@ public:
 	virtual void UpdateRenderBreakpoints();
 
 	//
+	bool supportBreakpoints;
 	virtual void AddBreakpointPC(int address);
 	virtual void AddBreakpointSetBackground(int address, int value);
 	virtual void AddBreakpointMemory(int address, u32 memoryAccess, MemoryBreakpointComparison comparison, int value);

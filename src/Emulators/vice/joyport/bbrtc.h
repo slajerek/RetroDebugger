@@ -27,7 +27,7 @@
 #ifndef VICE_BBRTC_H
 #define VICE_BBRTC_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 extern int joyport_bbrtc_resources_init(void);
 extern void joyport_bbrtc_resources_shutdown(void);

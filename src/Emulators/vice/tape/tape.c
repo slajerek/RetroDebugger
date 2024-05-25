@@ -47,7 +47,7 @@
 #include "tape.h"
 #include "tapeimage.h"
 #include "traps.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "uiapi.h"
 #include "vice-event.h"
 

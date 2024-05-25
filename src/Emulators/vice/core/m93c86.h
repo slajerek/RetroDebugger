@@ -27,7 +27,7 @@
 #ifndef VICE_M93C86
 #define VICE_M93C86
 
-#include "types.h"
+#include "vicetypes.h"
 
 extern BYTE m93c86_read_data(void);
 extern void m93c86_write_data(BYTE value);

@@ -27,7 +27,7 @@
 #include "vice.h"
 
 #include "render1x1.h"
-#include "types.h"
+#include "vicetypes.h"
 
 
 /* 16 color 1x1 renderers */

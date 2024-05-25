@@ -34,7 +34,7 @@
 #include "monitor.h"
 #include "snapshot.h"
 #include "tpi.h"
-#include "types.h"
+#include "vicetypes.h"
 
 
 #define irq_active      (tpi_context->c_tpi[TPI_AIR])

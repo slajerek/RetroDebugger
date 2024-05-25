@@ -31,7 +31,7 @@
 #ifndef VICE_SID_ENGINE_H
 #define VICE_SID_ENGINE_H
 
-#include "types.h"
+#include "vicetypes.h"
 #include "sound.h"
 
 #if (defined(WIN32) || defined(MACOSX_COCOA) || defined(WATCOM_COMPILE) || defined(__BEOS__)) && !defined(USE_SDLUI)

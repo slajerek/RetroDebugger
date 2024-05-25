@@ -28,7 +28,7 @@
 #ifndef VICE_VICII_FETCH_H
 #define VICE_VICII_FETCH_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 extern void vicii_fetch_matrix(void);
 extern BYTE vicii_fetch_graphics(void);

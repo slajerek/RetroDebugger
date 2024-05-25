@@ -27,7 +27,7 @@
 #ifndef VICE_FASTSID_H
 #define VICE_FASTSID_H
 
-#include "types.h"
+#include "vicetypes.h"
 #include "sid.h"
 #include "sid-snapshot.h"
 

@@ -47,7 +47,7 @@
 #include "sid.h"
 #include "sound.h"
 #include "ssi2001.h"
-#include "types.h"
+#include "vicetypes.h"
 
 #include "log.h"
 

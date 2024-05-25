@@ -30,7 +30,7 @@
 #include <time.h>
 
 #include "snapshot.h"
-#include "types.h"
+#include "vicetypes.h"
 
 #define DS12C887_RAM_SIZE   128
 #define DS12C887_REG_SIZE   11

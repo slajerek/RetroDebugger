@@ -31,7 +31,7 @@
 
 #include <string.h>
 
-#include "types.h"
+#include "vicetypes.h"
 
 #include "c64-midi.h"
 #include "cartio.h"

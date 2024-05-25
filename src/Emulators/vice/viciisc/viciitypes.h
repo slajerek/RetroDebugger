@@ -30,7 +30,7 @@
 #define VICE_VICIITYPES_H
 
 #include "raster.h"
-#include "types.h"
+#include "vicetypes.h"
 
 /* Screen constants.  */
 #define VICII_SCREEN_XPIX                  320

@@ -35,7 +35,7 @@
 #include "CDebugSymbols.h"
 #include "CDebugMemory.h"
 #include "CDebuggerEmulatorPlugin.h"
-#include "CViewMemoryMap.h"
+#include "CViewDataMap.h"
 #include "CDebugEventsHistory.h"
 
 #include "CDataAdapterNesRam.h"
@@ -70,15 +70,21 @@ CDebugInterfaceNes::CDebugInterfaceNes(CViewC64 *viewC64) //, uint8 *memory)
 
 	snapshotsManager = new CSnapshotsManager(this);
 
-	dataAdapter = new CDataAdapterNesRam(this);
-	dataAdapterPpuNmt = new CDataAdapterNesPpuNmt(this);
+	//
 	
-	// for loading breakpoints and symbols
-	this->symbols = new CDebugSymbols(this, this->dataAdapter);
-	this->symbols->CreateDefaultSegment();
+	// NES
+	symbols = new CDebugSymbols(this, true);
+	dataAdapter = new CDataAdapterNesRam(symbols);
 
-	this->symbolsPpuNmt = new CDebugSymbols(this, this->dataAdapterPpuNmt);
-	this->symbolsPpuNmt->CreateDefaultSegment();
+	symbols->SetDataAdapter(dataAdapter);
+	symbols->CreateDefaultSegment();
+
+	// PPU Nametables
+	symbolsPpuNmt = new CDebugSymbols(this, false);
+	dataAdapterPpuNmt = new CDataAdapterNesPpuNmt(symbolsPpuNmt);
+	
+	symbolsPpuNmt->SetDataAdapter(dataAdapterPpuNmt);
+	symbolsPpuNmt->CreateDefaultSegment();
 	
 	isDebugOn = true;
 	
@@ -96,9 +102,9 @@ void CDebugInterfaceNes::StepOneCycle()
 CDebugInterfaceNes::~CDebugInterfaceNes()
 {
 	debugInterfaceNes = NULL;
-	if (screenImage)
+	if (screenImageData)
 	{
-		delete screenImage;
+		delete screenImageData;
 	}
 	
 	if (dataAdapter)

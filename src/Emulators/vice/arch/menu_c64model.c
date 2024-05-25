@@ -28,7 +28,7 @@
 
 #include <stdio.h>
 
-#include "types.h"
+#include "vicetypes.h"
 
 #include "c64model.h"
 #include "cia.h"

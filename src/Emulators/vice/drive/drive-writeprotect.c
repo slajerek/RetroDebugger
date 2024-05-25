@@ -28,7 +28,7 @@
 
 #include "drive-writeprotect.h"
 #include "drive.h"
-#include "types.h"
+#include "vicetypes.h"
 
 /// c64d
 BYTE c64d_drive_writeprotect_sense_peek(drive_t *dptr)

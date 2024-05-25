@@ -23,6 +23,8 @@
 // TODO: fixme, plugins should also parse command line options
 extern char *crtMakerConfigFilePath;
 
+// workaround for Windows to not show console when user clicked file in OS and started debugger, then with added --pass
+bool c64CommandLineSkipConsoleAttach = false;
 
 #define C64D_PASS_CONFIG_DATA_MARKER	0x029A
 #define C64D_PASS_CONFIG_DATA_VERSION	0x0002
@@ -68,6 +70,8 @@ void C64DebuggerInitStartupTasks()
 
 void c64PrintC64DebuggerVersion()
 {
+	SYS_AttachConsole();
+
 	printHelp("Retro Debugger v%s by Slajerek/Samar\n", RETRODEBUGGER_VERSION_STRING);
 
 #if defined(RUN_COMMODORE64)
@@ -100,12 +104,12 @@ void c64PrintCommandLineHelp()
 	printHelp("-breakpoints <file>\n");
 	printHelp("     load breakpoints\n");
 	printHelp("-symbols <file>\n");
-	printHelp("     load symbols (code labels)");
+	printHelp("     load symbols (code labels)\n");
 	printHelp("-watch <file>\n");
-	printHelp("     load watches");
+	printHelp("     load watches\n");
 	printHelp("-debuginfo <file>\n");
-	printHelp("     load debug symbols (*.dbg)");
-	printHelp("\n");
+	printHelp("     load debug symbols (*.dbg)\n");
+//	printHelp("\n");
 	printHelp("-wait <ms>\n");
 	printHelp("     wait before performing tasks\n");
 	
@@ -198,6 +202,9 @@ void C64DebuggerParseCommandLine0()
 		
 		if (SYS_FileExists(arg))
 		{
+			// workaround for Windows, so we will not show console when user started by clicking on prg/d64/... file
+			c64CommandLineSkipConsoleAttach = true;
+			
 			CSlrString *filePath = new CSlrString(arg);
 			filePath->DebugPrint("filePath=");
 			
@@ -950,7 +957,7 @@ void C64DebuggerParseCommandLine2()
 			LOGD("C64DebuggerParseCommandLine2: set c64SettingsPathToPRG=%s", arg);
 			c64SettingsPathToPRG = new CSlrString(arg);
 		}
-		else if (!strcmp(cmd, "cartridge"))
+		else if (!strcmp(cmd, "cartridge") || !strcmp(cmd, "crt"))
 		{
 			char *arg = c64ParseCommandLineGetArgument();
 			c64SettingsPathToCartridge = new CSlrString(arg);
@@ -1056,7 +1063,10 @@ void C64DebuggerPassConfigToRunningInstance()
 {
 	//NSLog(@"C64DebuggerPassConfigToRunningInstance");
 	
-	SYS_AttachConsole();
+	if (c64CommandLineSkipConsoleAttach == false)
+	{
+		SYS_AttachConsole();
+	}
 
 	c64SettingsPassConfigToRunningInstance = true;
 	printLine("-----< RetroDebugger v%s by Slajerek/Samar >------\n", RETRODEBUGGER_VERSION_STRING);

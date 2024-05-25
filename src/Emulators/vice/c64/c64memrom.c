@@ -28,7 +28,7 @@
 
 #include "c64mem.h"
 #include "c64memrom.h"
-#include "types.h"
+#include "vicetypes.h"
 #include <string.h>
 
 #ifdef USE_EMBEDDED

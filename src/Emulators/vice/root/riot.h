@@ -28,7 +28,7 @@
 #ifndef VICE_RIOT_H
 #define VICE_RIOT_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 /*
  * signal values (for signaling edges on the control lines)

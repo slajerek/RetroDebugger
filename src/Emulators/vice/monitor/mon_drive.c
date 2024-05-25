@@ -39,7 +39,7 @@
 #include "montypes.h"
 #include "mon_drive.h"
 #include "mon_util.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "uimon.h"
 #include "vdrive.h"
 #include "vdrive-command.h"

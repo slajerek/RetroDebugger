@@ -32,7 +32,7 @@
 #ifndef VICE_REU_H
 #define VICE_REU_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 struct snapshot_s;
 

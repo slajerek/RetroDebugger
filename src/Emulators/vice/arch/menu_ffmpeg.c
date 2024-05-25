@@ -31,7 +31,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "types.h"
+#include "vicetypes.h"
 
 #include "gfxoutput.h"
 #include "lib.h"

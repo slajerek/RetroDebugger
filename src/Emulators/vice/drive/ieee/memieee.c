@@ -33,7 +33,7 @@
 #include "drivetypes.h"
 #include "memieee.h"
 #include "riotd.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "via1d2031.h"
 #include "viad.h"
 

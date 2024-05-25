@@ -51,7 +51,7 @@
 #include "parallel-trap.h"
 #include "parallel.h"
 #include "resources.h"
-#include "types.h"
+#include "vicetypes.h"
 
 
 int parallel_debug = 0;

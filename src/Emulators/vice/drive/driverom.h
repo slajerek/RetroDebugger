@@ -27,7 +27,7 @@
 #ifndef VICE_DRIVEROM_H
 #define VICE_DRIVEROM_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 struct drive_s;
 struct snapshot_s;

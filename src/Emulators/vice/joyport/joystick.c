@@ -52,7 +52,7 @@
 #include "resources.h"
 #include "snapshot.h"
 #include "translate.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "uiapi.h"
 #include "userport_joystick.h"
 #include "vice-event.h"
@@ -799,16 +799,6 @@ void c64d_joystick_key_up(int key, unsigned int joyport)
 
 //	LOGD("c64d_joystick_key_up: key=%x joyport=%d", key, joyport);
 	
-	// TODO: this is strange and needs proper debug why c64 joystick is switched
-	if (key == JOYPAD_E)
-	{
-		key = JOYPAD_W;
-	}
-	else if (key == JOYPAD_W)
-	{
-		key = JOYPAD_E;
-	}
-	
 	c64d_lock_mutex();
 
 	if (key == JOYPAD_N)
@@ -854,16 +844,6 @@ void c64d_joystick_key_up(int key, unsigned int joyport)
 void c64d_joystick_key_down(int key, unsigned int joyport)
 {
 //	LOGD("c64d_joystick_key_down: key=%d joyport=%d", key, joyport);
-	
-	// TODO: this is strange and needs proper debug why c64 joystick is switched
-	if (key == JOYPAD_E)
-	{
-		key = JOYPAD_W;
-	}
-	else if (key == JOYPAD_W)
-	{
-		key = JOYPAD_E;
-	}
 	
 	int keysetnum = JOYDEV_KEYSET1;
 	int value;

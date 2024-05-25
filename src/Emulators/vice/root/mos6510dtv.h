@@ -30,7 +30,7 @@
 #ifndef VICE_MOS6510DTV_H
 #define VICE_MOS6510DTV_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 /* Struct for the 6510DTV registers.  */
 /* This contains some redundancy to make it compatible with the way registers

@@ -41,7 +41,7 @@
 #include "lib.h"
 #include "memiec.h"
 #include "resources.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "via.h"
 #include "via1d1541.h"
 #include "wd1770.h"

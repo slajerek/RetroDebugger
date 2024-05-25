@@ -35,7 +35,7 @@
 #include "serial-iec-device.h"
 #include "serial-trap.h"
 #include "serial.h"
-#include "types.h"
+#include "vicetypes.h"
 
 
 /* Warning: these are only valid for the VIC20, C64 and C128, but *not* for

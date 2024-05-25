@@ -39,7 +39,7 @@
 #include "resources.h"
 #include "snapshot.h"
 #include "translate.h"
-#include "types.h"
+#include "vicetypes.h"
 
 static int memory_hack = 0;
 

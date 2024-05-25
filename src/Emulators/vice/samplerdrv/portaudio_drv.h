@@ -27,7 +27,7 @@
 #ifndef VICE_PORTAUDIO_DRV_H
 #define VICE_PORTAUDIO_DRV_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 extern void portaudio_init(void);
 

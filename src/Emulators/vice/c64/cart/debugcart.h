@@ -27,7 +27,7 @@
 #ifndef VICE_DEBUGCART_H
 #define VICE_DEBUGCART_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 extern int debugcart_cmdline_options_init(void);
 extern int debugcart_resources_init(void);

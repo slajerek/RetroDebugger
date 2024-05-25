@@ -38,7 +38,7 @@
 #include "fsimage.h"
 #include "lib.h"
 #include "log.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "util.h"
 #include "x64.h"
 

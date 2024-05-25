@@ -35,7 +35,7 @@
 #include "C64DebuggerPluginGoatTracker.h"
 #include "C64DebuggerPluginCrtMaker.h"
 #include "C64DebuggerPluginDNDK.h"
-#include "CViewMemoryMap.h"
+#include "CViewDataMap.h"
 #include "CViewMonitorConsole.h"
 #include "CGuiViewMessages.h"
 #include "CGuiViewUiDebug.h"
@@ -50,6 +50,7 @@
 #include "imgui_internal.h"
 #include "implot.h"
 #include "implot_internal.h"
+#include "ImGuiUtils.h"
 
 extern bool c64dSkipBogusPageOffsetReadOnSTA;
 
@@ -70,7 +71,10 @@ CMainMenuBar::CMainMenuBar()
 	extensionsImportLabels.push_back(new CSlrString("dbg"));
 	extensionsImportLabels.push_back(new CSlrString("lbl"));
 	extensionsImportLabels.push_back(new CSlrString("labels"));
+	extensionsImportLabels.push_back(new CSlrString("txt"));
+	
 	extensionsExportLabels.push_back(new CSlrString("labels"));
+	
 	extensionsREU.push_back(new CSlrString("reu"));
 
 	extensionsWatches.push_back(new CSlrString("watches"));
@@ -79,8 +83,8 @@ CMainMenuBar::CMainMenuBar()
 	extensionsMemory.push_back(new CSlrString("bin"));
 	extensionsCSV.push_back(new CSlrString("csv"));
 	extensionsProfiler.push_back(new CSlrString("pd"));
-	extensionsTimeline.push_back(new CSlrString("rtdl"));
 	extensionsTimeline.push_back(new CSlrString("rdtl"));
+	extensionsTimeline.push_back(new CSlrString("rtdl"));
 
 	// this is Search view
 	viewSearchWindow = new CGuiViewSearch("Open Window", 200, 150, -1, 400, 200, this);
@@ -163,10 +167,10 @@ CMainMenuBar::CMainMenuBar()
 		kbsInsertNextD64 = new CSlrKeyboardShortcut(KBZONE_GLOBAL, "Insert next disk to Device #8", '8', false, true, true, false, this);
 		guiMain->AddKeyboardShortcut(kbsInsertNextD64);
 
-		kbsStartFromDisk = new CSlrKeyboardShortcut(KBZONE_GLOBAL, "Start from Device #8", MTKEY_F3, false, false, false, false, this);
+		kbsStartFromDisk = new CSlrKeyboardShortcut(KBZONE_GLOBAL, "Start from Device #8", MTKEY_F3, false, true, false, false, this);
 		guiMain->AddKeyboardShortcut(kbsStartFromDisk);
 		
-		kbsBrowseD64 = new CSlrKeyboardShortcut(KBZONE_GLOBAL, "Browse Device #8", MTKEY_F7, false, false, false, false, this);
+		kbsBrowseD64 = new CSlrKeyboardShortcut(KBZONE_GLOBAL, "Browse Device #8", MTKEY_F7, false, true, false, false, this);
 		guiMain->AddKeyboardShortcut(kbsBrowseD64);
 		
 		// cartridge
@@ -351,7 +355,7 @@ CMainMenuBar::CMainMenuBar()
 	guiMain->AddKeyboardShortcut(kbsJoystickFire);
 
 #if defined(RUN_NES)
-	kbsJoystickFireB = new CSlrKeyboardShortcut(KBZONE_SCREEN, "Joystick FIRE B", MTKEY_RCONTROL, false, true, false, false, this);
+	kbsJoystickFireB = new CSlrKeyboardShortcut(KBZONE_SCREEN, "Joystick FIRE B", MTKEY_RCONTROL, false, false, true, false, this);
 	guiMain->AddKeyboardShortcut(kbsJoystickFireB);
 	kbsJoystickStart = new CSlrKeyboardShortcut(KBZONE_SCREEN, "Joystick START", MTKEY_F1, false, false, false, false, this);
 	guiMain->AddKeyboardShortcut(kbsJoystickStart);
@@ -586,7 +590,7 @@ void CMainMenuBar::RenderImGui()
 		
 		if (ImGui::BeginMenu("Code"))
 		{
-			char *t = "Step Instruction";
+			const char *t = "Step Instruction";
 			bool isPaused = true;
 
 			for (std::vector<CDebugInterface *>::iterator it = viewC64->debugInterfaces.begin(); it != viewC64->debugInterfaces.end(); it++)
@@ -1243,44 +1247,81 @@ void CMainMenuBar::RenderImGui()
 //					}
 					if (ImGui::BeginMenu("Reset C64 before PRG load"))
 					{
-						bool b = c64SettingsAutoJmpDoReset == MACHINE_RESET_NONE;
-						bool bp = c64SettingsAutoJmpDoReset == MACHINE_RESET_HARD;
+						bool b = c64SettingsAutoJmpDoReset == MACHINE_LOADPRG_RESET_MODE_NONE;
+						bool bp = c64SettingsAutoJmpDoReset == MACHINE_LOADPRG_RESET_MODE_LOAD_SNAPSHOT_BASIC;
 						if (ImGui::MenuItem("No reset",
 											bp ? kbsAutoJmpDoReset->cstr : "", &b))
 						{
-							c64SettingsAutoJmpDoReset = MACHINE_RESET_NONE;
+							c64SettingsAutoJmpDoReset = MACHINE_LOADPRG_RESET_MODE_NONE;
 							C64DebuggerStoreSettings();
 						}
 
+						ImGui::Separator();
+						
 						bp = b;
-						b = c64SettingsAutoJmpDoReset == MACHINE_RESET_SOFT;
+						b = c64SettingsAutoJmpDoReset == MACHINE_LOADPRG_RESET_MODE_SOFT;
 
 						if (ImGui::MenuItem("Soft reset",
 											bp ? kbsAutoJmpDoReset->cstr : "", &b))
 						{
-							c64SettingsAutoJmpDoReset = MACHINE_RESET_SOFT;
+							c64SettingsAutoJmpDoReset = MACHINE_LOADPRG_RESET_MODE_SOFT;
 							C64DebuggerStoreSettings();
 						}
 
 						bp = b;
-						b = c64SettingsAutoJmpDoReset == MACHINE_RESET_HARD;
+						b = c64SettingsAutoJmpDoReset == MACHINE_LOADPRG_RESET_MODE_HARD;
 
 						if (ImGui::MenuItem("Hard reset",
 											bp ? kbsAutoJmpDoReset->cstr : "", &b))
 						{
-							c64SettingsAutoJmpDoReset = MACHINE_RESET_HARD;
+							c64SettingsAutoJmpDoReset = MACHINE_LOADPRG_RESET_MODE_HARD;
 							C64DebuggerStoreSettings();
 						}
 
+						int step = 10; int step_fast = 100;
+						if (ImGui::InputScalar("Wait after Reset", ImGuiDataType_::ImGuiDataType_U32, &c64SettingsAutoJmpWaitAfterReset, &step, &step_fast, "%d", ImGuiInputTextFlags_CharsDecimal | ImGuiInputTextFlags_EnterReturnsTrue))
+						{
+							C64DebuggerStoreSettings();
+						}
+
+						ImGui::Separator();
+						
+						bp = b;
+						b = c64SettingsAutoJmpDoReset == MACHINE_LOADPRG_RESET_MODE_LOAD_SNAPSHOT_BASIC;
+
+						if (ImGui::MenuItem("Basic Snapshot (C64 PAL)",
+											bp ? kbsAutoJmpDoReset->cstr : "", &b))
+						{
+							c64SettingsAutoJmpDoReset = MACHINE_LOADPRG_RESET_MODE_LOAD_SNAPSHOT_BASIC;
+							C64DebuggerStoreSettings();
+						}
+						
+						/*
+						 
+						 TODO:
+						ImGui::Separator();
+						
+						bp = b;
+						b = c64SettingsAutoJmpDoReset == MACHINE_LOADPRG_RESET_MODE_LOAD_SNAPSHOT_CUSTOM;
+
+						if (ImGui::MenuItem("Custom Snapshot (TODO)",
+											bp ? kbsAutoJmpDoReset->cstr : "", &b))
+						{
+							c64SettingsAutoJmpDoReset = MACHINE_LOADPRG_RESET_MODE_LOAD_SNAPSHOT_CUSTOM;
+							C64DebuggerStoreSettings();
+						}
+						
+						ImGui::MenuItem("Select snapshot file: XXXXXXX");
+						
+						static bool f = false;
+						ImGui::Checkbox("Setup Basic vectors and Drive RAM", &f);
+
+						 
+						 */
+
 						ImGui::EndMenu();
 					}
-					
-					int step = 10; int step_fast = 100;
-					if (ImGui::InputScalar("Wait after Reset", ImGuiDataType_::ImGuiDataType_U32, &c64SettingsAutoJmpWaitAfterReset, &step, &step_fast, "%d", ImGuiInputTextFlags_CharsDecimal | ImGuiInputTextFlags_EnterReturnsTrue))
-					{
-						C64DebuggerStoreSettings();
-					}
-					
+										
 					ImGui::Separator();
 
 					if (ImGui::BeginMenu("Memory"))
@@ -1878,7 +1919,7 @@ void CMainMenuBar::RenderImGui()
 					if (ImGui::MenuItem("Select C64 ROMs folder"))
 					{
 						systemDialogOperation = SystemDialogOperationC64RomsFolder;
-						SYS_DialogPickFolder(this, c64SettingsPathToC64Roms);
+						SYS_DialogPickFolder(this, c64SettingsPathToRomsC64);
 					}
 	
 					/*
@@ -2338,13 +2379,20 @@ void CMainMenuBar::RenderImGui()
 				{
 					viewC64->SetViewportsEnable(viewportsEnable);
 				}
+
+				ImGuiIO& io = ImGui::GetIO();
+
 				bool uiDockingWithShift = true;
 				viewC64->config->GetBool("uiDockingWithShift", &uiDockingWithShift, true);
 				if (ImGui::MenuItem("Docking with shift", NULL, &uiDockingWithShift))
 				{
 					viewC64->config->SetBool("uiDockingWithShift", &uiDockingWithShift);
-					ImGuiIO& io = ImGui::GetIO();
 					io.ConfigDockingWithShift = uiDockingWithShift;
+				}
+
+				if (ImGui::MenuItem("Hide tab bar icon", NULL, &io.ConfigIsTabBarTriangleHidden))
+				{
+					viewC64->config->SetBool("ConfigIsTabBarTriangleHidden", &io.ConfigIsTabBarTriangleHidden);
 				}
 				
 				ImGui::Separator();
@@ -2679,6 +2727,7 @@ void CMainMenuBar::RenderImGui()
 
 		static bool show_retro_debugger_about = false;
 		static bool show_app_metrics = false;
+		static bool show_app_frame_time_histogram = false;
 		static bool show_app_style_editor = false;
 		static bool show_app_demo = false;
 		static bool show_implot_demo = false;
@@ -2689,6 +2738,7 @@ void CMainMenuBar::RenderImGui()
 			ImGui::MenuItem("Retro Debugger about", "", &show_retro_debugger_about);
 			ImGui::Separator();
 			ImGui::MenuItem("ImGui Metrics", "", &show_app_metrics);
+//			ImGui::MenuItem("ImGui Frame time histogram", "", &show_app_frame_time_histogram);
 			ImGui::MenuItem("ImGui Style Editor", "", &show_app_style_editor);
 			ImGui::MenuItem("ImGui Demo", "", &show_app_demo);
 			ImGui::MenuItem("ImGui Plot demo", "", &show_implot_demo);
@@ -2727,7 +2777,9 @@ void CMainMenuBar::RenderImGui()
 			ImGui::Separator();
 			ImGui::Text("");
 			ImGui::Text("If you like this tool and you feel that you would like to share with me some beers,");
-			ImGui::Text("then you can use this link: http://tinyurl.com/C64Debugger-PayPal");
+			ImGui::Text("then you can use this link: ");
+			ImGui::SameLine();
+			ImGui::TextURL("http://tinyurl.com/C64Debugger-PayPal", "https://www.paypal.com/donate/?business=7CQZJRKL9BXPL&no_recurring=0&item_name=For+the+Retro+Debugger&currency_code=EUR", true, false);
 			ImGui::Text("");
 			ImGui::Separator();
 
@@ -2749,6 +2801,14 @@ void CMainMenuBar::RenderImGui()
 			ImGui::End();
 		}
 		if (show_app_metrics)       { ImGui::ShowMetricsWindow(&show_app_metrics); }
+		
+//		static ImGui::FrameTimeHistogram fth;v
+//		static fTime
+//		if (show_app_frame_time_histogram)
+//		{
+//			fth.Draw("Frame time histogram");
+//		}
+		
 		if (show_app_style_editor)
 		{
 			ImGui::Begin("Dear ImGui Style Editor", &show_app_style_editor);
@@ -2896,9 +2956,6 @@ bool CMainMenuBar::KeyDown(u32 keyCode, bool isShift, bool isAlt, bool isControl
 		return true;
 	}
 	
-	if (guiMain->CheckKeyboardShortcut(keyCode))
-		return true;
-	
 	return false;
 }
 
@@ -2907,21 +2964,7 @@ bool CMainMenuBar::ProcessKeyboardShortcut(u32 zone, u8 actionType, CSlrKeyboard
 	LOGD("CMainMenuBar::ProcessKeyboardShortcut");
 	shortcut->DebugPrint();
 	
-	// TODO: GENERALIZE THIS make a list of avaliable interfaces and iterate
-	if (viewC64->debugInterfaceC64)
-	{
-		viewC64->viewC64Screen->KeyUpModifierKeys(shortcut->isShift, shortcut->isAlt, shortcut->isControl);
-	}
-	
-	if (viewC64->debugInterfaceAtari)
-	{
-		viewC64->viewAtariScreen->KeyUpModifierKeys(shortcut->isShift, shortcut->isAlt, shortcut->isControl);
-	}
-
-	if (viewC64->debugInterfaceNes)
-	{
-		viewC64->viewNesScreen->KeyUpModifierKeys(shortcut->isShift, shortcut->isAlt, shortcut->isControl);
-	}
+	viewC64->KeyUpModifierKeys(shortcut->isShift, shortcut->isAlt, shortcut->isControl);
 	
 	if (shortcut == kbsCloseWindow)
 	{
@@ -3091,12 +3134,13 @@ bool CMainMenuBar::ProcessKeyboardShortcut(u32 zone, u8 actionType, CSlrKeyboard
 		if (shortcut == kbsBrowseD64)
 		{
 			// TODO: workaround for broken scroll to selected item, fix me in viewMenuItem
-			bool wasVisible = viewC64->viewDrive1541FileD64->IsVisible();
+			bool wasVisible = viewC64->viewDrive1541Browser->IsVisible();
 			
-			viewC64->viewDrive1541FileD64->StartBrowsingD64(0);
+			viewC64->viewDrive1541Browser->SetVisible(true);
+			viewC64->viewDrive1541Browser->StartBrowsingD64(0);
 			if (!viewC64->viewC64Screen->HasFocus())
 			{
-				guiMain->SetFocus(viewC64->viewDrive1541FileD64);
+				guiMain->SetFocus(viewC64->viewDrive1541Browser);
 			}
 			
 			return true;
@@ -3104,7 +3148,7 @@ bool CMainMenuBar::ProcessKeyboardShortcut(u32 zone, u8 actionType, CSlrKeyboard
 		
 		if (shortcut == kbsStartFromDisk)
 		{
-			viewC64->viewDrive1541FileD64->StartDiskPRGEntry(0, true);
+			viewC64->viewDrive1541Browser->StartDiskPRGEntry(0, true);
 			return true;
 		}
 		
@@ -3713,17 +3757,29 @@ void CMainMenuBar::ToggleAutoJmpAlwaysToLoadedPRGAddress()
 
 void CMainMenuBar::ToggleAutoJmpDoReset()
 {
-	if (c64SettingsAutoJmpDoReset == MACHINE_RESET_HARD)
+	c64SettingsAutoJmpDoReset++;
+	if (c64SettingsAutoJmpDoReset == MACHINE_LOADPRG_RESET_MODE_END_OF_ENUM)
+		c64SettingsAutoJmpDoReset = MACHINE_LOADPRG_RESET_MODE_NONE;
+	
+	if (c64SettingsAutoJmpDoReset == MACHINE_LOADPRG_RESET_MODE_NONE)
 	{
 		viewC64->ShowMessageInfo("Do not Reset before PRG load");
 	}
-	else if (c64SettingsAutoJmpDoReset == MACHINE_RESET_NONE)
+	else if (c64SettingsAutoJmpDoReset == MACHINE_LOADPRG_RESET_MODE_SOFT)
 	{
 		viewC64->ShowMessageInfo("Soft Reset before PRG load");
 	}
-	else if (c64SettingsAutoJmpDoReset == MACHINE_RESET_SOFT)
+	else if (c64SettingsAutoJmpDoReset == MACHINE_LOADPRG_RESET_MODE_HARD)
 	{
 		viewC64->ShowMessageInfo("Hard Reset before PRG load");
+	}
+	else if (c64SettingsAutoJmpDoReset == MACHINE_LOADPRG_RESET_MODE_LOAD_SNAPSHOT_BASIC)
+	{
+		viewC64->ShowMessageInfo("Load Basic snapshot before PRG load");
+	}
+	else if (c64SettingsAutoJmpDoReset == MACHINE_LOADPRG_RESET_MODE_LOAD_SNAPSHOT_CUSTOM)
+	{
+		viewC64->ShowMessageInfo("Load Custom snapshot before PRG load");
 	}
 }
 
@@ -3799,6 +3855,7 @@ void CMainMenuBar::DetachEverything(bool showMessage, bool storeSettings)
 		}
 
 		viewC64->debugInterfaceC64->ClearDebugMarkers();
+		viewC64->debugInterfaceC64->SetDebugMode(DEBUGGER_MODE_RUNNING);
 
 		guiMain->UnlockMutex();
 	}
@@ -3834,7 +3891,8 @@ void CMainMenuBar::DetachEverything(bool showMessage, bool storeSettings)
 		}
 
 		viewC64->debugInterfaceAtari->ClearDebugMarkers();
-		
+		viewC64->debugInterfaceAtari->SetDebugMode(DEBUGGER_MODE_RUNNING);
+
 		guiMain->UnlockMutex();
 
 	}
@@ -4199,7 +4257,7 @@ void CMainMenuBar::SystemDialogFileOpenSelected(CSlrString *path)
 	if (systemDialogOperation == SystemDialogOperationImportLabels)
 	{
 		CSlrString *ext = path->GetFileExtensionComponentFromPath();
-		if (ext->CompareWith("vs"))
+		if (ext->CompareWith("vs") || ext->CompareWith("txt"))
 		{
 			selectedDebugInterface->symbols->ParseSymbols(path);
 		}
@@ -4216,6 +4274,10 @@ void CMainMenuBar::SystemDialogFileOpenSelected(CSlrString *path)
 			selectedDebugInterface->symbols->DeleteAllSymbols();
 			selectedDebugInterface->symbols->LoadLabelsRetroDebuggerFormat(path);
 		}
+		else
+		{
+			viewC64->ShowMessageError("Loading labels failed, unknown file extension");
+		}
 	}
 	else if (systemDialogOperation == SystemDialogOperationImportWatches)
 	{
@@ -4224,6 +4286,10 @@ void CMainMenuBar::SystemDialogFileOpenSelected(CSlrString *path)
 			selectedDebugInterface->symbols->currentSegment->DeleteAllWatches();
 			selectedDebugInterface->symbols->LoadWatchesRetroDebuggerFormat(path);
 		}
+		else
+		{
+			viewC64->ShowMessageError("Loading watches failed, no current segment");
+		}
 	}
 	else if (systemDialogOperation == SystemDialogOperationImportBreakpoints)
 	{
@@ -4231,6 +4297,10 @@ void CMainMenuBar::SystemDialogFileOpenSelected(CSlrString *path)
 		{
 			selectedDebugInterface->symbols->currentSegment->ClearBreakpoints();
 			selectedDebugInterface->symbols->LoadBreakpointsRetroDebuggerFormat(path);
+		}
+		else
+		{
+			viewC64->ShowMessageError("Loading breakpoints failed, no current segment");
 		}
 	}
 
@@ -4321,9 +4391,9 @@ void CMainMenuBar::SystemDialogFileOpenSelected(CSlrString *path)
 	// pick folder
 	else if (systemDialogOperation == SystemDialogOperationC64RomsFolder)
 	{
-		if (c64SettingsPathToC64Roms)
-			delete c64SettingsPathToC64Roms;
-		c64SettingsPathToC64Roms = new CSlrString(path);
+		if (c64SettingsPathToRomsC64)
+			delete c64SettingsPathToRomsC64;
+		c64SettingsPathToRomsC64 = new CSlrString(path);
 		
 		CDebugInterfaceVice *vice = (CDebugInterfaceVice*)viewC64->debugInterfaceC64;
 		char *p = path->GetStdASCII();

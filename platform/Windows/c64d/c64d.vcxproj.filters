@@ -246,6 +246,12 @@
     <Filter Include="Source Files\src\Plugins\Commando">
       <UniqueIdentifier>{e70f7495-151a-4eeb-b549-f3504bf5e8c4}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\src\Emulators\vice\ViceInterface\Adapters">
+      <UniqueIdentifier>{da4c08a7-3ccf-4804-b001-5eef902d5ef8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\src\Plugins\Slideshow">
+      <UniqueIdentifier>{c04896c9-3f9c-4714-a338-b5fbbac3244a}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\src\Emulators\atari800\a-cartridge.c">
@@ -2159,9 +2165,6 @@
     <ClCompile Include="..\..\..\src\Views\CViewEmulationState.cpp">
       <Filter>Source Files\src\Views</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\src\Views\CViewMemoryMap.cpp">
-      <Filter>Source Files\src\Views</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\..\src\Views\CViewMonitorConsole.cpp">
       <Filter>Source Files\src\Views</Filter>
     </ClCompile>
@@ -2385,9 +2388,6 @@
       <Filter>Source Files\src\Views\C64</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\Views\C64\CViewC64Screen.cpp">
-      <Filter>Source Files\src\Views\C64</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\Views\C64\CViewC64ScreenWrapper.cpp">
       <Filter>Source Files\src\Views\C64</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\Views\C64\CViewC64StateCIA.cpp">
@@ -3554,18 +3554,6 @@
     <ClCompile Include="..\..\..\src\Emulators\vice\ViceInterface\CDebugInterfaceVice.cpp">
       <Filter>Source Files\src\Emulators\vice\ViceInterface</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\src\Emulators\vice\ViceInterface\CDebugSymbolsC64.cpp">
-      <Filter>Source Files\src\Emulators\vice\ViceInterface</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\Emulators\vice\ViceInterface\CDebugSymbolsDrive1541.cpp">
-      <Filter>Source Files\src\Emulators\vice\ViceInterface</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\Emulators\vice\ViceInterface\CDebugSymbolsSegmentC64.cpp">
-      <Filter>Source Files\src\Emulators\vice\ViceInterface</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\Emulators\vice\ViceInterface\CDebugSymbolsSegmentDrive1541.cpp">
-      <Filter>Source Files\src\Emulators\vice\ViceInterface</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\..\src\Emulators\vice\ViceInterface\ViceLogWrapper.cpp">
       <Filter>Source Files\src\Emulators\vice\ViceInterface</Filter>
     </ClCompile>
@@ -3740,9 +3728,6 @@
     <ClCompile Include="..\..\..\src\Views\C64\CViewC64ColorRamScreen.cpp">
       <Filter>Source Files\src\Views</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\src\Views\C64\AllGraphics\CViewC64AllGraphics.cpp">
-      <Filter>Source Files\src\Views\C64\AllGraphics</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\..\src\Views\C64\AllGraphics\CViewC64AllGraphicsBitmaps.cpp">
       <Filter>Source Files\src\Views\C64\AllGraphics</Filter>
     </ClCompile>
@@ -3805,6 +3790,69 @@
     </ClCompile>
     <ClCompile Include="..\..\..\src\DebugInterface\Symbols\CDebugMemory.cpp">
       <Filter>Source Files\src\DebugInterface\Symbols</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\DebugInterface\C64\CDataAdapterDrive1541Minimal.cpp">
+      <Filter>Source Files\src\DebugInterface\C64</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\DebugInterface\C64\CDebugDataAdapterDrive1541Contents.cpp">
+      <Filter>Source Files\src\DebugInterface\C64</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Emulators\vice\ViceInterface\Adapters\CDataAdapterViceC64.cpp">
+      <Filter>Source Files\src\Emulators\vice\ViceInterface\Adapters</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Emulators\vice\ViceInterface\Adapters\CDataAdapterViceC64Cartridge.cpp">
+      <Filter>Source Files\src\Emulators\vice\ViceInterface\Adapters</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Emulators\vice\ViceInterface\Adapters\CDataAdapterViceC64DirectRam.cpp">
+      <Filter>Source Files\src\Emulators\vice\ViceInterface\Adapters</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Emulators\vice\ViceInterface\Adapters\CDataAdapterViceC64Reu.cpp">
+      <Filter>Source Files\src\Emulators\vice\ViceInterface\Adapters</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Emulators\vice\ViceInterface\Adapters\CDataAdapterViceDrive1541.cpp">
+      <Filter>Source Files\src\Emulators\vice\ViceInterface\Adapters</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Emulators\vice\ViceInterface\Adapters\CDataAdapterViceDrive1541DirectRam.cpp">
+      <Filter>Source Files\src\Emulators\vice\ViceInterface\Adapters</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Emulators\vice\ViceInterface\Adapters\CDataAdapterViceDrive1541DiskContents.cpp">
+      <Filter>Source Files\src\Emulators\vice\ViceInterface\Adapters</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Views\CViewEmulatorScreen.cpp">
+      <Filter>Source Files\src\Views</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Views\CDataAddressEditBox.cpp">
+      <Filter>Source Files\src\Views</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Views\CDataAddressEditBoxHex.cpp">
+      <Filter>Source Files\src\Views</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Views\CViewDataMap.cpp">
+      <Filter>Source Files\src\Views</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Emulators\vice\ViceInterface\Adapters\CDataAddressEditBoxDiskContents.cpp">
+      <Filter>Source Files\src\Emulators\vice\ViceInterface\Adapters</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\DebugInterface\C64\CDebugSymbolsC64.cpp">
+      <Filter>Source Files\src\DebugInterface\C64</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\DebugInterface\C64\CDebugSymbolsDrive1541.cpp">
+      <Filter>Source Files\src\DebugInterface\C64</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\DebugInterface\C64\CDebugSymbolsSegmentC64.cpp">
+      <Filter>Source Files\src\DebugInterface\C64</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\DebugInterface\C64\CDebugSymbolsSegmentDrive1541.cpp">
+      <Filter>Source Files\src\DebugInterface\C64</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Plugins\Slideshow\C64DebuggerPluginSlideshow.cpp">
+      <Filter>Source Files\src\Plugins\Slideshow</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Views\C64\CViewC64BreakpointsIrq.cpp">
+      <Filter>Source Files\src\Views\C64</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Views\C64\CViewDrive1541BreakpointsIrq.cpp">
+      <Filter>Source Files\src\Views\C64</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -6034,9 +6082,6 @@
     <ClInclude Include="..\..\..\src\Views\CViewEmulationState.h">
       <Filter>Source Files\src\Views</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\src\Views\CViewMemoryMap.h">
-      <Filter>Source Files\src\Views</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\..\src\Views\CViewMonitorConsole.h">
       <Filter>Source Files\src\Views</Filter>
     </ClInclude>
@@ -6275,9 +6320,6 @@
       <Filter>Source Files\src\Views\C64</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\src\Views\C64\CViewC64Screen.h">
-      <Filter>Source Files\src\Views\C64</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\src\Views\C64\CViewC64ScreenWrapper.h">
       <Filter>Source Files\src\Views\C64</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\src\Views\C64\CViewC64StateCIA.h">
@@ -7561,18 +7603,6 @@
     <ClInclude Include="..\..\..\src\Emulators\vice\ViceInterface\CDebugInterfaceVice.h">
       <Filter>Source Files\src\Emulators\vice\ViceInterface</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\src\Emulators\vice\ViceInterface\CDebugSymbolsC64.h">
-      <Filter>Source Files\src\Emulators\vice\ViceInterface</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\src\Emulators\vice\ViceInterface\CDebugSymbolsDrive1541.h">
-      <Filter>Source Files\src\Emulators\vice\ViceInterface</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\src\Emulators\vice\ViceInterface\CDebugSymbolsSegmentC64.h">
-      <Filter>Source Files\src\Emulators\vice\ViceInterface</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\src\Emulators\vice\ViceInterface\CDebugSymbolsSegmentDrive1541.h">
-      <Filter>Source Files\src\Emulators\vice\ViceInterface</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\..\src\Emulators\vice\ViceInterface\ViceLogWrapper.h">
       <Filter>Source Files\src\Emulators\vice\ViceInterface</Filter>
     </ClInclude>
@@ -7771,9 +7801,6 @@
     <ClInclude Include="..\..\..\src\Views\C64\CViewC64ColorRamScreen.h">
       <Filter>Source Files\src\Views</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\src\Views\C64\AllGraphics\CViewC64AllGraphics.h">
-      <Filter>Source Files\src\Views\C64\AllGraphics</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\..\src\Views\C64\AllGraphics\CViewC64AllGraphicsBitmaps.h">
       <Filter>Source Files\src\Views\C64\AllGraphics</Filter>
     </ClInclude>
@@ -7822,9 +7849,6 @@
     <ClInclude Include="..\..\..\src\Embedded\FontUnifont.h">
       <Filter>Source Files\src\Embedded</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\src\Embedded\gamecontrollerdb_txt_zlib.h">
-      <Filter>Source Files\src\Embedded</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\..\src\Embedded\icon_small_close_gfx.h">
       <Filter>Source Files\src\Embedded</Filter>
     </ClInclude>
@@ -7860,6 +7884,75 @@
     </ClInclude>
     <ClInclude Include="..\..\..\src\DebugInterface\Symbols\CDebugMemory.h">
       <Filter>Source Files\src\DebugInterface\Symbols</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\DebugInterface\C64\CDataAdapterDrive1541Minimal.h">
+      <Filter>Source Files\src\DebugInterface\C64</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\DebugInterface\C64\CDebugDataAdapterDrive1541Contents.h">
+      <Filter>Source Files\src\DebugInterface\C64</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Embedded\reset_basic_snap_zlib.h">
+      <Filter>Source Files\src\Embedded</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Emulators\vice\ViceInterface\Adapters\CDataAdapterViceC64.h">
+      <Filter>Source Files\src\Emulators\vice\ViceInterface\Adapters</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Emulators\vice\ViceInterface\Adapters\CDataAdapterViceC64Cartridge.h">
+      <Filter>Source Files\src\Emulators\vice\ViceInterface\Adapters</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Emulators\vice\ViceInterface\Adapters\CDataAdapterViceC64DirectRam.h">
+      <Filter>Source Files\src\Emulators\vice\ViceInterface\Adapters</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Emulators\vice\ViceInterface\Adapters\CDataAdapterViceC64Reu.h">
+      <Filter>Source Files\src\Emulators\vice\ViceInterface\Adapters</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Emulators\vice\ViceInterface\Adapters\CDataAdapterViceDrive1541.h">
+      <Filter>Source Files\src\Emulators\vice\ViceInterface\Adapters</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Emulators\vice\ViceInterface\Adapters\CDataAdapterViceDrive1541DirectRam.h">
+      <Filter>Source Files\src\Emulators\vice\ViceInterface\Adapters</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Emulators\vice\ViceInterface\Adapters\CDataAdapterViceDrive1541DiskContents.h">
+      <Filter>Source Files\src\Emulators\vice\ViceInterface\Adapters</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Views\CViewEmulatorScreen.h">
+      <Filter>Source Files\src\Views</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Views\CDataAddressEditBox.h">
+      <Filter>Source Files\src\Views</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Views\CDataAddressEditBoxHex.h">
+      <Filter>Source Files\src\Views</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Views\CViewDataMap.h">
+      <Filter>Source Files\src\Views</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Emulators\vice\ViceInterface\Adapters\CDataAddressEditBoxDiskContents.h">
+      <Filter>Source Files\src\Emulators\vice\ViceInterface\Adapters</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\DebugInterface\C64\CDebugSymbolsC64.h">
+      <Filter>Source Files\src\DebugInterface\C64</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\DebugInterface\C64\CDebugSymbolsDrive1541.h">
+      <Filter>Source Files\src\DebugInterface\C64</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\DebugInterface\C64\CDebugSymbolsSegmentC64.h">
+      <Filter>Source Files\src\DebugInterface\C64</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\DebugInterface\C64\CDebugSymbolsSegmentDrive1541.h">
+      <Filter>Source Files\src\DebugInterface\C64</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Plugins\Slideshow\C64DebuggerPluginSlideshow.h">
+      <Filter>Source Files\src\Plugins\Slideshow</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Views\C64\CViewC64BreakpointsIrq.h">
+      <Filter>Source Files\src\Views\C64</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Views\C64\CViewDrive1541BreakpointsIrq.h">
+      <Filter>Source Files\src\Views\C64</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Views\C64\AllGraphics\ViewC64AllGraphicsDefs.h">
+      <Filter>Source Files\src\Views\C64\AllGraphics</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

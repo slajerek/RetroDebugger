@@ -27,7 +27,7 @@
 #ifndef VICE_RENDERYUV_H
 #define VICE_RENDERYUV_H
 
-#include "types.h"
+#include "vicetypes.h"
 #include "video-render.h"
 
 /* Image struct, modeled after XvImage. */

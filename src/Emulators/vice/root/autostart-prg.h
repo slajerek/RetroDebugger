@@ -27,7 +27,7 @@
 #ifndef VICE_AUTOSTART_PRG_H
 #define VICE_AUTOSTART_PRG_H
 
-#include "types.h"
+#include "vicetypes.h"
 #include "log.h"
 #include "fileio.h"
 

@@ -27,7 +27,7 @@
 #ifndef VICE_USERPORT_DAC_H
 #define VICE_USERPORT_DAC_H
 
-#include "types.h"
+#include "vicetypes.h"
 #include "sound.h"
 
 extern int userport_dac_resources_init(void);

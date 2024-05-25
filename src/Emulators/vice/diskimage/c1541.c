@@ -101,7 +101,7 @@
 #include "serial.h"
 #include "snapshot.h"
 #include "tape.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "util.h"
 #include "vdrive-bam.h"
 #include "vdrive-command.h"

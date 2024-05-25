@@ -28,7 +28,7 @@
 #ifndef VICE_JOYSTICK_H
 #define VICE_JOYSTICK_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 extern int joystick_init(void);
 extern int joystick_resources_init(void);

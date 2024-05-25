@@ -33,7 +33,7 @@
 #ifndef VICE_DQBB_H
 #define VICE_DQBB_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 extern int dqbb_cart_enabled(void);
 

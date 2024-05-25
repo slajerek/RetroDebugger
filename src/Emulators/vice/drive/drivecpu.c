@@ -52,7 +52,7 @@
 #include "mos6510.h"
 #include "rotation.h"
 #include "snapshot.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "via.h"
 
 #include "ViceWrapper.h"
@@ -3655,7 +3655,7 @@ opcode.op.op8[0] = ((o) >> 16) & 0xff; \
 ///
 		
 		////
-		c64d_mark_disk_cell_execute(LAST_OPCODE_ADDR & 0xFFFF, LAST_OPCODE_INFO & 0xFF);
+		c64d_mark_drive1541_cell_execute(LAST_OPCODE_ADDR & 0xFFFF, LAST_OPCODE_INFO & 0xFF);
 		
 		
 		if (_c64d_new_drive_pc == -1)

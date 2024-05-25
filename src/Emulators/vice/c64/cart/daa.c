@@ -26,7 +26,7 @@
  */
 
 #include "daa.h"
-#include "types.h"
+#include "vicetypes.h"
 
 const BYTE daa_reg_a[2048] = {
     0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,

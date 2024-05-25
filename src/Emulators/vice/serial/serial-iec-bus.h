@@ -27,7 +27,7 @@
 #ifndef VICE_SERIAL_IEC_BUS_H
 #define VICE_SERIAL_IEC_BUS_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 extern void serial_iec_bus_init(void);
 extern void serial_iec_bus_reset(void);

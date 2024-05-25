@@ -27,7 +27,7 @@
 #ifndef VICE_SER_EEPROM
 #define VICE_SER_EEPROM
 
-#include "types.h"
+#include "vicetypes.h"
 
 extern void eeprom_data_readadvance(void);
 extern BYTE eeprom_data_readbyte(void);

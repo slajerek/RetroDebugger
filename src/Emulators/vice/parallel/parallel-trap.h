@@ -27,7 +27,7 @@
 #ifndef VICE_PARALLEL_TRAP_H
 #define VICE_PARALLEL_TRAP_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 extern int parallel_trap_attention(int b);
 extern int parallel_trap_sendbyte(BYTE data);

@@ -28,7 +28,7 @@
 #define VICE_PLUS256K_H
 
 #include "snapshot.h"
-#include "types.h"
+#include "vicetypes.h"
 
 extern int plus256k_enabled;
 

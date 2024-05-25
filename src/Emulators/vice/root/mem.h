@@ -29,7 +29,7 @@
 #ifndef VICE_MEM_H_
 #define VICE_MEM_H_
 
-#include "types.h"
+#include "vicetypes.h"
 
 
 typedef BYTE read_func_t(WORD addr);

@@ -27,7 +27,7 @@
 #ifndef VICE_RESID_H
 #define VICE_RESID_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 extern sid_engine_t resid_hooks;
 

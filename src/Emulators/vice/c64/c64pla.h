@@ -28,7 +28,7 @@
 #ifndef VICE_C64PLA_H
 #define VICE_C64PLA_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 struct pport_s {
     /* Value written to processor port.  */

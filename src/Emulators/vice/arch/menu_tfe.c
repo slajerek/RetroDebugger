@@ -30,7 +30,7 @@
 
 #include <stdio.h>
 
-#include "types.h"
+#include "vicetypes.h"
 
 #include "lib.h"
 #include "menu_common.h"

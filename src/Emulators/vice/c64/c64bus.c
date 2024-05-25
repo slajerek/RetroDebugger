@@ -30,7 +30,7 @@
 #include "machine-bus.h"
 #include "parallel.h"
 #include "serial.h"
-#include "types.h"
+#include "vicetypes.h"
 
 int machine_bus_lib_directory(unsigned int unit, const char *pattern, BYTE **buf)
 {

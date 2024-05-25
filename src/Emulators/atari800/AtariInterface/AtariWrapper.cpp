@@ -9,11 +9,12 @@
 #include "CGuiMain.h"
 #include "CViewC64.h"
 #include "CViewAtariStatePOKEY.h"
-#include "CViewMemoryMap.h"
+#include "CViewDataMap.h"
 #include "SND_SoundEngine.h"
 #include "CSnapshotsManager.h"
 #include "EmulatorsConfig.h"
 #include "CDebugSymbols.h"
+#include "CDebugMemory.h"
 #include "CDebugSymbolsSegment.h"
 #include "CDebugEventsHistory.h"
 #include <string.h>
@@ -46,7 +47,7 @@ void atrd_mark_atari_cell_read(uint16 addr)
 {
 	int pc = Atari800_GetPC();
 
-	viewC64->viewAtariMemoryMap->CellRead(addr, pc, -1, -1);
+	debugInterfaceAtari->symbols->memory->CellRead(addr, pc, -1, -1);
 	
 	// skip checking breakpoints when quick fast-forward/restoring snapshot
 	if (debugInterfaceAtari->snapshotsManager->IsPerformingSnapshotRestore())
@@ -72,7 +73,7 @@ void atrd_mark_atari_cell_read(uint16 addr)
 void atrd_mark_atari_cell_write(uint16 addr, uint8 value)
 {
 	int pc = Atari800_GetPC();
-	viewC64->viewAtariMemoryMap->CellWrite(addr, value, pc, -1, -1); //viceCurrentC64PC, vicii.raster_line, vicii.raster_cycle);
+	viewC64->debugInterfaceAtari->symbols->memory->CellWrite(addr, value, pc, -1, -1); //viceCurrentC64PC, vicii.raster_line, vicii.raster_cycle);
 	
 	// skip checking breakpoints when quick fast-forward/restoring snapshot
 	if (debugInterfaceAtari->snapshotsManager->IsPerformingSnapshotRestore())
@@ -97,7 +98,7 @@ void atrd_mark_atari_cell_write(uint16 addr, uint8 value)
 void atrd_mark_atari_cell_execute(uint16 addr, uint8 opcode)
 {
 //	LOGD("atrd_mark_atari_cell_execute: %04x %02x", addr, opcode);
-	viewC64->viewAtariMemoryMap->CellExecute(addr, opcode);
+	viewC64->debugInterfaceAtari->symbols->memory->CellExecute(addr, opcode);
 }
 
 int atrd_is_debug_on_atari()

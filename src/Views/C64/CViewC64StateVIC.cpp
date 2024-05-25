@@ -10,7 +10,7 @@ extern "C" {
 #include "CSlrString.h"
 #include "SYS_KeyCodes.h"
 #include "CViewC64.h"
-#include "CViewMemoryMap.h"
+#include "CViewDataMap.h"
 #include "CViewDataDump.h"
 #include "C64Tools.h"
 #include "CViewC64Screen.h"
@@ -633,7 +633,7 @@ void CViewC64StateVIC::RenderStateVIC(vicii_cycle_state_t *viciiState,
 		sprintf(buf, "Y scroll          : %d", viciiState->regs[0x11] & 0x07);
 		fontBytes->BlitText(buf, px, py, posZ, fontSize); py += fontSize;
 		
-		sprintf(buf, "Border            : %dx%d", 39 + ((viciiState->regs[0x16] >> 3) & 1), 24 + ((viciiState->regs[0x11] >> 3) & 1));
+		sprintf(buf, "Border            : %dx%d", 38 + (((viciiState->regs[0x16] >> 3) & 1) << 1), 24 + ((viciiState->regs[0x11] >> 3) & 1));
 		fontBytes->BlitText(buf, px, py, posZ, fontSize); py += fontSize;
 		
 		if (showSprites == true)

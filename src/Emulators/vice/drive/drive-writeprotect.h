@@ -27,7 +27,7 @@
 #ifndef VICE_DRIVE_WRITEPROTECT_H
 #define VICE_DRIVE_WRITEPROTECT_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 struct drive_s;
 

@@ -140,7 +140,6 @@ public:
 	virtual bool ButtonSwitchChanged(CGuiButtonSwitch *button);
 	virtual void RenderFocusBorder();
 	
-	
 	//
 	CGuiViewFrame *viewFrame;
 	

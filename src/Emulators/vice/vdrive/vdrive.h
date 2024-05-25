@@ -27,7 +27,7 @@
 #ifndef VICE_VDRIVE_H
 #define VICE_VDRIVE_H
 
-#include "types.h"
+#include "vicetypes.h"
 #include "vdrive-dir.h"
 
 /* temporarily until the 4000 support is not safe */

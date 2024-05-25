@@ -33,7 +33,7 @@
 #include "raster.h"
 #include "raster-resources.h"
 #include "resources.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "util.h"
 #include "video.h"
 

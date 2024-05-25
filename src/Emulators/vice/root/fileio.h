@@ -27,7 +27,7 @@
 #ifndef VICE_FILEIO_H
 #define VICE_FILEIO_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 #define FILEIO_COMMAND_READ        0
 #define FILEIO_COMMAND_WRITE       1

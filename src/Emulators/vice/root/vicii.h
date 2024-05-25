@@ -28,7 +28,7 @@
 #ifndef VICE_VICII_H
 #define VICE_VICII_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 struct canvas_refresh_s;
 struct machine_timing_s;

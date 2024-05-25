@@ -40,7 +40,7 @@
 #define VICE_CIATIMER_H
 
 #include "alarm.h"
-#include "types.h"
+#include "vicetypes.h"
 
 
 /* #define      CIAT_DEBUG */

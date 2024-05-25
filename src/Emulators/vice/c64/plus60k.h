@@ -27,7 +27,7 @@
 #ifndef VICE_PLUS60K_H
 #define VICE_PLUS60K_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 extern int plus60k_enabled;
 extern int plus60k_base;

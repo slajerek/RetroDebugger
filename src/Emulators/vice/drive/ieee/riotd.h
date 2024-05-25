@@ -28,7 +28,7 @@
 #ifndef VICE_RIOTD_H
 #define VICE_RIOTD_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 struct drive_context_s;
 struct riot_context_s;

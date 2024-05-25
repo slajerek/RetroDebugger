@@ -30,7 +30,7 @@
 #define VICE_TRAPS_H
 
 #include "mem.h"
-#include "types.h"
+#include "vicetypes.h"
 
 /* JAM (0x02) is the trap-opcode.               */
 /* Note: If you change this, you need to change */

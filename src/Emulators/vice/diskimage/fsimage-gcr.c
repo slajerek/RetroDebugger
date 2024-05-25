@@ -37,7 +37,7 @@
 #include "cbmdos.h"
 #include "log.h"
 #include "lib.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "util.h"
 
 

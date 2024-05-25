@@ -28,7 +28,7 @@
 #define VICE_UIFILEREQ_H
 
 #include "vice.h"
-#include "types.h"
+#include "vicetypes.h"
 
 typedef enum {
     FILEREQ_MODE_CHOOSE_FILE = 0,

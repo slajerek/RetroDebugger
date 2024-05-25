@@ -41,7 +41,7 @@
 #include "output.h"
 #include "palette.h"
 #include "sysfile.h"
-#include "types.h"
+#include "vicetypes.h"
 
 #ifdef DEBUG_MPS803
 #define DBG(x) printf x

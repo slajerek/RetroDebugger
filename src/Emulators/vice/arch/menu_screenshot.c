@@ -36,7 +36,7 @@
 #include "menu_screenshot.h"
 #include "resources.h"
 #include "screenshot.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "ui.h"
 #include "uifilereq.h"
 #include "uimenu.h"

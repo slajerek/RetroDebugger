@@ -38,7 +38,7 @@
 #include "serial-trap.h"
 #include "serial.h"
 #include "traps.h"
-#include "types.h"
+#include "vicetypes.h"
 
 
 /* Flag: Have traps been installed?  */

@@ -30,7 +30,7 @@
 #ifndef VICE_SPI_SDCARD
 #define VICE_SPI_SDCARD
 
-#include "types.h"
+#include "vicetypes.h"
 
 extern void spi_mmc_trigger_mode_write(BYTE value);
 extern BYTE spi_mmc_trigger_mode_read(void);

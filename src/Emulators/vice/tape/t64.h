@@ -32,7 +32,7 @@
 
 #include <stdio.h>
 
-#include "types.h"
+#include "vicetypes.h"
 
 /** \brief  Size of a T64 header n bytes */
 #define T64_HDR_SIZE                    64

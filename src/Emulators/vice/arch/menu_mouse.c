@@ -28,7 +28,7 @@
 
 #include <stdio.h>
 
-#include "types.h"
+#include "vicetypes.h"
 
 #ifdef HAVE_MOUSE
 

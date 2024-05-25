@@ -64,7 +64,7 @@
 #include "tape.h"
 #include "traps.h"
 #include "translate.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "uiapi.h"
 #include "util.h"
 #include "video.h"

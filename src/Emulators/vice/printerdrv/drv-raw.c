@@ -32,7 +32,7 @@
 #include "log.h"
 #include "output-select.h"
 #include "output.h"
-#include "types.h"
+#include "vicetypes.h"
 
 /* #define DEBUG_PRINTER */
 

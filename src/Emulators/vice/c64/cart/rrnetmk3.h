@@ -33,7 +33,7 @@
 #ifndef VICE_RRNETMK3_H
 #define VICE_RRNETMK3_H
 
-#include "types.h"
+#include "vicetypes.h"
 #include "c64cart.h"
 
 extern int rrnetmk3_cart_enabled(void);

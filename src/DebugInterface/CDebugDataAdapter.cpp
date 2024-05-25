@@ -6,24 +6,20 @@
 //
 
 #include "SYS_Defs.h"
-#include "CDebugInterface.h"
+#include "CDebugSymbols.h"
 #include "CDebugDataAdapter.h"
-#include "CViewMemoryMap.h"
+#include "CDebugMemory.h"
+#include "CDataAddressEditBoxHex.h"
 
-CDebugDataAdapter::CDebugDataAdapter(const char *adapterID, CDebugInterface *debugInterface)
+CDebugDataAdapter::CDebugDataAdapter(const char *adapterID, CDebugSymbols *debugSymbols)
 : CDataAdapter(adapterID)
 {
-	this->debugInterface = debugInterface;
-	this->viewMemoryMap = NULL;
+	this->debugSymbols = debugSymbols;
+	this->debugInterface = debugSymbols->debugInterface;
 }
 
 CDebugDataAdapter::~CDebugDataAdapter()
 {
-}
-
-void CDebugDataAdapter::SetViewMemoryMap(CViewMemoryMap *viewMemoryMap)
-{
-	this->viewMemoryMap = viewMemoryMap;
 }
 
 int CDebugDataAdapter::AdapterGetDataLength()
@@ -36,54 +32,46 @@ int CDebugDataAdapter::GetDataOffset()
 	return CDataAdapter::GetDataOffset();
 }
 
-void CDebugDataAdapter::AdapterReadByte(int addr, uint8 *value)
+int CDebugDataAdapter::GetAddressForCell(int cell)
 {
-	CDataAdapter::AdapterReadByte(addr, value);
+	return cell;
 }
 
-void CDebugDataAdapter::AdapterWriteByte(int addr, uint8 value)
+void CDebugDataAdapter::GetAddressStringForCell(int cell, char *str, int maxLen)
 {
-	CDataAdapter::AdapterWriteByte(addr, value);
+//	sprintfHexCode16(str, GetAddressForCell(cell));
+	snprintf(str, maxLen, "%04x", GetAddressForCell(cell));
 }
 
-void CDebugDataAdapter::AdapterReadByte(int addr, uint8 *value, bool *isAvailable)
+CDataAddressEditBox *CDebugDataAdapter::CreateDataAddressEditBox(CDataAddressEditBoxCallback *callback)
 {
-	CDataAdapter::AdapterReadByte(addr, value, isAvailable);
+	CDataAddressEditBox *editBox = new CDataAddressEditBoxHex(4);
+	editBox->SetCallback(callback);
+	return editBox;
 }
 
-void CDebugDataAdapter::AdapterWriteByte(int addr, uint8 value, bool *isAvailable)
+void CDebugDataAdapter::AdapterReadByte(int cell, uint8 *value)
 {
-	CDataAdapter::AdapterWriteByte(addr, value, isAvailable);
+	CDataAdapter::AdapterReadByte(cell, value);
 }
 
-void CDebugDataAdapter::AdapterReadBlockDirect(uint8 *buffer, int addrStart, int addrEnd)
+void CDebugDataAdapter::AdapterWriteByte(int cell, uint8 value)
 {
-	CDataAdapter::AdapterReadBlockDirect(buffer, addrStart, addrEnd);
+	CDataAdapter::AdapterWriteByte(cell, value);
 }
 
-void CDebugDataAdapter::MarkCellRead(int addr)
+void CDebugDataAdapter::AdapterReadByte(int cell, uint8 *value, bool *isAvailable)
 {
-	int pc = debugInterface->GetCpuPC();
-	viewMemoryMap->CellRead(addr, pc, -1, -1);
+	CDataAdapter::AdapterReadByte(cell, value, isAvailable);
 }
 
-void CDebugDataAdapter::MarkCellRead(int addr, int pc, int rasterX, int rasterY)
+void CDebugDataAdapter::AdapterWriteByte(int cell, uint8 value, bool *isAvailable)
 {
-	viewMemoryMap->CellRead(addr, pc, rasterX, rasterY);
+	CDataAdapter::AdapterWriteByte(cell, value, isAvailable);
 }
 
-void CDebugDataAdapter::MarkCellWrite(int addr, uint8 value)
+void CDebugDataAdapter::AdapterReadBlockDirect(uint8 *buffer, int cellStart, int cellEnd)
 {
-	int pc = debugInterface->GetCpuPC();
-	viewMemoryMap->CellWrite(addr, value, pc, -1, -1);
+	CDataAdapter::AdapterReadBlockDirect(buffer, cellStart, cellEnd);
 }
 
-void CDebugDataAdapter::MarkCellWrite(int addr, uint8 value, int pc, int rasterX, int rasterY)
-{
-	viewMemoryMap->CellWrite(addr, value, pc, rasterX, rasterY);
-}
-
-void CDebugDataAdapter::MarkCellExecute(int addr, uint8 opcode)
-{
-	viewMemoryMap->CellExecute(addr, opcode);
-}

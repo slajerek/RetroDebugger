@@ -35,7 +35,7 @@
 #include "sid.h"
 #include "sid-resources.h"
 #include "sound.h"
-#include "types.h"
+#include "vicetypes.h"
 
 static BYTE machine_sid2_read(WORD addr)
 {

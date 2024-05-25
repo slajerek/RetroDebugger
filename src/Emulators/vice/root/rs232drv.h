@@ -27,7 +27,7 @@
 #ifndef VICE_RS232DRV_H
 #define VICE_RS232DRV_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 extern int rs232drv_resources_init(void);
 extern void rs232drv_resources_shutdown(void);

@@ -28,7 +28,7 @@
 #ifndef VICE_C64MODEL_H
 #define VICE_C64MODEL_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 #define C64MODEL_C64_PAL 0
 #define C64MODEL_C64C_PAL 1

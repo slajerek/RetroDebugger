@@ -26,7 +26,7 @@
 #ifndef VICE_MOUSEDRV_H
 #define VICE_MOUSEDRV_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 #include "mouse.h"
 

@@ -27,7 +27,7 @@
 #ifndef VICE_FSDEVICE_READ_H
 #define VICE_FSDEVICE_READ_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 struct vdrive_s;
 

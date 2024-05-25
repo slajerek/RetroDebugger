@@ -28,7 +28,7 @@
 #ifndef VICE_H6809REGS_H
 #define VICE_H6809REGS_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 typedef struct h6809_regs_s {
     WORD reg_x;

@@ -33,7 +33,7 @@
 #ifndef VICE_MAGICVOICE_H
 #define VICE_MAGICVOICE_H
 
-#include "types.h"
+#include "vicetypes.h"
 #include "sound.h"
 
 struct machine_context_s;

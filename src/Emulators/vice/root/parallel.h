@@ -37,7 +37,7 @@
 #ifndef VICE_PARALLEL_H
 #define VICE_PARALLEL_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 /* debug variable - set to 1 to generate output */
 extern int parallel_debug;

@@ -29,7 +29,7 @@
  */
 
 #include "vice.h"
-#include "types.h"
+#include "vicetypes.h"
 
 #include <stdlib.h>
 #include <string.h>

@@ -28,7 +28,7 @@
 #define VICE_C64_256K_H
 
 #include "snapshot.h"
-#include "types.h"
+#include "vicetypes.h"
 
 extern int c64_256k_start;
 extern int c64_256k_enabled;

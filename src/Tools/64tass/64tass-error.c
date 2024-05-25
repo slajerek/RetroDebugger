@@ -218,4 +218,5 @@ void err_destroy(void) {
 	file_list.len = 0;
 	error_list.p = 0;
 	error_list.len = 0;
+	error_list.data = NULL;
 }

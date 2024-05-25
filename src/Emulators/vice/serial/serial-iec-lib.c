@@ -33,7 +33,7 @@
 #include "lib.h"
 #include "serial-iec.h"
 #include "serial.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "util.h"
 
 

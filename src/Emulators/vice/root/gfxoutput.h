@@ -28,7 +28,7 @@
 #ifndef VICE_GFXOUTPUT_H
 #define VICE_GFXOUTPUT_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 struct screenshot_s;
 

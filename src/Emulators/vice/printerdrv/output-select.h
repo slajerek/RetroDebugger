@@ -27,7 +27,7 @@
 #ifndef VICE_OUTPUT_SELECT_H
 #define VICE_OUTPUT_SELECT_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 struct output_parameter_s;
 

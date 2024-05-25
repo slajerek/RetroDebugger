@@ -29,9 +29,6 @@ public:
 	float tb;
 
 	CGuiViewMenu *viewMenu;
-
-
-
 	
 	std::list<CSlrString *> openFileExtensions;
 	std::list<CSlrString *> diskExtensions;
@@ -86,7 +83,7 @@ public:
 
 	
 	void LoadLabelsAndWatches(CSlrString *path, CDebugInterface *debugInterface);
-	void SetBasicEndAddr(int endAddr);
+	void SetBasicVectors(int endAddr);
 
 	void OpenDialogStartJukeboxPlaylist();
 

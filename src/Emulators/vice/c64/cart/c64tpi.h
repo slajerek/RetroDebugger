@@ -34,7 +34,7 @@
 #ifndef VICE_C64TPI_H
 #define VICE_C64TPI_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 struct machine_context_s;
 

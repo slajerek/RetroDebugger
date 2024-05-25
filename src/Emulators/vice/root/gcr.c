@@ -44,7 +44,7 @@
 #include "gcr.h"
 #include "lib.h"
 #include "log.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "cbmdos.h"
 #include "diskimage.h"
 

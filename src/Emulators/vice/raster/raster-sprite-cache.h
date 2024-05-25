@@ -28,7 +28,7 @@
 #ifndef VICE_RASTER_SPRITE_CACHE_H
 #define VICE_RASTER_SPRITE_CACHE_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 /* This defines the cache for one sprite line. */
 struct raster_sprite_cache_s {

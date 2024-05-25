@@ -51,7 +51,7 @@
 #include "resources.h"
 #include "rotation.h"
 #include "snapshot.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "vdrive-bam.h"
 #include "vdrive-snapshot.h"
 #include "zfile.h"

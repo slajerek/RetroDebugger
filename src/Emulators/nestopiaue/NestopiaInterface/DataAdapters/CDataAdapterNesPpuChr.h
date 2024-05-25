@@ -1,14 +1,14 @@
 #ifndef _CDataAdapterNesPpuChr_H_
 #define _CDataAdapterNesPpuChr_H_
 
-#include "CDataAdapter.h"
+#include "CDebugDataAdapter.h"
 
 class CDebugInterfaceNes;
 
-class CDataAdapterNesPpuChr : public CDataAdapter
+class CDataAdapterNesPpuChr : public CDebugDataAdapter
 {
 public:
-	CDataAdapterNesPpuChr(CDebugInterfaceNes *debugInterfaceNes);
+	CDataAdapterNesPpuChr(CDebugSymbols *debugSymbols);
 	CDebugInterfaceNes *debugInterfaceNes;
 	
 	virtual int AdapterGetDataLength();

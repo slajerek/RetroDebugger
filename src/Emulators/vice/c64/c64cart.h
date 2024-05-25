@@ -27,7 +27,7 @@
 #ifndef VICE_C64CART_H
 #define VICE_C64CART_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 /* Cartridge ROM limit = 1MB (EasyFlash) */
 #define C64CART_ROM_LIMIT (1024 * 1024)

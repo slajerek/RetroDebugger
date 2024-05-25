@@ -37,7 +37,7 @@
 #include "log.h"
 #include "monitor.h"
 #include "snapshot.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "via.h"
 
 #undef byte

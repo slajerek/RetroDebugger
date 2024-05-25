@@ -29,7 +29,7 @@
 #include "vice.h"
 
 #include "renderscale2x.h"
-#include "types.h"
+#include "vicetypes.h"
 
 static DWORD scale2x(const DWORD *colortab, const BYTE **srcx1,
                      const BYTE **srcx2, const BYTE **srcy1,

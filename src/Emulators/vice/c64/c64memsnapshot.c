@@ -45,7 +45,7 @@
 #include "reu.h"
 #include "georam.h"
 #include "snapshot.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "uiapi.h"
 
 #if defined(HAVE_RS232DEV) || defined(HAVE_RS232NET)

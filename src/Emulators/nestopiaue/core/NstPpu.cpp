@@ -29,7 +29,7 @@
 
 #include "CByteBuffer.h"
 #include "CDebugInterfaceNes.h"
-#include "CDataAdapterNesPpuNmt.h"
+#include "CDebugMemory.h"
 
 namespace Nes
 {
@@ -991,8 +991,8 @@ namespace Nes
 
 				if (address >= 0x2000)
 				{
-					nmt.Poke( address & 0xFFF, data );					
-					debugInterfaceNes->dataAdapterPpuNmt->MarkCellWrite(address & 0xFFF, data);
+					nmt.Poke( address & 0xFFF, data );
+					debugInterfaceNes->symbolsPpuNmt->memory->CellWrite(address & 0xFFF, data);
 				}
 				else
 				{

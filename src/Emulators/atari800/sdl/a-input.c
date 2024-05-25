@@ -1530,12 +1530,12 @@ int getAtariJoystickPORT(int joystickState)
 	if (joystickState & JOYPAD_E)
 	{
 //		LOGD("+ JOYPAD_E");
-		j &= INPUT_STICK_LEFT;
+		j &= INPUT_STICK_RIGHT;
 	}
 	else if (joystickState & JOYPAD_W)
 	{
 //		LOGD("+ JOYPAD_W");
-		j &= INPUT_STICK_RIGHT;
+		j &= INPUT_STICK_LEFT;
 	}
 	
 //	LOGD("= j=%x", j);

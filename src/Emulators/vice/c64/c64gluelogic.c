@@ -39,7 +39,7 @@
 #include "resources.h"
 #include "snapshot.h"
 #include "translate.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "vicii.h"
 
 static int glue_logic_type = GLUE_LOGIC_DISCRETE;

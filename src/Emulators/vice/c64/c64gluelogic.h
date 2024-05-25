@@ -27,7 +27,7 @@
 #ifndef VICE_C64GLUELOGIC_H
 #define VICE_C64GLUELOGIC_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 #define GLUE_LOGIC_DISCRETE  0
 #define GLUE_LOGIC_CUSTOM_IC 1

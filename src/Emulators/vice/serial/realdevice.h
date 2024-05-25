@@ -27,7 +27,7 @@
 #ifndef VICE_REALDEVICE_H
 #define VICE_REALDEVICE_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 extern void realdevice_init(void);
 extern void realdevice_reset(void);

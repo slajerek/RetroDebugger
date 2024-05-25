@@ -27,7 +27,7 @@
 #ifndef VICE_VDRIVEIEC_H
 #define VICE_VDRIVEIEC_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 struct bufferinfo_s;
 struct cbmdos_cmd_parse_s;

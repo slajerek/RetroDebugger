@@ -46,7 +46,7 @@
 #include "romset.h"
 #include "sysfile.h"
 #include "translate.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "util.h"
 
 

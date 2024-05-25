@@ -28,7 +28,7 @@
 #ifndef VICE_VDRIVE_BAM_H
 #define VICE_VDRIVE_BAM_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 #define BAM_FIRST_TRACK         0
 #define BAM_FIRST_SECTOR        1

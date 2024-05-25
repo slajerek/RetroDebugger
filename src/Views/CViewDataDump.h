@@ -4,23 +4,25 @@
 #include "SYS_Defs.h"
 #include "CGuiView.h"
 #include "CGuiEditHex.h"
+#include "CDataAddressEditBox.h"
 #include <vector>
 #include <list>
 
 class CSlrFont;
 class CSlrMutex;
-class CDataAdapter;
-class CViewMemoryMap;
+class CViewDataMap;
 class CDebugInterface;
 class CViewDisassembly;
 class CDebugSymbols;
+class CDebugDataAdapter;
 class CDebugMemory;
+class CDataAddressEditBox;
 
-class CViewDataDump : public CGuiView, CGuiEditHexCallback
+class CViewDataDump : public CGuiView, CGuiEditHexCallback, CDataAddressEditBoxCallback
 {
 public:
 	CViewDataDump(const char *name, float posX, float posY, float posZ, float sizeX, float sizeY,
-				  CDebugSymbols *symbols, CViewMemoryMap *viewMemoryMap, CViewDisassembly *viewDisassembly);
+				  CDebugSymbols *symbols, CViewDataMap *viewMemoryMap, CViewDisassembly *viewDisassembly);
 	
 	virtual bool KeyDown(u32 keyCode, bool isShift, bool isAlt, bool isControl, bool isSuper);
 	virtual bool KeyDownRepeat(u32 keyCode, bool isShift, bool isAlt, bool isControl, bool isSuper);
@@ -45,18 +47,13 @@ public:
 	float fontCharactersWidth;
 	float markerSizeX, markerSizeY;
 	
-	u8 numDigitsInAddress;
-	char digitsAddressFormat[8];
-	char digitsAddressFormatUpperCase[8];
-	void SetNumDigitsInAddress(int numDigits);
-
 	int numberOfBytesPerLine;
 	
-	CDataAdapter *dataAdapter;
-	CViewMemoryMap *viewMemoryMap;
+	CDebugDataAdapter *dataAdapter;
+	CViewDataMap *viewMemoryMap;
 	CViewDisassembly *viewDisassembly;
 
-	void SetDataAdapter(CDataAdapter *newDataAdapter);
+	void SetDataAdapter(CDebugDataAdapter *newDataAdapter);
 	
 	int dataShowStart;
 	int dataShowEnd;
@@ -65,7 +62,7 @@ public:
 //	bool isVisibleEditCursor;
 	int editCursorPositionX;
 	int editCursorPositionY;
-	int dataAddr;
+	int currentDataIndex;
 	int numberOfLines;
 	
 	void ScrollDataUp();
@@ -104,12 +101,14 @@ public:
 	
 	CSlrFont *fonts[5];
 
-	
+	// editing values
 	bool isEditingValue;
-	CGuiEditHex *editHex;
+	CGuiEditHex *editBoxHex;
 	virtual void GuiEditHexEnteredValue(CGuiEditHex *editHex, u32 lastKeyCode, bool isCancelled);
 
+	CDataAddressEditBox *dataAddressEditBox;
 	bool isEditingValueAddr;
+	virtual void DataAddressEditBoxEnteredValue(CDataAddressEditBox *editBox, u32 lastKeyCode, bool isCancelled);
 	
 	void CancelEditingHexBox();
 

@@ -28,7 +28,7 @@
 #define VICE_MON_UTIL_H
 
 #include "monitor.h"
-#include "types.h"
+#include "vicetypes.h"
 
 struct console_s;
 

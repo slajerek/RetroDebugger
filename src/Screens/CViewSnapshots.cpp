@@ -22,7 +22,7 @@ extern "C" {
 #include "CViewC64Screen.h"
 
 #include "C64KeyboardShortcuts.h"
-#include "CViewMemoryMap.h"
+#include "CViewDataMap.h"
 
 #include "CGuiMain.h"
 #include "CViewMainMenu.h"

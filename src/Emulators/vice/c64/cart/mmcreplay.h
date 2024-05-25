@@ -33,7 +33,7 @@
 #ifndef VICE_MMCREPLAY_H
 #define VICE_MMCREPLAY_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 #define MMCR_TYPE_AUTO  0
 #define MMCR_TYPE_MMC   1

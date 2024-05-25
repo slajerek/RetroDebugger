@@ -65,7 +65,7 @@ extern char *strcpy(char *s1, char *s2);
 #include "resid.h"
 #include "resources.h"
 #include "sid-snapshot.h"
-#include "types.h"
+#include "vicetypes.h"
 
 } // extern "C"
 

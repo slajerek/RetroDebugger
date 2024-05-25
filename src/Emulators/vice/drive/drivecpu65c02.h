@@ -27,7 +27,7 @@
 #ifndef VICE_DRIVECPU65C02_H
 #define VICE_DRIVECPU65C02_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 /* Masks to extract information. */
 #define OPINFO_NUMBER_MSK               0xff

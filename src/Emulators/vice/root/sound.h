@@ -32,7 +32,7 @@
 
 #include <stdio.h>
 
-#include "types.h"
+#include "vicetypes.h"
 
 
 /* OSS: check if needed defines are present */

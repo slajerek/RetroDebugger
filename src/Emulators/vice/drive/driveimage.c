@@ -36,7 +36,7 @@
 #include "drivetypes.h"
 #include "gcr.h"
 #include "log.h"
-#include "types.h"
+#include "vicetypes.h"
 
 
 /* Logging goes here.  */

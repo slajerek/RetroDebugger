@@ -41,7 +41,7 @@
 #include "resources.h"
 #include "serial.h"
 #include "translate.h"
-#include "types.h"
+#include "vicetypes.h"
 
 #ifdef HAVE_OPENCBM
 static int interface_opencbm_attach(unsigned int prnr);

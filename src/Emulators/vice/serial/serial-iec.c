@@ -28,7 +28,7 @@
 
 #include "serial-iec-bus.h"
 #include "serial-iec.h"
-#include "types.h"
+#include "vicetypes.h"
 
 
 static int serial_iec_st = 0;

@@ -28,13 +28,16 @@ extern "C" {
 #include "SYS_CommandLine.h"
 #include "CGuiMain.h"
 #include "CViewC64.h"
-#include "CViewMemoryMap.h"
+#include "CViewDataMap.h"
 #include "CViewC64StateSID.h"
 #include "CSnapshotsManager.h"
 #include "CByteBuffer.h"
-#include "CDebugSymbols.h"
+#include "CDebugSymbolsC64.h"
 #include "CDebugSymbolsSegmentC64.h"
+#include "CDebugSymbolsDrive1541.h"
 #include "CDebugSymbolsSegmentDrive1541.h"
+#include "CDataAdapterViceDrive1541DiskContents.h"
+#include "CDebugMemory.h"
 #include "CDebugEventsHistory.h"
 #include "SND_SoundEngine.h"
 
@@ -136,7 +139,9 @@ void c64d_mark_c64_cell_read(uint16 addr)
 	}
 	
 	if (!isBogusPageOffsetRead)
-		viewC64->viewC64MemoryMap->CellRead(addr, viceCurrentC64PC, vicii.raster_line, vicii.raster_cycle);
+	{
+		debugInterfaceVice->symbols->memory->CellRead(addr, viceCurrentC64PC, vicii.raster_line, vicii.raster_cycle);
+	}
 
 	// skip checking breakpoints when quick fast-forward/restoring snapshot
 	if (debugInterfaceVice->snapshotsManager->IsPerformingSnapshotRestore())
@@ -163,7 +168,7 @@ void c64d_mark_c64_cell_read(uint16 addr)
 
 void c64d_mark_c64_cell_write(uint16 addr, uint8 value)
 {
-	viewC64->viewC64MemoryMap->CellWrite(addr, value, viceCurrentC64PC, vicii.raster_line, vicii.raster_cycle);
+	debugInterfaceVice->symbols->memory->CellWrite(addr, value, viceCurrentC64PC, vicii.raster_line, vicii.raster_cycle);
 	
 	// skip checking breakpoints when quick fast-forward/restoring snapshot
 	if (debugInterfaceVice->snapshotsManager->IsPerformingSnapshotRestore())
@@ -186,17 +191,17 @@ void c64d_mark_c64_cell_write(uint16 addr, uint8 value)
 
 void c64d_mark_c64_cell_execute(uint16 addr, uint8 opcode)
 {
-	viewC64->viewC64MemoryMap->CellExecute(addr, opcode);
+	debugInterfaceVice->symbols->memory->CellExecute(addr, opcode);
 }
 
 extern "C" {
 	uint8 c64d_peek_drive(int driveNum, uint16 addr);
 }
 
-void c64d_mark_disk_cell_read(uint16 addr)
+void c64d_mark_drive1541_cell_read(uint16 addr)
 {
-//	LOGD("c64d_mark_disk_cell_read: %04x", addr);
-	viewC64->viewDrive1541MemoryMap->CellRead(addr, viceCurrentDiskPC[0], -1, -1);
+//	LOGD("c64d_mark_drive1541_cell_read: %04x", addr);
+	debugInterfaceVice->symbolsDrive1541->memory->CellRead(addr, viceCurrentDiskPC[0], -1, -1);
 	
 	// skip checking breakpoints when quick fast-forward/restoring snapshot
 	if (debugInterfaceVice->snapshotsManager->IsPerformingSnapshotRestore())
@@ -221,10 +226,10 @@ void c64d_mark_disk_cell_read(uint16 addr)
 	}
 }
 
-void c64d_mark_disk_cell_write(uint16 addr, uint8 value)
+void c64d_mark_drive1541_cell_write(uint16 addr, uint8 value)
 {
 //	debugInterfaceVice->MarkDrive1541CellWrite(addr, value);
-	viewC64->viewDrive1541MemoryMap->CellWrite(addr, value, viceCurrentDiskPC[0], -1, -1);
+	debugInterfaceVice->symbolsDrive1541->memory->CellWrite(addr, value, viceCurrentDiskPC[0], -1, -1);
 	
 	// skip checking breakpoints when quick fast-forward/restoring snapshot
 	if (debugInterfaceVice->snapshotsManager->IsPerformingSnapshotRestore())
@@ -247,12 +252,18 @@ void c64d_mark_disk_cell_write(uint16 addr, uint8 value)
 	}
 }
 
-void c64d_mark_disk_cell_execute(uint16 addr, uint8 opcode)
+void c64d_mark_drive1541_cell_execute(uint16 addr, uint8 opcode)
 {
-	//LOGD("c64d_mark_disk_cell_execute: %04x %02x", addr, opcode);
-	viewC64->viewDrive1541MemoryMap->CellExecute(addr, opcode);
+	//LOGD("c64d_mark_drive1541_cell_execute: %04x %02x", addr, opcode);
+	
+	debugInterfaceVice->symbolsDrive1541->memory->CellExecute(addr, opcode);
 }
 
+// TODO: add driveId
+void c64d_mark_drive1541_contents_track_dirty(uint16 track)
+{
+	((CDataAdapterViceDrive1541DiskContents*)(debugInterfaceVice->dataAdapterDrive1541DiskContents))->MarkTrackDirty(track);
+}
 
 void c64d_display_speed(float speed, float frame_rate)
 {
@@ -350,7 +361,7 @@ void c64d_clear_screen()
 {
 	debugInterfaceVice->LockRenderScreenMutex();
 	
-	uint8 *destScreenPtr = (uint8 *)debugInterfaceVice->screenImage->resultData;
+	uint8 *destScreenPtr = (uint8 *)debugInterfaceVice->screenImageData->resultData;
 	
 	for (int y = 0; y < 512; y++)
 	{
@@ -424,7 +435,7 @@ void c64d_refresh_screen_no_callback()
 		int screenHeight = vicii.raster.canvas->draw_buffer->visible_height; //-skipTopLines;
 		
 		uint8 *srcScreenPtr = screenBuffer + (skipTopLines*screenWidth);
-		uint8 *destScreenPtr = (uint8 *)debugInterfaceVice->screenImage->resultData;
+		uint8 *destScreenPtr = (uint8 *)debugInterfaceVice->screenImageData->resultData;
 		
 		for (int y = 0; y < screenHeight; y++)
 		{
@@ -451,7 +462,7 @@ void c64d_refresh_screen_no_callback()
 		int screenHeight = vicii.raster.canvas->draw_buffer->visible_height; //-skipTopLines;
 
 		uint8 *srcScreenPtr = screenBuffer + (skipTopLines*screenWidth);
-		uint8 *destScreenPtr = (uint8 *)debugInterfaceVice->screenImage->resultData;
+		uint8 *destScreenPtr = (uint8 *)debugInterfaceVice->screenImageData->resultData;
 		
 		for (int y = 0; y < screenHeight; y++)
 		{
@@ -525,7 +536,7 @@ void c64d_refresh_previous_lines()
 			{
 				for (int j = 0; j < debugInterfaceVice->screenSupersampleFactor; j++)
 				{
-					debugInterfaceVice->screenImage->SetPixelResultRGBA(x * debugInterfaceVice->screenSupersampleFactor + j,
+					debugInterfaceVice->screenImageData->SetPixelResultRGBA(x * debugInterfaceVice->screenSupersampleFactor + j,
 																   y * debugInterfaceVice->screenSupersampleFactor + i,
 																   c64d_palette_red[v], c64d_palette_green[v], c64d_palette_blue[v], 255);
 				}
@@ -602,7 +613,7 @@ void c64d_refresh_dbuf()
 		{
 			for (int j = 0; j < debugInterfaceVice->screenSupersampleFactor; j++)
 			{
-				debugInterfaceVice->screenImage->SetPixelResultRGBA(x * debugInterfaceVice->screenSupersampleFactor + j,
+				debugInterfaceVice->screenImageData->SetPixelResultRGBA(x * debugInterfaceVice->screenSupersampleFactor + j,
 															   rasterY * debugInterfaceVice->screenSupersampleFactor + i,
 															   c64d_palette_red[v], c64d_palette_green[v], c64d_palette_blue[v], 255);
 			}
@@ -1464,6 +1475,13 @@ int c64d_is_drive_dirty_and_needs_refresh(int driveNum)
 		return 1;
 	}
 	return 0;
+}
+
+void c64d_set_drive_dirty_needs_refresh_flag(int driveNum)
+{
+	drive_s *drive = drive_context[driveNum]->drive;
+	drive->GCR_dirty_track_needs_refresh = 1;
+	drive->P64_dirty_needs_refresh = 1;
 }
 
 void c64d_clear_drive_dirty_needs_refresh_flag(int driveNum)

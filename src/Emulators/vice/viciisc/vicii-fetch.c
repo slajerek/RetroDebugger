@@ -36,7 +36,7 @@
 #include "debug.h"
 #include "maincpu.h"
 #include "mem.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "vicii-chip-model.h"
 #include "vicii-fetch.h"
 #include "viciitypes.h"

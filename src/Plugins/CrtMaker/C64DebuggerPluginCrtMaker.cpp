@@ -5,6 +5,60 @@
 #include "C64Tools.h"
 #include <map>
 
+// Usage: when crt is packed then you can get 'file' by calling in your code
+//  LDY #<file num>  JSR $0100
+
+// .var Depack = $0100
+// .var SetDepackWithIo = $0129				// $01 = $35 depack with i/o, e.g. directly to color ram
+// .var SetDepackDirectToRam = $012F		// $01 = $34 depack direct to ram (default)
+//
+// the $02-$0C (incl.) addresses at zero page are reserved during depack
+//
+// 0100-03f8 are reserved for depacker framework, from 03f8 all up is free
+// during cartridge read the kernal is on thus IRQ needs to run via 0314/0316 vectors
+// but during ram store the kernal is off thus IRQ needs to run via FFFE/FFFF vectors
+// also remember to store state of $01 in IRQ as depacker alternates between #$37 for read and #$34 for store
+//
+// you can use default handler:
+// this is copy of default kernal's irq handler to mimic the same number of cycles and behavior
+//
+//	A("				LDA #<DefaultKernalIRQ");
+//	A("				STA $fffe");
+//	A("				LDA #>DefaultKernalIRQ");
+//	A("				STA $ffff");
+//	A("				LDA #<DefaultIRQ");
+//	A("				STA $0314");
+//	A("				STA $0316");
+//	A("				LDA #>DefaultIRQ");
+//	A("				STA $0315");
+//	A("				STA $0317");
+
+//  A("DefaultKernalIRQ		PHA");
+//  A("						TXA");
+//  A("						PHA");
+//  A("						TYA");
+//  A("						PHA");
+//  A("						TSX");
+//  A("						LDA $0104,x");
+//  A("						AND #$10");
+//  A("						BEQ irqKernal2");
+//  A("irqKernal2     		JMP ($0314)");
+//  A("DefaultIRQ      		LDA $01");
+//  A("						STA irq1val01+1");
+//  A("						LDA #$35");
+//  A("						STA $01");
+//
+//  A("						JSR $%04x", songPlay);
+//  A("						ASL $d019");
+//  A("irq1val01:      		LDA #$00");
+//  A("						STA $01");
+//  A("						PLA");
+//  A("						TAY");
+//  A("						PLA");
+//  A("						TAX");
+//  A("						PLA");
+//  A("						RTI");
+
 #define ASSEMBLE(fmt, ...) sprintf(assembleTextBuf, fmt, ## __VA_ARGS__); this->Assemble(assembleTextBuf);
 #define A(fmt, ...) sprintf(assembleTextBuf, fmt, ## __VA_ARGS__); api->Assemble64TassAddLine(assembleTextBuf);
 #define PUT(v) this->PutDataByte(v);
@@ -26,7 +80,7 @@ void PLUGIN_CrtMakerSetVisible(bool isVisible)
 {
 	if (pluginCrtMaker != NULL)
 	{
-		pluginCrtMaker->view->SetVisible(isVisible);
+		pluginCrtMaker->crtMaker->SetVisible(isVisible);
 	}
 }
 
@@ -39,7 +93,7 @@ void C64DebuggerPluginCrtMaker::Init()
 {
 	LOGD("C64DebuggerPluginCrtMaker::Init");
 
-	view = new CViewC64CrtMaker(0, 50, -1, 400, 300, this);
+	crtMaker = new CViewC64CrtMaker(0, 50, -1, 400, 300, this);
 
 	//
 	api->StartThread(this);
@@ -50,9 +104,9 @@ void C64DebuggerPluginCrtMaker::ThreadRun(void *data)
 	SYS_Sleep(50);
 	api->DetachEverything();
 	
-	api->AddView(view);
+	api->AddView(crtMaker);
 	
-	view->Run();
+	crtMaker->Run();
 }
 
 void C64DebuggerPluginCrtMaker::DoFrame()
@@ -126,6 +180,7 @@ void CCrtMakerFile::Init(const char *filePath, const char *displayName, int dest
 	this->prgFilePath = NULL;
 	this->exoFilePath = NULL;
 	this->destinationAddr = destinationAddr;
+	this->status = CCrtMakerFileStatus::StatusPending;
 	
 	this->size = 0;
 	this->data = NULL;

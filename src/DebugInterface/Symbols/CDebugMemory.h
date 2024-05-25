@@ -53,16 +53,25 @@ class CDebugMemory
 public:
 	CDebugMemory(CDebugSymbols *debugSymbols);
 	
-	CDebugInterface *degugInterface;
+	CDebugInterface *debugInterface;
 	CDebugSymbols *debugSymbols;
 	CDataAdapter *dataAdapter;
 	
-	CDebugMemoryCell **memoryCells;
+	CDebugMemoryCell *GetMemoryCell(int address);
 
 	bool IsExecuteCodeAddress(int address);
 	void ClearDebugMarkers();
 	void ClearReadWriteDebugMarkers();
 
+	void CellRead(int addr);
+	void CellRead(int addr, int pc, int rasterX, int rasterY);
+	void CellWrite(int addr, uint8 value);
+	void CellWrite(int addr, uint8 value, int pc, int rasterX, int rasterY);
+	void CellExecute(int addr, uint8 opcode);
+
+private:
+	CDebugMemoryCell **memoryCells;
+	int numCells;
 };
 
 #endif

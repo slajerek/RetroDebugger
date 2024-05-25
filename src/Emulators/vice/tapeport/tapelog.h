@@ -27,7 +27,7 @@
 #ifndef VICE_TAPELOG_H
 #define VICE_TAPELOG_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 extern int tapelog_resources_init(void);
 extern void tapelog_resources_shutdown(void);

@@ -27,7 +27,7 @@
 #ifndef VICE_C64CARTMEM_H
 #define VICE_C64CARTMEM_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 /*
     this interface is used by: vicii-fetch.c, vicii.c, c64meminit.c, c64mem.c, c64memsc.c

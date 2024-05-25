@@ -38,7 +38,7 @@
 #include "output.h"
 #include "palette.h"
 #include "sysfile.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "lib.h"
 
 /* MAX_COL must be a multiple of 32 */

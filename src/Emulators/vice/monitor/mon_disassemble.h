@@ -30,7 +30,7 @@
 #define VICE_MON_DISASSEMBLE_H
 
 #include "montypes.h"
-#include "types.h"
+#include "vicetypes.h"
 
 extern const char *mon_disassemble_to_string_ex(MEMSPACE, unsigned int addr, unsigned int x,
                                                 unsigned int p1, unsigned int p2, unsigned int p3,

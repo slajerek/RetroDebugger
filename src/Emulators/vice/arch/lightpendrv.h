@@ -28,7 +28,7 @@
 #define VICE_LIGHTPENDRV_H
 
 #include "vice.h"
-#include "types.h"
+#include "vicetypes.h"
 
 struct sdl_lightpen_adjust_s {
     int offset_x, offset_y;

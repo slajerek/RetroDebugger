@@ -32,7 +32,7 @@
 #include "log.h"
 #include "ser-eeprom.h"
 #include "snapshot.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "util.h"
 
 /* #define EEPROMDEBUG */

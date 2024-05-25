@@ -35,6 +35,15 @@ class CDebugInterfaceVice;
 class CViewBreakpoints;
 class CWaveformData;
 
+class CDataAdapterViceC64;
+class CDataAdapterViceC64DirectRam;
+
+class CDataAdapterViceDrive1541;
+class CDataAdapterViceDrive1541DirectRam;
+class CDataAdapterViceDrive1541DiskContents;
+
+class CDataAdapterViceC64Cartridge;
+
 class CThreadViceDriveFlush : public CSlrThread
 {
 public:
@@ -55,6 +64,16 @@ public:
 	virtual void InitKeyMap(C64KeyMap *keyMap);
 
 	CAudioChannelVice *audioChannel;
+	
+	CDataAdapterViceC64 *dataAdapterViceC64;
+	CDataAdapterViceC64DirectRam *dataAdapterViceC64DirectRam;
+	
+	CDataAdapterViceDrive1541 *dataAdapterViceDrive1541;
+	CDataAdapterViceDrive1541DirectRam *dataAdapterViceDrive1541DirectRam;
+	CDataAdapterViceDrive1541DiskContents *dataAdapterViceDrive1541DiskContents;
+	
+	CDataAdapterViceC64Cartridge *dataAdapterViceC64Cartridge;
+	
 	
 	int modelType;
 	virtual int GetC64ModelType();
@@ -162,7 +181,7 @@ public:
 	virtual void MakeJsrC64(uint16 addr);
 	
 	
-	virtual void MakeBasicRunC64();
+	virtual void MakeJMPToBasicRunC64();
 	
 	///
 	virtual void SetStackPointerC64(uint8 val);
@@ -221,11 +240,14 @@ public:
 	virtual bool LoadDiskDataSnapshotSynced(CByteBuffer *byteBuffer);
 	virtual bool SaveDiskDataSnapshotSynced(CByteBuffer *byteBuffer);
 
+	virtual void PrepareDriveForBasicRun();
+	
 	virtual bool IsDriveDirtyForSnapshot();
 	virtual void ClearDriveDirtyForSnapshotFlag();
 
-	virtual bool IsDriveDirtyForRefresh();
-	virtual void ClearDriveDirtyForRefreshFlag();
+	virtual bool IsDriveDirtyForRefresh(int driveNum);
+	virtual void SetDriveDirtyForRefreshFlag(int driveNum);
+	virtual void ClearDriveDirtyForRefreshFlag(int driveNum);
 
 	virtual void SetDebugMode(uint8 debugMode);
 	virtual uint8 GetDebugMode();

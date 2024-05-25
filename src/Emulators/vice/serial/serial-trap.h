@@ -27,7 +27,7 @@
 #ifndef VICE_SERIAL_TRAP_H
 #define VICE_SERIAL_TRAP_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 extern void serial_trap_init(WORD tmpin);
 

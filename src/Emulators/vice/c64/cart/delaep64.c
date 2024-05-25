@@ -39,7 +39,7 @@
 #include "export.h"
 #include "monitor.h"
 #include "snapshot.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "util.h"
 #include "vicii-phi1.h"
 #include "crt.h"

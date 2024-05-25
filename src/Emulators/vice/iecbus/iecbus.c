@@ -36,7 +36,7 @@
 #include "iecdrive.h"
 #include "printer.h"
 #include "via.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "serial.h"
 
 #include "SYS_Types.h"
@@ -238,13 +238,13 @@ uint8 c64d_peek_drive(int driveNum, uint16 addr)
 	return c64d_peek_mem_drive_internal(drv, addr);
 }
 
-void c64d_peek_memory_drive(int driveNum, BYTE *buffer, uint16 addrStart, uint16 addrEnd)
+void c64d_peek_memory_drive(int driveNum, uint8 *buffer, int addrStart, int addrEnd)
 {
 	drive_context_t *drv = drive_context[driveNum];
 	c64d_peek_memory_drive_internal(drv, buffer, addrStart, addrEnd);
 }
 
-void c64d_copy_ram_memory_drive(int driveNum, BYTE *buffer, uint16 addrStart, uint16 addrEnd)
+void c64d_copy_ram_memory_drive(int driveNum, uint8 *buffer, int addrStart, int addrEnd)
 {
 	drive_context_t *drv = drive_context[driveNum];
 	c64d_copy_ram_memory_drive_internal(drv, buffer, addrStart, addrEnd);

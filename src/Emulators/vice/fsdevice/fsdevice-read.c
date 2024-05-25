@@ -47,7 +47,7 @@
 #include "ioutil.h"
 #include "lib.h"
 #include "tape.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "vdrive.h"
 
 

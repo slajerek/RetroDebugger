@@ -30,7 +30,7 @@
 #ifndef VICE_SOCKET_H
 #define VICE_SOCKET_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 typedef struct vice_network_socket_s vice_network_socket_t;
 

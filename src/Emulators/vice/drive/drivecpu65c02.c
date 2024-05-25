@@ -48,7 +48,7 @@
 #include "r65c02.h"
 #include "rotation.h"
 #include "snapshot.h"
-#include "types.h"
+#include "vicetypes.h"
 
 
 #define DRIVE_CPU

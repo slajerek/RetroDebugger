@@ -36,7 +36,7 @@
 #include "log.h"
 #include "maincpu.h"
 #include "snapshot.h"
-#include "types.h"
+#include "vicetypes.h"
 
 /* -------------------------------------------------------------------------- */
 

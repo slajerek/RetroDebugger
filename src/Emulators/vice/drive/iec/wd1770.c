@@ -34,7 +34,7 @@
 #include "drive.h"
 #include "drivetypes.h"
 #include "log.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "wd1770.h"
 #include "fdd.h"
 #include "lib.h"

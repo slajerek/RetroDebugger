@@ -27,7 +27,7 @@
 #ifndef VICE_DS12C887RTC_H
 #define VICE_DS12C887RTC_H
 
-#include "types.h"
+#include "vicetypes.h"
 #include "sound.h"
 
 extern int ds12c887rtc_cart_enabled(void);

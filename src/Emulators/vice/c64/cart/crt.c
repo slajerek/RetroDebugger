@@ -35,7 +35,7 @@
 #include "crt.h"
 #include "log.h"
 #include "resources.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "c64cart.h"
 
 #define CARTRIDGE_INCLUDE_PRIVATE_API

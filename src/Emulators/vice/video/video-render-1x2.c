@@ -28,7 +28,7 @@
 #include "vice.h"
 
 #include "render1x2.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "video-render.h"
 #include "video.h"
 

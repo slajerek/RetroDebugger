@@ -31,7 +31,7 @@
 #include "drive.h"
 #include "mos6510.h"
 #include "r65c02.h"
-#include "types.h"
+#include "vicetypes.h"
 
 /*
  *  The philosophy behind this approach is that only the drive module knows

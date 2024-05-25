@@ -36,7 +36,7 @@
 #include "diskimage.h"
 #include "imagecontents.h"
 #include "lib.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "vdrive-bam.h"
 #include "vdrive-dir.h"
 #include "vdrive-internal.h"

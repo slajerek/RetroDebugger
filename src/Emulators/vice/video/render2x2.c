@@ -27,7 +27,7 @@
 #include "vice.h"
 
 #include "render2x2.h"
-#include "types.h"
+#include "vicetypes.h"
 #include <string.h>
 
 

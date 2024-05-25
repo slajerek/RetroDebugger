@@ -44,7 +44,7 @@
 #include "c64memrom.h"
 #include "c64rom.h"
 #include "patchrom.h"
-#include "types.h"
+#include "vicetypes.h"
 
 #include "ViceWrapper.h"
 

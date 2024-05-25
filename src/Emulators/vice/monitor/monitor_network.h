@@ -31,7 +31,7 @@
 #ifndef VICE_MONITOR_NETWORK_H
 #define VICE_MONITOR_NETWORK_H
 
-#include "types.h"
+#include "vicetypes.h"
 #include "uiapi.h"
 
 extern int monitor_network_resources_init(void);

@@ -38,7 +38,7 @@
 #include "lib.h"
 #include "parallel.h"
 #include "rotation.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "via.h"
 #include "via1d2031.h"
 #include "viad.h"

@@ -28,7 +28,7 @@
 
 #include <stdio.h>
 
-#include "types.h"
+#include "vicetypes.h"
 #include "zipcode.h"
 
 int zipcode_read_sector(FILE *zip_fd, int track, int *sector, char *buf)

@@ -33,7 +33,7 @@
 #ifndef VICE_IECBUS_H
 #define VICE_IECBUS_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 #define IECBUS_NUM 16
 

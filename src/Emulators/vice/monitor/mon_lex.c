@@ -1537,7 +1537,7 @@ char *yytext;
 #include "montypes.h"
 #include "asm.h"
 #include "mon_parse.h" /* FIXME ! */
-#include "types.h"
+#include "vicetypes.h"
 
 
 #define YY_ALWAYS_INTERACTIVE 1

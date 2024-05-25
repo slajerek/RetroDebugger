@@ -80,7 +80,7 @@
 #include "sysfile.h"
 #include "translate.h"
 #include "traps.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "uiapi.h"
 #include "uimon.h"
 #include "util.h"

@@ -53,7 +53,7 @@
 #include "snapshot.h"
 #include "spi-sdcard.h"
 #include "translate.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "util.h"
 
 #define CARTRIDGE_INCLUDE_PRIVATE_API

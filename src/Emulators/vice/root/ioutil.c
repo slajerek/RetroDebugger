@@ -72,7 +72,7 @@
 #include "archdep.h"
 #include "ioutil.h"
 #include "lib.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "util.h"
 #include "vicemaxpath.h"
 

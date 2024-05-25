@@ -8,7 +8,7 @@ class CDebugInterfaceAtari;
 class CDataAdapterAtari : public CDebugDataAdapter
 {
 public:
-	CDataAdapterAtari(CDebugInterfaceAtari *debugInterfaceAtari);
+	CDataAdapterAtari(CDebugSymbols *debugSymbols);
 	CDebugInterfaceAtari *debugInterfaceAtari;
 	
 	virtual int AdapterGetDataLength();

@@ -34,7 +34,7 @@
 #include "joy.h"
 #include "keyboard.h"
 #include "menu_common.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "ui.h"
 #include "uimenu.h"
 #include "uipoll.h"

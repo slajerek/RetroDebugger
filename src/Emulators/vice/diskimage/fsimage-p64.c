@@ -37,7 +37,7 @@
 #include "gcr.h"
 #include "log.h"
 #include "lib.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "util.h"
 #include "p64.h"
 

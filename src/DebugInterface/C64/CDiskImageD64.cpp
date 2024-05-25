@@ -1,14 +1,4 @@
-extern "C" {
-#include "diskimage.h"
-#include "vdrive.h"
-#include "vdrive-command.h"
-#include "vdrive-iec.h"
-#include "charset.h"
-#include "driveimage.h"
-#include "lib.h"
-#include "fileio.h"
-#include "cbmimage.h"
-};
+// TODO: make this generic for C64 regardless of emulator, supports VICE now only
 
 #include "CGuiMain.h"
 #include "CDiskImageD64.h"
@@ -18,16 +8,14 @@ extern "C" {
 #include "CDebugInterfaceC64.h"
 #include "CViewDrive1541Browser.h"
 
-extern "C" {
-	disk_image_t *c64d_read_disk_image(char *fileName);
-	void c64d_disk_image_destroy(disk_image_t *diskImage);
+#include "CDebugInterfaceVice.h"
+#include "CDataAdapterViceDrive1541DiskContents.h"
 
-	int disk_image_read_sector(const disk_image_t *image, BYTE *buf, const disk_addr_t *dadr);
-	disk_image_t *c64d_get_drive_disk_image(int driveId);
-};
 
-CDiskImageD64::CDiskImageD64(int driveId)
+CDiskImageD64::CDiskImageD64(CDebugInterfaceVice *debugInterface, int driveId)
 {
+	this->debugInterface = debugInterface;
+	this->isDiskAttached = false;
 	this->SetDiskImage(driveId);
 }
 
@@ -41,22 +29,9 @@ void CDiskImageD64::SetDiskImage(int driveId)
 {
 	isFromFile = false;
 	
-	diskImage = c64d_get_drive_disk_image(driveId);
+	dataAdapter = (CDataAdapterViceDrive1541DiskContents*)debugInterface->dataAdapterDrive1541DiskContents;
 	
-	// note, the below code will crash as fsimage (i.e. file) is NULL, and Vice needs fsimage to load file
-//	if (diskImage == NULL)
-//	{
-//		diskImage = disk_image_create();
-//
-//		viewC64->debugInterfaceC64->LockMutex();
-//		drive_image_attach(this->diskImage, 8);
-//		viewC64->debugInterfaceC64->UnlockMutex();
-//	}
-
-	if (this->diskImage != NULL)
-	{
-		this->ReadImage();
-	}
+	this->ReadImage();
 }
 
 void CDiskImageD64::RefreshImage()
@@ -70,12 +45,13 @@ void CDiskImageD64::RefreshImage()
 	this->ReadImage();
 }
 
+// TODO: create data adapter for flat disk image and reuse adapter here
 void CDiskImageD64::SetDiskImage(char *fileName)
 {
 	isFromFile = true;
 	
-	this->diskImage = c64d_read_disk_image(fileName);
-	this->ReadImage();
+//	this->diskImage = c64d_read_disk_image(fileName);
+//	this->ReadImage(this->diskImage);
 }
 
 DiskImageFileEntry *CDiskImageD64::FindDiskPRGEntry(int entryNum)
@@ -100,37 +76,70 @@ DiskImageFileEntry *CDiskImageD64::FindDiskPRGEntry(int entryNum)
 
 CDiskImageD64::~CDiskImageD64()
 {
+	Clear();
 	if (isFromFile)
 	{
-		c64d_disk_image_destroy(this->diskImage);
+//		c64d_disk_image_destroy(this->diskImage);
 	}
 }
+
+void CDiskImageD64::Clear()
+{
+	while(!fileEntries.empty())
+	{
+		DiskImageFileEntry *entry = fileEntries.back();
+		fileEntries.pop_back();
+		delete entry;
+	}
+}
+
+bool CDiskImageD64::IsDiskAttached()
+{
+	if (isDiskAttached != dataAdapter->IsDiskAttached())
+		ReadImage();
+	
+	return isDiskAttached;
+}
+
+
+//#define LOGReadImage LOGD
+#define LOGReadImage(...) ;
 
 bool CDiskImageD64::ReadImage()
 {
 	LOGD("CDiskImageD64::ReadImage");
 	
+	Clear();
+	
+	if (dataAdapter->IsDiskAttached() == false)
+	{
+		memset(diskName, ' ', 0x10);
+		memset(diskId, ' ', 0x07);
+		isDiskAttached = false;
+		
+		LOGD("--- disk attached false");
+		return true;
+	}
+	
 	u8 sectorData[256];
 	
 	// read BAM
-	disk_addr_t diskAddr;
-	diskAddr.track = D64_BAM_TRACK;
-	diskAddr.sector = D64_BAM_SECTOR;
-	disk_image_read_sector(diskImage, sectorData, &diskAddr);
+	dataAdapter->ReadSector(D64_BAM_TRACK-1, D64_BAM_SECTOR, sectorData);
+	
 	
 	int offset = 0x90;
 	for (int i = 0; i < 0x10; i++)
 	{
 		diskName[i] = sectorData[offset + i];
 		
-		//LOGD("offset=%d diskName[%d]=%02x '%c'", offset+i, i, diskName[i], diskName[i]);
+		LOGReadImage("offset=%d diskName[%d]=%02x '%c'", offset+i, i, diskName[i], diskName[i]);
 	}
 	
 	offset = 0xA0;
 	for (int i = 0; i < 7; i++)
 	{
 		diskId[i] = sectorData[offset + i];
-		//LOGD("offset=%d diskId[%d]=%02x '%c'", offset+i, i, diskId[i], diskId[i]);
+		LOGReadImage("offset=%d diskId[%d]=%02x '%c'", offset+i, i, diskId[i], diskId[i]);
 	}
 	
 	// scan BAM track entries for free sectors
@@ -142,7 +151,7 @@ bool CDiskImageD64::ReadImage()
 		int freeSectors = sectorData[offset];
 		numFreeSectors += freeSectors;
 		
-		//LOGD("...track %d freeSectors=%d numFreeSectors=%d", i, freeSectors, numFreeSectors);
+		LOGReadImage("...track %d freeSectors=%d numFreeSectors=%d", i, freeSectors, numFreeSectors);
 	}
 	
 	// remove track 18
@@ -150,26 +159,25 @@ bool CDiskImageD64::ReadImage()
 	int freeSectorsTrackBAM = sectorData[offset];
 	numFreeSectors -= freeSectorsTrackBAM;
 	
-	LOGD("numFreeSectors=%d", numFreeSectors);
-	
-	diskAddr.track = D64_BAM_TRACK;
-	diskAddr.sector = 1;
+	LOGReadImage("numFreeSectors=%d", numFreeSectors);
 
-	while(diskAddr.track != 0)
+	int track = D64_BAM_TRACK-1;
+	int sector = 1;
+
+	while(track != -1)
 	{
-		LOGD("--> dirTrack=%d dirSector=%d", diskAddr.track, diskAddr.sector);
-
-		disk_image_read_sector(diskImage, sectorData, &diskAddr);
-
+		LOGReadImage("--> dirTrack=%d dirSector=%d", track+1, sector);
+		dataAdapter->ReadSector(track, sector, sectorData);
+//		disk_image_read_sector(diskImage, sectorData, &diskAddr);
 		
 		for (int entryNum = 0; entryNum < 8; entryNum++)
 		{
-			//LOGD("   entryNum=%d", entryNum);
+			LOGReadImage("   entryNum=%d", entryNum);
 			
 			int entryOffset = entryNum * 0x20;
 			
 			u8 fileType = sectorData[entryOffset + 2];
-			//LOGD("    fileType=%02x", fileType);
+			LOGReadImage("    fileType=%02x", fileType);
 			
 			if (fileType != 0x00)
 			{
@@ -181,7 +189,7 @@ bool CDiskImageD64::ReadImage()
 				fileEntry->track = sectorData[entryOffset + 3];
 				fileEntry->sector = sectorData[entryOffset + 4];
 
-				LOGD("  type=%02x locked=%d closed=%d | track=%d sector=%d",
+				LOGReadImage("  type=%02x locked=%d closed=%d | track=%d sector=%d",
 					 fileEntry->fileType, fileEntry->locked, fileEntry->closed,
 					 fileEntry->track, fileEntry->sector);
 				
@@ -189,26 +197,29 @@ bool CDiskImageD64::ReadImage()
 				{
 					fileEntry->fileName[i] = sectorData[entryOffset + 5 + i];
 					
-					//LOGD("  fileName[%d]=%02x '%c'", i, fileEntry->fileName[i], fileEntry->fileName[i]);
+					LOGReadImage("  fileName[%d]=%02x '%c'", i, fileEntry->fileName[i], fileEntry->fileName[i]);
 				}
 
 				fileEntry->fileSize = sectorData[entryOffset + 0x1E] + sectorData[entryOffset + 0x1F] * 0x100;
 				
-				LOGD("  fileSize=%d", fileEntry->fileSize);
+				LOGReadImage("  fileSize=%d", fileEntry->fileSize);
 				
 				this->fileEntries.push_back(fileEntry);
 			}
-			
 		}
 		
 		// next dir track
-		diskAddr.track = sectorData[0];
-		diskAddr.sector = sectorData[1];
+		track = sectorData[0]-1;
+		sector = sectorData[1];
+		
+		LOGReadImage("next track=%d sector=%d", track, sector);
 		
 		if (this->fileEntries.size() >= D64_MAX_FILES)
 			break;
 	}
-	LOGD("--> done dir");
+	LOGReadImage("--> done dir");
+	
+	isDiskAttached = true;
 	
 	LOGD("CDiskImageD64::ReadImage: done");
 	return true;
@@ -242,21 +253,18 @@ bool CDiskImageD64::ReadEntry(DiskImageFileEntry *fileEntry, CByteBuffer *byteBu
 	
 	u8 sectorData[256];
 
-	disk_addr_t diskAddr;
-	
-	diskAddr.track = fileEntry->track;
-	diskAddr.sector = fileEntry->sector;
+	int track = fileEntry->track-1;
+	int sector = fileEntry->sector;
 	
 	while(1)
 	{
-		LOGD("..reading track=%d sector=%d", diskAddr.track, diskAddr.sector);
-		
-		disk_image_read_sector(diskImage, sectorData, &diskAddr);
+//		LOGD("..reading track=%d sector=%d", track+1, sector);
+		dataAdapter->ReadSector(track, sector, sectorData);
 
-		diskAddr.track = sectorData[0];
-		diskAddr.sector = sectorData[1];
+		track = sectorData[0]-1;
+		sector = sectorData[1];
 		
-		if (diskAddr.track == 0)
+		if (track == -1)
 			break;
 		
 		for (int i = 2; i < 256; i++)
@@ -278,10 +286,10 @@ bool CDiskImageD64::ReadEntry(DiskImageFileEntry *fileEntry, CByteBuffer *byteBu
 		}
 	}
 	
-	LOGD("..finishing sector data=%d", diskAddr.sector);
+	LOGD("..finishing sector data=%d", sector);
 	
-	diskAddr.sector += 1;
-	for (int i = 2; i < diskAddr.sector; i++)
+	sector += 1;
+	for (int i = 2; i < sector; i++)
 	{
 		byteBuffer->PutU8(sectorData[i]);
 		//LOGD("...... prg [%04x | %6d] = %02x", 0x07FF + byteBuffer->index-1, byteBuffer->index-1, data[offset+i]);
@@ -330,175 +338,23 @@ const char *CDiskImageD64::FileEntryTypeToStr(u8 fileType)
 }
 
 // disk operations on vdrive
-
 bool CDiskImageD64::CreateDiskImage(const char *cPath)
 {
-	int ret = cbmimage_create_image(cPath, DISK_IMAGE_TYPE_D64);
-	if (ret == 0)
-	{
-		return true;
-	}
-	
-	return false;
+	return dataAdapter->CreateDiskImage(cPath);
 }
 
 void CDiskImageD64::FormatDisk(const char *diskName, const char *diskId)
 {
-	LOGD("CDiskImageD64::FormatDisk: %s %s", diskName, diskId);
-
-	if (diskImage == NULL)
-	{
-		LOGError("CDiskImageD64::FormatDisk: diskImage is NULL");
-		return;
-	}
-	
-	vdrive_t *vdrive = (vdrive_t*)lib_calloc(1, sizeof(vdrive_t));
-
-	vdrive_device_setup(vdrive, 8);
-	vdrive->image = this->diskImage;
-	vdrive_attach_image(this->diskImage, 8, vdrive);
-	
-	char *commandBuf = SYS_GetCharBuf();
-	
-	sprintf(commandBuf, "n:%s,%s", diskName, diskId);
-	charset_petconvstring((u8 *)commandBuf, 0);
-
-	vdrive_command_execute(vdrive, (u8 *)commandBuf,
-			(unsigned int)strlen(commandBuf));
-
-	SYS_ReleaseCharBuf(commandBuf);
-
-	vdrive_detach_image(this->diskImage, (unsigned int)8, vdrive);
-	drive_image_attach(this->diskImage, 8);
-	
-	lib_free(vdrive);
+	return dataAdapter->FormatDisk(diskName, diskId);
 }
 
 int CDiskImageD64::InsertFile(std::filesystem::path filePath, bool alwaysReplace)
 {
-	if (diskImage == NULL)
-	{
-		LOGError("CDiskImageD64::InsertFile: diskImage is NULL");
-		return RET_STATUS_FAILED;
-	}
-	
-	vdrive_t *vdrive = (vdrive_t*)lib_calloc(1, sizeof(vdrive_t));
-
-	vdrive_device_setup(vdrive, 8);
-	vdrive->image = this->diskImage;
-	vdrive_attach_image(this->diskImage, 8, vdrive);
-
-	fileio_info_t *finfo;
-	finfo = fileio_open(filePath.string().c_str(), NULL, FILEIO_FORMAT_RAW | FILEIO_FORMAT_P00,
-						FILEIO_COMMAND_READ | FILEIO_COMMAND_FSNAME,
-						FILEIO_TYPE_PRG);
-	if (finfo == NULL)
-	{
-		LOGError("CDiskImageD64::FormatDisk: file not found %s", filePath.string().c_str());
-		return RET_STATUS_FAILED;
-	}
-	
-	CSlrString *fileName = new CSlrString((char *)(finfo->name));
-	CSlrString *fileNameNoExt = fileName->GetFileNameWithoutExtensionAndPath();
-	char *cFileNameNoExt = fileNameNoExt->GetStdASCII();
-		
-//	char *dest_name = lib_stralloc((char *)filePath.filename().string().c_str()); //(finfo->name));
-	char *dest_name = cFileNameNoExt;
-	unsigned int dest_len = strlen(cFileNameNoExt); //finfo->length;
-	
-	bool replaced = false;
-	if (vdrive_iec_open(vdrive, (BYTE *)dest_name, (unsigned int)dest_len, 1, NULL))
-	{
-		LOGError("CDiskImageD64::FormatDisk: cannot open `%s' for writing on image", finfo->name);
-		
-		if (!alwaysReplace)
-		{
-			fileio_close(finfo);
-			lib_free(dest_name);
-			return RET_STATUS_FAILED;
-		}
-		else
-		{
-			char *bufCommand = SYS_GetCharBuf();
-
-			sprintf(bufCommand, "s:");
-			charset_petconvstring((BYTE *)bufCommand, 0);
-			strcat(bufCommand, dest_name);
-
-			LOGD("replacing file: %s", bufCommand);
-			int status = vdrive_command_execute(vdrive, (BYTE *)bufCommand,
-											(unsigned int)strlen(bufCommand));
-			LOGD("%02d, %s, 00, 00", status, cbmdos_errortext((unsigned int)status));
-			
-//			// vdrive_command_execute() returns CBMDOS_IPE_DELETED even if no
-//			// files where actually scratched, so just display error messages that
-//			// actual mean something, not "ERRORCODE 1" */
-//
-//			// the below does not work?
-//			//			if (status != CBMDOS_IPE_OK && status != CBMDOS_IPE_DELETED)
-//			{
-//				// pad with spaces
-//				char buf[0x11] = "                ";
-//				for (int i = 0; i < strlen(dest_name); i++)
-//				{
-//					buf[i] = dest_name[i];
-//					if (i == 0x10)
-//						break;
-//				}
-//
-//				sprintf(bufCommand, "s:");
-//				charset_petconvstring((BYTE *)bufCommand, 0);
-//				strcat(bufCommand, dest_name);
-//
-//				LOGD("replacing file: %s", bufCommand);
-//				status = vdrive_command_execute(vdrive, (BYTE *)bufCommand,
-//												(unsigned int)strlen(bufCommand));
-//				LOGD("%02d, %s, 00, 00", status, cbmdos_errortext((unsigned int)status));
-//			}
-
-			SYS_ReleaseCharBuf(bufCommand);
-			
-			if (vdrive_iec_open(vdrive, (BYTE *)dest_name, (unsigned int)dest_len, 1, NULL))
-			{
-				LOGError("CDiskImageD64::FormatDisk: cannot open `%s' for writing on image", finfo->name);
-				
-				fileio_close(finfo);
-				lib_free(dest_name);
-				return RET_STATUS_FAILED;
-			}
-			
-			replaced = true;
-		}
-	}
-	
-	while (1) {
-		BYTE c;
-
-		if (fileio_read(finfo, &c, 1) != 1) {
-			break;
-		}
-
-		if (vdrive_iec_write(vdrive, c, 1)) {
-			LOGError("CDiskImageD64::FormatDisk: no space on image?");
-			break;
-		}
-	}
-
-	fileio_close(finfo);
-	vdrive_iec_close(vdrive, 1);
-
-//	lib_free(dest_name);
-	STRFREE(cFileNameNoExt);
-	
-	vdrive_detach_image(this->diskImage, (unsigned int)8, vdrive);
-	drive_image_attach(this->diskImage, 8);
-	
-	lib_free(vdrive);
-	return replaced ? RET_STATUS_REPLACED : RET_STATUS_OK;
+	return dataAdapter->InsertFile(filePath, alwaysReplace);
 }
 
 /*
- this is pure u8 *data version:
+ this is old, pure u8 *data version:
  
  // this is based on http://unusedino.de/ec64/technical/formats/d64.html
  DiskImageTrack d64TracksOffsets[D64_NUM_TRACKS+1] = {

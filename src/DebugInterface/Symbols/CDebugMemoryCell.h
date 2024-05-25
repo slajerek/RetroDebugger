@@ -37,6 +37,8 @@ public:
 	void ClearDebugMarkers();
 	void ClearReadWriteDebugMarkers();
 	
+	void UpdateCellColors(u8 v, bool showExecutePC, int pc);
+	
 	// last write PC & raster (where was PC & raster when cell was written)
 	int writePC;
 	int writeRasterLine, writeRasterCycle;

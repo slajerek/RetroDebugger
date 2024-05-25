@@ -29,7 +29,7 @@
 #include "platform_x86_runtime_cpu.h"
 
 #ifndef PLATFORM_NO_X86_ASM
-#include "types.h"
+#include "vicetypes.h"
 #include <string.h>
 
 /* cpuid code for ow */

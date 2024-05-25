@@ -27,7 +27,7 @@
 #ifndef VICE_CIAD_H
 #define VICE_CIAD_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 struct cia_context_s;
 struct cia_initdesc_s;

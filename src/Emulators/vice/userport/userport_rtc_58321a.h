@@ -27,7 +27,7 @@
 #ifndef VICE_USERPORT_RTC_58321A_H
 #define VICE_USERPORT_RTC_58321A_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 extern int userport_rtc_58321a_enable;
 

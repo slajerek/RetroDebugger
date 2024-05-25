@@ -39,7 +39,7 @@
 #include "machine.h"
 #include "palette.h"
 #include "sysfile.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "util.h"
 
 

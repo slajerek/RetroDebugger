@@ -27,7 +27,7 @@
 #ifndef VICE_DIGIMAX_H
 #define VICE_DIGIMAX_H
 
-#include "types.h"
+#include "vicetypes.h"
 #include "sound.h"
 
 extern int digimax_cart_enabled(void);

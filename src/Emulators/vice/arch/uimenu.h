@@ -32,7 +32,7 @@
 #define VICE_UIMENU_H
 
 #include "vice.h"
-#include "types.h"
+#include "vicetypes.h"
 
 extern int sdl_menu_state;
 

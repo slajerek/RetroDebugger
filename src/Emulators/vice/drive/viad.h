@@ -28,7 +28,7 @@
 #ifndef VICE_VIAD_H
 #define VICE_VIAD_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 struct drive_context_s;
 struct drive_s;

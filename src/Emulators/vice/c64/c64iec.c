@@ -38,7 +38,7 @@
 #include "iecbus.h"
 #include "iecdrive.h"
 #include "maincpu.h"
-#include "types.h"
+#include "vicetypes.h"
 
 /* #define DEBUG_IECBUS_VCD */
 

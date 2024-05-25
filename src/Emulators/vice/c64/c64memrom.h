@@ -27,7 +27,7 @@
 #ifndef VICE_C64MEMROM_H
 #define VICE_C64MEMROM_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 extern BYTE c64memrom_basic64_rom[];
 extern BYTE c64memrom_kernal64_rom[];

@@ -1,12 +1,12 @@
-#include "CViewC64AllGraphics.h"
 #include "CViewC64AllGraphicsCharsets.h"
+#include "ViewC64AllGraphicsDefs.h"
 #include "VID_Main.h"
 #include "VID_ImageBinding.h"
 #include "CDebugInterfaceC64.h"
 #include "CViewC64VicDisplay.h"
 #include "CViewC64VicControl.h"
 #include "CViewDataDump.h"
-#include "CViewMemoryMap.h"
+#include "CViewDataMap.h"
 #include "C64Tools.h"
 #include "CGuiMain.h"
 #include "CViewDataDump.h"
@@ -14,6 +14,7 @@
 #include "CSlrString.h"
 #include "CViewC64StateVIC.h"
 #include "CViewC64.h"
+#include "CViewC64AllGraphicsCharsetsControl.h"
 
 CViewC64AllGraphicsCharsets::CViewC64AllGraphicsCharsets(const char *name, float posX, float posY, float posZ, float sizeX, float sizeY, CDebugInterfaceC64 *debugInterface)
 : CGuiViewMovingPane(name, posX, posY, posZ, sizeX, sizeY,
@@ -478,6 +479,20 @@ bool CViewC64AllGraphicsCharsets::DoFinishDoubleTap(float x, float y)
 {
 	LOGG("CViewC64AllGraphicsCharsets::DoFinishTap: %f %f", x, y);
 	return CGuiView::DoFinishDoubleTap(x, y);
+}
+
+bool CViewC64AllGraphicsCharsets::HasContextMenuItems()
+{
+	return true;
+}
+
+void CViewC64AllGraphicsCharsets::RenderContextMenuItems()
+{
+	bool isVisible = viewC64->viewC64AllGraphicsCharsetsControl->visible;
+	if (ImGui::MenuItem("All Charsets controller", NULL, &isVisible))
+	{
+		viewC64->viewC64AllGraphicsCharsetsControl->SetVisible(isVisible);
+	}
 }
 
 // bug: this event is not called when layout is set, and button state is updated on keyboard shortcut only

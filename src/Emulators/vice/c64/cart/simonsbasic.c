@@ -39,7 +39,7 @@
 #include "monitor.h"
 #include "simonsbasic.h"
 #include "snapshot.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "util.h"
 #include "crt.h"
 

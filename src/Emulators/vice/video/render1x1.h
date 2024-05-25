@@ -28,7 +28,7 @@
 #ifndef VICE_RENDER1X1_H
 #define VICE_RENDER1X1_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 #include "video.h"
 

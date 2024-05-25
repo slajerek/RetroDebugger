@@ -36,7 +36,7 @@
 #include "mon_assemble.h"
 #include "mon_register.h"
 #include "montypes.h"
-#include "types.h"
+#include "vicetypes.h"
 
 static const int addr_mode_size[] = {
     1, /* ASM_ADDR_MODE_IMPLIED */

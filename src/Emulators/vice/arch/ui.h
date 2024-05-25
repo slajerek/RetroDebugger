@@ -31,7 +31,7 @@
 
 #include "vice_sdl.h"
 
-#include "types.h"
+#include "vicetypes.h"
 #include "uiapi.h"
 #include "uimenu.h"
 

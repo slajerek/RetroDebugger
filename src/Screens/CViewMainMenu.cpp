@@ -3,6 +3,9 @@
 // This view will be removed. It is being refactored and moved to main menu bar instead
 //
 
+#include "RES_ResourceManager.h"
+#include "CSlrFileZlib.h"
+
 #include "CViewC64.h"
 #include "CColorsTheme.h"
 #include "CViewMainMenu.h"
@@ -20,7 +23,7 @@
 #include "CViewSnapshots.h"
 #include "CViewTimeline.h"
 #include "CViewAbout.h"
-#include "CViewMemoryMap.h"
+#include "CViewDataMap.h"
 #include "CViewDrive1541Browser.h"
 #include "CViewKeyboardShortcuts.h"
 #include "CSnapshotsManager.h"
@@ -31,6 +34,7 @@
 #include "CMainMenuBar.h"
 
 #include "CDebugInterfaceC64.h"
+#include "CDebugSymbolsDrive1541.h"
 #include "CDebugInterfaceAtari.h"
 #include "CDebugInterfaceNes.h"
 
@@ -328,7 +332,7 @@ void CViewMainMenu::SystemDialogFileSaveCancelled()
 {
 }
 
-// TODO: make a generic file opener
+// TODO: refactor and move me to.... / in progress make a generic file opener
 void CViewMainMenu::LoadFile(CSlrString *path)
 {
 	LOGM("CViewMainMenu::LoadFile:");
@@ -467,6 +471,7 @@ bool CViewMainMenu::InsertD64(CSlrString *path, bool updatePathToD64, bool autoR
 	LOGD("CViewMainMenu::InsertD64: path=%x autoRun=%s autoRunEntryNum=%d", path, STRBOOL(autoRun), autoRunEntryNum);
 	path->DebugPrint("CViewMainMenu::InsertD64: path=");
 	
+	guiMain->LockMutex();
 	if (SYS_FileExists(path) == false)
 	{
 		if (c64SettingsPathToD64 != NULL)
@@ -479,6 +484,7 @@ bool CViewMainMenu::InsertD64(CSlrString *path, bool updatePathToD64, bool autoR
 		{
 			guiMain->ShowMessageBox("Error", "Unable to open the D64 file. Please check its location, permissions, and ensure it's a valid format.");
 		}
+		guiMain->UnlockMutex();
 		return false;
 	}
 	
@@ -511,25 +517,23 @@ bool CViewMainMenu::InsertD64(CSlrString *path, bool updatePathToD64, bool autoR
 	char *fname = SYS_GetFileNameWithExtensionFromFullPath(asciiPath);
 	viewC64->ShowMessage("Inserted %s", fname);
 	
-	guiMain->LockMutex();
-
 //	if (menuItemInsertD64->str2 != NULL)
 //		delete menuItemInsertD64->str2;
 //	menuItemInsertD64->str2 = new CSlrString(fname);
 //	delete [] fname;
 	
-	guiMain->UnlockMutex();
-
 	LOGM("Inserted new d64: %s", asciiPath);
 	delete [] asciiPath;
 	
-	viewC64->viewDrive1541FileD64->StartSelectedDiskImageBrowsing();
+	viewC64->viewDrive1541Browser->StartSelectedDiskImageBrowsing();
 	
 	if (autoRun)
 	{
-		viewC64->viewDrive1541FileD64->StartDiskPRGEntry(autoRunEntryNum, showLoadAddressInfo);
+		viewC64->viewDrive1541Browser->StartDiskPRGEntry(autoRunEntryNum, showLoadAddressInfo);
 	}
 	
+	guiMain->UnlockMutex();
+
 	return true;
 }
 
@@ -703,6 +707,9 @@ bool CViewMainMenu::InsertCartridge(CSlrString *path, bool updatePathToCRT)
 {
 	path->DebugPrint("CViewMainMenu::InsertCartridge, path=");
 	
+	guiMain->LockMutex();
+	debugInterfaceVice->LockIoMutex();
+	
 	if (SYS_FileExists(path) == false)
 	{
 		if (c64SettingsPathToCartridge != NULL)
@@ -710,6 +717,9 @@ bool CViewMainMenu::InsertCartridge(CSlrString *path, bool updatePathToCRT)
 		
 		c64SettingsPathToCartridge = NULL;
 		LOGError("CViewMainMenu::InsertCartridge: file not found, skipping");
+	
+		debugInterfaceVice->UnlockIoMutex();
+		guiMain->UnlockMutex();
 		return false;
 	}
 
@@ -742,20 +752,19 @@ bool CViewMainMenu::InsertCartridge(CSlrString *path, bool updatePathToCRT)
 	// display file name in menu
 	char *fname = SYS_GetFileNameWithExtensionFromFullPath(asciiPath);
 
-	guiMain->LockMutex();
-	
+
 //	if (menuItemInsertCartridge->str2 != NULL)
 //		delete menuItemInsertCartridge->str2;
 //	menuItemInsertCartridge->str2 = new CSlrString(fname);
 //	delete [] fname;
-
-	guiMain->UnlockMutex();
 	
 	LOGM("Attached new cartridge: %s", asciiPath);
 	delete [] asciiPath;
 	
 	C64DebuggerStoreSettings();
 	
+	debugInterfaceVice->UnlockIoMutex();
+	guiMain->UnlockMutex();
 	return true;
 }
 
@@ -763,6 +772,9 @@ bool CViewMainMenu::LoadPRG(CSlrString *path, bool autoStart, bool updatePRGFold
 {
 	path->DebugPrint("CViewMainMenu::LoadPRG: path=");
 	
+	guiMain->LockMutex();
+	debugInterfaceVice->LockIoMutex();
+
 	viewC64->DefaultSymbolsStore();
 
 	LOGD("   >>> LoadPRG, autostart=%d forceFastReset=%d", autoStart, forceFastReset);
@@ -801,13 +813,15 @@ bool CViewMainMenu::LoadPRG(CSlrString *path, bool autoStart, bool updatePRGFold
 	{
 		delete file;
 		viewC64->ShowMessageError("Error loading PRG file, no such file path:\n%s", asciiPath);
+		debugInterfaceVice->UnlockIoMutex();
+		guiMain->UnlockMutex();
 		return false;
 	}
 	
 	// display file name in menu
 	char *fname = SYS_GetFileNameWithExtensionFromFullPath(asciiPath);
 	
-	guiMain->LockMutex();
+//	guiMain->LockMutex();
 	
 //	if (menuItemOpenFile->str2 != NULL)
 //		delete menuItemOpenFile->str2;
@@ -820,7 +834,7 @@ bool CViewMainMenu::LoadPRG(CSlrString *path, bool autoStart, bool updatePRGFold
 
 	viewC64->DefaultSymbolsRestore();
 
-	guiMain->UnlockMutex();
+//	guiMain->UnlockMutex();
 
 	//
 	CByteBuffer *byteBuffer = new CByteBuffer(file, false);
@@ -832,6 +846,9 @@ bool CViewMainMenu::LoadPRG(CSlrString *path, bool autoStart, bool updatePRGFold
 	delete byteBuffer;
 	
 	C64DebuggerStoreSettings();
+
+	debugInterfaceVice->UnlockIoMutex();
+	guiMain->UnlockMutex();
 
 	return true;
 }
@@ -863,9 +880,16 @@ bool CViewMainMenu::LoadSID(CSlrString *filePath)
 		CByteBuffer *byteBufferSID = new CByteBuffer(file, false);
 		CByteBuffer *byteBufferPRG = ConvertSIDtoPRG(byteBufferSID);
 		
-		LoadPRG(byteBufferPRG, true, false, true);
+		if (byteBufferPRG != NULL)
+		{
+			LoadPRG(byteBufferPRG, true, false, true);
+			delete byteBufferPRG;
+		}
+		else
+		{
+			viewC64->ShowMessageError("Failed to import SID");
+		}
 		
-		delete byteBufferPRG;
 		delete byteBufferSID;
 	}
 	else if (c64SettingsC64SidImportMode == SID_IMPORT_MODE_DIRECT_COPY)
@@ -901,7 +925,10 @@ extern "C" {
 bool CViewMainMenu::LoadTape(CSlrString *path, bool autoStart, bool updateTAPFolderPath, bool showAddressInfo)
 {
 	path->DebugPrint("CViewMainMenu::LoadTape: path=");
-		
+	
+	guiMain->LockMutex();
+	debugInterfaceVice->LockIoMutex();
+
 	if (SYS_FileExists(path) == false)
 	{
 		if (c64SettingsPathToTAP != NULL)
@@ -909,11 +936,14 @@ bool CViewMainMenu::LoadTape(CSlrString *path, bool autoStart, bool updateTAPFol
 		
 		c64SettingsPathToTAP = NULL;
 		LOGError("CViewMainMenu::LoadTape: file not found, skipping");
+		
+		debugInterfaceVice->UnlockIoMutex();
+		guiMain->UnlockMutex();
 		return false;
 	}
 
 	LOGD("   >>> LoadTape, autostart=%d", autoStart);
-	guiMain->LockMutex();
+//	guiMain->LockMutex();
 
 	viewC64->DefaultSymbolsStore();
 
@@ -949,6 +979,9 @@ bool CViewMainMenu::LoadTape(CSlrString *path, bool autoStart, bool updateTAPFol
 	{
 		delete file;
 		viewC64->ShowMessageError("Error loading TAP file");
+//		guiMain->UnlockMutex();
+
+		debugInterfaceVice->UnlockIoMutex();
 		guiMain->UnlockMutex();
 		return false;
 	}
@@ -970,6 +1003,9 @@ bool CViewMainMenu::LoadTape(CSlrString *path, bool autoStart, bool updateTAPFol
 	//
 	viewC64->DefaultSymbolsRestore();
 	
+//	guiMain->UnlockMutex();
+
+	debugInterfaceVice->UnlockIoMutex();
 	guiMain->UnlockMutex();
 
 	return true;
@@ -1554,31 +1590,83 @@ void CViewMainMenu::ThreadRun(void *data)
 		viewC64->debugInterfaceC64->HardReset();
 		SYS_Sleep(350);
 		
-		viewC64->viewDrive1541FileD64->UpdateDriveDiskID();
+		debugInterfaceVice->PrepareDriveForBasicRun();
+
 		viewC64->debugInterfaceC64->SetPatchKernalFastBoot(c64SettingsFastBootKernalPatch);
 		
 	}
 	else
 	{
 		// do regular check, depends on user's setting
-		if (loadPrgAutoStart && c64SettingsAutoJmpDoReset != MACHINE_RESET_NONE)
+		if (loadPrgAutoStart)
 		{
-			viewC64->debugInterfaceC64->SetDebugMode(DEBUGGER_MODE_RUNNING);
-			viewC64->debugInterfaceC64->SetPatchKernalFastBoot(true);
-			
-			if (c64SettingsAutoJmpDoReset == MACHINE_RESET_SOFT)
+			if (c64SettingsAutoJmpDoReset == MACHINE_LOADPRG_RESET_MODE_SOFT
+				|| c64SettingsAutoJmpDoReset == MACHINE_LOADPRG_RESET_MODE_HARD)
 			{
-				viewC64->debugInterfaceC64->Reset();
+				viewC64->debugInterfaceC64->SetDebugMode(DEBUGGER_MODE_RUNNING);
+				viewC64->debugInterfaceC64->SetPatchKernalFastBoot(true);
+				
+				if (c64SettingsAutoJmpDoReset == MACHINE_LOADPRG_RESET_MODE_SOFT)
+				{
+					viewC64->debugInterfaceC64->Reset();
+				}
+				else if (c64SettingsAutoJmpDoReset == MACHINE_LOADPRG_RESET_MODE_HARD)
+				{
+					viewC64->debugInterfaceC64->HardReset();
+				}
+				
+				SYS_Sleep(c64SettingsAutoJmpWaitAfterReset);
+				
+				viewC64->viewDrive1541Browser->UpdateDriveDiskID();
+				viewC64->debugInterfaceC64->SetPatchKernalFastBoot(c64SettingsFastBootKernalPatch);
 			}
-			else if (c64SettingsAutoJmpDoReset == MACHINE_RESET_HARD)
+			else if (c64SettingsAutoJmpDoReset == MACHINE_LOADPRG_RESET_MODE_LOAD_SNAPSHOT_BASIC)
 			{
-				viewC64->debugInterfaceC64->HardReset();
+				LOGD("c64SettingsAutoJmpDoReset is MACHINE_LOAD_SNAPSHOT_BASIC");
+				
+				if (viewC64->debugInterfaceC64->GetC64ModelType() != 0)
+				{
+					viewC64->debugInterfaceC64->ForceRunAndUnJamCpu();
+					int modelId = 0;
+					C64DebuggerSetSetting("C64Model", &modelId);
+					SYS_Sleep(200);
+				}
+				
+				viewC64->debugInterfaceC64->PauseEmulationBlockedWait();
+
+				guiMain->LockMutex();
+				
+				CSlrFileZlib *fileZlib = RES_GetFileZlib("/template/reset_basic_snapshot", DEPLOY_FILE_TYPE_DATA);
+				u32 fileSize = fileZlib->GetFileSize();
+				u8 *snapshotData = new u8[fileSize];
+				fileZlib->Read(snapshotData, fileSize);
+				CByteBuffer *byteBuffer = new CByteBuffer(snapshotData, fileSize);
+				viewC64->debugInterfaceC64->LoadFullSnapshot(byteBuffer);
+				delete byteBuffer;
+				delete fileZlib;
+				
+				// be sure that snapshot is loaded, run one instruction
+				viewC64->debugInterfaceC64->PauseEmulationBlockedWait();
+				
+				// and then switch to RUNNING
+				viewC64->debugInterfaceC64->SetDebugMode(DEBUGGER_MODE_RUNNING);
+				
+				// and insert disk
+				if (c64SettingsPathToD64)
+				{
+					debugInterfaceVice->InsertD64(c64SettingsPathToD64);
+				}
+				// inserting is synched, does not need sleep here
+//				SYS_Sleep(50);
+
+				viewC64->debugInterfaceC64->PauseEmulationBlockedWait();
+				viewC64->debugInterfaceC64->SetDebugMode(DEBUGGER_MODE_RUNNING);
+
+				// prepare drive RAM, set vectors etc
+				debugInterfaceVice->PrepareDriveForBasicRun();
+				
+				guiMain->UnlockMutex();
 			}
-			
-			SYS_Sleep(c64SettingsAutoJmpWaitAfterReset);
-			
-			viewC64->viewDrive1541FileD64->UpdateDriveDiskID();
-			viewC64->debugInterfaceC64->SetPatchKernalFastBoot(c64SettingsFastBootKernalPatch);
 		}
 	}
 	
@@ -1588,7 +1676,7 @@ void CViewMainMenu::ThreadRun(void *data)
 	LOGD("CViewMainMenu::finished");
 }
 
-void CViewMainMenu::SetBasicEndAddr(int endAddr)
+void CViewMainMenu::SetBasicVectors(int endAddr)
 {
 	LOGD("CViewMainMenu::SetBasicEndAddr: %x", endAddr);
 	// some decrunchers need correct basic pointers
@@ -1617,8 +1705,9 @@ void CViewMainMenu::SetBasicEndAddr(int endAddr)
 	
 	// stop cursor flash
 	viewC64->debugInterfaceC64->SetByteC64(0x00CC, 0x01);
-
-	viewC64->viewDrive1541FileD64->UpdateDriveDiskID();
+	
+	// setup drive
+	debugInterfaceVice->PrepareDriveForBasicRun();
 }
 
 bool CViewMainMenu::LoadPRGNotThreaded(CByteBuffer *byteBuffer, bool autoStart, bool showAddressInfo)
@@ -1641,24 +1730,28 @@ bool CViewMainMenu::LoadPRGNotThreaded(CByteBuffer *byteBuffer, bool autoStart, 
 		
 		//http://www.lemon64.com/forum/viewtopic.php?t=870&sid=a13a63a952d295ff70c67d93409bc392
 		
-		if (startAddr == 0x0801)
+		if (startAddr == 0x0801 || startAddr == 0x0800)
 		{
 //			if (isRunBasicCompatibleMode)
 			{
 				// new "RUN"
-				SetBasicEndAddr(endAddr);
+				SetBasicVectors(endAddr);
+				
+//				viewC64->ShowMessage("LoadPRGNotThreaded");
 				
 				viewC64->debugInterfaceC64->symbols->memory->ClearReadWriteDebugMarkers();
 				viewC64->debugInterfaceC64->symbolsDrive1541->memory->ClearReadWriteDebugMarkers();
 				
-				viewC64->debugInterfaceC64->MakeBasicRunC64();
-
-				viewC64->ShowMainScreen();
 				
-				if (viewC64->debugInterfaceC64->IsCpuJam())
-				{
-					viewC64->debugInterfaceC64->ForceRunAndUnJamCpu();
-				}
+				viewC64->debugInterfaceC64->MakeJMPToBasicRunC64();
+
+//				viewC64->ShowMainScreen();
+
+				viewC64->debugInterfaceC64->ForceRunAndUnJamCpu();
+				
+				
+				
+				
 			}
 			/*
 			else

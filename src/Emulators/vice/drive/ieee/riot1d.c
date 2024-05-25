@@ -35,7 +35,7 @@
 #include "parallel.h"
 #include "riot.h"
 #include "riotd.h"
-#include "types.h"
+#include "vicetypes.h"
 
 
 void riot1_store(drive_context_t *ctxptr, WORD addr, BYTE data)

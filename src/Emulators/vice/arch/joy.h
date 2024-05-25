@@ -31,7 +31,7 @@
 #ifndef VICE_JOY_H
 #define VICE_JOY_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 #include "vice_sdl.h"
 

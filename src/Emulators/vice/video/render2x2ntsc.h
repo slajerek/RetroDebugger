@@ -29,7 +29,7 @@
 #ifndef VICE_RENDER2X2NTSC_H
 #define VICE_RENDER2X2NTSC_H
 
-#include "types.h"
+#include "vicetypes.h"
 #include "viewport.h"
 
 extern void render_UYVY_2x2_ntsc(video_render_color_tables_t *colortab,

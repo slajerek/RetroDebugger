@@ -8,7 +8,8 @@ class CDebugInterfaceNes;
 class CDataAdapterNesPpuNmt : public CDebugDataAdapter
 {
 public:
-	CDataAdapterNesPpuNmt(CDebugInterfaceNes *debugInterface);
+	CDataAdapterNesPpuNmt(CDebugSymbols *debugSymbols);
+	CDebugInterfaceNes *debugInterfaceNes;
 	
 	virtual int AdapterGetDataLength();
 	

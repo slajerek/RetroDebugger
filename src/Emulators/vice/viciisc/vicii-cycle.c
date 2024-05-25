@@ -35,7 +35,7 @@
 #include "lib.h"
 #include "log.h"
 #include "maincpu.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "vicii-chip-model.h"
 #include "vicii-cycle.h"
 #include "vicii-draw-cycle.h"

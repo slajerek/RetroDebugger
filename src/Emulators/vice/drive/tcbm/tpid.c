@@ -36,7 +36,7 @@
 #include "rotation.h"
 #include "tpi.h"
 #include "tpid.h"
-#include "types.h"
+#include "vicetypes.h"
 
 
 typedef struct drivetpi_context_s {

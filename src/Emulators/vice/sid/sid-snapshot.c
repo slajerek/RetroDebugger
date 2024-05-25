@@ -44,7 +44,7 @@
 #include "sound.h"
 #include "snapshot.h"
 #include "ssi2001.h"
-#include "types.h"
+#include "vicetypes.h"
 
 /* Take care of possible failures to set the sid engine and fall back to fastsid */
 static void set_sid_engine_with_fallback(int engine)

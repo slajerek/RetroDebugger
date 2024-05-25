@@ -27,7 +27,7 @@
 #ifndef VICE_IECIEEE_H
 #define VICE_IECIEEE_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 struct drive_context_s;
 struct snapshot_s;

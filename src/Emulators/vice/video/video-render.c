@@ -39,7 +39,7 @@
 #include "render2x2pal.h"
 #include "render2x4crt.h"
 #include "renderyuv.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "video-render.h"
 #include "video-sound.h"
 #include "video.h"

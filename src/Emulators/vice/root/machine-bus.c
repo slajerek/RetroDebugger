@@ -32,7 +32,7 @@
 #include "log.h"
 #include "machine-bus.h"
 #include "serial.h"
-#include "types.h"
+#include "vicetypes.h"
 
 /* #define DEBUG_BUS */
 

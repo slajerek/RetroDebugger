@@ -42,7 +42,7 @@
       postfix (_slot0, _slot1, _slotmain, _slotio)
 */
 
-#include "types.h"
+#include "vicetypes.h"
 
 /* from c64cart.c */
 extern int cart_attach_cmdline(const char *param, void *extra_param);

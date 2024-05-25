@@ -35,7 +35,7 @@
 #include "alarm.h"
 #include "ciatimer.h"
 #include "snapshot.h"
-#include "types.h"
+#include "vicetypes.h"
 
 
 #ifdef CIAT_NEED_LOG

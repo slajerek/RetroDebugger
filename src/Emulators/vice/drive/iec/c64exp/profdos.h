@@ -27,7 +27,7 @@
 #ifndef VICE_PROFDOS_H
 #define VICE_PROFDOS_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 struct drive_context_s;
 

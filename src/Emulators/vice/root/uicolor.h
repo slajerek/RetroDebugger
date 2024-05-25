@@ -27,7 +27,7 @@
 #ifndef VICE_UICOLOR_H
 #define VICE_UICOLOR_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 struct video_canvas_s;
 struct palette_s;

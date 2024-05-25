@@ -27,7 +27,7 @@
 #ifndef VICE_Z80REGS_H
 #define VICE_Z80REGS_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 typedef struct z80_regs_s {
     WORD reg_af;

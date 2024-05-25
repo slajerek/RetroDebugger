@@ -15,7 +15,7 @@ class CSlrImage;
 class CViewDataDump;
 class CDebugInterface;
 class CSlrFont;
-class CViewMemoryMap;
+class CViewDataMap;
 class CDataAdapter;
 class CDebugSymbols;
 class CDebugSymbolsDataWatch;
@@ -25,7 +25,7 @@ class CViewDataWatch : public CGuiView, public ImGui::ComboFilterCallback
 {
 public:
 	CViewDataWatch(const char *name, float posX, float posY, float posZ, float sizeX, float sizeY,
-				   CDebugSymbols *symbols, CViewMemoryMap *viewMemoryMap);
+				   CDebugSymbols *symbols, CViewDataMap *viewMemoryMap);
 	~CViewDataWatch();
 	
 	virtual void DoLogic();
@@ -34,7 +34,7 @@ public:
 	CDebugSymbols *symbols;
 	CDebugInterface *debugInterface;
 	CDataAdapter *dataAdapter;
-	CViewMemoryMap *viewMemoryMap;
+	CViewDataMap *viewMemoryMap;
 	
 	CViewDataDump *viewDataDump;
 	void SetViewC64DataDump(CViewDataDump *viewDataDump);

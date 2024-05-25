@@ -36,7 +36,7 @@
 #include "montypes.h"
 #include "mon_assemble.h"
 #include "mon_util.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "uimon.h"
 #include "util.h"
 

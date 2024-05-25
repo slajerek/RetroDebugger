@@ -67,6 +67,9 @@ public:
 
 	void ClearCursorPos();
 	void ClearGraphicsForcedMode();
+	
+	virtual bool HasContextMenuItems();
+	virtual void RenderContextMenuItems();
 };
 
 #endif //_C64_VIEW_ALL_GRAPHICS_

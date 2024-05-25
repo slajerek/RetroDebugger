@@ -15,7 +15,7 @@ class CDebugInterface;
 class CSlrMutex;
 class CSlrString;
 class CBreakpointAddr;
-class CViewMemoryMap;
+class CViewDataMap;
 class CSlrKeyboardShortcut;
 class CViewDisassembly;
 class CDebugSymbols;

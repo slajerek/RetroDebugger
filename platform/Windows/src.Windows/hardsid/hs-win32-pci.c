@@ -63,7 +63,7 @@
 #include "log.h"
 #include "platform.h"
 #include "sid-resources.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "wininpoutp.h"
 
 #define MAXSID 4

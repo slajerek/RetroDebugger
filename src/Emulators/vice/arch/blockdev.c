@@ -32,7 +32,7 @@
 #include "vice_sdl.h"
 
 #include "blockdev.h"
-#include "types.h"
+#include "vicetypes.h"
 
 #include "ViceWrapper.h"
 #include "log.h"

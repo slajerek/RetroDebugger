@@ -268,7 +268,7 @@ static void check_and_run_alternate_cpu(void)
 #include "reu.h"
 #include "snapshot.h"
 #include "traps.h"
-#include "types.h"
+#include "vicetypes.h"
 
 // c64d
 #include "viciitypes.h"

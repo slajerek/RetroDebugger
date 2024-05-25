@@ -27,7 +27,7 @@
 #ifndef VICE_DEBUG_H
 #define VICE_DEBUG_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 /* Manually defined */
 /* To enable/disable this option by hand change the 0 below to 1. */

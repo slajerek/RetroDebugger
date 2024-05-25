@@ -30,7 +30,7 @@
 #include <time.h>
 
 #include "snapshot.h"
-#include "types.h"
+#include "vicetypes.h"
 
 #define DS1216E_REG_SIZE   8
 

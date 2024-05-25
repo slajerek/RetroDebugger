@@ -11,10 +11,10 @@
 
 extern Nes::Api::Emulator nesEmulator;
 
-CDataAdapterNesPpuNmt::CDataAdapterNesPpuNmt(CDebugInterfaceNes *debugInterface)
-: CDebugDataAdapter("NesPpuNmt", debugInterface)
+CDataAdapterNesPpuNmt::CDataAdapterNesPpuNmt(CDebugSymbols *debugSymbols)
+: CDebugDataAdapter("NesPpuNmt", debugSymbols)
 {
-	this->debugInterface = debugInterface;
+	this->debugInterfaceNes = (CDebugInterfaceNes *)(debugSymbols->debugInterface);
 }
 
 int CDataAdapterNesPpuNmt::AdapterGetDataLength()

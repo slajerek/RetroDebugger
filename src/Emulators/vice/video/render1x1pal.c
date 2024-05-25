@@ -27,7 +27,7 @@
 #include "vice.h"
 
 #include "render1x1pal.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "video-color.h"
 
 /*

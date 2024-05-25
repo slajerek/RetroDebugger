@@ -29,7 +29,7 @@
 #include <stdio.h>
 
 #include "sound.h"
-#include "types.h"
+#include "vicetypes.h"
 
 static FILE *dump_fd = NULL;
 

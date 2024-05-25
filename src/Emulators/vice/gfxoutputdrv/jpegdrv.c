@@ -37,7 +37,7 @@
 #include "gfxoutput.h"
 #include "palette.h"
 #include "screenshot.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "util.h"
 
 #include "jpeglib.h"

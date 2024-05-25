@@ -37,7 +37,7 @@
 #include "log.h"
 #include "mem.h"
 #include "snapshot.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "vicii-draw-cycle.h"
 #include "vicii-resources.h"
 #include "vicii-snapshot.h"

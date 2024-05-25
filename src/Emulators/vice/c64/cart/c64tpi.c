@@ -50,7 +50,7 @@
 #include "resources.h"
 #include "tpi.h"
 #include "translate.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "util.h"
 #include "crt.h"
 

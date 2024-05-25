@@ -37,7 +37,7 @@
 #include "cartridge.h"
 #include "export.h"
 #include "snapshot.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "util.h"
 #include "zaxxon.h"
 #include "crt.h"

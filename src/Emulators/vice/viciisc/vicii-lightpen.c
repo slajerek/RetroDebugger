@@ -27,7 +27,7 @@
 #include "vice.h"
 
 #include "maincpu.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "vicii-chip-model.h"
 #include "vicii-irq.h"
 #include "vicii-lightpen.h"

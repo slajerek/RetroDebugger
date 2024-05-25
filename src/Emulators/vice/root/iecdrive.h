@@ -32,7 +32,7 @@
 #ifndef VICE_IECDRIVE_H
 #define VICE_IECDRIVE_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 /* return value for iec_available_busses() (can be ored) */
 #define IEC_BUS_IEC     0x01    /* serial IEC bus */

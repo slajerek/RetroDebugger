@@ -27,7 +27,7 @@
 #ifndef VICE_SHORTBUS_H
 #define VICE_SHORTBUS_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 extern int shortbus_resources_init(void);
 extern void shortbus_resources_shutdown(void);

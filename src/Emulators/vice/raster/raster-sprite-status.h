@@ -28,7 +28,7 @@
 #ifndef VICE_RASTER_SPRITE_STATUS_H
 #define VICE_RASTER_SPRITE_STATUS_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 struct raster_cache_s;
 

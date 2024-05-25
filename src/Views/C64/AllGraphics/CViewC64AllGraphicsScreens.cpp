@@ -1,4 +1,4 @@
-#include "CViewC64AllGraphics.h"
+#include "ViewC64AllGraphicsDefs.h"
 #include "CViewC64AllGraphicsScreens.h"
 #include "CViewC64AllGraphicsScreensControl.h"
 #include "VID_Main.h"
@@ -7,7 +7,7 @@
 #include "CViewC64VicDisplay.h"
 #include "CViewC64VicControl.h"
 #include "CViewDataDump.h"
-#include "CViewMemoryMap.h"
+#include "CViewDataMap.h"
 #include "C64Tools.h"
 #include "CGuiMain.h"
 #include "CViewDataDump.h"
@@ -427,6 +427,20 @@ bool CViewC64AllGraphicsScreens::DoFinishDoubleTap(float x, float y)
 {
 	LOGG("CViewC64AllGraphicsScreens::DoFinishTap: %f %f", x, y);
 	return CGuiView::DoFinishDoubleTap(x, y);
+}
+
+bool CViewC64AllGraphicsScreens::HasContextMenuItems()
+{
+	return true;
+}
+
+void CViewC64AllGraphicsScreens::RenderContextMenuItems()
+{
+	bool isVisible = viewControl->visible;
+	if (ImGui::MenuItem("All Screens controller", NULL, &isVisible))
+	{
+		viewControl->SetVisible(isVisible);
+	}
 }
 
 // bug: this event is not called when layout is set, and button state is updated on keyboard shortcut only

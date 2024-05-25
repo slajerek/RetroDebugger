@@ -17,7 +17,7 @@
 #include "C64SettingsStorage.h"
 #include "C64KeyboardShortcuts.h"
 #include "C64Opcodes.h"
-#include "CViewMemoryMap.h"
+#include "CViewDataMap.h"
 #include "CDebugMemory.h"
 #include "CDebugMemoryCell.h"
 #include "CDebugSymbolsDataWatch.h"
@@ -27,7 +27,7 @@
 #include <math.h>
 
 CViewDataWatch::CViewDataWatch(const char *name, float posX, float posY, float posZ, float sizeX, float sizeY,
-							   CDebugSymbols *symbols, CViewMemoryMap *viewMemoryMap)
+							   CDebugSymbols *symbols, CViewDataMap *viewMemoryMap)
 : CGuiView(name, posX, posY, posZ, sizeX, sizeY)
 {
 	viewDataDump = NULL;
@@ -261,7 +261,7 @@ void CViewDataWatch::RenderImGui()
 					FUN_ToUpperCaseStr(comboFilterTextBuf);
 					addWatchPopupAddr = FUN_HexStrToValue(comboFilterTextBuf);
 				}
-				else if (hints != NULL)
+				else if (hints != NULL && numHints > 0)
 				{
 					strcpy(comboFilterTextBuf, hints[comboFilterState.activeIdx]);
 				}
@@ -296,14 +296,21 @@ void CViewDataWatch::RenderImGui()
 		if (finalizeAddingBreakpoint)
 		{
 			CDebugSymbolsCodeLabel *label = symbols->currentSegment->FindLabelByText(comboFilterTextBuf);
+			
+			char *hexNumberBuf = comboFilterTextBuf;
+			if (comboFilterTextBuf[0] == '$' && comboFilterTextBuf[1] != 0)
+			{
+				hexNumberBuf = comboFilterTextBuf + 1;
+			}
+			
 			if (label)
 			{
 				addWatchPopupAddr = label->address;
 			}
-			else if (FUN_IsHexNumber(comboFilterTextBuf))
+			else if (FUN_IsHexNumber(hexNumberBuf))
 			{
 				FUN_ToUpperCaseStr(comboFilterTextBuf);
-				addWatchPopupAddr = FUN_HexStrToValue(comboFilterTextBuf);
+				addWatchPopupAddr = FUN_HexStrToValue(hexNumberBuf);
 			}
 			else
 			{
@@ -355,6 +362,11 @@ bool CViewDataWatch::ComboFilterShouldOpenPopupCallback(const char *label, char 
 	}
 	
 	if (hints == NULL)
+	{
+		return false;
+	}
+	
+	if (num_hints == 0)
 	{
 		return false;
 	}

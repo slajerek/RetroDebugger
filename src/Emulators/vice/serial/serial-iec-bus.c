@@ -30,7 +30,7 @@
 #include "realdevice.h"
 #include "serial-iec-bus.h"
 #include "serial.h"
-#include "types.h"
+#include "vicetypes.h"
 
 
 void serial_iec_bus_open(unsigned int device, BYTE secondary, void (*st_func)(BYTE))

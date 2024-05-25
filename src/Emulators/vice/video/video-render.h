@@ -28,7 +28,7 @@
 #ifndef VICE_VIDEORENDER_H
 #define VICE_VIDEORENDER_H
 
-#include "types.h"
+#include "vicetypes.h"
 #include "viewport.h"
 
 struct video_render_config_s;

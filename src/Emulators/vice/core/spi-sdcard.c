@@ -35,7 +35,7 @@
 #include "log.h"
 #include "snapshot.h"
 #include "spi-sdcard.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "util.h"
 
 /* #define TEST_MMC_ALWAYS_NOCARD */

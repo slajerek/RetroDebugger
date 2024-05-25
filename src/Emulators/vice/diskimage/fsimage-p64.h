@@ -27,7 +27,7 @@
 #ifndef VICE_FSIMAGE_P64_H
 #define VICE_FSIMAGE_P64_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 struct disk_image_s;
 struct disk_track_s;

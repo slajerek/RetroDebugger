@@ -34,7 +34,7 @@
 #ifndef VICE_CIA_H
 #define VICE_CIA_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 /* MOS 6526 models */
 #define CIA_MODEL_6526  0  /* "old" */

@@ -27,7 +27,7 @@
 #ifndef VICE_FSDRIVE_H
 #define VICE_FSDRIVE_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 extern void fsdrive_init(void);
 extern void fsdrive_reset(void);

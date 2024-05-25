@@ -51,7 +51,7 @@
 #include "lib.h"
 #include "log.h"
 #include "rotation.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "via.h"
 #include "viad.h"
 #include "drive-sound.h"
@@ -125,14 +125,14 @@ static void restore_int(via_context_t *via_context, unsigned int int_num, int va
 
 void via2d_store(drive_context_t *ctxptr, WORD addr, BYTE data)
 {
-	c64d_mark_disk_cell_write(addr, data);
+	c64d_mark_drive1541_cell_write(addr, data);
 	
     viacore_store(ctxptr->via2, addr, data);
 }
 
 BYTE via2d_read(drive_context_t *ctxptr, WORD addr)
 {
-	c64d_mark_disk_cell_read(addr);
+	c64d_mark_drive1541_cell_read(addr);
 	
     return viacore_read(ctxptr->via2, addr);
 }

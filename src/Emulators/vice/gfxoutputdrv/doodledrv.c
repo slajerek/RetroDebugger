@@ -42,7 +42,7 @@
 #include "resources.h"
 #include "screenshot.h"
 #include "translate.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "uiapi.h"
 #include "util.h"
 #include "vsync.h"

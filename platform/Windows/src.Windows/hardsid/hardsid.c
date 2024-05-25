@@ -35,7 +35,7 @@
 
 #include "hardsid.h"
 #include "sid-snapshot.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "log.h"
 
 static int hardsid_is_open = -1;

@@ -1,10 +1,10 @@
 #include "CDataAdapterNesRam.h"
 #include "CDebugInterfaceNes.h"
 
-CDataAdapterNesRam::CDataAdapterNesRam(CDebugInterfaceNes *debugInterfaceNes)
-: CDebugDataAdapter("NesRam", debugInterfaceNes)
+CDataAdapterNesRam::CDataAdapterNesRam(CDebugSymbols *debugSymbols)
+: CDebugDataAdapter("NesRam", debugSymbols)
 {
-	this->debugInterfaceNes = debugInterfaceNes;
+	this->debugInterfaceNes = (CDebugInterfaceNes *)(debugSymbols->debugInterface);
 }
 
 int CDataAdapterNesRam::AdapterGetDataLength()

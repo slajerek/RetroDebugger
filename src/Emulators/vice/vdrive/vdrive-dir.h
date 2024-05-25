@@ -28,7 +28,7 @@
 #ifndef VICE_VDRIVE_DIR_H
 #define VICE_VDRIVE_DIR_H
 
-#include "types.h"
+#include "vicetypes.h"
 #include "cbmdos.h"
 
 #define SLOT_TYPE_OFFSET      2

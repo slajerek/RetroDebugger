@@ -43,7 +43,7 @@
 #include "log.h"
 #include "ata.h"
 #include "snapshot.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "util.h"
 #include "lib.h"
 #include "alarm.h"

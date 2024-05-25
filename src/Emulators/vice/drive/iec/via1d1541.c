@@ -41,7 +41,7 @@
 #include "interrupt.h"
 #include "lib.h"
 #include "rotation.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "via.h"
 #include "via1d1541.h"
 #include "viad.h"
@@ -61,14 +61,14 @@ typedef struct drivevia1_context_s {
 
 void via1d1541_store(drive_context_t *ctxptr, WORD addr, BYTE data)
 {
-	c64d_mark_disk_cell_write(addr, data);
+	c64d_mark_drive1541_cell_write(addr, data);
 
     viacore_store(ctxptr->via1d1541, addr, data);
 }
 
 BYTE via1d1541_read(drive_context_t *ctxptr, WORD addr)
 {
-	c64d_mark_disk_cell_read(addr);
+	c64d_mark_drive1541_cell_read(addr);
 	
     return viacore_read(ctxptr->via1d1541, addr);
 }

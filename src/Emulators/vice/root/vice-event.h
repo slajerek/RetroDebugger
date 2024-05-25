@@ -27,7 +27,7 @@
 #ifndef VICE_EVENT_H
 #define VICE_EVENT_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 #define EVENT_LIST_END          0
 #define EVENT_KEYBOARD_MATRIX   1

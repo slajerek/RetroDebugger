@@ -28,7 +28,7 @@
 #ifndef VICE_MOS6510_H
 #define VICE_MOS6510_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 /* Struct for the 6510 registers.  */
 /* This contains some redundancy to make it compatible with the way registers

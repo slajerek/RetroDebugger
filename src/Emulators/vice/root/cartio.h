@@ -27,7 +27,7 @@
 #ifndef VICE_CARTIO_H
 #define VICE_CARTIO_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 #define IO_DETACH_CART     0
 #define IO_DETACH_RESOURCE 1

@@ -27,7 +27,7 @@
 #ifndef VICE_MACHINE_BUS_H
 #define VICE_MACHINE_BUS_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 struct cbmdos_cmd_parse_s;
 struct vdrive_s;

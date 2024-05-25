@@ -27,7 +27,7 @@
 #ifndef VICE_C64_DIAG_586220_HARNESS_H
 #define VICE_C64_DIAG_586220_HARNESS_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 #define C64_DIAG_USERPORT_PB0     0
 #define C64_DIAG_USERPORT_PB1     1

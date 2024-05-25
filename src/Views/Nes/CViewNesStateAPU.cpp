@@ -14,7 +14,7 @@
 #include "CSlrString.h"
 #include "SYS_KeyCodes.h"
 #include "CViewC64.h"
-#include "CViewMemoryMap.h"
+#include "CViewDataMap.h"
 #include "C64Tools.h"
 #include "CViewC64Screen.h"
 #include "SYS_Threading.h"
@@ -217,7 +217,7 @@ void CViewNesStateAPU::RenderState(float px, float py, float posZ, CSlrFont *fon
 		
 		double cpuClockFreq = debugInterfaceNes->GetCpuClockFrequency();
 
-		char *space = "    ";
+		const char *space = "    ";
 		
 		u16 regOffset = 0;
 		

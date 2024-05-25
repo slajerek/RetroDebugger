@@ -40,8 +40,8 @@ public:
 	virtual void ZoomDisplay(float newScale);
 
 	// load from png file
-	virtual void ConvertImageToScreen(char *filePath);
-	virtual void ConvertImageToScreen(CImageData *imageData);
+	virtual bool ConvertImageToScreen(char *filePath);
+	virtual bool ConvertImageToScreen(CImageData *imageData);
 	virtual CImageData *GetScreenImage(int *width, int *height);
 	
 	// always returns 320x200 for C64:

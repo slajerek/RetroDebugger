@@ -277,7 +277,8 @@ public:
 	void InitGridLinesColorFromSettings();
 	
 	void RenderRasterCursor(int rasterX, int rasterY);
-	
+	void RenderRasterCursorOnForeground(int rasterX, int rasterY);
+
 	void RenderBadLines();
 	void RenderBreakpointsLines();
 	
@@ -357,6 +358,9 @@ public:
 
 	u8 backgroundColorAlpha;
 	u8 foregroundColorAlpha;
+	
+	bool HasContextMenuItems();
+	void RenderContextMenuItems();
 	
 	bool performIsTopWindowCheck;
 	virtual bool IsTopWindow();

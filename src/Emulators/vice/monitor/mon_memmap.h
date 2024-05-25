@@ -28,7 +28,7 @@
 #define VICE_MON_MEMMAP_H
 
 #include "montypes.h"
-#include "types.h"
+#include "vicetypes.h"
 
 extern void mon_memmap_init(void);
 extern void mon_memmap_shutdown(void);

@@ -28,7 +28,7 @@
 #ifndef VICE_DATASETTE_H
 #define VICE_DATASETTE_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 #define DATASETTE_CONTROL_STOP    0
 #define DATASETTE_CONTROL_START   1

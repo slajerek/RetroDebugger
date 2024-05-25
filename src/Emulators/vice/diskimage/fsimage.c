@@ -39,7 +39,7 @@
 #include "fsimage.h"
 #include "lib.h"
 #include "log.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "zfile.h"
 #include "util.h"
 #include "cbmdos.h"

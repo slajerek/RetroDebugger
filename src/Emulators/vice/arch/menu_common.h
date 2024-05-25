@@ -32,7 +32,7 @@
 #define VICE_MENU_COMMON_H
 
 #include "vice.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "uimenu.h"
 
 extern const char *sdl_menu_text_tick;

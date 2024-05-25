@@ -29,7 +29,7 @@
 #ifndef VICE_RENDER1X1NTSC_H
 #define VICE_RENDER1X1NTSC_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 #include "video.h"
 

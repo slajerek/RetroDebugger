@@ -52,7 +52,7 @@
 #include "snapshot.h"
 #include "spi-sdcard.h"
 #include "translate.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "util.h"
 #include "vicii-phi1.h"
 

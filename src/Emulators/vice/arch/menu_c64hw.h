@@ -28,7 +28,7 @@
 #define VICE_MENU_C64HW_H
 
 #include "vice.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "uimenu.h"
 
 extern const ui_menu_entry_t c64_hardware_menu[];

@@ -29,7 +29,7 @@
 
 #include "render2x2.h"
 #include "renderscale2x.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "video-render.h"
 #include "video.h"
 

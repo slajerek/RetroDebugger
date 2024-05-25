@@ -29,7 +29,7 @@
 
 #include <stdio.h>
 
-#include "types.h"
+#include "vicetypes.h"
 
 extern void funplay_config_init(void);
 extern void funplay_config_setup(BYTE *rawcart);

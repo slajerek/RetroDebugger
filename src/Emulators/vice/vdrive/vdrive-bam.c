@@ -44,7 +44,7 @@
 #include "diskconstants.h"
 #include "diskimage.h"
 #include "log.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "vdrive-bam.h"
 #include "vdrive-command.h"
 #include "vdrive.h"

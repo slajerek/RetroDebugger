@@ -27,7 +27,7 @@
 #ifndef VICE_DOODLEDRV_H
 #define VICE_DOODLEDRV_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 typedef struct doodle_data_s {
     BYTE *colormap;

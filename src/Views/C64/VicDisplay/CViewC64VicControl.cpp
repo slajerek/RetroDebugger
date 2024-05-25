@@ -1,7 +1,7 @@
 extern "C" {
 #include "vice.h"
 #include "main.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "viciitypes.h"
 #include "vicii.h"
 #include "c64mem.h"
@@ -19,13 +19,15 @@ extern "C" {
 #include "CSlrFont.h"
 #include "CGuiLabel.h"
 #include "CViewC64StateVIC.h"
-#include "CViewMemoryMap.h"
+#include "CViewDataMap.h"
 #include "CViewDataDump.h"
 #include "CViewDisassembly.h"
 #include "CViewC64VicDisplay.h"
 #include "C64SettingsStorage.h"
 #include "CDebugSymbols.h"
 #include "CDebugSymbolsSegmentC64.h"
+
+#include "ViceWrapper.h"
 
 CViewC64VicControl::CViewC64VicControl(const char *name, float posX, float posY, float posZ, float sizeX, float sizeY,
 									   CViewC64VicDisplay *vicDisplay)
@@ -670,11 +672,13 @@ void CViewC64VicControl::SetPosition(float posX, float posY, float posZ, float s
 	float listGapX = 1.0f;
 	
 	lblScreenAddress->SetPosition(px, py, posZ, lblScreenAddress->sizeX, lblScreenAddress->sizeY);
-	
+	lblScreenAddress->SetFontSize(fontScale);
+
 	px += listSizeX;
 	
 	lblCharsetAddress->SetPosition(px, py, posZ, lblCharsetAddress->sizeX, lblCharsetAddress->sizeY);
-	
+	lblCharsetAddress->SetFontSize(fontScale);
+
 	px = startX + listGapX;
 	py += lblScreenAddress->sizeY;
 	
@@ -691,6 +695,8 @@ void CViewC64VicControl::SetPosition(float posX, float posY, float posZ, float s
 	
 	px = startX + listSizeX + listGapX;
 	lblBitmapAddress->SetPosition(px, py, posZ, lblBitmapAddress->sizeX, lblBitmapAddress->sizeY);
+	lblBitmapAddress->SetFontSize(fontScale);
+
 	py += lblBitmapAddress->sizeY;
 	
 	float listBitmapSizeY = 32.0f * scale;
@@ -1338,22 +1344,6 @@ bool CViewC64VicControl::DoTap(float x, float y)
 
 bool CViewC64VicControl::DoRightClick(float x, float y)
 {
-	if (viewC64->viewC64Screen->IsInsideViewNonVisible(x, y))
-	{
-		if (viewC64->viewC64Screen->visible)
-		{
-			viewC64->viewC64Screen->showZoomedScreen = true;
-			viewC64->viewC64Screen->visible = false;
-		}
-		else
-		{
-			viewC64->viewC64Screen->showZoomedScreen = false;
-			viewC64->viewC64Screen->visible = true;
-		}
-		
-		return true;
-	}
-	
 	return CGuiView::DoRightClick(x, y);
 }
 

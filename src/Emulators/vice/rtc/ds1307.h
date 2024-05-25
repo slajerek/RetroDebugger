@@ -28,7 +28,7 @@
 #define VICE_DS1307_H
 
 #include "snapshot.h"
-#include "types.h"
+#include "vicetypes.h"
 
 typedef struct rtc_ds1307_s rtc_ds1307_t;
 

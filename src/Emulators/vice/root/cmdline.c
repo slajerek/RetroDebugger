@@ -38,7 +38,7 @@
 #include "lib.h"
 #include "resources.h"
 #include "translate.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "uicmdline.h"
 #include "util.h"
 #include "log.h"

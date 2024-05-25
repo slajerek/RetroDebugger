@@ -27,7 +27,7 @@
 #ifndef VICE_CLKGUARD_H
 #define VICE_CLKGUARD_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 #define CLKGUARD_SUB_MIN 0xfffff
 

@@ -15,6 +15,7 @@
 #include "IMG_Scale.h"
 #include "C64Tools.h"
 #include "CMainMenuBar.h"
+#include "CLayoutParameter.h"
 
 #include "CViewC64Screen.h"
 
@@ -63,21 +64,21 @@ CViewC64VicEditor::CViewC64VicEditor(const char *name, float posX, float posY, f
 	
 	debugInterface = viewC64->debugInterfaceC64;
 	recentlyOpened = new CRecentlyOpenedFiles(new CSlrString("recents-viceditor"), this);
-
+	
 	imGuiNoWindowPadding = true;
 	imGuiNoScrollbar = true;
-
+	
 	font = viewC64->fontCBMShifted;
 	fontScale = 5.0f;//1.5;
 	fontHeight = font->GetCharHeight('@', fontScale) + 2;
-
+	
 	isPainting = false;
 	isKeyboardMovingDisplay = false;
 	prevRx = -1000;
 	prevRy = -1000;
 	prevMousePosX = 0;
 	prevMousePosY = 0;
-
+	
 	brushSize = 1;
 	currentBrush = new CVicEditorBrush();
 	currentBrush->CreateBrushRectangle(brushSize);
@@ -85,10 +86,10 @@ CViewC64VicEditor::CViewC64VicEditor(const char *name, float posX, float posY, f
 	viewVicDisplay = new CViewC64VicDisplay("CViewVicEditor::viewVicDisplay", posX, posY, posZ, sizeX, sizeY, viewC64->debugInterfaceC64);
 	viewVicDisplay->SetVicControlView(viewC64->viewC64VicControl);
 	viewVicDisplay->SetShowDisplayBorderType(VIC_DISPLAY_SHOW_BORDER_VISIBLE_AREA);
-
+	
 	viewVicDisplay->SetDisplayPosition(0,0, 1.0f, true);
 	viewVicDisplay->InitGridLinesColorFromSettings();
-
+	
 	//viewVicDisplay->showGridLines = true;
 	viewVicDisplay->showRasterCursor = false;
 	viewVicDisplay->consumeTapBackground = false;
@@ -115,7 +116,7 @@ CViewC64VicEditor::CViewC64VicEditor(const char *name, float posX, float posY, f
 	
 	layerUnrestrictedBitmap = new CVicEditorLayerUnrestrictedBitmap(this, "Unrestricted");
 	layers.push_back(layerUnrestrictedBitmap);
-
+	
 	this->selectedLayer = NULL;
 	
 	//
@@ -130,7 +131,7 @@ CViewC64VicEditor::CViewC64VicEditor(const char *name, float posX, float posY, f
 	importFileExtensions.push_back(new CSlrString("pic"));
 	importFileExtensions.push_back(new CSlrString("hdr"));
 	importFileExtensions.push_back(new CSlrString("tga"));
-
+	
 	importFileExtensions.push_back(new CSlrString("aas"));
 	importFileExtensions.push_back(new CSlrString("art"));
 	importFileExtensions.push_back(new CSlrString("dd"));
@@ -151,7 +152,7 @@ CViewC64VicEditor::CViewC64VicEditor(const char *name, float posX, float posY, f
 	exportHiresBitmapFileExtensions.push_back(new CSlrString("art"));
 	exportHiresTextFileExtensions.push_back(new CSlrString("rawtext"));
 	exportPNGFileExtensions.push_back(new CSlrString("png"));
-
+	
 	// this will be created elsewhere
 	viewLayers = NULL;
 	viewCharset = NULL;
@@ -160,79 +161,79 @@ CViewC64VicEditor::CViewC64VicEditor(const char *name, float posX, float posY, f
 	
 	//
 	viewCreateNewPicture = new CViewC64VicEditorCreateNewPicture("Create New Picture##c64", 100, 100, -1, this);
-//	viewCreateNewPicture->SetVisible(false);
-//	guiMain->AddView(viewCreateNewPicture);
+	//	viewCreateNewPicture->SetVisible(false);
+	//	guiMain->AddView(viewCreateNewPicture);
 	
 	// keyboard shortcuts
 	kbsVicEditorCreateNewPicture = new CSlrKeyboardShortcut(KBZONE_VIC_EDITOR, "VIC Editor: New Picture", 'n', false, false, true, false, this);
 	guiMain->AddKeyboardShortcut(kbsVicEditorCreateNewPicture);
-
+	
 	kbsVicEditorPreviewScale = new CSlrKeyboardShortcut(KBZONE_VIC_EDITOR, "VIC Editor: Preview scale", '/', false, false, false, false, this);
 	guiMain->AddKeyboardShortcut(kbsVicEditorPreviewScale);
-
+	
 	kbsVicEditorShowCursor = new CSlrKeyboardShortcut(KBZONE_VIC_EDITOR, "Show cursor", '\'', false, false, false, false, this);
 	guiMain->AddKeyboardShortcut(kbsVicEditorShowCursor);
-
+	
 	kbsVicEditorShowGrid = new CSlrKeyboardShortcut(KBZONE_VIC_EDITOR, "Show grid", 'g', false, false, false, false, this);
 	guiMain->AddKeyboardShortcut(kbsVicEditorShowGrid);
-
+	
 	kbsVicEditorDoUndo = new CSlrKeyboardShortcut(KBZONE_VIC_EDITOR, "Undo", 'z', false, false, true, false, this);
 	guiMain->AddKeyboardShortcut(kbsVicEditorDoUndo);
-
+	
 	kbsVicEditorDoRedo = new CSlrKeyboardShortcut(KBZONE_VIC_EDITOR, "Redo", 'z', true, false, true, false, this);
 	guiMain->AddKeyboardShortcut(kbsVicEditorDoRedo);
-
+	
 	kbsVicEditorOpenFile = new CSlrKeyboardShortcut(KBZONE_VIC_EDITOR, "Open file", 'o', false, false, true, false, this);
 	guiMain->AddKeyboardShortcut(kbsVicEditorOpenFile);
-
+	
 	kbsVicEditorExportFile = new CSlrKeyboardShortcut(KBZONE_GLOBAL, "Export screen to file", 'e', true, false, true, false, this);
 	guiMain->AddKeyboardShortcut(kbsVicEditorExportFile);
-
+	
 	kbsVicEditorSaveVCE = new CSlrKeyboardShortcut(KBZONE_VIC_EDITOR, "Save as VCE", 's', false, false, true, false, this);
 	guiMain->AddKeyboardShortcut(kbsVicEditorSaveVCE);
-
+	
 	kbsVicEditorClearScreen = new CSlrKeyboardShortcut(KBZONE_VIC_EDITOR, "Clear screen", MTKEY_BACKSPACE, false, false, true, false, this);
 	guiMain->AddKeyboardShortcut(kbsVicEditorClearScreen);
-
+	
 	kbsVicEditorRectangleBrushSizePlus = new CSlrKeyboardShortcut(KBZONE_VIC_EDITOR, "Rectangle brush size +", ']', false, false, true, false, this);
 	guiMain->AddKeyboardShortcut(kbsVicEditorRectangleBrushSizePlus);
-
+	
 	kbsVicEditorRectangleBrushSizeMinus = new CSlrKeyboardShortcut(KBZONE_VIC_EDITOR, "Rectangle brush size -", '[', false, false, true, false, this);
 	guiMain->AddKeyboardShortcut(kbsVicEditorRectangleBrushSizeMinus);
-
+	
 	kbsVicEditorCircleBrushSizePlus = new CSlrKeyboardShortcut(KBZONE_VIC_EDITOR, "Circle brush size +", ']', false, false, false, false, this);
 	guiMain->AddKeyboardShortcut(kbsVicEditorCircleBrushSizePlus);
-
+	
 	kbsVicEditorCircleBrushSizeMinus = new CSlrKeyboardShortcut(KBZONE_VIC_EDITOR, "Circle brush size -", '[', false, false, false, false, this);
 	guiMain->AddKeyboardShortcut(kbsVicEditorCircleBrushSizeMinus);
-
+	
 	kbsVicEditorToggleAllWindows = new CSlrKeyboardShortcut(KBZONE_VIC_EDITOR, "Toggle all windows", 'f', false, false, false, false, this);
 	guiMain->AddKeyboardShortcut(kbsVicEditorToggleAllWindows);
-
+	
 	kbsVicEditorToggleWindowPreview = new CSlrKeyboardShortcut(KBZONE_VIC_EDITOR, "Toggle preview", 'd', false, false, false, false, this);
 	guiMain->AddKeyboardShortcut(kbsVicEditorToggleWindowPreview);
-
+	
 	kbsVicEditorToggleWindowPalette = new CSlrKeyboardShortcut(KBZONE_VIC_EDITOR, "Toggle palette", 'p', false, false, false, false, this);
 	guiMain->AddKeyboardShortcut(kbsVicEditorToggleWindowPalette);
-
+	
 	kbsVicEditorSwitchPaletteColors = new CSlrKeyboardShortcut(KBZONE_VIC_EDITOR, "Switch palette colors", 'x', false, false, false, false, this);
 	guiMain->AddKeyboardShortcut(kbsVicEditorSwitchPaletteColors);
-
+	
 	kbsVicEditorToggleWindowLayers = new CSlrKeyboardShortcut(KBZONE_VIC_EDITOR, "Toggle layers", 'l', false, false, false, false, this);
 	guiMain->AddKeyboardShortcut(kbsVicEditorToggleWindowLayers);
-
+	
 	kbsVicEditorToggleWindowCharset = new CSlrKeyboardShortcut(KBZONE_VIC_EDITOR, "Toggle charset", 'c', false, false, false, false, this);
 	guiMain->AddKeyboardShortcut(kbsVicEditorToggleWindowCharset);
-
+	
 	kbsVicEditorToggleWindowSprite = new CSlrKeyboardShortcut(KBZONE_VIC_EDITOR, "Toggle sprite", 's', false, false, false, false, this);
 	guiMain->AddKeyboardShortcut(kbsVicEditorToggleWindowSprite);
-
+	
 	kbsVicEditorToggleSpriteFrames = new CSlrKeyboardShortcut(KBZONE_VIC_EDITOR, "Toggle sprite frames", 'g', false, false, true, false, this);
 	guiMain->AddKeyboardShortcut(kbsVicEditorToggleSpriteFrames);
-
+	
 	kbsVicEditorToggleTopBar = NULL; //new CSlrKeyboardShortcut(KBZONE_VIC_EDITOR, "Toggle top bar", 'b', false, false, true, false, this);
-//	guiMain->AddKeyboardShortcut(kbsVicEditorToggleTopBar);
-
+	//	guiMain->AddKeyboardShortcut(kbsVicEditorToggleTopBar);
+	
 	kbsVicEditorSelectNextLayer = new CSlrKeyboardShortcut(KBZONE_VIC_EDITOR, "Select next layer", '`', false, false, false, false, this);
 	guiMain->AddKeyboardShortcut(kbsVicEditorSelectNextLayer);
 	//
@@ -247,19 +248,26 @@ CViewC64VicEditor::CViewC64VicEditor(const char *name, float posX, float posY, f
 	
 	// register for OS window size changes
 	guiMain->AddGlobalOSWindowChangedCallback(this);
-
+	
 	prevDisplayPosX = 0;
 	prevDisplayPosY = 0;
 	
 	//
 	this->viewVicDisplay->InitGridLinesColorFromSettings();
-
+	
 	//
 	ZoomDisplay(3.0f);
 	UpdateDisplayFrame();
 	viewVicDisplay->UpdateGridLinesVisibleOnCurrentZoom();
-
+	
 	this->viewVicDisplay->showGridLines = true;
+	
+	serializedDisplayX = 0.0f;
+	serializedDisplayY = 0.0f;
+	
+	AddLayoutParameter(new CLayoutParameterFloat("Display zoom", true, &viewVicDisplay->scale));
+	AddLayoutParameter(new CLayoutParameterFloat("Display pos X", true, &serializedDisplayX));
+	AddLayoutParameter(new CLayoutParameterFloat("Display pos Y", true, &serializedDisplayY));
 }
 
 CViewC64VicEditor::~CViewC64VicEditor()
@@ -1256,6 +1264,9 @@ bool CViewC64VicEditor::DoNotTouchedMove(float x, float y)
 		
 		prevMousePosX = x;
 		prevMousePosY = y;
+		
+		LOGD("%f %f", viewVicDisplay->posX, viewVicDisplay->posY);
+
 		return true;
 	}
 	
@@ -1290,11 +1301,11 @@ bool CViewC64VicEditor::DoNotTouchedMove(float x, float y)
 //					PaintUsingLeftMouseButton(x, y);
 //				}
 
-				/*
 				if (guiMain->isRightMouseButtonPressed)
 				{
 					PaintUsingRightMouseButton(x, y);
-				}*/
+				}
+				
 			}
 		}
 		else
@@ -1390,6 +1401,14 @@ void CViewC64VicEditor::CheckDisplayBoundaries(float *px, float *py)
 
 	LOGD("CheckDisplayBoundaries: px=%f py=%f posX=%f posY=%f displayX=%f displayY=%f",
 		 *px, *py, posX, posY, viewVicDisplay->posX, viewVicDisplay->posY);
+	
+//	// sanity check
+//	if (*px < posX || *py + viewVicDisplay->sizeY < posY || *px > posX+sizeX || *py > posY+sizeY)
+	if (*px < -10000 || *py < -10000 || *px > 10000 || *py > 10000)
+	{
+		*px = 0;
+		*py = 0;
+	}
 
 //	float lx = mainDisplayPosX - borderX;
 //	if (*px < lx)
@@ -4093,6 +4112,9 @@ bool CViewC64VicEditor::ImportVCE(CSlrString *path)
 // context menu
 bool CViewC64VicEditor::HasContextMenuItems()
 {
+	return false;
+	
+	
 	if (isShowingContextMenu)
 		return true;
 	
@@ -4222,3 +4244,33 @@ void CViewC64VicEditor::RenderContextMenuItems()
 	}
 }
 
+void CViewC64VicEditor::SerializeLayout(CByteBuffer *byteBuffer)
+{
+	serializedDisplayX = viewVicDisplay->posX - this->posX;
+	serializedDisplayY = viewVicDisplay->posY - this->posY;
+
+	LOGD("display posX=%f posY=%f", viewVicDisplay->posX, viewVicDisplay->posY);
+	LOGD("serializedDisplayX=%f serializedDisplayY=%f", serializedDisplayX, serializedDisplayY);
+	LOGD("posX=%f posY=%f", posX, posY);
+	LOGD("scale=%f", viewVicDisplay->scale);
+	CGuiView::SerializeLayout(byteBuffer);
+}
+
+bool CViewC64VicEditor::DeserializeLayout(CByteBuffer *byteBuffer, int version)
+{
+	CGuiView::DeserializeLayout(byteBuffer, version);
+	
+	LOGD("scale=%f", viewVicDisplay->scale);
+	LOGD("serializedDisplayX=%f serializedDisplayY=%f", serializedDisplayX, serializedDisplayY);
+	LOGD("posX=%f posY=%f", posX, posY);
+	
+	viewVicDisplay->SetPosition(serializedDisplayX, serializedDisplayY);
+
+	if (viewVicDisplay->scale < 0.20f)
+		viewVicDisplay->scale = 0.20f;
+
+	UpdateDisplayFrame();
+	
+	LOGD("display posX=%f posY=%f", viewVicDisplay->posX, viewVicDisplay->posY);
+	return true;
+}

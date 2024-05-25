@@ -32,7 +32,7 @@
 
 #ifdef HAVE_PCAP
 
-#include "types.h"
+#include "vicetypes.h"
 
 extern int cs8900io_cart_enabled(void);
 

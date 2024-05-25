@@ -42,7 +42,7 @@
 #include "resources.h"
 #include "translate.h"
 #include "traps.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "wdc65816.h"
 
 typedef struct traplist_s {

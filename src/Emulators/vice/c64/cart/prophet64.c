@@ -40,7 +40,7 @@
 #include "monitor.h"
 #include "prophet64.h"
 #include "snapshot.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "util.h"
 #include "crt.h"
 

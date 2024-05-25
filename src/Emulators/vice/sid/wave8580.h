@@ -31,7 +31,7 @@
  * Created with Deadman's Raw Data to C Header converter
  */
 
-#include "types.h"
+#include "vicetypes.h"
 
 static BYTE waveform30_8580[4096] =
 {

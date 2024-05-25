@@ -1,7 +1,7 @@
 extern "C" {
 #include "vice.h"
 #include "main.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "viciitypes.h"
 #include "vicii.h"
 #include "c64mem.h"
@@ -20,7 +20,7 @@ extern "C" {
 #include "CSlrFont.h"
 #include "CGuiLabel.h"
 #include "CViewC64StateVIC.h"
-#include "CViewMemoryMap.h"
+#include "CViewDataMap.h"
 #include "CViewDataDump.h"
 #include "CViewDisassembly.h"
 #include "CViewC64VicControl.h"
@@ -1901,7 +1901,6 @@ void CViewC64VicDisplay::SetDisplayFrameRaster(float rasterX, float rasterY, flo
 	UpdateDisplayFrameScreen();
 }
 
-
 void CViewC64VicDisplay::RenderRasterCursor(int rasterX, int rasterY)
 {
 	float cx = displayPosWithScrollX + (float)rasterX * rasterScaleFactorX  + rasterCrossOffsetX;
@@ -1938,6 +1937,42 @@ void CViewC64VicDisplay::RenderRasterCursor(int rasterX, int rasterY)
 	
 }
 
+void CViewC64VicDisplay::RenderRasterCursorOnForeground(int rasterX, int rasterY)
+{
+	float cx = displayPosWithScrollX + (float)rasterX * rasterScaleFactorX  + rasterCrossOffsetX;
+	float cy = displayPosWithScrollY + (float)rasterY * rasterScaleFactorY  + rasterCrossOffsetY;
+	
+
+	/// long screen line
+	BlitFilledRectangleOnForeground(posX, cy - rasterCrossWidth2, posZ, fullScanScreenSizeX, rasterCrossWidth,
+						rasterLongScrenLineR, rasterLongScrenLineG, rasterLongScrenLineB, rasterLongScrenLineA);
+	BlitFilledRectangleOnForeground(cx - rasterCrossWidth2, posY, posZ, rasterCrossWidth, fullScanScreenSizeY,
+						rasterLongScrenLineR, rasterLongScrenLineG, rasterLongScrenLineB, rasterLongScrenLineA);
+
+	// red cross
+	BlitFilledRectangleOnForeground(cx - rasterCrossWidth2, cy - rasterCrossSizeY2, posZ, rasterCrossWidth, rasterCrossSizeY,
+						rasterCrossExteriorR, rasterCrossExteriorG, rasterCrossExteriorB, rasterCrossExteriorA);
+	BlitFilledRectangleOnForeground(cx - rasterCrossSizeX2, cy - rasterCrossWidth2, posZ, rasterCrossSizeX, rasterCrossWidth,
+						rasterCrossExteriorR, rasterCrossExteriorG, rasterCrossExteriorB, rasterCrossExteriorA);
+
+	// cross ending tip
+	BlitFilledRectangleOnForeground(cx - rasterCrossWidth2, cy - rasterCrossSizeY34, posZ, rasterCrossWidth, rasterCrossSizeY4,
+						rasterCrossEndingTipR, rasterCrossEndingTipG, rasterCrossEndingTipB, rasterCrossEndingTipA);
+	BlitFilledRectangleOnForeground(cx - rasterCrossWidth2, cy + rasterCrossSizeY2, posZ, rasterCrossWidth, rasterCrossSizeY4,
+						rasterCrossEndingTipR, rasterCrossEndingTipG, rasterCrossEndingTipB, rasterCrossEndingTipA);
+	BlitFilledRectangleOnForeground(cx - rasterCrossSizeX34, cy - rasterCrossWidth2, posZ, rasterCrossSizeX4, rasterCrossWidth,
+						rasterCrossEndingTipR, rasterCrossEndingTipG, rasterCrossEndingTipB, rasterCrossEndingTipA);
+	BlitFilledRectangleOnForeground(cx + rasterCrossSizeX2, cy - rasterCrossWidth2, posZ, rasterCrossSizeX4, rasterCrossWidth,
+						rasterCrossEndingTipR, rasterCrossEndingTipG, rasterCrossEndingTipB, rasterCrossEndingTipA);
+
+	// white interior cross
+	BlitFilledRectangleOnForeground(cx - rasterCrossWidth2, cy - rasterCrossSizeY6, posZ, rasterCrossWidth, rasterCrossSizeY3,
+						rasterCrossInteriorR, rasterCrossInteriorG, rasterCrossInteriorB, rasterCrossInteriorA);
+	BlitFilledRectangleOnForeground(cx - rasterCrossSizeX6, cy - rasterCrossWidth2, posZ, rasterCrossSizeX3, rasterCrossWidth,
+						rasterCrossInteriorR, rasterCrossInteriorG, rasterCrossInteriorB, rasterCrossInteriorA);
+	
+}
+
 void CViewC64VicDisplay::RenderBadLines()
 {
 //	LOGD("CViewC64VicDisplay::RenderBadLines");
@@ -1969,17 +2004,20 @@ void CViewC64VicDisplay::RenderBreakpointsLines()
 	
 	CDebugSymbolsSegmentC64 *segment = (CDebugSymbolsSegmentC64 *) debugInterface->symbols->currentSegment;
 
-	std::map<int, CBreakpointAddr *> *breakpointsMap = &(segment->breakpointsRasterLine->breakpoints);
-	
-	float cy = displayPosY + rasterCrossOffsetY - (0x33 * rasterScaleFactorY) + rasterScaleFactorY/2.0f;
-
-	for (std::map<int, CBreakpointAddr *>::iterator it = breakpointsMap->begin();
-		 it != breakpointsMap->end(); it++)
+	if (segment)
 	{
-		CBreakpointAddr *breakpoint = it->second;
-		float rasterLine = breakpoint->addr;
-		float lineY = cy + rasterScaleFactorY * rasterLine;
-		BlitFilledRectangle(posX, lineY, posZ, sizeX, rasterScaleFactorY, 1.0f, 0.0f, 0.0f, c64SettingsScreenGridLinesAlpha);
+		std::map<int, CBreakpointAddr *> *breakpointsMap = &(segment->breakpointsRasterLine->breakpoints);
+		
+		float cy = displayPosY + rasterCrossOffsetY - (0x33 * rasterScaleFactorY) + rasterScaleFactorY/2.0f;
+
+		for (std::map<int, CBreakpointAddr *>::iterator it = breakpointsMap->begin();
+			 it != breakpointsMap->end(); it++)
+		{
+			CBreakpointAddr *breakpoint = it->second;
+			float rasterLine = breakpoint->addr;
+			float lineY = cy + rasterScaleFactorY * rasterLine;
+			BlitFilledRectangle(posX, lineY, posZ, sizeX, rasterScaleFactorY, 1.0f, 0.0f, 0.0f, c64SettingsScreenGridLinesAlpha);
+		}
 	}
 	
 	viewC64->debugInterfaceC64->UnlockMutex();
@@ -2052,7 +2090,7 @@ bool CViewC64VicDisplay::ScrollMemoryAndDisassemblyToRasterPosition(float rx, fl
 			viewC64->viewC64Disassembly->changedByUser = false;
 		}
 		
-		CDebugMemoryCell *cell = viewC64->debugInterfaceC64->symbols->memory->memoryCells[addr];
+		CDebugMemoryCell *cell = viewC64->debugInterfaceC64->symbols->memory->GetMemoryCell(addr);
 		if (cell->writePC != -1)
 		{
 			//LOGD(".... isForced=%d changed=%d", isForced, viewC64->viewC64Disassembly->changedByUser);
@@ -2691,6 +2729,8 @@ void CViewC64VicDisplay::ToggleVICRasterBreakpoint()
 
 bool CViewC64VicDisplay::KeyDown(u32 keyCode, bool isShift, bool isAlt, bool isControl, bool isSuper)
 {
+	LOGD("CViewC64VicDisplay::KeyDown: keyCode=%d isShift=%d isAlt=%d isControl=%d isSuper=%d", keyCode, isShift, isAlt, isControl, isSuper);
+	
 	if (keyCode == MTKEY_ARROW_UP
 		|| keyCode == MTKEY_ARROW_DOWN
 		|| keyCode == MTKEY_ARROW_LEFT
@@ -2726,7 +2766,7 @@ bool CViewC64VicDisplay::KeyDown(u32 keyCode, bool isShift, bool isAlt, bool isC
 			}
 			else if (isShift)
 			{
-				for (int i = 0; i < 8; i++)
+				for (int i = 0; i < 8*4; i++)
 					RasterCursorRight();
 			}
 			else
@@ -2780,9 +2820,8 @@ bool CViewC64VicDisplay::KeyDown(u32 keyCode, bool isShift, bool isAlt, bool isC
 	
 	if (keyboardShortcut == viewC64->mainMenuBar->kbsToggleBreakpoint)
 	{
-		ToggleVICRasterBreakpoint();
-		
-		viewC64->viewC64Screen->KeyUpModifierKeys(isShift, isAlt, isControl);
+		ToggleVICRasterBreakpoint();		
+		debugInterface->KeyUpModifierKeys(isShift, isAlt, isControl);
 		return true;
 	}
 	
@@ -2848,6 +2887,131 @@ bool CViewC64VicDisplay::IsTopWindow()
 		return false;
 	}
 	return true;
+}
+
+bool CViewC64VicDisplay::HasContextMenuItems()
+{
+   return false;
+}
+
+void CViewC64VicDisplay::RenderContextMenuItems()
+{
+	// TODO: this context menu replicates vic control functionality, but it is handy to have it also in the context menu
+	
+	/*
+	vicii_cycle_state_t *viciiState = &(viewC64->viciiStateToShow);
+
+	u8 mc;
+	u8 eb;
+	u8 bm;
+	u8 blank;
+	
+	mc = (viciiState->regs[0x16] & 0x10) >> 4;
+	eb = (viciiState->regs[0x11] & 0x40) >> 6;
+	bm = (viciiState->regs[0x11] & 0x20) >> 5;
+	
+	blank = (viciiState->regs[0x11] & 0x10) >> 4;
+
+	
+	bool isOn = viewVicControl->btnModeText->IsOn();
+	ImGui::Text("btnModeText->isOn=%s", STRBOOL(isOn));
+	*/
+	
+	/*
+	
+	// text / bitmap
+	if (btnModeText->IsOn())
+	{
+		SetButtonState(btnModeText, false);
+		SetButtonState(btnModeBitmap, false);
+		
+		bm = 0;
+		blank = 1;
+	}
+	else if (btnModeBitmap->IsOn())
+	{
+		SetButtonState(btnModeText, false);
+		SetButtonState(btnModeBitmap, false);
+		
+		bm = 1;
+		blank = 1;
+	}
+	else
+	{
+		if (bm == 0)
+		{
+			SetButtonState(btnModeText, true);
+			SetButtonState(btnModeBitmap, false);
+		}
+		else
+		{
+			SetButtonState(btnModeText, false);
+			SetButtonState(btnModeBitmap, true);
+		}
+	}
+	
+	// hires / multi
+	if (btnModeHires->IsOn())
+	{
+		SetButtonState(btnModeHires, false);
+		SetButtonState(btnModeMulti, false);
+		
+		mc = 0;
+		blank = 1;
+	}
+	else if (btnModeMulti->IsOn())
+	{
+		SetButtonState(btnModeHires, false);
+		SetButtonState(btnModeMulti, false);
+		
+		mc = 1;
+		blank = 1;
+	}
+	else
+	{
+		if (mc == 0)
+		{
+			SetButtonState(btnModeHires, true);
+			SetButtonState(btnModeMulti, false);
+		}
+		else
+		{
+			SetButtonState(btnModeHires, false);
+			SetButtonState(btnModeMulti, true);
+		}
+	}
+	
+	// standard / extended
+	if (btnModeStandard->IsOn())
+	{
+		SetButtonState(btnModeStandard, false);
+		SetButtonState(btnModeExtended, false);
+		
+		eb = 0;
+		blank = 1;
+	}
+	else if (btnModeExtended->IsOn())
+	{
+		SetButtonState(btnModeStandard, false);
+		SetButtonState(btnModeExtended, false);
+		
+		eb = 1;
+		blank = 1;
+	}
+	else
+	{
+		if (eb == 0)
+		{
+			SetButtonState(btnModeStandard, true);
+			SetButtonState(btnModeExtended, false);
+		}
+		else
+		{
+			SetButtonState(btnModeStandard, false);
+			SetButtonState(btnModeExtended, true);
+		}
+	
+	*/
 }
 
 // Layout

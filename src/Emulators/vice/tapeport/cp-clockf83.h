@@ -27,7 +27,7 @@
 #ifndef VICE_CPCLOCKF83_H
 #define VICE_CPCLOCKF83_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 extern int tapertc_resources_init(void);
 extern int tapertc_cmdline_options_init(void);

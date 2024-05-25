@@ -23,6 +23,8 @@ class CSlrFont;
 class C64KeyMap;
 class CDiskImageD64;
 class CWaveformData;
+class CDebugSymbolsC64;
+class CDebugSymbolsDrive1541;
 
 // abstract class
 class CDebugInterfaceC64 : public CDebugInterface
@@ -61,20 +63,30 @@ public:
 	virtual uint8 *GetCharRom();
 	
 	float emulationSpeed, emulationFrameRate;
+
+	// symbols defined in CDebugInterface
+	CDebugDataAdapter *dataAdapterC64;
+	CDebugDataAdapter *dataAdapterC64DirectRam;
+
+
+	// C64
+	CDebugSymbolsC64 *symbolsC64;	// note this is the same pointer as default from base class CDebugSymbols *symbols
 	
 	// 1541 disk drive
-	CDebugSymbols *symbolsDrive1541;
+	CDebugSymbolsDrive1541 *symbolsDrive1541;
+	CDebugDataAdapter *dataAdapterDrive1541;
+	CDebugDataAdapter *dataAdapterDrive1541DirectRam;
+	CDebugDataAdapter *dataAdapterDrive1541MinimalRam;
+	CDebugSymbols *symbolsDrive1541DiskContents;
+	CDebugDataAdapter *dataAdapterDrive1541DiskContents;
 	bool debugOnDrive1541;
 	
 	// cartridge
 	CDebugSymbols *symbolsCartridgeC64;
+	CDebugDataAdapter *dataAdapterCartridgeC64;
+
 
 	// data adapters
-	CDebugDataAdapter *dataAdapterC64;
-	CDebugDataAdapter *dataAdapterC64DirectRam;
-	CDebugDataAdapter *dataAdapterDrive1541;
-	CDebugDataAdapter *dataAdapterDrive1541DirectRam;
-	CDebugDataAdapter *dataAdapterCartridgeC64;
 
 	virtual int GetC64ModelType();
 	virtual uint8 GetC64MachineType();
@@ -208,7 +220,7 @@ public:
 	virtual void FillC64Ram(uint16 addr, uint16 size, uint8 value);
 	
 	//
-	virtual void MakeBasicRunC64();
+	virtual void MakeJMPToBasicRunC64();
 
 	//
 	virtual void GetVICColors(uint8 *cD021, uint8 *cD022, uint8 *cD023, uint8 *cD025, uint8 *cD026, uint8 *cD027, uint8 *cD800);

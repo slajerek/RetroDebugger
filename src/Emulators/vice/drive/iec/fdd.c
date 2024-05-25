@@ -31,7 +31,7 @@
 
 #include "diskimage.h"
 #include "lib.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "fdd.h"
 #include "diskimage.h"
 #include "drive.h"

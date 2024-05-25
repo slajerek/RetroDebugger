@@ -29,7 +29,7 @@
 #ifndef VICE_AUTOSTART_H
 #define VICE_AUTOSTART_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 #define AUTOSTART_MODE_NONE -1
 #define AUTOSTART_MODE_RUN  0

@@ -30,7 +30,7 @@
 #define VICE_C64MEM_H
 
 #include "mem.h"
-#include "types.h"
+#include "vicetypes.h"
 
 #ifndef C64_RAM_SIZE
 #define C64_RAM_SIZE 0x10000

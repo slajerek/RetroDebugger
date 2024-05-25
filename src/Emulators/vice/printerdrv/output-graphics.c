@@ -40,7 +40,7 @@
 #include "palette.h"
 #include "resources.h"
 #include "screenshot.h"
-#include "types.h"
+#include "vicetypes.h"
 
 
 struct output_gfx_s {

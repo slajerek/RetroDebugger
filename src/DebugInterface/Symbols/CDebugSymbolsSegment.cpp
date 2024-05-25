@@ -9,7 +9,7 @@
 #include "CDebugSymbolsDataWatch.h"
 #include "C64SettingsStorage.h"
 
-CDebugSymbolsSegment::CDebugSymbolsSegment(CDebugSymbols *debugSymbols, CSlrString *name, int segmentNum)
+CDebugSymbolsSegment::CDebugSymbolsSegment(CDebugSymbols *debugSymbols, CSlrString *name, int segmentNum, bool supportBreakpoints)
 {
 	LOGD("CDebugSymbolsSegment: %x", this);
 	name->DebugPrint("CDebugSymbolsSegment name=");
@@ -17,6 +17,7 @@ CDebugSymbolsSegment::CDebugSymbolsSegment(CDebugSymbols *debugSymbols, CSlrStri
 	this->symbols = debugSymbols;
 	this->name = name;
 	this->segmentNum = segmentNum;
+	this->supportBreakpoints = supportBreakpoints;
 	
 	int maxAddress = debugSymbols->dataAdapter->AdapterGetDataLength();
 	codeSourceLineByMemoryAddress = new CDebugAsmSourceLine* [maxAddress];

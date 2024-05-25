@@ -28,7 +28,7 @@
 #define VICE_UIMSGBOX_H
 
 #include "vice.h"
-#include "types.h"
+#include "vicetypes.h"
 
 #define MESSAGE_OK     0
 #define MESSAGE_YESNO  1

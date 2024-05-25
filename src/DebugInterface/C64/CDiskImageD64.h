@@ -47,29 +47,30 @@ typedef struct DiskImageFileEntry_s {
 	int fileSize;
 } DiskImageFileEntry;
 
-
-struct disk_image_s;
-typedef struct disk_image_s disk_image_t;
-
-struct vdrive_s;
-typedef struct vdrive_s vdrive_t;
+class CDebugInterfaceVice;
+class CDataAdapterViceDrive1541DiskContents;
 
 class CDiskImageD64
 {
 public:
 	// get disk image from drive attached
-	CDiskImageD64(int driveId);
+	CDiskImageD64(CDebugInterfaceVice *debugInterface, int driveId);
 	
 	// get disk image from file
 	CDiskImageD64(char *fileName);
 	
 	virtual ~CDiskImageD64();
-	
+		
 	void SetDiskImage(int driveId);
 	void SetDiskImage(char *fileName);
 	void RefreshImage();
+	void Clear();
 
-	disk_image_t *diskImage;
+	CDebugInterfaceVice *debugInterface;
+	CDataAdapterViceDrive1541DiskContents *dataAdapter;
+	
+//	disk_image_t *diskImage;
+	bool IsDiskAttached();
 	bool isFromFile;
 	
 	bool ReadImage();
@@ -91,6 +92,9 @@ public:
 	bool CreateDiskImage(const char *cPath);
 	void FormatDisk(const char *diskName, const char *diskId);
 	int InsertFile(std::filesystem::path filePath, bool alwaysReplace);
+	
+private:
+	bool isDiskAttached;
 };
 
 #endif

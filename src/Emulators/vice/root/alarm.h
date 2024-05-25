@@ -28,7 +28,7 @@
 #ifndef VICE_ALARM_H
 #define VICE_ALARM_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 #define ALARM_CONTEXT_MAX_PENDING_ALARMS 0x100
 

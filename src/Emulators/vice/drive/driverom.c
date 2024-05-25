@@ -37,7 +37,7 @@
 #include "resources.h"
 #include "sysfile.h"
 #include "traps.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "snapshot.h"
 
 /* patch for 1541 driverom at $EAAF */

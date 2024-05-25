@@ -27,7 +27,7 @@
 #ifndef VICE_R65C02_H
 #define VICE_R65C02_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 /* Struct for the R65C02 registers.  */
 /* This contains some redundancy to make it compatible with the way registers

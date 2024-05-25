@@ -38,7 +38,7 @@
 #include "log.h"
 #include "resources.h"
 #include "translate.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "uiapi.h"
 #include "util.h"
 #include "vice-event.h"

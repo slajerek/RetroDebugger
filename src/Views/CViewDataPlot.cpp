@@ -211,7 +211,7 @@ ImU32 ImPlotColorsExtensionGetterCallback(int index)
 	float backgroundB = 0.5f;
 //	float backgroundR = 1.5f;
 
-	CDebugMemoryCell *cell = _currentViewDataPlot->symbols->memory->memoryCells[index];
+	CDebugMemoryCell *cell = _currentViewDataPlot->symbols->memory->GetMemoryCell(index);
 	float oneMinusAlpha = 1 - cell->sa;
 
 	float newR = ((cell->sr * cell->sa) + (oneMinusAlpha * backgroundR));

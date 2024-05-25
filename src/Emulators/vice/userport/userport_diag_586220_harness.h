@@ -27,7 +27,7 @@
 #ifndef VICE_USERPORT_DIAG_586220_HARNESS_H
 #define VICE_USERPORT_DIAG_586220_HARNESS_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 extern int userport_diag_586220_harness_enable;
 

@@ -36,7 +36,7 @@
 #include "interrupt.h"
 #include "lib.h"
 #include "log.h"
-#include "types.h"
+#include "vicetypes.h"
 
 
 typedef struct drivecia1571_context_s {

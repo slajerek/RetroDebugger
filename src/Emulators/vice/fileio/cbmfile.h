@@ -27,7 +27,7 @@
 #ifndef VICE_CBMFILE_H
 #define VICE_CBMFILE_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 struct fileio_info_s;
 

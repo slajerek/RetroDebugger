@@ -1,12 +1,12 @@
 #include "CViewC64AllGraphicsBitmaps.h"
-#include "CViewC64AllGraphics.h"
+#include "ViewC64AllGraphicsDefs.h"
 #include "VID_Main.h"
 #include "VID_ImageBinding.h"
 #include "CDebugInterfaceC64.h"
 #include "CViewC64VicDisplay.h"
 #include "CViewC64VicControl.h"
 #include "CViewDataDump.h"
-#include "CViewMemoryMap.h"
+#include "CViewDataMap.h"
 #include "C64Tools.h"
 #include "CGuiMain.h"
 #include "CViewDataDump.h"
@@ -394,6 +394,20 @@ bool CViewC64AllGraphicsBitmaps::DoFinishDoubleTap(float x, float y)
 {
 	LOGG("CViewC64AllGraphicsBitmaps::DoFinishTap: %f %f", x, y);
 	return CGuiView::DoFinishDoubleTap(x, y);
+}
+
+bool CViewC64AllGraphicsBitmaps::HasContextMenuItems()
+{
+	return true;
+}
+
+void CViewC64AllGraphicsBitmaps::RenderContextMenuItems()
+{
+	bool isVisible = viewControl->visible;
+	if (ImGui::MenuItem("All Bitmaps controller", NULL, &isVisible))
+	{
+		viewControl->SetVisible(isVisible);
+	}
 }
 
 // bug: this event is not called when layout is set, and button state is updated on keyboard shortcut only

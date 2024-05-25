@@ -27,7 +27,7 @@
 #ifndef VICE_CBMDOS_H
 #define VICE_CBMDOS_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 /* CBM DOS Input Processor Error Codes.  */
 #define CBMDOS_IPE_OK                      0

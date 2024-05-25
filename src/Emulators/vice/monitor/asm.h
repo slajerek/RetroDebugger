@@ -33,7 +33,7 @@
 #ifndef VICE_ASM_H
 #define VICE_ASM_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 enum asm_addr_mode {
     ASM_ADDR_MODE_IMPLIED,

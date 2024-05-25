@@ -28,7 +28,7 @@
 #ifndef VICE_VICII_PHI1_H
 #define VICE_VICII_PHI1_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 extern BYTE vicii_read_phi1(void);
 extern BYTE vicii_read_phi1_lowlevel(void);

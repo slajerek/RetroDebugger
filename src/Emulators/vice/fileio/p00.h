@@ -34,7 +34,7 @@
 
 #include <stdio.h>
 
-#include "types.h"
+#include "vicetypes.h"
 
 struct fileio_info_s;
 

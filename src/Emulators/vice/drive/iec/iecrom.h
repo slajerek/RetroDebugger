@@ -27,7 +27,7 @@
 #ifndef VICE_IECROM_H
 #define VICE_IECROM_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 struct drive_s;
 

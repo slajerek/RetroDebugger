@@ -32,7 +32,7 @@
 #include <stdio.h>
 
 #include "resources.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "ui.h"
 #include "uiapi.h"
 #include "uimenu.h"

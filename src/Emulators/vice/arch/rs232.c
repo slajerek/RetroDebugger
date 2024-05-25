@@ -79,7 +79,7 @@
 #include "resources.h"
 #include "rs232.h"
 #include "translate.h"
-#include "types.h"
+#include "vicetypes.h"
 
 #if defined(NEXTSTEP_COMPILE) || defined(OPENSTEP_COMPILE)
 int cfsetispeed(struct termios *t, int speed)

@@ -27,7 +27,7 @@
 
 #ifndef VICE_C64MEMLIMIT_H
 #define VICE_C64MEMLIMIT_H
-#include "types.h"
+#include "vicetypes.h"
 
 #define NUM_CONFIGS 32
 

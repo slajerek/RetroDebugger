@@ -28,7 +28,7 @@
 #define VICE_HS_WIN32_H
 
 #include "sid-snapshot.h"
-#include "types.h"
+#include "vicetypes.h"
 
 extern int hs_dll_open(void);
 extern int hs_isa_open(void);

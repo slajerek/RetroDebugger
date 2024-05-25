@@ -31,7 +31,7 @@
 
 #include "c64_diag_586220_harness.h"
 #include "datasette.h"
-#include "types.h"
+#include "vicetypes.h"
 
 static BYTE c64_diag_userport_pax = 0;
 static BYTE c64_diag_userport_pbx = 0;

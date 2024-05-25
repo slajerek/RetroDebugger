@@ -27,7 +27,7 @@
 #ifndef VICE_USERPORT_JOYSTICK_H
 #define VICE_USERPORT_JOYSTICK_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 #define USERPORT_JOYSTICK_CGA      0
 #define USERPORT_JOYSTICK_PET      1

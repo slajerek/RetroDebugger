@@ -1294,11 +1294,10 @@ int ConvertSdlAxisToJoystickAxis(int sdlAxis)
 			return JOYPAD_N;
 		case SDL_CONTROLLER_BUTTON_DPAD_DOWN:
 			return JOYPAD_S;
-			// TODO: bug? why this is reversed here?
 		case SDL_CONTROLLER_BUTTON_DPAD_LEFT:
-			return JOYPAD_E;
-		case SDL_CONTROLLER_BUTTON_DPAD_RIGHT:
 			return JOYPAD_W;
+		case SDL_CONTROLLER_BUTTON_DPAD_RIGHT:
+			return JOYPAD_E;
 		case SDL_CONTROLLER_BUTTON_A:
 			return JOYPAD_FIRE;
 		case SDL_CONTROLLER_BUTTON_B:

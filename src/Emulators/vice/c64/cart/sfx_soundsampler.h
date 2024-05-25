@@ -27,7 +27,7 @@
 #ifndef VICE_SFX_SOUNDSAMPLER_H
 #define VICE_SFX_SOUNDSAMPLER_H
 
-#include "types.h"
+#include "vicetypes.h"
 #include "sound.h"
 
 extern int sfx_soundsampler_cart_enabled(void);

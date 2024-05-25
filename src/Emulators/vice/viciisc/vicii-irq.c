@@ -29,7 +29,7 @@
 
 #include "interrupt.h"
 #include "mainc64cpu.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "vicii-irq.h"
 #include "viciitypes.h"
 

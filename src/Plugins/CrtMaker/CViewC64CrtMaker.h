@@ -60,16 +60,12 @@ public:
 	CSlrFont *font;
 	float fontScale;
 	float fontHeight;
-	//
 
-	//
-	CImageData *imageDataScreen;
-	CSlrImage *imageScreen;
-	
 	//
 	bool ReadConfigFromFile(char *hjsonFilePath);
 	bool ReadBuildFromFile(char *hjsonFilePath);
 	bool ProcessFiles();
+	bool MakeCartridge();
 	
 	bool AssembleFile(CCrtMakerFile *file);
 	bool ExomizeFile(CCrtMakerFile *file);
@@ -87,6 +83,7 @@ public:
 	char *binFilesPath;
 	char *exoFilesPath;
 	char *decrunchBinPath;
+	u16   decrunchBinStartAddr;
 
 	//
 	int cartSize;
@@ -126,6 +123,21 @@ public:
 	// forward
 	u8 *Assemble64Tass(int *codeStartAddr, int *codeSize);
 	void CopyToRam(int codeStartAddr, int codeSize, u8 *buf);
+	
+	CByteBuffer *byteBufferMapText;
+	void PrintMap(const char *format, ...);
+	
+	// logs
+	ImGuiTextBuffer     Buf;
+	ImGuiTextFilter     Filter;
+	ImVector<int>       LineOffsets; // Index to lines offset. We maintain this with AddLog() calls.
+	bool                AutoScroll;  // Keep scrolling if already at the bottom.
+	
+	void Clear();
+	void Print(const char* fmt, ...) IM_FMTARGS(2);
+	void PrintError(const char* fmt, ...) IM_FMTARGS(2);
+
+	CSlrMutex *mutex;
 };
 
 #endif //_VIEW_C64GOATTRACKER_

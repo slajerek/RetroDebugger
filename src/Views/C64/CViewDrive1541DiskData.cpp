@@ -2,11 +2,15 @@
 #include "CGuiMain.h"
 #include "CViewC64.h"
 #include "CDebugInterfaceC64.h"
+#include "CDataAdapterViceDrive1541DiskContents.h"
 
 extern "C" {
 #define DWORD u32
 disk_image_t *c64d_get_drive_disk_image(int driveId);
+gcr_t *c64d_get_drive_disk_gcr(int driveId);
+int c64d_get_drive_current_halftrack(int driveId);
 #include "gcr.h"
+#include "vice.h"
 #include "diskimage.h"
 }
 
@@ -47,21 +51,59 @@ void CViewDrive1541DiskData::RenderImGui()
 	
 	debugInterface->LockMutex();
 	this->diskImage = c64d_get_drive_disk_image(driveId);
+	gcr_t *gcr = c64d_get_drive_disk_gcr(0);
+	
+//	if (this->diskImage && diskImage->gcr)
+//	{
+//		ImGui::Text("diskImage->gcr=%x gcr=%x ", diskImage->gcr, gcr);
+//	}
+	
+	int currentHalfTrack = c64d_get_drive_current_halftrack(0);
+//	ImGui::Text("current_half_track=%d", currentHalfTrack);
 
-	/* Number of tracks we emulate. 84 for 1541, 168 for 1571 */
-	#define MAX_GCR_TRACKS 168
+//	if (diskImage && diskImage->gcr)
+//	{
+//		//
+//		int sum = 0;
+//		for (int t = 0; t < MAX_GCR_TRACKS; t++) //84; t++)
+//		{
+////			unsigned int device;
+////			unsigned int type;
+////			unsigned int tracks;
+////			unsigned int max_half_tracks;
+//
+//			ImGui::Text("track %d size=%d", t, gcr->tracks[t].size);
+//		}
+//		sum++;
+//	}
 
-	//
-	int sum = 0;
-	for (int t = 0; t < MAX_GCR_TRACKS; t++) //84; t++)
-	{
-		ImGui::Text("track %d size=%d", t, this->diskImage->gcr->tracks[t].size);
-	}
-	sum++;
+	static int uiTrack = 1;
+	static int uiSector = 1;
+	ImGui::PushItemWidth(120.0f);
+	ImGui::InputInt("Track", &uiTrack);
+	ImGui::SameLine();
+	ImGui::InputInt("Sector", &uiSector);
+	
+	int track  = uiTrack-1;
+	int sector = uiSector-1;
+
+	int halftrack = track*2;
+	static u8 buf[256];
+	memset(buf, 0, 256);
+	gcr_read_sector(&(gcr->tracks[halftrack]), buf, sector);
 	
 	
+//	a;
 	
+	// render hex editor
+	ImGui::Text("Data:");
+	memoryEditorSector.DrawContents(buf, 256);
+
+	ImGui::Text("GCR:");
+	memoryEditorGCR.DrawContents(gcr->tracks[track].data, gcr->tracks[track].size);
 	
+//	memoryEditor.DrawContents(gcr->tracks[track].data, gcr->tracks[track].size);
+//	memoryEditor.DrawWindow("Memory Editor", data, data_size);
 	
 	debugInterface->UnlockMutex();
 	

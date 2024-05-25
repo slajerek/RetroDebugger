@@ -27,7 +27,7 @@
 #ifndef VICE_IDE64_H
 #define VICE_IDE64_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 extern int ide64_resources_init(void);
 extern int ide64_resources_shutdown(void);

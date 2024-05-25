@@ -37,7 +37,7 @@ extern "C" {
 #include "CSnapshotsManager.h"
 #include "CDebuggerEmulatorPlugin.h"
 #include "CDebugSymbols.h"
-#include "CViewMemoryMap.h"
+#include "CViewDataMap.h"
 #include "CDebugEventsHistory.h"
 #include "CDebugMemory.h"
 
@@ -76,11 +76,12 @@ CDebugInterfaceAtari::CDebugInterfaceAtari(CViewC64 *viewC64) //, uint8 *memory)
 
 	snapshotsManager = new CSnapshotsManager(this);
 
-	dataAdapter = new CDataAdapterAtari(this);
+	//
+	symbols = new CDebugSymbols(this, true);
+	dataAdapter = new CDataAdapterAtari(symbols);
 
-	// for loading breakpoints and symbols
-	this->symbols = new CDebugSymbols(this, dataAdapter);
-	this->symbols->CreateDefaultSegment();
+	symbols->SetDataAdapter(dataAdapter);
+	symbols->CreateDefaultSegment();
 
 	isDebugOn = true;
 	
@@ -125,9 +126,9 @@ void CDebugInterfaceAtari::StepOneCycle()
 CDebugInterfaceAtari::~CDebugInterfaceAtari()
 {
 	debugInterfaceAtari = NULL;
-	if (screenImage)
+	if (screenImageData)
 	{
-		delete screenImage;
+		delete screenImageData;
 	}
 	
 	if (dataAdapter)
@@ -336,7 +337,7 @@ void CDebugInterfaceAtari::RefreshScreenNoCallback()
 	// dest screen width is 512
 	
 	uint8 *srcScreenPtr = screenBuffer;
-	uint8 *destScreenPtr = (uint8 *)this->screenImage->resultData;
+	uint8 *destScreenPtr = (uint8 *)this->screenImageData->resultData;
 	
 	int screenHeight = this->GetScreenSizeY();
 	

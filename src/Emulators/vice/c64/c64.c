@@ -117,7 +117,7 @@
 #include "tapeport.h"
 #include "translate.h"
 #include "traps.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "userport.h"
 #include "userport_4bit_sampler.h"
 #include "userport_8bss.h"

@@ -6,7 +6,7 @@
 #include "CViewDisassembly.h"
 #include "CDebugInterface.h"
 #include "CDebugSymbolsSegment.h"
-#include "CViewMemoryMap.h"
+#include "CViewDataMap.h"
 #include "CDebugMemoryCell.h"
 #include "CViewDisassembly.h"
 #include "CViewDataDump.h"
@@ -17,7 +17,7 @@ using namespace ImGui;
 // NOTE: dataAdapter is provided to distinguish symbols->dataAdapter, that may include ROM to disassemble code
 //       with a RAM-only data adapter for data monitoring used here (i.e. dataAdapter provided in constructor should point to RAM)
 CViewDataMonitor::CViewDataMonitor(const char *name, float posX, float posY, float posZ, float sizeX, float sizeY,
-								   CDebugSymbols *symbols, CDataAdapter *dataAdapter, CViewMemoryMap *viewMemoryMap, CViewDisassembly *viewDisassembly)
+								   CDebugSymbols *symbols, CDataAdapter *dataAdapter, CViewDataMap *viewMemoryMap, CViewDisassembly *viewDisassembly)
 : CGuiView(name, posX, posY, posZ, sizeX, sizeY)
 {
 	this->symbols = symbols;
@@ -274,7 +274,7 @@ void CViewDataMonitor::RenderImGui()
 					Text("%02X", data[addr]);
 
 					// code addr
-					CDebugMemoryCell *cell = symbols->memory->memoryCells[addr];
+					CDebugMemoryCell *cell = symbols->memory->GetMemoryCell(addr);
 
 					TableNextColumn();
 					if (cell->writePC >= 0)

@@ -27,7 +27,7 @@
 #ifndef VICE_T6721_H
 #define VICE_T6721_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 /* t6721a.pdf:581 status output */
 #define T6721_STATUS_END_OF_SPEECH      0x01

@@ -52,10 +52,7 @@ class C64KeyboardShortcuts;
 class CSlrFontProportional;
 class CSlrKeyboardShortcut;
 class CSlrKeyboardShortcuts;
-class CC64DataAdapter;
-class CC64DirectRamDataAdapter;
-class CC64DiskDataAdapter;
-class CC64DiskDirectRamDataAdapter;
+
 class CDebugSymbols;
 
 class CGuiViewMessages;
@@ -65,10 +62,9 @@ class CDebugInterfaceMenuItemFolder;
 class CDebugInterfaceMenuItemView;
 
 class CViewC64Screen;
-class CViewC64ScreenWrapper;
 class CViewC64ScreenViewfinder;
 
-class CViewMemoryMap;
+class CViewDataMap;
 class CViewDataDump;
 class CViewDataMonitor;
 class CViewDataPlot;
@@ -78,6 +74,7 @@ class CViewDebugEventsHistory;
 class CViewDisassembly;
 class CViewSourceCode;
 class CViewC64StateCPU;
+class CViewC64BreakpointsIrq;
 class CViewC64StateCIA;
 class CViewC64StateSID;
 class CViewC64StateVIC;
@@ -91,6 +88,7 @@ class CViewDrive1541StateVIA;
 class CViewDrive1541Led;
 class CViewDrive1541Browser;
 class CViewDrive1541DiskData;
+class CViewDrive1541BreakpointsIrq;
 class CViewC64StateREU;
 class CViewC64AllGraphicsBitmaps;
 class CViewC64AllGraphicsBitmapsControl;
@@ -266,28 +264,29 @@ public:
 	//
 	void InitViceViews();
 	CViewC64Screen *viewC64Screen;
-//	CViewC64ScreenWrapper *viewC64ScreenWrapper;
 	CViewC64ScreenViewfinder *viewC64ScreenViewfinder;
-	
-	CViewMemoryMap *viewC64MemoryMap;
-	CViewMemoryMap *viewDrive1541MemoryMap;
-	
+
 	CViewDataDump *viewC64MemoryDataDump;
+	CViewDataMap *viewC64MemoryMap;
 	CViewDataWatch *viewC64MemoryDataWatch;
 	CViewDataMonitor *viewC64MemoryMonitor;
 	CViewDataPlot *viewC64MemoryPlot;
 
 	CViewDataDump *viewDrive1541MemoryDataDump;
+	CViewDataMap *viewDrive1541MemoryMap;
+	CViewDataMap *viewDrive1541MemoryMapMinimalRam;
 	CViewDataWatch *viewDrive1541MemoryDataWatch;
 	CViewDataMonitor *viewDrive1541MemoryMonitor;
 
+	CViewDataDump *viewDrive1541DiskContentsDataDump;
+	
 	CViewDataDump *viewC64MemoryDataDump2;
 	CViewDataDump *viewC64MemoryDataDump3;
 
 	CViewDataDump *viewDrive1541MemoryDataDump2;
 	CViewDataDump *viewDrive1541MemoryDataDump3;
 
-	CViewMemoryMap *viewC64CartridgeMemoryMap;
+	CViewDataMap *viewC64CartridgeMemoryMap;
 	CViewDataDump *viewC64CartridgeMemoryDataDump;
 	
 	CViewDisassembly *viewC64Disassembly;
@@ -298,8 +297,10 @@ public:
 	CViewBreakpoints *viewC64BreakpointsPC;
 	CViewBreakpoints *viewC64BreakpointsMemory;
 	CViewBreakpoints *viewC64BreakpointsRaster;
-	CViewBreakpoints *viewC64BreakpointsDrive1541PC;
-	CViewBreakpoints *viewC64BreakpointsDrive1541Memory;
+	CViewC64BreakpointsIrq *viewC64BreakpointsIrq;
+	CViewBreakpoints *viewDrive1541BreakpointsPC;
+	CViewBreakpoints *viewDrive1541BreakpointsMemory;
+	CViewDrive1541BreakpointsIrq *viewDrive1541BreakpointsIrq;
 	
 	CViewDebugEventsHistory *viewC64DebugEventsHistory;
 
@@ -336,7 +337,7 @@ public:
 	CViewC64StateCPU *viewC64StateCPU;
 	CViewDrive1541StateCPU *viewDrive1541StateCPU;
 	
-	CViewDrive1541Browser *viewDrive1541FileD64;
+	CViewDrive1541Browser *viewDrive1541Browser;
 	CViewDrive1541DiskData *viewDrive1541DiskData;
 	
 	// VIC Editor
@@ -364,7 +365,7 @@ public:
 	CViewDataMonitor *viewAtariMemoryMonitor;
 	CViewDataPlot *viewAtariMemoryPlot;
 	CViewDataWatch *viewAtariMemoryDataWatch;
-	CViewMemoryMap *viewAtariMemoryMap;
+	CViewDataMap *viewAtariMemoryMap;
 	CViewAtariStateCPU *viewAtariStateCPU;
 	CViewAtariStateANTIC *viewAtariStateANTIC;
 	CViewAtariStatePIA *viewAtariStatePIA;
@@ -394,12 +395,12 @@ public:
 	CViewDebugEventsHistory *viewNesBreakpointsHistory;
 
 	CViewSourceCode *viewNesSourceCode;
-	CViewMemoryMap *viewNesMemoryMap;
+	CViewDataMap *viewNesMemoryMap;
 	CViewDataDump *viewNesMemoryDataDump;
 	CViewDataMonitor *viewNesMemoryMonitor;
 	CViewDataPlot *viewNesMemoryPlot;
 	CViewDataWatch *viewNesMemoryDataWatch;
-	CViewMemoryMap *viewNesPpuNametableMemoryMap;
+	CViewDataMap *viewNesPpuNametableMemoryMap;
 	CViewDataDump *viewNesPpuNametableMemoryDataDump;
 	CViewMonitorConsole *viewNesMonitorConsole;
 	CViewEmulationCounters *viewNesEmulationCounters;
@@ -515,6 +516,8 @@ public:
 	void SetViewportsEnable(bool viewportsEnable);
 
 	volatile bool isShowingRasterCross;
+	
+	void KeyUpModifierKeys(bool isShift, bool isAlt, bool isControl);
 	
 	virtual void ApplicationEnteredBackground();
 	virtual void ApplicationEnteredForeground();

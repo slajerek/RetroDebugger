@@ -65,7 +65,7 @@ int vsync_frame_counter;
 #include "resources.h"
 #include "sound.h"
 #include "translate.h"
-#include "types.h"
+#include "vicetypes.h"
 #if (defined(WIN32) || defined (HAVE_OPENGL_SYNC)) && !defined(USE_SDLUI) && !defined(USE_SDLUI2)
 #include "videoarch.h"
 #endif

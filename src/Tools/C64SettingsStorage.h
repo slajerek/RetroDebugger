@@ -18,11 +18,14 @@
 // settings that need to be set when emulation is initialized
 #define C64DEBUGGER_BLOCK_POSTLAUNCH	2
 
-enum resetMode : u8
+enum loadPRGResetMode : u8
 {
-	MACHINE_RESET_NONE = 0,
-	MACHINE_RESET_SOFT = 1,
-	MACHINE_RESET_HARD = 2
+	MACHINE_LOADPRG_RESET_MODE_NONE = 0,
+	MACHINE_LOADPRG_RESET_MODE_SOFT = 1,
+	MACHINE_LOADPRG_RESET_MODE_HARD = 2,
+	MACHINE_LOADPRG_RESET_MODE_LOAD_SNAPSHOT_BASIC = 3,
+	MACHINE_LOADPRG_RESET_MODE_END_OF_ENUM = 4,
+	MACHINE_LOADPRG_RESET_MODE_LOAD_SNAPSHOT_CUSTOM = 5
 };
 
 enum muteSIDMode : u8
@@ -126,12 +129,12 @@ extern u8 c64SettingsSelectedJoystick2;
 
 // startup
 extern int c64SettingsWaitOnStartup;
-extern CSlrString *c64SettingsPathToC64Roms;
-extern CSlrString *c64SettingsPathToC64Kernal;
-extern CSlrString *c64SettingsPathToC64Basic;
-extern CSlrString *c64SettingsPathToC64Chargen;
-extern CSlrString *c64SettingsPathToC64Drive1541;
-extern CSlrString *c64SettingsPathToC64Drive1541ii;
+extern CSlrString *c64SettingsPathToRomsC64;
+extern CSlrString *c64SettingsPathToRomC64Kernal;
+extern CSlrString *c64SettingsPathToRomC64Basic;
+extern CSlrString *c64SettingsPathToRomC64Chargen;
+extern CSlrString *c64SettingsPathToRomC64Drive1541;
+extern CSlrString *c64SettingsPathToRomC64Drive1541ii;
 extern CSlrString *c64SettingsPathToD64;
 extern CSlrString *c64SettingsDefaultD64Folder;
 extern CSlrString *c64SettingsPathToPRG;

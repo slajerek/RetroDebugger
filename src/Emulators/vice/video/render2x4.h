@@ -28,7 +28,7 @@
 #ifndef VICE_RENDER2X4_H
 #define VICE_RENDER2X4_H
 
-#include "types.h"
+#include "vicetypes.h"
 #include "video.h"
 
 extern void render_08_2x4_04(const video_render_color_tables_t *color_tab,

@@ -31,7 +31,7 @@
 #ifndef VICE_GCR_H
 #define VICE_GCR_H
 
-#include "types.h"
+#include "vicetypes.h"
 #include "cbmdos.h"
 
 /* Number of bytes in one raw track. For usage with D64/D71 */

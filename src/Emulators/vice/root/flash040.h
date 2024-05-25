@@ -26,7 +26,7 @@
 #ifndef VICE_FLASH040_H
 #define VICE_FLASH040_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 enum flash040_type_s {
     /* 29F040 */

@@ -39,7 +39,7 @@
 #include "tap.h"
 #include "tape-snapshot.h"
 #include "tape.h"
-#include "types.h"
+#include "vicetypes.h"
 
 
 /* Logging.  */

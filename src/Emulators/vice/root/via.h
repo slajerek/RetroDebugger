@@ -28,7 +28,7 @@
 #ifndef VICE_VIA_H
 #define VICE_VIA_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 /* MOS 6522 registers */
 #define VIA_PRB         0  /* Port B */

@@ -36,7 +36,7 @@
 #include "lib.h"
 #include "resources.h"
 #include "translate.h"
-#include "types.h"
+#include "vicetypes.h"
 
 static int cmdline_fsdirectory(const char *param, void *extra_param)
 {

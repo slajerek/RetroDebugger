@@ -1,10 +1,10 @@
 #include "CDataAdapterAtari.h"
 #include "CDebugInterfaceAtari.h"
 
-CDataAdapterAtari::CDataAdapterAtari(CDebugInterfaceAtari *debugInterfaceAtari)
-: CDebugDataAdapter("Atari", debugInterfaceAtari)
+CDataAdapterAtari::CDataAdapterAtari(CDebugSymbols *debugSymbols)
+: CDebugDataAdapter("Atari", debugSymbols)
 {
-	this->debugInterfaceAtari = debugInterfaceAtari;
+	this->debugInterfaceAtari = (CDebugInterfaceAtari*)(debugSymbols->debugInterface);
 }
 
 int CDataAdapterAtari::AdapterGetDataLength()

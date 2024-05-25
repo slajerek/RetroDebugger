@@ -33,7 +33,7 @@
 #include "rs232.h"
 #include "rs232drv.h"
 #include "translate.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "util.h"
 
 #if defined(HAVE_RS232DEV) || defined(HAVE_RS232NET)

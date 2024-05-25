@@ -28,7 +28,7 @@
 #ifndef VICE_TPI_H
 #define VICE_TPI_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 #define TPI_PA          0
 #define TPI_PB          1

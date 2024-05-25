@@ -6,12 +6,13 @@
 #include "CSlrString.h"
 #include "SYS_KeyCodes.h"
 #include "CViewC64.h"
-#include "CViewMemoryMap.h"
+#include "CViewDataMap.h"
 #include "C64Tools.h"
 #include "SYS_Threading.h"
 #include "CGuiEditHex.h"
 #include "VID_ImageBinding.h"
-#include "CDataAdapter.h"
+#include "CDebugDataAdapter.h"
+#include "CDataAddressEditBox.h"
 #include "CViewDisassembly.h"
 #include "CDebugInterface.h"
 #include "C64SettingsStorage.h"
@@ -35,7 +36,7 @@
 #include "CViewNesScreen.h"
 
 CViewDataDump::CViewDataDump(const char *name, float posX, float posY, float posZ, float sizeX, float sizeY,
-							 CDebugSymbols *symbols, CViewMemoryMap *viewMemoryMap, CViewDisassembly *viewDisassembly)
+							 CDebugSymbols *symbols, CViewDataMap *viewMemoryMap, CViewDisassembly *viewDisassembly)
 : CGuiView(name, posX, posY, posZ, sizeX, sizeY)
 {
 	imGuiNoWindowPadding = true;
@@ -48,10 +49,15 @@ CViewDataDump::CViewDataDump(const char *name, float posX, float posY, float pos
 	this->viewMemoryMap = viewMemoryMap;
 	this->viewDisassembly = viewDisassembly;
 	
+	editBoxHex = NULL;
+	dataAddressEditBox = NULL;
+	
 	if (this->viewMemoryMap)
 	{
 		this->viewMemoryMap->SetDataDumpView(this);
 	}
+	
+	SetDataAdapter(dataAdapter);
 	
 	fontAtari = viewC64->fontAtari;
 	fontCBM1 = viewC64->fontCBM1;
@@ -73,7 +79,7 @@ CViewDataDump::CViewDataDump(const char *name, float posX, float posY, float pos
 	dataShowStart = 0;
 	dataShowEnd = 0;
 	dataShowSize = 0;
-	dataAddr = 0;
+	currentDataIndex = 0;
 	
 	numberOfBytesPerLine = 8;
 	
@@ -89,8 +95,8 @@ CViewDataDump::CViewDataDump(const char *name, float posX, float posY, float pos
 	showDataCharacters = true;
 	showSprites = true;
 		
-	editHex = new CGuiEditHex(this);
-	editHex->isCapitalLetters = false;
+	editBoxHex = new CGuiEditHex(this);
+	editBoxHex->isCapitalLetters = false;
 	isEditingValue = false;
 	
 	isEditingValueAddr = false;
@@ -98,9 +104,6 @@ CViewDataDump::CViewDataDump(const char *name, float posX, float posY, float pos
 	strTemp = new CSlrString();
 
 	renderDataWithColors = false;
-
-	//
-	SetNumDigitsInAddress(4);
 
 	//
 	AddLayoutParameter(new CLayoutParameterFloat("Font Size", &fontSize));
@@ -161,19 +164,17 @@ CViewDataDump::CViewDataDump(const char *name, float posX, float posY, float pos
 	this->SetPosition(posX, posY, sizeX, sizeY, true);
 }
 
-void CViewDataDump::SetDataAdapter(CDataAdapter *newDataAdapter)
+void CViewDataDump::SetDataAdapter(CDebugDataAdapter *newDataAdapter)
 {
 	this->dataAdapter = newDataAdapter;
-}
-
-void CViewDataDump::SetNumDigitsInAddress(int numDigits)
-{
-	numDigitsInAddress = numDigits;
-	sprintf(digitsAddressFormat, "%%0%dx", numDigitsInAddress);
-	sprintf(digitsAddressFormatUpperCase, "%%0%dX", numDigitsInAddress);
-//	LOGD("digitsAddressFormat='%s'", digitsAddressFormat);
+	if (this->dataAddressEditBox)
+		delete this->dataAddressEditBox;
+	this->dataAddressEditBox = NULL;
 	
-	RecalculateFontSizes();
+	if (this->dataAdapter)
+	{
+		this->dataAddressEditBox = dataAdapter->CreateDataAddressEditBox(this);
+	}
 }
 
 void CViewDataDump::SetPosition(float posX, float posY, float sizeX, float sizeY)
@@ -232,7 +233,7 @@ void CViewDataDump::DoLogic()
 
 bool CViewDataDump::FindDataPosition(float x, float y, int *dataPositionX, int *dataPositionY, int *dataPositionAddr)
 {
-	float fontBytesSize40 = 4*fontBytesSize;
+	float fontBytesSize40 = (float)(dataAddressEditBox->GetNumDigits()) * fontBytesSize;
 	float fontBytesSize40_gap = fontBytesSize40 + gapAddress;
 	float fontBytesSize20_gap = 2.0*fontBytesSize + gapHexData;
 	float fontBytesSize05 = gapDataCharacters; //0.5f*fontBytesSize;
@@ -305,7 +306,7 @@ void CViewDataDump::Render()
 //	if (debugInterface->GetSettingIsWarpSpeed() == true)
 //		return;
 
-	char buf[256+64];
+	char *buf = SYS_GetCharBuf();
 	
 	float px = posX;
 	float py = posY;
@@ -320,7 +321,7 @@ void CViewDataDump::Render()
 	float cx = 0.0f;
 	float cy = 0.0f;
 	
-	float fontBytesSize40 = fontBytesSize * (float)numDigitsInAddress;
+	float fontBytesSize40 = fontBytesSize * (float)dataAddressEditBox->GetNumDigits();
 	float fontBytesSize40_gap = fontBytesSize40 + gapAddress;
 	float fontBytesSize20_gap = 2.0*fontBytesSize + gapHexData;
 	float fontBytesSize05 = gapDataCharacters; //0.5f*fontBytesSize;
@@ -341,35 +342,35 @@ void CViewDataDump::Render()
 				if (dy == editCursorPositionY)
 				{
 					int addrEdit = GetAddrFromDataPosition(editCursorPositionX, editCursorPositionY);
-//					sprintfHexCode16(buf, addrEdit);
-					sprintf(buf, digitsAddressFormat, addrEdit);
-					
+
+					dataAdapter->GetAddressStringForCell(addrEdit, buf, MAX_STRING_LENGTH);
+	
 					BlitFilledRectangle(px, py, posZ, fontBytesSize40, fontBytesSize, 0.0f, 0.7f, 0.0f, 1.0f);
 				}
 				else
 				{
-//					sprintfHexCode16(buf, addr + addrOffset);
-					sprintf(buf, digitsAddressFormat, addr + addrOffset);
-
+					dataAdapter->GetAddressStringForCell(addr + addrOffset, buf, MAX_STRING_LENGTH);
 				}
 			}
 			fontBytes->BlitText(buf, px, py, posZ, fontBytesSize);
+			px += ((float)strlen(buf)) * fontBytesSize + gapAddress;
 		}
 		else
 		{
 			if (dy == numberOfLines2)
 			{
-				fontBytes->BlitTextColor(editHex->textWithCursor, px, py, posZ, fontBytesSize, 1.0f, 1.0f, 1.0f, 1.0f);
+//				fontBytes->BlitTextColor(editBoxHex->textWithCursor, px, py, posZ, fontBytesSize, 1.0f, 1.0f, 1.0f, 1.0f);
+				dataAddressEditBox->Render(px, py, fontBytes, fontBytesSize);
+				
+				px += ((float)dataAddressEditBox->GetNumDigits()) * fontBytesSize + gapAddress;
 			}
 			else
 			{
-//				sprintfHexCode16(buf, addr + addrOffset);
-				sprintf(buf, digitsAddressFormat, addr + addrOffset);
+				dataAdapter->GetAddressStringForCell(addr + addrOffset, buf, MAX_STRING_LENGTH);
 				fontBytes->BlitText(buf, px, py, posZ, fontBytesSize);
+				px += ((float)strlen(buf)) * fontBytesSize + gapAddress;
 			}
 		}
-		
-		px += fontBytesSize40_gap;
 		
 		// data bytes
 		for (int dx = 0; dx < numberOfBytesPerLine; dx++)
@@ -380,99 +381,113 @@ void CViewDataDump::Render()
 			dataAdapter->AdapterReadByte(a, &value, &isAvailable);
 			if (isAvailable)
 			{
-				CDebugMemoryCell *cell = debugMemory->memoryCells[a];
+				CDebugMemoryCell *cell = debugMemory->GetMemoryCell(a);
 				
-				if (cell->isExecuteCode)
+				if (cell)
 				{
-					BlitFilledRectangle(px, py, posZ, markerSizeX, markerSizeY,
-										colorExecuteCodeR, colorExecuteCodeG, colorExecuteCodeB, colorExecuteCodeA);
-				}
-				else if (cell->isExecuteArgument)
-				{
-					BlitFilledRectangle(px, py, posZ, markerSizeX, markerSizeY,
-										colorExecuteArgumentR, colorExecuteArgumentG, colorExecuteArgumentB, colorExecuteArgumentA);
-				}
-				BlitFilledRectangle(px, py, posZ, markerSizeX, markerSizeY, cell->sr, cell->sg, cell->sb, cell->sa);
-								
-				//BlitTextColor(CSlrString *text, float posX, float posY, float posZ, float scale, float colorR, float colorG, float colorB, float alpha)
-				
-				// TODO: refactor me
-				if (this->viewMemoryMap->visible == false)
-				{
-					this->viewMemoryMap->UpdateMapColorsForCell(cell);
-				}
-				
-				if (/*isVisibleEditCursor &&*/ editCursorPositionY == dy && editCursorPositionX == dx)
-				{
-					cx = px;
-					cy = py;
-					
-					if (isEditingValue == false)
+					if (cell->isExecuteCode)
 					{
-						sprintfHexCode8(buf, value);
+						BlitFilledRectangle(px, py, posZ, markerSizeX, markerSizeY,
+											colorExecuteCodeR, colorExecuteCodeG, colorExecuteCodeB, colorExecuteCodeA);
+					}
+					else if (cell->isExecuteArgument)
+					{
+						BlitFilledRectangle(px, py, posZ, markerSizeX, markerSizeY,
+											colorExecuteArgumentR, colorExecuteArgumentG, colorExecuteArgumentB, colorExecuteArgumentA);
+					}
+					BlitFilledRectangle(px, py, posZ, markerSizeX, markerSizeY, cell->sr, cell->sg, cell->sb, cell->sa);
+									
+					//BlitTextColor(CSlrString *text, float posX, float posY, float posZ, float scale, float colorR, float colorG, float colorB, float alpha)
 
-						CDebugMemoryCell *cell = debugMemory->memoryCells[this->dataAddr];
-//						fontBytes->BlitTextColor(buf, px, py, posZ, fontBytesSize,
-
-//						fontBytesSize*2.0f, fontCharactersWidth, 0.3f,  1.0f, 0.3f, 0.5f, 1.3f);
-
-						float r = cell->rr;
-						float g = cell->rg;
-						float b = cell->rb;
-						float a = cell->ra;
-
-						// prevent white color on white background
-						float s = cell->rr + cell->rg + cell->rb;
-						
-//						if (s > 2.7f)
-//						{
-							r = cell->rr < 0.40f ? cell->rr : 0.4f;
-							g = cell->rg < 0.40f ? cell->rg : 0.4f;
-							b = cell->rb < 0.40f ? cell->rb : 0.4f;
-							a = cell->ra;
-//						}
-//						else if (s > 1.2f)
-//						{
-//							r = cell->rr < 0.5f ? cell->rr : 0.6f;
-//							g = cell->rg < 0.5f ? cell->rg : 0.6f;
-//							b = cell->rb < 0.5f ? cell->rb : 0.6f;
-//							a = cell->ra;
-//						}
-
-						BlitFilledRectangle(px, py, posZ, fontBytesSize*2.0f, fontCharactersWidth, r, g, b, a);
-						
-//
-//						viewC64->fontDisassemblyInverted->BlitTextColor(buf, px, py, posZ, fontBytesSize, cell->rb, cell->rg, cell->rr, 1.0f);
-						viewC64->fontDisassemblyInverted->BlitTextColor(buf, px, py, posZ, fontBytesSize, 1.0f, 1.0f, 1.0f, 0.7f);
+					// TODO: refactor refresh of memory map cell colors and skip visibility and update, change so debugmemory has a list of consumers, if no consumers are visible skip this update UpdateCellColors, if any consumer visible do for each cell once per frame
+					if (this->viewMemoryMap)
+					{
+						if (viewMemoryMap->visible == false)
+						{
+							cell->UpdateCellColors(value, viewMemoryMap->showCurrentExecutePC, symbols->GetCurrentExecuteAddr());
+						}
 					}
 					else
 					{
-//						if (cell->isExecute)
-						{
-//							LOGD("editHex->textWithCursor=%s", editHex->textWithCursor);
-//							fontBytes->BlitTextColor(editHex->textWithCursor, px, py, posZ, fontBytesSize, 1.0f, 1.0f, 1.0f, 1.0f);
-//							viewC64->fontDisassemblyInverted->BlitTextColor(editHex->textWithCursor, px, py, posZ, fontBytesSize, 1.0f, 1.0f, 1.0f, 1.0f);
-							fontBytes->BlitTextColor(editHex->textWithCursor, px, py, posZ, fontBytesSize, 1.0f, 1.0f, 1.0f, 1.0f);
-						}
-//						else
-//						{
-//							fontBytes->BlitTextColor(editHex->textWithCursor, px, py, posZ, fontBytesSize, 0.8f, 0.8f, 0.8f, 1.0f);
-//						}
+						cell->UpdateCellColors(value, false, 0);
 					}
 					
-					dataAddr = a;
-				}
-				else
-				{
-					sprintfHexCode8(buf, value);
-//					if (cell->isExecute)
+					////////// refactor^^^^
+
+					if (/*isVisibleEditCursor &&*/ editCursorPositionY == dy && editCursorPositionX == dx)
 					{
-						fontBytes->BlitTextColor(buf, px, py, posZ, fontBytesSize, 1.0f, 1.0f, 1.0f, 1.0f);
+						cx = px;
+						cy = py;
+						
+						if (isEditingValue == false)
+						{
+							sprintfHexCode8(buf, value);
+
+							CDebugMemoryCell *cell = debugMemory->GetMemoryCell(this->currentDataIndex);
+	//						fontBytes->BlitTextColor(buf, px, py, posZ, fontBytesSize,
+
+	//						fontBytesSize*2.0f, fontCharactersWidth, 0.3f,  1.0f, 0.3f, 0.5f, 1.3f);
+
+							float r = cell->rr;
+							float g = cell->rg;
+							float b = cell->rb;
+							float a = cell->ra;
+
+							// prevent white color on white background
+							float s = cell->rr + cell->rg + cell->rb;
+							
+	//						if (s > 2.7f)
+	//						{
+								r = cell->rr < 0.40f ? cell->rr : 0.4f;
+								g = cell->rg < 0.40f ? cell->rg : 0.4f;
+								b = cell->rb < 0.40f ? cell->rb : 0.4f;
+								a = cell->ra;
+	//						}
+	//						else if (s > 1.2f)
+	//						{
+	//							r = cell->rr < 0.5f ? cell->rr : 0.6f;
+	//							g = cell->rg < 0.5f ? cell->rg : 0.6f;
+	//							b = cell->rb < 0.5f ? cell->rb : 0.6f;
+	//							a = cell->ra;
+	//						}
+
+							BlitFilledRectangle(px, py, posZ, fontBytesSize*2.0f, fontCharactersWidth, r, g, b, a);
+							
+	//
+	//						viewC64->fontDisassemblyInverted->BlitTextColor(buf, px, py, posZ, fontBytesSize, cell->rb, cell->rg, cell->rr, 1.0f);
+							viewC64->fontDisassemblyInverted->BlitTextColor(buf, px, py, posZ, fontBytesSize, 1.0f, 1.0f, 1.0f, 0.7f);
+						}
+						else
+						{
+	//						if (cell->isExecute)
+							{
+	//							LOGD("editHex->textWithCursor=%s", editHex->textWithCursor);
+	//							fontBytes->BlitTextColor(editHex->textWithCursor, px, py, posZ, fontBytesSize, 1.0f, 1.0f, 1.0f, 1.0f);
+	//							viewC64->fontDisassemblyInverted->BlitTextColor(editHex->textWithCursor, px, py, posZ, fontBytesSize, 1.0f, 1.0f, 1.0f, 1.0f);
+								fontBytes->BlitTextColor(editBoxHex->textWithCursor, px, py, posZ, fontBytesSize, 1.0f, 1.0f, 1.0f, 1.0f);
+							}
+	//						else
+	//						{
+	//							fontBytes->BlitTextColor(editHex->textWithCursor, px, py, posZ, fontBytesSize, 0.8f, 0.8f, 0.8f, 1.0f);
+	//						}
+						}
+						
+						currentDataIndex = a;
 					}
-//					else
-//					{
-//						fontBytes->BlitTextColor(buf, px, py, posZ, fontBytesSize, 0.8f, 0.8f, 0.8f, 1.0f);
-//					}
+					else
+					{
+						sprintfHexCode8(buf, value);
+	//					if (cell->isExecute)
+						{
+							fontBytes->BlitTextColor(buf, px, py, posZ, fontBytesSize, 1.0f, 1.0f, 1.0f, 1.0f);
+						}
+	//					else
+	//					{
+	//						fontBytes->BlitTextColor(buf, px, py, posZ, fontBytesSize, 0.8f, 0.8f, 0.8f, 1.0f);
+	//					}
+					}
+					
+					
 				}
 			}
 			
@@ -489,9 +504,14 @@ void CViewDataDump::Render()
 			for (int dx = 0; dx < numberOfBytesPerLine; dx++)
 			{
 				u8 value;
-				dataAdapter->AdapterReadByte(a, &value);
+				bool isAvailable;
 				
-				fontCharacters->BlitChar((u16)value, px, py, posZ, fontCharactersSize);
+				dataAdapter->AdapterReadByte(a, &value, &isAvailable);
+				
+				if (isAvailable)
+				{
+					fontCharacters->BlitChar((u16)value, px, py, posZ, fontCharactersSize);
+				}
 				
 				px += fontCharactersWidth;
 				a++;
@@ -608,6 +628,7 @@ void CViewDataDump::Render()
 		}
 	}
 
+	SYS_ReleaseCharBuf(buf);
 }
 
 void CViewDataDump::UpdateCharacters(bool useColors, u8 colorD021, u8 colorD022, u8 colorD023, u8 colorD800)
@@ -615,7 +636,7 @@ void CViewDataDump::UpdateCharacters(bool useColors, u8 colorD021, u8 colorD022,
 	std::list<CSlrImage *>::iterator itImage = charactersImages.begin();
 	std::list<CImageData *>::iterator itImageData =  charactersImageData.begin();
 	
-	int addr = dataAddr;
+	int addr = currentDataIndex;
 	
 	if (addr < 0)
 	{
@@ -678,7 +699,7 @@ void CViewDataDump::UpdateSprites(bool useColors, u8 colorD021, u8 colorD025, u8
 	std::list<CSlrImage *>::iterator itImage = spritesImages.begin();
 	std::list<CImageData *>::iterator itImageData =  spritesImageData.begin();
 	
-	int addr = dataAddr;
+	int addr = currentDataIndex;
 	
 //	int zi = 0;
 	while(itImage != spritesImages.end())
@@ -768,13 +789,16 @@ bool CViewDataDump::DoTap(float x, float y)
 
 	if (guiMain->isControlPressed)
 	{
-		CDebugMemoryCell *cell = debugMemory->memoryCells[dataPositionAddr];
+		CDebugMemoryCell *cell = debugMemory->GetMemoryCell(dataPositionAddr);
 		
 		if (guiMain->isShiftPressed)
 		{
 			if (cell->readPC != -1)
 			{
-				viewDisassembly->ScrollToAddress(cell->readPC);
+				if (viewDisassembly)
+				{
+					viewDisassembly->ScrollToAddress(cell->readPC);
+				}
 			}
 			
 			if (guiMain->isAltPressed)
@@ -793,7 +817,10 @@ bool CViewDataDump::DoTap(float x, float y)
 		{
 			if (cell->writePC != -1)
 			{
-				viewDisassembly->ScrollToAddress(cell->writePC);
+				if (viewDisassembly)
+				{
+					viewDisassembly->ScrollToAddress(cell->writePC);
+				}
 			}
 			
 			if (guiMain->isAltPressed)
@@ -817,7 +844,10 @@ bool CViewDataDump::DoTap(float x, float y)
 			if (time < c64SettingsDoubleClickMS)
 			{
 				// double click
-				viewDisassembly->ScrollToAddress(dataPositionAddr);
+				if (viewDisassembly)
+				{
+					viewDisassembly->ScrollToAddress(dataPositionAddr);
+				}
 			}
 		}
 	}
@@ -1001,7 +1031,7 @@ void CViewDataDump::ScrollToAddress(int address, bool updateDataShowStart)
 	}
 
 	//isVisibleEditCursor = true;
-	dataAddr = address;
+	currentDataIndex = address;
 }
 
 bool CViewDataDump::KeyDown(u32 keyCode, bool isShift, bool isAlt, bool isControl, bool isSuper)
@@ -1032,8 +1062,6 @@ bool CViewDataDump::KeyDown(u32 keyCode, bool isShift, bool isAlt, bool isContro
 		{
 			fontCharacters = fontCBM1;
 		}
-		
-		//viewC64->viewC64Screen->KeyUpModifierKeys(isShift, isAlt, isControl);
 		return false;
 	}
 	
@@ -1043,32 +1071,42 @@ bool CViewDataDump::KeyDown(u32 keyCode, bool isShift, bool isAlt, bool isContro
 	if (isEditingValue && keyboardShortcutMemory == viewC64->mainMenuBar->kbsGoToAddress)
 	{
 		CancelEditingHexBox();
-
+		
 		// setting up the key shortcut to enter goto address will be handled later
 	}
 	
-	if (isEditingValue || isEditingValueAddr)
+	if (isEditingValue)
 	{
-		editHex->KeyDown(keyCode);
+		editBoxHex->KeyDown(keyCode);
 		return true;
 	}
 	
-	if (keyCode == MTKEY_HOME && isControl)
+	if (isEditingValueAddr)
+	{
+		dataAddressEditBox->KeyDown(keyCode);
+		return true;
+	}
+	
+	// TODO: HOME should move to first item in current line, ctrl+HOME should move to beginning of document
+	if (keyCode == MTKEY_HOME) // && isControl)
 	{
 		this->ScrollToAddress(0x0000);
 		return true;
 	}
 	
-	if (keyCode == MTKEY_END && isControl)
+	if (keyCode == MTKEY_END) // && isControl)
 	{
 		this->ScrollToAddress(dataAdapter->AdapterGetDataLength()-1);
 		return true;
 	}
 	
-	CSlrKeyboardShortcut *keyboardShortcutDisassembly = guiMain->keyboardShortcuts->FindShortcut(KBZONE_DISASSEMBLY, bareKey, isShift, isAlt, isControl, isSuper);
-	if (keyboardShortcutDisassembly == viewC64->mainMenuBar->kbsToggleTrackPC)
+	if (viewDisassembly != NULL)
 	{
-		return viewDisassembly->KeyDown(keyCode, isShift, isAlt, isControl, isSuper);
+		CSlrKeyboardShortcut *keyboardShortcutDisassembly = guiMain->keyboardShortcuts->FindShortcut(KBZONE_DISASSEMBLY, bareKey, isShift, isAlt, isControl, isSuper);
+		if (keyboardShortcutDisassembly == viewC64->mainMenuBar->kbsToggleTrackPC)
+		{
+			return viewDisassembly->KeyDown(keyCode, isShift, isAlt, isControl, isSuper);
+		}
 	}
 	
 	//
@@ -1076,25 +1114,12 @@ bool CViewDataDump::KeyDown(u32 keyCode, bool isShift, bool isAlt, bool isContro
 	if (keyboardShortcutMemory == viewC64->mainMenuBar->kbsGoToAddress)
 	{
 		int adr = dataShowStart + dataShowSize/2 + dataAdapter->GetDataOffset();
-		editHex->SetValue(adr, numDigitsInAddress);
+		dataAddressEditBox->SetValue(adr);
 		
 		isEditingValue = false;
 		isEditingValueAddr = true;
 		
-		// TODO: make generic and iterate over interfaces
-		if (viewC64->debugInterfaceC64)
-		{
-			viewC64->viewC64Screen->KeyUpModifierKeys(isShift, isAlt, isControl);
-		}
-		if (viewC64->debugInterfaceAtari)
-		{
-			viewC64->viewAtariScreen->KeyUpModifierKeys(isShift, isAlt, isControl);
-		}
-
-		if (viewC64->debugInterfaceNes)
-		{
-			viewC64->viewNesScreen->KeyUpModifierKeys(isShift, isAlt, isControl);
-		}
+		viewC64->KeyUpModifierKeys(isShift, isAlt, isControl);
 		return true;
 	}
 
@@ -1260,7 +1285,7 @@ bool CViewDataDump::KeyDown(u32 keyCode, bool isShift, bool isAlt, bool isContro
 			addr -= dataAdapter->GetDataOffset();
 			u8 v;
 			dataAdapter->AdapterReadByte(addr, &v);
-			editHex->SetValue(v, 2);
+			editBoxHex->SetValue(v, 2);
 			isEditingValue = true;
 			return true;
 		}
@@ -1268,7 +1293,7 @@ bool CViewDataDump::KeyDown(u32 keyCode, bool isShift, bool isAlt, bool isContro
 		{
 			// mimic start editing
 			this->KeyDown(MTKEY_ENTER, false, false, false, false);
-			editHex->KeyDown(keyCode);
+			editBoxHex->KeyDown(keyCode);
 			return true;
 		}
 	}
@@ -1309,23 +1334,26 @@ void CViewDataDump::GuiEditHexEnteredValue(CGuiEditHex *editHex, u32 lastKeyCode
 		
 		// move to next value?
 	}
-	else
+}
+
+void CViewDataDump::DataAddressEditBoxEnteredValue(CDataAddressEditBox *editBox, u32 lastKeyCode, bool isCancelled)
+{
+	if (isEditingValueAddr)
 	{
 		int addrOffset = dataAdapter->GetDataOffset();
-		int addr = editHex->value;
+		int addr = dataAddressEditBox->GetValue();
 
 		// ux, when user entered value below data offset let us add it
 		if (addr < addrOffset)
 		{
 			addr += addrOffset;
 		}
-		
+
 		addr -= addrOffset;
-		
-		ScrollToAddress(addr);
+
 		isEditingValueAddr = false;
+		ScrollToAddress(addr);
 	}
-	
 }
 
 void CViewDataDump::PasteHexValuesFromClipboard()
@@ -1486,10 +1514,10 @@ void CViewDataDump::RenderContextMenuItems()
 {
 	CGuiView::RenderContextMenuItems();
 	
-	CDebugMemoryCell *cell = debugMemory->memoryCells[dataAddr];
+	CDebugMemoryCell *cell = debugMemory->GetMemoryCell(currentDataIndex);
 	
 	u8 val;
-	dataAdapter->AdapterReadByte(dataAddr, &val);
+	dataAdapter->AdapterReadByte(currentDataIndex, &val);
 	
 	localLabelText[0] = 0;
 	CDebugSymbolsSegment *currentSegment = NULL;
@@ -1497,7 +1525,7 @@ void CViewDataDump::RenderContextMenuItems()
 	if (symbols && symbols->currentSegment)
 	{
 		currentSegment = symbols->currentSegment;
-		label = currentSegment->FindLabel(dataAddr);
+		label = currentSegment->FindLabel(currentDataIndex);
 		if (label)
 		{
 			strcpy(localLabelText, label->GetLabelText());
@@ -1505,9 +1533,12 @@ void CViewDataDump::RenderContextMenuItems()
 	}
 
 	char *buf = SYS_GetCharBuf();
-	char *fmt = SYS_GetCharBuf();
-	sprintf(fmt, "Address %s: %02X", digitsAddressFormatUpperCase, val);
-	sprintf(buf, fmt, dataAddr);
+	dataAdapter->GetAddressStringForCell(currentDataIndex, buf, MAX_STRING_LENGTH);
+
+	char *dataAddressStr = SYS_GetCharBuf();
+	sprintf(dataAddressStr, "Address %s: %02X", buf, val);
+	SYS_ReleaseCharBuf(dataAddressStr);
+
 	ImGui::Text(buf);
 	
 	ImGui::SameLine();
@@ -1533,7 +1564,7 @@ void CViewDataDump::RenderContextMenuItems()
 			{
 				// TODO: refactor this: fix ownership
 				char *labelText = STRALLOC(localLabelText);
-				currentSegment->AddCodeLabel(dataAddr, labelText);
+				currentSegment->AddCodeLabel(currentDataIndex, labelText);
 			}
 		}
 	}
@@ -1571,126 +1602,129 @@ void CViewDataDump::RenderContextMenuItems()
 //	if (ImGui::CollapsingHeader("Breakpoints", ImGuiTreeNodeFlags_DefaultOpen))
 	{
 		// breakpoints
-		if (currentSegment)
+		if (currentSegment && currentSegment->supportBreakpoints && currentSegment->breakpointsMemory)
 		{
-			if (currentSegment->breakpointsMemory)
+			bool supportsWriteBreakpoint, supportsReadBreakpoint;
+			currentSegment->symbols->debugInterface->SupportsBreakpoints(&supportsWriteBreakpoint, &supportsReadBreakpoint);
+			
+			if (supportsWriteBreakpoint || supportsReadBreakpoint)
 			{
-				bool supportsWriteBreakpoint, supportsReadBreakpoint;
-				currentSegment->symbols->debugInterface->SupportsBreakpoints(&supportsWriteBreakpoint, &supportsReadBreakpoint);
+				currentSegment->symbols->debugInterface->LockMutex();
 				
-				if (supportsWriteBreakpoint || supportsReadBreakpoint)
+				ImGui::Text("Breakpoint:");
+				CBreakpointMemory *memoryBreakpoint = (CBreakpointMemory*)currentSegment->breakpointsMemory->GetBreakpoint(currentDataIndex);
+				
+				if (!memoryBreakpoint)
 				{
-					currentSegment->symbols->debugInterface->LockMutex();
-					
-					ImGui::Text("Breakpoint:");
-					CBreakpointMemory *memoryBreakpoint = (CBreakpointMemory*)currentSegment->breakpointsMemory->GetBreakpoint(dataAddr);
-					
-					if (!memoryBreakpoint)
+					if (supportsWriteBreakpoint)
 					{
-						if (supportsWriteBreakpoint)
+						bool isWrite = false;
+						if (ImGui::Checkbox("Write##memoryBreakpoint", &isWrite))
 						{
-							bool isWrite = false;
-							if (ImGui::Checkbox("Write##memoryBreakpoint", &isWrite))
-							{
-								currentSegment->AddBreakpointMemory(dataAddr, MEMORY_BREAKPOINT_ACCESS_WRITE, MemoryBreakpointComparison::MEMORY_BREAKPOINT_LESS_OR_EQUAL, 0xFF);
-							}
-						}
-						
-						if (supportsReadBreakpoint)
-						{
-							bool isRead = false;
-							ImGui::SameLine();
-							if (ImGui::Checkbox("Read##memoryBreakpoint", &isRead))
-							{
-								currentSegment->AddBreakpointMemory(dataAddr, MEMORY_BREAKPOINT_ACCESS_READ, MemoryBreakpointComparison::MEMORY_BREAKPOINT_LESS_OR_EQUAL, 0xFF);
-							}
+							currentSegment->AddBreakpointMemory(currentDataIndex, MEMORY_BREAKPOINT_ACCESS_WRITE, MemoryBreakpointComparison::MEMORY_BREAKPOINT_LESS_OR_EQUAL, 0xFF);
 						}
 					}
-					else
-					{
-						if (supportsWriteBreakpoint)
-						{
-							bool isWrite = IS_SET(memoryBreakpoint->memoryAccess, MEMORY_BREAKPOINT_ACCESS_WRITE);
-							if (ImGui::Checkbox("Write##memoryBreakpoint", &isWrite))
-							{
-								if (isWrite)
-								{
-									SET_BIT(memoryBreakpoint->memoryAccess, MEMORY_BREAKPOINT_ACCESS_WRITE);
-								}
-								else
-								{
-									REMOVE_BIT(memoryBreakpoint->memoryAccess, MEMORY_BREAKPOINT_ACCESS_WRITE);
-								}
-							}
-						}
-
-						if (supportsReadBreakpoint)
-						{
-							// TODO: read breakpoint in Vice is fired on STA (because it reads)
-							bool isRead  = IS_SET(memoryBreakpoint->memoryAccess, MEMORY_BREAKPOINT_ACCESS_READ);
-							ImGui::SameLine();
-							if (ImGui::Checkbox("Read##memoryBreakpoint", &isRead))
-							{
-								if (isRead)
-								{
-									SET_BIT(memoryBreakpoint->memoryAccess, MEMORY_BREAKPOINT_ACCESS_READ);
-								}
-								else
-								{
-									REMOVE_BIT(memoryBreakpoint->memoryAccess, MEMORY_BREAKPOINT_ACCESS_READ);
-								}
-							}
-						}
-						
-						ImGui::SameLine();
-						
-		//				MEMORY_BREAKPOINT_EQUAL = 0,
-		//				MEMORY_BREAKPOINT_NOT_EQUAL,
-		//				MEMORY_BREAKPOINT_LESS,
-		//				MEMORY_BREAKPOINT_LESS_OR_EQUAL,
-		//				MEMORY_BREAKPOINT_GREATER,
-		//				MEMORY_BREAKPOINT_GREATER_OR_EQUAL,
-
-						ImGui::PushItemWidth(50);
-						int comparison = memoryBreakpoint->comparison;
-						if (ImGui::Combo("##memoryBreakpointComparison", &comparison, "==\0!=\0<\0<=\0>\0>=\0\0"))
-						{
-							memoryBreakpoint->comparison = (MemoryBreakpointComparison)comparison;
-						}
-						ImGui::PopItemWidth();
-						
-						ImGui::SameLine();
-
-						ImGui::PushItemWidth(30);
-						ImGuiInputTextFlags defaultHexInputFlags = ImGuiInputTextFlags_CharsHexadecimal | ImGuiInputTextFlags_CharsUppercase | ImGuiInputTextFlags_EnterReturnsTrue;
-						
-						u8 val = memoryBreakpoint->value;
-						if (ImGui::InputScalar("##memoryBreakpointValue", ImGuiDataType_::ImGuiDataType_U8, &val, NULL, NULL, "%02X", defaultHexInputFlags))
-						{
-							memoryBreakpoint->value = val;
-						}
-						ImGui::PopItemWidth();
-					}
 					
-					currentSegment->symbols->debugInterface->UnlockMutex();
-
-					ImGui::Separator();
+					if (supportsReadBreakpoint)
+					{
+						bool isRead = false;
+						ImGui::SameLine();
+						if (ImGui::Checkbox("Read##memoryBreakpoint", &isRead))
+						{
+							currentSegment->AddBreakpointMemory(currentDataIndex, MEMORY_BREAKPOINT_ACCESS_READ, MemoryBreakpointComparison::MEMORY_BREAKPOINT_LESS_OR_EQUAL, 0xFF);
+						}
+					}
 				}
+				else
+				{
+					if (supportsWriteBreakpoint)
+					{
+						bool isWrite = IS_SET(memoryBreakpoint->memoryAccess, MEMORY_BREAKPOINT_ACCESS_WRITE);
+						if (ImGui::Checkbox("Write##memoryBreakpoint", &isWrite))
+						{
+							if (isWrite)
+							{
+								SET_BIT(memoryBreakpoint->memoryAccess, MEMORY_BREAKPOINT_ACCESS_WRITE);
+							}
+							else
+							{
+								REMOVE_BIT(memoryBreakpoint->memoryAccess, MEMORY_BREAKPOINT_ACCESS_WRITE);
+							}
+						}
+					}
+
+					if (supportsReadBreakpoint)
+					{
+						// TODO: read breakpoint in Vice is fired on STA (because it reads)
+						bool isRead  = IS_SET(memoryBreakpoint->memoryAccess, MEMORY_BREAKPOINT_ACCESS_READ);
+						ImGui::SameLine();
+						if (ImGui::Checkbox("Read##memoryBreakpoint", &isRead))
+						{
+							if (isRead)
+							{
+								SET_BIT(memoryBreakpoint->memoryAccess, MEMORY_BREAKPOINT_ACCESS_READ);
+							}
+							else
+							{
+								REMOVE_BIT(memoryBreakpoint->memoryAccess, MEMORY_BREAKPOINT_ACCESS_READ);
+							}
+						}
+					}
+					
+					ImGui::SameLine();
+					
+	//				MEMORY_BREAKPOINT_EQUAL = 0,
+	//				MEMORY_BREAKPOINT_NOT_EQUAL,
+	//				MEMORY_BREAKPOINT_LESS,
+	//				MEMORY_BREAKPOINT_LESS_OR_EQUAL,
+	//				MEMORY_BREAKPOINT_GREATER,
+	//				MEMORY_BREAKPOINT_GREATER_OR_EQUAL,
+
+					ImGui::PushItemWidth(50);
+					int comparison = memoryBreakpoint->comparison;
+					if (ImGui::Combo("##memoryBreakpointComparison", &comparison, "==\0!=\0<\0<=\0>\0>=\0\0"))
+					{
+						memoryBreakpoint->comparison = (MemoryBreakpointComparison)comparison;
+					}
+					ImGui::PopItemWidth();
+					
+					ImGui::SameLine();
+
+					ImGui::PushItemWidth(30);
+					ImGuiInputTextFlags defaultHexInputFlags = ImGuiInputTextFlags_CharsHexadecimal | ImGuiInputTextFlags_CharsUppercase | ImGuiInputTextFlags_EnterReturnsTrue;
+					
+					u8 val = memoryBreakpoint->value;
+					if (ImGui::InputScalar("##memoryBreakpointValue", ImGuiDataType_::ImGuiDataType_U8, &val, NULL, NULL, "%02X", defaultHexInputFlags))
+					{
+						memoryBreakpoint->value = val;
+					}
+					ImGui::PopItemWidth();
+				}
+				
+				currentSegment->symbols->debugInterface->UnlockMutex();
+
+				ImGui::Separator();
 			}
+
 		}
 	}
 	
 //	if (ImGui::CollapsingHeader("Rewind", ImGuiTreeNodeFlags_DefaultOpen))
+	
+	if (currentSegment && currentSegment->supportBreakpoints && currentSegment->breakpointsMemory)
 	{
-		// scroll/rewind
-		if (ImGui::MenuItem("Scroll to last read", PLATFORM_STR_KEY_CTRL "+Shift+click", false, (cell->readPC != -1) ))
+		if (viewDisassembly)
 		{
-			viewDisassembly->ScrollToAddress(cell->readPC);
-		}
+			// scroll/rewind
+			if (ImGui::MenuItem("Scroll to last read", PLATFORM_STR_KEY_CTRL "+Shift+click", false, (cell->readPC != -1) ))
+			{
+				viewDisassembly->ScrollToAddress(cell->readPC);
+			}
 
-		if (ImGui::MenuItem("Scroll to last write", PLATFORM_STR_KEY_CTRL "+click", false, (cell->writePC != -1)))
-		{
-			viewDisassembly->ScrollToAddress(cell->writePC);
+			if (ImGui::MenuItem("Scroll to last write", PLATFORM_STR_KEY_CTRL "+click", false, (cell->writePC != -1)))
+			{
+				viewDisassembly->ScrollToAddress(cell->writePC);
+			}
 		}
 
 		if (debugInterface->snapshotsManager)
@@ -1713,20 +1747,28 @@ void CViewDataDump::RenderContextMenuItems()
 				debugInterface->snapshotsManager->RestoreSnapshotByCycle(cell->executeCycle);
 			}
 		}
+
+		ImGui::Separator();
 	}
 
-	SYS_ReleaseCharBuf(fmt);
 	SYS_ReleaseCharBuf(buf);
-	ImGui::Separator();
 	
 //	if (ImGui::CollapsingHeader("Config", ImGuiTreeNodeFlags_DefaultOpen))
 }
 
 void CViewDataDump::CancelEditingHexBox()
 {
-	editHex->CancelEntering();
-	isEditingValue = false;
-	isEditingValueAddr = false;
+	if (isEditingValue)
+	{
+		editBoxHex->CancelEntering();
+		isEditingValue = false;
+	}
+	
+	if (isEditingValueAddr)
+	{
+		dataAddressEditBox->CancelEntering();
+		isEditingValueAddr = false;
+	}
 }
 
 void CViewDataDump::Serialize(CByteBuffer *byteBuffer)

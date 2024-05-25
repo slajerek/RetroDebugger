@@ -25,7 +25,7 @@
  */
 
 #include "vice.h"
-#include "types.h"
+#include "vicetypes.h"
 
 #include <assert.h>
 #include <string.h>

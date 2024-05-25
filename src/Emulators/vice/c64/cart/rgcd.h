@@ -29,7 +29,7 @@
 
 #include <stdio.h>
 
-#include "types.h"
+#include "vicetypes.h"
 
 extern void rgcd_reset(void);
 extern void rgcd_config_init(void);

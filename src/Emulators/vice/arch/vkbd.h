@@ -31,7 +31,7 @@
 #define VICE_VKBD_H
 
 #include "vice.h"
-#include "types.h"
+#include "vicetypes.h"
 
 #include "uimenu.h"
 

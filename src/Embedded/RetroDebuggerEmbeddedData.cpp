@@ -29,7 +29,6 @@
 //#include "icon_toolbox_export_gfx.h"
 #include "icon_raw_export_gfx.h"
 #include "icon_raw_import_gfx.h"
-#include "gamecontrollerdb_txt_zlib.h"
 
 // fonts
 #include "FontProFontIIx.h"
@@ -45,6 +44,10 @@
 #include "FontMonoki.h"
 #include "FontLiberationSans.h"
 #include "FontExoMedium.h"
+
+// template data
+#include "reset_basic_snap_zlib.h"
+
 
 void RetroDebuggerEmbeddedAddData()
 {
@@ -65,7 +68,7 @@ void RetroDebuggerEmbeddedAddData()
 	RES_AddEmbeddedDataToDeploy("/gfx/icon_tool_brush_circle", DEPLOY_FILE_TYPE_GFX, icon_tool_brush_circle_gfx, icon_tool_brush_circle_gfx_length);
 	RES_AddEmbeddedDataToDeploy("/gfx/icon_tool_on_top_on", DEPLOY_FILE_TYPE_GFX, icon_tool_on_top_on_gfx, icon_tool_on_top_on_gfx_length);
 	RES_AddEmbeddedDataToDeploy("/gfx/icon_tool_on_top_off", DEPLOY_FILE_TYPE_GFX, icon_tool_on_top_off_gfx, icon_tool_on_top_off_gfx_length);
-
+	
 	RES_AddEmbeddedDataToDeploy("/gfx/icon_close", DEPLOY_FILE_TYPE_GFX, icon_close_gfx, icon_close_gfx_length);
 	
 	//	RES_AddEmbeddedDataToDeploy("/gfx/icon_toolbox_export", DEPLOY_FILE_TYPE_GFX, icon_toolbox_export_gfx, icon_toolbox_export_gfx_length);
@@ -76,10 +79,9 @@ void RetroDebuggerEmbeddedAddData()
 	
 	RES_AddEmbeddedDataToDeploy("/gfx/icon_small_export", DEPLOY_FILE_TYPE_GFX, icon_small_export_gfx, icon_small_export_gfx_length);
 	RES_AddEmbeddedDataToDeploy("/gfx/icon_small_import", DEPLOY_FILE_TYPE_GFX, icon_small_import_gfx, icon_small_import_gfx_length);
-
-	// controllers data
-	RES_AddEmbeddedDataToDeploy("/gamecontrollerdb", DEPLOY_FILE_TYPE_DATA, gamecontrollerdb_txt_zlib, gamecontrollerdb_txt_zlib_length);
 	
+	RES_AddEmbeddedDataToDeploy("/template/reset_basic_snapshot", DEPLOY_FILE_TYPE_DATA, reset_basic_snap_zlib, reset_basic_snap_zlib_length);
+
 }
 
 //

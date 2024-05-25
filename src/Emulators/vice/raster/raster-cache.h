@@ -31,7 +31,7 @@
 #include <string.h>
 
 #include "raster-sprite-cache.h"
-#include "types.h"
+#include "vicetypes.h"
 
 /* Yeah, static allocation sucks.  But it's faster, and we are not wasting
    much space anyway.  */

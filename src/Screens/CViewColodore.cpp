@@ -16,7 +16,7 @@
 #include "CDebugInterfaceC64.h"
 #include "MTH_Random.h"
 
-#include "CViewMemoryMap.h"
+#include "CViewDataMap.h"
 
 #include "CGuiMain.h"
 
@@ -100,7 +100,6 @@ void CViewColodore::Render()
 //	font->BlitTextColor("C64 Debugger is (C) Marcin Skoczylas, aka Slajerek/Samar", px, py, posZ, fontScale, tr, tg, tb, 1); py += fontHeight;
 	
 	
-	viewC64->viewC64Screen->RefreshScreen();
 	viewC64->viewC64Screen->Render();
 
 }
@@ -221,10 +220,10 @@ void CViewColodore::ActivateView()
 	float sy = (float)viewC64->debugInterfaceC64->GetScreenSizeY() * scale;
 	float px = this->sizeX - sx + 150.0f;
 	float py = 50.0;//this->sizeY - sy;
-	viewC64->viewC64Screen->SetPosition(px, py, sx, sy);
+	viewC64->viewC64Screen->SetPosition(px, py, -1, sx, sy);
 
 	
-	viewC64->viewC64Screen->SetupScreenColodore();
+//	viewC64->viewC64Screen->SetupScreenColodore();
 	
 }
 
@@ -233,3 +232,40 @@ void CViewColodore::DeactivateView()
 	LOGG("CViewColodore::DeactivateView()");
 }
 
+
+////
+//void CViewC64Screen::RefreshScreenColodore()
+//{
+//	//LOGD("CViewC64Screen::RefreshScreen");
+//	return;
+//
+//	debugInterface->LockRenderScreenMutex();
+//
+//	// refresh texture of C64's screen
+//	CImageData *screen = debugInterface->GetScreenImageData();
+//	colodoreScreen->RefreshColodoreScreen(screen);
+//
+//	imageScreen->ReBindImageData(colodoreScreen->imageDataColodoreScreen);
+//
+//	debugInterface->UnlockRenderScreenMutex();
+//}
+
+//void CViewC64Screen::SetupScreenColodore()
+//{
+//	this->colodoreScreen = new C64ColodoreScreen(this->debugInterface);
+//	
+//	imageScreenColodore = new CSlrImage(true, true);
+//	imageScreenColodore->LoadImage(this->colodoreScreen->imageDataColodoreScreen, RESOURCE_PRIORITY_STATIC, false);
+//	imageScreenColodore->resourceType = RESOURCE_TYPE_IMAGE_DYNAMIC;
+//	imageScreenColodore->resourcePriority = RESOURCE_PRIORITY_STATIC;
+//	VID_PostImageBinding(imageScreenColodore, NULL);
+//
+//	imageScreen = imageScreenColodore;
+//}
+//
+
+//if (this->colodoreScreen)
+//{
+//	RefreshScreenColodore();
+//	return;
+//}

@@ -28,7 +28,7 @@
 #define VICE_UIPOLL_H
 
 #include "vice.h"
-#include "types.h"
+#include "vicetypes.h"
 
 #include "vice_sdl.h"
 

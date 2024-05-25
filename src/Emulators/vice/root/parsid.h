@@ -27,7 +27,7 @@
 #ifndef VICE_PARSID_H
 #define VICE_PARSID_H
 
-#include "types.h"
+#include "vicetypes.h"
 #include "sid-snapshot.h"
 
 /* control register bits */

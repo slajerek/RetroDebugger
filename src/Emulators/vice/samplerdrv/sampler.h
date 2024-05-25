@@ -27,7 +27,7 @@
 #ifndef VICE_SAMPLER_H
 #define VICE_SAMPLER_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 #define SAMPLER_CHANNEL_DEFAULT 0
 #define SAMPLER_CHANNEL_1       1

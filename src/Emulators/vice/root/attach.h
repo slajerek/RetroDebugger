@@ -28,7 +28,7 @@
 #ifndef VICE_ATTACH_H
 #define VICE_ATTACH_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 #define ATTACH_DEVICE_NONE 0
 #define ATTACH_DEVICE_FS   1 /* filesystem */

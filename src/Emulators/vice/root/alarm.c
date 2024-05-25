@@ -33,7 +33,7 @@
 #include "alarm.h"
 #include "lib.h"
 #include "log.h"
-#include "types.h"
+#include "vicetypes.h"
 
 
 alarm_context_t *alarm_context_new(const char *name)

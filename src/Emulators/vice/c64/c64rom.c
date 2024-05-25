@@ -39,7 +39,7 @@
 #include "patchrom.h"
 #include "resources.h"
 #include "sysfile.h"
-#include "types.h"
+#include "vicetypes.h"
 
 static log_t c64rom_log = LOG_ERR;
 

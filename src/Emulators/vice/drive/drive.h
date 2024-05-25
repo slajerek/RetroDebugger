@@ -29,7 +29,7 @@
 #ifndef VICE_DRIVE_H
 #define VICE_DRIVE_H
 
-#include "types.h"
+#include "vicetypes.h"
 #include "ds1216e.h"	//rtc/
 #include "p64.h"
 

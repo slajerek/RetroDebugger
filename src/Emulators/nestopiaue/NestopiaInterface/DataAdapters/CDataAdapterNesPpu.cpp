@@ -1,10 +1,10 @@
 #include "CDataAdapterNesPpu.h"
 #include "CDebugInterfaceNes.h"
 
-CDataAdapterNesPpu::CDataAdapterNesPpu(CDebugInterfaceNes *debugInterfaceNes)
-: CDataAdapter("NesPpu")
+CDataAdapterNesPpu::CDataAdapterNesPpu(CDebugSymbols *debugSymbols)
+: CDebugDataAdapter("NesPpu", debugSymbols)
 {
-	this->debugInterfaceNes = debugInterfaceNes;
+	this->debugInterfaceNes = (CDebugInterfaceNes *)(debugSymbols->debugInterface);
 }
 
 int CDataAdapterNesPpu::AdapterGetDataLength()

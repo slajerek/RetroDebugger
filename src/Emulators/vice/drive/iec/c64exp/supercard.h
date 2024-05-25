@@ -27,7 +27,7 @@
 #ifndef VICE_SUPERCARD_H
 #define VICE_SUPERCARD_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 struct drive_context_s;
 

@@ -8,7 +8,7 @@ class CDebugInterfaceNes;
 class CDataAdapterNesRam : public CDebugDataAdapter
 {
 public:
-	CDataAdapterNesRam(CDebugInterfaceNes *debugInterface);
+	CDataAdapterNesRam(CDebugSymbols *debugSymbols);
 	CDebugInterfaceNes *debugInterfaceNes;
 	
 	virtual int AdapterGetDataLength();

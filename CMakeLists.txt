@@ -14,7 +14,8 @@ add_definitions(
     -DIMGUI_IMPL_OPENGL_LOADER_GL3W
 )
 
-set (CMAKE_CXX_FLAGS "-fpermissive")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fpermissive")
+set(CMAKE_C_FLAGS "$(CMAKE_C_FLAGS) -fpermissive")
 
 find_package(PkgConfig REQUIRED)
 find_package(SDL2 REQUIRED)
@@ -29,8 +30,8 @@ include_directories(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Plugins"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Plugins/CrtMaker"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Plugins/DNDK"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/Plugins/Commando"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Plugins/ShowPic"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Plugins/Slideshow"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Plugins/GoatTracker"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Plugins/GoatTracker/gt2"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Plugins/GoatTracker/gt2/asm"
@@ -52,6 +53,7 @@ include_directories(
     "${CMAKE_CURRENT_SOURCE_DIR}/../MTEngineSDL/src/Engine/Core/Net"
     "${CMAKE_CURRENT_SOURCE_DIR}/../MTEngineSDL/src/Engine/Core/Pool"
     "${CMAKE_CURRENT_SOURCE_DIR}/../MTEngineSDL/src/Engine/Core/Render"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../MTEngineSDL/src/Engine/Core/GamePads"
     "${CMAKE_CURRENT_SOURCE_DIR}/../MTEngineSDL/src/Engine/Funct"
     "${CMAKE_CURRENT_SOURCE_DIR}/../MTEngineSDL/src/Engine/Funct/DataTable"
     "${CMAKE_CURRENT_SOURCE_DIR}/../MTEngineSDL/src/Engine/Funct/ImageProcessing"
@@ -70,6 +72,7 @@ include_directories(
     "${CMAKE_CURRENT_SOURCE_DIR}/../MTEngineSDL/src/Engine/Libs/imgui"
     "${CMAKE_CURRENT_SOURCE_DIR}/../MTEngineSDL/src/Engine/Libs/imguiext"
     "${CMAKE_CURRENT_SOURCE_DIR}/../MTEngineSDL/src/Engine/Libs/implot"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../MTEngineSDL/src/Engine/Libs/imgui-notify"
     "${CMAKE_CURRENT_SOURCE_DIR}/../MTEngineSDL/src/Engine/Libs/jpeg"
     "${CMAKE_CURRENT_SOURCE_DIR}/../MTEngineSDL/src/Engine/Libs/jpeg/jpeg-9a"
     "${CMAKE_CURRENT_SOURCE_DIR}/../MTEngineSDL/src/Engine/Libs/libjson"
@@ -158,9 +161,10 @@ include_directories(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Emulators/vice/tapeport"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Emulators/vice/userport"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Emulators/vice/vdrive"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/Emulators/vice/ViceInterface"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Emulators/vice/viciisc"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Emulators/vice/video"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Emulators/vice/ViceInterface"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Emulators/vice/ViceInterface/Adapters"
 
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Screens/VicEditor"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Screens"
@@ -201,8 +205,10 @@ add_library(Plugins STATIC
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Plugins/C64DebuggerPluginTemplate.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Plugins/C64DebuggerPluginDummy.cpp"
 
-#    "${CMAKE_CURRENT_SOURCE_DIR}/src/Plugins/ShowPic/C64DebuggerPluginShowPic.cpp"
-
+#     "${CMAKE_CURRENT_SOURCE_DIR}/src/Plugins/ShowPic/C64DebuggerPluginShowPic.cpp"
+    
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Plugins/Slideshow/C64DebuggerPluginSlideshow.cpp"
+    
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Plugins/GoatTracker/CAudioChannelGoatTracker.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Plugins/GoatTracker/CViewC64GoatTracker.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Plugins/GoatTracker/gt2/gsid.cpp"
@@ -673,6 +679,21 @@ add_library(EmulatorNestopiaUE STATIC
 )
 
 add_library(EmulatorVice STATIC
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Emulators/vice/ViceInterface/ViceWrapper.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Emulators/vice/ViceInterface/CDataAdaptersVice.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Emulators/vice/ViceInterface/CDebuggerApiVice.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Emulators/vice/ViceInterface/CDebuggerEmulatorPluginVice.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Emulators/vice/ViceInterface/CDebugInterfaceVice.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Emulators/vice/ViceInterface/CAudioChannelVice.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Emulators/vice/ViceInterface/ViceLogWrapper.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Emulators/vice/ViceInterface/Adapters/CDataAdapterViceC64.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Emulators/vice/ViceInterface/Adapters/CDataAdapterViceC64Cartridge.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Emulators/vice/ViceInterface/Adapters/CDataAdapterViceC64DirectRam.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Emulators/vice/ViceInterface/Adapters/CDataAdapterViceC64Reu.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Emulators/vice/ViceInterface/Adapters/CDataAdapterViceDrive1541.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Emulators/vice/ViceInterface/Adapters/CDataAdapterViceDrive1541DirectRam.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Emulators/vice/ViceInterface/Adapters/CDataAdapterViceDrive1541DiskContents.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Emulators/vice/ViceInterface/Adapters/CDataAddressEditBoxDiskContents.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Emulators/vice/resid-fp/residfp-convolve-sse.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Emulators/vice/resid-fp/residfp-extfilt.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Emulators/vice/resid-fp/residfp-filter.cpp"
@@ -684,17 +705,6 @@ add_library(EmulatorVice STATIC
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Emulators/vice/resid-fp/residfp-voice.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Emulators/vice/sid/resid-fp.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Emulators/vice/sid/resid.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/Emulators/vice/ViceInterface/CDebugSymbolsDrive1541.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/Emulators/vice/ViceInterface/ViceWrapper.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/Emulators/vice/ViceInterface/CDebugSymbolsSegmentDrive1541.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/Emulators/vice/ViceInterface/CDataAdaptersVice.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/Emulators/vice/ViceInterface/CDebugSymbolsSegmentC64.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/Emulators/vice/ViceInterface/CDebuggerApiVice.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/Emulators/vice/ViceInterface/CDebugSymbolsC64.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/Emulators/vice/ViceInterface/CDebuggerEmulatorPluginVice.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/Emulators/vice/ViceInterface/CDebugInterfaceVice.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/Emulators/vice/ViceInterface/CAudioChannelVice.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/Emulators/vice/ViceInterface/ViceLogWrapper.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Emulators/vice/resid/resid-version.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Emulators/vice/resid/resid-voice.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Emulators/vice/resid/resid-envelope.cpp"
@@ -1242,6 +1252,7 @@ add_executable(retrodebugger
     "${CMAKE_CURRENT_SOURCE_DIR}/src/RetroDebuggerAppInit.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Embedded/RetroDebuggerEmbeddedData.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/DebugInterface/INT_BinaryProtocol.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/DebugInterface/CDebugEventsHistory.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/DebugInterface/CDebugBreakpoints.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/DebugInterface/CDebugInterfaceTask.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/DebugInterface/CDebuggerApi.cpp"
@@ -1254,24 +1265,29 @@ add_executable(retrodebugger
     "${CMAKE_CURRENT_SOURCE_DIR}/src/DebugInterface/Symbols/CDebugMemory.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/DebugInterface/C64/CDebugInterfaceC64.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/DebugInterface/C64/CDiskImageD64.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/DebugInterface/C64/CDataAdapterDrive1541Minimal.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/DebugInterface/C64/CDebugDataAdapterDrive1541Contents.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/DebugInterface/C64/CDebugSymbolsC64.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/DebugInterface/C64/CDebugSymbolsDrive1541.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/DebugInterface/C64/CDebugSymbolsSegmentDrive1541.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/DebugInterface/C64/CDebugSymbolsSegmentC64.cpp"
+
     "${CMAKE_CURRENT_SOURCE_DIR}/src/DebugInterface/MenuItems/CDebugInterfaceMenuItem.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/DebugInterface/MenuItems/CDebugInterfaceMenuItemFolder.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/DebugInterface/MenuItems/CDebugInterfaceMenuItemView.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/DebugInterface/CDebugDataAdapter.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/DebugInterface/CDebuggerEmulatorPlugin.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/DebugInterface/CDebugInterface.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/DebugInterface/CDebugEventsHistory.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Screens/CViewC64.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Screens/CViewMainMenu.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/Views/CViewMemoryMap.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Views/CViewEmulatorScreen.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Views/CViewDataMap.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Views/CViewEmulationState.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Views/CViewEmulationCounters.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/Views/CViewFileBrowser.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Views/CViewDataDump.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/Views/CViewDataMonitor.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/Views/CViewDataPlot.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Views/CDataAddressEditBox.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Views/CDataAddressEditBoxHex.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Views/CViewDataWatch.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/Views/CViewDebugEventsHistory.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Views/CViewMonitorConsole.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Views/CViewDisassembly.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Views/CViewSourceCode.cpp"
@@ -1280,6 +1296,10 @@ add_executable(retrodebugger
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Views/CMainMenuBar.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Views/CViewTimeline.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Views/CViewBaseStateCPU.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Views/CViewDataMonitor.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Views/CViewDataPlot.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Views/CViewDebugEventsHistory.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Views/CViewFileBrowser.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Views/Atari800/CViewAtariScreen.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Views/Atari800/CViewAtariStateANTIC.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Views/Atari800/CViewAtariStateGTIA.cpp"
@@ -1296,10 +1316,6 @@ add_executable(retrodebugger
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Views/Nes/CViewNesStatePPU.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Views/Nes/CViewNesPpuOam.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Views/Nes/CViewNesStateCPU.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/Views/C64/CViewC64Screen.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/Views/C64/CViewC64ScreenWrapper.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/Views/C64/CViewC64ScreenViewfinder.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/Views/C64/CViewC64MemoryDebuggerLayoutToolbar.cpp"
 
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Views/C64/AllGraphics/CViewC64AllGraphics.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Views/C64/AllGraphics/CViewC64AllGraphicsBitmaps.cpp"
@@ -1344,24 +1360,28 @@ add_executable(retrodebugger
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Views/C64/VicEditor/Layers/CVicEditorLayerUnrestrictedBitmap.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Views/C64/VicEditor/Layers/CVicEditorLayerVirtualSprites.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Views/C64/VicEditor/Layers/CViewC64VicEditorLayers.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Views/C64/CViewC64Screen.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Views/C64/CViewC64ScreenViewfinder.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Views/C64/CViewC64ColorRamScreen.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Views/C64/CViewC64StateSID.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Views/C64/CViewC64Disassembly.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Views/C64/CViewDrive1541Browser.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Views/C64/CViewDrive1541DiskData.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Views/C64/CViewC64SidTrackerHistory.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Views/C64/CViewDrive1541StateCPU.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Views/C64/CViewDrive1541StateVIA.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Views/C64/CViewDrive1541Led.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/Views/C64/CViewDrive1541Browser.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/Views/C64/CViewDrive1541DiskData.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Views/C64/CViewC64StateVIC.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Views/C64/CViewC64SidPianoKeyboard.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Views/C64/CViewC64EmulationCounters.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Views/C64/CViewC64StateCIA.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Views/C64/CViewC64StateREU.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Views/C64/CViewC64StateCPU.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Views/C64/CViewC64BreakpointsIrq.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Views/C64/CViewDrive1541BreakpointsIrq.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Views/C64/CViewC64KeyMap.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Views/JukeboxPlaylist/CViewJukeboxPlaylist.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Views/JukeboxPlaylist/CJukeboxPlaylist.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/Views/C64/CViewC64KeyMap.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Screens/CViewKeyboardShortcuts.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Screens/VicEditor/C64DisplayListCodeGenerator.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Screens/VicEditor/CVicEditorTool.cpp"
@@ -1373,6 +1393,7 @@ add_executable(retrodebugger
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Tools/C64SharedMemory.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Tools/C64ColodoreScreen.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Tools/C64Tools.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Tools/C64SIDDump.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Tools/64tass/64tass-encoding.c"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Tools/64tass/64tass-section.c"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Tools/64tass/64tass-misc.c"
@@ -1421,7 +1442,6 @@ add_executable(retrodebugger
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Tools/libpsid64/libpsid-theme.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Tools/libpsid64/libpsid-screen.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Tools/C64SIDFrequencies.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/Tools/C64SIDDump.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Tools/CGuiLockableList.cpp"
 
     "${CMAKE_CURRENT_SOURCE_DIR}/platform/Linux/src.Linux/archdep.c"
@@ -1441,8 +1461,7 @@ target_link_libraries(retrodebugger
     gobject-2.0
     gio-2.0
     dbus-1
-#    /usr/lib/x86_64-linux-gnu/libsndio.so
-    sndio
+    /usr/lib/x86_64-linux-gnu/libsndio.so
     dl
     m
     pthread

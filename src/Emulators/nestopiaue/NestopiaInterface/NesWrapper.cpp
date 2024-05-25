@@ -38,13 +38,14 @@
 #include "SYS_CommandLine.h"
 #include "CGuiMain.h"
 #include "CViewC64.h"
-#include "CViewMemoryMap.h"
+#include "CViewDataMap.h"
 #include "SYS_Threading.h"
 #include "SND_SoundEngine.h"
 #include "CSnapshotsManager.h"
 #include "CViewNesStateAPU.h"
 #include "CDebugSymbols.h"
 #include "CDebugSymbolsSegment.h"
+#include "CDebugMemory.h"
 #include "CDebugEventsHistory.h"
 #include <string.h>
 
@@ -498,7 +499,7 @@ void nesd_update_screen(bool lockRenderMutex)
 	// dest screen width is 512*supersampling
 	
 	uint8 *srcScreenPtr = screenBuffer;
-	uint8 *destScreenPtr = (uint8 *)debugInterfaceNes->screenImage->resultData;
+	uint8 *destScreenPtr = (uint8 *)debugInterfaceNes->screenImageData->resultData;
 	
 	int screenWidth = video_width - (overscan_h ? 2 * dif : 0);
 	int screenHeight = Api::Video::Output::HEIGHT - (overscan_v ? 16 : 0);
@@ -1304,12 +1305,12 @@ int nesd_joystick_axis_to_pad_button(uint32 axis)
 
 	if ((axis & JOYPAD_E) == JOYPAD_E)
 	{
-		padButton |= Core::Input::Controllers::Pad::LEFT;
+		padButton |= Core::Input::Controllers::Pad::RIGHT;
 	}
 
 	if ((axis & JOYPAD_W) == JOYPAD_W)
 	{
-		padButton |= Core::Input::Controllers::Pad::RIGHT;
+		padButton |= Core::Input::Controllers::Pad::LEFT;
 	}
 
 	if ((axis & JOYPAD_S) == JOYPAD_S)
@@ -1545,7 +1546,7 @@ void nesd_mark_cell_read(uint16 addr)
 {
 	int pc = nesd_get_cpu_pc();
 	
-	viewC64->viewNesMemoryMap->CellRead(addr, pc, -1, -1);
+	debugInterfaceNes->symbols->memory->CellRead(addr, pc, -1, -1);
 	
 	// skip checking breakpoints when quick fast-forward/restoring snapshot
 	if (debugInterfaceNes->snapshotsManager->IsPerformingSnapshotRestore())
@@ -1571,7 +1572,7 @@ void nesd_mark_cell_read(uint16 addr)
 void nesd_mark_cell_write(uint16 addr, uint8 value)
 {
 	int pc = nesd_get_cpu_pc();
-	viewC64->viewNesMemoryMap->CellWrite(addr, value, pc, -1, -1);
+	debugInterfaceNes->symbols->memory->CellWrite(addr, value, pc, -1, -1);
 	
 	// skip checking breakpoints when quick fast-forward/restoring snapshot
 	if (debugInterfaceNes->snapshotsManager->IsPerformingSnapshotRestore())
@@ -1596,7 +1597,7 @@ void nesd_mark_cell_write(uint16 addr, uint8 value)
 void nesd_mark_cell_execute(uint16 addr, uint8 opcode)
 {
 //	LOGD("nesd_mark_cell_execute: %04x %02x", addr, opcode);
-	viewC64->viewNesMemoryMap->CellExecute(addr, opcode);
+	debugInterfaceNes->symbols->memory->CellExecute(addr, opcode);
 }
 
 bool nesd_is_debug_on()

@@ -27,7 +27,7 @@
 #ifndef VICE_FILE_DRV_H
 #define VICE_FILE_DRV_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 extern void fileaudio_init(void);
 extern void fileaudio_shutdown(void);

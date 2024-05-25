@@ -9,7 +9,7 @@ extern "C" {
 #include "CSlrString.h"
 #include "SYS_KeyCodes.h"
 #include "CViewC64.h"
-#include "CViewMemoryMap.h"
+#include "CViewDataMap.h"
 #include "C64Tools.h"
 #include "CViewC64Screen.h"
 #include "SYS_Threading.h"

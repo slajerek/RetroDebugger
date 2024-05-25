@@ -27,7 +27,7 @@
 #ifndef VICE_STARDOS_EXP_H
 #define VICE_STARDOS_EXP_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 struct drive_context_s;
 

@@ -35,7 +35,7 @@
 #include "raster-sprite-status.h"
 #include "raster-sprite.h"
 #include "raster.h"
-#include "types.h"
+#include "vicetypes.h"
 
 
 static void raster_sprite_status_init(raster_sprite_status_t *status,

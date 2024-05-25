@@ -27,7 +27,7 @@
 #ifndef VICE_VICII_IRQ_H
 #define VICE_VICII_IRQ_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 extern void vicii_irq_raster_set(CLOCK mclk);
 extern void vicii_irq_raster_clear(CLOCK mclk);

@@ -40,7 +40,7 @@
 #include "log.h"
 #include "snapshot.h"
 #include "supersnapshot4.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "util.h"
 #include "crt.h"
 

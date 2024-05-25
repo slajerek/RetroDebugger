@@ -30,7 +30,7 @@
 #include <stdio.h>
 
 #include "sound.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "archdep.h"
 #include "log.h"
 

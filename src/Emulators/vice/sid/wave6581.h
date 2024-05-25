@@ -31,7 +31,7 @@
  * MOS-6581 R4
  */
 
-#include "types.h"
+#include "vicetypes.h"
 
 static BYTE waveform50_6581[] =
 {

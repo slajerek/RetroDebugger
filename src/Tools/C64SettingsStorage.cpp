@@ -2,7 +2,7 @@
 #include "EmulatorsConfig.h"
 #include "C64SettingsStorage.h"
 #include "SYS_Platform.h"
-#include "CViewMemoryMap.h"
+#include "CViewDataMap.h"
 #include "CSlrFileFromOS.h"
 #include "CByteBuffer.h"
 #include "CViewC64.h"
@@ -12,6 +12,7 @@
 #include "CViewMonitorConsole.h"
 #include "SND_SoundEngine.h"
 #include "CViewC64Screen.h"
+#include "CViewC64ScreenViewfinder.h"
 #include "CViewC64VicEditor.h"
 #include "CViewC64VicDisplay.h"
 #include "CViewC64VicControl.h"
@@ -143,12 +144,12 @@ int c64SettingsSnapshotsIntervalNumFrames = 10;
 int c64SettingsSnapshotsLimit = (50 * 60 * 3) / 10;
 u8 c64SettingsTimelineSaveZlibCompressionLevel = 1;	// Z_BEST_SPEED
 
-CSlrString *c64SettingsPathToC64Roms = NULL;
-CSlrString *c64SettingsPathToC64Kernal = NULL;
-CSlrString *c64SettingsPathToC64Basic = NULL;
-CSlrString *c64SettingsPathToC64Chargen = NULL;
-CSlrString *c64SettingsPathToC64Drive1541 = NULL;
-CSlrString *c64SettingsPathToC64Drive1541ii = NULL;
+CSlrString *c64SettingsPathToRomsC64 = NULL;
+CSlrString *c64SettingsPathToRomC64Kernal = NULL;
+CSlrString *c64SettingsPathToRomC64Basic = NULL;
+CSlrString *c64SettingsPathToRomC64Chargen = NULL;
+CSlrString *c64SettingsPathToRomC64Drive1541 = NULL;
+CSlrString *c64SettingsPathToRomC64Drive1541ii = NULL;
 
 CSlrString *c64SettingsPathToD64 = NULL;
 CSlrString *c64SettingsDefaultD64Folder = NULL;
@@ -242,7 +243,7 @@ bool c64SettingsVicDisplayApplyScroll = false;
 
 bool c64SettingsAutoJmpAlwaysToLoadedPRGAddress = false;	// will jump to loaded address when PRG is loaded from menu
 bool c64SettingsAutoJmpFromInsertedDiskFirstPrg = true;	// will load first PRG from attached disk
-int c64SettingsAutoJmpDoReset = MACHINE_RESET_HARD;
+int c64SettingsAutoJmpDoReset = MACHINE_LOADPRG_RESET_MODE_LOAD_SNAPSHOT_BASIC;
 int c64SettingsAutoJmpWaitAfterReset = 1300;				// this is to let c64 drive finish reset
 
 bool c64SettingsForceUnpause = false;						// unpause debugger on jmp if code is stopped
@@ -384,12 +385,12 @@ void C64DebuggerStoreSettings()
 	byteBuffer->PutU16(C64DEBUGGER_SETTINGS_FILE_VERSION);
 	
 	storeSettingBlock(byteBuffer, C64DEBUGGER_BLOCK_PRELAUNCH);
-	storeSettingString(byteBuffer, "FolderC64Roms", c64SettingsPathToC64Roms);
-	storeSettingString(byteBuffer, "FolderC64Kernal", c64SettingsPathToC64Kernal);
-	storeSettingString(byteBuffer, "FolderC64Basic", c64SettingsPathToC64Basic);
-	storeSettingString(byteBuffer, "FolderC64Chargen", c64SettingsPathToC64Chargen);
-	storeSettingString(byteBuffer, "FolderC64Drive1541", c64SettingsPathToC64Drive1541);
-	storeSettingString(byteBuffer, "FolderC64Drive1541ii", c64SettingsPathToC64Drive1541ii);
+	storeSettingString(byteBuffer, "FolderC64Roms", c64SettingsPathToRomsC64);
+	storeSettingString(byteBuffer, "FolderC64Kernal", c64SettingsPathToRomC64Kernal);
+	storeSettingString(byteBuffer, "FolderC64Basic", c64SettingsPathToRomC64Basic);
+	storeSettingString(byteBuffer, "FolderC64Chargen", c64SettingsPathToRomC64Chargen);
+	storeSettingString(byteBuffer, "FolderC64Drive1541", c64SettingsPathToRomC64Drive1541);
+	storeSettingString(byteBuffer, "FolderC64Drive1541ii", c64SettingsPathToRomC64Drive1541ii);
 	storeSettingString(byteBuffer, "FolderD64", c64SettingsDefaultD64Folder);
 	storeSettingString(byteBuffer, "FolderPRG", c64SettingsDefaultPRGFolder);
 	storeSettingString(byteBuffer, "FolderCRT", c64SettingsDefaultCartridgeFolder);
@@ -830,50 +831,50 @@ void C64DebuggerSetSetting(const char *name, void *value)
 	// C64
 	else if (!strcmp(name, "FolderC64Roms"))
 	{
-		if (c64SettingsPathToC64Roms != NULL)
-			delete c64SettingsPathToC64Roms;
+		if (c64SettingsPathToRomsC64 != NULL)
+			delete c64SettingsPathToRomsC64;
 		
-		c64SettingsPathToC64Roms = new CSlrString((CSlrString*)value);
+		c64SettingsPathToRomsC64 = new CSlrString((CSlrString*)value);
 		return;
 	}
 	else if (!strcmp(name, "FolderC64Kernal"))
 	{
-		if (c64SettingsPathToC64Kernal != NULL)
-			delete c64SettingsPathToC64Kernal;
+		if (c64SettingsPathToRomC64Kernal != NULL)
+			delete c64SettingsPathToRomC64Kernal;
 		
-		c64SettingsPathToC64Kernal = new CSlrString((CSlrString*)value);
+		c64SettingsPathToRomC64Kernal = new CSlrString((CSlrString*)value);
 		return;
 	}
 	else if (!strcmp(name, "FolderC64Basic"))
 	{
-		if (c64SettingsPathToC64Basic != NULL)
-			delete c64SettingsPathToC64Basic;
+		if (c64SettingsPathToRomC64Basic != NULL)
+			delete c64SettingsPathToRomC64Basic;
 		
-		c64SettingsPathToC64Basic = new CSlrString((CSlrString*)value);
+		c64SettingsPathToRomC64Basic = new CSlrString((CSlrString*)value);
 		return;
 	}
 	else if (!strcmp(name, "FolderC64Chargen"))
 	{
-		if (c64SettingsPathToC64Chargen != NULL)
-			delete c64SettingsPathToC64Chargen;
+		if (c64SettingsPathToRomC64Chargen != NULL)
+			delete c64SettingsPathToRomC64Chargen;
 		
-		c64SettingsPathToC64Chargen = new CSlrString((CSlrString*)value);
+		c64SettingsPathToRomC64Chargen = new CSlrString((CSlrString*)value);
 		return;
 	}
 	else if (!strcmp(name, "FolderC64Drive1541"))
 	{
-		if (c64SettingsPathToC64Drive1541 != NULL)
-			delete c64SettingsPathToC64Drive1541;
+		if (c64SettingsPathToRomC64Drive1541 != NULL)
+			delete c64SettingsPathToRomC64Drive1541;
 		
-		c64SettingsPathToC64Drive1541 = new CSlrString((CSlrString*)value);
+		c64SettingsPathToRomC64Drive1541 = new CSlrString((CSlrString*)value);
 		return;
 	}
 	else if (!strcmp(name, "FolderC64Drive1541ii"))
 	{
-		if (c64SettingsPathToC64Drive1541ii != NULL)
-			delete c64SettingsPathToC64Drive1541ii;
+		if (c64SettingsPathToRomC64Drive1541ii != NULL)
+			delete c64SettingsPathToRomC64Drive1541ii;
 		
-		c64SettingsPathToC64Drive1541ii = new CSlrString((CSlrString*)value);
+		c64SettingsPathToRomC64Drive1541ii = new CSlrString((CSlrString*)value);
 		return;
 	}
 
@@ -1861,7 +1862,7 @@ void C64DebuggerSetSetting(const char *name, void *value)
 		c64SettingsScreenRasterViewfinderScale = v;
 		if (viewC64->debugInterfaceC64)
 		{
-			viewC64->viewC64Screen->SetZoomedScreenLevel(v);
+			viewC64->viewC64ScreenViewfinder->SetZoomedScreenLevel(v);
 		}
 		return;
 	}

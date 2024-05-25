@@ -44,7 +44,7 @@
 #include "machine.h"
 #include "maincpu.h"
 #include "resources.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "vicii-phi1.h"
 
 #define CARTRIDGE_INCLUDE_PRIVATE_API

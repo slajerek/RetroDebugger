@@ -36,7 +36,7 @@
 #include "lib.h"
 #include "log.h"
 #include "machine-drive.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "vdrive-command.h"
 #include "vdrive-internal.h"
 #include "vdrive.h"

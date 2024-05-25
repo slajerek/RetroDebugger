@@ -34,7 +34,7 @@
 #include "drivetypes.h"
 #include "lib.h"
 #include "memiec.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "via1d1541.h"
 #include "viad.h"
 #include "wd1770.h"
@@ -56,42 +56,42 @@ BYTE drive_read_rom_ds1216(drive_context_t *drv, WORD address)
 
 static BYTE drive_read_ram(drive_context_t *drv, WORD address)
 {
-	c64d_mark_disk_cell_read(address);
+	c64d_mark_drive1541_cell_read(address);
 
     return drv->drive->drive_ram[address];
 }
 
 static void drive_store_ram(drive_context_t *drv, WORD address, BYTE value)
 {
-	c64d_mark_disk_cell_write(address, value);
+	c64d_mark_drive1541_cell_write(address, value);
 
 	drv->drive->drive_ram[address] = value;
 }
 
 static BYTE drive_read_1541ram(drive_context_t *drv, WORD address)
 {
-	c64d_mark_disk_cell_read(address);
+	c64d_mark_drive1541_cell_read(address);
 	
     return drv->drive->drive_ram[address & 0x7ff];
 }
 
 static void drive_store_1541ram(drive_context_t *drv, WORD address, BYTE value)
 {
-	c64d_mark_disk_cell_write(address, value);
+	c64d_mark_drive1541_cell_write(address, value);
 	
 	drv->drive->drive_ram[address & 0x7ff] = value;
 }
 
 static BYTE drive_read_zero(drive_context_t *drv, WORD address)
 {
-	c64d_mark_disk_cell_read(address);
+	c64d_mark_drive1541_cell_read(address);
 	
     return drv->drive->drive_ram[address & 0xff];
 }
 
 static void drive_store_zero(drive_context_t *drv, WORD address, BYTE value)
 {
-	c64d_mark_disk_cell_write(address, value);
+	c64d_mark_drive1541_cell_write(address, value);
 
 	drv->drive->drive_ram[address & 0xff] = value;
 }
@@ -233,9 +233,9 @@ uint8 c64d_peek_mem_drive_internal(drive_context_t *drv, uint16 addr)
 	return drive_peek_free(drv, addr); //drv->cpud->read_func[(addr) >> 8](drv, (WORD)addr);
 }
 
-void c64d_peek_memory_drive_internal(drive_context_t *drv, BYTE *memoryBuffer, uint16 addrStart, uint16 addrEnd)
+void c64d_peek_memory_drive_internal(drive_context_t *drv, BYTE *memoryBuffer, int addrStart, int addrEnd)
 {
-	uint16 addr;
+	int addr;
 	uint8 *bufPtr = memoryBuffer + addrStart;
 	for (addr = addrStart; addr < addrEnd; addr++)
 	{
@@ -243,9 +243,9 @@ void c64d_peek_memory_drive_internal(drive_context_t *drv, BYTE *memoryBuffer, u
 	}
 }
 
-void c64d_copy_ram_memory_drive_internal(drive_context_t *drv, BYTE *memoryBuffer, uint16 addrStart, uint16 addrEnd)
+void c64d_copy_ram_memory_drive_internal(drive_context_t *drv, BYTE *memoryBuffer, int addrStart, int addrEnd)
 {
-	uint16 addr;
+	int addr;
 	uint8 *bufPtr = memoryBuffer + addrStart;
 	for (addr = addrStart; addr < addrEnd; addr++)
 	{
@@ -255,7 +255,7 @@ void c64d_copy_ram_memory_drive_internal(drive_context_t *drv, BYTE *memoryBuffe
 
 void c64d_peek_whole_map_drive_internal(drive_context_t *drv, uint8 *memoryBuffer)
 {
-	uint16 addr;
+	int addr;
 	uint8 *bufPtr = memoryBuffer;
 	for (addr = 0; addr < 0x0800; addr++)
 	{
@@ -293,7 +293,7 @@ uint8 c64d_mem_ram_read_drive_internal(drive_context_t *drv, uint16 addr)
 
 void c64d_copy_mem_ram_drive_internal(drive_context_t *drv, uint8 *memoryBuffer)
 {
-	uint16 addr;
+	int addr;
 	uint8 *bufPtr = memoryBuffer;
 	for (addr = 0; addr < 0x0800; addr++)
 	{

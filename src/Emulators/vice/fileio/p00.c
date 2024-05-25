@@ -44,7 +44,7 @@
 #include "log.h"
 #include "p00.h"
 #include "rawfile.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "util.h"
 
 

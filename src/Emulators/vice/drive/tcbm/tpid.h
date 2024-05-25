@@ -27,7 +27,7 @@
 #ifndef VICE_TPID_H
 #define VICE_TPID_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 struct drive_context_s;
 struct tpi_context_s;

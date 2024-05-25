@@ -46,7 +46,7 @@
 #include "mousedrv.h"
 #include "resources.h"
 #include "translate.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "ui.h"
 #include "uiapi.h"
 #include "uicolor.h"

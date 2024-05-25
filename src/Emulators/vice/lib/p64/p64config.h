@@ -30,7 +30,7 @@
 #define P64CONFIG_H
 
 #include "lib.h"
-#include "types.h"
+#include "vicetypes.h"
 
 #ifdef P64_USE_STDINT
 #undef P64_USE_STDINT

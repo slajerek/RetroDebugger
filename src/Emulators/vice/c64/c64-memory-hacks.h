@@ -28,7 +28,7 @@
 #define VICE_C64_MEMORY_HACKS_H
 
 #include "snapshot.h"
-#include "types.h"
+#include "vicetypes.h"
 
 #define MEMORY_HACK_NONE       0
 #define MEMORY_HACK_C64_256K   1

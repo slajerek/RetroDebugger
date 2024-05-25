@@ -27,7 +27,7 @@
 #ifndef VICE_DMA_H
 #define VICE_DMA_H
 
-#include "types.h"
+#include "vicetypes.h"
 
 extern void dma_maincpu_steal_cycles(CLOCK start_clk, int num, CLOCK sub);
 

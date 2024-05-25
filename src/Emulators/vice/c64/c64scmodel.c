@@ -39,7 +39,7 @@
 #include "resources.h"
 #include "sid.h"
 #include "tapeport.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "userport.h"
 #include "vicii.h"
 

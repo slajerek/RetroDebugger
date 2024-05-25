@@ -98,7 +98,7 @@
 #include <vorbis/vorbisfile.h>
 #endif
 
-#include "types.h"
+#include "vicetypes.h"
 
 #include "cmdline.h"
 #include "file_drv.h"

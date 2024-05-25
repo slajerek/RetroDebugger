@@ -28,7 +28,7 @@
 
 #include "interface-userport.h"
 #include "printer.h"
-#include "types.h"
+#include "vicetypes.h"
 
 
 int printer_userport_init_resources(void)

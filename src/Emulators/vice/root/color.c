@@ -33,7 +33,7 @@
 #include "lib.h"
 #include "log.h"
 #include "palette.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "uicolor.h"
 
 

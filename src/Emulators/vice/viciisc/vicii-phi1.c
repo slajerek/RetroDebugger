@@ -27,7 +27,7 @@
 
 #include "vice.h"
 
-#include "types.h"
+#include "vicetypes.h"
 #include "vicii-phi1.h"
 #include "viciitypes.h"
 

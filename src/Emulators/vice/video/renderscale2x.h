@@ -29,7 +29,7 @@
 #ifndef VICE_RENDERSCALE2X_H
 #define VICE_RENDERSCALE2X_H
 
-#include "types.h"
+#include "vicetypes.h"
 #include "video.h"
 
 extern void render_08_scale2x(const video_render_color_tables_t *color_tab,

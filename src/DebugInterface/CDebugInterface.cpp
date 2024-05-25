@@ -149,8 +149,8 @@ unsigned int CDebugInterface::GetEmulationFrameNumber()
 
 void CDebugInterface::CreateScreenData()
 {
-	screenImage = new CImageData(512 * this->screenSupersampleFactor, 512 * this->screenSupersampleFactor, IMG_TYPE_RGBA);
-	screenImage->AllocImage(false, true);
+	screenImageData = new CImageData(512 * this->screenSupersampleFactor, 512 * this->screenSupersampleFactor, IMG_TYPE_RGBA);
+	screenImageData->AllocImage(false, true);
 }
 
 void CDebugInterface::RefreshScreenNoCallback()
@@ -166,7 +166,7 @@ void CDebugInterface::SetSupersampleFactor(int factor)
 	
 	this->screenSupersampleFactor = factor;
 	
-	delete screenImage;
+	delete screenImageData;
 	CreateScreenData();
 	
 	this->UnlockRenderScreenMutex();
@@ -175,7 +175,7 @@ void CDebugInterface::SetSupersampleFactor(int factor)
 CImageData *CDebugInterface::GetScreenImageData()
 {
 //	LOGD("CDebugInterface::GetScreenImageData");
-	return this->screenImage;
+	return this->screenImageData;
 }
 
 CDebugDataAdapter *CDebugInterface::GetDataAdapter()
@@ -289,6 +289,29 @@ void CDebugInterface::MouseUp(float x, float y)
 {
 }
 
+// force key up modifier keys when processing keyboard shortcut
+// (e.g. when pressed Ctrl+C, C is consumed as key shortcut, thus we need to release Ctrl)
+void CDebugInterface::KeyUpModifierKeys(bool isShift, bool isAlt, bool isControl)
+{
+	LockIoMutex();
+	if (isShift)
+	{
+		KeyboardUp(MTKEY_LSHIFT);
+		KeyboardUp(MTKEY_RSHIFT);
+	}
+	if (isAlt)
+	{
+		KeyboardUp(MTKEY_LALT);
+		KeyboardUp(MTKEY_RALT);
+	}
+	if (isControl)
+	{
+		KeyboardUp(MTKEY_LCONTROL);
+		KeyboardUp(MTKEY_RCONTROL);
+	}
+	UnlockIoMutex();
+}
+
 // input events for snapshot manager
 CByteBuffer *CDebugInterface::GetInputEventsBufferForCurrentCycle()
 {
@@ -339,6 +362,32 @@ uint8 CDebugInterface::SetDebugModeBlockedWait(uint8 debugMode)
 	SYS_Sleep(500);
 	
 	return currentDebugMode;
+}
+
+void CDebugInterface::PauseEmulationBlockedWait()
+{
+	// just run one emulation loop (one instruction)
+	LockMutex();
+	this->SetDebugMode(DEBUGGER_MODE_RUN_ONE_INSTRUCTION);
+	UnlockMutex();
+	
+	// poll current debug mode and return when paused
+	u32 tries = 0;
+	while(GetDebugMode() != DEBUGGER_MODE_PAUSED)
+	{
+		SYS_Sleep(20);
+		tries++;
+		
+		// this is sanity check if for some reason emulator does not pause after one cycle (?)
+		// we then just force pause and sleep 500ms
+		// 20ms * 100 = 2s
+		if (tries > 100)
+		{
+			this->SetDebugMode(DEBUGGER_MODE_PAUSED);
+			SYS_Sleep(500);
+			break;
+		}
+	}
 }
 
 uint8 CDebugInterface::GetDebugMode()
@@ -531,15 +580,9 @@ CGuiView *CDebugInterface::GetViewScreen()
 	return viewScreen;
 }
 
-CViewMemoryMap *CDebugInterface::GetViewMemoryMap()
+void CDebugInterface::AddViewMemoryMap(CViewDataMap *viewMemoryMap)
 {
-	CDebugDataAdapter *dataAdapter = GetDataAdapter();
-	if (dataAdapter == NULL)
-	{
-		LOGError("CDebugInterface::GetViewMemoryMap: dataAdapter is NULL");
-		return NULL;
-	}
-	return dataAdapter->viewMemoryMap;
+	viewsMemoryMap.push_back(viewMemoryMap);
 }
 
 CViewTimeline *CDebugInterface::GetViewTimeline()
@@ -598,6 +641,16 @@ void CDebugInterface::UnlockTasksMutex()
 void CDebugInterfaceCodeMonitorCallback::CodeMonitorCallbackPrintLine(CSlrString *printLine)
 {
 	LOGError("CDebugInterfaceCodeMonitorCallback::CodeMonitorCallbackPrintLine: not implemented callback");
+}
+
+void CDebugInterface::ShowNotificationInfo(const char *message)
+{
+	viewC64->ShowMessageInfo("%s", message);
+}
+
+void CDebugInterface::ShowNotificationError(const char *message)
+{
+	viewC64->ShowMessageError("%s", message);
 }
 
 void CDebugInterface::ShowMessageBox(const char *title, const char *message)

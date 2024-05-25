@@ -27,7 +27,7 @@
 #ifndef VICE_MC6821CORE_H_
 #define VICE_MC6821CORE_H_
 
-#include "types.h"
+#include "vicetypes.h"
 
 /* control register bit masks */
 

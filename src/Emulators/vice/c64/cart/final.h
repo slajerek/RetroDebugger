@@ -30,7 +30,7 @@
 
 #include <stdio.h>
 
-#include "types.h"
+#include "vicetypes.h"
 
 extern void final_v1_freeze(void);
 extern BYTE final_v1_roml_read(WORD addr);

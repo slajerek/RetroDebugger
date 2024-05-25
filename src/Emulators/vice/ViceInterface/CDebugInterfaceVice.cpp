@@ -1,7 +1,7 @@
 extern "C" {
 #include "vice.h"
 #include "main.h"
-#include "types.h"
+#include "vicetypes.h"
 #include "mos6510.h"
 #include "montypes.h"
 #include "attach.h"
@@ -53,28 +53,33 @@ extern "C" {
 #include "CAudioChannelVice.h"
 #include "CDebuggerEmulatorPlugin.h"
 #include "CSnapshotsManager.h"
+
+#include "CDataAdapterViceDrive1541.h"
+#include "CDataAdapterDrive1541Minimal.h"
 #include "CDebugSymbolsC64.h"
 #include "CDebugSymbolsDrive1541.h"
 #include "CWaveformData.h"
-#include "CViewMemoryMap.h"
+#include "CViewDataMap.h"
 #include "CDebugEventsHistory.h"
 
 // 44100/50*5
 #define SID_WAVEFORM_LENGTH 4410*8
 
 extern "C" {
-	void vsync_suspend_speed_eval(void);
-	void c64d_reset_sound_clk();
-	void sound_suspend(void);
-	void sound_resume(void);
-	int c64d_sound_run_sound_when_paused(void);
-	int set_suspend_time(int val, void *param);
-	
-	void c64d_set_debug_mode(int newMode);
-	void c64d_patch_kernal_fast_boot();
-	void c64d_init_memory(uint8 *c64memory);
-	
-	int resources_get_int(const char *name, int *value_return);
+void vsync_suspend_speed_eval(void);
+void c64d_reset_sound_clk();
+void sound_suspend(void);
+void sound_resume(void);
+int c64d_sound_run_sound_when_paused(void);
+int set_suspend_time(int val, void *param);
+
+void c64d_set_debug_mode(int newMode);
+void c64d_patch_kernal_fast_boot();
+void c64d_init_memory(uint8 *c64memory);
+
+int resources_get_int(const char *name, int *value_return);
+
+disk_image_t *c64d_get_drive_disk_image(int driveId);
 }
 
 void c64d_update_c64_model();
@@ -145,22 +150,51 @@ CDebugInterfaceVice::CDebugInterfaceVice(CViewC64 *viewC64, uint8 *c64memory, bo
 	driveFlushThread = NULL;
 
 	InitViceMainProgram();
-	
-	this->dataAdapterC64 = new CDataAdapterVice(this);
-	this->dataAdapterC64DirectRam = new CDataAdapterViceDirectRam(this);
-	this->dataAdapterDrive1541 = new CDataAdapterViceDisk(this);
-	this->dataAdapterDrive1541DirectRam = new CDataAdapterViceDiskDirectRam(this);
-	this->dataAdapterCartridgeC64 = new CDataAdapterViceCartridge(this, CCartridgeDataAdapterViceType::C64CartridgeDataAdapterViceTypeRamL);
-	
-	// for loading breakpoints and symbols
-	this->symbols = new CDebugSymbolsC64(this, this->dataAdapterC64);
-	this->symbols->CreateDefaultSegment();
 
-	this->symbolsDrive1541 = new CDebugSymbolsDrive1541(this, dataAdapterDrive1541);
-	this->symbolsDrive1541->CreateDefaultSegment();
+	// create default symbols and data adapters
+	
+	// C64
+	symbolsC64 = new CDebugSymbolsC64(this);
+	symbols = symbolsC64;
+	
+	dataAdapterViceC64 = new CDataAdapterViceC64(symbols);
+	dataAdapterC64 = dataAdapterViceC64;
+	symbols->SetDataAdapter(dataAdapterC64);
+	symbols->CreateDefaultSegment();
+	
+	dataAdapterViceC64DirectRam = new CDataAdapterViceC64DirectRam(symbols);
+	dataAdapterC64DirectRam = dataAdapterViceC64DirectRam;
 
-	this->symbolsCartridgeC64 = new CDebugSymbols(this, this->dataAdapterCartridgeC64);
-	this->symbolsCartridgeC64->CreateDefaultSegment();
+	// Drive1541
+	symbolsDrive1541 = new CDebugSymbolsDrive1541(this);
+
+	dataAdapterViceDrive1541 = new CDataAdapterViceDrive1541(symbolsDrive1541);
+	dataAdapterDrive1541 = dataAdapterViceDrive1541;
+
+	symbolsDrive1541->SetDataAdapter(dataAdapterDrive1541);
+	symbolsDrive1541->CreateDefaultSegment();
+
+	dataAdapterViceDrive1541DirectRam = new CDataAdapterViceDrive1541DirectRam(symbolsDrive1541);
+	dataAdapterDrive1541DirectRam = dataAdapterViceDrive1541DirectRam;
+
+	//
+	dataAdapterDrive1541MinimalRam = new CDataAdapterDrive1541Minimal(symbolsDrive1541, dataAdapterViceDrive1541);
+
+	// Drive1541DiskContents
+	symbolsDrive1541DiskContents = new CDebugSymbols(this, false);
+	dataAdapterViceDrive1541DiskContents = new CDataAdapterViceDrive1541DiskContents(symbolsDrive1541DiskContents, 0);
+	dataAdapterDrive1541DiskContents = dataAdapterViceDrive1541DiskContents;
+	
+	symbolsDrive1541DiskContents->SetDataAdapter(dataAdapterViceDrive1541DiskContents);
+	symbolsDrive1541DiskContents->CreateDefaultSegment();
+
+	// C64Cartridge
+	symbolsCartridgeC64 = new CDebugSymbols(this, false);
+	dataAdapterViceC64Cartridge = new CDataAdapterViceC64Cartridge(symbolsCartridgeC64, CCartridgeDataAdapterViceType::C64CartridgeDataAdapterViceTypeRamL);
+	dataAdapterCartridgeC64 = dataAdapterViceC64Cartridge;
+
+	symbolsCartridgeC64->SetDataAdapter(dataAdapterViceC64Cartridge);
+	symbolsCartridgeC64->CreateDefaultSegment();
 
 	C64KeyMap *keyMap = C64KeyMapGetDefault();
 	InitKeyMap(keyMap);
@@ -179,6 +213,16 @@ void CDebugInterfaceVice::InitViceMainProgram()
 	{
 		LOGError("Vice failed, err=%d", ret);
 	}
+	
+	// note, vice changes and strips argv, we need to update the argc to be properly later parsed by other emulators
+	for (int i = 1; i < sysArgc; i++)
+	{
+		if (sysArgv[i] == NULL)
+		{
+			sysArgc = i;
+			break;
+		}
+	}
 }
 
 extern "C" {
@@ -189,7 +233,7 @@ extern "C" {
 
 float CDebugInterfaceVice::GetEmulationFPS()
 {
-	return this->numEmulationFPS;
+	return numEmulationFPS;
 }
 
 void CDebugInterfaceVice::SetPatchKernalFastBoot(bool isPatchKernal)
@@ -272,7 +316,7 @@ void CDebugInterfaceVice::RunEmulationThread()
 	LOGM("CDebugInterfaceVice::RunEmulationThread");
 	CDebugInterface::RunEmulationThread();
 
-	this->isRunning = true;
+	isRunning = true;
 
 #if defined(WIN32)
 	if (c64SettingsUseOnlyFirstCPU)
@@ -290,12 +334,12 @@ void CDebugInterfaceVice::RunEmulationThread()
 
 	if (driveFlushThread == NULL)
 	{
-		this->driveFlushThread = new CThreadViceDriveFlush(this, 2500); // every 2.5s
-		SYS_StartThread(this->driveFlushThread);
+		driveFlushThread = new CThreadViceDriveFlush(this, 2500); // every 2.5s
+		SYS_StartThread(driveFlushThread);
 	}
 	
 	// update sid type
-	this->SetSidTypeAsync(c64SettingsSIDEngineModel);
+	SetSidTypeAsync(c64SettingsSIDEngineModel);
 
 //	audioChannel->Start();
 	
@@ -303,13 +347,13 @@ void CDebugInterfaceVice::RunEmulationThread()
 	
 //	audioChannel->Stop();
 
-	this->isRunning = false;
+	isRunning = false;
 	LOGM("CDebugInterfaceVice::RunEmulationThread: finished");
 }
 
 void CDebugInterfaceVice::SetSidDataHistorySteps(int numSteps)
 {
-	this->sidDataHistorySteps = numSteps;
+	sidDataHistorySteps = numSteps;
 }
 
 void CDebugInterfaceVice::UpdateSidDataHistory()
@@ -391,23 +435,23 @@ void CThreadViceDriveFlush::ThreadRun(void *data)
 	{
 		if (isRunning)
 		{
-			SYS_Sleep(this->flushCheckIntervalInMS);
+			SYS_Sleep(flushCheckIntervalInMS);
 
 			if (!isRunning)
 				continue;
 
-			this->debugInterface->LockMutex();
+			debugInterface->LockMutex();
 			if (debugInterface->snapshotsManager->snapshotToRestore
 				|| debugInterface->snapshotsManager->pauseNumFrame != -1)
 			{
-				this->debugInterface->UnlockMutex();
-				SYS_Sleep(this->flushCheckIntervalInMS * 4);
+				debugInterface->UnlockMutex();
+				SYS_Sleep(flushCheckIntervalInMS * 4);
 				continue;
 			}
 
 	//		LOGD("CViceDriveFlushThread: flushing drive");
 			drive_gcr_data_writeback_all();
-			this->debugInterface->UnlockMutex();
+			debugInterface->UnlockMutex();
 	//		LOGD("CViceDriveFlushThread: flushing drive finished");
 			
 		}
@@ -662,11 +706,13 @@ bool CDebugInterfaceVice::KeyboardUp(uint32 mtKeyCode)
 
 void CDebugInterfaceVice::JoystickDown(int port, uint32 axis)
 {
+//	LOGD("CDebugInterfaceVice::JoystickDown %d %d", port, axis);
 	c64d_joystick_key_down(axis, port+1);
 }
 
 void CDebugInterfaceVice::JoystickUp(int port, uint32 axis)
 {
+//	LOGD("CDebugInterfaceVice::JoystickUp %d %d", port, axis);
 	c64d_joystick_key_up(axis, port+1);
 }
 
@@ -722,6 +768,9 @@ void CDebugInterfaceVice::GetDrive1541State(C64StateDrive1541 *state)
 
 void CDebugInterfaceVice::InsertD64(CSlrString *path)
 {
+	int diskId = 0;
+	
+	LockIoMutex();
 	char *asciiPath = path->GetStdASCII();
 	
 	SYS_FixFileNameSlashes(asciiPath);
@@ -734,11 +783,17 @@ void CDebugInterfaceVice::InsertD64(CSlrString *path)
 	}
 	
 	delete [] asciiPath;
+
+	// TODO: add drive ID
+	((CDataAdapterViceDrive1541DiskContents*)dataAdapterDrive1541DiskContents)->DiskAttached();
+	
+	UnlockIoMutex();
 }
 
 void CDebugInterfaceVice::DetachDriveDisk()
 {
 	file_system_detach_disk(8);
+	((CDataAdapterViceDrive1541DiskContents*)debugInterfaceVice->dataAdapterDrive1541DiskContents)->DiskDetached();
 }
 
 // REU
@@ -1444,9 +1499,9 @@ extern "C" {
 	void c64d_maincpu_make_basic_run();
 };
 
-void CDebugInterfaceVice::MakeBasicRunC64()
+void CDebugInterfaceVice::MakeJMPToBasicRunC64()
 {
-	LOGD("CDebugInterfaceVice::MakeBasicRunC64");
+	LOGD("CDebugInterfaceVice::MakeJMPToBasicRunC64");
 	
 	c64d_maincpu_make_basic_run();
 }
@@ -1589,8 +1644,8 @@ void CDebugInterfaceVice::SetByteToRam1541(uint16 addr, uint8 val)
 extern "C" {
 	uint8 c64d_peek_drive(int driveNum, uint16 addr);
 	uint8 c64d_mem_ram_read_drive(int driveNum, uint16 addr);
-	void c64d_peek_memory_drive(int driveNum, BYTE *buffer, uint16 addrStart, uint16 addrEnd);
-	void c64d_copy_ram_memory_drive(int driveNum, BYTE *buffer, uint16 addrStart, uint16 addrEnd);
+	void c64d_peek_memory_drive(int driveNum, BYTE *buffer, int addrStart, int addrEnd);
+	void c64d_copy_ram_memory_drive(int driveNum, BYTE *buffer, int addrStart, int addrEnd);
 	void c64d_peek_whole_map_drive(int driveNum, uint8 *memoryBuffer);
 	void c64d_copy_mem_ram_drive(int driveNum, uint8 *memoryBuffer);
 }
@@ -1900,6 +1955,8 @@ static void trap_detach_everything(WORD addr, void *v)
 	tape_image_detach(1);
 	
 	file_system_detach_disk(8);
+	
+	((CDataAdapterViceDrive1541DiskContents*)debugInterfaceVice->dataAdapterDrive1541DiskContents)->DiskDetached();
 }
 
 
@@ -1954,18 +2011,6 @@ void CDebugInterfaceVice::SetSIDReceiveChannelsData(int sidNumber, bool isReceiv
 	{
 		c64d_sid_receive_channels_data(sidNumber, 0);
 	}
-}
-
-// snapshots
-bool CDebugInterfaceVice::LoadFullSnapshot(CByteBuffer *snapshotBuffer)
-{
-	SYS_FatalExit("CDebugInterfaceVice::LoadFullSnapshot: not implemented");
-	return true;
-}
-
-void CDebugInterfaceVice::SaveFullSnapshot(CByteBuffer *snapshotBuffer)
-{
-	SYS_FatalExit("CDebugInterfaceVice::LoadFullSnapshot: not implemented");
 }
 
 void c64d_update_c64_model()
@@ -2093,6 +2138,7 @@ static void load_snapshot_trap(WORD addr, void *v)
 	SYS_ReleaseCharBuf(filePath);
 	
 	debugInterfaceVice->ClearHistory();
+	((CDataAdapterViceDrive1541DiskContents*)debugInterfaceVice->dataAdapterDrive1541DiskContents)->DiskAttached();
 
 	debugInterfaceVice->UnlockMutex();
 	guiMain->UnlockMutex();
@@ -2156,6 +2202,34 @@ void CDebugInterfaceVice::SaveFullSnapshot(char *filePath)
 	}
 }
 
+// snapshots
+bool CDebugInterfaceVice::LoadFullSnapshot(CByteBuffer *byteBuffer)
+{
+	LOGD("LoadFullSnapshot");
+	debugInterfaceVice->LockMutex();
+	gSoundEngine->LockMutex("LoadFullSnapshot");
+
+	int ret = c64_snapshot_read_from_memory(1, 1, 1, 1, 1, 1, byteBuffer->data, byteBuffer->length);
+	if (ret != 0)
+	{
+		LOGError("CDebugInterfaceVice::LoadFullSnapshot: failed");
+
+		gSoundEngine->UnlockMutex("LoadFullSnapshot");
+		debugInterfaceVice->UnlockMutex();
+		return false;
+	}
+	
+	gSoundEngine->UnlockMutex("LoadFullSnapshot");
+	debugInterfaceVice->UnlockMutex();
+	return true;
+}
+
+void CDebugInterfaceVice::SaveFullSnapshot(CByteBuffer *snapshotBuffer)
+{
+	SYS_FatalExit("CDebugInterfaceVice::LoadFullSnapshot: not implemented");
+}
+
+
 // these calls should be synced with CPU IRQ so snapshot store or restore is allowed
 bool CDebugInterfaceVice::LoadChipsSnapshotSynced(CByteBuffer *byteBuffer)
 {
@@ -2210,7 +2284,9 @@ bool CDebugInterfaceVice::LoadDiskDataSnapshotSynced(CByteBuffer *byteBuffer)
 	gSoundEngine->UnlockMutex("LoadDiskDataSnapshotSynced");
 	debugInterfaceVice->UnlockMutex();
 	
-	viewC64->viewDrive1541FileD64->RefreshInsertedDiskImageAsync();
+	debugInterfaceVice->dataAdapterViceDrive1541DiskContents->DiskAttached();
+	
+//	viewC64->viewDrive1541Browser->RefreshInsertedDiskImageAsync();
 	return true;
 }
 
@@ -2259,6 +2335,25 @@ bool CDebugInterfaceVice::SaveFullSnapshotSynced(CByteBuffer *byteBuffer,
 	return false;
 }
 
+// this sets up drive internals from disk image so it is ready for the c64 basic run
+void CDebugInterfaceVice::PrepareDriveForBasicRun()
+{
+	viewC64->viewDrive1541Browser->UpdateDriveDiskID();
+	
+	
+//	dataAdapterViceDrive1541->ReadS
+	
+	u8 buf[256];
+	dataAdapterViceDrive1541DiskContents->ReadSector(D64_BAM_TRACK-1, 0, buf);
+	
+	for (int i = 0; i < 256; i++)
+	{
+		dataAdapterDrive1541DirectRam->AdapterWriteByte(0x400+i, buf[i]);
+		dataAdapterDrive1541DirectRam->AdapterWriteByte(0x700+i, buf[i]);
+	}
+	
+}
+
 bool CDebugInterfaceVice::IsDriveDirtyForSnapshot()
 {
 	return c64d_is_drive_dirty_for_snapshot() == 0 ? false : true;
@@ -2269,14 +2364,19 @@ void CDebugInterfaceVice::ClearDriveDirtyForSnapshotFlag()
 	c64d_clear_drive_dirty_for_snapshot();
 }
 
-bool CDebugInterfaceVice::IsDriveDirtyForRefresh()
+bool CDebugInterfaceVice::IsDriveDirtyForRefresh(int driveNum)
 {
-	return c64d_is_drive_dirty_and_needs_refresh(0) == 0 ? false : true;
+	return c64d_is_drive_dirty_and_needs_refresh(driveNum) == 0 ? false : true;
 }
 
-void CDebugInterfaceVice::ClearDriveDirtyForRefreshFlag()
+void CDebugInterfaceVice::SetDriveDirtyForRefreshFlag(int driveNum)
 {
-	c64d_clear_drive_dirty_needs_refresh_flag(0);
+	c64d_set_drive_dirty_needs_refresh_flag(driveNum);
+}
+
+void CDebugInterfaceVice::ClearDriveDirtyForRefreshFlag(int driveNum)
+{
+	c64d_clear_drive_dirty_needs_refresh_flag(driveNum);
 }
 
 
@@ -2417,15 +2517,15 @@ void CDebugInterfaceVice::ScanFolderForRoms(const char *folderPath)
 	sprintf(buf, "%s%ckernal", folderPath, SYS_FILE_SYSTEM_PATH_SEPARATOR);
 	if (SYS_FileExists(buf))
 	{
-		if (c64SettingsPathToC64Kernal)
-			delete c64SettingsPathToC64Kernal;
-		c64SettingsPathToC64Kernal = new CSlrString(buf);
+		if (c64SettingsPathToRomC64Kernal)
+			delete c64SettingsPathToRomC64Kernal;
+		c64SettingsPathToRomC64Kernal = new CSlrString(buf);
 		foundKernal = true;
 	}
-	if (!SYS_FileExists(c64SettingsPathToC64Kernal))
+	if (!SYS_FileExists(c64SettingsPathToRomC64Kernal))
 	{
-		delete c64SettingsPathToC64Kernal;
-		c64SettingsPathToC64Kernal = NULL;
+		delete c64SettingsPathToRomC64Kernal;
+		c64SettingsPathToRomC64Kernal = NULL;
 		foundKernal = false;
 	}
 	
@@ -2433,15 +2533,15 @@ void CDebugInterfaceVice::ScanFolderForRoms(const char *folderPath)
 	sprintf(buf, "%s%cbasic", folderPath, SYS_FILE_SYSTEM_PATH_SEPARATOR);
 	if (SYS_FileExists(buf))
 	{
-		if (c64SettingsPathToC64Basic)
-			delete c64SettingsPathToC64Basic;
-		c64SettingsPathToC64Basic = new CSlrString(buf);
+		if (c64SettingsPathToRomC64Basic)
+			delete c64SettingsPathToRomC64Basic;
+		c64SettingsPathToRomC64Basic = new CSlrString(buf);
 		foundBasic = true;
 	}
-	if (!SYS_FileExists(c64SettingsPathToC64Basic))
+	if (!SYS_FileExists(c64SettingsPathToRomC64Basic))
 	{
-		delete c64SettingsPathToC64Basic;
-		c64SettingsPathToC64Basic = NULL;
+		delete c64SettingsPathToRomC64Basic;
+		c64SettingsPathToRomC64Basic = NULL;
 		foundBasic = false;
 	}
 	
@@ -2449,15 +2549,15 @@ void CDebugInterfaceVice::ScanFolderForRoms(const char *folderPath)
 	sprintf(buf, "%s%cchargen", folderPath, SYS_FILE_SYSTEM_PATH_SEPARATOR);
 	if (SYS_FileExists(buf))
 	{
-		if (c64SettingsPathToC64Chargen)
-			delete c64SettingsPathToC64Chargen;
-		c64SettingsPathToC64Chargen = new CSlrString(buf);
+		if (c64SettingsPathToRomC64Chargen)
+			delete c64SettingsPathToRomC64Chargen;
+		c64SettingsPathToRomC64Chargen = new CSlrString(buf);
 		foundChargen = true;
 	}
-	if (!SYS_FileExists(c64SettingsPathToC64Chargen))
+	if (!SYS_FileExists(c64SettingsPathToRomC64Chargen))
 	{
-		delete c64SettingsPathToC64Chargen;
-		c64SettingsPathToC64Chargen = NULL;
+		delete c64SettingsPathToRomC64Chargen;
+		c64SettingsPathToRomC64Chargen = NULL;
 		foundChargen = false;
 	}
 
@@ -2465,15 +2565,15 @@ void CDebugInterfaceVice::ScanFolderForRoms(const char *folderPath)
 	sprintf(buf, "%s%cdos1541", folderPath, SYS_FILE_SYSTEM_PATH_SEPARATOR);
 	if (SYS_FileExists(buf))
 	{
-		if (c64SettingsPathToC64Drive1541)
-			delete c64SettingsPathToC64Drive1541;
-		c64SettingsPathToC64Drive1541 = new CSlrString(buf);
+		if (c64SettingsPathToRomC64Drive1541)
+			delete c64SettingsPathToRomC64Drive1541;
+		c64SettingsPathToRomC64Drive1541 = new CSlrString(buf);
 		foundDos1541 = true;
 	}
-	if (!SYS_FileExists(c64SettingsPathToC64Drive1541))
+	if (!SYS_FileExists(c64SettingsPathToRomC64Drive1541))
 	{
-		delete c64SettingsPathToC64Drive1541;
-		c64SettingsPathToC64Drive1541 = NULL;
+		delete c64SettingsPathToRomC64Drive1541;
+		c64SettingsPathToRomC64Drive1541 = NULL;
 		foundDos1541 = false;
 	}
 
@@ -2481,25 +2581,25 @@ void CDebugInterfaceVice::ScanFolderForRoms(const char *folderPath)
 	sprintf(buf, "%s%cdos1541II", folderPath, SYS_FILE_SYSTEM_PATH_SEPARATOR);
 	if (SYS_FileExists(buf))
 	{
-		if (c64SettingsPathToC64Drive1541ii)
-			delete c64SettingsPathToC64Drive1541ii;
-		c64SettingsPathToC64Drive1541ii = new CSlrString(buf);
+		if (c64SettingsPathToRomC64Drive1541ii)
+			delete c64SettingsPathToRomC64Drive1541ii;
+		c64SettingsPathToRomC64Drive1541ii = new CSlrString(buf);
 		foundDos1541ii = true;
 	}
-	if (!SYS_FileExists(c64SettingsPathToC64Drive1541ii))
+	if (!SYS_FileExists(c64SettingsPathToRomC64Drive1541ii))
 	{
-		delete c64SettingsPathToC64Drive1541ii;
-		c64SettingsPathToC64Drive1541ii = NULL;
+		delete c64SettingsPathToRomC64Drive1541ii;
+		c64SettingsPathToRomC64Drive1541ii = NULL;
 		foundDos1541ii = false;
 	}
 
 	// prepare message box
 	sprintf(buf, "Found C64 ROMs:          \n\nkernal: %s\nbasic: %s\nchargen: %s\ndos1541: %s\ndos1541II: %s\n\n",
-			foundKernal ? "YES" : (c64SettingsPathToC64Kernal ? "NO, using previous" : "NO" ),
-			foundBasic  ? "YES" : (c64SettingsPathToC64Basic ? "NO, using previous" : "NO" ),
-			foundChargen ? "YES" : (c64SettingsPathToC64Chargen ? "NO, using previous" : "NO" ),
-			foundDos1541 ? "YES" : (c64SettingsPathToC64Drive1541 ? "NO, using previous" : "NO" ),
-			foundDos1541ii ? "YES" : (c64SettingsPathToC64Drive1541ii ? "NO, using previous" : "NO" ));
+			foundKernal ? "YES" : (c64SettingsPathToRomC64Kernal ? "NO, using previous" : "NO" ),
+			foundBasic  ? "YES" : (c64SettingsPathToRomC64Basic ? "NO, using previous" : "NO" ),
+			foundChargen ? "YES" : (c64SettingsPathToRomC64Chargen ? "NO, using previous" : "NO" ),
+			foundDos1541 ? "YES" : (c64SettingsPathToRomC64Drive1541 ? "NO, using previous" : "NO" ),
+			foundDos1541ii ? "YES" : (c64SettingsPathToRomC64Drive1541ii ? "NO, using previous" : "NO" ));
 
 	ShowMessageBox("C64 ROMs folder scan", buf);
 	
@@ -2592,11 +2692,11 @@ void CDebugInterfaceVice::DumpRomsToFolder(const char *folderPath)
 
 void CDebugInterfaceVice::ReadEmbeddedRoms()
 {
-	CByteBuffer::ReadFromFileOrClearBuffer(c64SettingsPathToC64Kernal, c64memrom_kernal64_rom, C64_KERNAL_ROM_SIZE);
-	CByteBuffer::ReadFromFileOrClearBuffer(c64SettingsPathToC64Basic, c64memrom_basic64_rom, C64_BASIC_ROM_SIZE);
-	CByteBuffer::ReadBufferFromFile(c64SettingsPathToC64Chargen, mem_chargen_rom, C64_CHARGEN_ROM_SIZE);
-	CByteBuffer::ReadFromFileOrClearBuffer(c64SettingsPathToC64Drive1541, drive_rom1541_embedded, DRIVE_ROM1541_SIZE);
-	CByteBuffer::ReadFromFileOrClearBuffer(c64SettingsPathToC64Drive1541ii, drive_rom1541ii_embedded, DRIVE_ROM1541II_SIZE);
+	CByteBuffer::ReadFromFileOrClearBuffer(c64SettingsPathToRomC64Kernal, c64memrom_kernal64_rom, C64_KERNAL_ROM_SIZE);
+	CByteBuffer::ReadFromFileOrClearBuffer(c64SettingsPathToRomC64Basic, c64memrom_basic64_rom, C64_BASIC_ROM_SIZE);
+	CByteBuffer::ReadBufferFromFile(c64SettingsPathToRomC64Chargen, mem_chargen_rom, C64_CHARGEN_ROM_SIZE);
+	CByteBuffer::ReadFromFileOrClearBuffer(c64SettingsPathToRomC64Drive1541, drive_rom1541_embedded, DRIVE_ROM1541_SIZE);
+	CByteBuffer::ReadFromFileOrClearBuffer(c64SettingsPathToRomC64Drive1541ii, drive_rom1541ii_embedded, DRIVE_ROM1541II_SIZE);
 }
 
 void CDebugInterfaceVice::CheckLoadedRoms()
@@ -2606,26 +2706,26 @@ void CDebugInterfaceVice::CheckLoadedRoms()
 	char *buf2 = SYS_GetCharBuf();
 	int n = 0;
 	
-	if (!SYS_FileExists(c64SettingsPathToC64Kernal))
+	if (!SYS_FileExists(c64SettingsPathToRomC64Kernal))
 	{
 		strcat(buf, "kernal"); sep = sep2; n++;
 	}
-	if (!SYS_FileExists(c64SettingsPathToC64Basic))
+	if (!SYS_FileExists(c64SettingsPathToRomC64Basic))
 	{
 		sprintf(buf2, "%sbasic", sep); sep = sep2; n++;
 		strcat(buf, buf2);
 	}
-	if (!SYS_FileExists(c64SettingsPathToC64Chargen))
+	if (!SYS_FileExists(c64SettingsPathToRomC64Chargen))
 	{
 		sprintf(buf2, "%schargen", sep); sep = sep2; n++;
 		strcat(buf, buf2);
 	}
-	if (!SYS_FileExists(c64SettingsPathToC64Drive1541))
+	if (!SYS_FileExists(c64SettingsPathToRomC64Drive1541))
 	{
 		sprintf(buf2, "%sdos1541", sep); sep = sep2; n++;
 		strcat(buf, buf2);
 	}
-	if (!SYS_FileExists(c64SettingsPathToC64Drive1541ii))
+	if (!SYS_FileExists(c64SettingsPathToRomC64Drive1541ii))
 	{
 		sprintf(buf2, "%sdos1541II", sep); n++;
 		strcat(buf, buf2);

@@ -36,7 +36,7 @@
 #include "ioutil.h"
 #include "lib.h"
 #include "rawfile.h"
-#include "types.h"
+#include "vicetypes.h"
 
 
 static char *cbmfile_find_file(const char *fsname, const char *path)

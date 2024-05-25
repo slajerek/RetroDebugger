@@ -30,8 +30,6 @@ void CVicEditorLayerC64Screen::RenderMain(vicii_cycle_state_t *viciiState)
 {
 	CViewC64Screen *viewC64Screen = viewC64->viewC64Screen;
 
-	viewC64Screen->RefreshScreen();
-	
 	if (vicEditor->viewVicDisplay->showDisplayBorderType == VIC_DISPLAY_SHOW_BORDER_VISIBLE_AREA
 		|| vicEditor->viewVicDisplay->showDisplayBorderType == VIC_DISPLAY_SHOW_BORDER_NONE)
 	{
@@ -100,10 +98,10 @@ void CVicEditorLayerC64Screen::RenderMain(vicii_cycle_state_t *viciiState)
 			sy = vicEditor->viewVicDisplay->visibleScreenSizeY * osy;
 		}
 				
-		Blit(viewC64Screen->imageScreen,
+		Blit(viewC64Screen->image,
 			 px, py, -1,
 			 sx, sy,
-			 0.0f, 0.0f, viewC64Screen->screenTexEndX, viewC64Screen->screenTexEndY);
+			 0.0f, 0.0f, viewC64Screen->renderTextureEndX, viewC64Screen->renderTextureEndY);
 //		BlitRectangle(px, py, -1, sx, sy, 1, 0, 0, 1);
 	}
 	
