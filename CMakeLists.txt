@@ -15,7 +15,7 @@ add_definitions(
 )
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fpermissive")
-set(CMAKE_C_FLAGS "$(CMAKE_C_FLAGS) -fpermissive")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fpermissive")
 
 find_package(PkgConfig REQUIRED)
 find_package(SDL2 REQUIRED)
