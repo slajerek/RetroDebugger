@@ -1317,7 +1317,6 @@ add_executable(retrodebugger
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Views/Nes/CViewNesPpuOam.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Views/Nes/CViewNesStateCPU.cpp"
 
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/Views/C64/AllGraphics/CViewC64AllGraphics.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Views/C64/AllGraphics/CViewC64AllGraphicsBitmaps.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Views/C64/AllGraphics/CViewC64AllGraphicsBitmapsControl.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Views/C64/AllGraphics/CViewC64AllGraphicsCharsets.cpp"
