@@ -1460,7 +1460,7 @@ target_link_libraries(retrodebugger
     gobject-2.0
     gio-2.0
     dbus-1
-    /usr/lib/x86_64-linux-gnu/libsndio.so
+    sndio
     dl
     m
     pthread
