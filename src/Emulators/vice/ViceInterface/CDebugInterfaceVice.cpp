@@ -2512,94 +2512,113 @@ void CDebugInterfaceVice::ScanFolderForRoms(const char *folderPath)
 	bool foundChargen = false;
 	bool foundDos1541 = false;
 	bool foundDos1541ii = false;
+
+	// Filenames moved into constants
+	
+	// Define the variables for the strings
+	const char *KERNAL_ROM_NAME = "kernal";
+	const char *BASIC_ROM_NAME = "basic";
+	const char *CHARGEN_ROM_NAME = "chargen";
+	const char *DOS1541_ROM_NAME = "dos1541";
+	const char *DOS1541II_ROM_NAME = "dos1541ii";
 	
 	// kernal
-	sprintf(buf, "%s%ckernal", folderPath, SYS_FILE_SYSTEM_PATH_SEPARATOR);
+	sprintf(buf, "%s%c%s", folderPath, SYS_FILE_SYSTEM_PATH_SEPARATOR, KERNAL_ROM_NAME);
 	if (SYS_FileExists(buf))
 	{
-		if (c64SettingsPathToRomC64Kernal)
-			delete c64SettingsPathToRomC64Kernal;
-		c64SettingsPathToRomC64Kernal = new CSlrString(buf);
-		foundKernal = true;
+	    if (c64SettingsPathToRomC64Kernal)
+	        delete c64SettingsPathToRomC64Kernal;
+	    c64SettingsPathToRomC64Kernal = new CSlrString(buf);
+	    foundKernal = true;
 	}
 	if (!SYS_FileExists(c64SettingsPathToRomC64Kernal))
 	{
-		delete c64SettingsPathToRomC64Kernal;
-		c64SettingsPathToRomC64Kernal = NULL;
-		foundKernal = false;
+	    delete c64SettingsPathToRomC64Kernal;
+	    c64SettingsPathToRomC64Kernal = NULL;
+	    foundKernal = false;
 	}
 	
 	// basic
-	sprintf(buf, "%s%cbasic", folderPath, SYS_FILE_SYSTEM_PATH_SEPARATOR);
+	sprintf(buf, "%s%c%s", folderPath, SYS_FILE_SYSTEM_PATH_SEPARATOR, BASIC_ROM_NAME);
 	if (SYS_FileExists(buf))
 	{
-		if (c64SettingsPathToRomC64Basic)
-			delete c64SettingsPathToRomC64Basic;
-		c64SettingsPathToRomC64Basic = new CSlrString(buf);
-		foundBasic = true;
+	    if (c64SettingsPathToRomC64Basic)
+	        delete c64SettingsPathToRomC64Basic;
+	    c64SettingsPathToRomC64Basic = new CSlrString(buf);
+	    foundBasic = true;
 	}
 	if (!SYS_FileExists(c64SettingsPathToRomC64Basic))
 	{
-		delete c64SettingsPathToRomC64Basic;
-		c64SettingsPathToRomC64Basic = NULL;
-		foundBasic = false;
+	    delete c64SettingsPathToRomC64Basic;
+	    c64SettingsPathToRomC64Basic = NULL;
+	    foundBasic = false;
 	}
 	
 	// chargen
-	sprintf(buf, "%s%cchargen", folderPath, SYS_FILE_SYSTEM_PATH_SEPARATOR);
+	sprintf(buf, "%s%c%s", folderPath, SYS_FILE_SYSTEM_PATH_SEPARATOR, CHARGEN_ROM_NAME);
 	if (SYS_FileExists(buf))
 	{
-		if (c64SettingsPathToRomC64Chargen)
-			delete c64SettingsPathToRomC64Chargen;
-		c64SettingsPathToRomC64Chargen = new CSlrString(buf);
-		foundChargen = true;
+	    if (c64SettingsPathToRomC64Chargen)
+	        delete c64SettingsPathToRomC64Chargen;
+	    c64SettingsPathToRomC64Chargen = new CSlrString(buf);
+	    foundChargen = true;
 	}
 	if (!SYS_FileExists(c64SettingsPathToRomC64Chargen))
 	{
-		delete c64SettingsPathToRomC64Chargen;
-		c64SettingsPathToRomC64Chargen = NULL;
-		foundChargen = false;
+	    delete c64SettingsPathToRomC64Chargen;
+	    c64SettingsPathToRomC64Chargen = NULL;
+	    foundChargen = false;
 	}
-
+	
 	// drive 1541
-	sprintf(buf, "%s%cdos1541", folderPath, SYS_FILE_SYSTEM_PATH_SEPARATOR);
+	sprintf(buf, "%s%c%s", folderPath, SYS_FILE_SYSTEM_PATH_SEPARATOR, DOS1541_ROM_NAME);
 	if (SYS_FileExists(buf))
 	{
-		if (c64SettingsPathToRomC64Drive1541)
-			delete c64SettingsPathToRomC64Drive1541;
-		c64SettingsPathToRomC64Drive1541 = new CSlrString(buf);
-		foundDos1541 = true;
+	    if (c64SettingsPathToRomC64Drive1541)
+	        delete c64SettingsPathToRomC64Drive1541;
+	    c64SettingsPathToRomC64Drive1541 = new CSlrString(buf);
+	    foundDos1541 = true;
 	}
 	if (!SYS_FileExists(c64SettingsPathToRomC64Drive1541))
 	{
-		delete c64SettingsPathToRomC64Drive1541;
-		c64SettingsPathToRomC64Drive1541 = NULL;
-		foundDos1541 = false;
+	    delete c64SettingsPathToRomC64Drive1541;
+	    c64SettingsPathToRomC64Drive1541 = NULL;
+	    foundDos1541 = false;
 	}
-
+	
 	// drive 1541-II
-	sprintf(buf, "%s%cdos1541II", folderPath, SYS_FILE_SYSTEM_PATH_SEPARATOR);
+	sprintf(buf, "%s%c%s", folderPath, SYS_FILE_SYSTEM_PATH_SEPARATOR, DOS1541II_ROM_NAME);
 	if (SYS_FileExists(buf))
 	{
-		if (c64SettingsPathToRomC64Drive1541ii)
-			delete c64SettingsPathToRomC64Drive1541ii;
-		c64SettingsPathToRomC64Drive1541ii = new CSlrString(buf);
-		foundDos1541ii = true;
+	    if (c64SettingsPathToRomC64Drive1541ii)
+	        delete c64SettingsPathToRomC64Drive1541ii;
+	    c64SettingsPathToRomC64Drive1541ii = new CSlrString(buf);
+	    foundDos1541ii = true;
 	}
 	if (!SYS_FileExists(c64SettingsPathToRomC64Drive1541ii))
 	{
-		delete c64SettingsPathToRomC64Drive1541ii;
-		c64SettingsPathToRomC64Drive1541ii = NULL;
-		foundDos1541ii = false;
+	    delete c64SettingsPathToRomC64Drive1541ii;
+	    c64SettingsPathToRomC64Drive1541ii = NULL;
+	    foundDos1541ii = false;
 	}
+	
 
+	// Made more user-friendly: show filenames and path
 	// prepare message box
-	sprintf(buf, "Found C64 ROMs:          \n\nkernal: %s\nbasic: %s\nchargen: %s\ndos1541: %s\ndos1541II: %s\n\n",
-			foundKernal ? "YES" : (c64SettingsPathToRomC64Kernal ? "NO, using previous" : "NO" ),
-			foundBasic  ? "YES" : (c64SettingsPathToRomC64Basic ? "NO, using previous" : "NO" ),
-			foundChargen ? "YES" : (c64SettingsPathToRomC64Chargen ? "NO, using previous" : "NO" ),
-			foundDos1541 ? "YES" : (c64SettingsPathToRomC64Drive1541 ? "NO, using previous" : "NO" ),
-			foundDos1541ii ? "YES" : (c64SettingsPathToRomC64Drive1541ii ? "NO, using previous" : "NO" ));
+sprintf(buf, "C64 ROMs Status:\n\n"
+              "Folder: '%s'\n\n"
+              "Kernal ROM (File: '%s'): %s\n"
+              "Basic ROM (File: '%s'): %s\n"
+              "Chargen ROM (File: '%s'): %s\n"
+              "Drive 1541 ROM (File: '%s'): %s\n"
+              "Drive 1541-II ROM (File: '%s'): %s\n\n"
+              "Please ensure that all required ROM files are in the specified folder.",
+        folderPath,
+        KERNAL_ROM_NAME, foundKernal ? "FOUND" : (c64SettingsPathToRomC64Kernal ? "MISSING, using previous version" : "MISSING, no version available"),
+        BASIC_ROM_NAME, foundBasic ? "FOUND" : (c64SettingsPathToRomC64Basic ? "MISSING, using previous version" : "MISSING, no version available"),
+        CHARGEN_ROM_NAME, foundChargen ? "FOUND" : (c64SettingsPathToRomC64Chargen ? "MISSING, using previous version" : "MISSING, no version available"),
+        DOS1541_ROM_NAME, foundDos1541 ? "FOUND" : (c64SettingsPathToRomC64Drive1541 ? "MISSING, using previous version" : "MISSING, no version available"),
+        DOS1541II_ROM_NAME, foundDos1541ii ? "FOUND" : (c64SettingsPathToRomC64Drive1541ii ? "MISSING, using previous version" : "MISSING, no version available"));
 
 	ShowMessageBox("C64 ROMs folder scan", buf);
 	
