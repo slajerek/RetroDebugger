@@ -2521,6 +2521,7 @@ void CDebugInterfaceVice::ScanFolderForRoms(const char *folderPath)
 	const char *CHARGEN_ROM_NAME = "chargen";
 	const char *DOS1541_ROM_NAME = "dos1541";
 	const char *DOS1541II_ROM_NAME = "dos1541ii";
+	const char *DOS1541II_ROM_NAME_2 = "d1541ii";
 	
 	// kernal
 	sprintf(buf, "%s%c%s", folderPath, SYS_FILE_SYSTEM_PATH_SEPARATOR, KERNAL_ROM_NAME);
@@ -2590,10 +2591,21 @@ void CDebugInterfaceVice::ScanFolderForRoms(const char *folderPath)
 	sprintf(buf, "%s%c%s", folderPath, SYS_FILE_SYSTEM_PATH_SEPARATOR, DOS1541II_ROM_NAME);
 	if (SYS_FileExists(buf))
 	{
-	    if (c64SettingsPathToRomC64Drive1541ii)
-	        delete c64SettingsPathToRomC64Drive1541ii;
-	    c64SettingsPathToRomC64Drive1541ii = new CSlrString(buf);
-	    foundDos1541ii = true;
+		if (c64SettingsPathToRomC64Drive1541ii)
+			delete c64SettingsPathToRomC64Drive1541ii;
+		c64SettingsPathToRomC64Drive1541ii = new CSlrString(buf);
+		foundDos1541ii = true;
+	}
+	else
+	{
+		sprintf(buf, "%s%c%s", folderPath, SYS_FILE_SYSTEM_PATH_SEPARATOR, DOS1541II_ROM_NAME_2);
+		if (SYS_FileExists(buf))
+		{
+			if (c64SettingsPathToRomC64Drive1541ii)
+				delete c64SettingsPathToRomC64Drive1541ii;
+			c64SettingsPathToRomC64Drive1541ii = new CSlrString(buf);
+			foundDos1541ii = true;
+		}
 	}
 	if (!SYS_FileExists(c64SettingsPathToRomC64Drive1541ii))
 	{
@@ -2605,7 +2617,7 @@ void CDebugInterfaceVice::ScanFolderForRoms(const char *folderPath)
 
 	// Made more user-friendly: show filenames and path
 	// prepare message box
-sprintf(buf, "C64 ROMs Status:\n\n"
+	sprintf(buf, "C64 ROMs Status:\n\n"
               "Folder: '%s'\n\n"
               "Kernal ROM (File: '%s'): %s\n"
               "Basic ROM (File: '%s'): %s\n"
