@@ -8,10 +8,10 @@
 #include "CGuiEditHex.h"
 #include "CColorsTheme.h"
 
-class CBreakpointAddr;
-class CBreakpointMemory;
+class CDebugBreakpointAddr;
+class CDebugBreakpointData;
 class CDebugBreakpointsAddr;
-class CDebugBreakpointsMemory;
+class CDebugBreakpointsData;
 
 class CViewBreakpointsOLD : public CGuiView, CGuiButtonSwitchCallback, CGuiEditHexCallback
 {
@@ -117,31 +117,31 @@ public:
 
 	virtual void GuiEditHexEnteredValue(CGuiEditHex *editHex, u32 lastKeyCode, bool isCancelled);
 
-	CBreakpointAddr *editingBreakpoint;
+	CDebugBreakpointAddr *editingBreakpoint;
 	CGuiEditHex *editHex;
 	
 	//
 	void RenderAddrBreakpoints(CDebugBreakpointsAddr *addrBreakpoints, float pStartX, float pStartY, int cursorGroupId,
 							   char *addrFormatStr, char *addrEmptyStr);
-	void RenderMemoryBreakpoints(CDebugBreakpointsMemory *memoryBreakpoints, float pStartX, float pStartY, int cursorGroupId);
+	void RenderMemoryBreakpoints(CDebugBreakpointsData *memoryBreakpoints, float pStartX, float pStartY, int cursorGroupId);
 	
 	bool CheckTapAddrBreakpoints(float x, float y,
 								 CDebugBreakpointsAddr *addrBreakpoints,
 								 float pStartX, float pStartY, int cursorGroupId);
 	
 	bool CheckTapMemoryBreakpoints(float x, float y,
-								   CDebugBreakpointsMemory *memoryBreakpoints,
+								   CDebugBreakpointsData *memoryBreakpoints,
 								   float pStartX, float pStartY, int cursorGroupId);
 
 	
 	void GuiEditHexEnteredValueAddr(CGuiEditHex *editHex, CDebugBreakpointsAddr *addrBreakpoints);
-	void GuiEditHexEnteredValueMemory(CGuiEditHex *editHex, u32 lastKeyCode, CDebugBreakpointsMemory *memoryBreakpoints);
+	void GuiEditHexEnteredValueMemory(CGuiEditHex *editHex, u32 lastKeyCode, CDebugBreakpointsData *memoryBreakpoints);
 	
 	void StartEditingSelectedAddrBreakpoint(CDebugBreakpointsAddr *addrBreakpoints, char *emptyAddrStr);
-	void StartEditingSelectedMemoryBreakpoint(CDebugBreakpointsMemory *memoryBreakpoints);
+	void StartEditingSelectedMemoryBreakpoint(CDebugBreakpointsData *memoryBreakpoints);
 	
 	void DeleteSelectedAddrBreakpoint(CDebugBreakpointsAddr *addrBreakpoints);
-	void DeleteSelectedMemoryBreakpoint(CDebugBreakpointsMemory *memoryBreakpoints);
+	void DeleteSelectedMemoryBreakpoint(CDebugBreakpointsData *memoryBreakpoints);
 	
 	CGuiView *prevView;
 	

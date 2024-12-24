@@ -59,7 +59,7 @@ void atrd_mark_atari_cell_read(uint16 addr)
 	if (segment)
 	{
 		u8 value = MEMORY_SafeGetByte(addr);
-		CBreakpointMemory *breakpoint = segment->breakpointsMemory->EvaluateBreakpoint(addr, value, MEMORY_BREAKPOINT_ACCESS_READ);
+		CDebugBreakpointData *breakpoint = segment->breakpointsData->EvaluateBreakpoint(addr, value, MEMORY_BREAKPOINT_ACCESS_READ);
 		if (breakpoint != NULL)
 		{
 			debugInterfaceAtari->SetDebugMode(DEBUGGER_MODE_PAUSED);
@@ -84,7 +84,7 @@ void atrd_mark_atari_cell_write(uint16 addr, uint8 value)
 	CDebugSymbolsSegment *segment = debugInterfaceAtari->symbols->currentSegment;
 	if (segment)
 	{
-		CBreakpointMemory *breakpoint = segment->breakpointsMemory->EvaluateBreakpoint(addr, value, MEMORY_BREAKPOINT_ACCESS_WRITE);
+		CDebugBreakpointData *breakpoint = segment->breakpointsData->EvaluateBreakpoint(addr, value, MEMORY_BREAKPOINT_ACCESS_WRITE);
 		if (breakpoint != NULL)
 		{
 			debugInterfaceAtari->SetDebugMode(DEBUGGER_MODE_PAUSED);
@@ -134,7 +134,7 @@ void atrd_check_pc_breakpoint(uint16 pc)
 	else
 	{
 		debugInterface->LockMutex();
-		CBreakpointAddr *addrBreakpoint = segment->breakpointsPC->EvaluateBreakpoint(pc);
+		CDebugBreakpointAddr *addrBreakpoint = segment->breakpointsPC->EvaluateBreakpoint(pc);
 		if (addrBreakpoint != NULL)
 		{
 			if (IS_SET(addrBreakpoint->actions, ADDR_BREAKPOINT_ACTION_SET_BACKGROUND))

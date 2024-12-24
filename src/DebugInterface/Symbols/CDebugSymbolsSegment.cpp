@@ -35,11 +35,11 @@ void CDebugSymbolsSegment::Init()
 	breakOnPC = true;
 	breakOnMemory = true;
 
-	breakpointsPC = new CDebugBreakpointsAddr(BREAKPOINT_TYPE_CPU_PC, "CpuPC", this, "%04X", 0, 0xFFFF);
-	breakpointsByType[BREAKPOINT_TYPE_CPU_PC] = breakpointsPC;
+	breakpointsPC = new CDebugBreakpointsAddr(BREAKPOINT_TYPE_ADDR, "CpuPC", this, "%04X", 0, 0xFFFF);
+	breakpointsByType[BREAKPOINT_TYPE_ADDR] = breakpointsPC;
 	
-	breakpointsMemory = new CDebugBreakpointsMemory(BREAKPOINT_TYPE_MEMORY, "Memory", this, "%04X", 0, 0xFFFF);
-	breakpointsByType[BREAKPOINT_TYPE_MEMORY] = breakpointsMemory;
+	breakpointsData = new CDebugBreakpointsData(BREAKPOINT_TYPE_DATA, "Memory", this, "%04X", 0, 0xFFFF);
+	breakpointsByType[BREAKPOINT_TYPE_DATA] = breakpointsData;
 }
 
 CDebugSymbolsSegment::~CDebugSymbolsSegment()
@@ -70,15 +70,15 @@ CDebugSymbolsSegment::~CDebugSymbolsSegment()
 void CDebugSymbolsSegment::UpdateRenderBreakpoints()
 {
 	breakpointsPC->UpdateRenderBreakpoints();
-	breakpointsMemory->UpdateRenderBreakpoints();
+	breakpointsData->UpdateRenderBreakpoints();
 }
 
 void CDebugSymbolsSegment::AddBreakpointPC(int address)
 {
-	CBreakpointAddr *addrBreakpoint = this->breakpointsPC->GetBreakpoint(address);
+	CDebugBreakpointAddr *addrBreakpoint = this->breakpointsPC->GetBreakpoint(address);
 	if (addrBreakpoint == NULL)
 	{
-		addrBreakpoint = new CBreakpointAddr(address);
+		addrBreakpoint = new CDebugBreakpointAddr(symbols, address);
 		addrBreakpoint->actions = ADDR_BREAKPOINT_ACTION_STOP;
 		this->breakpointsPC->AddBreakpoint(addrBreakpoint);
 	}
@@ -90,10 +90,10 @@ void CDebugSymbolsSegment::AddBreakpointPC(int address)
 
 void CDebugSymbolsSegment::AddBreakpointSetBackground(int address, int value)
 {
-	CBreakpointAddr *addrBreakpoint = this->breakpointsPC->GetBreakpoint(address);
+	CDebugBreakpointAddr *addrBreakpoint = this->breakpointsPC->GetBreakpoint(address);
 	if (addrBreakpoint == NULL)
 	{
-		addrBreakpoint = new CBreakpointAddr(address);
+		addrBreakpoint = new CDebugBreakpointAddr(address);
 		addrBreakpoint->actions = ADDR_BREAKPOINT_ACTION_SET_BACKGROUND;
 		addrBreakpoint->data = value;
 		this->breakpointsPC->AddBreakpoint(addrBreakpoint);
@@ -104,18 +104,18 @@ void CDebugSymbolsSegment::AddBreakpointSetBackground(int address, int value)
 	}
 }
 
-void CDebugSymbolsSegment::AddBreakpointMemory(int address, u32 memoryAccess, MemoryBreakpointComparison comparison, int value)
+CDebugBreakpointData *CDebugSymbolsSegment::AddBreakpointMemory(int address, u32 memoryAccess, DataBreakpointComparison comparison, int value)
 {
-	CBreakpointMemory *memBreakpoint = new CBreakpointMemory(address, memoryAccess, comparison, value);
-	this->breakpointsMemory->AddBreakpoint(memBreakpoint);
-	
+	CDebugBreakpointData *memBreakpoint = new CDebugBreakpointData(address, memoryAccess, comparison, value);
+	this->breakpointsData->AddBreakpoint(memBreakpoint);
 	this->breakOnMemory = true;
+	return memBreakpoint;
 }
 
 void CDebugSymbolsSegment::ClearBreakpoints()
 {
 	breakpointsPC->ClearBreakpoints();
-	breakpointsMemory->ClearBreakpoints();
+	breakpointsData->ClearBreakpoints();
 }
 
 // code labels
@@ -274,20 +274,9 @@ CDebugSymbolsCodeLabel *CDebugSymbolsSegment::FindNearLabel(int address, int *of
 	
 	// scan labels to find most near
 	const int maxLabelAddrOffset = c64SettingsDisassemblyNearLabelMaxOffset;
-;
+
 	for (int i = 0; i < maxLabelAddrOffset; i++)
 	{
-		// scan right
-		int addrR = address + i;
-		if (addrR < symbols->dataAdapter->AdapterGetDataLength())
-		{
-			label = FindLabel(addrR);
-			if (label)
-			{
-				*offset = -i;
-				return label;
-			}
-		}
 		// scan left
 		int addrL = address - i;
 		if (addrL >= 0)
@@ -296,6 +285,18 @@ CDebugSymbolsCodeLabel *CDebugSymbolsSegment::FindNearLabel(int address, int *of
 			if (label)
 			{
 				*offset = +i;
+				return label;
+			}
+		}
+
+		// scan right
+		int addrR = address + i;
+		if (addrR < symbols->dataAdapter->AdapterGetDataLength())
+		{
+			label = FindLabel(addrR);
+			if (label)
+			{
+				*offset = -i;
 				return label;
 			}
 		}
@@ -348,7 +349,6 @@ CDebugSymbolsCodeLabel *CDebugSymbolsSegment::FindLabelByText(const char *text)
 {
 	char *buf = SYS_GetCharBuf();
 	strncpy(buf, text, MAX_STRING_LENGTH-1);
-	FUN_ToUpperCaseStr(buf);
 	u64 hashCode = GetHashCode64(buf);
 	SYS_ReleaseCharBuf(buf);
 

@@ -593,31 +593,31 @@ void CDebugAsmSource::ParseXML(CByteBuffer *byteBuffer, CDebugInterface *debugIn
 				
 				int value = arg->ToIntFromHex();
 				
-				MemoryBreakpointComparison memBreakComparison = MemoryBreakpointComparison::MEMORY_BREAKPOINT_EQUAL;
+				DataBreakpointComparison memBreakComparison = DataBreakpointComparison::MEMORY_BREAKPOINT_EQUAL;
 				
 				if (op->Equals("==") || op->Equals("="))
 				{
-					memBreakComparison = MemoryBreakpointComparison::MEMORY_BREAKPOINT_EQUAL;
+					memBreakComparison = DataBreakpointComparison::MEMORY_BREAKPOINT_EQUAL;
 				}
 				else if (op->Equals("!="))
 				{
-					memBreakComparison = MemoryBreakpointComparison::MEMORY_BREAKPOINT_NOT_EQUAL;
+					memBreakComparison = DataBreakpointComparison::MEMORY_BREAKPOINT_NOT_EQUAL;
 				}
 				else if (op->Equals("<"))
 				{
-					memBreakComparison = MemoryBreakpointComparison::MEMORY_BREAKPOINT_LESS;
+					memBreakComparison = DataBreakpointComparison::MEMORY_BREAKPOINT_LESS;
 				}
 				else if (op->Equals("<=") || op->Equals("=<"))
 				{
-					memBreakComparison = MemoryBreakpointComparison::MEMORY_BREAKPOINT_LESS_OR_EQUAL;
+					memBreakComparison = DataBreakpointComparison::MEMORY_BREAKPOINT_LESS_OR_EQUAL;
 				}
 				else if (op->Equals(">"))
 				{
-					memBreakComparison = MemoryBreakpointComparison::MEMORY_BREAKPOINT_GREATER;
+					memBreakComparison = DataBreakpointComparison::MEMORY_BREAKPOINT_GREATER;
 				}
 				else if (op->Equals(">=") || op->Equals("=>"))
 				{
-					memBreakComparison = MemoryBreakpointComparison::MEMORY_BREAKPOINT_GREATER_OR_EQUAL;
+					memBreakComparison = DataBreakpointComparison::MEMORY_BREAKPOINT_GREATER_OR_EQUAL;
 				}
 				else
 				{

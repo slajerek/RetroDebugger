@@ -1,16 +1,23 @@
 #ifndef _CDEBUGINTERFACE_H_
 #define _CDEBUGINTERFACE_H_
 
-#include "CDebugBreakpoints.h"
+#include "CDebugBreakpoint.h"
+#include "CDebugBreakpointAddr.h"
+#include "CDebugBreakpointData.h"
+#include "CDebugBreakpointRasterLine.h"
+#include "CDebugBreakpointsAddr.h"
+#include "CDebugBreakpointsData.h"
 #include "CDebugDataAdapter.h"
 #include "CByteBuffer.h"
 #include "DebuggerDefs.h"
 #include "EmulatorsConfig.h"
+#include "json.hpp"
 
 #include <map>
 #include <list>
 
 class CGuiView;
+
 class CViewC64;
 class CSlrMutex;
 class CImageData;
@@ -20,6 +27,7 @@ class CSnapshotsManager;
 class CDebugSymbols;
 class CDebugSymbolsSegment;
 
+class CViewEmulatorScreen;
 class CViewDisassembly;
 class CViewBreakpoints;
 class CViewDataWatch;
@@ -30,6 +38,9 @@ class CDebugInterfaceTask;
 class CViewDataMap;
 class CViewTimeline;
 class CDebugEventsHistory;
+
+class CDebuggerApi;
+class CDebuggerServerApi;
 
 class CDebugInterfaceCodeMonitorCallback
 {
@@ -52,6 +63,7 @@ public:
 	virtual int GetEmulatorType();
 	virtual CSlrString *GetEmulatorVersionString();
 	virtual const char *GetPlatformNameString();
+	virtual const char *GetPlatformNameEndpointString();
 	
 	virtual float GetEmulationFPS();
 	
@@ -120,7 +132,6 @@ public:
 	virtual void JoystickDown(int port, uint32 axis);
 	virtual void JoystickUp(int port, uint32 axis);
 	
-	// TODO: mouse
 	virtual void MouseDown(float x, float y);
 	virtual void MouseMove(float x, float y);
 	virtual void MouseUp(float x, float y);
@@ -141,9 +152,12 @@ public:
 	virtual void PauseEmulationBlockedWait();
 
 	//
-	virtual void Reset();
-	virtual void HardReset();
+	virtual void ResetSoft();
+	virtual void ResetHard();
 	
+	virtual void DetachEverything();
+
+	//
 	virtual bool LoadExecutable(char *fullFilePath);
 	virtual bool MountDisk(char *fullFilePath, int diskNo, bool readOnly);
 
@@ -188,6 +202,8 @@ public:
 	
 	virtual void StepOverInstruction();
 	virtual void StepOneCycle();
+	virtual void StepOverSubroutine();
+	
 	virtual void RunContinueEmulation();
 
 	// breakpoints
@@ -196,7 +212,10 @@ public:
 	virtual void SetDebugOn(bool debugOn);
 
 	virtual CDebugDataAdapter *GetDataAdapter();
-		
+	
+	// note this may fallback to default data adapter if not implemented
+	virtual CDebugDataAdapter *GetDataAdapterDirectRam();
+
 	// view breakpoints
 	virtual void UpdateRenderBreakpoints();
 
@@ -229,11 +248,20 @@ public:
 	void RemovePlugin(CDebuggerEmulatorPlugin *plugin);
 	
 	// views
-	CGuiView *viewScreen;
-	virtual CGuiView *GetViewScreen();
+	CViewEmulatorScreen *viewScreen;
+	virtual CViewEmulatorScreen *GetViewScreen();
 	std::vector<CViewDataMap *> viewsMemoryMap;
 	virtual void AddViewMemoryMap(CViewDataMap *viewMemoryMap);
 	virtual CViewTimeline *GetViewTimeline();
+	CViewDisassembly *viewDisassembly;
+	virtual CViewDisassembly *GetViewDisassembly();
+	
+	// plugin api
+	virtual CDebuggerApi *GetDebuggerApi();
+	
+	// debugger server api
+	CDebuggerServerApi *debuggerServerApi;
+	virtual CDebuggerServerApi *GetDebuggerServerApi();
 	
 	//
 	CSlrMutex *breakpointsMutex;

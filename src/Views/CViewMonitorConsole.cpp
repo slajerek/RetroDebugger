@@ -1432,7 +1432,7 @@ void CViewMonitorConsole::CommandMemoryLoad()
 	{
 		//this->viewConsole->PrintLine("Usage: L [PRG] [from addres] [file name]");
 		// no tokens - just open LOAD PRG dialog
-		viewC64->viewC64MainMenu->OpenDialogOpenFile();
+		viewC64->mainMenuHelper->OpenDialogOpenFile();
 		return;
 	}
 

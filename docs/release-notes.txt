@@ -1,44 +1,74 @@
+Retro Debugger v0.64.70 (Xmas 24 Dec'24 release)
+Added: Remote debug WebSockets server on port $0DEB (thanks to Mojzesh for thorough testing, bug fixing and valuable assistance)
+       Check out the library and a great example of usage in Go, created by Mojzesh: https://github.com/mojzesh/c64d-ws-client
+Added: C64 mouse support (thanks to Anthony Savva for pointing this out)
+Added: Display current value (hex, dec, binary) in Memory/Data Dump views (thanks to Brush/Elysium for pointing this out)
+Added: Support of Windows ARM64 architecture
+Bug fixed: selecting C64 Vice border mode in Settings was not refreshing Screen and VIC Editor texture boundaries (thanks to DKT/Samar for reporting)
+Bug fixed: searching for label was not finding it (thanks to Stein Pedersen for reporting and a fix)
+Bug fixed: VicEditor's automatic grid lines were not updated on startup
+Bug fixed: crash when scrubbing timeline when EasyFlash with state was attached
+Bug fixed (Linux): fixes for CMake files, PR #50 (thanks Uffe Jakobsen)
+Changed: Adjusted label resolution to prioritize +N labels over -N when closely positioned, especially for 16-bit pointers (thanks to Brush/Elysium for reporting)
+Changed: More user-friendly message for not found ROMs, PR #68 (thanks to jumpjack)
+Changed: Use project-relative paths in Visual Studio project files, PR #63 (thanks to Stein Pedersen)
+... and a lot of refactoring and other various bug fixes.
+
+Enjoy my first ever DJ Set created for New Year's Eve EOY 2024/25 party! Play here: https://youtu.be/LZF44uOo1_g
+
+Retro Debugger v0.64.68 (Moonshine Dragons release)
+Added: 1541 Drive disk contents editor and GCR view (C64/1541 Drive/1541 Disk contents and 1541 GCR Disk data)
+Added: 1541 Drive memory map for full 64kB and only RAM
+Fixed: 1541 Drive memory map allows zooming (thx to Bacchus/Fairlight for reporting)
+Fixed: Clicking on 1541 Drive memory map moves to proper address in 1541 Drive memory dump (thx to Bacchus/Fairlight for reporting)
+Added: Settings/C64/Reset C64 before PRG load allows selecting BASIC snapshot as starting point (note, this is now the best option to autostart PRG files, although only C64 PAL is now supported. Thx to Brush/Elysium for testing)
+Changed: F7 keyboard shortcut to show D64 disk browser is now changed to Alt+F7, and F3 to Alt+F3, to not conflict with Action Replay/Retro Replay menu when bypass key shortcuts option is selected
+Added: Store zoom and position of VIC Display screen and All Screens panes (note, VIC Editor's screen position may be off, you may need to zoom in and setup position manually after upgrading layout)
+Added: Context menu to show controller in All Screens views
+Added: Setting UI/Hide tab bar triangle icon
+Added: #44 remember selected Segment when file is reloaded (thanks to SingleCopy for world's first PR to RetroDebugger!)
+Fixed: #32 "$" input in C64 Data watch causes crash
+Fixed: intermittent crash on quit when drive browser was refreshing contents
+Fixed: crash on startup when multiple command line parameters were passed to Vice (thanks to Stephen D. for reporting)
+Fixed: bug that caused strange random characters to be displayed in comment when a new debug event was created (thanks to David Youd for mentioning this in his video).
+Fixed: C64 detach disk correctly now properly clears disk directory in D64 disk browser
+Fixed: menu bar that consumed keyboard shortcuts, causing e.g. VIC Display to not respond to Ctrl+L/R arrows, as they were consumed by emulation rewind (thanks to Tom Telmo for reporting)
+Fixed: 1541 Drive directory was not updated on snapshot reload
+Fixed: Disassembly line bar was disappearing in some rare edge cases
+Fixed: Paiting in VIC Editor using right mouse button did not work on mouse move
+Fixed Windows: do not show system console when user started debugger by clicking on file (thx to Isildur/Samar for reporting)
+Fixed Windows: #40 Window position is not correctly restored on restart on MS Windows (thx to Isildur/Samar for reporting)
+Fixed Linux: #27 Compiling v0.64.66 on Debian fails with "unknown type name ‘BYTE’"
+Fixed Linux: #31 Implicit Declaration errors
+Fixed Linux: #43 Missing gcc compiler flag
+Fixed Linux: #46 Leftover CViewC64KeyMap view in Screens folder was used instead of new version of this view (thanks to thecky for PR)
+
+Plus various fixes and improvements in CRT Maker plugin,
+... and as always a lot of refactoring and small bug and crash fixes.
+
+
 Retro Debugger v0.64.66 (Xmas release)
-Added: Debug Events History view (e.g. past breakpoints), you can now rewind 
-       code to specific breakpoint (suggested by Brush/Elysium). 
-       See demo: https://youtu.be/v_sunlK6_wo
-Added: Memory Monitor view to track memory changes. 
-       See demo: https://youtu.be/0r-z36Lk6TQ
-Added: Memory Plot view (suggested by Digger/Elysium). 
-       See demo: https://youtu.be/qqALSiTesHc
-Added: File browser view (suggested by Chash/Caution^Fraction). 
-       See demo: https://youtu.be/ctYunZSYzsU
+Added: Debug Events History view (e.g. past breakpoints), you can now rewind code to specific breakpoint (suggested by Brush/Elysium). See demo: https://youtu.be/v_sunlK6_wo
+Added: Memory Monitor view to track memory changes. See demo: https://youtu.be/0r-z36Lk6TQ
+Added: Memory Plot view (suggested by Digger/Elysium). See demo: https://youtu.be/qqALSiTesHc
+Added: File browser view (suggested by Chash/Caution^Fraction). See demo: https://youtu.be/ctYunZSYzsU
 Added: SidDump-style export in SID Tracker history view context menu
-Added: New flags to memory markers dump: 
-       VicScreen, VicSpritePointer, VicCharset, VicBitmap, VicColorRam 
-       (suggested by Wacek/Arise)
-Added: show labels with offsets in disassembly when label is not found 
-       (e.g. label+1, label+2, etc.), configurable in Settings 
-       (suggested by Brush/Elysium)
-Added: Reset keymap to default 
-       (issue https://github.com/slajerek/RetroDebugger/issues/22)
+Added: New flags to memory markers dump: VicScreen, VicSpritePointer, VicCharset, VicBitmap, VicColorRam (suggested by Wacek/Arise)
+Added: show labels with offsets in disassembly when label is not found (e.g. label+1, label+2, etc.), configurable in Settings (suggested by Brush/Elysium)
+Added: Reset keymap to default (issue https://github.com/slajerek/RetroDebugger/issues/22)
 Added: 1541 disk directory view: format new disk image, add prg to disk image
-Added: Context menu in the Memory map with an option to select CPU, or RAM 
-       (suggested by Bacchus/Fairlight)
-Added: Reset can now start emulation and continue running automatically, 
-       configurable in Settings
+Added: Context menu in the Memory map with an option to select CPU, or RAM (suggested by Bacchus/Fairlight)
+Added: Reset can now start emulation and continue running automatically, configurable in Settings
 Added: Borrowed opensource fonts from Furnace tracker
-Fixed: Setting emulator's screen zoom to 25%, 50%, 100% was off one pixel due 
-       to recent refactorings (thanks to Jetboy/Elysium for reporting)
-Fixed: mouse position and clicks were not properly forwarded to GoatTracker2 plugin 
-       (thanks to Linus for reporting)
-Fixed: sometimes invisible views could consume mouse clicks and other events 
-       (thanks to Tom Telmo for additional testing)
-Fixed: sometimes layout could not load all views parameters when run on older 
-       RetroDebugger version and thus destroing unknown parameters on layout save
-Changed MS Windows: Upgrading settings path, moving settings from 
-        C:\ProgramData\RetroDebugger to C:\Users\mars\AppData\Local\RetroDebugger
+Fixed: Setting emulator's screen zoom to 25%, 50%, 100% was off one pixel due to recent refactorings (thanks to Jetboy/Elysium for reporting)
+Fixed: mouse position and clicks were not properly forwarded to GoatTracker2 plugin (thanks to Linus for reporting)
+Fixed: sometimes invisible views could consume mouse clicks and other events (thanks to Tom Telmo for additional testing)
+Fixed: sometimes layout could not load all views parameters when run on older RetroDebugger version and thus destroing unknown parameters on layout save
+Changed MS Windows: Upgrading settings path, moving settings from C:\ProgramData\RetroDebugger\ to C:\Users\mars\AppData\Local\RetroDebugger\
 
 ... and a lot of refactoring and other various bug fixes.
 
-Big shoutout to Bacchus/Fairlight, Tom Telmo and Jetboy/Elysium for their 
-last-minute eagle eyes! Just moments before release, these heroes stepped in 
-to report bugs and conduct extra testing.
+Big shoutout to Bacchus/Fairlight, Tom Telmo and Jetboy/Elysium for their last-minute eagle eyes! Just moments before release, these heroes stepped in to report bugs and conduct extra testing.
 
 
 Retro Debugger v0.64.64 The X Party release!

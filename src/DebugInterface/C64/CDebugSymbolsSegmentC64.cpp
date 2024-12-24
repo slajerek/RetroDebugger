@@ -1,5 +1,7 @@
 #include "CDebugSymbolsSegmentC64.h"
 #include "CDebugSymbols.h"
+#include "CDebugBreakpointsRasterLine.h"
+#include "CDebugBreakpointRasterLine.h"
 
 CDebugSymbolsSegmentC64::CDebugSymbolsSegmentC64(CDebugSymbols *debugSymbols, CSlrString *name, int segmentNum)
 : CDebugSymbolsSegment(debugSymbols, name, segmentNum, true)
@@ -11,8 +13,10 @@ void CDebugSymbolsSegmentC64::Init()
 	CDebugSymbolsSegment::Init();
 
 	breakOnRaster = true;
-	breakpointsRasterLine = new CDebugBreakpointsAddr(BREAKPOINT_TYPE_RASTER_LINE, "RasterLine", this, "%03X", 0, 0x137);
+	breakpointsRasterLine = new CDebugBreakpointsRasterLine(BREAKPOINT_TYPE_RASTER_LINE, "RasterLine", this, "%03X", 0, 0x137);
 	breakpointsRasterLine->addBreakpointPopupHeadlineStr = "Add Raster line Breakpoint";
+	breakpointsRasterLine->addBreakpointsTableColumnAddrStr = "Raster line";
+	breakpointsRasterLine->addressNameJsonStr = "rasterLine";
 	
 	breakpointsByType[BREAKPOINT_TYPE_RASTER_LINE] = breakpointsRasterLine;
 
@@ -21,12 +25,18 @@ void CDebugSymbolsSegmentC64::Init()
 	breakOnC64IrqNMI = false;
 }
 
-void CDebugSymbolsSegmentC64::AddBreakpointRaster(int rasterNum)
+CDebugBreakpointRasterLine *CDebugSymbolsSegmentC64::AddBreakpointRaster(int rasterNum)
 {
-	CBreakpointAddr *rasterBreakpoint = new CBreakpointAddr(rasterNum);
-	this->breakpointsRasterLine->AddBreakpoint(rasterBreakpoint);
-	
-	this->breakOnRaster = true;
+	CDebugBreakpointRasterLine *rasterBreakpoint = new CDebugBreakpointRasterLine(symbols, rasterNum);
+	breakpointsRasterLine->AddBreakpoint(rasterBreakpoint);
+	breakOnRaster = true;
+	return rasterBreakpoint;
+}
+
+u64 CDebugSymbolsSegmentC64::RemoveBreakpointRaster(int rasterNum)
+{
+	u64 breakpointId = breakpointsRasterLine->DeleteBreakpoint(rasterNum);
+	return breakpointId;
 }
 
 void CDebugSymbolsSegmentC64::UpdateRenderBreakpoints()

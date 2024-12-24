@@ -3,6 +3,7 @@
 #include "VID_Main.h"
 #include "CGuiMain.h"
 #include "CViewC64.h"
+#include "CDebugMemory.h"
 #include "SND_SoundEngine.h"
 #include "C64SettingsStorage.h"
 #include "CSlrFileFromOS.h"
@@ -485,6 +486,9 @@ bool CSnapshotsManager::CheckSnapshotRestore()
 
 		// TODO: WTF c64d_reset_sound_clk?   generalize
 		c64d_reset_sound_clk();
+		
+		// clear all history events after restored cycle (mem write history, execute history)
+		debugInterface->symbols->memory->ClearEventsAfterCycle(snapshotToRestore->cycle);
 		
 		gSoundEngine->UnlockMutex("CSnapshotsManager::CheckSnapshotRestore: restore snapshot");
 

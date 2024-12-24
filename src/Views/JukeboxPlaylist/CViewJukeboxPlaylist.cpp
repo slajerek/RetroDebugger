@@ -267,7 +267,7 @@ void CViewJukeboxPlaylist::ThreadRun(void *data)
 	
 	if (entry->resetMode == MACHINE_LOADPRG_RESET_MODE_HARD)
 	{
-		viewC64->debugInterfaceC64->HardReset();
+		viewC64->debugInterfaceC64->ResetHard();
 		
 		if (entry->delayAfterResetTime < 0)
 		{
@@ -280,7 +280,7 @@ void CViewJukeboxPlaylist::ThreadRun(void *data)
 	}
 	else if (entry->resetMode == MACHINE_LOADPRG_RESET_MODE_SOFT)
 	{
-		viewC64->debugInterfaceC64->Reset();
+		viewC64->debugInterfaceC64->ResetSoft();
 		
 		if (entry->delayAfterResetTime < 0)
 		{
@@ -301,24 +301,24 @@ void CViewJukeboxPlaylist::ThreadRun(void *data)
 		CSlrString *ext = entry->filePath->GetFileExtensionComponentFromPath();
 		if (ext->CompareWith("prg") || ext->CompareWith("PRG"))
 		{
-			viewC64->viewC64MainMenu->LoadPRG(entry->filePath, currentEntry->autoRun, false, this->playlist->showLoadAddressInfo, false);
+			viewC64->mainMenuHelper->LoadPRG(entry->filePath, currentEntry->autoRun, false, this->playlist->showLoadAddressInfo, false);
 		}
 		else if (ext->CompareWith("d64") || ext->CompareWith("D64")
 				 || ext->CompareWith("g64") || ext->CompareWith("G64"))
 		{
-			viewC64->viewC64MainMenu->InsertD64(entry->filePath, false,
+			viewC64->mainMenuHelper->InsertD64(entry->filePath, false,
 												currentEntry->autoRun, currentEntry->runFileNum-1,
 												this->playlist->showLoadAddressInfo);
 		}
 		else if (ext->CompareWith("crt") || ext->CompareWith("CRT"))
 		{
-			viewC64->viewC64MainMenu->InsertCartridge(entry->filePath, false);
+			viewC64->mainMenuHelper->InsertCartridge(entry->filePath, false);
 		}
 		else if (ext->CompareWith("reu") || ext->CompareWith("REU"))
 		{
 			bool val = true;
 			C64DebuggerSetSetting("ReuEnabled", &val);
-			viewC64->viewC64MainMenu->AttachReu(entry->filePath, false, false);
+			viewC64->mainMenuHelper->AttachReu(entry->filePath, false, false);
 		}
 		else if (ext->CompareWith("snap") || ext->CompareWith("SNAP")
 				 || ext->CompareWith("vsf") || ext->CompareWith("VSF"))

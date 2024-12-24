@@ -155,7 +155,7 @@ void c64d_mark_c64_cell_read(uint16 addr)
 		if (segment)
 		{
 			u8 value = c64d_peek_c64(addr);
-			CBreakpointMemory *breakpoint = segment->breakpointsMemory->EvaluateBreakpoint(addr, value, MEMORY_BREAKPOINT_ACCESS_READ);
+			CDebugBreakpointData *breakpoint = segment->breakpointsData->EvaluateBreakpoint(addr, value, MEMORY_BREAKPOINT_ACCESS_READ);
 			if (breakpoint != NULL)
 			{
 				debugInterfaceVice->SetDebugMode(DEBUGGER_MODE_PAUSED);
@@ -179,7 +179,7 @@ void c64d_mark_c64_cell_write(uint16 addr, uint8 value)
 	CDebugSymbolsSegment *segment = debugInterfaceVice->symbols->currentSegment;
 	if (segment)
 	{
-		CBreakpointMemory *breakpoint = segment->breakpointsMemory->EvaluateBreakpoint(addr, value, MEMORY_BREAKPOINT_ACCESS_WRITE);
+		CDebugBreakpointData *breakpoint = segment->breakpointsData->EvaluateBreakpoint(addr, value, MEMORY_BREAKPOINT_ACCESS_WRITE);
 		if (breakpoint != NULL)
 		{
 			debugInterfaceVice->SetDebugMode(DEBUGGER_MODE_PAUSED);
@@ -215,7 +215,7 @@ void c64d_mark_drive1541_cell_read(uint16 addr)
 	
 		u8 value = c64d_peek_drive(segment->driveNum, addr);
 
-		CBreakpointMemory *breakpoint = segment->breakpointsMemory->EvaluateBreakpoint(addr, value, MEMORY_BREAKPOINT_ACCESS_READ);
+		CDebugBreakpointData *breakpoint = segment->breakpointsData->EvaluateBreakpoint(addr, value, MEMORY_BREAKPOINT_ACCESS_READ);
 		if (breakpoint)
 		{
 			debugInterfaceVice->SetDebugMode(DEBUGGER_MODE_PAUSED);
@@ -241,7 +241,7 @@ void c64d_mark_drive1541_cell_write(uint16 addr, uint8 value)
 	{
 		debugInterfaceVice->LockMutex();
 		
-		CBreakpointMemory *breakpoint = segment->breakpointsMemory->EvaluateBreakpoint(addr, value, MEMORY_BREAKPOINT_ACCESS_WRITE);
+		CDebugBreakpointData *breakpoint = segment->breakpointsData->EvaluateBreakpoint(addr, value, MEMORY_BREAKPOINT_ACCESS_WRITE);
 		if (breakpoint)
 		{
 			debugInterfaceVice->SetDebugMode(DEBUGGER_MODE_PAUSED);
@@ -693,7 +693,7 @@ void c64d_c64_check_pc_breakpoint(uint16 pc)
 	{
 		debugInterfaceVice->LockMutex();
 		
-		CBreakpointAddr *addrBreakpoint = segment->breakpointsPC->EvaluateBreakpoint(pc);
+		CDebugBreakpointAddr *addrBreakpoint = segment->breakpointsPC->EvaluateBreakpoint(pc);
 		if (addrBreakpoint != NULL)
 		{
 			if (IS_SET(addrBreakpoint->actions, ADDR_BREAKPOINT_ACTION_SET_BACKGROUND))
@@ -756,7 +756,7 @@ void c64d_drive1541_check_pc_breakpoint(uint16 pc)
 	else if (segment->breakOnPC)
 	{
 		debugInterfaceVice->LockMutex();
-		CBreakpointAddr *addrBreakpoint = segment->breakpointsPC->EvaluateBreakpoint(pc);
+		CDebugBreakpointAddr *addrBreakpoint = segment->breakpointsPC->EvaluateBreakpoint(pc);
 		if (addrBreakpoint != NULL)
 		{
 			if (IS_SET(addrBreakpoint->actions, ADDR_BREAKPOINT_ACTION_STOP))
@@ -1142,7 +1142,7 @@ void c64d_c64_check_raster_breakpoint(uint16 rasterLine)
 	debugInterfaceVice->LockMutex();
 	if (segment && segment->breakOnRaster)
 	{
-		CBreakpointAddr *breakpoint = segment->breakpointsRasterLine->EvaluateBreakpoint(rasterLine);
+		CDebugBreakpointAddr *breakpoint = segment->breakpointsRasterLine->EvaluateBreakpoint(rasterLine);
 		if (breakpoint != NULL)
 		{
 			debugInterfaceVice->SetDebugMode(DEBUGGER_MODE_PAUSED);

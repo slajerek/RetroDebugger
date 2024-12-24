@@ -28,6 +28,7 @@ public:
 	virtual int GetEmulatorType();
 	virtual CSlrString *GetEmulatorVersionString();
 	virtual const char *GetPlatformNameString();
+	virtual const char *GetPlatformNameEndpointString();
 
 	virtual bool IsPal();
 	virtual double GetCpuClockFrequency();
@@ -72,8 +73,8 @@ public:
 	virtual uint8 GetDebugMode();
 
 	//
-	virtual void Reset();
-	virtual void HardReset();
+	virtual void ResetSoft();
+	virtual void ResetHard();
 	
 	// this is main emulation cpu cycle counter
 	virtual u64 GetMainCpuCycleCounter();
@@ -88,6 +89,8 @@ public:
 	virtual bool InsertCartridge(char *fullFilePath);
 	virtual bool AttachTape(char *fullFilePath, bool readOnly);
 	
+	virtual void DetachEverything();
+
 	//
 	virtual bool LoadFullSnapshot(char *filePath);
 	virtual void SaveFullSnapshot(char *filePath);
@@ -143,6 +146,8 @@ public:
 	virtual void StepOneCycle();
 
 	virtual void SupportsBreakpoints(bool *writeBreakpoint, bool *readBreakpoint);
+
+	virtual CDebuggerApi *GetDebuggerApi();
 	
 	//	virtual uint8 GetByteFromRamC64(uint16 addr);
 //	virtual void MakeJmpC64(uint16 addr);

@@ -191,7 +191,7 @@ void C64DebuggerPluginSlideshow::ThreadRun(void *data)
 	crtMaker->MakeCartridge();
 	
 	// run the cart
-	api->debugInterface->HardReset();
+	api->debugInterface->ResetHard();
 	api->debugInterface->SetDebugMode(DEBUGGER_MODE_RUNNING);
 
 	SYS_Sleep(300);
@@ -391,7 +391,7 @@ void C64DebuggerPluginSlideshow::ThreadRun(void *data)
 	// recreate CRT
 	crtMaker->ProcessFiles();
 	crtMaker->MakeCartridge();
-	viewC64->viewC64MainMenu->InsertCartridge(new CSlrString(crtMaker->cartOutPath), false);
+	viewC64->mainMenuHelper->InsertCartridge(new CSlrString(crtMaker->cartOutPath), false);
 	//api->MakeJmp(entryPoint);
 	api->UnPauseEmulation();
 	

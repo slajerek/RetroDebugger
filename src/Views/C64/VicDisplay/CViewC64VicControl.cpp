@@ -1083,10 +1083,10 @@ void CViewC64VicControl::Render()
 			
 //			LOGD("rasterLine=%02x", rasterLine);
 
-			std::map<int, CBreakpointAddr *> *breakpointsMap = &(segment->breakpointsRasterLine->breakpoints);
+			std::map<int, CDebugBreakpointAddr *> *breakpointsMap = &(segment->breakpointsRasterLine->breakpoints);
 			
 			// find if breakpoint exists
-			std::map<int, CBreakpointAddr *>::iterator it = breakpointsMap->find(rasterLine);
+			std::map<int, CDebugBreakpointAddr *>::iterator it = breakpointsMap->find(rasterLine);
 			if (it == breakpointsMap->end())
 			{
 				btnToggleBreakpoint->SetOn(false);

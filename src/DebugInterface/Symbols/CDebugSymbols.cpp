@@ -463,18 +463,18 @@ void CDebugSymbols::ParseBreakpoints(CByteBuffer *byteBuffer)
 			
 			LOGD(".. adding breakOnPC %4.4x", address);
 			
-			std::map<int, CBreakpointAddr *>::iterator it = currentSegment->breakpointsPC->breakpoints.find(address);
+			std::map<int, CDebugBreakpointAddr *>::iterator it = currentSegment->breakpointsPC->breakpoints.find(address);
 			if (it == currentSegment->breakpointsPC->breakpoints.end())
 			{
 				// not found
-				CBreakpointAddr *addrBreakpoint = new CBreakpointAddr(address);
+				CDebugBreakpointAddr *addrBreakpoint = new CDebugBreakpointAddr(this, address);
 				addrBreakpoint->actions = ADDR_BREAKPOINT_ACTION_STOP;
 				currentSegment->breakpointsPC->breakpoints[address] = addrBreakpoint;
 			}
 			else
 			{
 				LOGD("...... exists %4.4x", address);
-				CBreakpointAddr *addrBreakpoint = it->second;
+				CDebugBreakpointAddr *addrBreakpoint = it->second;
 				SET_BIT(addrBreakpoint->actions, ADDR_BREAKPOINT_ACTION_STOP);
 			}
 		}
@@ -496,11 +496,11 @@ void CDebugSymbols::ParseBreakpoints(CByteBuffer *byteBuffer)
 			
 			LOGD(".. adding setBkg %4.4x %2.2x", address, value);
 			
-			std::map<int, CBreakpointAddr *>::iterator it = currentSegment->breakpointsPC->breakpoints.find(address);
+			std::map<int, CDebugBreakpointAddr *>::iterator it = currentSegment->breakpointsPC->breakpoints.find(address);
 			if (it == currentSegment->breakpointsPC->breakpoints.end())
 			{
 				// not found
-				CBreakpointAddr *addrBreakpoint = new CBreakpointAddr(address);
+				CDebugBreakpointAddr *addrBreakpoint = new CDebugBreakpointAddr(this, address);
 				addrBreakpoint->actions = ADDR_BREAKPOINT_ACTION_SET_BACKGROUND;
 				addrBreakpoint->data = value;
 				currentSegment->breakpointsPC->breakpoints[address] = addrBreakpoint;
@@ -508,7 +508,7 @@ void CDebugSymbols::ParseBreakpoints(CByteBuffer *byteBuffer)
 			else
 			{
 				LOGD("...... exists %4.4x", address);
-				CBreakpointAddr *addrBreakpoint = it->second;
+				CDebugBreakpointAddr *addrBreakpoint = it->second;
 				addrBreakpoint->data = value;
 				SET_BIT(addrBreakpoint->actions, ADDR_BREAKPOINT_ACTION_SET_BACKGROUND);
 			}
@@ -567,31 +567,31 @@ void CDebugSymbols::ParseBreakpoints(CByteBuffer *byteBuffer)
 			
 			int value = arg->ToIntFromHex();
 
-			MemoryBreakpointComparison memBreakComparison = MemoryBreakpointComparison::MEMORY_BREAKPOINT_EQUAL;
+			DataBreakpointComparison memBreakComparison = DataBreakpointComparison::MEMORY_BREAKPOINT_EQUAL;
 			
 			if (op->Equals("==") || op->Equals("="))
 			{
-				memBreakComparison = MemoryBreakpointComparison::MEMORY_BREAKPOINT_EQUAL;
+				memBreakComparison = DataBreakpointComparison::MEMORY_BREAKPOINT_EQUAL;
 			}
 			else if (op->Equals("!="))
 			{
-				memBreakComparison = MemoryBreakpointComparison::MEMORY_BREAKPOINT_NOT_EQUAL;
+				memBreakComparison = DataBreakpointComparison::MEMORY_BREAKPOINT_NOT_EQUAL;
 			}
 			else if (op->Equals("<"))
 			{
-				memBreakComparison = MemoryBreakpointComparison::MEMORY_BREAKPOINT_LESS;
+				memBreakComparison = DataBreakpointComparison::MEMORY_BREAKPOINT_LESS;
 			}
 			else if (op->Equals("<=") || op->Equals("=<"))
 			{
-				memBreakComparison = MemoryBreakpointComparison::MEMORY_BREAKPOINT_LESS_OR_EQUAL;
+				memBreakComparison = DataBreakpointComparison::MEMORY_BREAKPOINT_LESS_OR_EQUAL;
 			}
 			else if (op->Equals(">"))
 			{
-				memBreakComparison = MemoryBreakpointComparison::MEMORY_BREAKPOINT_GREATER;
+				memBreakComparison = DataBreakpointComparison::MEMORY_BREAKPOINT_GREATER;
 			}
 			else if (op->Equals(">=") || op->Equals("=>"))
 			{
-				memBreakComparison = MemoryBreakpointComparison::MEMORY_BREAKPOINT_GREATER_OR_EQUAL;
+				memBreakComparison = DataBreakpointComparison::MEMORY_BREAKPOINT_GREATER_OR_EQUAL;
 			}
 			else
 			{
@@ -604,8 +604,8 @@ void CDebugSymbols::ParseBreakpoints(CByteBuffer *byteBuffer)
 			op->DebugPrint("..... op=");
 			LOGD("..... value=%2.2x", value);
 			
-			CBreakpointMemory *memBreakpoint = new CBreakpointMemory(address, MEMORY_BREAKPOINT_ACCESS_WRITE, memBreakComparison, value);
-			currentSegment->breakpointsMemory->breakpoints[address] = memBreakpoint;
+			CDebugBreakpointData *memBreakpoint = new CDebugBreakpointData(this, address, MEMORY_BREAKPOINT_ACCESS_WRITE, memBreakComparison, value);
+			currentSegment->breakpointsData->breakpoints[address] = memBreakpoint;
 		}
 		else
 		{
@@ -1545,7 +1545,7 @@ void CDebugSymbols::SelectPreviousSegment()
 	
 	if (this->currentSegmentNum == 0)
 	{
-		this->currentSegmentNum = this->segments.size()-1;
+		this->currentSegmentNum = (int)this->segments.size()-1;
 	}
 	else
 	{
@@ -1557,6 +1557,29 @@ void CDebugSymbols::SelectPreviousSegment()
 	debugInterface->UnlockMutex();
 	guiMain->UnlockMutex();
 }
+
+// returns if segment found
+bool CDebugSymbols::SetSegment(CSlrString *segmentName)
+{
+	guiMain->LockMutex();
+	debugInterface->LockMutex();
+
+	for (CDebugSymbolsSegment *segment : segments)
+	{
+		if (segment->name->CompareWith(segmentName))
+		{
+			debugInterface->UnlockMutex();
+			guiMain->UnlockMutex();
+			currentSegment = segment;
+			return true;
+		}
+	}
+	
+	debugInterface->UnlockMutex();
+	guiMain->UnlockMutex();
+	return false;
+}
+
 
 void CDebugSymbols::ClearTemporaryBreakpoint()
 {

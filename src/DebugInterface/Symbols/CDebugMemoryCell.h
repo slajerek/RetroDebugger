@@ -2,6 +2,23 @@
 #define _CDebugMemoryMapCell_h_
 
 #include "SYS_Defs.h"
+#include "M_Circlebuf.h"
+
+struct DebugMemoryCellHistoryValue
+{
+	u64 cycle;
+	u32 frame;
+	int pc;
+	u8 value;
+};
+// sizeof is 25
+
+struct DebugMemoryCellHistoryEvent
+{
+	u64 cycle;
+	u32 frame;
+};
+// sizeof is 12
 
 class CDebugMemoryCell
 {
@@ -31,8 +48,11 @@ public:
 	
 	void MarkCellRead();
 	void MarkCellWrite(uint8 value);
-	void MarkCellExecuteCode(uint8 opcode);
+	void MarkCellWrite(uint8 value, u64 writeCycle, u32 writeFrame, int writePC, int writeRasterLine, int writeRasterCycle);
+	void MarkCellExecuteCode(uint8 opcode, u64 executeCycle, u32 executeFrame);
 	void MarkCellExecuteArgument();
+	
+	void ClearEventsAfterCycle(u64 cycle);
 	
 	void ClearDebugMarkers();
 	void ClearReadWriteDebugMarkers();
@@ -54,6 +74,14 @@ public:
 	// last execute cycle
 	u64 executeCycle;
 	u32 executeFrame;
+	
+	// history
+	
+	// previous values: cycle, frame and value
+	struct circlebuf valuesHistory;
+	
+	// previous executes: cycle, frame (i.e. when this address was previously executed)
+	struct circlebuf executeHistory;
 };
 
 

@@ -1,5 +1,9 @@
 #!/usr/bin/env ruby
 
+# https://github.com/specht/champ
+# Champ - N. Harold Cham's 65C02 Profiler
+# modified for Retro Debugger by Marcin 'slajerek' Skoczylas
+
 require 'fileutils'
 require 'open3'
 require 'set'

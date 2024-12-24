@@ -76,6 +76,7 @@ public:
 
 	// returns charset addr
 	int ImportCharset(CSlrString *path);
+	int ImportCharset(u8 *data);
 	void ImportCharsetAndShowMessage(CSlrString *path);
 	bool ExportCharset(CSlrString *path);
 	

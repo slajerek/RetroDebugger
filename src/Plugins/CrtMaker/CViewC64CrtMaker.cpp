@@ -496,7 +496,7 @@ void CViewC64CrtMaker::Run()
 	}
 
 	// run the cart
-	api->debugInterface->HardReset();
+	api->debugInterface->ResetHard();
 	api->debugInterface->SetDebugMode(DEBUGGER_MODE_RUNNING);
 
 	SYS_Sleep(300);

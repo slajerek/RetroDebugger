@@ -2,7 +2,6 @@
 #define _CDebugInterfaceC64_H_
 
 #include "CDebugInterface.h"
-#include "CDebugBreakpoints.h"
 #include "CDataAdapter.h"
 #include "CByteBuffer.h"
 #include "DebuggerDefs.h"
@@ -38,6 +37,7 @@ public:
 	virtual int GetEmulatorType();
 	virtual CSlrString *GetEmulatorVersionString();
 	virtual const char *GetPlatformNameString();
+	virtual const char *GetPlatformNameEndpointString();
 
 	virtual float GetEmulationFPS();
 
@@ -94,8 +94,8 @@ public:
 	virtual int GetScreenSizeX();
 	virtual int GetScreenSizeY();
 	
-	virtual void Reset();
-	virtual void HardReset();
+	virtual void ResetSoft();
+	virtual void ResetHard();
 	virtual void DiskDriveReset();
 	
 	// C64 keyboard & joystick mapper
@@ -104,6 +104,16 @@ public:
 
 	virtual void JoystickDown(int port, uint32 axis);
 	virtual void JoystickUp(int port, uint32 axis);
+
+	//
+	virtual void EmulatedMouseUpdateSettings();
+	virtual bool EmulatedMouseEnable(bool enable);
+	virtual void EmulatedMouseSetType(int mouseType);
+	virtual void EmulatedMouseSetPort(int port);
+	virtual void EmulatedMouseSetPosition(int x, int y);
+	virtual void EmulatedMouseButtonLeft(bool isPressed);
+	virtual void EmulatedMouseButtonMiddle(bool isPressed);
+	virtual void EmulatedMouseButtonRight(bool isPressed);
 
 	// debugger control
 	virtual void SetDebugOnC64(bool debugOnC64);
@@ -247,6 +257,7 @@ public:
 //	// see $F3F6 in 1541 ROM: http://unusedino.de/ec64/technical/misc/c1541/romlisting.html#FDD3
 //	virtual void UpdateDriveDiskID(int driveId);
 	
+	virtual void DetachEverything();
 
 	// tape
 	virtual void AttachTape(CSlrString *filePath);
@@ -267,9 +278,6 @@ public:
 	virtual void SetReuSize(int reuSize);
 	virtual bool LoadReu(char *filePath);
 	virtual bool SaveReu(char *filePath);
-
-	//
-	virtual void DetachEverything();
 
 	// snapshots
 	virtual bool LoadFullSnapshot(CByteBuffer *snapshotBuffer);
@@ -332,6 +340,7 @@ public:
 	
 	//
 	virtual CDebugDataAdapter *GetDataAdapter();
+	virtual CDebugDataAdapter *GetDataAdapterDirectRam();
 
 	//
 	// @returns NULL when monitor is not supported
@@ -352,7 +361,9 @@ public:
 	virtual bool IsProfilerActive();
 	
 	//
-	
+	virtual CDebuggerApi *GetDebuggerApi();
+	virtual CDebuggerServerApi *GetDebuggerServerApi();
+
 };
 
 #endif

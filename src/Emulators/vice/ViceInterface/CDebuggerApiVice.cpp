@@ -1,4 +1,5 @@
 #include "CDebuggerApiVice.h"
+#include "CDebugInterfaceVice.h"
 #include "CViewC64.h"
 #include "CViewMonitorConsole.h"
 #include "CViewC64VicEditor.h"
@@ -20,7 +21,7 @@
 #include "CViewDataMap.h"
 #include "CDebugAsmSource.h"
 #include "CDebugSymbols.h"
-#include "CDebugSymbolsSegment.h"
+#include "CDebugSymbolsSegmentC64.h"
 #include "CViewDataWatch.h"
 #include "CGuiMain.h"
 #include "CSlrFont.h"
@@ -29,6 +30,7 @@ CDebuggerApiVice::CDebuggerApiVice(CDebugInterface *debugInterface)
 : CDebuggerApi(debugInterface)
 {
 	assembleTarget = ASSEMBLE_TARGET_MAIN_CPU;
+	debugInterfaceVice = (CDebugInterfaceVice *)debugInterface;
 }
 
 void CDebuggerApiVice::SwitchToVicEditor()
@@ -188,14 +190,19 @@ long CDebuggerApiVice::GetCurrentTimeInMilliseconds()
 	return SYS_GetCurrentTimeInMillis();
 }
 
-void CDebuggerApiVice::ResetMachine()
-{
-	viewC64->debugInterfaceC64->HardReset();
-}
-
 void CDebuggerApiVice::MakeJmp(int addr)
 {
-	viewC64->debugInterfaceC64->MakeJmpC64(addr);
+	debugInterfaceVice->MakeJmpC64(addr);
+}
+
+CDataAdapter *CDebuggerApiVice::GetDataAdapterDrive1541MemoryWithIO()
+{
+	return debugInterfaceVice->dataAdapterDrive1541;
+}
+
+CDataAdapter *CDebuggerApiVice::GetDataAdapterDrive1541MemoryDirectRAM()
+{
+	return debugInterfaceVice->dataAdapterDrive1541DirectRam;
 }
 
 void CDebuggerApiVice::SetByte(int addr, u8 v)
@@ -205,18 +212,18 @@ void CDebuggerApiVice::SetByte(int addr, u8 v)
 
 void CDebuggerApiVice::SetByteWithIo(int addr, u8 v)
 {
-	viewC64->debugInterfaceC64->SetByteC64(addr, v);
+	debugInterfaceVice->SetByteC64(addr, v);
 }
 
 void CDebuggerApiVice::SetByteToRam(int addr, u8 v)
 {
 //	LOGD("CDebuggerApiVice::SetByteToRam: %04x %02x", addr, v);
-	viewC64->debugInterfaceC64->SetByteToRamC64(addr, v);
+	debugInterfaceVice->SetByteToRamC64(addr, v);
 }
 
 u8 CDebuggerApiVice::GetByteWithIo(int addr)
 {
-	return viewC64->debugInterfaceC64->GetByteC64(addr);
+	return debugInterfaceVice->GetByteC64(addr);
 }
 
 u8 CDebuggerApiVice::GetByteFromRam(int addr)
@@ -226,12 +233,12 @@ u8 CDebuggerApiVice::GetByteFromRam(int addr)
 
 void CDebuggerApiVice::SetByteToRamC64(int addr, u8 v)
 {
-	viewC64->debugInterfaceC64->SetByteToRamC64(addr, v);
+	debugInterfaceVice->SetByteToRamC64(addr, v);
 }
 
 u8 CDebuggerApiVice::GetByteFromRamC64(int addr)
 {
-	return viewC64->debugInterfaceC64->GetByteFromRamC64(addr);
+	return debugInterfaceVice->GetByteFromRamC64(addr);
 }
 
 void CDebuggerApiVice::DetachEverything()
@@ -287,65 +294,6 @@ int CDebuggerApiVice::Assemble(int addr, char *assembleText)
 	return -1;
 }
 
-void CDebuggerApiVice::AddWatch(CSlrString *segmentName, int address, CSlrString *watchName, uint8 representation, int numberOfValues)
-{
-	if (debugInterface->symbols)
-	{
-		CDebugSymbolsSegment *segment = debugInterface->symbols->FindSegment(segmentName);
-		if (segment == NULL)
-		{
-			segmentName->DebugPrint("segment=");
-			LOGError("CDebuggerApiVice::AddWatch: segment not found");
-			return;
-		}
-
-		// TODO: convert watch name in symbols to CSlrString
-		char *cWatchName = watchName->GetStdASCII();
-		segment->AddWatch(address, cWatchName, representation, numberOfValues);
-		delete [] cWatchName;
-	}
-	else
-	{
-		LOGError("CDebuggerApiVice::AddWatch: no symbols");
-	}
-}
-
-void CDebuggerApiVice::AddWatch(int address, char *watchName, uint8 representation, int numberOfValues)
-{
-	// TODO: Generalize me
-	CDebugInterface *debugInterface = NULL;
-	if (viewC64->debugInterfaceC64)
-	{
-		debugInterface = viewC64->debugInterfaceC64;
-	}
-	else if (viewC64->debugInterfaceAtari)
-	{
-		debugInterface = viewC64->debugInterfaceAtari;
-	}
-	
-	
-	if (debugInterface->symbols)
-	{
-		CDebugSymbolsSegment *segment = debugInterface->symbols->currentSegment;
-		if (segment == NULL)
-		{
-			LOGError("CDebuggerApiVice::AddWatch: default segment not found");
-			return;
-		}
-		
-		segment->AddWatch(address, watchName, representation, numberOfValues);
-	}
-	else
-	{
-		LOGError("CDebuggerApiVice::AddWatch: no symbols");
-	}
-}
-
-void CDebuggerApiVice::AddWatch(int address, char *watchName)
-{
-	this->AddWatch(address, watchName, WATCH_REPRESENTATION_HEX_8, 1);
-}
-
 bool CDebuggerApiVice::LoadPRG(const char *filePath)
 {
 	u16 fromAddr, toAddr;
@@ -359,7 +307,7 @@ bool CDebuggerApiVice::LoadPRG(const char *filePath, u16 *fromAddr, u16 *toAddr)
 	{
 		CByteBuffer *byteBuffer = new CByteBuffer(file, false);
 
-		viewC64->viewC64MainMenu->LoadPRG(byteBuffer, fromAddr, toAddr);
+		viewC64->mainMenuHelper->LoadPRG(byteBuffer, fromAddr, toAddr);
 		
 		delete byteBuffer;
 		delete file;
@@ -372,13 +320,13 @@ bool CDebuggerApiVice::LoadPRG(const char *filePath, u16 *fromAddr, u16 *toAddr)
 
 bool CDebuggerApiVice::LoadPRG(CByteBuffer *byteBuffer, u16 *fromAddr, u16 *toAddr)
 {
-	viewC64->viewC64MainMenu->LoadPRG(byteBuffer, fromAddr, toAddr);
+	viewC64->mainMenuHelper->LoadPRG(byteBuffer, fromAddr, toAddr);
 	return true;
 }
 
 bool CDebuggerApiVice::LoadPRG(CByteBuffer *byteBuffer, bool autoStart, bool forceFastReset)
 {
-	return viewC64->viewC64MainMenu->LoadPRG(byteBuffer, autoStart, false, forceFastReset);
+	return viewC64->mainMenuHelper->LoadPRG(byteBuffer, autoStart, false, forceFastReset);
 }
 
 bool CDebuggerApiVice::LoadCRT(CByteBuffer *byteBuffer)
@@ -392,7 +340,7 @@ bool CDebuggerApiVice::LoadCRT(CByteBuffer *byteBuffer)
 	
 	filePath->DebugPrint();
 	
-	bool ret = viewC64->viewC64MainMenu->InsertCartridge(filePath, false);
+	bool ret = viewC64->mainMenuHelper->InsertCartridge(filePath, false);
 	
 	delete filePath;
 	
@@ -402,7 +350,7 @@ bool CDebuggerApiVice::LoadCRT(CByteBuffer *byteBuffer)
 bool CDebuggerApiVice::LoadCRT(const char *filePath)
 {
 	CSlrString *path = new CSlrString(filePath);
-	bool ret = viewC64->viewC64MainMenu->InsertCartridge(path, false);
+	bool ret = viewC64->mainMenuHelper->InsertCartridge(path, false);
 	delete path;
 	return ret;
 }
@@ -433,10 +381,10 @@ bool CDebuggerApiVice::LoadKLA(const char *filePath, u16 bitmapAddress, u16 scre
 	return ret;
 }
 
-void CDebuggerApiVice::SaveExomizerPRG(u16 fromAddr, u16 toAddr, u16 jmpAddr, const char *filePath)
+bool CDebuggerApiVice::SaveExomizerPRG(u16 fromAddr, u16 toAddr, u16 jmpAddr, const char *filePath)
 {
 	LOGM("SaveExomizerPRG: fromAddr=%04x toAddr=%04x jmpAddr=%04x filePath='%s'", fromAddr, toAddr, jmpAddr, filePath);
-	C64SaveMemoryExomizerPRG(fromAddr, toAddr, jmpAddr, filePath);
+	return C64SaveMemoryExomizerPRG(fromAddr, toAddr, jmpAddr, filePath);
 }
 
 u8 *CDebuggerApiVice::ExomizerMemoryRaw(u16 fromAddr, u16 toAddr, int *compressedSize)
@@ -444,22 +392,10 @@ u8 *CDebuggerApiVice::ExomizerMemoryRaw(u16 fromAddr, u16 toAddr, int *compresse
 	return C64ExomizeMemoryRaw(fromAddr, toAddr, compressedSize);
 }
 
-
-
-void CDebuggerApiVice::SavePRG(u16 fromAddr, u16 toAddr, const char *filePath)
+bool CDebuggerApiVice::SavePRG(u16 fromAddr, u16 toAddr, const char *filePath)
 {
 	LOGM("SavePRG: fromAddr=%04x toAddr=%04x filePath='%s'", fromAddr, toAddr, filePath);
-	C64SaveMemory(fromAddr, toAddr, true, viewC64->debugInterfaceC64->dataAdapterC64DirectRam, filePath);
-}
-
-void CDebuggerApiVice::SaveBinary(u16 fromAddr, u16 toAddr, const char *filePath)
-{
-	C64SaveMemory(fromAddr, toAddr, false, viewC64->debugInterfaceC64->dataAdapterC64DirectRam, filePath);
-}
-
-int CDebuggerApiVice::LoadBinary(u16 fromAddr, const char *filePath)
-{
-	return C64LoadMemory(fromAddr, viewC64->debugInterfaceC64->dataAdapterC64DirectRam, filePath);
+	return C64SaveMemory(fromAddr, toAddr, true, debugInterfaceVice->dataAdapterC64DirectRam, filePath);
 }
 
 void CDebuggerApiVice::BasicUpStart(u16 jmpAddr)
@@ -468,19 +404,19 @@ void CDebuggerApiVice::BasicUpStart(u16 jmpAddr)
 	
 	char buf[16];
 	sprintf(buf, "%d", jmpAddr);
-	viewC64->debugInterfaceC64->SetByteToRamC64(0x0801, 0x0D);
-	viewC64->debugInterfaceC64->SetByteToRamC64(0x0802, 0x08);
-	viewC64->debugInterfaceC64->SetByteToRamC64(0x0803, (u8) (lineNumber & 0xff));
-	viewC64->debugInterfaceC64->SetByteToRamC64(0x0804, (u8) (lineNumber >> 8));
-	viewC64->debugInterfaceC64->SetByteToRamC64(0x0805, 0x9E);
-	viewC64->debugInterfaceC64->SetByteToRamC64(0x0806, 0x20);
+	debugInterfaceVice->SetByteToRamC64(0x0801, 0x0D);
+	debugInterfaceVice->SetByteToRamC64(0x0802, 0x08);
+	debugInterfaceVice->SetByteToRamC64(0x0803, (u8) (lineNumber & 0xff));
+	debugInterfaceVice->SetByteToRamC64(0x0804, (u8) (lineNumber >> 8));
+	debugInterfaceVice->SetByteToRamC64(0x0805, 0x9E);
+	debugInterfaceVice->SetByteToRamC64(0x0806, 0x20);
 
 	int a = 0x0807;
 	for (int i = 0; i < strlen(buf); i++)
 	{
-		viewC64->debugInterfaceC64->SetByteToRamC64(a++, buf[i]);
+		debugInterfaceVice->SetByteToRamC64(a++, buf[i]);
 	}
-	viewC64->debugInterfaceC64->SetByteToRamC64(a++, 0x00);
+	debugInterfaceVice->SetByteToRamC64(a++, 0x00);
 }
 
 void CDebuggerApiVice::AddCrtEntryPoint(u8 *cartImage, u16 coldStartAddr, u16 warmStartAddr)
@@ -574,13 +510,39 @@ CByteBuffer *CDebuggerApiVice::MakeCrt(const char *cartName, int cartSize, int b
 
 void CDebuggerApiVice::SetCiaRegister(u8 ciaId, u8 registerNum, u8 value)
 {
-	viewC64->debugInterfaceC64->SetCiaRegister(ciaId, registerNum, value);
+	debugInterfaceVice->SetCiaRegister(ciaId, registerNum, value);
+}
+
+u8 CDebuggerApiVice::GetCiaRegister(u8 ciaId, u8 registerNum)
+{
+	return debugInterfaceVice->GetCiaRegister(ciaId, registerNum);
+}
+
+void CDebuggerApiVice::SetSid(CSidData *sidData)
+{
+	debugInterfaceVice->SetSid(sidData);
+}
+
+void CDebuggerApiVice::SetSidRegister(uint8 sidId, uint8 registerNum, uint8 value)
+{
+	debugInterfaceVice->SetSidRegister(sidId, registerNum, value);
+}
+
+u8 CDebuggerApiVice::GetSidRegister(uint8 sidId, uint8 registerNum)
+{
+	return debugInterfaceVice->GetSidRegister(sidId, registerNum);
 }
 
 void CDebuggerApiVice::SetVicRegister(u16 registerNum, u8 value)
 {
 	u8 reg = registerNum & 0x00FF;
-	viewC64->debugInterfaceC64->SetVicRegister(reg, value);
+	debugInterfaceVice->SetVicRegister(reg, value);
+}
+
+u8 CDebuggerApiVice::GetVicRegister(u16 registerNum)
+{
+	u8 reg = registerNum & 0x00FF;
+	return debugInterfaceVice->GetVicRegister(reg);
 }
 
 void CDebuggerApiVice::SetScreenAndCharsetAddress(u16 screenAddr, u16 charsetAddr)
@@ -614,7 +576,35 @@ void CDebuggerApiVice::SetScreenAndCharsetAddress(u16 screenAddr, u16 charsetAdd
 
 void CDebuggerApiVice::GetCBMColor(u8 colorNum, u8 *r, u8 *g, u8 *b)
 {
-	return viewC64->debugInterfaceC64->GetCBMColor(colorNum, r, g, b);
+	return debugInterfaceVice->GetCBMColor(colorNum, r, g, b);
+}
+
+void CDebuggerApiVice::SetDrive1541ViaRegister(u8 driveId, u8 viaId, u8 registerNum, u8 value)
+{
+	debugInterfaceVice->SetViaRegister(driveId, viaId, registerNum, value);
+}
+
+u8 CDebuggerApiVice::GetDrive1541ViaRegister(u8 driveId, u8 viaId, u8 registerNum)
+{
+	return debugInterfaceVice->GetViaRegister(driveId, viaId, registerNum);
+}
+
+u64 CDebuggerApiVice::AddBreakpointRasterLine(int rasterLine)
+{
+	debugInterfaceVice->LockMutex();
+	CDebugSymbolsSegmentC64 *segment = (CDebugSymbolsSegmentC64*)debugInterfaceVice->symbols->currentSegment;
+	CDebugBreakpointRasterLine *breakpoint = segment->AddBreakpointRaster(rasterLine);
+	debugInterfaceVice->UnlockMutex();
+	return breakpoint->breakpointId;
+}
+
+u64 CDebuggerApiVice::RemoveBreakpointRasterLine(int rasterLine)
+{
+	debugInterfaceVice->LockMutex();
+	CDebugSymbolsSegmentC64 *segment = (CDebugSymbolsSegmentC64*)debugInterfaceVice->symbols->currentSegment;
+	u64 breakpointId = segment->RemoveBreakpointRaster(rasterLine);
+	debugInterfaceVice->UnlockMutex();
+	return breakpointId;
 }
 
 void CDebuggerApiVice::ShowMessage(const char *text)
@@ -634,5 +624,24 @@ void CDebuggerApiVice::AddView(CGuiView *view)
 	guiMain->AddView(view);
 	debugInterface->AddView(view);
 	guiMain->UnlockMutex();
+}
+
+nlohmann::json CDebuggerApiVice::GetCpuStatusJson()
+{
+	nlohmann::json cpuStatus;
+	cpuStatus["pc"] = viewC64->viciiStateToShow.pc;
+	cpuStatus["a"] = viewC64->viciiStateToShow.a;
+	cpuStatus["x"] = viewC64->viciiStateToShow.x;
+	cpuStatus["y"] = viewC64->viciiStateToShow.y;
+	cpuStatus["sp"] = viewC64->viciiStateToShow.sp;
+	cpuStatus["p"] = viewC64->viciiStateToShow.processorFlags;
+	cpuStatus["memory0001"] = viewC64->viciiStateToShow.memory0001;
+	cpuStatus["instructionCycle"] = viewC64->viciiStateToShow.instructionCycle;
+	cpuStatus["rasterCycle"] = viewC64->viciiStateToShow.raster_cycle;
+	cpuStatus["rasterX"] = viewC64->c64RasterPosToShowX;
+	cpuStatus["rasterY"] = viewC64->c64RasterPosToShowY;
+	cpuStatus["exrom"] = viewC64->viciiStateToShow.exrom;
+	cpuStatus["game"] = viewC64->viciiStateToShow.game;
+	return cpuStatus;
 }
 

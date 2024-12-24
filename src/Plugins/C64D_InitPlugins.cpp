@@ -30,7 +30,6 @@ void C64D_InitPlugins()
 //	viewC64->RegisterEmulatorPlugin(plugin);
 
 //	C64DebuggerPluginCommando *plugin = new C64DebuggerPluginCommando(300, 30, 0, 500, 400);
-//	viewC64->RegisterEmulatorPlugin(plugin);
-	
+//	viewC64->RegisterEmulatorPlugin(plugin);	
 }
 

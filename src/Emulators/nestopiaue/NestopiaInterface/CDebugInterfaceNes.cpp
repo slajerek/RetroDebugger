@@ -18,6 +18,7 @@
 #include "EmulatorsConfig.h"
 #include "CDebugInterfaceNes.h"
 #include "CDebugInterfaceNesTasks.h"
+#include "CDebuggerApiNestopia.h"
 #include "RES_ResourceManager.h"
 #include "CByteBuffer.h"
 #include "CSlrString.h"
@@ -154,6 +155,11 @@ CSlrString *CDebugInterfaceNes::GetEmulatorVersionString()
 const char *CDebugInterfaceNes::GetPlatformNameString()
 {
 	return "NES";
+}
+
+const char *CDebugInterfaceNes::GetPlatformNameEndpointString()
+{
+	return "nes";
 }
 
 bool CDebugInterfaceNes::IsPal()
@@ -449,17 +455,17 @@ void CDebugInterfaceNes::ClearDebugMarkers()
 	symbols->memory->ClearDebugMarkers();
 }
 
-void CDebugInterfaceNes::Reset()
+void CDebugInterfaceNes::ResetSoft()
 {
 	LOGM("CDebugInterfaceNes::Reset");
 	CDebugInterfaceNesTaskReset *task = new CDebugInterfaceNesTaskReset(this);
 	this->AddCpuDebugInterruptTask(task);
 }
 
-void CDebugInterfaceNes::HardReset()
+void CDebugInterfaceNes::ResetHard()
 {
-	LOGM("CDebugInterfaceNes::HardReset");
-	CDebugInterfaceNesTaskHardReset *task = new CDebugInterfaceNesTaskHardReset(this);
+	LOGM("CDebugInterfaceNes::ResetHard");
+	CDebugInterfaceNesTaskResetHard *task = new CDebugInterfaceNesTaskResetHard(this);
 	this->AddCpuDebugInterruptTask(task);
 }
 
@@ -469,6 +475,16 @@ void CDebugInterfaceNes::ResetClockCounters()
 	machine.cpu.nesdMainCpuCycle = 0;
 	machine.cpu.nesdMainCpuDebugCycle = 0;
 	machine.cpu.nesdMainCpuPreviousInstructionCycle = 0;
+}
+
+void CDebugInterfaceNes::DetachEverything()
+{
+	this->LockMutex();
+	
+	nesd_unload_cartridge();
+	ResetHard();
+	
+	this->UnlockMutex();
 }
 
 bool CDebugInterfaceNes::LoadExecutable(char *fullFilePath)
@@ -733,5 +749,10 @@ void CDebugInterfaceNes::SupportsBreakpoints(bool *writeBreakpoint, bool *readBr
 {
 	*writeBreakpoint = true;
 	*readBreakpoint = false;
+}
+
+CDebuggerApi *CDebugInterfaceNes::GetDebuggerApi()
+{
+	return new CDebuggerApiNestopia(this);
 }
 

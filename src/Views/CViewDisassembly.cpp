@@ -974,10 +974,10 @@ int CViewDisassembly::RenderDisassemblyLine(float px, float py, int addr, uint8 
 
 	CDebugBreakpointsAddr *breakpoints = symbols->currentSegment->breakpointsPC;
 	
-	std::map<int, CBreakpointAddr *>::iterator it = breakpoints->renderBreakpoints.find(addr);
+	std::map<int, CDebugBreakpointAddr *>::iterator it = breakpoints->renderBreakpoints.find(addr);
 	if (it != breakpoints->renderBreakpoints.end())
 	{
-		CBreakpointAddr *breakpoint = it->second;
+		CDebugBreakpointAddr *breakpoint = it->second;
 		
 		// is active?
 		if (breakpoint->isActive)
@@ -1692,10 +1692,10 @@ void CViewDisassembly::RenderHexLine(float px, float py, int addr)
 	
 	CDebugBreakpointsAddr *breakpoints = symbols->currentSegment->breakpointsPC;
 	
-	std::map<int, CBreakpointAddr *>::iterator it = breakpoints->renderBreakpoints.find(addr);
+	std::map<int, CDebugBreakpointAddr *>::iterator it = breakpoints->renderBreakpoints.find(addr);
 	if (it != breakpoints->renderBreakpoints.end())
 	{
-		CBreakpointAddr *breakpoint = it->second;
+		CDebugBreakpointAddr *breakpoint = it->second;
 		
 		// is active?
 		if (breakpoint->isActive == true)
@@ -1968,7 +1968,6 @@ void CViewDisassembly::UpdateDisassembly(int startAddress, int endAddress)
 	
 	UpdateLocalMemoryCopy(startAddress, endAddress);
 	
-	
 	CalcDisassemblyStart(startAddress, &renderAddress, &renderLinesBefore);
 	
 	renderSkipLines = numberOfLinesBack - renderLinesBefore;
@@ -2020,7 +2019,7 @@ void CViewDisassembly::UpdateDisassembly(int startAddress, int endAddress)
 			addr = renderAddress;
 			
 			// +0
-			CDebugMemoryCell *cell0 = debugMemory->GetMemoryCell(addr);	//% memoryLength
+			CDebugMemoryCell *cell0 = debugMemory->GetMemoryCell(addr % memoryLength);
 			if (cell0->isExecuteCode)
 			{
 				opcode = memory[addr];	//% memoryLength
@@ -2030,7 +2029,7 @@ void CViewDisassembly::UpdateDisassembly(int startAddress, int endAddress)
 			else
 			{
 				// +1
-				CDebugMemoryCell *cell1 = debugMemory->GetMemoryCell( addr+1 );	//% memoryLength
+				CDebugMemoryCell *cell1 = debugMemory->GetMemoryCell( (addr+1) % memoryLength);
 				if (cell1->isExecuteCode)
 				{
 					// check if at addr is 1-length opcode
@@ -2065,7 +2064,7 @@ void CViewDisassembly::UpdateDisassembly(int startAddress, int endAddress)
 				else
 				{
 					// +2
-					CDebugMemoryCell *cell2 = debugMemory->GetMemoryCell( addr+2 );	//% memoryLength
+					CDebugMemoryCell *cell2 = debugMemory->GetMemoryCell( (addr+2) % memoryLength );
 					if (cell2->isExecuteCode)
 					{
 						// check if at addr is 2-length opcode
@@ -2097,7 +2096,7 @@ void CViewDisassembly::UpdateDisassembly(int startAddress, int endAddress)
 							op[i] = memory[addr];
 						}
 						
-						opcode = memory[ (renderAddress) ];	//% memoryLength
+						opcode = memory[ (renderAddress % memoryLength) ];
 						renderAddress += UpdateDisassemblyOpcodeLine(py, renderAddress, op[0], op[1], op[2]);
 						py += fontSize;
 					}
@@ -2156,7 +2155,7 @@ void CViewDisassembly::UpdateDisassembly(int startAddress, int endAddress)
 				int addr;
 				
 				addr = renderAddress-1;
-				CDebugMemoryCell *cell1 = debugMemory->GetMemoryCell(addr);
+				CDebugMemoryCell *cell1 = debugMemory->GetMemoryCell(addr % memoryLength);
 				if (cell1->isExecuteCode)
 				{
 					op = memory[addr];
@@ -2173,7 +2172,7 @@ void CViewDisassembly::UpdateDisassembly(int startAddress, int endAddress)
 				}
 				
 				addr = renderAddress-2;
-				CDebugMemoryCell *cell2 = debugMemory->GetMemoryCell(addr);
+				CDebugMemoryCell *cell2 = debugMemory->GetMemoryCell(addr % memoryLength);
 				if (cell2->isExecuteCode)
 				{
 					op = memory[addr];
@@ -2195,7 +2194,7 @@ void CViewDisassembly::UpdateDisassembly(int startAddress, int endAddress)
 				}
 				
 				addr = renderAddress-3;
-				CDebugMemoryCell *cell3 = debugMemory->GetMemoryCell(addr);
+				CDebugMemoryCell *cell3 = debugMemory->GetMemoryCell(addr % memoryLength);
 				if (cell3->isExecuteCode)
 				{
 					op = memory[addr];
@@ -2473,7 +2472,7 @@ void CViewDisassembly::TogglePCBreakpoint(int addr)
 	CDebugBreakpointsAddr *breakpoints = symbols->currentSegment->breakpointsPC;
 	
 	// keep copy of breakpoints to not lock mutex during rendering
-	std::map<int, CBreakpointAddr *>::iterator it = breakpoints->renderBreakpoints.find(addr);
+	std::map<int, CDebugBreakpointAddr *>::iterator it = breakpoints->renderBreakpoints.find(addr);
 	if (it != breakpoints->renderBreakpoints.end())
 	{
 		// remove breakpoint
@@ -2490,7 +2489,7 @@ void CViewDisassembly::TogglePCBreakpoint(int addr)
 		// add breakpoint
 		LOGD("add breakpoint addr=%4.4x", addr);
 
-		CBreakpointAddr *breakpoint = new CBreakpointAddr(addr);
+		CDebugBreakpointAddr *breakpoint = new CDebugBreakpointAddr(addr);
 		breakpoint->actions = ADDR_BREAKPOINT_ACTION_STOP;
 		
 		breakpoints->AddBreakpoint(breakpoint);
@@ -2498,6 +2497,56 @@ void CViewDisassembly::TogglePCBreakpoint(int addr)
 	}
 	
 	debugInterface->UnlockMutex();
+}
+
+CDebugBreakpointAddr *CViewDisassembly::AddPCBreakpoint(int addr)
+{
+	debugInterface->LockMutex();
+	
+	CDebugBreakpointsAddr *breakpoints = symbols->currentSegment->breakpointsPC;
+	
+	// keep copy of breakpoints to not lock mutex during rendering
+	std::map<int, CDebugBreakpointAddr *>::iterator it = breakpoints->renderBreakpoints.find(addr);
+	if (it != breakpoints->renderBreakpoints.end())
+	{
+		debugInterface->UnlockMutex();
+		return it->second;
+	}
+	
+	// add breakpoint
+	LOGD("add breakpoint addr=%4.4x", addr);
+
+	CDebugBreakpointAddr *breakpoint = new CDebugBreakpointAddr(addr);
+	breakpoint->actions = ADDR_BREAKPOINT_ACTION_STOP;
+	
+	breakpoints->AddBreakpoint(breakpoint);
+	breakpoints->renderBreakpoints[addr] = breakpoint;
+	
+	debugInterface->UnlockMutex();
+	
+	return breakpoint;
+}
+
+u64 CViewDisassembly::RemovePCBreakpoint(int addr)
+{
+	debugInterface->LockMutex();
+	
+	CDebugBreakpointsAddr *breakpoints = symbols->currentSegment->breakpointsPC;
+
+	u64 breakpointId = UNKNOWN_BREAKPOINT_ID;
+	
+	// keep copy of breakpoints to not lock mutex during rendering
+	std::map<int, CDebugBreakpointAddr *>::iterator it = breakpoints->renderBreakpoints.find(addr);
+	if (it != breakpoints->renderBreakpoints.end())
+	{
+		// remove breakpoint
+		//LOGD("remove breakpoint addr=%4.4x", addr);
+
+		breakpoints->renderBreakpoints.erase(it);
+		breakpointId = breakpoints->DeleteBreakpoint(addr);
+	}
+	debugInterface->UnlockMutex();
+	return breakpointId;
 }
 
 //@returns is consumed
@@ -3114,7 +3163,7 @@ void CViewDisassembly::SetBreakpointPC(int address, bool setOn)
 
 	bool found = false;
 	
-	std::map<int, CBreakpointAddr *>::iterator it2 = breakpoints->renderBreakpoints.find(address);
+	std::map<int, CDebugBreakpointAddr *>::iterator it2 = breakpoints->renderBreakpoints.find(address);
 	if (it2 != breakpoints->renderBreakpoints.end())
 	{
 		if (setOn)
@@ -3141,7 +3190,7 @@ void CViewDisassembly::SetBreakpointPC(int address, bool setOn)
 			// add breakpoint
 			LOGD("CViewDisassembly::SetBreakpointPC: add breakpoint addr=%04x", address);
 			
-			CBreakpointAddr *breakpoint = new CBreakpointAddr(address);
+			CDebugBreakpointAddr *breakpoint = new CDebugBreakpointAddr(address);
 			breakpoint->actions = ADDR_BREAKPOINT_ACTION_STOP;
 			
 			breakpoints->AddBreakpoint(breakpoint);
@@ -3162,10 +3211,10 @@ void CViewDisassembly::SetBreakpointPCIsActive(int address, bool setActive)
 	debugInterface->LockMutex();
 	
 	CDebugBreakpointsAddr *breakpoints = symbols->currentSegment->breakpointsPC;
-	std::map<int, CBreakpointAddr *>::iterator itBp = breakpoints->renderBreakpoints.find(address);
+	std::map<int, CDebugBreakpointAddr *>::iterator itBp = breakpoints->renderBreakpoints.find(address);
 	if (itBp != breakpoints->renderBreakpoints.end())
 	{
-		CBreakpointAddr *bp = itBp->second;
+		CDebugBreakpointAddr *bp = itBp->second;
 		bp->isActive = setActive;
 	}
 	else
@@ -3175,10 +3224,10 @@ void CViewDisassembly::SetBreakpointPCIsActive(int address, bool setActive)
 		
 		// as a workaround create one
 		this->SetBreakpointPC(address, true);
-		std::map<int, CBreakpointAddr *>::iterator itBp = breakpoints->renderBreakpoints.find(address);
+		std::map<int, CDebugBreakpointAddr *>::iterator itBp = breakpoints->renderBreakpoints.find(address);
 		if (itBp != breakpoints->renderBreakpoints.end())
 		{
-			CBreakpointAddr *bp = itBp->second;
+			CDebugBreakpointAddr *bp = itBp->second;
 			bp->isActive = setActive;
 		}
 	}
@@ -4286,17 +4335,17 @@ void CViewDisassembly::RenderContextMenuItems()
 					}
 					
 					// update breakpoint PC
-					CBreakpointAddr *breakpointPC = currentSegment->breakpointsPC->GetBreakpoint(existingLabel->address);
+					CDebugBreakpointAddr *breakpointPC = currentSegment->breakpointsPC->GetBreakpoint(existingLabel->address);
 					if (breakpointPC)
 					{
 						currentSegment->breakpointsPC->RemoveBreakpoint(breakpointPC);
 					}
 					
 					// update breakpoint memory
-					CBreakpointAddr *breakpointMemory = currentSegment->breakpointsMemory->GetBreakpoint(existingLabel->address);
+					CDebugBreakpointAddr *breakpointMemory = currentSegment->breakpointsData->GetBreakpoint(existingLabel->address);
 					if (breakpointMemory)
 					{
-						currentSegment->breakpointsMemory->RemoveBreakpoint(breakpointMemory);
+						currentSegment->breakpointsData->RemoveBreakpoint(breakpointMemory);
 					}
 
 					// update label
@@ -4319,7 +4368,7 @@ void CViewDisassembly::RenderContextMenuItems()
 					if (breakpointMemory)
 					{
 						breakpointMemory->addr = cursorAddress;
-						currentSegment->breakpointsMemory->AddBreakpoint(breakpointMemory);
+						currentSegment->breakpointsData->AddBreakpoint(breakpointMemory);
 					}
 				}
 				else
@@ -4370,6 +4419,26 @@ void CViewDisassembly::RenderContextMenuItems()
 			}
 		}
 	}
+	
+	ImGui::Separator();
+
+	// #if defined(EXPERIMENTAL_EVENTS_HISTORY)
+	/*
+	bool canRewindToPreviousExecute = false;
+	if (cell)
+	{
+		if (cell->executeHistory.size > 0)
+		{
+			canRewindToPreviousExecute = true;
+		}
+	}
+	
+	if (ImGui::MenuItem("Rewind to previous execute", "", false, canRewindToPreviousExecute))
+	{
+		
+	}
+	 ImGui::Separator();
+	*/
 	
 	CGuiView::RenderContextMenuLayoutParameters(false);
 

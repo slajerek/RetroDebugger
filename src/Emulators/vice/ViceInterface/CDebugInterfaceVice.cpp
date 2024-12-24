@@ -32,6 +32,7 @@ extern "C" {
 
 #include "RES_ResourceManager.h"
 #include "CDebugInterfaceVice.h"
+#include "CDebuggerApiVice.h"
 #include "CDebugMemory.h"
 #include "CByteBuffer.h"
 #include "CSlrString.h"
@@ -61,6 +62,7 @@ extern "C" {
 #include "CWaveformData.h"
 #include "CViewDataMap.h"
 #include "CDebugEventsHistory.h"
+#include "CDebuggerServerApiVice.h"
 
 // 44100/50*5
 #define SID_WAVEFORM_LENGTH 4410*8
@@ -340,7 +342,7 @@ void CDebugInterfaceVice::RunEmulationThread()
 	
 	// update sid type
 	SetSidTypeAsync(c64SettingsSIDEngineModel);
-
+	
 //	audioChannel->Start();
 	
 	vice_main_loop_run();
@@ -551,7 +553,7 @@ void CDebugInterfaceVice::ClearDebugMarkers()
 	symbolsCartridgeC64->memory->ClearDebugMarkers();
 }
 
-void CDebugInterfaceVice::Reset()
+void CDebugInterfaceVice::ResetSoft()
 {
 	vsync_suspend_speed_eval();
 	
@@ -570,15 +572,17 @@ void CDebugInterfaceVice::Reset()
 	}
 }
 
-void CDebugInterfaceVice::HardReset()
+void CDebugInterfaceVice::ResetHard()
 {
-	LOGD("CDebugInterfaceVice::HardReset");
+	LOGD("CDebugInterfaceVice::ResetHard");
 	vsync_suspend_speed_eval();
 	
 	keyboard_clear_keymatrix();
 
 	machine_trigger_reset(MACHINE_RESET_MODE_HARD);
 	this->ResetEmulationFrameCounter();
+	this->ClearHistory();
+	
 	c64d_maincpu_clk = 6;
 
 	c64d_update_c64_model();
@@ -714,6 +718,88 @@ void CDebugInterfaceVice::JoystickUp(int port, uint32 axis)
 {
 //	LOGD("CDebugInterfaceVice::JoystickUp %d %d", port, axis);
 	c64d_joystick_key_up(axis, port+1);
+}
+
+extern "C" {
+int set_mouse_enabled(int val, void *param);
+int joyport_set_device(int port, int id);
+void c64d_mouse_set_type(int mt);
+int c64d_mouse_type_to_joyportid(int mouseType);
+void mousedrv_button_left(int pressed);
+void mousedrv_button_right(int pressed);
+void mousedrv_button_middle(int pressed);
+void mousedrv_button_up(int pressed);
+void mousedrv_button_down(int pressed);
+void mouse_move(int x, int y);
+void c64d_mouse_set_position(int x, int y);
+};
+
+#define JOYPORT_ID_NONE                0
+#define JOYPORT_ID_JOYSTICK            1
+
+void CDebugInterfaceVice::EmulatedMouseUpdateSettings()
+{
+	// reset mouse
+	set_mouse_enabled(0, NULL);
+	
+	// set mouse enabled as per settings
+	if (c64SettingsEmulatedMouseC64Enabled)
+	{
+		if (set_mouse_enabled((c64SettingsEmulatedMouseC64Enabled ? 1:0), NULL) < 0)
+		{
+			return;
+		}
+		c64d_mouse_set_type(c64SettingsEmulatedMouseC64Type);
+		
+		// set ports
+		joyport_set_device(0, JOYPORT_ID_JOYSTICK);
+		joyport_set_device(1, JOYPORT_ID_JOYSTICK);
+
+		if (c64SettingsEmulatedMouseC64Enabled)
+		{
+			int joyportId = c64d_mouse_type_to_joyportid(c64SettingsEmulatedMouseC64Type);
+			joyport_set_device(c64SettingsEmulatedMouseC64Port, joyportId);
+		}
+	}
+}
+
+bool CDebugInterfaceVice::EmulatedMouseEnable(bool enable)
+{
+	c64SettingsEmulatedMouseC64Enabled = enable;
+	EmulatedMouseUpdateSettings();
+	return true;
+}
+
+void CDebugInterfaceVice::EmulatedMouseSetType(int mouseType)
+{
+	c64SettingsEmulatedMouseC64Type = mouseType;
+	EmulatedMouseUpdateSettings();
+}
+
+void CDebugInterfaceVice::EmulatedMouseSetPort(int port)
+{
+	c64SettingsEmulatedMouseC64Port = port;
+	EmulatedMouseUpdateSettings();
+}
+
+void CDebugInterfaceVice::EmulatedMouseSetPosition(int newX, int newY)
+{
+	c64d_mouse_set_position(newX, newY);
+}
+
+void CDebugInterfaceVice::EmulatedMouseButtonLeft(bool isPressed)
+{
+	mousedrv_button_left(isPressed ? 1:0);
+}
+
+void CDebugInterfaceVice::EmulatedMouseButtonMiddle(bool isPressed)
+{
+	mousedrv_button_middle(isPressed ? 1:0);
+}
+
+void CDebugInterfaceVice::EmulatedMouseButtonRight(bool isPressed)
+{
+	mousedrv_button_right(isPressed ? 1:0);
 }
 
 int CDebugInterfaceVice::GetCpuPC()
@@ -1745,7 +1831,7 @@ void CDebugInterfaceVice::GetVICColors(uint8 *cD021, uint8 *cD022, uint8 *cD023,
 
 void CDebugInterfaceVice::GetVICSpriteColors(uint8 *cD021, uint8 *cD025, uint8 *cD026, uint8 *spriteColors)
 {
-	SYS_FatalExit("CDebugInterfaceVice::GetVICSpriteColors: not implemented");
+	LOGTODO("CDebugInterfaceVice::GetVICSpriteColors: not implemented");
 }
 
 void CDebugInterfaceVice::GetCBMColor(uint8 colorNum, uint8 *r, uint8 *g, uint8 *b)
@@ -2226,7 +2312,7 @@ bool CDebugInterfaceVice::LoadFullSnapshot(CByteBuffer *byteBuffer)
 
 void CDebugInterfaceVice::SaveFullSnapshot(CByteBuffer *snapshotBuffer)
 {
-	SYS_FatalExit("CDebugInterfaceVice::LoadFullSnapshot: not implemented");
+	LOGTODO("CDebugInterfaceVice::LoadFullSnapshot: not implemented");
 }
 
 
@@ -2503,6 +2589,8 @@ bool CDebugInterfaceVice::ExecuteCodeMonitorCommand(CSlrString *commandStr)
 	return true;
 }
 
+// d1541II
+
 void CDebugInterfaceVice::ScanFolderForRoms(const char *folderPath)
 {
 	char *buf = SYS_GetCharBuf();
@@ -2522,69 +2610,69 @@ void CDebugInterfaceVice::ScanFolderForRoms(const char *folderPath)
 	const char *DOS1541_ROM_NAME = "dos1541";
 	const char *DOS1541II_ROM_NAME = "dos1541ii";
 	const char *DOS1541II_ROM_NAME_2 = "d1541ii";
-	
+
 	// kernal
 	sprintf(buf, "%s%c%s", folderPath, SYS_FILE_SYSTEM_PATH_SEPARATOR, KERNAL_ROM_NAME);
 	if (SYS_FileExists(buf))
 	{
-	    if (c64SettingsPathToRomC64Kernal)
-	        delete c64SettingsPathToRomC64Kernal;
-	    c64SettingsPathToRomC64Kernal = new CSlrString(buf);
-	    foundKernal = true;
+		if (c64SettingsPathToRomC64Kernal)
+			delete c64SettingsPathToRomC64Kernal;
+		c64SettingsPathToRomC64Kernal = new CSlrString(buf);
+		foundKernal = true;
 	}
 	if (!SYS_FileExists(c64SettingsPathToRomC64Kernal))
 	{
-	    delete c64SettingsPathToRomC64Kernal;
-	    c64SettingsPathToRomC64Kernal = NULL;
-	    foundKernal = false;
+		delete c64SettingsPathToRomC64Kernal;
+		c64SettingsPathToRomC64Kernal = NULL;
+		foundKernal = false;
 	}
 	
 	// basic
 	sprintf(buf, "%s%c%s", folderPath, SYS_FILE_SYSTEM_PATH_SEPARATOR, BASIC_ROM_NAME);
 	if (SYS_FileExists(buf))
 	{
-	    if (c64SettingsPathToRomC64Basic)
-	        delete c64SettingsPathToRomC64Basic;
-	    c64SettingsPathToRomC64Basic = new CSlrString(buf);
-	    foundBasic = true;
+		if (c64SettingsPathToRomC64Basic)
+			delete c64SettingsPathToRomC64Basic;
+		c64SettingsPathToRomC64Basic = new CSlrString(buf);
+		foundBasic = true;
 	}
 	if (!SYS_FileExists(c64SettingsPathToRomC64Basic))
 	{
-	    delete c64SettingsPathToRomC64Basic;
-	    c64SettingsPathToRomC64Basic = NULL;
-	    foundBasic = false;
+		delete c64SettingsPathToRomC64Basic;
+		c64SettingsPathToRomC64Basic = NULL;
+		foundBasic = false;
 	}
 	
 	// chargen
 	sprintf(buf, "%s%c%s", folderPath, SYS_FILE_SYSTEM_PATH_SEPARATOR, CHARGEN_ROM_NAME);
 	if (SYS_FileExists(buf))
 	{
-	    if (c64SettingsPathToRomC64Chargen)
-	        delete c64SettingsPathToRomC64Chargen;
-	    c64SettingsPathToRomC64Chargen = new CSlrString(buf);
-	    foundChargen = true;
+		if (c64SettingsPathToRomC64Chargen)
+			delete c64SettingsPathToRomC64Chargen;
+		c64SettingsPathToRomC64Chargen = new CSlrString(buf);
+		foundChargen = true;
 	}
 	if (!SYS_FileExists(c64SettingsPathToRomC64Chargen))
 	{
-	    delete c64SettingsPathToRomC64Chargen;
-	    c64SettingsPathToRomC64Chargen = NULL;
-	    foundChargen = false;
+		delete c64SettingsPathToRomC64Chargen;
+		c64SettingsPathToRomC64Chargen = NULL;
+		foundChargen = false;
 	}
 	
 	// drive 1541
 	sprintf(buf, "%s%c%s", folderPath, SYS_FILE_SYSTEM_PATH_SEPARATOR, DOS1541_ROM_NAME);
 	if (SYS_FileExists(buf))
 	{
-	    if (c64SettingsPathToRomC64Drive1541)
-	        delete c64SettingsPathToRomC64Drive1541;
-	    c64SettingsPathToRomC64Drive1541 = new CSlrString(buf);
-	    foundDos1541 = true;
+		if (c64SettingsPathToRomC64Drive1541)
+			delete c64SettingsPathToRomC64Drive1541;
+		c64SettingsPathToRomC64Drive1541 = new CSlrString(buf);
+		foundDos1541 = true;
 	}
 	if (!SYS_FileExists(c64SettingsPathToRomC64Drive1541))
 	{
-	    delete c64SettingsPathToRomC64Drive1541;
-	    c64SettingsPathToRomC64Drive1541 = NULL;
-	    foundDos1541 = false;
+		delete c64SettingsPathToRomC64Drive1541;
+		c64SettingsPathToRomC64Drive1541 = NULL;
+		foundDos1541 = false;
 	}
 	
 	// drive 1541-II
@@ -2609,28 +2697,27 @@ void CDebugInterfaceVice::ScanFolderForRoms(const char *folderPath)
 	}
 	if (!SYS_FileExists(c64SettingsPathToRomC64Drive1541ii))
 	{
-	    delete c64SettingsPathToRomC64Drive1541ii;
-	    c64SettingsPathToRomC64Drive1541ii = NULL;
-	    foundDos1541ii = false;
+		delete c64SettingsPathToRomC64Drive1541ii;
+		c64SettingsPathToRomC64Drive1541ii = NULL;
+		foundDos1541ii = false;
 	}
-	
 
 	// Made more user-friendly: show filenames and path
 	// prepare message box
 	sprintf(buf, "C64 ROMs Status:\n\n"
-              "Folder: '%s'\n\n"
-              "Kernal ROM (File: '%s'): %s\n"
-              "Basic ROM (File: '%s'): %s\n"
-              "Chargen ROM (File: '%s'): %s\n"
-              "Drive 1541 ROM (File: '%s'): %s\n"
-              "Drive 1541-II ROM (File: '%s'): %s\n\n"
-              "Please ensure that all required ROM files are in the specified folder.",
-        folderPath,
-        KERNAL_ROM_NAME, foundKernal ? "FOUND" : (c64SettingsPathToRomC64Kernal ? "MISSING, using previous version" : "MISSING, no version available"),
-        BASIC_ROM_NAME, foundBasic ? "FOUND" : (c64SettingsPathToRomC64Basic ? "MISSING, using previous version" : "MISSING, no version available"),
-        CHARGEN_ROM_NAME, foundChargen ? "FOUND" : (c64SettingsPathToRomC64Chargen ? "MISSING, using previous version" : "MISSING, no version available"),
-        DOS1541_ROM_NAME, foundDos1541 ? "FOUND" : (c64SettingsPathToRomC64Drive1541 ? "MISSING, using previous version" : "MISSING, no version available"),
-        DOS1541II_ROM_NAME, foundDos1541ii ? "FOUND" : (c64SettingsPathToRomC64Drive1541ii ? "MISSING, using previous version" : "MISSING, no version available"));
+			  "Folder: '%s'\n\n"
+			  "Kernal ROM (File: '%s'): %s\n"
+			  "Basic ROM (File: '%s'): %s\n"
+			  "Chargen ROM (File: '%s'): %s\n"
+			  "Drive 1541 ROM (File: '%s'): %s\n"
+			  "Drive 1541-II ROM (File: '%s'): %s\n\n"
+			  "Please ensure that all required ROM files are in the specified folder.",
+		folderPath,
+		KERNAL_ROM_NAME, foundKernal ? "FOUND" : (c64SettingsPathToRomC64Kernal ? "MISSING, using previous version" : "MISSING, no version available"),
+		BASIC_ROM_NAME, foundBasic ? "FOUND" : (c64SettingsPathToRomC64Basic ? "MISSING, using previous version" : "MISSING, no version available"),
+		CHARGEN_ROM_NAME, foundChargen ? "FOUND" : (c64SettingsPathToRomC64Chargen ? "MISSING, using previous version" : "MISSING, no version available"),
+		DOS1541_ROM_NAME, foundDos1541 ? "FOUND" : (c64SettingsPathToRomC64Drive1541 ? "MISSING, using previous version" : "MISSING, no version available"),
+		DOS1541II_ROM_NAME, foundDos1541ii ? "FOUND" : (c64SettingsPathToRomC64Drive1541ii ? "MISSING, using previous version" : "MISSING, no version available"));
 
 	ShowMessageBox("C64 ROMs folder scan", buf);
 	
@@ -2676,7 +2763,7 @@ void CDebugInterfaceVice::UpdateRomsTrap()
 
 	this->UnlockMutex();
 	
-	HardReset();
+	ResetHard();
 	DiskDriveReset();
 	SetDebugMode(DEBUGGER_MODE_RUNNING);
 }
@@ -2787,14 +2874,34 @@ void CDebugInterfaceVice::SupportsBreakpoints(bool *writeBreakpoint, bool *readB
 	*readBreakpoint = true;
 }
 
-// SID
+CDebuggerApi *CDebugInterfaceVice::GetDebuggerApi()
+{
+	return new CDebuggerApiVice(this);
+}
+
+CDebuggerServerApi *CDebugInterfaceVice::GetDebuggerServerApi()
+{
+	if (debuggerServerApi)
+		return debuggerServerApi;
+	
+	debuggerServerApi = new CDebuggerServerApiVice(this);
+	return debuggerServerApi;
+}
+
+// SID poke/peek
+// Note: SID is specific, as setting one register may cause strange effects. So we push all registers at once.
 CPool CSidData::poolSidData(6000, sizeof(CSidData));
 
 CSidData::CSidData()
 {
-	memset(sidRegs[0], 0x00, C64_NUM_SID_REGISTERS);
-	memset(sidRegs[1], 0x00, C64_NUM_SID_REGISTERS);
-	memset(sidRegs[2], 0x00, C64_NUM_SID_REGISTERS);
+	for (int i = 0; i < SOUND_SIDS_MAX; i++)
+	{
+		for (int reg = 0; reg < C64_NUM_SID_REGISTERS; reg++)
+		{
+			sidRegs[i][reg] = 0x00;
+			shouldSetSidReg[i][reg] = true;
+		}
+	}
 }
 
 extern "C" {
@@ -2818,7 +2925,10 @@ void CSidData::RestoreSids()
 	{
 		for (int registerNum = 0; registerNum < C64_NUM_SID_REGISTERS; registerNum++)
 		{
-			sid_store_chip(registerNum, sidRegs[sidNum][registerNum], sidNum);
+			if (shouldSetSidReg[sidNum][registerNum])
+			{
+				sid_store_chip(registerNum, sidRegs[sidNum][registerNum], sidNum);
+			}
 		}
 	}
 	c64d_skip_sound_run_sound_in_sound_store = FALSE;
@@ -2892,7 +3002,7 @@ bool CSidData::LoadRegs(const char *fileName)
 /// default keymap
 void ViceKeyMapInitDefault()
 {
-	SYS_FatalExit("ViceKeyMapInitDefault");
+	SYS_FatalExit("ViceKeyMapInitDefault not implemented");
 	
 	
 //	 C64 keyboard matrix:

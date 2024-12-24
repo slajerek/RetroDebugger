@@ -9,6 +9,7 @@
 #include "CDebuggerEmulatorPlugin.h"
 #include "CViewDisassembly.h"
 #include "CDebugEventsHistory.h"
+#include "CDebuggerServerApi.h"
 
 CDebugInterface::CDebugInterface(CViewC64 *viewC64)
 {
@@ -17,6 +18,7 @@ CDebugInterface::CDebugInterface(CViewC64 *viewC64)
 	snapshotsManager = NULL;
 	symbols = NULL;
 	codeMonitorCallback = NULL;
+	debuggerServerApi = NULL;
 
 	isDebugOn = true;
 	
@@ -33,6 +35,7 @@ CDebugInterface::CDebugInterface(CViewC64 *viewC64)
 	emulationFrameCounter = 0;
 	
 	viewScreen = NULL;
+	viewDisassembly = NULL;
 	
 	this->debugMode = DEBUGGER_MODE_RUNNING;
 }
@@ -57,6 +60,11 @@ CSlrString *CDebugInterface::GetEmulatorVersionString()
 }
 
 const char *CDebugInterface::GetPlatformNameString()
+{
+	return NULL;
+}
+
+const char *CDebugInterface::GetPlatformNameEndpointString()
 {
 	return NULL;
 }
@@ -155,7 +163,7 @@ void CDebugInterface::CreateScreenData()
 
 void CDebugInterface::RefreshScreenNoCallback()
 {
-	SYS_FatalExit("CDebugInterface::RefreshScreenNoCallback");
+	LOGTODO("CDebugInterface::RefreshScreenNoCallback");
 }
 
 
@@ -180,8 +188,14 @@ CImageData *CDebugInterface::GetScreenImageData()
 
 CDebugDataAdapter *CDebugInterface::GetDataAdapter()
 {
-	SYS_FatalExit("CDebugInterface::GetDataAdapter");
+	LOGTODO("CDebugInterface::GetDataAdapter");
 	return NULL;
+}
+
+CDebugDataAdapter *CDebugInterface::GetDataAdapterDirectRam()
+{
+	LOGTODO("CDebugInterface::GetDataAdapterDirectRam");
+	return GetDataAdapter();
 }
 
 void CDebugInterface::ClearDebugMarkers()
@@ -196,15 +210,20 @@ void CDebugInterface::ClearHistory()
 	symbols->debugEventsHistory->DeleteAllEvents();
 }
 
+void CDebugInterface::DetachEverything()
+{
+	LOGTODO("CDebugInterface::DetachEverything");
+}
+
 bool CDebugInterface::LoadExecutable(char *fullFilePath)
 {
-	SYS_FatalExit("CDebugInterface::LoadExecutable");
+	LOGTODO("CDebugInterface::LoadExecutable");
 	return false;
 }
 
 bool CDebugInterface::MountDisk(char *fullFilePath, int diskNo, bool readOnly)
 {
-	SYS_FatalExit("CDebugInterface::MountDisk");
+	LOGTODO("CDebugInterface::MountDisk");
 	return false;
 }
 
@@ -239,13 +258,13 @@ bool CDebugInterface::SaveDiskDataSnapshotSynced(CByteBuffer *byteBuffer)
 
 bool CDebugInterface::IsDriveDirtyForSnapshot()
 {
-	SYS_FatalExit("CDebugInterface::IsDriveDirtyForSnapshot");
+	LOGTODO("CDebugInterface::IsDriveDirtyForSnapshot");
 	return false;
 }
 
 void CDebugInterface::ClearDriveDirtyForSnapshotFlag()
 {
-	SYS_FatalExit("CDebugInterface::ClearDriveDirtyForSnapshotFlag");
+	LOGTODO("CDebugInterface::ClearDriveDirtyForSnapshotFlag");
 }
 
 int CDebugInterface::GetScreenSizeX()
@@ -330,18 +349,18 @@ void ReplayInputEventsFromSnapshotsManager(CByteBuffer *byteBuffer);
 // state
 int CDebugInterface::GetCpuPC()
 {
-	SYS_FatalExit("CDebugInterface::GetCpuPC");
+	LOGTODO("CDebugInterface::GetCpuPC");
 	return -1;
 }
 
 void CDebugInterface::GetWholeMemoryMap(uint8 *buffer)
 {
-	SYS_FatalExit("CDebugInterface::GetWholeMemoryMap");
+	LOGTODO("CDebugInterface::GetWholeMemoryMap");
 }
 
 void CDebugInterface::GetWholeMemoryMapFromRam(uint8 *buffer)
 {
-	SYS_FatalExit("CDebugInterface::GetWholeMemoryMap");
+	LOGTODO("CDebugInterface::GetWholeMemoryMap");
 }
 
 //
@@ -395,14 +414,14 @@ uint8 CDebugInterface::GetDebugMode()
 	return this->debugMode;
 }
 
-void CDebugInterface::Reset()
+void CDebugInterface::ResetSoft()
 {
-	SYS_FatalExit("CDebugInterface::Reset");
+	LOGTODO("CDebugInterface::ResetSoft");
 }
 
-void CDebugInterface::HardReset()
+void CDebugInterface::ResetHard()
 {
-	SYS_FatalExit("CDebugInterface::HardReset");
+	LOGTODO("CDebugInterface::HardReset");
 }
 
 void CDebugInterface::SetDebugOn(bool debugOn)
@@ -430,13 +449,13 @@ void CDebugInterface::SetSettingIsWarpSpeed(bool isWarpSpeed)
 // make jmp without resetting CPU depending on dataAdapter
 void CDebugInterface::MakeJmpNoReset(CDataAdapter *dataAdapter, uint16 addr)
 {
-	SYS_FatalExit("CDebugInterface::MakeJmpNoReset");
+	LOGTODO("CDebugInterface::MakeJmpNoReset");
 }
 
 // make jmp and reset CPU
 void CDebugInterface::MakeJmpAndReset(uint16 addr)
 {
-	SYS_FatalExit("CDebugInterface::MakeJmpAndReset");
+	LOGTODO("CDebugInterface::MakeJmpAndReset");
 }
 
 void CDebugInterface::ClearTemporaryBreakpoint()
@@ -459,6 +478,14 @@ void CDebugInterface::StepOneCycle()
 	this->ClearTemporaryBreakpoint();
 	this->snapshotsManager->CancelRestore();
 	this->SetDebugMode(DEBUGGER_MODE_RUN_ONE_CYCLE);
+}
+
+void CDebugInterface::StepOverSubroutine()
+{
+	if (viewDisassembly)
+	{
+		viewDisassembly->StepOverJsr();
+	}
 }
 
 void CDebugInterface::RunContinueEmulation()
@@ -575,7 +602,7 @@ void CDebugInterface::AddMenuItem(CDebugInterfaceMenuItem *menuItem)
 }
 
 //
-CGuiView *CDebugInterface::GetViewScreen()
+CViewEmulatorScreen *CDebugInterface::GetViewScreen()
 {
 	return viewScreen;
 }
@@ -593,6 +620,27 @@ CViewTimeline *CDebugInterface::GetViewTimeline()
 		return NULL;
 	}
 	return this->snapshotsManager->viewTimeline;
+}
+
+CViewDisassembly *CDebugInterface::GetViewDisassembly()
+{
+	return viewDisassembly;
+}
+
+CDebuggerApi *CDebugInterface::GetDebuggerApi()
+{
+	LOGError("CDebugInterface::GetDebuggerApi: not implemeted");
+	return NULL;
+}
+
+// singleton (override factory)
+CDebuggerServerApi *CDebugInterface::GetDebuggerServerApi()
+{
+	if (debuggerServerApi)
+		return debuggerServerApi;
+	
+	debuggerServerApi = new CDebuggerServerApi(this);
+	return debuggerServerApi;
 }
 
 // TODO: ADD "#define DEBUGMUTEX" and push/pull names of locks here, list to be displayed when this locks here again

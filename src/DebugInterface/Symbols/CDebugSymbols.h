@@ -52,6 +52,7 @@ public:
 	//
 	void SelectNextSegment();
 	void SelectPreviousSegment();
+	bool SetSegment(CSlrString *segmentName);
 	
 	virtual void ClearTemporaryBreakpoint();
 	virtual void UpdateRenderBreakpoints();

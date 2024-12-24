@@ -100,8 +100,8 @@ public:
 	
 	virtual void ClearDebugMarkers();
 
-	virtual void Reset();
-	virtual void HardReset();
+	virtual void ResetSoft();
+	virtual void ResetHard();
 	virtual void DiskDriveReset();
 
 	// this is main emulation cpu cycle counter
@@ -124,6 +124,15 @@ public:
 	virtual void JoystickDown(int port, uint32 axis);
 	virtual void JoystickUp(int port, uint32 axis);
 	
+	virtual void EmulatedMouseUpdateSettings();
+	virtual bool EmulatedMouseEnable(bool enable);
+	virtual void EmulatedMouseSetType(int mouseType);
+	virtual void EmulatedMouseSetPort(int port);
+	virtual void EmulatedMouseSetPosition(int x, int y);
+	virtual void EmulatedMouseButtonLeft(bool isPressed);
+	virtual void EmulatedMouseButtonMiddle(bool isPressed);
+	virtual void EmulatedMouseButtonRight(bool isPressed);
+
 	//
 	virtual int GetCpuPC();
 	virtual int GetDrive1541PC();
@@ -357,6 +366,10 @@ public:
 	virtual void SupportsBreakpoints(bool *writeBreakpoint, bool *readBreakpoint);
 	
 	//
+	virtual CDebuggerApi *GetDebuggerApi();
+	virtual CDebuggerServerApi *GetDebuggerServerApi();
+
+	//
 	virtual void Shutdown();
 };
 
@@ -371,6 +384,9 @@ public:
 	void RestoreSids();
 	void CopyFrom(CSidData *sidData);
 	u8 sidRegs[SOUND_SIDS_MAX][C64_NUM_SID_REGISTERS];
+	
+	// shall we copy that sid register to SID
+	bool shouldSetSidReg[SOUND_SIDS_MAX][C64_NUM_SID_REGISTERS];
 	
 	void Serialize(CByteBuffer *byteBuffer);
 	bool Deserialize(CByteBuffer *byteBuffer);

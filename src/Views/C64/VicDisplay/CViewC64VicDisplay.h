@@ -366,6 +366,7 @@ public:
 	virtual bool IsTopWindow();
 	
 	// Layout
+	virtual void LayoutParameterChanged(CLayoutParameter *layoutParameter);
 	virtual void Serialize(CByteBuffer *byteBuffer);
 	virtual void Deserialize(CByteBuffer *byteBuffer);
 

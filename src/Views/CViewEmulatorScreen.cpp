@@ -23,7 +23,7 @@ CViewEmulatorScreen::CViewEmulatorScreen(const char *name, float posX, float pos
 	InitImage();
 }
 
-void CViewEmulatorScreen::CreateImageData()
+void CViewEmulatorScreen::RefreshEmulatorScreenImageData()
 {
 	this->imageData = debugInterface->GetScreenImageData();
 	this->paneWidth = debugInterface->GetScreenSizeX() * debugInterface->screenSupersampleFactor;
@@ -35,6 +35,10 @@ void CViewEmulatorScreen::CreateImageData()
 	float w = (float)debugInterface->GetScreenSizeX();
 	float h = (float)debugInterface->GetScreenSizeY();
 	SetKeepAspectRatio(true, w/h);
+	
+	UpdatePositionAndZoom();
+	
+	RefreshRenderTextureParameters();
 }
 
 bool CViewEmulatorScreen::UpdateImageData()
@@ -62,10 +66,7 @@ void CViewEmulatorScreen::RefreshImageParameters()
 	guiMain->LockMutex();
 	debugInterface->LockRenderScreenMutex();
 	
-	if (imageData)
-		delete imageData;
-	
-	CreateImageData();
+	RefreshEmulatorScreenImageData();
 	
 	image->RefreshImageParameters(imageData,  RESOURCE_PRIORITY_STATIC, false);
 	image->linearScaling = !c64SettingsRenderScreenNearest;
@@ -166,11 +167,11 @@ void CViewEmulatorScreen::RenderContextMenuItems()
 bool CViewEmulatorScreen::DoGamePadButtonDown(CGamePad *gamePad, u8 button)
 {
 	LOGI("CViewEmulatorScreen::DoGamePadButtonDown: %s %d", gamePad->name, button);
-	if (gamePad->index == viewC64->mainMenuBar->selectedJoystick1-2)
+	if (gamePad->index == c64SettingsSelectedJoystick1-2)
 	{
 		debugInterface->JoystickDown(0, ConvertSdlAxisToJoystickAxis(button));
 	}
-	if (gamePad->index == viewC64->mainMenuBar->selectedJoystick2-2)
+	if (gamePad->index == c64SettingsSelectedJoystick2-2)
 	{
 		debugInterface->JoystickDown(1, ConvertSdlAxisToJoystickAxis(button));
 	}
@@ -180,11 +181,11 @@ bool CViewEmulatorScreen::DoGamePadButtonDown(CGamePad *gamePad, u8 button)
 bool CViewEmulatorScreen::DoGamePadButtonUp(CGamePad *gamePad, u8 button)
 {
 	LOGI("CViewEmulatorScreen::DoGamePadButtonUp: %s %d", gamePad->name, button);
-	if (gamePad->index == viewC64->mainMenuBar->selectedJoystick1-2)
+	if (gamePad->index == c64SettingsSelectedJoystick1-2)
 	{
 		debugInterface->JoystickUp(0, ConvertSdlAxisToJoystickAxis(button));
 	}
-	if (gamePad->index == viewC64->mainMenuBar->selectedJoystick2-2)
+	if (gamePad->index == c64SettingsSelectedJoystick2-2)
 	{
 		debugInterface->JoystickUp(1, ConvertSdlAxisToJoystickAxis(button));
 	}
@@ -242,18 +243,18 @@ bool CViewEmulatorScreen::KeyDown(u32 keyCode, bool isShift, bool isAlt, bool is
 	if (IsSkipKey(keyCode, isShift, isAlt, isControl, isSuper))
 		return false;
 	
-	if (viewC64->mainMenuBar->selectedJoystick1 == SelectedJoystick::SelectedJoystickKeyboard
-		|| viewC64->mainMenuBar->selectedJoystick2 == SelectedJoystick::SelectedJoystickKeyboard)
+	if (c64SettingsSelectedJoystick1 == SelectedJoystick::SelectedJoystickKeyboard
+		|| c64SettingsSelectedJoystick2 == SelectedJoystick::SelectedJoystickKeyboard)
 	{
 		int joyAxis = GetJoystickAxis(keyCode, isShift, isAlt, isControl, isSuper);
 		if (joyAxis != JOYPAD_IDLE)
 		{
 			debugInterface->LockIoMutex();
-			if (viewC64->mainMenuBar->selectedJoystick1 == SelectedJoystick::SelectedJoystickKeyboard)
+			if (c64SettingsSelectedJoystick1 == SelectedJoystick::SelectedJoystickKeyboard)
 			{
 				debugInterface->JoystickDown(0, joyAxis);
 			}
-			if (viewC64->mainMenuBar->selectedJoystick2 == SelectedJoystick::SelectedJoystickKeyboard)
+			if (c64SettingsSelectedJoystick2 == SelectedJoystick::SelectedJoystickKeyboard)
 			{
 				debugInterface->JoystickDown(1, joyAxis);
 			}
@@ -304,18 +305,18 @@ bool CViewEmulatorScreen::KeyUp(u32 keyCode, bool isShift, bool isAlt, bool isCo
 {
 	LOGI(".......... CViewEmulatorScreen::KeyUp: keyCode=%d", keyCode);
 
-	if (viewC64->mainMenuBar->selectedJoystick1 == SelectedJoystick::SelectedJoystickKeyboard
-		|| viewC64->mainMenuBar->selectedJoystick2 == SelectedJoystick::SelectedJoystickKeyboard)
+	if (c64SettingsSelectedJoystick1 == SelectedJoystick::SelectedJoystickKeyboard
+		|| c64SettingsSelectedJoystick2 == SelectedJoystick::SelectedJoystickKeyboard)
 	{
 		int joyAxis = GetJoystickAxis(keyCode, isShift, isAlt, isControl, isSuper);
 		if (joyAxis != JOYPAD_IDLE)
 		{
 			debugInterface->LockIoMutex();
-			if (viewC64->mainMenuBar->selectedJoystick1 == SelectedJoystick::SelectedJoystickKeyboard)
+			if (c64SettingsSelectedJoystick1 == SelectedJoystick::SelectedJoystickKeyboard)
 			{
 				debugInterface->JoystickUp(0, joyAxis);
 			}
-			if (viewC64->mainMenuBar->selectedJoystick2 == SelectedJoystick::SelectedJoystickKeyboard)
+			if (c64SettingsSelectedJoystick2 == SelectedJoystick::SelectedJoystickKeyboard)
 			{
 				debugInterface->JoystickUp(1, joyAxis);
 			}
@@ -385,6 +386,41 @@ void CViewEmulatorScreen::PostDebugInterfaceKeyDown(u32 keyCode, bool isShift, b
 
 void CViewEmulatorScreen::PostDebugInterfaceKeyUp(u32 keyCode, bool isShift, bool isAlt, bool isControl, bool isSuper)
 {
+}
+
+bool CViewEmulatorScreen::DoTap(float x, float y)
+{
+	return CGuiViewMovingPaneImage::DoTap(x, y);
+}
+
+bool CViewEmulatorScreen::DoFinishTap(float x, float y)
+{
+	return CGuiViewMovingPaneImage::DoFinishTap(x, y);
+}
+
+bool CViewEmulatorScreen::DoRightClick(float x, float y)
+{
+	return CGuiViewMovingPaneImage::DoRightClick(x, y);
+}
+
+bool CViewEmulatorScreen::DoFinishRightClick(float x, float y)
+{
+	return CGuiViewMovingPaneImage::DoFinishRightClick(x, y);
+}
+
+bool CViewEmulatorScreen::DoMove(float x, float y, float distX, float distY, float diffX, float diffY)
+{
+	return CGuiViewMovingPaneImage::DoMove(x, y, distX, distY, diffX, diffY);
+}
+
+bool CViewEmulatorScreen::FinishMove(float x, float y, float distX, float distY, float accelerationX, float accelerationY)
+{
+	return CGuiViewMovingPaneImage::FinishMove(x, y, distX, distY, accelerationX, accelerationY);
+}
+
+bool CViewEmulatorScreen::DoScrollWheel(float deltaX, float deltaY)
+{
+	return CGuiViewMovingPaneImage::DoFinishTap(deltaX, deltaY);
 }
 
 CViewEmulatorScreen::~CViewEmulatorScreen()

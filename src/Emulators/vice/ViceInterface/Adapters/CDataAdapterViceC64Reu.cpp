@@ -1,6 +1,7 @@
 #include "CDebugInterfaceVice.h"
 #include "CDataAdapterViceC64Reu.h"
 
+// TODO: not implemented REU data adapter
 CDataAdapterViceC64Reu::CDataAdapterViceC64Reu(CDebugSymbols *debugSymbols)
 : CDebugDataAdapter("ViceReu", debugSymbols)
 {

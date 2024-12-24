@@ -186,7 +186,7 @@ void CViewC64VicEditorCreateNewPicture::CreateNewPicture(u8 mode, u8 backgroundC
 	debugInterfaceVice->SetPatchKernalFastBoot(true);
 	
 	viewC64->debugInterfaceC64->DetachCartridge();
-//	viewC64->debugInterfaceC64->HardReset();
+//	viewC64->debugInterfaceC64->ResetHard();
 	
 	SYS_Sleep(350);
 	
@@ -200,6 +200,20 @@ void CViewC64VicEditorCreateNewPicture::CreateNewPicture(u8 mode, u8 backgroundC
 	else if (mode == C64_PICTURE_MODE_TEXT_MULTI)
 	{
 		vicEditor->SetVicMode(false, true, false);
+		vicEditor->SetVicAddresses(0, 0x0C00, 0x1000, 0x0000);
+
+		vicEditor->viewCharset->SetVisible(true);
+	}
+	if (mode == C64_PICTURE_MODE_TEXT_HIRES_EXTENDED)
+	{
+		vicEditor->SetVicMode(false, false, true);
+		vicEditor->SetVicAddresses(0, 0x0C00, 0x1000, 0x0000);
+		
+		vicEditor->viewCharset->SetVisible(true);
+	}
+	else if (mode == C64_PICTURE_MODE_TEXT_MULTI_EXTENDED)
+	{
+		vicEditor->SetVicMode(false, true, true);
 		vicEditor->SetVicAddresses(0, 0x0C00, 0x1000, 0x0000);
 
 		vicEditor->viewCharset->SetVisible(true);

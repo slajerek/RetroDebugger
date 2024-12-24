@@ -350,6 +350,37 @@ int CViewC64Charset::ImportCharset(CSlrString *path)
 	return importCharsetAddr;
 }
 
+int CViewC64Charset::ImportCharset(u8 *data)
+{
+	u8 *screen_ptr;
+	u8 *color_ram_ptr;
+	u8 *chargen_ptr;
+	u8 *bitmap_low_ptr;
+	u8 *bitmap_high_ptr;
+	u8 colors[0x0F];
+	
+	vicEditor->viewVicDisplay->GetViciiPointers(&(viewC64->viciiStateToShow), &screen_ptr, &color_ram_ptr, &chargen_ptr, &bitmap_low_ptr, &bitmap_high_ptr, colors);
+	
+	int importCharsetAddr = vicEditor->viewVicDisplay->charsetAddress;
+	
+	int charsetAddr = importCharsetAddr;
+	
+	for (int i = 0; i < 0x800; i++)
+	{
+		u8 v = data[i];
+		
+		viewC64->debugInterfaceC64->SetByteToRamC64(charsetAddr, v);
+		
+		charsetAddr++;
+		if (charsetAddr > 0xFFFF)
+		{
+			break;
+		}
+	}
+	
+	return importCharsetAddr;
+}
+
 void CViewC64Charset::SystemDialogFileOpenCancelled()
 {
 }

@@ -15,7 +15,7 @@ public:
 
 	virtual bool HasContextMenuItems();
 	virtual void RenderContextMenuItems();
-
+	
 	virtual void ActivateView();
 	virtual void DeactivateView();
 	

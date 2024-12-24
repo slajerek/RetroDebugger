@@ -628,7 +628,7 @@ static int mt_to_id(int mt)
     return -1;
 }
 
-static int joyport_mouse_enable(int port, int val)
+int joyport_mouse_enable(int port, int val)
 {
     int mt;
 
@@ -667,6 +667,25 @@ static int joyport_mouse_enable(int port, int val)
     }
 
     return 0;
+}
+
+void c64d_mouse_set_type(int mt)
+{
+	if (mt != MOUSE_TYPE_SMART)
+	{
+		if (ds1202) {
+			ds1202_1302_destroy(ds1202, ds1202_rtc_save);
+			ds1202 = NULL;
+		}
+		mouse_type = -1;
+	}
+	
+	mouse_type = mt;
+}
+
+int c64d_mouse_type_to_joyportid(int mouseType)
+{
+	return mt_to_id(mouseType);
 }
 
 static BYTE joyport_mouse_value(int port)
@@ -944,7 +963,7 @@ static int mouse_joyport_register(void)
 /* --------------------------------------------------------- */
 /* Resources & cmdline */
 
-static int set_mouse_enabled(int val, void *param)
+int set_mouse_enabled(int val, void *param)
 {
     if (_mouse_enabled == val) {
         return 0;

@@ -888,7 +888,7 @@ void CViewBreakpointsOLD::StartEditingSelectedAddrBreakpoint(CDebugBreakpointsAd
 {
 	if (cursorElement < addrBreakpoints->breakpoints.size())
 	{
-		std::map<int, CBreakpointAddr *>::iterator it = addrBreakpoints->breakpoints.begin();
+		std::map<int, CDebugBreakpointAddr *>::iterator it = addrBreakpoints->breakpoints.begin();
 		for (int i = 0; i < cursorElement; i++)
 		{
 			it++;
@@ -905,21 +905,21 @@ void CViewBreakpointsOLD::StartEditingSelectedAddrBreakpoint(CDebugBreakpointsAd
 	
 }
 
-void CViewBreakpointsOLD::StartEditingSelectedMemoryBreakpoint(CDebugBreakpointsMemory *memoryBreakpoints)
+void CViewBreakpointsOLD::StartEditingSelectedMemoryBreakpoint(CDebugBreakpointsData *memoryBreakpoints)
 {
 	if (cursorElement < memoryBreakpoints->breakpoints.size())
 	{
-		std::map<int, CBreakpointAddr *>::iterator it = memoryBreakpoints->breakpoints.begin();
+		std::map<int, CDebugBreakpointAddr *>::iterator it = memoryBreakpoints->breakpoints.begin();
 		for (int i = 0; i < cursorElement; i++)
 		{
 			it++;
 		}
-		editingBreakpoint = (CBreakpointMemory *)it->second;
+		editingBreakpoint = (CDebugBreakpointData *)it->second;
 		editHex->SetValue(editingBreakpoint->addr, 4);
 	}
 	else
 	{
-		editingBreakpoint = new CBreakpointMemory(0, MEMORY_BREAKPOINT_ACCESS_WRITE, MemoryBreakpointComparison::MEMORY_BREAKPOINT_EQUAL, 0);
+		editingBreakpoint = new CDebugBreakpointData(0, MEMORY_BREAKPOINT_ACCESS_WRITE, DataBreakpointComparison::MEMORY_BREAKPOINT_EQUAL, 0);
 		editHex->SetText(new CSlrString("...."));
 	}
 	isEditingValue = true;
@@ -931,29 +931,29 @@ void CViewBreakpointsOLD::DeleteSelectedAddrBreakpoint(CDebugBreakpointsAddr *ad
 	debugInterface->LockMutex();
 	if (cursorElement < addrBreakpoints->breakpoints.size())
 	{
-		std::map<int, CBreakpointAddr *>::iterator it = addrBreakpoints->breakpoints.begin();
+		std::map<int, CDebugBreakpointAddr *>::iterator it = addrBreakpoints->breakpoints.begin();
 		for (int i = 0; i < cursorElement; i++)
 		{
 			it++;
 		}
-		CBreakpointAddr *breakpoint = it->second;
+		CDebugBreakpointAddr *breakpoint = it->second;
 		addrBreakpoints->breakpoints.erase(it);
 		delete breakpoint;
 	}
 	debugInterface->UnlockMutex();
 }
 
-void CViewBreakpointsOLD::DeleteSelectedMemoryBreakpoint(CDebugBreakpointsMemory *memoryBreakpoints)
+void CViewBreakpointsOLD::DeleteSelectedMemoryBreakpoint(CDebugBreakpointsData *memoryBreakpoints)
 {
 	debugInterface->LockMutex();
 	if (cursorElement < memoryBreakpoints->breakpoints.size())
 	{
-		std::map<int, CBreakpointAddr *>::iterator it = memoryBreakpoints->breakpoints.begin();
+		std::map<int, CDebugBreakpointAddr *>::iterator it = memoryBreakpoints->breakpoints.begin();
 		for (int i = 0; i < cursorElement; i++)
 		{
 			it++;
 		}
-		CBreakpointAddr *breakpoint = it->second;
+		CDebugBreakpointAddr *breakpoint = it->second;
 		memoryBreakpoints->breakpoints.erase(it);
 		delete breakpoint;
 	}
@@ -1007,32 +1007,32 @@ void CViewBreakpointsOLD::GuiEditHexEnteredValueAddr(CGuiEditHex *editHex, CDebu
 {
 	if (cursorElement < addrBreakpoints->breakpoints.size())
 	{
-		std::map<int, CBreakpointAddr *>::iterator it = addrBreakpoints->breakpoints.begin();
+		std::map<int, CDebugBreakpointAddr *>::iterator it = addrBreakpoints->breakpoints.begin();
 		for (int i = 0; i < cursorElement; i++)
 		{
 			it++;
 		}
-		CBreakpointAddr *addrBreakpoint = it->second;
+		CDebugBreakpointAddr *addrBreakpoint = it->second;
 		addrBreakpoints->breakpoints.erase(it);
 		addrBreakpoint->addr = editHex->value;
 		addrBreakpoints->breakpoints[addrBreakpoint->addr] = addrBreakpoint;
 	}
 	else
 	{
-		std::map<int, CBreakpointAddr *>::iterator it = addrBreakpoints->breakpoints.find(editHex->value);
+		std::map<int, CDebugBreakpointAddr *>::iterator it = addrBreakpoints->breakpoints.find(editHex->value);
 		if (it == addrBreakpoints->breakpoints.end())
 		{
-			CBreakpointAddr *addrBreakpoint = new CBreakpointAddr(editHex->value);
+			CDebugBreakpointAddr *addrBreakpoint = new CDebugBreakpointAddr(editHex->value);
 			addrBreakpoints->breakpoints[addrBreakpoint->addr] = addrBreakpoint;
 		}
 	}
 	
 	// position cursor on this
 	cursorElement = 0;
-	for (std::map<int, CBreakpointAddr *>::iterator it = addrBreakpoints->breakpoints.begin();
+	for (std::map<int, CDebugBreakpointAddr *>::iterator it = addrBreakpoints->breakpoints.begin();
 		 it != addrBreakpoints->breakpoints.end(); it++)
 	{
-		CBreakpointAddr *addrBreakpoint = it->second;
+		CDebugBreakpointAddr *addrBreakpoint = it->second;
 		if (addrBreakpoint->addr == editHex->value)
 			break;
 		
@@ -1043,13 +1043,13 @@ void CViewBreakpointsOLD::GuiEditHexEnteredValueAddr(CGuiEditHex *editHex, CDebu
 	this->cursorPosition = -1;
 }
 
-void CViewBreakpointsOLD::GuiEditHexEnteredValueMemory(CGuiEditHex *editHex, u32 lastKeyCode, CDebugBreakpointsMemory *memoryBreakpoints)
+void CViewBreakpointsOLD::GuiEditHexEnteredValueMemory(CGuiEditHex *editHex, u32 lastKeyCode, CDebugBreakpointsData *memoryBreakpoints)
 {
 	if (cursorPosition == 1)
 	{
 		if (lastKeyCode != MTKEY_ARROW_LEFT)
 		{
-			CBreakpointMemory *memoryBreakpoint = (CBreakpointMemory *)editingBreakpoint;
+			CDebugBreakpointData *memoryBreakpoint = (CDebugBreakpointData *)editingBreakpoint;
 			memoryBreakpoint->addr = editHex->value;
 			isEditingValue = false;
 			cursorPosition = 2;
@@ -1059,7 +1059,7 @@ void CViewBreakpointsOLD::GuiEditHexEnteredValueMemory(CGuiEditHex *editHex, u32
 	{
 		if (lastKeyCode == MTKEY_ARROW_LEFT)
 		{
-			CBreakpointMemory *memoryBreakpoint = (CBreakpointMemory *)editingBreakpoint;
+			CDebugBreakpointData *memoryBreakpoint = (CDebugBreakpointData *)editingBreakpoint;
 			memoryBreakpoint->value = editHex->value;
 			cursorPosition = 2;
 			isEditingValue = false;
@@ -1070,12 +1070,12 @@ void CViewBreakpointsOLD::GuiEditHexEnteredValueMemory(CGuiEditHex *editHex, u32
 			
 			if (cursorElement < memoryBreakpoints->breakpoints.size())
 			{
-				std::map<int, CBreakpointAddr *>::iterator it = memoryBreakpoints->breakpoints.begin();
+				std::map<int, CDebugBreakpointAddr *>::iterator it = memoryBreakpoints->breakpoints.begin();
 				for (int i = 0; i < cursorElement; i++)
 				{
 					it++;
 				}
-				CBreakpointMemory *memoryBreakpoint = (CBreakpointMemory*)it->second;
+				CDebugBreakpointData *memoryBreakpoint = (CDebugBreakpointData*)it->second;
 				memoryBreakpoints->breakpoints.erase(it);
 				memoryBreakpoint->value = editHex->value;
 				memoryBreakpoints->breakpoints[memoryBreakpoint->addr] = memoryBreakpoint;
@@ -1083,8 +1083,8 @@ void CViewBreakpointsOLD::GuiEditHexEnteredValueMemory(CGuiEditHex *editHex, u32
 			}
 			else
 			{
-				CBreakpointMemory *memoryBreakpoint = (CBreakpointMemory *)editingBreakpoint;
-				std::map<int, CBreakpointAddr *>::iterator it = memoryBreakpoints->breakpoints.find(memoryBreakpoint->addr);
+				CDebugBreakpointData *memoryBreakpoint = (CDebugBreakpointData *)editingBreakpoint;
+				std::map<int, CDebugBreakpointAddr *>::iterator it = memoryBreakpoints->breakpoints.find(memoryBreakpoint->addr);
 				if (it == memoryBreakpoints->breakpoints.end())
 				{
 					memoryBreakpoints->breakpoints[memoryBreakpoint->addr] = memoryBreakpoint;
@@ -1094,7 +1094,7 @@ void CViewBreakpointsOLD::GuiEditHexEnteredValueMemory(CGuiEditHex *editHex, u32
 				else
 				{
 					delete memoryBreakpoint;
-					memoryBreakpoint = (CBreakpointMemory*)it->second;
+					memoryBreakpoint = (CDebugBreakpointData*)it->second;
 					memoryBreakpoint->value = editHex->value;
 					addr = memoryBreakpoint->addr;
 				}
@@ -1102,10 +1102,10 @@ void CViewBreakpointsOLD::GuiEditHexEnteredValueMemory(CGuiEditHex *editHex, u32
 			
 			// position cursor on this
 			cursorElement = 0;
-			for (std::map<int, CBreakpointAddr *>::iterator it = memoryBreakpoints->breakpoints.begin();
+			for (std::map<int, CDebugBreakpointAddr *>::iterator it = memoryBreakpoints->breakpoints.begin();
 				 it != memoryBreakpoints->breakpoints.end(); it++)
 			{
-				CBreakpointAddr *addrBreakpoint = it->second;
+				CDebugBreakpointAddr *addrBreakpoint = it->second;
 				if (addrBreakpoint->addr == addr)
 					break;
 				
@@ -1389,10 +1389,10 @@ void CViewBreakpointsOLD::RenderAddrBreakpoints(CDebugBreakpointsAddr *addrBreak
 	float py = pStartY;
 	
 	int elemNum = 0;
-	for (std::map<int, CBreakpointAddr *>::iterator it = addrBreakpoints->breakpoints.begin();
+	for (std::map<int, CDebugBreakpointAddr *>::iterator it = addrBreakpoints->breakpoints.begin();
 		 it != addrBreakpoints->breakpoints.end(); it++)
 	{
-		CBreakpointAddr *addrBreakpoint = it->second;
+		CDebugBreakpointAddr *addrBreakpoint = it->second;
 		int addr = addrBreakpoint->addr;
 		sprintf(buf, addrFormatStr, addr);
 		
@@ -1449,7 +1449,7 @@ void CViewBreakpointsOLD::RenderAddrBreakpoints(CDebugBreakpointsAddr *addrBreak
 	font->BlitTextColor(strTemp, px, py, -1, fontNumbersScale, tr, tg, tb, 1, FONT_ALIGN_LEFT);
 }
 
-void CViewBreakpointsOLD::RenderMemoryBreakpoints(CDebugBreakpointsMemory *memoryBreakpoints, float pStartX, float pStartY, int cursorGroupId)
+void CViewBreakpointsOLD::RenderMemoryBreakpoints(CDebugBreakpointsData *memoryBreakpoints, float pStartX, float pStartY, int cursorGroupId)
 {
 	float width = fontWidth*8.5f;
 	
@@ -1458,10 +1458,10 @@ void CViewBreakpointsOLD::RenderMemoryBreakpoints(CDebugBreakpointsMemory *memor
 	
 	/// memory
 	int elemNum = 0;
-	for (std::map<int, CBreakpointAddr *>::iterator it = memoryBreakpoints->breakpoints.begin();
+	for (std::map<int, CDebugBreakpointAddr *>::iterator it = memoryBreakpoints->breakpoints.begin();
 		 it != memoryBreakpoints->breakpoints.end(); it++)
 	{
-		CBreakpointMemory *memoryBreakpoint = (CBreakpointMemory*)it->second;
+		CDebugBreakpointData *memoryBreakpoint = (CDebugBreakpointData*)it->second;
 		
 		char buf2[3] = {0};
 		
@@ -1578,7 +1578,7 @@ void CViewBreakpointsOLD::RenderMemoryBreakpoints(CDebugBreakpointsMemory *memor
 			/// ugh, again copy pasted code here with only slight differences... remember this is only a POC :D
 			
 			
-			CBreakpointMemory *memoryBreakpoint = (CBreakpointMemory *)editingBreakpoint;
+			CDebugBreakpointData *memoryBreakpoint = (CDebugBreakpointData *)editingBreakpoint;
 			
 			char buf2[3] = {0};
 			
@@ -1701,7 +1701,7 @@ bool CViewBreakpointsOLD::CheckTapAddrBreakpoints(float x, float y,
 }
 
 bool CViewBreakpointsOLD::CheckTapMemoryBreakpoints(float x, float y,
-												 CDebugBreakpointsMemory *memoryBreakpoints,
+												 CDebugBreakpointsData *memoryBreakpoints,
 												 float pStartX, float pStartY, int cursorGroupId)
 {
 	float width = fontWidth*8.5f;

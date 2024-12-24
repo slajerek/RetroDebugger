@@ -74,7 +74,7 @@ void set_joyport_pot_mask(int mask)
     pot_port_mask = mask;
 }
 
-static int joyport_set_device(int port, int id)
+int joyport_set_device(int port, int id)
 {
     int i;
 

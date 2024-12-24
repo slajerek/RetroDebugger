@@ -2,7 +2,7 @@
 #include "CViewC64.h"
 #include "CDebugMemory.h"
 #include "CViewDataMap.h"
-#include "CViewMainMenu.h"
+#include "CMainMenuHelper.h"
 #include "CViewC64StateSID.h"
 #include "CByteBuffer.h"
 #include "CDebugSymbols.h"
@@ -58,19 +58,24 @@ void CDebugInterfaceC64::Shutdown()
 
 int CDebugInterfaceC64::GetEmulatorType()
 {
-	SYS_FatalExit("CDebugInterfaceC64::GetEmulatorType");
+	LOGTODO("CDebugInterfaceC64::GetEmulatorType");
 	return -1;
 }
 
 CSlrString *CDebugInterfaceC64::GetEmulatorVersionString()
 {
-	SYS_FatalExit("CDebugInterfaceC64::GetEmulatorVersionString");
+	LOGTODO("CDebugInterfaceC64::GetEmulatorVersionString");
 	return NULL;
 }
 
 const char *CDebugInterfaceC64::GetPlatformNameString()
 {
 	return "C64";
+}
+
+const char *CDebugInterfaceC64::GetPlatformNameEndpointString()
+{
+	return "c64";
 }
 
 float CDebugInterfaceC64::GetEmulationFPS()
@@ -115,17 +120,17 @@ unsigned int CDebugInterfaceC64::GetEmulationFrameNumber()
 
 void CDebugInterfaceC64::RefreshScreenNoCallback()
 {
-	SYS_FatalExit("CDebugInterfaceC64::RefreshScreenNoCallback");
+	LOGTODO("CDebugInterfaceC64::RefreshScreenNoCallback");
 }
 
 void CDebugInterfaceC64::InitKeyMap(C64KeyMap *keyMap)
 {
-	SYS_FatalExit("CDebugInterfaceC64::InitKeyMap");
+	LOGTODO("CDebugInterfaceC64::InitKeyMap");
 }
 
 uint8 *CDebugInterfaceC64::GetCharRom()
 {
-	SYS_FatalExit("CDebugInterfaceC64::GetCharRom");
+	LOGTODO("CDebugInterfaceC64::GetCharRom");
 	return NULL;
 }
 
@@ -133,7 +138,7 @@ uint8 *CDebugInterfaceC64::GetCharRom()
 void CDebugInterfaceC64::RunEmulationThread()
 {
 	CDebugInterface::RunEmulationThread();
-	SYS_FatalExit("CDebugInterfaceC64::RunEmulationThread");
+	LOGTODO("CDebugInterfaceC64::RunEmulationThread");
 }
 
 void CDebugInterfaceC64::CheckLoadedRoms()
@@ -182,271 +187,271 @@ void CDebugInterfaceC64::SetDebugOnDrive1541(bool debugOnDrive1541)
 	this->debugOnDrive1541 = debugOnDrive1541;
 }
 
-void CDebugInterfaceC64::Reset()
+void CDebugInterfaceC64::ResetSoft()
 {
-	SYS_FatalExit("CDebugInterfaceC64::Reset");
+	LOGTODO("CDebugInterfaceC64::ResetSoft");
 }
 
-void CDebugInterfaceC64::HardReset()
+void CDebugInterfaceC64::ResetHard()
 {
-	SYS_FatalExit("CDebugInterfaceC64::HardReset");
+	LOGTODO("CDebugInterfaceC64::ResetHard");
 }
 
 void CDebugInterfaceC64::DiskDriveReset()
 {
-	SYS_FatalExit("CDebugInterfaceC64::DiskDriveReset");
+	LOGTODO("CDebugInterfaceC64::DiskDriveReset");
 }
 
 bool CDebugInterfaceC64::KeyboardDown(uint32 mtKeyCode)
 {
-	SYS_FatalExit("CDebugInterfaceC64::KeyboardDown");
+	LOGTODO("CDebugInterfaceC64::KeyboardDown");
 	return false;
 }
 
 bool CDebugInterfaceC64::KeyboardUp(uint32 mtKeyCode)
 {
-	SYS_FatalExit("CDebugInterfaceC64::KeyboardUp");
+	LOGTODO("CDebugInterfaceC64::KeyboardUp");
 	return false;
 }
 
 void CDebugInterfaceC64::JoystickDown(int port, uint32 axis)
 {
-	SYS_FatalExit("CDebugInterfaceC64::JoystickDown");
+	LOGTODO("CDebugInterfaceC64::JoystickDown");
 }
 
 void CDebugInterfaceC64::JoystickUp(int port, uint32 axis)
 {
-	SYS_FatalExit("CDebugInterfaceC64::JoystickUp");
+	LOGTODO("CDebugInterfaceC64::JoystickUp");
 }
 
 int CDebugInterfaceC64::GetCpuPC()
 {
-	SYS_FatalExit("CDebugInterfaceC64::GetCpuPC");
+	LOGTODO("CDebugInterfaceC64::GetCpuPC");
 	return 0;
 }
 
 int CDebugInterfaceC64::GetDrive1541PC()
 {
-	SYS_FatalExit("CDebugInterfaceC64::GetDrive1541PC");
+	LOGTODO("CDebugInterfaceC64::GetDrive1541PC");
 	return 0;
 }
 
 void CDebugInterfaceC64::GetC64CpuState(C64StateCPU *state)
 {
-	SYS_FatalExit("CDebugInterfaceC64::GetC64CpuState");
+	LOGTODO("CDebugInterfaceC64::GetC64CpuState");
 }
 
 void CDebugInterfaceC64::GetDrive1541CpuState(C64StateCPU *state)
 {
-	SYS_FatalExit("CDebugInterfaceC64::GetDrive1541CpuState");
+	LOGTODO("CDebugInterfaceC64::GetDrive1541CpuState");
 }
 
 void CDebugInterfaceC64::GetVICState(C64StateVIC *state)
 {
-	SYS_FatalExit("CDebugInterfaceC64::GetVICState");
+	LOGTODO("CDebugInterfaceC64::GetVICState");
 }
 
 void CDebugInterfaceC64::GetDrive1541State(C64StateDrive1541 *state)
 {
-	SYS_FatalExit("CDebugInterfaceC64::GetDrive1541State");
+	LOGTODO("CDebugInterfaceC64::GetDrive1541State");
 }
 
 //
 void CDebugInterfaceC64::SetStackPointerC64(uint8 val)
 {
-	SYS_FatalExit("CDebugInterfaceC64::SetStackPointerC64");
+	LOGTODO("CDebugInterfaceC64::SetStackPointerC64");
 }
 
 void CDebugInterfaceC64::SetRegisterAC64(uint8 val)
 {
-	SYS_FatalExit("CDebugInterfaceC64::SetRegisterAC64");
+	LOGTODO("CDebugInterfaceC64::SetRegisterAC64");
 }
 
 void CDebugInterfaceC64::SetRegisterXC64(uint8 val)
 {
-	SYS_FatalExit("CDebugInterfaceC64::SetRegisterXC64");
+	LOGTODO("CDebugInterfaceC64::SetRegisterXC64");
 }
 
 void CDebugInterfaceC64::SetRegisterYC64(uint8 val)
 {
-	SYS_FatalExit("CDebugInterfaceC64::SetRegisterYC64");
+	LOGTODO("CDebugInterfaceC64::SetRegisterYC64");
 }
 
 void CDebugInterfaceC64::SetRegisterPC64(uint8 val)
 {
-	SYS_FatalExit("CDebugInterfaceC64::SetRegisterPC64");
+	LOGTODO("CDebugInterfaceC64::SetRegisterPC64");
 }
 
 void CDebugInterfaceC64::SetStackPointer1541(uint8 val)
 {
-	SYS_FatalExit("CDebugInterfaceC64::SetStackPointer1541");
+	LOGTODO("CDebugInterfaceC64::SetStackPointer1541");
 }
 
 void CDebugInterfaceC64::SetRegisterA1541(uint8 val)
 {
-	SYS_FatalExit("CDebugInterfaceC64::SetRegisterA1541");
+	LOGTODO("CDebugInterfaceC64::SetRegisterA1541");
 }
 
 void CDebugInterfaceC64::SetRegisterX1541(uint8 val)
 {
-	SYS_FatalExit("CDebugInterfaceC64::SetRegisterX1541");
+	LOGTODO("CDebugInterfaceC64::SetRegisterX1541");
 }
 
 void CDebugInterfaceC64::SetRegisterY1541(uint8 val)
 {
-	SYS_FatalExit("CDebugInterfaceC64::SetRegisterY1541");
+	LOGTODO("CDebugInterfaceC64::SetRegisterY1541");
 }
 
 void CDebugInterfaceC64::SetRegisterP1541(uint8 val)
 {
-	SYS_FatalExit("CDebugInterfaceC64::SetRegisterP1541");
+	LOGTODO("CDebugInterfaceC64::SetRegisterP1541");
 }
 
 void CDebugInterfaceC64::InsertD64(CSlrString *path)
 {
-	SYS_FatalExit("CDebugInterfaceC64::InsertD64");
+	LOGTODO("CDebugInterfaceC64::InsertD64");
 }
 
 void CDebugInterfaceC64::DetachDriveDisk()
 {
-	SYS_FatalExit("CDebugInterfaceC64::DetachDriveDisk");
+	LOGTODO("CDebugInterfaceC64::DetachDriveDisk");
 }
 
 void CDebugInterfaceC64::MakeJMPToBasicRunC64()
 {
-	SYS_FatalExit("CDebugInterfaceC64::MakeBasicRunC64");
+	LOGTODO("CDebugInterfaceC64::MakeBasicRunC64");
 }
 
 bool CDebugInterfaceC64::GetSettingIsWarpSpeed()
 {
-	SYS_FatalExit("CDebugInterfaceC64::GetSettingIsWarpSpeed");
+	LOGTODO("CDebugInterfaceC64::GetSettingIsWarpSpeed");
 	return false;
 }
 
 void CDebugInterfaceC64::SetSettingIsWarpSpeed(bool isWarpSpeed)
 {
-	SYS_FatalExit("CDebugInterfaceC64::SetSettingIsWarpSpeed");
+	LOGTODO("CDebugInterfaceC64::SetSettingIsWarpSpeed");
 }
 
 void CDebugInterfaceC64::GetSidTypes(std::vector<CSlrString *> *sidTypes)
 {
-	SYS_FatalExit("CDebugInterfaceC64::GetSidTypes");
+	LOGTODO("CDebugInterfaceC64::GetSidTypes");
 }
 
 void CDebugInterfaceC64::GetSidTypes(std::vector<const char *> *sidTypes)
 {
-	SYS_FatalExit("CDebugInterfaceC64::GetSidTypes");
+	LOGTODO("CDebugInterfaceC64::GetSidTypes");
 }
 
 void CDebugInterfaceC64::SetSidType(int sidType)
 {
-	SYS_FatalExit("CDebugInterfaceC64::SetSidType");
+	LOGTODO("CDebugInterfaceC64::SetSidType");
 }
 
 // samplingMethod: Fast=0, Interpolating=1, Resampling=2, Fast Resampling=3
 void CDebugInterfaceC64::SetSidSamplingMethod(int samplingMethod)
 {
-	SYS_FatalExit("CDebugInterfaceC64::SetSidSamplingMethod");
+	LOGTODO("CDebugInterfaceC64::SetSidSamplingMethod");
 }
 
 // emulateFilters: no=0, yes=1
 void CDebugInterfaceC64::SetSidEmulateFilters(int emulateFilters)
 {
-	SYS_FatalExit("CDebugInterfaceC64::SetSidEmulateFilters");
+	LOGTODO("CDebugInterfaceC64::SetSidEmulateFilters");
 }
 
 // passband: 0-90
 void CDebugInterfaceC64::SetSidPassBand(int passband)
 {
-	SYS_FatalExit("CDebugInterfaceC64::SetSidPassBand");
+	LOGTODO("CDebugInterfaceC64::SetSidPassBand");
 }
 
 // filterBias: -500 500
 void CDebugInterfaceC64::SetSidFilterBias(int filterBias)
 {
-	SYS_FatalExit("CDebugInterfaceC64::SetSidFilterBias");
+	LOGTODO("CDebugInterfaceC64::SetSidFilterBias");
 }
 
 int CDebugInterfaceC64::GetNumSids()
 {
-	SYS_FatalExit("CDebugInterfaceC64::GetNumSids");
+	LOGTODO("CDebugInterfaceC64::GetNumSids");
 	return 0;
 }
 
 void CDebugInterfaceC64::SetSidStereo(int stereoMode)
 {
-	SYS_FatalExit("CDebugInterfaceC64::SetSidStereo");
+	LOGTODO("CDebugInterfaceC64::SetSidStereo");
 }
 
 void CDebugInterfaceC64::SetSidStereoAddress(uint16 sidAddress)
 {
-	SYS_FatalExit("CDebugInterfaceC64::SetSidStereoAddress");
+	LOGTODO("CDebugInterfaceC64::SetSidStereoAddress");
 }
 
 void CDebugInterfaceC64::SetSidTripleAddress(uint16 sidAddress)
 {
-	SYS_FatalExit("CDebugInterfaceC64::SetSidTripleAddress");
+	LOGTODO("CDebugInterfaceC64::SetSidTripleAddress");
 }
 
 void CDebugInterfaceC64::GetC64ModelTypes(std::vector<CSlrString *> *modelTypeNames, std::vector<int> *modelTypeIds)
 {
-	SYS_FatalExit("CDebugInterfaceC64::GetC64ModelTypes");
+	LOGTODO("CDebugInterfaceC64::GetC64ModelTypes");
 }
 
 void CDebugInterfaceC64::GetC64ModelTypes(std::vector<const char *> *modelTypeNames, std::vector<int> *modelTypeIds)
 {
-	SYS_FatalExit("CDebugInterfaceC64::GetC64ModelTypes");
+	LOGTODO("CDebugInterfaceC64::GetC64ModelTypes");
 }
 
 void CDebugInterfaceC64::SetC64ModelType(int modelType)
 {
-	SYS_FatalExit("CDebugInterfaceC64::SetC64ModelType");
+	LOGTODO("CDebugInterfaceC64::SetC64ModelType");
 }
 
 void CDebugInterfaceC64::SetPatchKernalFastBoot(bool isPatchKernal)
 {
-	SYS_FatalExit("CDebugInterfaceC64::SetPatchKernalFastBoot");
+	LOGTODO("CDebugInterfaceC64::SetPatchKernalFastBoot");
 }
 
 void CDebugInterfaceC64::SetRunSIDWhenInWarp(bool isRunningSIDInWarp)
 {
-	SYS_FatalExit("CDebugInterfaceC64::SetRunSIDWhenInWarp");
+	LOGTODO("CDebugInterfaceC64::SetRunSIDWhenInWarp");
 }
 
 void CDebugInterfaceC64::SetEmulationMaximumSpeed(int maximumSpeed)
 {
-	SYS_FatalExit("CDebugInterfaceC64::SetEmulationMaximumSpeed");
+	LOGTODO("CDebugInterfaceC64::SetEmulationMaximumSpeed");
 }
 
 void CDebugInterfaceC64::SetVSPBugEmulation(bool isVSPBugEmulation)
 {
-	SYS_FatalExit("CDebugInterfaceC64::SetVSPBugEmulation");
+	LOGTODO("CDebugInterfaceC64::SetVSPBugEmulation");
 }
 
 void CDebugInterfaceC64::SetSkipDrawingSprites(bool isSkipDrawingSprites)
 {
-	SYS_FatalExit("CDebugInterfaceC64::SetSkipDrawingSprites");
+	LOGTODO("CDebugInterfaceC64::SetSkipDrawingSprites");
 }
 
 void CDebugInterfaceC64::SetByteC64(uint16 addr, uint8 val)
 {
-	SYS_FatalExit("CDebugInterfaceC64::SetByteC64");
+	LOGTODO("CDebugInterfaceC64::SetByteC64");
 }
 
 void CDebugInterfaceC64::SetByteToRamC64(uint16 addr, uint8 val)
 {
-	SYS_FatalExit("CDebugInterfaceC64::SetByteToRamC64");
+	LOGTODO("CDebugInterfaceC64::SetByteToRamC64");
 }
 
 uint8 CDebugInterfaceC64::GetByteC64(uint16 addr)
 {
-	SYS_FatalExit("CDebugInterfaceC64::GetByteC64");
+	LOGTODO("CDebugInterfaceC64::GetByteC64");
 	return 0;
 }
 
 uint8 CDebugInterfaceC64::GetByteFromRamC64(uint16 addr)
 {
-	SYS_FatalExit("CDebugInterfaceC64::GetByteFromRamC64");
+	LOGTODO("CDebugInterfaceC64::GetByteFromRamC64");
 	return 0;
 }
 
@@ -469,22 +474,22 @@ void CDebugInterfaceC64::MakeJmpAndReset(uint16 addr)
 
 void CDebugInterfaceC64::MakeJmpC64(uint16 addr)
 {
-	SYS_FatalExit("CDebugInterfaceC64::MakeJmpC64");
+	LOGTODO("CDebugInterfaceC64::MakeJmpC64");
 }
 
 void CDebugInterfaceC64::MakeJmpNoResetC64(uint16 addr)
 {
-	SYS_FatalExit("CDebugInterfaceC64::MakeJmpNoResetC64");
+	LOGTODO("CDebugInterfaceC64::MakeJmpNoResetC64");
 }
 
 void CDebugInterfaceC64::MakeJsrC64(uint16 addr)
 {
-	SYS_FatalExit("CDebugInterfaceC64::MakeJsrC64");
+	LOGTODO("CDebugInterfaceC64::MakeJsrC64");
 }
 
 void CDebugInterfaceC64::MakeJmpNoReset1541(uint16 addr)
 {
-	SYS_FatalExit("CDebugInterfaceC64::MakeJmpNoReset1541");
+	LOGTODO("CDebugInterfaceC64::MakeJmpNoReset1541");
 }
 
 void CDebugInterfaceC64::SupportsBreakpoints(bool *writeBreakpoint, bool *readBreakpoint)
@@ -504,159 +509,159 @@ void CDebugInterfaceC64::ClearTemporaryBreakpoint()
 
 void CDebugInterfaceC64::SetByte1541(uint16 addr, uint8 val)
 {
-	SYS_FatalExit("CDebugInterfaceC64::SetByte1541");
+	LOGTODO("CDebugInterfaceC64::SetByte1541");
 }
 
 void CDebugInterfaceC64::SetByteToRam1541(uint16 addr, uint8 val)
 {
-	SYS_FatalExit("CDebugInterfaceC64::SetByteToRam1541");
+	LOGTODO("CDebugInterfaceC64::SetByteToRam1541");
 }
 
 uint8 CDebugInterfaceC64::GetByte1541(uint16 addr)
 {
-	SYS_FatalExit("CDebugInterfaceC64::GetByte1541");
+	LOGTODO("CDebugInterfaceC64::GetByte1541");
 	return 0;
 }
 
 uint8 CDebugInterfaceC64::GetByteFromRam1541(uint16 addr)
 {
-	SYS_FatalExit("CDebugInterfaceC64::GetByteFromRam1541");
+	LOGTODO("CDebugInterfaceC64::GetByteFromRam1541");
 	return 0;
 }
 
 void CDebugInterfaceC64::MakeJmp1541(uint16 addr)
 {
-	SYS_FatalExit("CDebugInterfaceC64::MakeJmp1541");
+	LOGTODO("CDebugInterfaceC64::MakeJmp1541");
 }
 
 void CDebugInterfaceC64::GetWholeMemoryMap(uint8 *buffer)
 {
-	SYS_FatalExit("CDebugInterfaceC64::GetWholeMemoryMap");
+	LOGTODO("CDebugInterfaceC64::GetWholeMemoryMap");
 }
 
 void CDebugInterfaceC64::GetWholeMemoryMapFromRam(uint8 *buffer)
 {
-	SYS_FatalExit("CDebugInterfaceC64::GetWholeMemoryMapFromRam");
+	LOGTODO("CDebugInterfaceC64::GetWholeMemoryMapFromRam");
 }
 
 void CDebugInterfaceC64::GetWholeMemoryMap1541(uint8 *buffer)
 {	
-	SYS_FatalExit("CDebugInterfaceC64::GetWholeMemoryMap1541");
+	LOGTODO("CDebugInterfaceC64::GetWholeMemoryMap1541");
 }
 
 void CDebugInterfaceC64::GetWholeMemoryMapFromRam1541(uint8 *buffer)
 {
-	SYS_FatalExit("CDebugInterfaceC64::GetWholeMemoryMapFromRam1541");
+	LOGTODO("CDebugInterfaceC64::GetWholeMemoryMapFromRam1541");
 }
 
 void CDebugInterfaceC64::GetMemory(uint8 *buffer, int addrStart, int addrEnd)
 {
-	SYS_FatalExit("CDebugInterfaceC64::GetMemory");
+	LOGTODO("CDebugInterfaceC64::GetMemory");
 }
 
 void CDebugInterfaceC64::GetMemoryFromRam(uint8 *buffer, int addrStart, int addrEnd)
 {
-	SYS_FatalExit("CDebugInterfaceC64::GetMemoryFromRam");
+	LOGTODO("CDebugInterfaceC64::GetMemoryFromRam");
 }
 
 void CDebugInterfaceC64::GetMemoryDrive1541(uint8 *buffer, int addrStart, int addrEnd)
 {
-	SYS_FatalExit("CDebugInterfaceC64::GetMemoryDrive1541");
+	LOGTODO("CDebugInterfaceC64::GetMemoryDrive1541");
 }
 
 void CDebugInterfaceC64::GetMemoryFromRamDrive1541(uint8 *buffer, int addrStart, int addrEnd)
 {	
-	SYS_FatalExit("CDebugInterfaceC64::GetMemoryFromRamDrive1541");
+	LOGTODO("CDebugInterfaceC64::GetMemoryFromRamDrive1541");
 }
 
 void CDebugInterfaceC64::FillC64Ram(uint16 addr, uint16 size, uint8 value)
 {
-	SYS_FatalExit("CDebugInterfaceC64::FillC64Ram");
+	LOGTODO("CDebugInterfaceC64::FillC64Ram");
 }
 
 bool CDebugInterfaceC64::LoadFullSnapshot(CByteBuffer *snapshotBuffer)
 {
-	SYS_FatalExit("CDebugInterfaceC64::LoadFullSnapshot");
+	LOGTODO("CDebugInterfaceC64::LoadFullSnapshot");
 	return false;
 }
 
 void CDebugInterfaceC64::SaveFullSnapshot(CByteBuffer *snapshotBuffer)
 {
-	SYS_FatalExit("CDebugInterfaceC64::SaveFullSnapshot");
+	LOGTODO("CDebugInterfaceC64::SaveFullSnapshot");
 }
 
 bool CDebugInterfaceC64::LoadFullSnapshot(char *filePath)
 {
-	SYS_FatalExit("CDebugInterfaceC64::LoadFullSnapshot");
+	LOGTODO("CDebugInterfaceC64::LoadFullSnapshot");
 	return false;
 }
 
 void CDebugInterfaceC64::SaveFullSnapshot(char *filePath)
 {
-	SYS_FatalExit("CDebugInterfaceC64::SaveFullSnapshot");
+	LOGTODO("CDebugInterfaceC64::SaveFullSnapshot");
 }
 
 // this call should be synced with CPU IRQ so snapshot store or restore is allowed
 bool CDebugInterfaceC64::LoadChipsSnapshotSynced(CByteBuffer *byteBuffer)
 {
-	SYS_FatalExit("CDebugInterfaceC64::LoadChipsSnapshotSynced");
+	LOGTODO("CDebugInterfaceC64::LoadChipsSnapshotSynced");
 	return false;
 }
 
 bool CDebugInterfaceC64::SaveChipsSnapshotSynced(CByteBuffer *byteBuffer)
 {
-	SYS_FatalExit("CDebugInterfaceC64::SaveChipsSnapshotSynced");
+	LOGTODO("CDebugInterfaceC64::SaveChipsSnapshotSynced");
 	return false;
 }
 
 bool CDebugInterfaceC64::LoadDiskDataSnapshotSynced(CByteBuffer *byteBuffer)
 {
-	SYS_FatalExit("CDebugInterfaceC64::LoadDiskDataSnapshotSynced");
+	LOGTODO("CDebugInterfaceC64::LoadDiskDataSnapshotSynced");
 	return false;
 }
 
 bool CDebugInterfaceC64::SaveDiskDataSnapshotSynced(CByteBuffer *byteBuffer)
 {
-	SYS_FatalExit("CDebugInterfaceC64::SaveDiskDataSnapshotSynced");
+	LOGTODO("CDebugInterfaceC64::SaveDiskDataSnapshotSynced");
 	return false;
 }
 
 bool CDebugInterfaceC64::IsDriveDirtyForSnapshot()
 {
-	SYS_FatalExit("CDebugInterfaceC64::IsDriveDirtyForSnapshot");
+	LOGTODO("CDebugInterfaceC64::IsDriveDirtyForSnapshot");
 	return false;
 }
 
 void CDebugInterfaceC64::ClearDriveDirtyForSnapshotFlag()
 {
-	SYS_FatalExit("CDebugInterfaceC64::ClearDriveDirtyForSnapshotFlag");
+	LOGTODO("CDebugInterfaceC64::ClearDriveDirtyForSnapshotFlag");
 }
 
 void CDebugInterfaceC64::GetVICColors(uint8 *cD021, uint8 *cD022, uint8 *cD023, uint8 *cD025, uint8 *cD026, uint8 *cD027, uint8 *cD800)
 {
-	SYS_FatalExit("CDebugInterfaceC64::GetVICColors");
+	LOGTODO("CDebugInterfaceC64::GetVICColors");
 }
 
 void CDebugInterfaceC64::GetVICSpriteColors(uint8 *cD021, uint8 *cD025, uint8 *cD026, uint8 *spriteColors)
 {
-	SYS_FatalExit("CDebugInterfaceC64::GetVICSpriteColors");
+	LOGTODO("CDebugInterfaceC64::GetVICSpriteColors");
 }
 
 void CDebugInterfaceC64::GetCBMColor(uint8 colorNum, uint8 *r, uint8 *g, uint8 *b)
 {
-	SYS_FatalExit("CDebugInterfaceC64::GetCBMColor");
+	LOGTODO("CDebugInterfaceC64::GetCBMColor");
 }
 
 void CDebugInterfaceC64::GetFloatCBMColor(uint8 colorNum, float *r, float *g, float *b)
 {
-	SYS_FatalExit("CDebugInterfaceC64::GetFloatCBMColor");
+	LOGTODO("CDebugInterfaceC64::GetFloatCBMColor");
 }
 
 //
 
 //void CDebugInterfaceC64::UiInsertD64(CSlrString *path)
 //{
-//	SYS_FatalExit("CDebugInterfaceC64::UiInsertD64");
+//	LOGTODO("CDebugInterfaceC64::UiInsertD64");
 ////	LOGTODO("CDebugInterfaceC64::UiInsertD64: shall we update Folder path to D64?");
 ////	viewC64->viewC64MainMenu->InsertD64(path, false, c64SettingsAutoJmpFromInsertedDiskFirstPrg, 0);
 //}
@@ -664,12 +669,12 @@ void CDebugInterfaceC64::GetFloatCBMColor(uint8 colorNum, float *r, float *g, fl
 //
 void CDebugInterfaceC64::SetVicRegister(uint8 registerNum, uint8 value)
 {
-	SYS_FatalExit("CDebugInterfaceC64::SetVicRegister");
+	LOGTODO("CDebugInterfaceC64::SetVicRegister");
 }
 
 u8 CDebugInterfaceC64::GetVicRegister(uint8 registerNum)
 {
-	SYS_FatalExit("CDebugInterfaceC64::GetVicRegister");
+	LOGTODO("CDebugInterfaceC64::GetVicRegister");
 	return 0;
 }
 
@@ -681,51 +686,51 @@ u8 CDebugInterfaceC64::GetVicRegister(vicii_cycle_state_t *viciiState, uint8 reg
 
 void CDebugInterfaceC64::SetCiaRegister(uint8 ciaId, uint8 registerNum, uint8 value)
 {
-	SYS_FatalExit("CDebugInterfaceC64::SetCiaRegister");
+	LOGTODO("CDebugInterfaceC64::SetCiaRegister");
 }
 
 u8 CDebugInterfaceC64::GetCiaRegister(uint8 ciaId, uint8 registerNum)
 {
-	SYS_FatalExit("CDebugInterfaceC64::GetCiaRegister");
+	LOGTODO("CDebugInterfaceC64::GetCiaRegister");
 	return 0;
 }
 
 void CDebugInterfaceC64::SetSidRegister(uint8 sidId, uint8 registerNum, uint8 value)
 {
-	SYS_FatalExit("CDebugInterfaceC64::SetSidRegister");
+	LOGTODO("CDebugInterfaceC64::SetSidRegister");
 }
 
 u8 CDebugInterfaceC64::GetSidRegister(uint8 sidId, uint8 registerNum)
 {
-	SYS_FatalExit("CDebugInterfaceC64::GetSidRegister");
+	LOGTODO("CDebugInterfaceC64::GetSidRegister");
 	return 0;
 }
 
 void CDebugInterfaceC64::UpdateSidDataHistory()
 {
-	SYS_FatalExit("CDebugInterfaceC64::UpdateSidDataHistory");
+	LOGTODO("CDebugInterfaceC64::UpdateSidDataHistory");
 }
 
 void CDebugInterfaceC64::SetViaRegister(uint8 driveId, uint8 viaId, uint8 registerNum, uint8 value)
 {
-	SYS_FatalExit("CDebugInterfaceC64::SetViaRegister");
+	LOGTODO("CDebugInterfaceC64::SetViaRegister");
 }
 
 u8 CDebugInterfaceC64::GetViaRegister(uint8 driveId, uint8 viaId, uint8 registerNum)
 {
-	SYS_FatalExit("CDebugInterfaceC64::GetViaRegister");
+	LOGTODO("CDebugInterfaceC64::GetViaRegister");
 	return 0;
 }
 
 
 void CDebugInterfaceC64::SetSIDMuteChannels(int sidNumber, bool mute1, bool mute2, bool mute3, bool muteExt)
 {
-	SYS_FatalExit("CDebugInterfaceC64::SetSIDMuteChannels");
+	LOGTODO("CDebugInterfaceC64::SetSIDMuteChannels");
 }
 
 void CDebugInterfaceC64::SetSIDReceiveChannelsData(int sidNumber, bool isReceiving)
 {
-	SYS_FatalExit("CDebugInterfaceC64::SetSIDReceiveChannelsData");
+	LOGTODO("CDebugInterfaceC64::SetSIDReceiveChannelsData");
 }
 
 //
@@ -796,60 +801,59 @@ void CDebugInterfaceC64::UpdateWaveformsMuteStatus()
 
 void CDebugInterfaceC64::SetVicRecordStateMode(uint8 recordMode)
 {
-	SYS_FatalExit("CDebugInterfaceC64::SetVicRecordStateMode");
+	LOGTODO("CDebugInterfaceC64::SetVicRecordStateMode");
 }
 
 bool CDebugInterfaceC64::IsCpuJam()
 {
-	SYS_FatalExit("CDebugInterfaceC64::IsCpuJam");
+	LOGTODO("CDebugInterfaceC64::IsCpuJam");
 	return false;
 }
 
 void CDebugInterfaceC64::ForceRunAndUnJamCpu()
 {
-	SYS_FatalExit("CDebugInterfaceC64::ForceRunAndUnJamCpu");
+	LOGTODO("CDebugInterfaceC64::ForceRunAndUnJamCpu");
 }
-
 
 //
 void CDebugInterfaceC64::AttachTape(CSlrString *filePath)
 {
-	SYS_FatalExit("CDebugInterfaceC64::AttachTape");
+	LOGTODO("CDebugInterfaceC64::AttachTape");
 }
 
 void CDebugInterfaceC64::DetachTape()
 {
-	SYS_FatalExit("CDebugInterfaceC64::DetachTape");
+	LOGTODO("CDebugInterfaceC64::DetachTape");
 }
 
 void CDebugInterfaceC64::DatasettePlay()
 {
-	SYS_FatalExit("CDebugInterfaceC64::DatasettePlay");
+	LOGTODO("CDebugInterfaceC64::DatasettePlay");
 }
 
 void CDebugInterfaceC64::DatasetteStop()
 {
-	SYS_FatalExit("CDebugInterfaceC64::DatasetteStop");
+	LOGTODO("CDebugInterfaceC64::DatasetteStop");
 }
 
 void CDebugInterfaceC64::DatasetteForward()
 {
-	SYS_FatalExit("CDebugInterfaceC64::DatasetteForward");
+	LOGTODO("CDebugInterfaceC64::DatasetteForward");
 }
 
 void CDebugInterfaceC64::DatasetteRewind()
 {
-	SYS_FatalExit("CDebugInterfaceC64::DatasetteRewind");
+	LOGTODO("CDebugInterfaceC64::DatasetteRewind");
 }
 
 void CDebugInterfaceC64::DatasetteRecord()
 {
-	SYS_FatalExit("CDebugInterfaceC64::DatasetteRecord");
+	LOGTODO("CDebugInterfaceC64::DatasetteRecord");
 }
 
 void CDebugInterfaceC64::DatasetteReset()
 {
-	SYS_FatalExit("CDebugInterfaceC64::DatasetteReset");
+	LOGTODO("CDebugInterfaceC64::DatasetteReset");
 }
 
 void CDebugInterfaceC64::DatasetteSetSpeedTuning(int speedTuning)
@@ -870,81 +874,81 @@ void CDebugInterfaceC64::DatasetteSetTapeWobble(int tapeWobble)
 
 void CDebugInterfaceC64::AttachCartridge(CSlrString *filePath)
 {
-	SYS_FatalExit("CDebugInterfaceC64::AttachCartridge");
+	LOGTODO("CDebugInterfaceC64::AttachCartridge");
 }
 
 void CDebugInterfaceC64::DetachCartridge()
 {
-	SYS_FatalExit("CDebugInterfaceC64::DetachCartridge");
+	LOGTODO("CDebugInterfaceC64::DetachCartridge");
 }
 
 void CDebugInterfaceC64::CartridgeFreezeButtonPressed()
 {
-	SYS_FatalExit("CDebugInterfaceC64::CartridgeFreezeButtonPressed");
+	LOGTODO("CDebugInterfaceC64::CartridgeFreezeButtonPressed");
 }
 
 void CDebugInterfaceC64::GetC64CartridgeState(C64StateCartridge *cartridgeState)
 {
-	SYS_FatalExit("CDebugInterfaceC64::GetC64CartridgeState");
+	LOGTODO("CDebugInterfaceC64::GetC64CartridgeState");
 }
 
 // REU
 void CDebugInterfaceC64::SetReuEnabled(bool isEnabled)
 {
-	SYS_FatalExit("CDebugInterfaceC64::SetReuEnabled");
+	LOGTODO("CDebugInterfaceC64::SetReuEnabled");
 }
 
 void CDebugInterfaceC64::SetReuSize(int reuSize)
 {
-	SYS_FatalExit("CDebugInterfaceC64::SetReuSize");
+	LOGTODO("CDebugInterfaceC64::SetReuSize");
 }
 
 bool CDebugInterfaceC64::LoadReu(char *filePath)
 {
-	SYS_FatalExit("CDebugInterfaceC64::LoadReu");
+	LOGTODO("CDebugInterfaceC64::LoadReu");
 	return false;
 }
 
 bool CDebugInterfaceC64::SaveReu(char *filePath)
 {
-	SYS_FatalExit("CDebugInterfaceC64::SaveReu");
+	LOGTODO("CDebugInterfaceC64::SaveReu");
 	return false;
 }
 
 //
 void CDebugInterfaceC64::DetachEverything()
 {
-	SYS_FatalExit("CDebugInterfaceC64::DetachEverything");
+	LOGTODO("CDebugInterfaceC64::DetachEverything");
 }
 
 void CDebugInterfaceC64::SetPalette(uint8 *palette)
 {
-	SYS_FatalExit("CDebugInterfaceC64::SetPalette");
+	LOGTODO("CDebugInterfaceC64::SetPalette");
 }
 
 void CDebugInterfaceC64::SetRunSIDEmulation(bool isSIDEmulationOn)
 {
-	SYS_FatalExit("CDebugInterfaceC64::SetRunSIDEmulation");
+	LOGTODO("CDebugInterfaceC64::SetRunSIDEmulation");
 }
 
 void CDebugInterfaceC64::SetAudioVolume(float volume)
 {
-	SYS_FatalExit("CDebugInterfaceC64::SetAudioVolume");
+	LOGTODO("CDebugInterfaceC64::SetAudioVolume");
 }
 
 void CDebugInterfaceC64::ProfilerActivate(char *fileName, int runForNumCycles, bool pauseCpuWhenFinished)
 {
-	SYS_FatalExit("CDebugInterfaceC64::ProfilerActivate");
+	LOGTODO("CDebugInterfaceC64::ProfilerActivate");
 }
 
 void CDebugInterfaceC64::ProfilerDeactivate()
 {
-	SYS_FatalExit("CDebugInterfaceC64::ProfilerDeactivate");
+	LOGTODO("CDebugInterfaceC64::ProfilerDeactivate");
 }
 
 bool CDebugInterfaceC64::IsProfilerActive()
 {
-	SYS_FatalExit("CDebugInterfaceC64::IsProfilerActive");
+	LOGTODO("CDebugInterfaceC64::IsProfilerActive");
 	return false;
 }
 
@@ -953,9 +957,14 @@ CDebugDataAdapter *CDebugInterfaceC64::GetDataAdapter()
 	return this->dataAdapterC64;
 }
 
+CDebugDataAdapter *CDebugInterfaceC64::GetDataAdapterDirectRam()
+{
+	return this->dataAdapterC64DirectRam;
+}
+
 //void CDebugInterfaceC64::UpdateDriveDiskID(int driveId)
 //{
-//	SYS_FatalExit("CDebugInterfaceC64::UpdateDriveDiskID");
+//	LOGTODO("CDebugInterfaceC64::UpdateDriveDiskID");
 //}
 
 //
@@ -1229,5 +1238,49 @@ bool CDebugInterfaceC64::ExecuteCodeMonitorCommand(CSlrString *commandStr)
 {
 	// monitor is not supported
 	return false;
+}
+
+void CDebugInterfaceC64::EmulatedMouseUpdateSettings()
+{
+}
+
+bool CDebugInterfaceC64::EmulatedMouseEnable(bool enable)
+{
+	return false;
+}
+
+void CDebugInterfaceC64::EmulatedMouseSetType(int mouseType)
+{
+}
+
+void CDebugInterfaceC64::EmulatedMouseSetPort(int port)
+{
+}
+
+void CDebugInterfaceC64::EmulatedMouseSetPosition(int newX, int newY)
+{
+}
+
+void CDebugInterfaceC64::EmulatedMouseButtonLeft(bool isPressed)
+{
+}
+
+void CDebugInterfaceC64::EmulatedMouseButtonMiddle(bool isPressed)
+{
+}
+
+void CDebugInterfaceC64::EmulatedMouseButtonRight(bool isPressed)
+{
+}
+
+CDebuggerApi *CDebugInterfaceC64::GetDebuggerApi()
+{
+	LOGError("CDebugInterfaceC64::GetDebuggerApi: not implemented");
+	return NULL;
+}
+
+CDebuggerServerApi *CDebugInterfaceC64::GetDebuggerServerApi()
+{
+	return CDebugInterface::GetDebuggerServerApi();
 }
 

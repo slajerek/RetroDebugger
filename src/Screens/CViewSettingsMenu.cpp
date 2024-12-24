@@ -876,7 +876,7 @@ void CViewSettingsMenu::MenuCallbackItemEntered(CGuiViewMenuItem *menuItem)
 	}
 	else if (menuItem == menuItemStartJukeboxPlaylist)
 	{
-		viewC64->viewC64MainMenu->OpenDialogStartJukeboxPlaylist();
+		viewC64->mainMenuHelper->OpenDialogStartJukeboxPlaylist();
 	}
 	else if (menuItem == menuItemClearSettings)
 	{

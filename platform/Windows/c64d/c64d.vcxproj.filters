@@ -252,6 +252,15 @@
     <Filter Include="Source Files\src\Plugins\Slideshow">
       <UniqueIdentifier>{c04896c9-3f9c-4714-a338-b5fbbac3244a}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\src\Remote">
+      <UniqueIdentifier>{d1406b71-a32f-4393-9871-aafa15f92907}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\src\Remote\Pipe">
+      <UniqueIdentifier>{4eb66e94-21dc-44bf-b574-40ca7f3211e6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\src\Remote\WebSockets">
+      <UniqueIdentifier>{a4052fb4-3f92-4cde-b656-d483767e28b8}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\src\Emulators\atari800\a-cartridge.c">
@@ -2033,9 +2042,6 @@
     <ClCompile Include="..\..\..\src\Screens\CViewKeyboardShortcuts.cpp">
       <Filter>Source Files\src\Screens</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\src\Screens\CViewMainMenu.cpp">
-      <Filter>Source Files\src\Screens</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\..\src\Screens\CViewSettingsMenu.cpp">
       <Filter>Source Files\src\Screens</Filter>
     </ClCompile>
@@ -3506,38 +3512,8 @@
     <ClCompile Include="..\..\..\src\Screens\CViewBreakpointsOLD.cpp">
       <Filter>Source Files\src\Screens</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\src\DebugInterface\Symbols\CDebugAsmSource.cpp">
-      <Filter>Source Files\src\DebugInterface\Symbols</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\DebugInterface\Symbols\CDebugSymbols.cpp">
-      <Filter>Source Files\src\DebugInterface\Symbols</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\DebugInterface\Symbols\CDebugSymbolsSegment.cpp">
-      <Filter>Source Files\src\DebugInterface\Symbols</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\..\src\Views\CViewBreakpoints.cpp">
       <Filter>Source Files\src\Views</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\DebugInterface\CDebugBreakpoints.cpp">
-      <Filter>Source Files\src\DebugInterface</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\DebugInterface\CDebugDataAdapter.cpp">
-      <Filter>Source Files\src\DebugInterface</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\DebugInterface\CDebuggerApi.cpp">
-      <Filter>Source Files\src\DebugInterface</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\DebugInterface\CDebuggerEmulatorPlugin.cpp">
-      <Filter>Source Files\src\DebugInterface</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\DebugInterface\CDebugInterface.cpp">
-      <Filter>Source Files\src\DebugInterface</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\DebugInterface\CDebugInterfaceTask.cpp">
-      <Filter>Source Files\src\DebugInterface</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\DebugInterface\INT_BinaryProtocol.cpp">
-      <Filter>Source Files\src\DebugInterface</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\Emulators\vice\ViceInterface\CAudioChannelVice.cpp">
       <Filter>Source Files\src\Emulators\vice\ViceInterface</Filter>
@@ -3622,18 +3598,6 @@
     </ClCompile>
     <ClCompile Include="..\..\..\src\Embedded\RetroDebuggerEmbeddedData.cpp">
       <Filter>Source Files\src\Embedded</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\DebugInterface\Symbols\CDebugSymbolsCodeLabel.cpp">
-      <Filter>Source Files\src\DebugInterface\Symbols</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\DebugInterface\Symbols\CDebugSymbolsDataWatch.cpp">
-      <Filter>Source Files\src\DebugInterface\Symbols</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\DebugInterface\C64\CDebugInterfaceC64.cpp">
-      <Filter>Source Files\src\DebugInterface\C64</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\DebugInterface\C64\CDiskImageD64.cpp">
-      <Filter>Source Files\src\DebugInterface\C64</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\Views\C64\CViewDrive1541StateCPU.cpp">
       <Filter>Source Files\src\Views\C64</Filter>
@@ -3764,9 +3728,6 @@
     <ClCompile Include="..\..\..\src\Views\CViewDataPlot.cpp">
       <Filter>Source Files\src\Views</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\src\DebugInterface\CDebugEventsHistory.cpp">
-      <Filter>Source Files\src\DebugInterface</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\..\src\Emulators\vice\diskimage\c1541.c">
       <Filter>Source Files\src\Emulators\vice\diskimage</Filter>
     </ClCompile>
@@ -3784,18 +3745,6 @@
     </ClCompile>
     <ClCompile Include="..\..\..\src\Views\C64\CViewDrive1541DiskData.cpp">
       <Filter>Source Files\src\Views\C64</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\DebugInterface\Symbols\CDebugMemoryCell.cpp">
-      <Filter>Source Files\src\DebugInterface\Symbols</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\DebugInterface\Symbols\CDebugMemory.cpp">
-      <Filter>Source Files\src\DebugInterface\Symbols</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\DebugInterface\C64\CDataAdapterDrive1541Minimal.cpp">
-      <Filter>Source Files\src\DebugInterface\C64</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\DebugInterface\C64\CDebugDataAdapterDrive1541Contents.cpp">
-      <Filter>Source Files\src\DebugInterface\C64</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\Emulators\vice\ViceInterface\Adapters\CDataAdapterViceC64.cpp">
       <Filter>Source Files\src\Emulators\vice\ViceInterface\Adapters</Filter>
@@ -3833,6 +3782,24 @@
     <ClCompile Include="..\..\..\src\Emulators\vice\ViceInterface\Adapters\CDataAddressEditBoxDiskContents.cpp">
       <Filter>Source Files\src\Emulators\vice\ViceInterface\Adapters</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\src\Plugins\Slideshow\C64DebuggerPluginSlideshow.cpp">
+      <Filter>Source Files\src\Plugins\Slideshow</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Views\C64\CViewC64BreakpointsIrq.cpp">
+      <Filter>Source Files\src\Views\C64</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Views\C64\CViewDrive1541BreakpointsIrq.cpp">
+      <Filter>Source Files\src\Views\C64</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\DebugInterface\C64\CDataAdapterDrive1541Minimal.cpp">
+      <Filter>Source Files\src\DebugInterface\C64</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\DebugInterface\C64\CDebugDataAdapterDrive1541Contents.cpp">
+      <Filter>Source Files\src\DebugInterface\C64</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\DebugInterface\C64\CDebugInterfaceC64.cpp">
+      <Filter>Source Files\src\DebugInterface\C64</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\..\src\DebugInterface\C64\CDebugSymbolsC64.cpp">
       <Filter>Source Files\src\DebugInterface\C64</Filter>
     </ClCompile>
@@ -3845,14 +3812,92 @@
     <ClCompile Include="..\..\..\src\DebugInterface\C64\CDebugSymbolsSegmentDrive1541.cpp">
       <Filter>Source Files\src\DebugInterface\C64</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\src\Plugins\Slideshow\C64DebuggerPluginSlideshow.cpp">
-      <Filter>Source Files\src\Plugins\Slideshow</Filter>
+    <ClCompile Include="..\..\..\src\DebugInterface\C64\CDiskImageD64.cpp">
+      <Filter>Source Files\src\DebugInterface\C64</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\src\Views\C64\CViewC64BreakpointsIrq.cpp">
-      <Filter>Source Files\src\Views\C64</Filter>
+    <ClCompile Include="..\..\..\src\DebugInterface\Symbols\CDebugAsmSource.cpp">
+      <Filter>Source Files\src\DebugInterface\Symbols</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\src\Views\C64\CViewDrive1541BreakpointsIrq.cpp">
-      <Filter>Source Files\src\Views\C64</Filter>
+    <ClCompile Include="..\..\..\src\DebugInterface\Symbols\CDebugBreakpoint.cpp">
+      <Filter>Source Files\src\DebugInterface\Symbols</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\DebugInterface\Symbols\CDebugBreakpointAddr.cpp">
+      <Filter>Source Files\src\DebugInterface\Symbols</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\DebugInterface\Symbols\CDebugBreakpointData.cpp">
+      <Filter>Source Files\src\DebugInterface\Symbols</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\DebugInterface\Symbols\CDebugBreakpointEventCallback.cpp">
+      <Filter>Source Files\src\DebugInterface\Symbols</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\DebugInterface\Symbols\CDebugBreakpointRasterLine.cpp">
+      <Filter>Source Files\src\DebugInterface\Symbols</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\DebugInterface\Symbols\CDebugBreakpointsAddr.cpp">
+      <Filter>Source Files\src\DebugInterface\Symbols</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\DebugInterface\Symbols\CDebugBreakpointsData.cpp">
+      <Filter>Source Files\src\DebugInterface\Symbols</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\DebugInterface\Symbols\CDebugBreakpointsRasterLine.cpp">
+      <Filter>Source Files\src\DebugInterface\Symbols</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\DebugInterface\Symbols\CDebugMemory.cpp">
+      <Filter>Source Files\src\DebugInterface\Symbols</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\DebugInterface\Symbols\CDebugMemoryCell.cpp">
+      <Filter>Source Files\src\DebugInterface\Symbols</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\DebugInterface\Symbols\CDebugSymbols.cpp">
+      <Filter>Source Files\src\DebugInterface\Symbols</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\DebugInterface\Symbols\CDebugSymbolsCodeLabel.cpp">
+      <Filter>Source Files\src\DebugInterface\Symbols</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\DebugInterface\Symbols\CDebugSymbolsDataWatch.cpp">
+      <Filter>Source Files\src\DebugInterface\Symbols</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\DebugInterface\Symbols\CDebugSymbolsSegment.cpp">
+      <Filter>Source Files\src\DebugInterface\Symbols</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\DebugInterface\CDebugBreakpoints.cpp">
+      <Filter>Source Files\src\DebugInterface</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\DebugInterface\CDebugDataAdapter.cpp">
+      <Filter>Source Files\src\DebugInterface</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\DebugInterface\CDebugEventsHistory.cpp">
+      <Filter>Source Files\src\DebugInterface</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\DebugInterface\CDebuggerApi.cpp">
+      <Filter>Source Files\src\DebugInterface</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\DebugInterface\CDebuggerEmulatorPlugin.cpp">
+      <Filter>Source Files\src\DebugInterface</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\DebugInterface\CDebugInterface.cpp">
+      <Filter>Source Files\src\DebugInterface</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\DebugInterface\CDebugInterfaceTask.cpp">
+      <Filter>Source Files\src\DebugInterface</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Remote\CDebuggerServer.cpp">
+      <Filter>Source Files\src\Remote</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Remote\CDebuggerServerApi.cpp">
+      <Filter>Source Files\src\Remote</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Remote\WebSockets\CDebuggerServerWebSockets.cpp">
+      <Filter>Source Files\src\Remote\WebSockets</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Remote\Pipe\CPipeProtocolDebuggerCallback.cpp">
+      <Filter>Source Files\src\Remote\Pipe</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Screens\CMainMenuHelper.cpp">
+      <Filter>Source Files\src\Screens</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Emulators\vice\ViceInterface\CDebuggerServerApiVice.cpp">
+      <Filter>Source Files\src\Emulators\vice\ViceInterface</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -5875,9 +5920,6 @@
     <ClInclude Include="..\..\..\src\Screens\CViewKeyboardShortcuts.h">
       <Filter>Source Files\src\Screens</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\src\Screens\CViewMainMenu.h">
-      <Filter>Source Files\src\Screens</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\..\src\Screens\CViewSettingsMenu.h">
       <Filter>Source Files\src\Screens</Filter>
     </ClInclude>
@@ -7552,41 +7594,8 @@
     <ClInclude Include="..\..\..\src\Screens\CViewBreakpointsOLD.h">
       <Filter>Source Files\src\Screens</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\src\DebugInterface\Symbols\CDebugAsmSource.h">
-      <Filter>Source Files\src\DebugInterface\Symbols</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\src\DebugInterface\Symbols\CDebugSymbols.h">
-      <Filter>Source Files\src\DebugInterface\Symbols</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\src\DebugInterface\Symbols\CDebugSymbolsSegment.h">
-      <Filter>Source Files\src\DebugInterface\Symbols</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\..\src\Views\CViewBreakpoints.h">
       <Filter>Source Files\src\Views</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\src\DebugInterface\CDebugBreakpoints.h">
-      <Filter>Source Files\src\DebugInterface</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\src\DebugInterface\CDebugDataAdapter.h">
-      <Filter>Source Files\src\DebugInterface</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\src\DebugInterface\CDebuggerApi.h">
-      <Filter>Source Files\src\DebugInterface</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\src\DebugInterface\CDebuggerEmulatorPlugin.h">
-      <Filter>Source Files\src\DebugInterface</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\src\DebugInterface\CDebugInterface.h">
-      <Filter>Source Files\src\DebugInterface</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\src\DebugInterface\CDebugInterfaceTask.h">
-      <Filter>Source Files\src\DebugInterface</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\src\DebugInterface\DebuggerDefs.h">
-      <Filter>Source Files\src\DebugInterface</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\src\DebugInterface\INT_BinaryProtocol.h">
-      <Filter>Source Files\src\DebugInterface</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\src\Emulators\vice\ViceInterface\CAudioChannelVice.h">
       <Filter>Source Files\src\Emulators\vice\ViceInterface</Filter>
@@ -7675,9 +7684,6 @@
     <ClInclude Include="..\..\..\src\Embedded\RetroDebuggerEmbeddedData.h">
       <Filter>Source Files\src\Embedded</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\src\DebugInterface\Symbols\CDebugSymbolsCodeLabel.h">
-      <Filter>Source Files\src\DebugInterface\Symbols</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\..\src\Embedded\FontCousineRegular.h">
       <Filter>Source Files\src\Embedded</Filter>
     </ClInclude>
@@ -7695,15 +7701,6 @@
     </ClInclude>
     <ClInclude Include="..\..\..\src\Embedded\FontSweet16mono.h">
       <Filter>Source Files\src\Embedded</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\src\DebugInterface\Symbols\CDebugSymbolsDataWatch.h">
-      <Filter>Source Files\src\DebugInterface\Symbols</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\src\DebugInterface\C64\CDebugInterfaceC64.h">
-      <Filter>Source Files\src\DebugInterface\C64</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\src\DebugInterface\C64\CDiskImageD64.h">
-      <Filter>Source Files\src\DebugInterface\C64</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\src\Views\C64\CViewDrive1541StateCPU.h">
       <Filter>Source Files\src\Views\C64</Filter>
@@ -7861,9 +7858,6 @@
     <ClInclude Include="..\..\..\src\Views\CViewDataPlot.h">
       <Filter>Source Files\src\Views</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\src\DebugInterface\CDebugEventsHistory.h">
-      <Filter>Source Files\src\DebugInterface</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\..\src\Views\CViewDebugEventsHistory.h">
       <Filter>Source Files\src\Views</Filter>
     </ClInclude>
@@ -7878,18 +7872,6 @@
     </ClInclude>
     <ClInclude Include="..\..\..\src\Views\C64\CViewDrive1541DiskData.h">
       <Filter>Source Files\src\Views\C64</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\src\DebugInterface\Symbols\CDebugMemoryCell.h">
-      <Filter>Source Files\src\DebugInterface\Symbols</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\src\DebugInterface\Symbols\CDebugMemory.h">
-      <Filter>Source Files\src\DebugInterface\Symbols</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\src\DebugInterface\C64\CDataAdapterDrive1541Minimal.h">
-      <Filter>Source Files\src\DebugInterface\C64</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\src\DebugInterface\C64\CDebugDataAdapterDrive1541Contents.h">
-      <Filter>Source Files\src\DebugInterface\C64</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\src\Embedded\reset_basic_snap_zlib.h">
       <Filter>Source Files\src\Embedded</Filter>
@@ -7930,6 +7912,27 @@
     <ClInclude Include="..\..\..\src\Emulators\vice\ViceInterface\Adapters\CDataAddressEditBoxDiskContents.h">
       <Filter>Source Files\src\Emulators\vice\ViceInterface\Adapters</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\src\Plugins\Slideshow\C64DebuggerPluginSlideshow.h">
+      <Filter>Source Files\src\Plugins\Slideshow</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Views\C64\CViewC64BreakpointsIrq.h">
+      <Filter>Source Files\src\Views\C64</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Views\C64\CViewDrive1541BreakpointsIrq.h">
+      <Filter>Source Files\src\Views\C64</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Views\C64\AllGraphics\ViewC64AllGraphicsDefs.h">
+      <Filter>Source Files\src\Views\C64\AllGraphics</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\DebugInterface\C64\CDataAdapterDrive1541Minimal.h">
+      <Filter>Source Files\src\DebugInterface\C64</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\DebugInterface\C64\CDebugDataAdapterDrive1541Contents.h">
+      <Filter>Source Files\src\DebugInterface\C64</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\DebugInterface\C64\CDebugInterfaceC64.h">
+      <Filter>Source Files\src\DebugInterface\C64</Filter>
+    </ClInclude>
     <ClInclude Include="..\..\..\src\DebugInterface\C64\CDebugSymbolsC64.h">
       <Filter>Source Files\src\DebugInterface\C64</Filter>
     </ClInclude>
@@ -7942,17 +7945,95 @@
     <ClInclude Include="..\..\..\src\DebugInterface\C64\CDebugSymbolsSegmentDrive1541.h">
       <Filter>Source Files\src\DebugInterface\C64</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\src\Plugins\Slideshow\C64DebuggerPluginSlideshow.h">
-      <Filter>Source Files\src\Plugins\Slideshow</Filter>
+    <ClInclude Include="..\..\..\src\DebugInterface\C64\CDiskImageD64.h">
+      <Filter>Source Files\src\DebugInterface\C64</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\src\Views\C64\CViewC64BreakpointsIrq.h">
-      <Filter>Source Files\src\Views\C64</Filter>
+    <ClInclude Include="..\..\..\src\DebugInterface\Symbols\CDebugAsmSource.h">
+      <Filter>Source Files\src\DebugInterface\Symbols</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\src\Views\C64\CViewDrive1541BreakpointsIrq.h">
-      <Filter>Source Files\src\Views\C64</Filter>
+    <ClInclude Include="..\..\..\src\DebugInterface\Symbols\CDebugBreakpoint.h">
+      <Filter>Source Files\src\DebugInterface\Symbols</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\src\Views\C64\AllGraphics\ViewC64AllGraphicsDefs.h">
-      <Filter>Source Files\src\Views\C64\AllGraphics</Filter>
+    <ClInclude Include="..\..\..\src\DebugInterface\Symbols\CDebugBreakpointAddr.h">
+      <Filter>Source Files\src\DebugInterface\Symbols</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\DebugInterface\Symbols\CDebugBreakpointData.h">
+      <Filter>Source Files\src\DebugInterface\Symbols</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\DebugInterface\Symbols\CDebugBreakpointEventCallback.h">
+      <Filter>Source Files\src\DebugInterface\Symbols</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\DebugInterface\Symbols\CDebugBreakpointRasterLine.h">
+      <Filter>Source Files\src\DebugInterface\Symbols</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\DebugInterface\Symbols\CDebugBreakpointsAddr.h">
+      <Filter>Source Files\src\DebugInterface\Symbols</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\DebugInterface\Symbols\CDebugBreakpointsData.h">
+      <Filter>Source Files\src\DebugInterface\Symbols</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\DebugInterface\Symbols\CDebugBreakpointsRasterLine.h">
+      <Filter>Source Files\src\DebugInterface\Symbols</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\DebugInterface\Symbols\CDebugMemory.h">
+      <Filter>Source Files\src\DebugInterface\Symbols</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\DebugInterface\Symbols\CDebugMemoryCell.h">
+      <Filter>Source Files\src\DebugInterface\Symbols</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\DebugInterface\Symbols\CDebugSymbols.h">
+      <Filter>Source Files\src\DebugInterface\Symbols</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\DebugInterface\Symbols\CDebugSymbolsCodeLabel.h">
+      <Filter>Source Files\src\DebugInterface\Symbols</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\DebugInterface\Symbols\CDebugSymbolsDataWatch.h">
+      <Filter>Source Files\src\DebugInterface\Symbols</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\DebugInterface\Symbols\CDebugSymbolsSegment.h">
+      <Filter>Source Files\src\DebugInterface\Symbols</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\DebugInterface\CDebugBreakpoints.h">
+      <Filter>Source Files\src\DebugInterface</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\DebugInterface\CDebugDataAdapter.h">
+      <Filter>Source Files\src\DebugInterface</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\DebugInterface\CDebugEventsHistory.h">
+      <Filter>Source Files\src\DebugInterface</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\DebugInterface\CDebuggerApi.h">
+      <Filter>Source Files\src\DebugInterface</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\DebugInterface\CDebuggerEmulatorPlugin.h">
+      <Filter>Source Files\src\DebugInterface</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\DebugInterface\CDebugInterface.h">
+      <Filter>Source Files\src\DebugInterface</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\DebugInterface\CDebugInterfaceTask.h">
+      <Filter>Source Files\src\DebugInterface</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\DebugInterface\DebuggerDefs.h">
+      <Filter>Source Files\src\DebugInterface</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Remote\CDebuggerServer.h">
+      <Filter>Source Files\src\Remote</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Remote\CDebuggerServerApi.h">
+      <Filter>Source Files\src\Remote</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Remote\WebSockets\CDebuggerServerWebSockets.h">
+      <Filter>Source Files\src\Remote\WebSockets</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Remote\Pipe\CPipeProtocolDebuggerCallback.h">
+      <Filter>Source Files\src\Remote\Pipe</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Screens\CMainMenuHelper.h">
+      <Filter>Source Files\src\Screens</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Emulators\vice\ViceInterface\CDebuggerServerApiVice.h">
+      <Filter>Source Files\src\Emulators\vice\ViceInterface</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -127,6 +127,11 @@ extern bool c64SettingsShowPositionsInHex;
 extern u8 c64SettingsSelectedJoystick1;
 extern u8 c64SettingsSelectedJoystick2;
 
+extern bool c64SettingsEmulatedMouseCursorAutoHide;
+extern bool c64SettingsEmulatedMouseC64Enabled;
+extern int c64SettingsEmulatedMouseC64Type;
+extern u8 c64SettingsEmulatedMouseC64Port;
+
 // startup
 extern int c64SettingsWaitOnStartup;
 extern CSlrString *c64SettingsPathToRomsC64;
@@ -271,6 +276,10 @@ extern u8 c64SettingsAtariRamSizeOption;
 extern bool c64SettingsRunVice;
 extern bool c64SettingsRunAtari800;
 extern bool c64SettingsRunNestopia;
+
+// debugger websockets server
+extern bool c64SettingsRunDebuggerServerWebSockets;
+extern int c64SettingsRunDebuggerServerWebSocketsPort;
 
 // set setting
 void C64DebuggerSetSetting(const char *name, void *value);

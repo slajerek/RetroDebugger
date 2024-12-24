@@ -114,6 +114,15 @@ void mouse_move(int x, int y)
     mouse_timestamp = vsyncarch_gettime();
 }
 
+void c64d_mouse_set_position(int x, int y)
+{
+	mouse_x = x;
+	mouse_y = y;
+	mouse_timestamp = vsyncarch_gettime();
+}
+
+//void c64d_set_mouse_pos(int x, int y);
+
 unsigned long mousedrv_get_timestamp(void)
 {
     return mouse_timestamp;
@@ -132,4 +141,14 @@ void mousedrv_button_right(int pressed)
 void mousedrv_button_middle(int pressed)
 {
     mouse_funcs.mbm(pressed);
+}
+
+void mousedrv_button_up(int pressed)
+{
+	mouse_funcs.mbu(pressed);
+}
+
+void mousedrv_button_down(int pressed)
+{
+	mouse_funcs.mbd(pressed);
 }

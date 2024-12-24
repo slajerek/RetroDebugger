@@ -25,7 +25,7 @@ extern "C" {
 #include "CViewDataMap.h"
 
 #include "CGuiMain.h"
-#include "CViewMainMenu.h"
+#include "CMainMenuHelper.h"
 
 #include "CDebugInterface.h"
 #include "CDebugInterfaceC64.h"
@@ -826,7 +826,7 @@ void CSnapshotUpdateThread::ThreadRun(void *data)
 			
 			SYS_Sleep(200);
 
-			viewC64->debugInterfaceC64->HardReset();
+			viewC64->debugInterfaceC64->ResetHard();
 		}
 		
 		// perform update

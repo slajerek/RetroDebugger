@@ -127,8 +127,8 @@ public:
 	
 	CSlrKeyboardShortcut *kbsOpenFile;
 	CSlrKeyboardShortcut *kbsReloadAndRestart;
-	CSlrKeyboardShortcut *kbsSoftReset;
-	CSlrKeyboardShortcut *kbsHardReset;
+	CSlrKeyboardShortcut *kbsResetSoft;
+	CSlrKeyboardShortcut *kbsResetHard;
 	CSlrKeyboardShortcut *kbsDiskDriveReset;
 
 	CSlrKeyboardShortcut *kbsDetachEverything;

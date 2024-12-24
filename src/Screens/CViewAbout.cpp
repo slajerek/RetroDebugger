@@ -311,7 +311,7 @@ void CViewAbout::Render(float posX, float posY)
 bool CViewAbout::DoTap(float x, float y)
 {
 	LOGG("CViewAbout::DoTap:  x=%f y=%f", x, y);
-	guiMain->SetView(viewC64->viewC64MainMenu);
+	guiMain->SetView(viewC64->mainMenuHelper);
 	return CGuiView::DoTap(x, y);
 }
 
@@ -374,7 +374,7 @@ void CViewAbout::SwitchAboutScreen()
 {
 	if (guiMain->currentView == this)
 	{
-		guiMain->SetView(viewC64->viewC64MainMenu);
+		guiMain->SetView(viewC64->mainMenuHelper);
 	}
 	else
 	{
@@ -384,7 +384,7 @@ void CViewAbout::SwitchAboutScreen()
 
 bool CViewAbout::KeyDown(u32 keyCode, bool isShift, bool isAlt, bool isControl, bool isSuper)
 {
-	guiMain->SetView(viewC64->viewC64MainMenu);
+	guiMain->SetView(viewC64->mainMenuHelper);
 
 //	if (keyCode == MTKEY_BACKSPACE)
 //	{

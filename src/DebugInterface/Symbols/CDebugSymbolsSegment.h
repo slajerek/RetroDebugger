@@ -2,7 +2,12 @@
 #define _CDebugSymbolsSegment_h_
 
 #include "SYS_Defs.h"
-#include "CDebugBreakpoints.h"
+#include "CDebugBreakpoint.h"
+#include "CDebugBreakpointAddr.h"
+#include "CDebugBreakpointData.h"
+#include "CDebugBreakpointRasterLine.h"
+#include "CDebugBreakpointsAddr.h"
+#include "CDebugBreakpointsData.h"
 #include "hjson.h"
 #include <vector>
 
@@ -36,7 +41,7 @@ public:
 	bool breakOnPC;
 	CDebugBreakpointsAddr *breakpointsPC;
 	bool breakOnMemory;
-	CDebugBreakpointsMemory *breakpointsMemory;
+	CDebugBreakpointsData *breakpointsData;
 
 	virtual void Init();
 	virtual void UpdateRenderBreakpoints();
@@ -45,7 +50,7 @@ public:
 	bool supportBreakpoints;
 	virtual void AddBreakpointPC(int address);
 	virtual void AddBreakpointSetBackground(int address, int value);
-	virtual void AddBreakpointMemory(int address, u32 memoryAccess, MemoryBreakpointComparison comparison, int value);
+	virtual CDebugBreakpointData *AddBreakpointMemory(int address, u32 memoryAccess, DataBreakpointComparison comparison, int value);
 	
 	virtual void ClearBreakpoints();
 

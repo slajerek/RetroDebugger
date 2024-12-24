@@ -20,6 +20,7 @@ extern "C" {
 #endif
 
 #include "CDebugInterfaceAtari.h"
+#include "CDebuggerApiAtari.h"
 #include "RES_ResourceManager.h"
 #include "CByteBuffer.h"
 #include "CSlrString.h"
@@ -40,15 +41,12 @@ extern "C" {
 #include "CViewDataMap.h"
 #include "CDebugEventsHistory.h"
 #include "CDebugMemory.h"
-
 #include "CAudioChannelAtari.h"
 
 //44100/50*4/8
 #define POKEY_WAVEFORM_LENGTH 441*3
 
 CDebugInterfaceAtari *debugInterfaceAtari;
-
-#if defined(RUN_ATARI)
 
 extern "C" {
 void ATRD_SetConfigFileName(const char *fileName);
@@ -178,6 +176,11 @@ CSlrString *CDebugInterfaceAtari::GetEmulatorVersionString()
 const char *CDebugInterfaceAtari::GetPlatformNameString()
 {
 	return "Atari XL/XE";
+}
+
+const char *CDebugInterfaceAtari::GetPlatformNameEndpointString()
+{
+	return "atari800";
 }
 
 float CDebugInterfaceAtari::GetEmulationFPS()
@@ -928,14 +931,14 @@ extern "C" {
 	void Colours_SetVideoSystem(int mode);
 	void CARTRIDGE_Remove(void);
 }
-void CDebugInterfaceAtari::Reset()
+void CDebugInterfaceAtari::ResetSoft()
 {
 	LOGM("CDebugInterfaceAtari::Reset");
 	CPU_Reset();
 
 }
 
-void CDebugInterfaceAtari::HardReset()
+void CDebugInterfaceAtari::ResetHard()
 {
 	LOGM("CDebugInterfaceAtari::HardReset");
 	
@@ -1019,7 +1022,7 @@ void CDebugInterfaceAtari::DetachEverything()
 {
 	SIO_DisableDrive(1);
 	CARTRIDGE_Remove();
-	HardReset();
+	ResetHard();
 }
 
 void CDebugInterfaceAtari::DetachDriveDisk()
@@ -1030,7 +1033,7 @@ void CDebugInterfaceAtari::DetachDriveDisk()
 void CDebugInterfaceAtari::DetachCartridge()
 {
 	CARTRIDGE_Remove();
-	HardReset();
+	ResetHard();
 }
 
 //
@@ -1376,70 +1379,8 @@ void CDebugInterfaceAtari::SupportsBreakpoints(bool *writeBreakpoint, bool *read
 	*readBreakpoint = false;
 }
 
-#else
-// dummy interface for atari
-
-CDebugInterfaceAtari::CDebugInterfaceAtari(CViewC64 *viewC64) //, uint8 *memory)
-: CDebugInterface(viewC64)
+CDebuggerApi *CDebugInterfaceAtari::GetDebuggerApi()
 {
+	return new CDebuggerApiAtari(this);
 }
 
-CDebugInterfaceAtari::~CDebugInterfaceAtari() {}
-void CDebugInterfaceAtari::RestartEmulation() {}
-int CDebugInterfaceAtari::GetEmulatorType() { return EMULATOR_TYPE_ATARI800; }
-CSlrString *CDebugInterfaceAtari::GetEmulatorVersionString() { return NULL; }
-CSlrString *CDebugInterfaceAtari::GetPlatformNameString() { return NULL; }
-void CDebugInterfaceAtari::RunEmulationThread() {}
-void CDebugInterfaceAtari::DoFrame() {}
-void CDebugInterfaceAtari::SetByte(uint16 addr, uint8 val) {}
-uint8 CDebugInterfaceAtari::GetByte(uint16 addr) { return 0; }
-void CDebugInterfaceAtari::GetMemory(uint8 *buffer, int addrStart, int addrEnd) {}
-int CDebugInterfaceAtari::GetCpuPC() { return -1; }
-void CDebugInterfaceAtari::GetWholeMemoryMap(uint8 *buffer) {}
-void CDebugInterfaceAtari::GetWholeMemoryMapFromRam(uint8 *buffer) {}
-void CDebugInterfaceAtari::GetCpuRegs(u16 *PC, u8 *A,u8 *X, u8 *Y, u8 *P,u8 *S,u8 *IRQ) {}
-int CDebugInterfaceAtari::GetScreenSizeX() { return -1; }
-int CDebugInterfaceAtari::GetScreenSizeY() { return -1; }
-void CDebugInterfaceAtari::SetDebugMode(uint8 debugMode) {}
-uint8 CDebugInterfaceAtari::GetDebugMode() { return 0; }
-void CDebugInterfaceAtari::MakeJmpNoReset(CDataAdapter *dataAdapter, uint16 addr) {}
-void CDebugInterfaceAtari::MakeJmpAndReset(uint16 addr) {}
-int CDebugInterfaceAtari::MapMTKeyToAKey(uint32 mtKeyCode, int shiftctrl, int key_control) { return -1; }
-bool CDebugInterfaceAtari::KeyboardDown(uint32 mtKeyCode) { return false; }
-bool CDebugInterfaceAtari::KeyboardUp(uint32 mtKeyCode) { return false; }
-void CDebugInterfaceAtari::JoystickDown(int port, uint32 axis) {}
-void CDebugInterfaceAtari::JoystickUp(int port, uint32 axis) {}
-void CDebugInterfaceAtari::Reset() {}
-void CDebugInterfaceAtari::HardReset() {}
-bool CDebugInterfaceAtari::LoadExecutable(char *fullFilePath) { return false; }
-bool CDebugInterfaceAtari::MountDisk(char *fullFilePath, int diskNo, bool readOnly) { return false; }
-bool CDebugInterfaceAtari::InsertCartridge(char *fullFilePath, bool readOnly) { return false; }
-bool CDebugInterfaceAtari::AttachTape(char *fullFilePath, bool readOnly) { return false; }
-bool CDebugInterfaceAtari::LoadFullSnapshot(char *filePath) { return false; }
-void CDebugInterfaceAtari::SaveFullSnapshot(char *filePath) {}
-void CDebugInterfaceAtari::SetVideoSystem(u8 videoSystem) {}
-void CDebugInterfaceAtari::SetMachineType(u8 machineType) {}
-void CDebugInterfaceAtari::SetRamSizeOption(u8 ramSizeOption) {}
-CViewDisassembly *CDebugInterfaceAtari::GetViewMainCpuDisassembly() { return NULL; }
-CViewDisassembly *CDebugInterfaceAtari::GetViewDriveDisassembly(int driveNo) { return NULL; }
-CDataAdapter *CDebugInterfaceAtari::GetDataAdapter() { return NULL; }
-float CDebugInterfaceAtari::GetEmulationFPS() { return 0; }
-u64 CDebugInterfaceAtari::GetMainCpuCycleCounter() { return 0; }
-u64 CDebugInterfaceAtari::GetPreviousCpuInstructionCycleCounter() { return 0; }
-void CDebugInterfaceAtari::ResetMainCpuDebugCycleCounter() {}
-u64 CDebugInterfaceAtari::GetMainCpuDebugCycleCounter() { return 0; }
-bool CDebugInterfaceAtari::IsDriveDirtyForSnapshot() { return false; }
-void CDebugInterfaceAtari::ClearDriveDirtyForSnapshotFlag() {}
-bool CDebugInterfaceAtari::LoadChipsSnapshotSynced(CByteBuffer *byteBuffer) { return NULL; }
-bool CDebugInterfaceAtari::SaveChipsSnapshotSynced(CByteBuffer *byteBuffer) { return NULL; }
-bool CDebugInterfaceAtari::LoadDiskDataSnapshotSynced(CByteBuffer *byteBuffer) { return NULL; }
-bool CDebugInterfaceAtari::SaveDiskDataSnapshotSynced(CByteBuffer *byteBuffer) { return NULL; }
-void CDebugInterfaceAtari::RefreshScreenNoCallback() {}
-void CDebugInterfaceAtari::DetachEverything() {}
-void CDebugInterfaceAtari::DetachDriveDisk() {}
-void CDebugInterfaceAtari::DetachCartridge() {}
-void CDebugInterfaceAtari::SetPokeyStereo(bool isStereo) {}
-bool CDebugInterfaceAtari::GetSettingIsWarpSpeed() { return false; }
-void CDebugInterfaceAtari::SetSettingIsWarpSpeed(bool isWarpSpeed) {}
-
-#endif

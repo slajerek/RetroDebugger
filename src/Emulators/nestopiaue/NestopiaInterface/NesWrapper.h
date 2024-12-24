@@ -13,6 +13,7 @@ bool NestopiaUE_PostInitialize();
 bool NestopiaUE_Run();
 
 bool nesd_insert_cartridge(char *filePath);
+bool nesd_unload_cartridge();
 
 void nesd_reset();
 unsigned char *nesd_get_ram();

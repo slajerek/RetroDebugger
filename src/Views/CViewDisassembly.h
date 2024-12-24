@@ -15,7 +15,7 @@ class CDebugInterface;
 class CDebugBreakpointsAddr;
 class CSlrMutex;
 class CSlrString;
-class CBreakpointAddr;
+class CDebugBreakpointAddr;
 class CViewDataDump;
 class CDebugSymbols;
 class CDebugMemory;
@@ -98,7 +98,9 @@ public:
 	std::map<u8, u8> jumpOpcodes;
 	
 	void TogglePCBreakpoint(int addr);
-	
+	CDebugBreakpointAddr *AddPCBreakpoint(int addr);
+	u64 RemovePCBreakpoint(int addr);
+
 	void ScrollDown();
 	void ScrollUp();
 	

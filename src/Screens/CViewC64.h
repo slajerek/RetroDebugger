@@ -15,7 +15,7 @@
 #include "SYS_Threading.h"
 #include "SYS_Defs.h"
 #include "SYS_PauseResume.h"
-#include "CViewMainMenu.h"
+#include "CMainMenuHelper.h"
 #include "CViewSettingsMenu.h"
 #include "SYS_SharedMemory.h"
 #include "CGuiViewSaveFile.h"
@@ -133,7 +133,7 @@ class CViewNesPpuPalette;
 class CViewNesPianoKeyboard;
 
 class CViewJukeboxPlaylist;
-class CViewMainMenu;
+class CMainMenuHelper;
 class CViewSettingsMenu;
 class CViewDrive1541Browser;
 class CViewC64KeyMap;
@@ -141,11 +141,13 @@ class CViewKeyboardShortcuts;
 class CViewSnapshots;
 class CViewColodore;
 class CViewAbout;
-
 class CViewAudioMixer;
-class CMainMenuBar;
 
+class CMainMenuBar;
 class CColorsTheme;
+
+class CPipeProtocolDebuggerCallback;
+class CDebuggerServer;
 
 class CEmulationThreadC64 : public CSlrThread
 {
@@ -247,7 +249,7 @@ public:
 	CGuiViewMessages *viewMessages;
 	CViewFileBrowser *viewFileBrowser;
 	
-	CViewMainMenu *viewC64MainMenu;
+	CMainMenuHelper *mainMenuHelper;
 	CViewSettingsMenu *viewC64SettingsMenu;
 	CViewC64KeyMap *viewC64KeyMap;
 	CViewKeyboardShortcuts *viewKeyboardShortcuts;
@@ -481,8 +483,8 @@ public:
 	void StepOneCycle();
 	void StepBackInstruction();
 	void RunContinueEmulation();
-	void HardReset();
-	void SoftReset();
+	void ResetHard();
+	void ResetSoft();
 	
 	void SwitchIsDataDirectlyFromRam();
 	void SwitchIsDataDirectlyFromRam(bool isFromRam);
@@ -617,6 +619,10 @@ public:
 	virtual void GlobalDropFileCallback(char *filePath, bool consumedByView);
 	
 	//
+	void DebuggerServerWebSocketsStart();
+	void DebuggerServerWebSocketsSetPort(int port);
+	
+	//
 	CRecentlyOpenedFiles *recentlyOpenedFiles;
 	virtual void RecentlyOpenedFilesCallbackSelectedMenuItem(CSlrString *filePath);
 	
@@ -628,6 +634,10 @@ public:
 	//
 	void OpenFileDialog();
 	void OpenFile(CSlrString *path);
+	
+	// remote debugger
+	CPipeProtocolDebuggerCallback *pipeProtocolCallback;
+	CDebuggerServer *debuggerServer;
 };
 
 extern CViewC64 *viewC64;

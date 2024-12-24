@@ -106,7 +106,7 @@ extern "C"{
 
 #include "CViewEmulationState.h"
 
-#include "CViewMainMenu.h"
+#include "CMainMenuHelper.h"
 #include "CViewSettingsMenu.h"
 
 #include "CViewDrive1541Browser.h"
@@ -158,16 +158,22 @@ extern "C"{
 #include "CDebugAsmSource.h"
 #include "CDebuggerEmulatorPlugin.h"
 #include "CSnapshotsManager.h"
+
 #include "CDebugSymbolsC64.h"
 #include "CDebugSymbolsSegmentC64.h"
 #include "CDebugSymbolsDrive1541.h"
 #include "CDebugInterfaceMenuItemFolder.h"
 #include "CDebugInterfaceMenuItemView.h"
+
 #include "C64D_InitPlugins.h"
+
+#include "CPipeProtocolDebuggerCallback.h"
+#include "CDebuggerServer.h"
 
 #include "CDebugInterfaceVice.h"
 #include "CDebugInterfaceAtari.h"
 #include "CDebugInterfaceNes.h"
+
 
 #include "CSlrFileZlib.h"
 #include <fstream>
@@ -187,6 +193,10 @@ void TEST_Editor();
 void TEST_Editor_Render();
 
 const ImGuiInputTextFlags defaultHexInputFlags = ImGuiInputTextFlags_CharsHexadecimal | ImGuiInputTextFlags_CharsUppercase | ImGuiInputTextFlags_EnterReturnsTrue;
+
+// workaround: external API due to stupid MS Windows winsock2 clashes
+CDebuggerServer *REMOTE_CreateDebuggerServerWebSockets(int port);
+void REMOTE_DebuggerServerWebSocketsSetPort(CDebuggerServer *debuggerServer, int port);
 
 // TODO: refactor this. after transition to ImGui the CViewC64 is no longer a view, it is just a application holder of other views.
 CViewC64::CViewC64(float posX, float posY, float posZ, float sizeX, float sizeY)
@@ -396,7 +406,7 @@ CViewC64::CViewC64(float posX, float posY, float posZ, float sizeX, float sizeY)
 //	DO NOT ADD YOUSELF YOU'VE BEEN ADDED ALREADY: guiMain->AddGuiElement(this);
 
 	// other screens. These screens are obsolete:
-	viewC64MainMenu = new CViewMainMenu(0, 0, -3.0, SCREEN_WIDTH, SCREEN_HEIGHT);
+	mainMenuHelper = new CMainMenuHelper(0, 0, -3.0, SCREEN_WIDTH, SCREEN_HEIGHT);
 //	guiMain->AddGuiElement(viewC64MainMenu);
 	
 	viewC64SettingsMenu = new CViewSettingsMenu(0, 0, -3.0, SCREEN_WIDTH, SCREEN_HEIGHT);
@@ -531,6 +541,8 @@ CViewC64::CViewC64(float posX, float posY, float posZ, float sizeX, float sizeY)
 	if (c64SettingsUsePipeIntegration)
 	{
 		PIPE_Init("retrodebugger");
+		pipeProtocolCallback = new CPipeProtocolDebuggerCallback();
+		PIPE_AddCallback(pipeProtocolCallback);
 	}
 	
 	//
@@ -614,6 +626,13 @@ CViewC64::CViewC64(float posX, float posY, float posZ, float sizeX, float sizeY)
 	// start post-init ui tasks
 	SYS_StartThread(this);
 	
+	// start remote debugger server
+	debuggerServer = NULL;
+	if (c64SettingsRunDebuggerServerWebSockets)
+	{
+		DebuggerServerWebSocketsStart();
+	}
+	
 //	TEST_Editor();
 }
 
@@ -627,7 +646,7 @@ void CViewC64::ThreadRun(void *passData)
 	{
 		if (debugInterface->isRunning)
 		{
-			CGuiView *view = debugInterface->GetViewScreen();
+			CViewEmulatorScreen *view = debugInterface->GetViewScreen();
 			if (view && view->IsVisible())
 			{
 				CUiThreadTaskSetViewFocus *task = new CUiThreadTaskSetViewFocus(view);
@@ -884,9 +903,9 @@ void CViewC64::InitViceViews()
 	viewC64MemoryMap->SetDataDumpView(viewC64MemoryDataDump);
 	
 	//
-	viewC64BreakpointsPC = new CViewBreakpoints("C64 PC Breakpoints", 10, 40, posZ, 400, 300, this->debugInterfaceC64->symbols, BREAKPOINT_TYPE_CPU_PC);
+	viewC64BreakpointsPC = new CViewBreakpoints("C64 PC Breakpoints", 10, 40, posZ, 400, 300, this->debugInterfaceC64->symbols, BREAKPOINT_TYPE_ADDR);
 
-	viewC64BreakpointsMemory = new CViewBreakpoints("C64 Memory Breakpoints", 30, 50, posZ, 400, 300, this->debugInterfaceC64->symbols, BREAKPOINT_TYPE_MEMORY);
+	viewC64BreakpointsMemory = new CViewBreakpoints("C64 Memory Breakpoints", 30, 50, posZ, 400, 300, this->debugInterfaceC64->symbols, BREAKPOINT_TYPE_DATA);
 
 	viewC64BreakpointsRaster = new CViewBreakpoints("C64 Raster Breakpoints", 40, 40, posZ, 400, 300, this->debugInterfaceC64->symbols, BREAKPOINT_TYPE_RASTER_LINE);
 	
@@ -894,9 +913,9 @@ void CViewC64::InitViceViews()
 
 	viewC64DebugEventsHistory = new CViewDebugEventsHistory("C64 Debug Events History", 180, 60, posZ, 400, 200, this->debugInterfaceC64);
 
-	viewDrive1541BreakpointsPC = new CViewBreakpoints("1541 PC Breakpoints", 60, 60, posZ, 400, 300, this->debugInterfaceC64->symbolsDrive1541, BREAKPOINT_TYPE_CPU_PC);
+	viewDrive1541BreakpointsPC = new CViewBreakpoints("1541 PC Breakpoints", 60, 60, posZ, 400, 300, this->debugInterfaceC64->symbolsDrive1541, BREAKPOINT_TYPE_ADDR);
 	
-	viewDrive1541BreakpointsMemory = new CViewBreakpoints("1541 Memory Breakpoints", 70, 70, posZ, 400, 300, this->debugInterfaceC64->symbolsDrive1541, BREAKPOINT_TYPE_MEMORY);
+	viewDrive1541BreakpointsMemory = new CViewBreakpoints("1541 Memory Breakpoints", 70, 70, posZ, 400, 300, this->debugInterfaceC64->symbolsDrive1541, BREAKPOINT_TYPE_DATA);
 
 	viewDrive1541BreakpointsIrq = new CViewDrive1541BreakpointsIrq("1541 IRQ Breakpoints", 80, 80, posZ, 400, 300, this->debugInterfaceC64->symbolsDrive1541);
 
@@ -912,7 +931,7 @@ void CViewC64::InitViceViews()
 											  debugInterfaceC64->symbolsCartridgeC64, viewC64CartridgeMemoryMap, viewC64Disassembly);
 
 	//
-	viewC64SourceCode = new CViewSourceCode("C64 Assembler source", 40, 70, posZ, 500, 350,
+	viewC64SourceCode = new CViewSourceCode("C64 Source code", 40, 70, posZ, 500, 350,
 											debugInterfaceC64, debugInterfaceC64->symbols, viewC64Disassembly);
 	//
 	viewC64StateCIA = new CViewC64StateCIA("C64 CIA", 10, 40, posZ, 400, 200, debugInterfaceC64);
@@ -1150,6 +1169,7 @@ void CViewC64::InitViceViews()
 
 	//
 	debugInterfaceC64->viewScreen = viewC64Screen;
+	debugInterfaceC64->viewDisassembly = viewC64Disassembly;
 	
 	// add timeline view to snapshots manager
 	debugInterfaceC64->snapshotsManager->viewTimeline = viewC64Timeline;
@@ -1175,9 +1195,9 @@ void CViewC64::InitAtari800Views()
 												debugInterfaceAtari->symbols, NULL);
 
 	//
-	viewAtariBreakpointsPC = new CViewBreakpoints("Atari PC Breakpoints", 70, 70, posZ, 200, 300, this->debugInterfaceAtari->symbols, BREAKPOINT_TYPE_CPU_PC);
+	viewAtariBreakpointsPC = new CViewBreakpoints("Atari PC Breakpoints", 70, 70, posZ, 200, 300, this->debugInterfaceAtari->symbols, BREAKPOINT_TYPE_ADDR);
 
-	viewAtariBreakpointsMemory = new CViewBreakpoints("Atari Memory Breakpoints", 90, 70, posZ, 200, 300, this->debugInterfaceAtari->symbols, BREAKPOINT_TYPE_MEMORY);
+	viewAtariBreakpointsMemory = new CViewBreakpoints("Atari Memory Breakpoints", 90, 70, posZ, 200, 300, this->debugInterfaceAtari->symbols, BREAKPOINT_TYPE_DATA);
 
 	//
 	viewAtariSourceCode = new CViewSourceCode("Atari Assembler source", 40, 70, posZ, 500, 350,
@@ -1252,6 +1272,7 @@ void CViewC64::InitAtari800Views()
 	
 	//
 	debugInterfaceAtari->viewScreen = viewAtariScreen;
+	debugInterfaceAtari->viewDisassembly = viewAtariDisassembly;
 
 	// add timeline view to snapshots manager
 	debugInterfaceAtari->snapshotsManager->viewTimeline = viewAtariTimeline;
@@ -1273,9 +1294,9 @@ void CViewC64::InitNestopiaViews()
 												debugInterfaceNes->symbols, NULL);
 		
 	//
-	viewNesBreakpointsPC = new CViewBreakpoints("NES PC Breakpoints", 70, 70, posZ, 200, 300, this->debugInterfaceNes->symbols, BREAKPOINT_TYPE_CPU_PC);
+	viewNesBreakpointsPC = new CViewBreakpoints("NES PC Breakpoints", 70, 70, posZ, 200, 300, this->debugInterfaceNes->symbols, BREAKPOINT_TYPE_ADDR);
 
-	viewNesBreakpointsMemory = new CViewBreakpoints("NES Memory Breakpoints", 90, 70, posZ, 200, 300, this->debugInterfaceNes->symbols, BREAKPOINT_TYPE_MEMORY);
+	viewNesBreakpointsMemory = new CViewBreakpoints("NES Memory Breakpoints", 90, 70, posZ, 200, 300, this->debugInterfaceNes->symbols, BREAKPOINT_TYPE_DATA);
 
 	//
 	viewNesSourceCode = new CViewSourceCode("NES Assembler source", 40, 70, posZ, 500, 350,
@@ -1375,6 +1396,7 @@ void CViewC64::InitNestopiaViews()
 	
 	//
 	debugInterfaceNes->viewScreen = viewNesScreen;
+	debugInterfaceNes->viewDisassembly = viewNesDisassembly;
 
 	// add timeline view to snapshots manager
 	debugInterfaceNes->snapshotsManager->viewTimeline = viewNesTimeline;
@@ -1451,7 +1473,7 @@ void CViewC64::StartViceC64EmulationThread()
 			// restart emulation
 			debugInterfaceC64->isRunning = true;
 //			debugInterfaceC64->ClearHistory();
-//			debugInterfaceC64->HardReset();
+//			debugInterfaceC64->ResetHard();
 			debugInterfaceC64->SetDebugMode(DEBUGGER_MODE_RUNNING);
 			debugInterfaceC64->RestartAudio();
 		}
@@ -1486,7 +1508,7 @@ void CViewC64::StartAtari800EmulationThread()
 			// restart emulation
 			debugInterfaceAtari->isRunning = true;
 //			debugInterfaceAtari->ClearHistory();
-//			debugInterfaceAtari->HardReset();
+//			debugInterfaceAtari->ResetHard();
 			debugInterfaceAtari->SetDebugMode(DEBUGGER_MODE_RUNNING);
 			debugInterfaceAtari->RestartAudio();
 		}
@@ -1521,7 +1543,7 @@ void CViewC64::StartNestopiaEmulationThread()
 			// restart emulation
 			debugInterfaceNes->isRunning = true;
 //			debugInterfaceNes->ClearHistory();
-//			debugInterfaceNes->HardReset();
+//			debugInterfaceNes->ResetHard();
 			debugInterfaceNes->SetDebugMode(DEBUGGER_MODE_RUNNING);
 			debugInterfaceNes->audioChannel->Start();
 		}
@@ -1728,13 +1750,15 @@ void CViewC64::Render()
 	//////////
 
 #ifdef RUN_COMMODORE64
+	debugInterfaceC64->snapshotsManager->LockMutex();
+	
 	// copy current state of VIC
 	c64d_vicii_copy_state(&(this->currentViciiState));
 
 	viewC64VicDisplay->UpdateViciiState();
 
 	this->UpdateViciiColors();
-	
+		
 	//////////
 	
 	if (viewC64VicDisplay->canScrollDisassembly)
@@ -1773,6 +1797,8 @@ void CViewC64::Render()
 			debugInterfaceC64->SetSIDReceiveChannelsData(sidNum, false);
 		}
 	}
+	
+	debugInterfaceC64->snapshotsManager->UnlockMutex();
 	
 #endif
 	
@@ -2039,7 +2065,7 @@ void CViewC64::RunContinueEmulation()
 	}
 }
 
-void CViewC64::HardReset()
+void CViewC64::ResetHard()
 {
 	if (c64SettingsRestartAudioOnEmulationReset)
 	{
@@ -2054,57 +2080,32 @@ void CViewC64::HardReset()
 			CDebugInterface *debugInterface = *it;
 			debugInterface->SetDebugMode(DEBUGGER_MODE_RUNNING);
 		}
-			 
 	}
-	
-	// TODO: CViewC64::HardReset  make generic & move execute markers to debug interface
-	if (debugInterfaceC64)
+
+	for (std::vector<CDebugInterface *>::iterator it = debugInterfaces.begin();
+		 it != debugInterfaces.end(); it++)
 	{
-		debugInterfaceC64->HardReset();
-		debugInterfaceC64->ClearDebugMarkers();
-	}
-	
-	if (debugInterfaceAtari)
-	{
-		debugInterfaceAtari->HardReset();
-		debugInterfaceAtari->ClearDebugMarkers();
-	}
-	
-	if (debugInterfaceNes)
-	{
-		debugInterfaceNes->ClearDebugMarkers();
-		debugInterfaceNes->HardReset();
-	}
-	
-	if (c64SettingsIsInVicEditor)
-	{
-		viewC64->viewC64VicControl->UnlockAll();
+		CDebugInterface *debugInterface = *it;
+		debugInterface->ResetHard();
+		debugInterface->ClearDebugMarkers();
 	}
 }
 
-void CViewC64::SoftReset()
+void CViewC64::ResetSoft()
 {
 	if (c64SettingsRestartAudioOnEmulationReset)
 	{
 		// TODO: gSoundEngine->RestartAudioUnit();
 	}
 	
-	// TODO: make a list of avaliable interfaces and iterate
-	if (debugInterfaceC64)
+	for (std::vector<CDebugInterface *>::iterator it = debugInterfaces.begin();
+		 it != debugInterfaces.end(); it++)
 	{
-		debugInterfaceC64->Reset();
+		CDebugInterface *debugInterface = *it;
+		debugInterface->ResetSoft();
+		debugInterface->ClearDebugMarkers();
 	}
-	
-	if (debugInterfaceAtari)
-	{
-		debugInterfaceAtari->Reset();
-	}
-	
-	if (debugInterfaceNes)
-	{
-		debugInterfaceNes->Reset();
-	}
-	
+
 	if (c64SettingsIsInVicEditor)
 	{
 		viewC64->viewC64VicControl->UnlockAll();
@@ -2324,7 +2325,7 @@ bool CViewC64::KeyDownRepeat(u32 keyCode, bool isShift, bool isAlt, bool isContr
 	// if emulator screen has focus then it takes precedence
 	for (CDebugInterface *debugInterface : debugInterfaces)
 	{
-		CGuiView *view = debugInterface->GetViewScreen();
+		CViewEmulatorScreen *view = debugInterface->GetViewScreen();
 		if (view && view->HasFocus())
 		{
 			view->KeyDownRepeat(keyCode, isShift, isAlt, isControl, isSuper);
@@ -2372,7 +2373,7 @@ bool CViewC64::KeyDown(u32 keyCode, bool isShift, bool isAlt, bool isControl, bo
 	// if emulator screen has focus then it takes precedence
 	for (CDebugInterface *debugInterface : debugInterfaces)
 	{
-		CGuiView *view = debugInterface->GetViewScreen();
+		CViewEmulatorScreen *view = debugInterface->GetViewScreen();
 		if (view && view->HasFocus())
 		{
 			if (view->KeyDown(keyCode, isShift, isAlt, isControl, isSuper))
@@ -2579,7 +2580,7 @@ bool CViewC64::PostKeyDown(u32 keyCode, bool isShift, bool isAlt, bool isControl
 	// not consumed key send to screen
 	for (CDebugInterface *debugInterface : debugInterfaces)
 	{
-		CGuiView *view = debugInterface->GetViewScreen();
+		CViewEmulatorScreen *view = debugInterface->GetViewScreen();
 		if (view->IsVisible())
 		{
 			if (view->KeyDown(keyCode, isShift, isAlt, isControl, isSuper))
@@ -2659,7 +2660,7 @@ bool CViewC64::KeyUp(u32 keyCode, bool isShift, bool isAlt, bool isControl, bool
 		if (!debugInterface->isRunning)
 			continue;
 		
-		CGuiView *viewScreen = debugInterface->GetViewScreen();
+		CViewEmulatorScreen *viewScreen = debugInterface->GetViewScreen();
 		if (!viewScreen)
 			continue;
 		
@@ -2676,7 +2677,7 @@ bool CViewC64::KeyUp(u32 keyCode, bool isShift, bool isAlt, bool isControl, bool
 		if (!debugInterface->isRunning)
 			continue;
 		
-		CGuiView *viewScreen = debugInterface->GetViewScreen();
+		CViewEmulatorScreen *viewScreen = debugInterface->GetViewScreen();
 		if (!viewScreen)
 			continue;
 		
@@ -2747,18 +2748,22 @@ bool CViewC64::DoNotTouchedMove(float x, float y)
 {
 	LOGG("CViewC64::DoNotTouchedMove, mouseCursor=%f %f", mouseCursorX, mouseCursorY);
 
+	mouseCursorX = x;
+	mouseCursorY = y;
+
+	if (c64SettingsEmulatedMouseC64Enabled && c64SettingsEmulatedMouseCursorAutoHide)
+	{
+		// do not show mouse cursor on mouse move when emulated mouse is autohide or grabbed
+		return false;
+	}
+	
 	if (guiMain->IsMouseCursorVisible() == false)
 	{
 		guiMain->SetMouseCursorVisible(true);
 		mouseCursorVisibilityCounter = 0;
 	}
-
-	mouseCursorX = x;
-	mouseCursorY = y;
 	
 	return false;
-	
-	return CGuiView::DoNotTouchedMove(x, y);
 }
 
 bool CViewC64::DoScrollWheel(float deltaX, float deltaY)
@@ -3155,10 +3160,10 @@ void CViewC64::CheckMouseCursorVisibility()
 			// cursor is already hidden
 			return;
 		}
-
-		// cursor is visible
-		if (mouseCursorNumFramesToHideCursor > 0
-			&& mouseCursorVisibilityCounter > mouseCursorNumFramesToHideCursor)
+		
+		// we are full screen, do we need to grab cursor by emulated mouse?
+		if (c64SettingsEmulatedMouseC64Enabled && guiMain->viewFullScreen == viewC64Screen
+			&& c64SettingsEmulatedMouseCursorAutoHide)
 		{
 			// hide cursor
 			guiMain->SetMouseCursorVisible(false);
@@ -3166,19 +3171,44 @@ void CViewC64::CheckMouseCursorVisibility()
 		}
 		else
 		{
-			mouseCursorVisibilityCounter++;
+			// cursor is visible, wait till mouseCursorNumFramesToHideCursor and hide
+			if (mouseCursorNumFramesToHideCursor > 0
+				&& mouseCursorVisibilityCounter > mouseCursorNumFramesToHideCursor)
+			{
+				// hide cursor
+				guiMain->SetMouseCursorVisible(false);
+				mouseCursorVisibilityCounter = 0;
+			}
+			else
+			{
+				mouseCursorVisibilityCounter++;
+			}
 		}
 	}
 	else
 	{
-		// not fullscreen, show cursor
-		if (guiMain->IsMouseCursorVisible() == false)
+		// not fullscreen
+		if (c64SettingsEmulatedMouseC64Enabled && c64SettingsEmulatedMouseCursorAutoHide)
 		{
-			mouseCursorVisibilityCounter = 0;
-			guiMain->SetMouseCursorVisible(true);
+			// hide mouse cursor when on c64 screen
+			if (viewC64Screen->IsInsideView(guiMain->mousePosX, guiMain->mousePosY))
+			{
+				guiMain->SetMouseCursorVisible(false);
+			}
+			else
+			{
+				guiMain->SetMouseCursorVisible(true);
+			}
+		}
+		else
+		{
+			if (guiMain->IsMouseCursorVisible() == false)
+			{
+				mouseCursorVisibilityCounter = 0;
+				guiMain->SetMouseCursorVisible(true);
+			}
 		}
 	}
-	
 }
 
 void CViewC64::ShowMouseCursor()
@@ -3747,6 +3777,34 @@ char *CViewC64::ATRD_GetPathForRoms_IMPL()
 	return buf;
 }
 
+void CViewC64::DebuggerServerWebSocketsStart()
+{
+	if (debuggerServer != NULL)
+	{
+		if (debuggerServer->isRunning)
+		{
+			LOGWarning("CViewC64::DebuggerServerWebSocketsStart: debuggerServer != NULL and isRunning=true");
+		}
+		else
+		{
+			debuggerServer->Start();
+		}
+	}
+	else
+	{
+		debuggerServer = REMOTE_CreateDebuggerServerWebSockets(c64SettingsRunDebuggerServerWebSocketsPort);
+		debuggerServer->Start();
+	}
+}
+
+void CViewC64::DebuggerServerWebSocketsSetPort(int port)
+{
+	if (this->debuggerServer)
+	{
+		REMOTE_DebuggerServerWebSocketsSetPort(this->debuggerServer, port);
+	}
+}
+
 void CViewC64::ApplicationShutdown()
 {
 	LOGD("CViewC64::ApplicationShutdown");
@@ -3774,12 +3832,12 @@ void CViewC64::ApplicationShutdown()
 std::set<std::string> CViewC64::GetSupportedFileExtensions()
 {
 	std::set<std::string> extensions = {
-		u8"prg", u8"d64", u8"x64", u8"g64", u8"p64", u8"crt", u8"reu", u8"sid", u8"snap", u8"vsf", u8"tap", u8"t64",
-		u8"xex", u8"obx", u8"atr", u8"a8s",
-		u8"sap", u8"cmc", u8"cm3", u8"cmr", u8"cms", u8"dmc", u8"dlt", u8"fc", u8"mpt", u8"mpd", u8"rmt", u8"tmc", u8"tm8", u8"tm2", u8"stil",
-		u8"nes",
-		u8"c64jukebox", u8"rtdl", u8"rdtl",
-		u8"png", u8"jpg", u8"jpeg", u8"bmp", u8"gif", u8"psd", u8"pic", u8"hdr", u8"tga", u8"kla", u8"dd", u8"ddl", u8"aas", u8"art", u8"vce"
+		"prg", "d64", "x64", "g64", "p64", "crt", "reu", "sid", "snap", "vsf", "tap", "t64",
+		"xex", "obx", "atr", "a8s",
+		"sap", "cmc", "cm3", "cmr", "cms", "dmc", "dlt", "fc", "mpt", "mpd", "rmt", "tmc", "tm8", "tm2", "stil",
+		"nes",
+		"c64jukebox", "rtdl", "rdtl",
+		"png", "jpg", "jpeg", "bmp", "gif", "psd", "pic", "hdr", "tga", "kla", "dd", "ddl", "aas", "art", "vce"
 	};
 	return extensions;
 }
@@ -3799,14 +3857,14 @@ void CViewC64::GlobalDropFileCallback(char *filePath, bool consumedByView)
 		}
 
 		CSlrString *slrPath = new CSlrString(filePath);
-		viewC64->viewC64MainMenu->LoadFile(slrPath);
+		viewC64->mainMenuHelper->LoadFile(slrPath);
 		delete slrPath;
 	}
 }
 
 void CViewC64::RecentlyOpenedFilesCallbackSelectedMenuItem(CSlrString *filePath)
 {
-	viewC64->viewC64MainMenu->LoadFile(filePath);
+	viewC64->mainMenuHelper->LoadFile(filePath);
 }
 
 void CViewC64::ViewFileBrowserCallbackOpenFile(fs::path path)
@@ -3819,10 +3877,10 @@ void CViewC64::ViewFileBrowserCallbackOpenFile(fs::path path)
 
 void CViewC64::OpenFile(CSlrString *path)
 {
-	viewC64->viewC64MainMenu->LoadFile(path);
+	viewC64->mainMenuHelper->LoadFile(path);
 }
 
 void CViewC64::OpenFileDialog()
 {
-	viewC64->viewC64MainMenu->OpenDialogOpenFile();
+	viewC64->mainMenuHelper->OpenDialogOpenFile();
 }

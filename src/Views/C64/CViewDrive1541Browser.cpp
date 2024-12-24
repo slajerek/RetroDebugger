@@ -123,7 +123,7 @@ void CViewDrive1541Browser::StartFileEntry(DiskImageFileEntry *fileEntry, bool s
 		UpdateDriveDiskID();
 		
 		// load the PRG
-		bool ret = viewC64->viewC64MainMenu->LoadPRG(byteBuffer, true, showLoadAddressInfo, false);
+		bool ret = viewC64->mainMenuHelper->LoadPRG(byteBuffer, true, showLoadAddressInfo, false);
 		
 		if (ret == false)
 		{
@@ -496,7 +496,7 @@ void CViewDrive1541Browser::RefreshDiskImageMenu()
 			if (this->viewMenu->menuItems.size() > 0)
 			{
 				targetScrollPosition = std::distance(this->viewMenu->menuItems.begin(), this->viewMenu->selectedItem);
-				LOGD("size=%d", this->viewMenu->menuItems.size());
+//				LOGD("size=%d", this->viewMenu->menuItems.size());
 			}
 			
 			LOGD("targetScrollPosition=%d", targetScrollPosition);
@@ -1109,7 +1109,7 @@ CViewDrive1541FileD64EntryItem::~CViewDrive1541FileD64EntryItem()
 void CViewDrive1541FileD64EntryItem::RenderItem(float px, float py, float pz)
 {
 	viewC64->fontCBM1->BlitTextColor(str, px, py, pz,
-												  viewC64->viewC64MainMenu->fontScale, r, g, b, 1);
+												  viewC64->mainMenuHelper->fontScale, r, g, b, 1);
 
 }
 

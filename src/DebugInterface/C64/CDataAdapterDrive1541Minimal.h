@@ -1,5 +1,5 @@
-#ifndef CDataAdapterDrive1541ShortenedMemory_h
-#define CDataAdapterDrive1541ShortenedMemory_h
+#ifndef CDataAdapterDrive1541Minimal_h
+#define CDataAdapterDrive1541Minimal_h
 
 #include "CDebugDataAdapter.h"
 
@@ -11,7 +11,7 @@ class CDebugInterfaceC64;
 // imageHeight=1024	imageWidth=64
 // last cell is vx=16 vy=33 addr=1c10
 // 64 per row * 33 = 2112   + 16 = 2128
-#define DRIVE1541_SHORTENED_MEMORY_ADAPTER_LENGTH	2128
+#define DRIVE1541_MINIMAL_MEMORY_ADAPTER_LENGTH	2128
 
 class CDataAdapterDrive1541Minimal : public CDebugDataAdapter
 {

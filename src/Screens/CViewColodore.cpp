@@ -176,7 +176,7 @@ void CViewColodore::SwitchAboutScreen()
 {
 	if (guiMain->currentView == this)
 	{
-		guiMain->SetView(viewC64->viewC64MainMenu);
+		guiMain->SetView(viewC64->mainMenuHelper);
 	}
 	else
 	{

@@ -18,8 +18,6 @@ public:
 	CDebuggerApiNestopia(CDebugInterface *debugInterface);
 	CDebugInterfaceNes *debugInterfaceNes;
 	
-	virtual void ResetMachine();
-	
 	virtual void CreateNewPicture(u8 mode, u8 backgroundColor);
 	virtual void StartThread(CSlrThread *run);
 
@@ -60,8 +58,7 @@ public:
 	virtual int Assemble(int addr, char *assembleText);
 	
 	//
-	virtual void SaveBinary(u16 fromAddr, u16 toAddr, char *fileName);
-	virtual int LoadBinary(u16 fromAddr, char *filePath);
+	virtual nlohmann::json GetCpuStatusJson();
 };
 
 #endif

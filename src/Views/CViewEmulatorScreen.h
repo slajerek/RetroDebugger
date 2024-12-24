@@ -15,7 +15,15 @@ public:
 	
 	CDebugInterface *debugInterface;
 	
-	virtual void CreateImageData();
+	virtual bool DoTap(float x, float y);
+	virtual bool DoFinishTap(float x, float y);
+	virtual bool DoRightClick(float x, float y);
+	virtual bool DoFinishRightClick(float x, float y);
+	virtual bool DoMove(float x, float y, float distX, float distY, float diffX, float diffY);
+	virtual bool FinishMove(float x, float y, float distX, float distY, float accelerationX, float accelerationY);
+	virtual bool DoScrollWheel(float deltaX, float deltaY);
+
+	virtual void RefreshEmulatorScreenImageData();
 	virtual bool UpdateImageData();
 	
 	virtual void RefreshImage();

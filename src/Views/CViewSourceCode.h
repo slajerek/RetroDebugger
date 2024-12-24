@@ -14,7 +14,7 @@ class CSlrFont;
 class CDebugInterface;
 class CSlrMutex;
 class CSlrString;
-class CBreakpointAddr;
+class CDebugBreakpointAddr;
 class CViewDataMap;
 class CSlrKeyboardShortcut;
 class CViewDisassembly;

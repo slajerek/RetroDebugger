@@ -39,10 +39,10 @@ public:
 	virtual void ExecuteTask();
 };
 
-class CDebugInterfaceNesTaskHardReset : public CDebugInterfaceTask
+class CDebugInterfaceNesTaskResetHard : public CDebugInterfaceTask
 {
 public:
-	CDebugInterfaceNesTaskHardReset(CDebugInterfaceNes *debugInterface);
+	CDebugInterfaceNesTaskResetHard(CDebugInterfaceNes *debugInterface);
 	CDebugInterfaceNes *debugInterface;
 	virtual void ExecuteTask();
 };

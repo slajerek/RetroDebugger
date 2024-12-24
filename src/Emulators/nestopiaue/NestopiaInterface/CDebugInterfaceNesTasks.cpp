@@ -89,12 +89,12 @@ void CDebugInterfaceNesTaskReset::ExecuteTask()
 }
 
 //
-CDebugInterfaceNesTaskHardReset::CDebugInterfaceNesTaskHardReset(CDebugInterfaceNes *debugInterface)
+CDebugInterfaceNesTaskResetHard::CDebugInterfaceNesTaskResetHard(CDebugInterfaceNes *debugInterface)
 {
 	this->debugInterface = debugInterface;
 }
 
-void CDebugInterfaceNesTaskHardReset::ExecuteTask()
+void CDebugInterfaceNesTaskResetHard::ExecuteTask()
 {
 	nesd_reset();
 	

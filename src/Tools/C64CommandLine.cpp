@@ -5,7 +5,7 @@
 #include "CViewC64.h"
 #include "SYS_CommandLine.h"
 #include "CDebugSymbols.h"
-#include "CViewMainMenu.h"
+#include "CMainMenuHelper.h"
 #include "CViewSnapshots.h"
 #include "CSlrString.h"
 #include "RES_ResourceManager.h"
@@ -669,12 +669,12 @@ void c64PerformStartupTasksThreaded()
 					{
 						SYS_Sleep(100);
 					}
-					viewC64->viewC64MainMenu->InsertD64(c64SettingsPathToD64, false, c64SettingsAutoJmpFromInsertedDiskFirstPrg, 0, true);
+					viewC64->mainMenuHelper->InsertD64(c64SettingsPathToD64, false, c64SettingsAutoJmpFromInsertedDiskFirstPrg, 0, true);
 				}
 				else
 				{
 					// just load disk, do not start, we will start PRG instead
-					viewC64->viewC64MainMenu->InsertD64(c64SettingsPathToD64, false, false, 0, false);
+					viewC64->mainMenuHelper->InsertD64(c64SettingsPathToD64, false, false, 0, false);
 				}
 			}
 			
@@ -693,14 +693,14 @@ void c64PerformStartupTasksThreaded()
 	//			else
 				{
 					// just load tape, do not start
-					viewC64->viewC64MainMenu->LoadTape(c64SettingsPathToTAP, false, false, false);
+					viewC64->mainMenuHelper->LoadTape(c64SettingsPathToTAP, false, false, false);
 				}
 				
 			}
 			
 			if (c64SettingsPathToCartridge != NULL)
 			{
-				viewC64->viewC64MainMenu->InsertCartridge(c64SettingsPathToCartridge, false);
+				viewC64->mainMenuHelper->InsertCartridge(c64SettingsPathToCartridge, false);
 				SYS_Sleep(666);
 			}
 		}
@@ -716,13 +716,18 @@ void c64PerformStartupTasksThreaded()
 			}
 			else //if (isPRGInCommandLine == true)
 			{
-				viewC64->viewC64MainMenu->LoadPRG(c64SettingsPathToPRG, cmdLineOptionDoAutoJmp, false, true, false);
+				viewC64->mainMenuHelper->LoadPRG(c64SettingsPathToPRG, cmdLineOptionDoAutoJmp, false, true, false);
 			}
 		}
 		
 		if (c64CommandLineHardReset)
 		{
-			viewC64->debugInterfaceC64->HardReset();
+			viewC64->debugInterfaceC64->ResetHard();
+		}
+		
+		if (c64SettingsEmulatedMouseC64Enabled)
+		{
+			viewC64->debugInterfaceC64->EmulatedMouseUpdateSettings();
 		}
 	}
 	
@@ -757,13 +762,13 @@ void c64PerformStartupTasksThreaded()
 					{
 						SYS_Sleep(100);
 					}
-					viewC64->viewC64MainMenu->InsertATR(c64SettingsPathToATR, false, c64SettingsAutoJmpFromInsertedDiskFirstPrg, 0, true);
+					viewC64->mainMenuHelper->InsertATR(c64SettingsPathToATR, false, c64SettingsAutoJmpFromInsertedDiskFirstPrg, 0, true);
 					
 				}
 				else
 				{
 					// just load disk, do not start, we will start XEX instead
-					viewC64->viewC64MainMenu->InsertATR(c64SettingsPathToATR, false, false, 0, false);
+					viewC64->mainMenuHelper->InsertATR(c64SettingsPathToATR, false, false, 0, false);
 				}
 			}
 			
@@ -796,7 +801,7 @@ void c64PerformStartupTasksThreaded()
 			
 			if (c64CommandLineHardReset)
 			{
-				viewC64->debugInterfaceAtari->HardReset();
+				viewC64->debugInterfaceAtari->ResetHard();
 			}
 		}
 		
@@ -811,7 +816,7 @@ void c64PerformStartupTasksThreaded()
 			}
 			else //if (isXEXInCommandLine == true)
 			{
-				viewC64->viewC64MainMenu->LoadXEX(c64SettingsPathToXEX, cmdLineOptionDoAutoJmp, false, true);
+				viewC64->mainMenuHelper->LoadXEX(c64SettingsPathToXEX, cmdLineOptionDoAutoJmp, false, true);
 			}
 		}
 		
@@ -823,7 +828,7 @@ void c64PerformStartupTasksThreaded()
 	{
 		if (c64SettingsPathToNES != NULL)
 		{
-			viewC64->viewC64MainMenu->LoadNES(c64SettingsPathToNES, false);
+			viewC64->mainMenuHelper->LoadNES(c64SettingsPathToNES, false);
 		}
 	}
 
@@ -1381,38 +1386,38 @@ void c64PerformNewConfigurationTasksThreaded(CByteBuffer *byteBuffer)
 		else if (t == C64D_PASS_CONFIG_DATA_PATH_TO_D64)
 		{
 			CSlrString *str = byteBuffer->GetSlrString();
-			viewC64->viewC64MainMenu->InsertD64(str, false, c64SettingsAutoJmpFromInsertedDiskFirstPrg, 0, true);
+			viewC64->mainMenuHelper->InsertD64(str, false, c64SettingsAutoJmpFromInsertedDiskFirstPrg, 0, true);
 			delete str;
 		}
 		else if (t == C64D_PASS_CONFIG_DATA_PATH_TO_TAP)
 		{
 			CSlrString *str = byteBuffer->GetSlrString();
-			viewC64->viewC64MainMenu->LoadTape(str, false, false, true);
+			viewC64->mainMenuHelper->LoadTape(str, false, false, true);
 			delete str;
 		}
 		else if (t == C64D_PASS_CONFIG_DATA_PATH_TO_CRT)
 		{
 			CSlrString *str = byteBuffer->GetSlrString();
-			viewC64->viewC64MainMenu->InsertCartridge(str, false);
+			viewC64->mainMenuHelper->InsertCartridge(str, false);
 			SYS_Sleep(666);
 			delete str;
 		}
 		else if (t == C64D_PASS_CONFIG_DATA_PATH_TO_XEX)
 		{
 			CSlrString *str = byteBuffer->GetSlrString();
-			viewC64->viewC64MainMenu->LoadXEX(str, cmdLineOptionDoAutoJmp, false, true);
+			viewC64->mainMenuHelper->LoadXEX(str, cmdLineOptionDoAutoJmp, false, true);
 			delete str;
 		}
 		else if (t == C64D_PASS_CONFIG_DATA_PATH_TO_ATR)
 		{
 			CSlrString *str = byteBuffer->GetSlrString();
-			viewC64->viewC64MainMenu->InsertATR(str, false, c64SettingsAutoJmpFromInsertedDiskFirstPrg, 0, true);
+			viewC64->mainMenuHelper->InsertATR(str, false, c64SettingsAutoJmpFromInsertedDiskFirstPrg, 0, true);
 			delete str;
 		}
 		else if (t == C64D_PASS_CONFIG_DATA_PATH_TO_NES)
 		{
 			CSlrString *str = byteBuffer->GetSlrString();
-			viewC64->viewC64MainMenu->LoadNES(str, true);
+			viewC64->mainMenuHelper->LoadNES(str, true);
 			delete str;
 		}
 		else if (t == C64D_PASS_CONFIG_DATA_SET_AUTOJMP)
@@ -1438,7 +1443,7 @@ void c64PerformNewConfigurationTasksThreaded(CByteBuffer *byteBuffer)
 		else if (t == C64D_PASS_CONFIG_DATA_PATH_TO_PRG)
 		{
 			CSlrString *str = byteBuffer->GetSlrString();
-			viewC64->viewC64MainMenu->LoadPRG(str, cmdLineOptionDoAutoJmp, false, true, false);
+			viewC64->mainMenuHelper->LoadPRG(str, cmdLineOptionDoAutoJmp, false, true, false);
 			delete str;
 		}
 //		else if (t == C64D_PASS_CONFIG_DATA_LAYOUT)
@@ -1471,7 +1476,7 @@ void c64PerformNewConfigurationTasksThreaded(CByteBuffer *byteBuffer)
 		}
 		else if (t == C64D_PASS_CONFIG_DATA_HARD_RESET)
 		{
-			debugInterface->HardReset();
+			debugInterface->ResetHard();
 		}
 		else if (t == C64D_PASS_CONFIG_DATA_FULL_SCREEN)
 		{

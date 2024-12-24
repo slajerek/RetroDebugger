@@ -1,8 +1,12 @@
 #include "CDebugMemoryCell.h"
 #include "CDebugMemory.h"
+#include "DBG_Log.h"
 
 const float alphaSplit = 0.55f;
 const float colorSplit = 0.5f;
+
+// WIP: store events in circlebuf and display (draw plots of memory value changes)
+//#define EXPERIMENTAL_EVENTS_HISTORY
 
 #if defined(RUN_ATARI)
 
@@ -119,20 +123,20 @@ inline void ColorFromValue(u8 v, float *r, float *g, float *b, float *a)
 
 
 ///
-void _markCellReadStyleDebugger(CDebugMemoryCell *cell)
+void _markMemoryCellColorReadStyleDebugger(CDebugMemoryCell *cell)
 {
 	cell->sg = 0.3f;
 	cell->sb = 1.0f;
 	cell->sa = 1.0f;
 }
 
-void _markCellWriteStyleDebugger(CDebugMemoryCell *cell)
+void _markMemoryCellColorWriteStyleDebugger(CDebugMemoryCell *cell)
 {
 	cell->sr = 1.0f;
 	cell->sa = 1.0f;
 }
 
-void _markCellExecuteCodeStyleDebugger(CDebugMemoryCell *cell)
+void _markMemoryCellColorExecuteCodeStyleDebugger(CDebugMemoryCell *cell)
 {
 	cell->sr = 0.0f;
 	cell->sg = 1.0f;
@@ -140,7 +144,7 @@ void _markCellExecuteCodeStyleDebugger(CDebugMemoryCell *cell)
 	cell->sa = 1.0f;
 }
 
-void _markCellExecuteArgumentStyleDebugger(CDebugMemoryCell *cell)
+void _markMemoryCellColorExecuteArgumentStyleDebugger(CDebugMemoryCell *cell)
 {
 	cell->sr = 0.0f;
 	cell->sg = 0.3f;
@@ -148,19 +152,19 @@ void _markCellExecuteArgumentStyleDebugger(CDebugMemoryCell *cell)
 	cell->sa = 1.0f;
 }
 
-void _markCellReadStyleICU(CDebugMemoryCell *cell)
+void _markMemoryCellColorReadStyleICU(CDebugMemoryCell *cell)
 {
 	cell->sg = 1.0f;
 	cell->sa = 1.0f;
 }
 
-void _markCellWriteStyleICU(CDebugMemoryCell *cell)
+void _markMemoryCellColorWriteStyleICU(CDebugMemoryCell *cell)
 {
 	cell->sr = 1.0f;
 	cell->sa = 1.0f;
 }
 
-void _markCellExecuteCodeStyleICU(CDebugMemoryCell *cell)
+void _markMemoryCellColorExecuteCodeStyleICU(CDebugMemoryCell *cell)
 {
 	cell->sr = 0.0f;
 	cell->sg = 1.0f;
@@ -168,7 +172,7 @@ void _markCellExecuteCodeStyleICU(CDebugMemoryCell *cell)
 	cell->sa = 1.0f;
 }
 
-void _markCellExecuteArgumentStyleICU(CDebugMemoryCell *cell)
+void _markMemoryCellColorExecuteArgumentStyleICU(CDebugMemoryCell *cell)
 {
 	cell->sr = 0.0f;
 	cell->sg = 1.0f;
@@ -176,25 +180,25 @@ void _markCellExecuteArgumentStyleICU(CDebugMemoryCell *cell)
 	cell->sa = 1.0f;
 }
 
-typedef void (*MarkCellReadFunc)(CDebugMemoryCell *cell);
-typedef void (*MarkCellWriteFunc)(CDebugMemoryCell *cell);
-typedef void (*MarkCellExecuteCodeFunc)(CDebugMemoryCell *cell);
-typedef void (*MarkCellExecuteArgumentFunc)(CDebugMemoryCell *cell);
+typedef void (*MarkMemoryCellColorReadFunc)(CDebugMemoryCell *cell);
+typedef void (*MarkMemoryCellColorWriteFunc)(CDebugMemoryCell *cell);
+typedef void (*MarkMemoryCellColorExecuteCodeFunc)(CDebugMemoryCell *cell);
+typedef void (*MarkMemoryCellColorExecuteArgumentFunc)(CDebugMemoryCell *cell);
 
-MarkCellReadFunc markCellRead = _markCellReadStyleDebugger;
-MarkCellWriteFunc markCellWrite = _markCellWriteStyleDebugger;
-MarkCellExecuteCodeFunc markCellExecuteCode = _markCellExecuteCodeStyleDebugger;
-MarkCellExecuteArgumentFunc markCellExecuteArgument = _markCellExecuteArgumentStyleDebugger;
+MarkMemoryCellColorReadFunc markMemoryCellColorRead = _markMemoryCellColorReadStyleDebugger;
+MarkMemoryCellColorWriteFunc markMemoryCellColorWrite = _markMemoryCellColorWriteStyleDebugger;
+MarkMemoryCellColorExecuteCodeFunc markMemoryCellColorExecuteCode = _markMemoryCellColorExecuteCodeStyleDebugger;
+MarkMemoryCellColorExecuteArgumentFunc markMemoryCellColorExecuteArgument = _markMemoryCellColorExecuteArgumentStyleDebugger;
 
 void C64DebuggerSetMemoryMapMarkersStyle(uint8 memoryMapMarkersStyle)
 {
 	float darken = 0.5f;
 	if (memoryMapMarkersStyle == MEMORY_MAP_MARKER_STYLE_DEFAULT)
 	{
-		markCellRead = _markCellReadStyleDebugger;
-		markCellWrite = _markCellWriteStyleDebugger;
-		markCellExecuteCode = _markCellExecuteCodeStyleDebugger;
-		markCellExecuteArgument = _markCellExecuteArgumentStyleDebugger;
+		markMemoryCellColorRead = _markMemoryCellColorReadStyleDebugger;
+		markMemoryCellColorWrite = _markMemoryCellColorWriteStyleDebugger;
+		markMemoryCellColorExecuteCode = _markMemoryCellColorExecuteCodeStyleDebugger;
+		markMemoryCellColorExecuteArgument = _markMemoryCellColorExecuteArgumentStyleDebugger;
 		
 		colorExecuteCodeR = 0.0f * darken;
 		colorExecuteCodeG = 1.0f * darken;
@@ -209,10 +213,10 @@ void C64DebuggerSetMemoryMapMarkersStyle(uint8 memoryMapMarkersStyle)
 	}
 	else if (memoryMapMarkersStyle == MEMORY_MAP_MARKER_STYLE_ICU)
 	{
-		markCellRead = _markCellReadStyleICU;
-		markCellWrite = _markCellWriteStyleICU;
-		markCellExecuteCode = _markCellExecuteCodeStyleICU;
-		markCellExecuteArgument = _markCellExecuteArgumentStyleICU;
+		markMemoryCellColorRead = _markMemoryCellColorReadStyleICU;
+		markMemoryCellColorWrite = _markMemoryCellColorWriteStyleICU;
+		markMemoryCellColorExecuteCode = _markMemoryCellColorExecuteCodeStyleICU;
+		markMemoryCellColorExecuteArgument = _markMemoryCellColorExecuteArgumentStyleICU;
 
 		colorExecuteCodeR = 0.0f * darken;
 		colorExecuteCodeG = 1.0f * darken;
@@ -238,6 +242,7 @@ void C64DebuggerSetMemoryMapMarkersStyle(uint8 memoryMapMarkersStyle)
 
 }
 
+#define DEFAULT_MEMORY_CELL_HISTORY_ITEMS	32
 
 CDebugMemoryCell::CDebugMemoryCell(int addr)
 {
@@ -258,6 +263,12 @@ CDebugMemoryCell::CDebugMemoryCell(int addr)
 	readPC  = readRasterCycle  = readRasterLine = -1;
 	writeCycle = readCycle = executeCycle = -1;
 	writeFrame = readFrame = executeFrame = -1;
+	
+	circlebuf_init(&valuesHistory);
+	circlebuf_reserve(&valuesHistory, sizeof(DebugMemoryCellHistoryValue) * DEFAULT_MEMORY_CELL_HISTORY_ITEMS);
+
+	circlebuf_init(&executeHistory);
+	circlebuf_reserve(&executeHistory, sizeof(DebugMemoryCellHistoryEvent) * DEFAULT_MEMORY_CELL_HISTORY_ITEMS);
 }
 
 CDebugMemoryCell::~CDebugMemoryCell()
@@ -294,30 +305,109 @@ void CDebugMemoryCell::ClearReadWriteDebugMarkers()
 
 void CDebugMemoryCell::MarkCellRead()
 {
-	markCellRead(this);
+	markMemoryCellColorRead(this);
 	isRead = true;
 }
 
 void CDebugMemoryCell::MarkCellWrite(uint8 value)
 {
 	//LOGTODO("remove argument marker based on previous code length");
-	
+	MarkCellWrite(value, 0, 0, 0, 0, 0);
+}
+
+void CDebugMemoryCell::MarkCellWrite(uint8 value, u64 writeCycle, u32 writeFrame, int writePC, int writeRasterLine, int writeRasterCycle)
+{
 	isExecuteCode = false;
 	isExecuteArgument = false;
 	isWrite = true;
-	markCellWrite(this);
+	
+	this->writePC = writePC;
+	this->writeRasterLine = writeRasterLine;
+	this->writeRasterCycle = writeRasterCycle;
+	
+	this->writeCycle = writeCycle;
+	this->writeFrame = writeFrame;
+	
+	markMemoryCellColorWrite(this);
+	
+#if defined(EXPERIMENTAL_EVENTS_HISTORY)
+	DebugMemoryCellHistoryValue h;
+	h.value = value;
+	h.cycle = writeCycle;
+	h.frame = writeFrame;
+	h.pc = writePC;
+	
+	if (valuesHistory.size >= DEFAULT_MEMORY_CELL_HISTORY_ITEMS * sizeof(DebugMemoryCellHistoryValue))
+	{
+		DebugMemoryCellHistoryValue hPop;
+		circlebuf_pop_front(&valuesHistory, &hPop, sizeof(DebugMemoryCellHistoryValue));
+	}
+	circlebuf_push_back(&valuesHistory, &h, sizeof(DebugMemoryCellHistoryValue));
+#endif
+	
 }
 
-void CDebugMemoryCell::MarkCellExecuteCode(uint8 opcode)
+void CDebugMemoryCell::MarkCellExecuteCode(uint8 opcode, u64 executeCycle, u32 executeFrame)
 {
 	isExecuteCode = true;
-	markCellExecuteCode(this);
+	
+	this->executeCycle = executeCycle;
+	this->executeFrame = executeFrame;
+	
+	markMemoryCellColorExecuteCode(this);
+		
+#if defined(EXPERIMENTAL_EVENTS_HISTORY)
+	DebugMemoryCellHistoryEvent h;
+	h.cycle = executeCycle;
+	h.frame = executeFrame;
+	
+	if (executeHistory.size >= DEFAULT_MEMORY_CELL_HISTORY_ITEMS * sizeof(DebugMemoryCellHistoryEvent))
+	{
+		DebugMemoryCellHistoryEvent hPop;
+		circlebuf_pop_front(&executeHistory, &hPop, sizeof(DebugMemoryCellHistoryEvent));
+	}
+	circlebuf_push_back(&executeHistory, &h, sizeof(DebugMemoryCellHistoryEvent));
+#endif
+	
 }
 
 void CDebugMemoryCell::MarkCellExecuteArgument()
 {
 	isExecuteArgument = true;
-	markCellExecuteArgument(this);
+	markMemoryCellColorExecuteArgument(this);
+}
+
+void CDebugMemoryCell::ClearEventsAfterCycle(u64 cycle)
+{
+	// value write events
+	while(valuesHistory.size > 0)
+	{
+		DebugMemoryCellHistoryValue h;
+		circlebuf_peek_back(&valuesHistory, &h, sizeof(DebugMemoryCellHistoryValue));
+		if (h.cycle > cycle)
+		{
+			circlebuf_pop_back(&valuesHistory, &h, sizeof(DebugMemoryCellHistoryValue));
+		}
+		else
+		{
+			break;
+		}
+	}
+
+	// execute events
+	while(executeHistory.size > 0)
+	{
+		DebugMemoryCellHistoryEvent h;
+		circlebuf_peek_back(&executeHistory, &h, sizeof(DebugMemoryCellHistoryEvent));
+		if (h.cycle > cycle)
+		{
+			circlebuf_pop_back(&executeHistory, &h, sizeof(DebugMemoryCellHistoryEvent));
+		}
+		else
+		{
+			break;
+		}
+	}
 }
 
 void CDebugMemoryCell::UpdateCellColors(u8 v, bool showExecutePC, int pc)

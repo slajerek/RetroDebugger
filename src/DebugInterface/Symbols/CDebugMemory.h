@@ -69,6 +69,8 @@ public:
 	void CellWrite(int addr, uint8 value, int pc, int rasterX, int rasterY);
 	void CellExecute(int addr, uint8 opcode);
 
+	void ClearEventsAfterCycle(u64 cycle);
+	
 private:
 	CDebugMemoryCell **memoryCells;
 	int numCells;

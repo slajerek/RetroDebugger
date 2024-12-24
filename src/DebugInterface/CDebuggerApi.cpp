@@ -25,28 +25,23 @@
 #include "CDebuggerApiNestopia.h"
 #include "CDebuggerApiAtari.h"
 
-// factory
+// static factory
 CDebuggerApi *CDebuggerApi::GetDebuggerApi(u8 emulatorType)
 {
 	CDebugInterface *debugInterface = viewC64->GetDebugInterface(emulatorType);
-
-	switch(emulatorType)
+	if (debugInterface)
 	{
-		case EMULATOR_TYPE_C64_VICE:
-			return new CDebuggerApiVice(debugInterface);
-		case EMULATOR_TYPE_NESTOPIA:
-			return new CDebuggerApiNestopia(debugInterface);
-		case EMULATOR_TYPE_ATARI800:
-			return new CDebuggerApiAtari(debugInterface);
+		return debugInterface->GetDebuggerApi();
 	}
-	SYS_FatalExit("CDebuggerAPI::GetDebuggerApi: emulatorType=%d not supported", emulatorType);
+	
+	LOGError("CDebuggerAPI::GetDebuggerApi: emulatorType=%d not supported", emulatorType);
 	return NULL;
 }
 
 CDebuggerApi::CDebuggerApi(CDebugInterface *debugInterface)
 {
 	this->debugInterface = debugInterface;
-	this->byteBufferAssembleText = new CByteBuffer();
+	byteBufferAssembleText = new CByteBuffer();
 }
 
 CDebuggerApi::~CDebuggerApi()
@@ -56,14 +51,45 @@ CDebuggerApi::~CDebuggerApi()
 void CDebuggerApi::PauseEmulation()
 {
 	LOGD("CDebuggerApi::PauseEmulation");
-	this->debugInterface->SetDebugMode(DEBUGGER_MODE_PAUSED);
+	debugInterface->SetDebugMode(DEBUGGER_MODE_PAUSED);
 }
 
 void CDebuggerApi::UnPauseEmulation()
 {
 	LOGD("CDebuggerApi::UnPauseEmulation");
-	this->debugInterface->SetDebugMode(DEBUGGER_MODE_RUNNING);
+	debugInterface->SetDebugMode(DEBUGGER_MODE_RUNNING);
 }
+
+void CDebuggerApi::StepOneCycle()
+{
+	debugInterface->StepOneCycle();
+}
+
+void CDebuggerApi::StepOverInstruction()
+{
+	debugInterface->StepOverInstruction();
+}
+
+void CDebuggerApi::StepOverSubroutine()
+{
+	debugInterface->StepOverSubroutine();
+}
+
+u64 CDebuggerApi::GetMainCpuCycleCounter()
+{
+	return debugInterface->GetMainCpuCycleCounter();
+}
+
+u64 CDebuggerApi::GetMainCpuInstructionCycleCounter()
+{
+	return debugInterface->GetCurrentCpuInstructionCycleCounter();
+}
+
+unsigned int CDebuggerApi::GetEmulationFrameNumber()
+{
+	return debugInterface->GetEmulationFrameNumber();
+}
+
 
 void CDebuggerApi::StartThread(CSlrThread *run)
 {
@@ -168,14 +194,31 @@ long CDebuggerApi::GetCurrentFrameNumber()
 	return debugInterface->GetEmulationFrameNumber();
 }
 
-void CDebuggerApi::ResetMachine()
+void CDebuggerApi::ResetMachine(bool isHardReset)
 {
-	SYS_FatalExit("CDebuggerApi::ResetMachine: not implemented");
+	if (isHardReset)
+	{
+		debugInterface->ResetHard();
+	}
+	else
+	{
+		debugInterface->ResetSoft();
+	}
 }
 
 void CDebuggerApi::MakeJmp(int addr)
 {
 	SYS_FatalExit("CDebuggerApi::MakeJMP: not implemented");
+}
+
+CDataAdapter *CDebuggerApi::GetDataAdapterMemoryWithIO()
+{
+	return debugInterface->GetDataAdapter();
+}
+
+CDataAdapter *CDebuggerApi::GetDataAdapterMemoryDirectRAM()
+{
+	return debugInterface->GetDataAdapterDirectRam();
 }
 
 void CDebuggerApi::SetByte(int addr, u8 v)
@@ -238,7 +281,7 @@ void CDebuggerApi::ClearRam(int startAddr, int endAddr, u8 value)
 {
 	for (int i = startAddr; i < endAddr; i++)
 	{
-		this->SetByteToRam(i, value);
+		SetByteToRam(i, value);
 	}
 }
 
@@ -269,7 +312,7 @@ bool CDebuggerApi::Assemble64TassToRam(int *codeStartAddr, int *codeSize)
 
 bool CDebuggerApi::Assemble64TassToRam(int *codeStartAddr, int *codeSize, char *fileName, bool quiet)
 {
-	u8 *buf = this->Assemble64Tass(codeStartAddr, codeSize, fileName, quiet);
+	u8 *buf = Assemble64Tass(codeStartAddr, codeSize, fileName, quiet);
 	
 	if (buf == NULL)
 	{
@@ -282,7 +325,7 @@ bool CDebuggerApi::Assemble64TassToRam(int *codeStartAddr, int *codeSize, char *
 	int addr = *codeStartAddr;
 	for (int i = 0; i < *codeSize; i++)
 	{
-		this->SetByteToRam(addr, buf[i]);
+		SetByteToRam(addr, buf[i]);
 		addr++;
 	}
 	free(buf);
@@ -319,7 +362,7 @@ void CDebuggerApi::Assemble64TassAddLine(const char *format, ...)
 
 u8 *CDebuggerApi::Assemble64Tass(int *codeStartAddr, int *codeSize)
 {
-	return this->Assemble64Tass(codeStartAddr, codeSize, NULL, false);
+	return Assemble64Tass(codeStartAddr, codeSize, NULL, false);
 }
 
 u8 *CDebuggerApi::Assemble64Tass(int *codeStartAddr, int *codeSize, const char *storeAsmFileName, bool quiet)
@@ -366,6 +409,51 @@ int CDebuggerApi::Assemble(int addr, char *assembleText)
 	return -1;
 }
 
+//
+CSlrString *CDebuggerApi::GetCurrentSegmentName()
+{
+	if (debugInterface->symbols->currentSegment == NULL)
+		return NULL;
+	return debugInterface->symbols->currentSegment->name;
+}
+
+bool CDebuggerApi::SetCurrentSegment(CSlrString *segmentName)
+{
+	return debugInterface->symbols->SetSegment(segmentName);
+}
+
+u64 CDebuggerApi::AddBreakpointPC(int addr)
+{
+	debugInterface->LockMutex();
+	CDebugBreakpointAddr *breakpoint = debugInterface->viewDisassembly->AddPCBreakpoint(addr);
+	debugInterface->UnlockMutex();
+	return breakpoint->breakpointId;
+}
+
+u64 CDebuggerApi::RemoveBreakpointPC(int addr)
+{
+	debugInterface->LockMutex();
+	u64 breakpointId = debugInterface->viewDisassembly->RemovePCBreakpoint(addr);
+	debugInterface->UnlockMutex();
+	return breakpointId;
+}
+
+u64 CDebuggerApi::AddBreakpointMemory(int address, u32 memoryAccess, DataBreakpointComparison comparison, int value)
+{
+	debugInterface->LockMutex();
+	CDebugBreakpointData *breakpoint = debugInterface->symbols->currentSegment->AddBreakpointMemory(address, memoryAccess, comparison, value);
+	debugInterface->UnlockMutex();
+	return breakpoint->breakpointId;
+}
+
+u64 CDebuggerApi::RemoveBreakpointMemory(int address)
+{
+	debugInterface->LockMutex();
+	u64 breakpointId = debugInterface->symbols->currentSegment->breakpointsData->DeleteBreakpoint(address);
+	debugInterface->UnlockMutex();
+	return breakpointId;
+}
+
 void CDebuggerApi::AddWatch(CSlrString *segmentName, int address, CSlrString *watchName, uint8 representation, int numberOfValues)
 {
 	if (debugInterface->symbols)
@@ -410,7 +498,7 @@ void CDebuggerApi::AddWatch(int address, char *watchName, uint8 representation, 
 
 void CDebuggerApi::AddWatch(int address, char *watchName)
 {
-	this->AddWatch(address, watchName, WATCH_REPRESENTATION_HEX_8, 1);
+	AddWatch(address, watchName, WATCH_REPRESENTATION_HEX_8, 1);
 }
 
 u8 *CDebuggerApi::ExomizerMemoryRaw(u16 fromAddr, u16 toAddr, int *compressedSize)
@@ -418,19 +506,14 @@ u8 *CDebuggerApi::ExomizerMemoryRaw(u16 fromAddr, u16 toAddr, int *compressedSiz
 	return C64ExomizeMemoryRaw(fromAddr, toAddr, compressedSize);
 }
 
-// TODO: fixme!
-void CDebuggerApi::SaveBinary(u16 fromAddr, u16 toAddr, char *filePath)
+void CDebuggerApi::SaveBinary(int fromAddr, int toAddr, const char *filePath)
 {
-	// TODO: we can implement this generic via SetRam(...
-	SYS_FatalExit("CDebuggerApi::SaveBinary: not implemented");
+	C64SaveMemory(fromAddr, toAddr, false, debugInterface->GetDataAdapterDirectRam(), filePath);
 }
 
-// TODO: fixme!
-int CDebuggerApi::LoadBinary(u16 fromAddr, char *filePath)
+int CDebuggerApi::LoadBinary(int fromAddr, const char *filePath)
 {
-	// TODO: we can implement this generic via SetRam(...
-	SYS_FatalExit("CDebuggerApi::LoadBinary: not implemented");
-	return -1;
+	return C64LoadMemory(fromAddr, debugInterface->GetDataAdapterDirectRam(), filePath);
 }
 
 void CDebuggerApi::LoadSnapshot(const char *fileName)
@@ -442,6 +525,31 @@ void CDebuggerApi::ResetEmulationCounters()
 {
 	debugInterface->ResetMainCpuDebugCycleCounter();
 	debugInterface->ResetEmulationFrameCounter();
+}
+
+void CDebuggerApi::SetWarpSpeed(bool isWarpSpeed)
+{
+	debugInterface->SetSettingIsWarpSpeed(isWarpSpeed);
+}
+
+bool CDebuggerApi::KeyboardDown(u32 mtKeyCode)
+{
+	return debugInterface->KeyboardDown(mtKeyCode);
+}
+
+bool CDebuggerApi::KeyboardUp(u32 mtKeyCode)
+{
+	return debugInterface->KeyboardUp(mtKeyCode);
+}
+
+void CDebuggerApi::JoystickDown(int port, u32 axis)
+{
+	debugInterface->JoystickDown(port, axis);
+}
+
+void CDebuggerApi::JoystickUp(int port, u32 axis)
+{
+	debugInterface->JoystickUp(port, axis);
 }
 
 void CDebuggerApi::ShowMessage(const char *text)
@@ -463,3 +571,61 @@ void CDebuggerApi::AddView(CGuiView *view)
 	guiMain->UnlockMutex();
 }
 
+nlohmann::json CDebuggerApi::GetCpuStatusJson()
+{
+	nlohmann::json empty;
+	return empty;
+}
+
+u32 CDebuggerApi::JoypadAxisNameToAxisCode(std::string axisName)
+{
+	if (axisName == "select")
+	{
+		return JOYPAD_SELECT;
+	}
+	if (axisName == "start")
+	{
+		return JOYPAD_START;
+	}
+	if (axisName == "fireB")
+	{
+		return JOYPAD_FIRE_B;
+	}
+	if (axisName == "fire")
+	{
+		return JOYPAD_FIRE;
+	}
+	if (axisName == "e" || axisName == "east")
+	{
+		return JOYPAD_E;
+	}
+	if (axisName == "w" || axisName == "west")
+	{
+		return JOYPAD_W;
+	}
+	if (axisName == "s" || axisName == "south")
+	{
+		return JOYPAD_S;
+	}
+	if (axisName == "n" || axisName == "north")
+	{
+		return JOYPAD_N;
+	}
+	if (axisName == "sw" || axisName == "southwest")
+	{
+		return JOYPAD_SW;
+	}
+	if (axisName == "se" || axisName == "southeast")
+	{
+		return JOYPAD_SE;
+	}
+	if (axisName == "nw" || axisName == "northwest")
+	{
+		return JOYPAD_NW;
+	}
+	if (axisName == "ne" || axisName == "northeast")
+	{
+		return JOYPAD_NE;
+	}
+	return JOYPAD_IDLE;
+}

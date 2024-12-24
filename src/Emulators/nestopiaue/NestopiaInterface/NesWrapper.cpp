@@ -326,6 +326,33 @@ bool nesd_insert_cartridge(char *filePath)
 	return true;
 }
 
+bool nesd_unload_cartridge()
+{
+	debugInterfaceNes->LockMutex();
+	nesd_sound_lock("nesd_insert_cartridge");
+	
+	machine->Unload();
+	
+	if (machine->Unload())
+	{
+		LOGError("Nestopia: Unload failed");
+		nesd_sound_unlock("nesd_insert_cartridge");
+		debugInterfaceNes->UnlockMutex();
+		return false;
+	}
+
+	nesd_set_defaults();
+	machine->Power(true);
+	
+	debugInterfaceNes->ResetEmulationFrameCounter();
+	debugInterfaceNes->ResetClockCounters();
+
+	nesd_sound_unlock("nesd_insert_cartridge");
+	debugInterfaceNes->UnlockMutex();
+	return true;
+
+}
+
 // threaded frame render sync is queueing samples, meaning sync is too fast... but why? see NestopiaUE_Run
 
 struct circlebuf audioBufferCircle;
@@ -1558,7 +1585,7 @@ void nesd_mark_cell_read(uint16 addr)
 	if (segment)
 	{
 		u8 value = nesd_peek_safe_io(addr);
-		CBreakpointMemory *breakpoint = segment->breakpointsMemory->EvaluateBreakpoint(addr, value, MEMORY_BREAKPOINT_ACCESS_READ);
+		CDebugBreakpointData *breakpoint = segment->breakpointsData->EvaluateBreakpoint(addr, value, MEMORY_BREAKPOINT_ACCESS_READ);
 		if (breakpoint != NULL)
 		{
 			debugInterfaceNes->SetDebugMode(DEBUGGER_MODE_PAUSED);
@@ -1583,7 +1610,7 @@ void nesd_mark_cell_write(uint16 addr, uint8 value)
 	CDebugSymbolsSegment *segment = debugInterfaceNes->symbols->currentSegment;
 	if (segment)
 	{
-		CBreakpointMemory *breakpoint = segment->breakpointsMemory->EvaluateBreakpoint(addr, value, MEMORY_BREAKPOINT_ACCESS_WRITE);
+		CDebugBreakpointData *breakpoint = segment->breakpointsData->EvaluateBreakpoint(addr, value, MEMORY_BREAKPOINT_ACCESS_WRITE);
 		if (breakpoint != NULL)
 		{
 			debugInterfaceNes->SetDebugMode(DEBUGGER_MODE_PAUSED);
@@ -1627,7 +1654,7 @@ void nesd_check_pc_breakpoint(uint16 pc)
 	else
 	{
 		debugInterface->LockMutex();
-		CBreakpointAddr *addrBreakpoint = segment->breakpointsPC->EvaluateBreakpoint(pc);
+		CDebugBreakpointAddr *addrBreakpoint = segment->breakpointsPC->EvaluateBreakpoint(pc);
 		
 		if (addrBreakpoint != NULL)
 		{

@@ -157,7 +157,7 @@ CDataAdapterDrive1541Minimal::CDataAdapterDrive1541Minimal(CDebugSymbols *debugS
 
 int CDataAdapterDrive1541Minimal::AdapterGetDataLength()
 {
-	return DRIVE1541_SHORTENED_MEMORY_ADAPTER_LENGTH;
+	return DRIVE1541_MINIMAL_MEMORY_ADAPTER_LENGTH;
 }
 
 void CDataAdapterDrive1541Minimal::AdapterReadByte(int pointer, uint8 *value, bool *isAvailable)

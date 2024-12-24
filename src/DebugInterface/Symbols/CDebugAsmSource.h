@@ -3,7 +3,12 @@
 
 #include "SYS_Defs.h"
 #include "CSlrString.h"
-#include "CDebugBreakpoints.h"
+#include "CDebugBreakpoint.h"
+#include "CDebugBreakpointAddr.h"
+#include "CDebugBreakpointData.h"
+#include "CDebugBreakpointRasterLine.h"
+#include "CDebugBreakpointsAddr.h"
+#include "CDebugBreakpointsData.h"
 #include <map>
 #include <vector>
 

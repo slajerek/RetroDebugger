@@ -1533,12 +1533,9 @@ void CViewDataDump::RenderContextMenuItems()
 	}
 
 	char *buf = SYS_GetCharBuf();
+	char *buf2 = SYS_GetCharBuf();
+
 	dataAdapter->GetAddressStringForCell(currentDataIndex, buf, MAX_STRING_LENGTH);
-
-	char *dataAddressStr = SYS_GetCharBuf();
-	sprintf(dataAddressStr, "Address %s: %02X", buf, val);
-	SYS_ReleaseCharBuf(dataAddressStr);
-
 	ImGui::Text(buf);
 	
 	ImGui::SameLine();
@@ -1568,7 +1565,12 @@ void CViewDataDump::RenderContextMenuItems()
 			}
 		}
 	}
-
+	
+	FUN_IntToBinaryStr(val, buf2);
+	
+	sprintf(buf, "%02X %3d %s", val, val, buf2);
+	ImGui::Text(buf);
+	
 /*	if (ImGui::CollapsingHeader("Statistics", ImGuiTreeNodeFlags_DefaultOpen))
 	{
 		ImGui::Text("Written by PC address: %04x", cell->writePC);
@@ -1597,12 +1599,14 @@ void CViewDataDump::RenderContextMenuItems()
 
 	}
 		*/
+	
+	
 	ImGui::Separator();
 	
 //	if (ImGui::CollapsingHeader("Breakpoints", ImGuiTreeNodeFlags_DefaultOpen))
 	{
 		// breakpoints
-		if (currentSegment && currentSegment->supportBreakpoints && currentSegment->breakpointsMemory)
+		if (currentSegment && currentSegment->supportBreakpoints && currentSegment->breakpointsData)
 		{
 			bool supportsWriteBreakpoint, supportsReadBreakpoint;
 			currentSegment->symbols->debugInterface->SupportsBreakpoints(&supportsWriteBreakpoint, &supportsReadBreakpoint);
@@ -1612,7 +1616,7 @@ void CViewDataDump::RenderContextMenuItems()
 				currentSegment->symbols->debugInterface->LockMutex();
 				
 				ImGui::Text("Breakpoint:");
-				CBreakpointMemory *memoryBreakpoint = (CBreakpointMemory*)currentSegment->breakpointsMemory->GetBreakpoint(currentDataIndex);
+				CDebugBreakpointData *memoryBreakpoint = (CDebugBreakpointData*)currentSegment->breakpointsData->GetBreakpoint(currentDataIndex);
 				
 				if (!memoryBreakpoint)
 				{
@@ -1621,7 +1625,7 @@ void CViewDataDump::RenderContextMenuItems()
 						bool isWrite = false;
 						if (ImGui::Checkbox("Write##memoryBreakpoint", &isWrite))
 						{
-							currentSegment->AddBreakpointMemory(currentDataIndex, MEMORY_BREAKPOINT_ACCESS_WRITE, MemoryBreakpointComparison::MEMORY_BREAKPOINT_LESS_OR_EQUAL, 0xFF);
+							currentSegment->AddBreakpointMemory(currentDataIndex, MEMORY_BREAKPOINT_ACCESS_WRITE, DataBreakpointComparison::MEMORY_BREAKPOINT_LESS_OR_EQUAL, 0xFF);
 						}
 					}
 					
@@ -1631,7 +1635,7 @@ void CViewDataDump::RenderContextMenuItems()
 						ImGui::SameLine();
 						if (ImGui::Checkbox("Read##memoryBreakpoint", &isRead))
 						{
-							currentSegment->AddBreakpointMemory(currentDataIndex, MEMORY_BREAKPOINT_ACCESS_READ, MemoryBreakpointComparison::MEMORY_BREAKPOINT_LESS_OR_EQUAL, 0xFF);
+							currentSegment->AddBreakpointMemory(currentDataIndex, MEMORY_BREAKPOINT_ACCESS_READ, DataBreakpointComparison::MEMORY_BREAKPOINT_LESS_OR_EQUAL, 0xFF);
 						}
 					}
 				}
@@ -1639,16 +1643,16 @@ void CViewDataDump::RenderContextMenuItems()
 				{
 					if (supportsWriteBreakpoint)
 					{
-						bool isWrite = IS_SET(memoryBreakpoint->memoryAccess, MEMORY_BREAKPOINT_ACCESS_WRITE);
+						bool isWrite = IS_SET(memoryBreakpoint->dataAccess, MEMORY_BREAKPOINT_ACCESS_WRITE);
 						if (ImGui::Checkbox("Write##memoryBreakpoint", &isWrite))
 						{
 							if (isWrite)
 							{
-								SET_BIT(memoryBreakpoint->memoryAccess, MEMORY_BREAKPOINT_ACCESS_WRITE);
+								SET_BIT(memoryBreakpoint->dataAccess, MEMORY_BREAKPOINT_ACCESS_WRITE);
 							}
 							else
 							{
-								REMOVE_BIT(memoryBreakpoint->memoryAccess, MEMORY_BREAKPOINT_ACCESS_WRITE);
+								REMOVE_BIT(memoryBreakpoint->dataAccess, MEMORY_BREAKPOINT_ACCESS_WRITE);
 							}
 						}
 					}
@@ -1656,17 +1660,17 @@ void CViewDataDump::RenderContextMenuItems()
 					if (supportsReadBreakpoint)
 					{
 						// TODO: read breakpoint in Vice is fired on STA (because it reads)
-						bool isRead  = IS_SET(memoryBreakpoint->memoryAccess, MEMORY_BREAKPOINT_ACCESS_READ);
+						bool isRead  = IS_SET(memoryBreakpoint->dataAccess, MEMORY_BREAKPOINT_ACCESS_READ);
 						ImGui::SameLine();
 						if (ImGui::Checkbox("Read##memoryBreakpoint", &isRead))
 						{
 							if (isRead)
 							{
-								SET_BIT(memoryBreakpoint->memoryAccess, MEMORY_BREAKPOINT_ACCESS_READ);
+								SET_BIT(memoryBreakpoint->dataAccess, MEMORY_BREAKPOINT_ACCESS_READ);
 							}
 							else
 							{
-								REMOVE_BIT(memoryBreakpoint->memoryAccess, MEMORY_BREAKPOINT_ACCESS_READ);
+								REMOVE_BIT(memoryBreakpoint->dataAccess, MEMORY_BREAKPOINT_ACCESS_READ);
 							}
 						}
 					}
@@ -1684,7 +1688,7 @@ void CViewDataDump::RenderContextMenuItems()
 					int comparison = memoryBreakpoint->comparison;
 					if (ImGui::Combo("##memoryBreakpointComparison", &comparison, "==\0!=\0<\0<=\0>\0>=\0\0"))
 					{
-						memoryBreakpoint->comparison = (MemoryBreakpointComparison)comparison;
+						memoryBreakpoint->comparison = (DataBreakpointComparison)comparison;
 					}
 					ImGui::PopItemWidth();
 					
@@ -1711,7 +1715,7 @@ void CViewDataDump::RenderContextMenuItems()
 	
 //	if (ImGui::CollapsingHeader("Rewind", ImGuiTreeNodeFlags_DefaultOpen))
 	
-	if (currentSegment && currentSegment->supportBreakpoints && currentSegment->breakpointsMemory)
+	if (currentSegment && currentSegment->supportBreakpoints && currentSegment->breakpointsData)
 	{
 		if (viewDisassembly)
 		{
@@ -1729,19 +1733,19 @@ void CViewDataDump::RenderContextMenuItems()
 
 		if (debugInterface->snapshotsManager)
 		{
-			if (ImGui::MenuItem("Rewind to last read", "Alt+" PLATFORM_STR_KEY_CTRL "+Shift+click", false, (cell->readCycle != -1) ))
+			if (ImGui::MenuItem("Rewind to previous read", "Alt+" PLATFORM_STR_KEY_CTRL "+Shift+click", false, (cell->readCycle != -1) ))
 			{
 				LOGM("============######################### RESTORE TO READ CYCLE=%d", cell->readCycle);
 				debugInterface->snapshotsManager->RestoreSnapshotByCycle(cell->readCycle);
 			}
 
-			if (ImGui::MenuItem("Rewind to last write", "Alt+" PLATFORM_STR_KEY_CTRL "+click", false, (cell->writeCycle != -1)))
+			if (ImGui::MenuItem("Rewind to previous write", "Alt+" PLATFORM_STR_KEY_CTRL "+click", false, (cell->writeCycle != -1)))
 			{
 				LOGM("============######################### RESTORE TO WRITE CYCLE=%d", cell->writeCycle);
 				debugInterface->snapshotsManager->RestoreSnapshotByCycle(cell->writeCycle);
 			}
 			
-			if (ImGui::MenuItem("Rewind to last execute", "", false, (cell->executeCycle != -1)))
+			if (ImGui::MenuItem("Rewind to previous execute", "", false, (cell->executeCycle != -1)))
 			{
 				LOGM("============######################### RESTORE TO EXECUTE CYCLE=%d", cell->executeCycle);
 				debugInterface->snapshotsManager->RestoreSnapshotByCycle(cell->executeCycle);
@@ -1752,6 +1756,7 @@ void CViewDataDump::RenderContextMenuItems()
 	}
 
 	SYS_ReleaseCharBuf(buf);
+	SYS_ReleaseCharBuf(buf2);
 	
 //	if (ImGui::CollapsingHeader("Config", ImGuiTreeNodeFlags_DefaultOpen))
 }

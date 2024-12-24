@@ -23,7 +23,8 @@ public:
 	virtual void Init();
 
 	//
-	void AddBreakpointRaster(int rasterNum);
+	CDebugBreakpointRasterLine *AddBreakpointRaster(int rasterNum);
+	u64 RemoveBreakpointRaster(int rasterNum);
 	void AddBreakpointVIC();
 	void AddBreakpointCIA();
 	void AddBreakpointNMI();

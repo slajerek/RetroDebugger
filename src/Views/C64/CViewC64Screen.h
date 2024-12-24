@@ -9,11 +9,22 @@ public:
 	CViewC64Screen(const char *name, float posX, float posY, float posZ, float sizeX, float sizeY, CDebugInterface *debugInterface);
 	virtual ~CViewC64Screen();
 	
+	virtual bool DoTap(float x, float y);
+	virtual bool DoFinishTap(float x, float y);
+	virtual bool DoRightClick(float x, float y);
+	virtual bool DoFinishRightClick(float x, float y);
+	virtual bool DoScrollWheel(float deltaX, float deltaY);
+	virtual bool DoNotTouchedMove(float x, float y);
+
+	virtual bool HasContextMenuItems();
+
 	virtual bool IsSkipKey(u32 keyCode, bool isShift, bool isAlt, bool isControl, bool isSuper);
 	virtual u32 ConvertKeyCode(u32 keyCode, bool isShift, bool isAlt, bool isControl, bool isSuper);
 	
 	virtual void PostDebugInterfaceKeyDown(u32 keyCode, bool isShift, bool isAlt, bool isControl, bool isSuper);
 	virtual void PostDebugInterfaceKeyUp(u32 keyCode, bool isShift, bool isAlt, bool isControl, bool isSuper);
+	
+	bool ShouldAutoHideMouse();
 	
 	bool shiftDown;
 		

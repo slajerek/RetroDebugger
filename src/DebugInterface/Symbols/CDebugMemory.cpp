@@ -102,14 +102,10 @@ void CDebugMemory::CellWrite(int addr, uint8 value, int pc, int writeRasterLine,
 	
 	if (cell)
 	{
-		cell->MarkCellWrite(value);
-		
-		cell->writePC = pc;
-		cell->writeRasterLine = writeRasterLine;
-		cell->writeRasterCycle = writeRasterCycle;
-		
-		cell->writeCycle = debugInterface->GetCurrentCpuInstructionCycleCounter();
-		cell->writeFrame = debugInterface->GetEmulationFrameNumber();
+		u64 writeCycle = debugInterface->GetCurrentCpuInstructionCycleCounter();
+		u32 writeFrame = debugInterface->GetEmulationFrameNumber();
+
+		cell->MarkCellWrite(value, writeCycle, writeFrame, pc, writeRasterLine, writeRasterCycle);
 	}
 }
 
@@ -120,9 +116,9 @@ void CDebugMemory::CellExecute(int addr, uint8 opcode)
 
 	if (cell)
 	{
-		cell->MarkCellExecuteCode(opcode);
-		cell->executeCycle = debugInterface->GetCurrentCpuInstructionCycleCounter();
-		cell->executeFrame = debugInterface->GetEmulationFrameNumber();
+		u64 executeCycle = debugInterface->GetCurrentCpuInstructionCycleCounter();
+		u32 executeFrame = debugInterface->GetEmulationFrameNumber();
+		cell->MarkCellExecuteCode(opcode, executeCycle, executeFrame);
 	}
 
 	uint8 l = opcodes[opcode].addressingLength;
@@ -160,3 +156,10 @@ void CDebugMemory::CellExecute(int addr, uint8 opcode)
 	}
 }
 
+void CDebugMemory::ClearEventsAfterCycle(u64 cycle)
+{
+	for (int i = 0; i < numCells; i++)
+	{
+		memoryCells[i]->ClearEventsAfterCycle(cycle);
+	}
+}

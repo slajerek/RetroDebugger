@@ -79,7 +79,7 @@ bool c64SettingsPassConfigToRunningInstance = false;
 int c64SettingsScreenSupersampleFactor = 4;
 bool c64SettingsEmulatorScreenBypassKeyboardShortcuts = true;
 
-bool c64SettingsUsePipeIntegration = true;
+bool c64SettingsUsePipeIntegration = false;
 
 bool c64SettingsWindowAlwaysOnTop = false;
 CByteBuffer *c64SettingsWindowPosition = NULL;
@@ -256,6 +256,11 @@ bool c64SettingsRunSIDWhenInWarp = true;
 u8 c64SettingsSelectedJoystick1 = 0;
 u8 c64SettingsSelectedJoystick2 = 0;
 
+bool c64SettingsEmulatedMouseC64Enabled = false;
+int c64SettingsEmulatedMouseC64Type = 0;
+u8 c64SettingsEmulatedMouseC64Port = 0;
+bool c64SettingsEmulatedMouseCursorAutoHide = true;
+
 //
 float c64SettingsPaintGridCharactersColorR = 0.7f;
 float c64SettingsPaintGridCharactersColorG = 0.7f;
@@ -302,7 +307,11 @@ u8 c64SettingsAtariVideoSystem = ATARI_VIDEO_SYSTEM_PAL;
 u8 c64SettingsAtariMachineType = 4;
 u8 c64SettingsAtariRamSizeOption = 9;
 
+// websockets server
+bool c64SettingsRunDebuggerServerWebSockets = false;
+int c64SettingsRunDebuggerServerWebSocketsPort = 0x0DEB;
 
+////
 void storeSettingBlock(CByteBuffer *byteBuffer, u8 value)
 {
 	byteBuffer->PutU8(C64DEBUGGER_SETTING_BLOCK);
@@ -556,6 +565,12 @@ void C64DebuggerStoreSettings()
 	storeSettingU8(byteBuffer, "SelectedJoystick2", c64SettingsSelectedJoystick2);
 
 	//
+	storeSettingU8(byteBuffer, "EmulatedMouseCursorAutoHide", c64SettingsEmulatedMouseCursorAutoHide);
+	storeSettingBool(byteBuffer, "EmulatedMouseC64Enabled", c64SettingsEmulatedMouseC64Enabled);
+	storeSettingI32(byteBuffer, "EmulatedMouseC64Type", c64SettingsEmulatedMouseC64Type);
+	storeSettingU8(byteBuffer, "EmulatedMouseC64Port", c64SettingsEmulatedMouseC64Port);
+
+	//
 	storeSettingU8(byteBuffer, "DisassemblyBackgroundColor", c64SettingsDisassemblyBackgroundColor);
 	storeSettingU8(byteBuffer, "DisassemblyExecuteColor", c64SettingsDisassemblyExecuteColor);
 	storeSettingU8(byteBuffer, "DisassemblyNonExecuteColor", c64SettingsDisassemblyNonExecuteColor);
@@ -583,14 +598,16 @@ void C64DebuggerStoreSettings()
 	storeSettingI32(byteBuffer, "SnapshotsManagerStoreInterval", c64SettingsSnapshotsIntervalNumFrames);
 	storeSettingI32(byteBuffer, "SnapshotsManagerLimit", c64SettingsSnapshotsLimit);
 	storeSettingU8(byteBuffer, "SnapshotsManagerSaveZlibCompressionLevel", c64SettingsTimelineSaveZlibCompressionLevel);
-	
+
 	storeSettingBlock(byteBuffer, C64DEBUGGER_BLOCK_EOF);
 
 	// new settings
 	gApplicationDefaultConfig->SetBoolSkipConfigSave("DisassemblyPressCtrlToSetBreakpoint", &c64SettingsPressCtrlToSetBreakpoint);
 	gApplicationDefaultConfig->SetBoolSkipConfigSave("AlwaysUnpauseEmulationAfterReset", &c64SettingsAlwaysUnpauseEmulationAfterReset);
 	gApplicationDefaultConfig->SetBoolSkipConfigSave("EmulatorScreenBypassKeyboardShortcuts", &c64SettingsEmulatorScreenBypassKeyboardShortcuts);
-	
+	gApplicationDefaultConfig->SetBoolSkipConfigSave("RunDebuggerServerWebSockets", &c64SettingsRunDebuggerServerWebSockets);
+	gApplicationDefaultConfig->SetIntSkipConfigSave("RunDebuggerServerWebSocketsPort", &c64SettingsRunDebuggerServerWebSocketsPort);
+
 #if !defined(DEBUG_SETTINGS_FILE_PATH)
 	LOGD("C64D_SETTINGS_FILE_PATH is set to=%s", C64D_SETTINGS_FILE_PATH);
 	CSlrString *fileName = new CSlrString(C64D_SETTINGS_FILE_PATH);
@@ -667,10 +684,13 @@ void C64DebuggerRestoreSettings(uint8 settingsBlockType)
 	gApplicationDefaultConfig->GetBool("DisassemblyPressCtrlToSetBreakpoint", &c64SettingsPressCtrlToSetBreakpoint, false);
 	gApplicationDefaultConfig->GetBool("AlwaysUnpauseEmulationAfterReset", &c64SettingsAlwaysUnpauseEmulationAfterReset, true);
 	gApplicationDefaultConfig->GetBool("EmulatorScreenBypassKeyboardShortcuts", &c64SettingsEmulatorScreenBypassKeyboardShortcuts, true);
-
+	
 	gApplicationDefaultConfig->GetBool("DisassemblyUseNearLabels", &c64SettingsDisassemblyUseNearLabels, true);
 	gApplicationDefaultConfig->GetBool("DisassemblyUseNearLabelsForJumps", &c64SettingsDisassemblyUseNearLabelsForJumps, false);
 	gApplicationDefaultConfig->GetInt("DisassemblyNearLabelMaxOffset", &c64SettingsDisassemblyNearLabelMaxOffset, 6);
+
+	gApplicationDefaultConfig->GetBool("RunDebuggerServerWebSockets", &c64SettingsRunDebuggerServerWebSockets, false);
+	gApplicationDefaultConfig->GetInt("RunDebuggerServerWebSocketsPort", &c64SettingsRunDebuggerServerWebSocketsPort, 0x0DEB);
 }
 
 void C64DebuggerReadSettingsValues(CByteBuffer *byteBuffer, uint8 settingsBlockType)
@@ -937,7 +957,7 @@ void C64DebuggerSetSetting(const char *name, void *value)
 		// the setting will be updated later by c64PerformStartupTasksThreaded
 		if (viewC64->debugInterfaceC64 && viewC64->debugInterfaceC64->isRunning)
 		{
-			viewC64->viewC64MainMenu->InsertD64(c64SettingsPathToD64, false, c64SettingsAutoJmpFromInsertedDiskFirstPrg, 0, true);
+			viewC64->mainMenuHelper->InsertD64(c64SettingsPathToD64, false, c64SettingsAutoJmpFromInsertedDiskFirstPrg, 0, true);
 		}
 		return;
 	}
@@ -952,7 +972,7 @@ void C64DebuggerSetSetting(const char *name, void *value)
 		// the setting will be updated later by c64PerformStartupTasksThreaded
 		if (viewC64->debugInterfaceC64 && viewC64->debugInterfaceC64->isRunning)
 		{
-			viewC64->viewC64MainMenu->LoadPRG(c64SettingsPathToPRG, false, false, true, false);
+			viewC64->mainMenuHelper->LoadPRG(c64SettingsPathToPRG, false, false, true, false);
 		}
 		return;
 	}
@@ -965,7 +985,7 @@ void C64DebuggerSetSetting(const char *name, void *value)
 		// the setting will be updated later by c64PerformStartupTasksThreaded
 		if (viewC64->debugInterfaceC64 && viewC64->debugInterfaceC64->isRunning)
 		{
-			viewC64->viewC64MainMenu->LoadTape(c64SettingsPathToTAP, false, false, false);
+			viewC64->mainMenuHelper->LoadTape(c64SettingsPathToTAP, false, false, false);
 		}
 		return;
 	}
@@ -979,7 +999,7 @@ void C64DebuggerSetSetting(const char *name, void *value)
 		// the setting will be updated later by c64PerformStartupTasksThreaded
 		if (viewC64->debugInterfaceC64 && viewC64->debugInterfaceC64->isRunning)
 		{
-			viewC64->viewC64MainMenu->InsertCartridge(c64SettingsPathToCartridge, false);
+			viewC64->mainMenuHelper->InsertCartridge(c64SettingsPathToCartridge, false);
 		}
 		return;
 	}
@@ -1544,7 +1564,7 @@ void C64DebuggerSetSetting(const char *name, void *value)
 			// the setting will be updated later by c64PerformStartupTasksThreaded
 			if (viewC64->debugInterfaceAtari && viewC64->debugInterfaceAtari->isRunning)
 			{
-				viewC64->viewC64MainMenu->InsertATR(c64SettingsPathToATR, false, c64SettingsAutoJmpFromInsertedDiskFirstPrg, 0, true);
+				viewC64->mainMenuHelper->InsertATR(c64SettingsPathToATR, false, c64SettingsAutoJmpFromInsertedDiskFirstPrg, 0, true);
 			}
 			return;
 		}
@@ -1566,7 +1586,7 @@ void C64DebuggerSetSetting(const char *name, void *value)
 			// the setting will be updated later by c64PerformStartupTasksThreaded
 			if (viewC64->debugInterfaceAtari && viewC64->debugInterfaceAtari->isRunning)
 			{
-				viewC64->viewC64MainMenu->LoadXEX(c64SettingsPathToXEX, false, false, true);
+				viewC64->mainMenuHelper->LoadXEX(c64SettingsPathToXEX, false, false, true);
 			}
 			return;
 		}
@@ -1589,7 +1609,7 @@ void C64DebuggerSetSetting(const char *name, void *value)
 			// the setting will be updated later by c64PerformStartupTasksThreaded
 			if (viewC64->debugInterfaceAtari && viewC64->debugInterfaceAtari->isRunning)
 			{
-				viewC64->viewC64MainMenu->LoadCAS(c64SettingsPathToCAS, false, false, true);
+				viewC64->mainMenuHelper->LoadCAS(c64SettingsPathToCAS, false, false, true);
 			}
 			return;
 		}
@@ -1612,7 +1632,7 @@ void C64DebuggerSetSetting(const char *name, void *value)
 			// the setting will be updated later by c64PerformStartupTasksThreaded
 			if (viewC64->debugInterfaceAtari && viewC64->debugInterfaceAtari->isRunning)
 			{
-				viewC64->viewC64MainMenu->InsertAtariCartridge(c64SettingsPathToAtariCartridge, false, false, true);
+				viewC64->mainMenuHelper->InsertAtariCartridge(c64SettingsPathToAtariCartridge, false, false, true);
 			}
 			return;
 		}
@@ -1679,7 +1699,7 @@ void C64DebuggerSetSetting(const char *name, void *value)
 			// the setting will be updated later by c64PerformStartupTasksThreaded
 			if (viewC64->debugInterfaceNes && viewC64->debugInterfaceNes->isRunning)
 			{
-				viewC64->viewC64MainMenu->LoadNES(c64SettingsPathToNES, false);
+				viewC64->mainMenuHelper->LoadNES(c64SettingsPathToNES, false);
 			}
 			return;
 		}
@@ -1885,6 +1905,31 @@ void C64DebuggerSetSetting(const char *name, void *value)
 		u8 v = *((u8*)value);
 		c64SettingsSelectedJoystick2 = v;
 		viewC64->mainMenuBar->selectedJoystick2 = v;
+		return;
+	}
+	else if (!strcmp(name, "EmulatedMouseCursorAutoHide"))
+	{
+		bool v = *((bool*)value);
+		c64SettingsEmulatedMouseCursorAutoHide = v;
+		return;
+	}
+
+	else if (!strcmp(name, "EmulatedMouseC64Enabled"))
+	{
+		bool v = *((bool*)value);
+		c64SettingsEmulatedMouseC64Enabled = v;
+		return;
+	}
+	else if (!strcmp(name, "EmulatedMouseC64Type"))
+	{
+		i32 v = *((i32*)value);
+		c64SettingsEmulatedMouseC64Type = v;
+		return;
+	}
+	else if (!strcmp(name, "EmulatedMouseC64Port"))
+	{
+		u8 v = *((u8*)value);
+		c64SettingsEmulatedMouseC64Port = v;
 		return;
 	}
 	else if (!strcmp(name, "DisassemblyBackgroundColor"))

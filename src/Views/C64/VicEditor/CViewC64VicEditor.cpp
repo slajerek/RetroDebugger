@@ -307,6 +307,11 @@ void CViewC64VicEditor::UpdateReferenceLayers()
 	}
 }
 
+void CViewC64VicEditor::ResetPosition()
+{
+	this->SetPosition(this->posX, this->posY, this->posZ, this->sizeX, this->sizeY);
+}
+
 void CViewC64VicEditor::SetPosition(float posX, float posY, float posZ, float sizeX, float sizeY)
 {
 	LOGD("CViewC64VicEditor::SetPosition: %f %f", posX, posY);
@@ -428,6 +433,16 @@ void CViewC64VicEditor::UpdateDisplayRasterPos()
 	
 	if (!viewC64->viewC64VicDisplay->isCursorLocked)
 	{
+		if ( (guiMain->FindTopWindow(mouseX, mouseY) == this))
+		{
+			LOGG("CViewC64VicEditor::UpdateDisplayRasterPos: IsInsideView(%3.2f, %3.2f)=%s", mouseX, mouseY, STRBOOL(IsInsideView(mouseX, mouseY)));
+			
+			if (viewVicDisplay)
+			{
+				LOGG("CViewC64VicEditor::UpdateDisplayRasterPos: IsInsideScreen(%3.2f, %3.2f)=%s", mouseX, mouseY, STRBOOL(viewVicDisplay->IsInsideScreen(mouseX, mouseY)));
+			}
+		}
+
 		if ( (guiMain->FindTopWindow(mouseX, mouseY) == this)
 			&& IsInsideView(mouseX, mouseY)
 			&& viewVicDisplay->IsInsideScreen(mouseX, mouseY))
@@ -1687,7 +1702,7 @@ u8 CViewC64VicEditor::PaintPixel(int rx, int ry, u8 colorSource)
 	return result;
 }
 
-// pure pixel paiting (for external API)
+// pure pixel painting (for external API)
 u8 CViewC64VicEditor::PaintPixelColor(bool forceColorReplace, int rx, int ry, u8 color, int selectedChar)
 {
 	guiMain->LockMutex();
@@ -1704,7 +1719,7 @@ u8 CViewC64VicEditor::PaintPixelColor(bool forceColorReplace, int rx, int ry, u8
 	return result;
 }
 
-// pure pixel paiting (for external API)
+// pure pixel painting (for external API)
 u8 CViewC64VicEditor::PaintPixelColor(int rx, int ry, u8 color)
 {
 	guiMain->LockMutex();
@@ -2270,7 +2285,7 @@ void CViewC64VicEditor::EnsureCorrectScreenAndBitmapAddr()
 
 void CViewC64VicEditor::SetVicMode(bool isBitmapMode, bool isMultiColor, bool isExtendedBackground)
 {
-	this->SetVicModeRegsOnly(isBitmapMode, isMultiColor, isExtendedBackground);
+	this->SetVicModeRegsOnly(true, isBitmapMode, isMultiColor, isExtendedBackground);
 
 	vicii_cycle_state_t *viciiState = &(viewC64->viciiStateToShow);
 	viewVicDisplay->SetCurrentCanvas(isBitmapMode, isMultiColor, isExtendedBackground, 1);
@@ -2279,12 +2294,21 @@ void CViewC64VicEditor::SetVicMode(bool isBitmapMode, bool isMultiColor, bool is
 //	viewVicDisplaySmall->currentCanvas->SetViciiState(viciiState);
 }
 
-void CViewC64VicEditor::SetVicModeRegsOnly(bool isBitmapMode, bool isMultiColor, bool isExtendedBackground)
+void CViewC64VicEditor::SetVicModeRegsOnly(bool screenIsOn, bool isBitmapMode, bool isMultiColor, bool isExtendedBackground)
 {
 	vicii_cycle_state_t *viciiState = &(viewC64->viciiStateToShow);
 	
 	u8 d011 = viciiState->regs[0x11];
 	u8 d016 = viciiState->regs[0x16];
+	
+	if (screenIsOn)
+	{
+		d011 = (d011 & 0xEF) | 0x10;
+	}
+	else
+	{
+		d011 = (d011 & 0xEF);
+	}
 	
 	if (isBitmapMode)
 	{
@@ -2320,8 +2344,10 @@ void CViewC64VicEditor::SetVicModeRegsOnly(bool isBitmapMode, bool isMultiColor,
 void CViewC64VicEditor::SetVicAddresses(int vbank, int screenAddr, int charsetAddr, int bitmapAddr)
 {
 	LOGD("CViewVicEditor::SetVicAddresses: vbank=%04x screen=%04x charset=%04x bitmap=%04x", vbank, screenAddr, charsetAddr, bitmapAddr);
-	vbank = vbank >> 14;
-	c64_glue_set_vbank(vbank, 0);
+	int vbankNum = vbank >> 14;
+	
+	LOGD("vbankNum=%04x", vbankNum);
+	c64_glue_set_vbank(vbankNum, 0);
 
 	int screen = (screenAddr - vbank) / 0x0400;
 	int charset = (charsetAddr - vbank) / 0x0800;
@@ -2475,7 +2501,7 @@ void CViewC64VicEditor::Deserialize(CByteBuffer *byteBuffer, int version)
 //	viewC64->viewC64VicControl->btnModeExtended->SetOn(isExtColor);
 //	viewC64->viewC64VicControl->btnModeStandard->SetOn(!isExtColor);
 
-	SetVicModeRegsOnly(isBitmap, isMultiColor, isExtColor);
+	SetVicModeRegsOnly(true, isBitmap, isMultiColor, isExtColor);
 	
 	// set VBank
 	int vbank = byteBuffer->getInt();
@@ -2667,7 +2693,7 @@ void CViewC64VicEditor::ImportImage(CSlrString *filePath, bool onlyVicEditorForm
 	else if (!onlyVicEditorFormats)
 	{
 		// TODO: move this into common open file interface, path will be deleted by SystemDialogFileOpenSelected
-		viewC64->viewC64MainMenu->SystemDialogFileOpenSelected(filePath);
+		viewC64->mainMenuHelper->SystemDialogFileOpenSelected(filePath);
 	}
 	else
 	{
@@ -3681,7 +3707,7 @@ bool CViewC64VicEditor::ExportPNG(CSlrString *path)
 	CImageData *c64Screen = viewC64->debugInterfaceC64->GetScreenImageData();
 	CImageData *imageCrop = IMG_CropSupersampleImageRGBA(c64Screen,
 														 viewC64->debugInterfaceC64->screenSupersampleFactor,
-														 0, 0, 384, 272);
+														 0, 0, viewC64->debugInterfaceC64->GetScreenSizeX(), viewC64->debugInterfaceC64->GetScreenSizeY());
 
 	viewVicDisplay->RefreshScreenImageData(&(viewC64->viciiStateToShow), 255, 255);
 	layerVirtualSprites->SimpleScanSpritesInThisFrame();
@@ -4083,7 +4109,7 @@ bool CViewC64VicEditor::ImportVCE(CSlrString *path)
 	viewC64->debugInterfaceC64->SetPatchKernalFastBoot(true);
 	
 	viewC64->debugInterfaceC64->DetachCartridge();
-	//	viewC64->debugInterfaceC64->HardReset();
+	//	viewC64->debugInterfaceC64->ResetHard();
 
 	SYS_Sleep(350);
 	
@@ -4107,6 +4133,13 @@ bool CViewC64VicEditor::ImportVCE(CSlrString *path)
 	delete str;
 
 	return true;
+}
+
+void CViewC64VicEditor::ResetBorderType()
+{
+	u8 borderType = viewVicDisplay->showDisplayBorderType;
+	viewVicDisplay->SetShowDisplayBorderType(borderType);
+	ResetPosition();
 }
 
 // context menu
@@ -4202,14 +4235,17 @@ void CViewC64VicEditor::RenderContextMenuItems()
 		if (ImGui::MenuItem("Automatic grid lines", NULL, &viewVicDisplay->gridLinesAutomatic))
 		{
 			viewC64->config->SetBool("VicDisplayAutomaticGridLines", &viewVicDisplay->gridLinesAutomatic);
+			viewVicDisplay->UpdateGridLinesVisibleOnCurrentZoom();
 		}
 		if (ImGui::SliderFloat("Grid lines zoom level", &viewVicDisplay->gridLinesShowZoomLevel, 0.1f, 10.0f))
 		{
 			viewC64->config->SetFloat("VicDisplayAutomaticGridLinesShowZoomLevel", &viewVicDisplay->gridLinesShowZoomLevel);
+			viewVicDisplay->UpdateGridLinesVisibleOnCurrentZoom();
 		}
 		if (ImGui::SliderFloat("Pixel values zoom level", &viewVicDisplay->gridLinesShowValuesZoomLevel, 0.1f, 40.0f))
 		{
 			viewC64->config->SetFloat("VicDisplayAutomaticValuesShowZoomLevel", &viewVicDisplay->gridLinesShowValuesZoomLevel);
+			viewVicDisplay->UpdateGridLinesVisibleOnCurrentZoom();
 		}
 		ImGui::Separator();
 		char *buf = SYS_GetCharBuf();
@@ -4270,6 +4306,8 @@ bool CViewC64VicEditor::DeserializeLayout(CByteBuffer *byteBuffer, int version)
 		viewVicDisplay->scale = 0.20f;
 
 	UpdateDisplayFrame();
+	
+	viewVicDisplay->UpdateGridLinesVisibleOnCurrentZoom();
 	
 	LOGD("display posX=%f posY=%f", viewVicDisplay->posX, viewVicDisplay->posY);
 	return true;

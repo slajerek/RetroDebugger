@@ -175,8 +175,11 @@ public:
 	// helpers
 	void EnsureCorrectScreenAndBitmapAddr();
 	void SetVicMode(bool isBitmapMode, bool isMultiColor, bool isExtendedBackground);
-	void SetVicModeRegsOnly(bool isBitmapMode, bool isMultiColor, bool isExtendedBackground);
+	void SetVicModeRegsOnly(bool screenIsOn, bool isBitmapMode, bool isMultiColor, bool isExtendedBackground);
 	void SetVicAddresses(int vbank, int screenAddr, int charsetAddr, int bitmapAddr);
+	
+	void ResetPosition();
+	void ResetBorderType();
 	
 	// keyboard shortcuts
 	CSlrKeyboardShortcut *kbsVicEditorCreateNewPicture;
