@@ -475,6 +475,9 @@ bool CSnapshotsManager::CheckSnapshotRestore()
 		// restore chips
 		debugInterface->LoadChipsSnapshotSynced(snapshotToRestore->byteBuffer);
 		
+		// clear all history events after restored cycle (mem write history, execute history)
+		debugInterface->symbols->memory->ClearEventsAfterCycle(snapshotToRestore->cycle);
+
 		snapshotToRestore = NULL;
 		
 		LOGS("!!!!!!!!!!!!!!!!!!!!!!!!     restored, currentFrame=%d pauseNumFrame=%d currentCycle=%d", debugInterface->GetEmulationFrameNumber(), pauseNumFrame, debugInterface->GetMainCpuCycleCounter());
@@ -486,10 +489,7 @@ bool CSnapshotsManager::CheckSnapshotRestore()
 
 		// TODO: WTF c64d_reset_sound_clk?   generalize
 		c64d_reset_sound_clk();
-		
-		// clear all history events after restored cycle (mem write history, execute history)
-		debugInterface->symbols->memory->ClearEventsAfterCycle(snapshotToRestore->cycle);
-		
+				
 		gSoundEngine->UnlockMutex("CSnapshotsManager::CheckSnapshotRestore: restore snapshot");
 
 		LOGS("CSnapshotsManager::CheckSnapshotRestore: UnlockMutex (1)");

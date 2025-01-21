@@ -158,7 +158,7 @@ void CDebugMemory::CellExecute(int addr, uint8 opcode)
 
 void CDebugMemory::ClearEventsAfterCycle(u64 cycle)
 {
-	for (int i = 0; i < numCells; i++)
+	for (int i = 0; i < dataAdapter->AdapterGetDataLength(); i++)
 	{
 		memoryCells[i]->ClearEventsAfterCycle(cycle);
 	}
