@@ -225,6 +225,11 @@ static BYTE iecbus_cpu_read_conf1(CLOCK clock)
     return iecbus.cpu_port;
 }
 
+BYTE c64d_iecbus_cpu_peek_conf1()
+{
+	return iecbus.cpu_port;
+}
+
 void c64d_get_drivecpu_regs(int driveNum, uint8 *a, uint8 *x, uint8 *y, uint8 *p, uint8 *sp, uint16 *pc)
 {
 	drive_context_t *drv = drive_context[driveNum];

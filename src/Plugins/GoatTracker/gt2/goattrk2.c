@@ -905,12 +905,12 @@ void mousecommands(void)
       if ((mousex >= 49+10) && (mousex <= 52+10))
       {
         ntsc ^= 1;
-        sound_init(b, mr, writer, hardsid, sidmodel, ntsc, multiplier, catweasel, interpolate, customclockrate);
+        gtsound_init(b, mr, writer, hardsid, sidmodel, ntsc, multiplier, catweasel, interpolate, customclockrate);
       }
       if ((mousex >= 54+10) && (mousex <= 57+10))
       {
         sidmodel ^= 1;
-        sound_init(b, mr, writer, hardsid, sidmodel, ntsc, multiplier, catweasel, interpolate, customclockrate);
+        gtsound_init(b, mr, writer, hardsid, sidmodel, ntsc, multiplier, catweasel, interpolate, customclockrate);
       }
       if ((mousex >= 62+10) && (mousex <= 65+10)) editadsr();
       if ((mousex >= 67+10) && (mousex <= 68+10)) prevmultiplier();
@@ -1132,7 +1132,7 @@ void generalcommands(void)
     else
     {
       sidmodel ^= 1;
-      sound_init(b, mr, writer, hardsid, sidmodel, ntsc, multiplier, catweasel, interpolate, customclockrate);
+      gtsound_init(b, mr, writer, hardsid, sidmodel, ntsc, multiplier, catweasel, interpolate, customclockrate);
     }
     break;
 
@@ -1497,7 +1497,7 @@ void prevmultiplier(void)
   if (multiplier > 0)
   {
     multiplier--;
-    sound_init(b, mr, writer, hardsid, sidmodel, ntsc, multiplier, catweasel, interpolate, customclockrate);
+    gtsound_init(b, mr, writer, hardsid, sidmodel, ntsc, multiplier, catweasel, interpolate, customclockrate);
   }
 }
 
@@ -1506,7 +1506,7 @@ void nextmultiplier(void)
   if (multiplier < 16)
   {
     multiplier++;
-    sound_init(b, mr, writer, hardsid, sidmodel, ntsc, multiplier, catweasel, interpolate, customclockrate);
+    gtsound_init(b, mr, writer, hardsid, sidmodel, ntsc, multiplier, catweasel, interpolate, customclockrate);
   }
 }
 

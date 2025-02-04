@@ -118,7 +118,7 @@ public:
 
 	bool ButtonClicked(CGuiButton *button);
 	
-	void SaveAndGoBack();
+	void SaveKeyboardMapping();
 	
 	bool isShift;
 	

@@ -995,12 +995,14 @@ BYTE ciacore_peek(cia_context_t *cia_context, WORD addr)
     return (cia_context->c_cia[addr]);
 }
 
+BYTE c64d_iecbus_cpu_peek_conf1();
+extern int c64iec_active;
 
 // slaj: this is "real" peek, no changes to c64 state, only reads
 BYTE c64d_ciacore_peek(cia_context_t *cia_context, WORD addr)
 {
 	CLOCK rclk;
-	BYTE byte;
+	BYTE value;
 	
 	addr &= 0x0f;
 	
@@ -1008,31 +1010,60 @@ BYTE c64d_ciacore_peek(cia_context_t *cia_context, WORD addr)
 	
 	switch (addr)
 	{
+		case CIA_PRA:
+		{
+			BYTE userval;
+
+			value = ((cia_context->c_cia[CIA_PRA] | ~(cia_context->c_cia[CIA_DDRA])) & 0x3f);
+
+			if (c64iec_active) {
+//				value |= (*iecbus_callback_read)(maincpu_clk);	// note, this has side effects, do not use!
+				value |= c64d_iecbus_cpu_peek_conf1();
+			}
+
+//			if (!(cia_context->c_cia[CIA_DDRA] & 4)) {
+//				userval = read_userport_pa2(value);
+//				if (value != userval) {
+//					value &= (userval & 1) ? 0xff : 0xfb;
+//				}
+//			}
+//
+//			if (!(cia_context->c_cia[CIA_DDRA] & 8)) {
+//				userval = read_userport_pa3(value);
+//				if (value != userval) {
+//					value &= (userval & 1) ? 0xff : 0xf7;
+//				}
+//			}
+
+			return value;
+		}
+			
+			
 			
 		case CIA_PRB:             /* port B */
-			byte = (cia_context->read_ciapb)(cia_context);
+			value = (cia_context->read_ciapb)(cia_context);
 			if ((cia_context->c_cia[CIA_CRA] | cia_context->c_cia[CIA_CRB]) & 0x02)
 			{
 				if (cia_context->c_cia[CIA_CRA] & 0x02)
 				{
-					byte &= 0xbf;
+					value &= 0xbf;
 					if (((cia_context->c_cia[CIA_CRA] & 0x04)
 						 ? cia_context->tat : ciat_is_underflow_clk(cia_context->ta, rclk)))
 					{
-						byte |= 0x40;
+						value |= 0x40;
 					}
 				}
 				if (cia_context->c_cia[CIA_CRB] & 0x02)
 				{
-					byte &= 0x7f;
+					value &= 0x7f;
 					if (((cia_context->c_cia[CIA_CRB] & 0x04)
 						 ? cia_context->tbt : ciat_is_underflow_clk(cia_context->tb, rclk)))
 					{
-						byte |= 0x80;
+						value |= 0x80;
 					}
 				}
 			}
-			return byte;
+			return value;
 			break;
 			
 		case CIA_TOD_TEN: /* Time Of Day clock 1/10 s */
@@ -1055,7 +1086,7 @@ BYTE c64d_ciacore_peek(cia_context_t *cia_context, WORD addr)
 //	return ciacore_read(cia_context, addr);
 //	BYTE ciacore_read(cia_context_t *cia_context, WORD addr) {
 	
-	byte = 0xff;
+	value = 0xff;
 	
 	addr &= 0x0f;
 	

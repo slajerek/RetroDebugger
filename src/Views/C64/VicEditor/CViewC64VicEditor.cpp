@@ -4171,7 +4171,7 @@ void CViewC64VicEditor::RenderContextMenuItems()
 		ClearScreen();
 	}
 	ImGui::Separator();
-		
+	
 	if (ImGui::MenuItem("Import from file", kbsVicEditorOpenFile->cstr))
 	{
 		this->OpenDialogImportFile();
@@ -4181,12 +4181,12 @@ void CViewC64VicEditor::RenderContextMenuItems()
 	{
 		this->OpenDialogSaveVCE();
 	}
-
+	
 	if (ImGui::MenuItem("Export to file", kbsVicEditorExportFile->cstr))
 	{
 		this->OpenDialogExportFile();
 	}
-
+	
 	if (ImGui::MenuItem("Save as PNG", viewC64->mainMenuBar->kbsSaveScreenImageAsPNG->cstr))
 	{
 		this->SaveScreenshotAsPNG();
@@ -4209,9 +4209,9 @@ void CViewC64VicEditor::RenderContextMenuItems()
 	ImGui::MenuItem("C64 Sprite", kbsVicEditorToggleWindowSprite->cstr, &viewC64->viewC64Sprite->visible);
 	ImGui::MenuItem("C64 Palette", kbsVicEditorToggleWindowPalette->cstr, &viewC64->viewC64Palette->visible);
 	ImGui::MenuItem("C64 Layers", kbsVicEditorToggleWindowLayers->cstr, &viewC64->viewVicEditorLayers->visible);
-
+	
 	ImGui::Separator();
-
+	
 	// add layout parameters
 	bool colorChangeBlocksPaint = !c64SettingsVicEditorForceReplaceColor;
 	if (ImGui::MenuItem("Block paint on char color change", NULL, &colorChangeBlocksPaint))
@@ -4254,9 +4254,9 @@ void CViewC64VicEditor::RenderContextMenuItems()
 		SYS_ReleaseCharBuf(buf);
 		ImGui::EndMenu();
 	}
-
+	
 	ImGui::Separator();
-
+	
 	if (ImGui::MenuItem("Switch palette colors", kbsVicEditorSwitchPaletteColors->cstr))
 	{
 		kbsVicEditorSwitchPaletteColors->Run();
@@ -4269,7 +4269,7 @@ void CViewC64VicEditor::RenderContextMenuItems()
 	{
 		kbsVicEditorRectangleBrushSizeMinus->Run();
 	}
-
+	
 	if (ImGui::MenuItem("Brush Circle +", kbsVicEditorCircleBrushSizePlus->cstr))
 	{
 		kbsVicEditorCircleBrushSizePlus->Run();
@@ -4277,6 +4277,14 @@ void CViewC64VicEditor::RenderContextMenuItems()
 	if (ImGui::MenuItem("Brush Circle -", kbsVicEditorCircleBrushSizeMinus->cstr))
 	{
 		kbsVicEditorCircleBrushSizeMinus->Run();
+	}
+	
+	ImGui::Separator();
+	
+	if (ImGui::MenuItem("Reset zoom", NULL))
+	{
+		ZoomDisplay(1.0f);
+		viewVicDisplay->SetPosition(posX, posY, -1, sizeX, sizeY);
 	}
 }
 

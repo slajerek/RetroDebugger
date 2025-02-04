@@ -7,6 +7,13 @@
 //#include "C64DebuggerPluginGoatTracker.h"
 //#include "C64DebuggerPluginDNDK.h"
 //#include "C64DebuggerPluginCommando.h"
+//#include "C64DebuggerPluginShowPic.h"
+//#include "C64DebuggerPluginMapper.h"
+//#include "C64DebuggerPluginParallax.h"
+//#include "C64DebuggerPluginRasterBars.h"
+//#include "C64DebuggerPluginPicFader.h"
+//#include "C64DebuggerPluginGalaxy.h"
+//#include "C64DebuggerPluginConvolution.h"
 
 void C64D_InitPlugins()
 {
@@ -30,6 +37,28 @@ void C64D_InitPlugins()
 //	viewC64->RegisterEmulatorPlugin(plugin);
 
 //	C64DebuggerPluginCommando *plugin = new C64DebuggerPluginCommando(300, 30, 0, 500, 400);
-//	viewC64->RegisterEmulatorPlugin(plugin);	
+//	viewC64->RegisterEmulatorPlugin(plugin);
+	
+//	C64DebuggerPluginShowPic *plugin = new C64DebuggerPluginShowPic();
+//	viewC64->RegisterEmulatorPlugin(plugin);
+
+//	C64DebuggerPluginMapper *plugin = new C64DebuggerPluginMapper();
+//	viewC64->RegisterEmulatorPlugin(plugin);
+
+//	C64DebuggerPluginParallax *plugin = new C64DebuggerPluginParallax(300, 30, -1, 500, 400);
+//	viewC64->RegisterEmulatorPlugin(plugin);
+
+//	C64DebuggerPluginPicFader *plugin = new C64DebuggerPluginPicFader(300, 30, 500, 400);
+//	viewC64->RegisterEmulatorPlugin(plugin);
+
+//	C64DebuggerPluginRasterBars *plugin = new C64DebuggerPluginRasterBars(300, 30, 500, 400);
+//	viewC64->RegisterEmulatorPlugin(plugin);
+
+//	C64DebuggerPluginGalaxy *plugin = new C64DebuggerPluginGalaxy();
+//	viewC64->RegisterEmulatorPlugin(plugin);
+
+//	C64DebuggerPluginConvolution *plugin = new C64DebuggerPluginConvolution(300, 30, 500, 400);
+//	viewC64->RegisterEmulatorPlugin(plugin);
+
 }
 
