@@ -17,6 +17,7 @@ add_definitions(
 )
 
 set (CMAKE_CXX_FLAGS "-fpermissive")
+set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-implicit-function-declaration")
 
 find_package(PkgConfig REQUIRED)
 find_package(SDL2 REQUIRED)
