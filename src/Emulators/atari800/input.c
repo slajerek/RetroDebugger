@@ -23,6 +23,7 @@
 */
 
 #include "atari-config.h"
+#include "zlib.h"
 #include <string.h>
 #include <stdlib.h> /* for exit() */
 #include "antic.h"
@@ -43,9 +44,6 @@
 #endif
 #ifdef __PLUS
 #include "input_win.h"
-#endif
-#ifdef EVENT_RECORDING
-#include <zlib.h>
 #endif
 
 #ifdef DREAMCAST
