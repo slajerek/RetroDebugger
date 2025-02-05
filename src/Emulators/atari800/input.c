@@ -39,6 +39,8 @@
 #include "a-platform.h"
 #include "pokey.h"
 #include "util.h"
+#include "a-util.h"
+
 #ifndef CURSES_BASIC
 #include "screen.h" /* for Screen_atari */
 #endif

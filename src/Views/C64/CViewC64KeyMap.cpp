@@ -527,7 +527,7 @@ void CViewC64KeyMap::DoLogic()
 {
 }
 
-CViewC64KeyMapKeyData *CViewC64KeyMap::AddButtonKey(char *keyName1, char *keyName2, float x, float y, float width, int matrixRow, int matrixCol)
+CViewC64KeyMapKeyData *CViewC64KeyMap::AddButtonKey(const char *keyName1, const char *keyName2, float x, float y, float width, int matrixRow, int matrixCol)
 {
 	CViewC64KeyMapKeyData *keyData = new CViewC64KeyMapKeyData();
 	keyData->name1 = keyName1;

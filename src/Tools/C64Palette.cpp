@@ -26,7 +26,7 @@ uint8 c64d_palette_c64_color_codes[] = {
 	0x0F, 0x0F, 0x0F,
 };
 
-void C64SetPalette(char *paletteName)
+void C64SetPalette(const char *paletteName)
 {
 	for (std::vector<C64PaletteData *>::iterator it = c64AvailablePalettes.begin(); it != c64AvailablePalettes.end(); it++)
 	{
@@ -81,7 +81,7 @@ void C64SetPaletteOriginalColorCodes()
 	c64d_set_palette(c64d_palette_c64_color_codes);
 }
 
-C64PaletteData::C64PaletteData(char *paletteName, uint8 *palette)
+C64PaletteData::C64PaletteData(const char *paletteName, uint8 *palette)
 {
 	this->paletteName = paletteName;
 	this->palette = palette;

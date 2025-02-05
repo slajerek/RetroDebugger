@@ -230,6 +230,14 @@ BYTE c64d_iecbus_cpu_peek_conf1()
 	return iecbus.cpu_port;
 }
 
+void c64d_get_drivecpu_regs_internal(drive_context_t *drv, uint8 *a, uint8 *x, uint8 *y, uint8 *p, uint8 *sp, uint16 *pc);
+uint8 c64d_peek_mem_drive_internal(drive_context_t *drv, uint16 addr);
+void c64d_peek_memory_drive_internal(drive_context_t *drv, BYTE *memoryBuffer, int addrStart, int addrEnd);
+void c64d_copy_ram_memory_drive_internal(drive_context_t *drv, BYTE *memoryBuffer, int addrStart, int addrEnd);
+void c64d_peek_whole_map_drive_internal(drive_context_t *drv, uint8 *memoryBuffer);
+uint8 c64d_mem_ram_read_drive_internal(drive_context_t *drv, uint16 addr);
+void c64d_mem_ram_write_drive_internal(drive_context_t *drv, uint16 addr, uint8 value);
+
 void c64d_get_drivecpu_regs(int driveNum, uint8 *a, uint8 *x, uint8 *y, uint8 *p, uint8 *sp, uint16 *pc)
 {
 	drive_context_t *drv = drive_context[driveNum];

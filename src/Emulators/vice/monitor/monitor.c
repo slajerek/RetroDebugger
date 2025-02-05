@@ -1770,6 +1770,7 @@ void mon_clear_symbol_table(MEMSPACE mem)
 
 /* *** INSTRUCTION COMMANDS *** */
 
+void c64d_set_debug_mode(int newMode);
 
 void mon_instructions_step(int count)
 {

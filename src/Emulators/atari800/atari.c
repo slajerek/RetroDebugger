@@ -143,9 +143,9 @@
 #if SUPPORTS_CHANGE_VIDEOMODE
 #include "videomode.h"
 #endif
-#ifdef SDL
-//#include "sdl/init.h"
-#endif
+//#ifdef SDL
+#include "a-init.h"
+//#endif
 #ifdef DIRECTX
 #include "win32\main.h"
 #endif

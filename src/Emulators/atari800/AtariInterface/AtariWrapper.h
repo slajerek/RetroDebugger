@@ -77,4 +77,6 @@ extern volatile unsigned int atrdMainCpuDebugCycle;
 extern volatile unsigned int atrdMainCpuCycle;
 extern volatile unsigned int atrdMainCpuPreviousInstructionCycle;
 
+void c64d_show_message(char *message);
+
 #endif

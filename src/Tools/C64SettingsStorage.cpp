@@ -318,49 +318,49 @@ void storeSettingBlock(CByteBuffer *byteBuffer, u8 value)
 	byteBuffer->PutU8(value);
 }
 
-void storeSettingU8(CByteBuffer *byteBuffer, char *name, u8 value)
+void storeSettingU8(CByteBuffer *byteBuffer, const char *name, u8 value)
 {
 	byteBuffer->PutU8(C64DEBUGGER_SETTING_U8);
 	byteBuffer->PutString(name);
 	byteBuffer->PutU8(value);
 }
 
-void storeSettingU16(CByteBuffer *byteBuffer, char *name, u16 value)
+void storeSettingU16(CByteBuffer *byteBuffer, const char *name, u16 value)
 {
 	byteBuffer->PutU8(C64DEBUGGER_SETTING_U16);
 	byteBuffer->PutString(name);
 	byteBuffer->PutU16(value);
 }
 
-void storeSettingI32(CByteBuffer *byteBuffer, char *name, i32 value)
+void storeSettingI32(CByteBuffer *byteBuffer, const char *name, i32 value)
 {
 	byteBuffer->PutU8(C64DEBUGGER_SETTING_I32);
 	byteBuffer->PutString(name);
 	byteBuffer->PutI32(value);
 }
 
-void storeSettingFloat(CByteBuffer *byteBuffer, char *name, float value)
+void storeSettingFloat(CByteBuffer *byteBuffer, const char *name, float value)
 {
 	byteBuffer->PutU8(C64DEBUGGER_SETTING_FLOAT);
 	byteBuffer->PutString(name);
 	byteBuffer->PutFloat(value);
 }
 
-void storeSettingBool(CByteBuffer *byteBuffer, char *name, bool value)
+void storeSettingBool(CByteBuffer *byteBuffer, const char *name, bool value)
 {
 	byteBuffer->PutU8(C64DEBUGGER_SETTING_BOOL);
 	byteBuffer->PutString(name);
 	byteBuffer->PutBool(value);
 }
 
-void storeSettingString(CByteBuffer *byteBuffer, char *name, CSlrString *value)
+void storeSettingString(CByteBuffer *byteBuffer, const char *name, CSlrString *value)
 {
 	byteBuffer->PutU8(C64DEBUGGER_SETTING_STRING);
 	byteBuffer->PutString(name);
 	byteBuffer->PutSlrString(value);
 }
 
-void storeSettingCustom(CByteBuffer *byteBuffer, char *name, CByteBuffer *value)
+void storeSettingCustom(CByteBuffer *byteBuffer, const char *name, CByteBuffer *value)
 {
 	if (value != NULL)
 	{

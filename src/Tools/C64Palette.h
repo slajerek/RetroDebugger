@@ -9,8 +9,8 @@ class CSlrString;
 class C64PaletteData
 {
 public:
-	C64PaletteData(char *paletteName, uint8 *palette);
-	char *paletteName;
+	C64PaletteData(const char *paletteName, uint8 *palette);
+	const char *paletteName;
 	uint8 *palette;
 };
 

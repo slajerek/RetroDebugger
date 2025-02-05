@@ -54,6 +54,7 @@
 #include "uiapi.h"
 #include "vdrive.h"
 #include "video.h"
+#include "sound.h"
 #include "vsync.h"
 
 /* #define DBGINIT */

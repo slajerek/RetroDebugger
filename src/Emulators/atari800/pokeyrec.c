@@ -26,7 +26,7 @@
 #include "pokeyrec.h"
 #include "pokey.h"
 #include "a-util.h"
-#include "log.h"
+#include "a-log.h"
 #include "util.h"
 #include <string.h>
 #include <stdio.h>
