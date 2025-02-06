@@ -23,6 +23,7 @@
 #include "atari-config.h"
 #include "atari.h"
 #include "afile.h"
+#include "zlib.h"
 #include "binload.h"
 #include "a-cartridge.h"
 #include "cassette.h"
@@ -35,9 +36,6 @@
 #ifndef BASIC
 #include "a-ui.h"
 #endif /* BASIC */
-#ifdef HAVE_LIBZ
-#include <zlib.h>
-#endif
 #include <stdio.h>
 
 
