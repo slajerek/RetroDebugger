@@ -18,6 +18,8 @@ add_definitions(
 
 set (CMAKE_CXX_FLAGS "-fpermissive")
 set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-implicit-function-declaration")
+set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-macro-redefined")
+set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-incompatible-pointer-types")
 
 find_package(PkgConfig REQUIRED)
 find_package(SDL2 REQUIRED)
