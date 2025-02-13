@@ -170,7 +170,7 @@ int atari800_main(int argc, char **argv)
 #endif /* HAVE_WINDOWS_H */
 
 	/* initialise Atari800 core */
-	if (!Atari800_Initialise(&argc, argv))
+	if (Atari800_Initialise(&argc, (const char **)argv) != 0)
 		return 3;
 
 	/* main loop */

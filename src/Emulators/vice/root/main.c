@@ -216,7 +216,7 @@ int vice_main_program(int argc, const char **argv, int c64model)
 
     DBG(("main:initcmdline_check_args(argc:%d)\n", argc));
     if (initcmdline_check_args(argc, (char**)argv) < 0) {
-		LOGError("error parsing commandline args");
+		LOGError("VICE: error parsing commandline args");
 		//return -1;
     }
 

@@ -1538,8 +1538,8 @@ void CMainMenuHelper::LoadLabelsAndWatches(CSlrString *path, CDebugInterface *de
 		}
 		else
 		{
-			LOGError("dbg file does not exist, parsed path=%s", buf);
-			path->DebugPrint("error: dbg at origin path does not exist, path=");
+			LOGWarning("dbg file does not exist, parsed path=%s", buf);
+			path->DebugPrint("warning: dbg at origin path does not exist, path=");
 		}
 		
 		delete file;

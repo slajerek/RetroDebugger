@@ -220,7 +220,7 @@ int cmdline_parse(int *argc, char **argv)
 
             p = lookup(argv[i], &is_ambiguous);
             if (p == NULL) {
-				LOGError("Unknown option '%s'.\n", argv[i]);
+				LOGError("VICE: Unknown option '%s'.\n", argv[i]);
                 return -1;
             }
 

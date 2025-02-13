@@ -2425,10 +2425,7 @@ bool CDebugInterfaceVice::SaveFullSnapshotSynced(CByteBuffer *byteBuffer,
 void CDebugInterfaceVice::PrepareDriveForBasicRun()
 {
 	viewC64->viewDrive1541Browser->UpdateDriveDiskID();
-	
-	
-//	dataAdapterViceDrive1541->ReadS
-	
+
 	u8 buf[256];
 	dataAdapterViceDrive1541DiskContents->ReadSector(D64_BAM_TRACK-1, 0, buf);
 	
@@ -2610,6 +2607,7 @@ void CDebugInterfaceVice::ScanFolderForRoms(const char *folderPath)
 	const char *DOS1541_ROM_NAME = "dos1541";
 	const char *DOS1541II_ROM_NAME = "dos1541ii";
 	const char *DOS1541II_ROM_NAME_2 = "d1541ii";
+	const char *DOS1541II_ROM_NAME_3 = "dos1541II";
 
 	// kernal
 	sprintf(buf, "%s%c%s", folderPath, SYS_FILE_SYSTEM_PATH_SEPARATOR, KERNAL_ROM_NAME);
@@ -2693,6 +2691,17 @@ void CDebugInterfaceVice::ScanFolderForRoms(const char *folderPath)
 				delete c64SettingsPathToRomC64Drive1541ii;
 			c64SettingsPathToRomC64Drive1541ii = new CSlrString(buf);
 			foundDos1541ii = true;
+		}
+		else
+		{
+			sprintf(buf, "%s%c%s", folderPath, SYS_FILE_SYSTEM_PATH_SEPARATOR, DOS1541II_ROM_NAME_3);
+			if (SYS_FileExists(buf))
+			{
+				if (c64SettingsPathToRomC64Drive1541ii)
+					delete c64SettingsPathToRomC64Drive1541ii;
+				c64SettingsPathToRomC64Drive1541ii = new CSlrString(buf);
+				foundDos1541ii = true;
+			}
 		}
 	}
 	if (!SYS_FileExists(c64SettingsPathToRomC64Drive1541ii))
