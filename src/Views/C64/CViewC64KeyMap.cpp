@@ -56,18 +56,6 @@ CViewC64KeyMap::CViewC64KeyMap(float posX, float posY, float posZ, float sizeX, 
 	float buttonGapY = 5.0f;
 	float textOffsetY = 4.5f;
 	
-//	btnBack = new CGuiButton(NULL, NULL,
-//								   px, py, posZ, buttonSizeX, buttonSizeY,
-//								   new CSlrString("SET AS DEFAULT"),
-//								   FONT_ALIGN_CENTER, buttonSizeX/2, textOffsetY,
-//								   font, fontScale,
-//								   1.0, 1.0, 1.0, 1.0,
-//								   0.3, 0.3, 0.3, 1.0,
-//								   this);
-//	this->AddGuiElement(btnBack);
-	
-	px += buttonSizeX + buttonGap;
-
 	btnImportKeyMap = new CGuiButton(NULL, NULL,
 							 px, py, posZ, buttonSizeX, buttonSizeY,
 							 new CSlrString("IMPORT"),
@@ -366,10 +354,6 @@ void CViewC64KeyMap::SetPosition(float posX, float posY, float posZ, float sizeX
 	float buttonGap = 8.0f;
 	float buttonGapY = 5.0f;
 	
-//	btnBack->SetPosition(px, py, posZ, buttonSizeX, buttonSizeY);
-	
-	px += buttonSizeX + buttonGap;
-
 	btnImportKeyMap->SetPosition(px, py, posZ, buttonSizeX, buttonSizeY);
 
 	px += buttonSizeX + buttonGap;
@@ -393,12 +377,6 @@ void CViewC64KeyMap::SetPosition(float posX, float posY, float posZ, float sizeX
 
 bool CViewC64KeyMap::ButtonClicked(CGuiButton *button)
 {
-//	if (button == btnBack)
-//	{
-//		SaveKeyboardMapping();
-//		return true;
-//	}
-	
 	if (button == btnAssignKey)
 	{
 		AssignKey();

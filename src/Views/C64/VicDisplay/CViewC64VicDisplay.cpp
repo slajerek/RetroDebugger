@@ -168,6 +168,7 @@ void CViewC64VicDisplay::Initialize(CDebugInterfaceC64 *debugInterface)
 	this->isCursorLocked = false;
 	
 	rasterCursorPosX = rasterCursorPosY = -9999;
+	rasterCursorAddr = -1;
 	
 	// init all types of canvas
 	this->canvasBlank = new C64VicDisplayCanvasBlank(this);
@@ -2044,6 +2045,7 @@ bool CViewC64VicDisplay::ScrollMemoryAndDisassemblyToRasterPosition(float rx, fl
 
 	// check if outside
 	int addr = -1;
+	rasterCursorAddr = -1;
 	
 	if (autoScrollMode == AUTOSCROLL_DISASSEMBLY_RASTER_PC)
 	{
@@ -2058,7 +2060,6 @@ bool CViewC64VicDisplay::ScrollMemoryAndDisassemblyToRasterPosition(float rx, fl
 		return false;
 	}
 
-	
 	if (autoScrollMode == AUTOSCROLL_DISASSEMBLY_COLOUR_ADDRESS)
 	{
 		addr = GetColorAddressForRaster(rx, ry);
@@ -2087,6 +2088,7 @@ bool CViewC64VicDisplay::ScrollMemoryAndDisassemblyToRasterPosition(float rx, fl
 	
 	rasterCursorPosX = rx;
 	rasterCursorPosY = ry;
+	rasterCursorAddr = addr;
 	
 	viewC64->viewC64MemoryDataDump->ScrollToAddress(addr, true);
 	

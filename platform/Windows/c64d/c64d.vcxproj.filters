@@ -3509,9 +3509,6 @@
     <ClCompile Include="..\..\..\src\Emulators\vice\arch\c64-hardsid.c">
       <Filter>Source Files\src\Emulators\vice\arch</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\src\Screens\CViewBreakpointsOLD.cpp">
-      <Filter>Source Files\src\Screens</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\..\src\Views\CViewBreakpoints.cpp">
       <Filter>Source Files\src\Views</Filter>
     </ClCompile>
@@ -7590,9 +7587,6 @@
     </ClInclude>
     <ClInclude Include="..\src.Windows\hardsid\wininpoutp.h">
       <Filter>Source Files\src.Windows\hardsid</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\src\Screens\CViewBreakpointsOLD.h">
-      <Filter>Source Files\src\Screens</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\src\Views\CViewBreakpoints.h">
       <Filter>Source Files\src\Views</Filter>

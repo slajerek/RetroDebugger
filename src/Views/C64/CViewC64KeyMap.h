@@ -107,7 +107,6 @@ public:
 	void UpdateFromKeyMap(C64KeyMap *keyMap);
 	C64KeyMap *keyMap;
 	
-//	CGuiButton *btnBack;
 	CGuiButton *btnExportKeyMap;
 	CGuiButton *btnImportKeyMap;
 	

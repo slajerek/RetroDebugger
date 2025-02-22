@@ -1288,7 +1288,6 @@
     <ClCompile Include="..\..\..\src\RetroDebuggerAppInit.cpp" />
     <ClCompile Include="..\..\..\src\Screens\CMainMenuHelper.cpp" />
     <ClCompile Include="..\..\..\src\Screens\CViewAbout.cpp" />
-    <ClCompile Include="..\..\..\src\Screens\CViewBreakpointsOLD.cpp" />
     <ClCompile Include="..\..\..\src\Screens\CViewC64.cpp" />
     <ClCompile Include="..\..\..\src\Screens\CViewColodore.cpp" />
     <ClCompile Include="..\..\..\src\Screens\CViewKeyboardShortcuts.cpp" />
@@ -2646,7 +2645,6 @@
     <ClInclude Include="..\..\..\src\RetroDebuggerAppInit.h" />
     <ClInclude Include="..\..\..\src\Screens\CMainMenuHelper.h" />
     <ClInclude Include="..\..\..\src\Screens\CViewAbout.h" />
-    <ClInclude Include="..\..\..\src\Screens\CViewBreakpointsOLD.h" />
     <ClInclude Include="..\..\..\src\Screens\CViewC64.h" />
     <ClInclude Include="..\..\..\src\Screens\CViewColodore.h" />
     <ClInclude Include="..\..\..\src\Screens\CViewKeyboardShortcuts.h" />

@@ -16,7 +16,7 @@ add_definitions(
     -DIMGUI_IMPL_OPENGL_LOADER_GL3W
 )
 
-set (CMAKE_CXX_FLAGS "-fpermissive")
+set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fpermissive")
 set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-implicit-function-declaration")
 set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-macro-redefined")
 set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-incompatible-pointer-types")
@@ -1400,7 +1400,6 @@ add_executable(retrodebugger
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Screens/CViewKeyboardShortcuts.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Screens/VicEditor/C64DisplayListCodeGenerator.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Screens/VicEditor/CVicEditorTool.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/Screens/CViewBreakpointsOLD.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Screens/CViewSettingsMenu.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Screens/CViewAbout.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Screens/CViewSnapshots.cpp"

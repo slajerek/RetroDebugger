@@ -59,6 +59,15 @@ extern bool c64dSkipBogusPageOffsetReadOnSTA;
 
 void PLUGIN_GoatTrackerSetVisible(bool isVisible);
 
+// move me to ImGui namespace
+void ImGuiTextCentered(std::string text) {
+	auto windowWidth = ImGui::GetWindowSize().x;
+	auto textWidth   = ImGui::CalcTextSize(text.c_str()).x;
+
+	ImGui::SetCursorPosX((windowWidth - textWidth) * 0.5f);
+	ImGui::Text(text.c_str());
+}
+
 CMainMenuBar::CMainMenuBar()
 {
 	selectedDebugInterface = NULL;
@@ -2894,7 +2903,7 @@ void CMainMenuBar::RenderImGui()
 		{
 			ImGui::Begin("Retro Debugger v" RETRODEBUGGER_VERSION_STRING " About", &show_retro_debugger_about);
 			ImGui::Text("Retro Debugger is a multiplatform debugger APIs host with ImGui implementation.");
-			ImGui::Text("(C) 2016-2024 Marcin 'slajerek' Skoczylas, see README for libraries copyright.");
+			ImGui::Text("(C) 2016-2025 Marcin 'slajerek' Skoczylas, see README for libraries copyright.");
 			ImGui::Separator();
 			ImGui::Text("");
 			ImGui::Text("If you like this tool and you feel that you would like to share with me some beers,");
@@ -2951,19 +2960,22 @@ void CMainMenuBar::RenderImGui()
 	if (layoutData && openPopupImGuiWorkaround)
 	{
 		layoutName[0] = 0x00;
+		message[0] = 0x00;
 		doNotUpdateViewsPosition = false;
 		ImGui::OpenPopup("New Workspace");
 	}
 	
-	if (ImGui::BeginPopupModal("New Workspace", NULL, waitingForNewLayoutKeyShortcut ? ImGuiWindowFlags_NoResize : ImGuiWindowFlags_AlwaysAutoResize))
+	if (ImGui::BeginPopupModal("New Workspace", NULL, ImGuiWindowFlags_AlwaysAutoResize)) //waitingForNewLayoutKeyShortcut ? ImGuiWindowFlags_NoResize : ImGuiWindowFlags_AlwaysAutoResize))
 	{
 		if (openPopupImGuiWorkaround)
 			ImGui::SetKeyboardFocusHere();
 
+		ImGui::Dummy(ImVec2(350.0f, 0.0f));
+
 		if (waitingForNewLayoutKeyShortcut == false)
 		{
 			bool saveLayout = false;
-			if (ImGui::InputText("Name##NewWorkspacePopup", layoutName, 127, ImGuiInputTextFlags_EnterReturnsTrue))
+			if (ImGui::InputText("Name##NewWorkspacePopup", layoutName, 200, ImGuiInputTextFlags_EnterReturnsTrue))
 			{
 				saveLayout = true;
 			}
@@ -2977,13 +2989,16 @@ void CMainMenuBar::RenderImGui()
 
 			if (ImGui::Button("Assign keyboard shortcut"))
 			{
+				message[0] = 0;
 				waitingForNewLayoutKeyShortcut = true;
+				guiMain->AddGlobalKeyboardCallback(this);
 			}
 
 			if (ImGui::Button("Cancel"))
 			{
 				delete layoutData;
 				layoutData = NULL;
+				guiMain->RemoveGlobalKeyboardCallback(this);
 				ImGui::CloseCurrentPopup();
 			}
 			
@@ -3021,15 +3036,28 @@ void CMainMenuBar::RenderImGui()
 				}
 				layoutData = NULL;
 				
+				guiMain->RemoveGlobalKeyboardCallback(this);
 				ImGui::CloseCurrentPopup();
 			}
 		}
 		else
 		{
 			// waiting for key shortcut
+			ImGui::NewLine();
+			ImGuiTextCentered("Assigning workspace key shortcut");
+			ImGuiTextCentered("Now press the shortcut key");
+			ImGui::NewLine();
+
+			if (message[0] != 0)
+			{
+				ImGuiTextCentered(message);
+				ImGui::NewLine();
+			}
 			
-			ImGui::Text("Hover here your cursor");
-			ImGui::Text ("and press a new shortcut key");
+			if (ImGui::Button("Cancel"))
+			{
+				waitingForNewLayoutKeyShortcut = false;
+			}
 		}
 		
 		openPopupImGuiWorkaround = false;
@@ -3039,19 +3067,12 @@ void CMainMenuBar::RenderImGui()
 
 }
 
-bool CMainMenuBar::KeyDown(u32 keyCode, bool isShift, bool isAlt, bool isControl, bool isSuper)
+void CMainMenuBar::GlobalPreKeyDownCallback(u32 keyCode, bool isShift, bool isAlt, bool isControl, bool isSuper)
 {
-	LOGI("CMainMenuBar::KeyDown: keyCode=%d %s %s %s %s\n", keyCode, STRBOOL(isShift), STRBOOL(isAlt), STRBOOL(isControl), STRBOOL(isSuper));
-	if (keyCode == MTKEY_ESC && guiMain->IsViewFullScreen())
-	{
-		guiMain->SetViewFullScreen(SetFullScreenMode::ViewLeaveFullScreen, NULL);
-		return true;
-	}
-	
 	if (waitingForNewLayoutKeyShortcut)
 	{
 		if (SYS_IsKeyCodeSpecial(keyCode))
-			return false;
+			return;
 		
 		if (layoutData->keyShortcut)
 		{
@@ -3063,18 +3084,24 @@ bool CMainMenuBar::KeyDown(u32 keyCode, bool isShift, bool isAlt, bool isControl
 		CSlrKeyboardShortcut *findShortcut = guiMain->keyboardShortcuts->FindShortcut(KBZONE_GLOBAL, keyCode, isShift, isAlt, isControl, isSuper);
 		if (findShortcut != NULL)
 		{
-			char *buf = SYS_GetCharBuf();
-			sprintf(buf, "Keyboard shortcut %s is already assigned to %s", findShortcut->cstr, findShortcut->name);
-			guiMain->ShowMessageBox("Please revise", buf);
-			SYS_ReleaseCharBuf(buf);
-			waitingForNewLayoutKeyShortcut = false;
-			return true;
+			sprintf(message, "%s is already assigned to %s", findShortcut->cstr, findShortcut->name);
+			return;
 		}
 
 		// keyboard shortcut name will be updated on save
 		layoutData->keyShortcut = new CSlrKeyboardShortcut(KBZONE_GLOBAL, "", keyCode, isShift, isAlt, isControl, guiMain->isSuperPressed, guiMain->layoutManager);
 		
 		waitingForNewLayoutKeyShortcut = false;
+		return;
+	}
+}
+
+bool CMainMenuBar::KeyDown(u32 keyCode, bool isShift, bool isAlt, bool isControl, bool isSuper)
+{
+	LOGI("CMainMenuBar::KeyDown: keyCode=%d %s %s %s %s\n", keyCode, STRBOOL(isShift), STRBOOL(isAlt), STRBOOL(isControl), STRBOOL(isSuper));
+	if (keyCode == MTKEY_ESC && guiMain->IsViewFullScreen())
+	{
+		guiMain->SetViewFullScreen(SetFullScreenMode::ViewLeaveFullScreen, NULL);
 		return true;
 	}
 	

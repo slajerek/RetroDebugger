@@ -175,6 +175,7 @@ public:
 	void CopyCurrentViciiStateAndUnlock();
 	
 	float rasterCursorPosX, rasterCursorPosY;
+	int rasterCursorAddr;
 	void UpdateRasterCursorPos();
 	void ClearRasterCursorPos();
 	

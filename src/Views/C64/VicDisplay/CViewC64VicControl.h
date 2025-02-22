@@ -108,7 +108,8 @@ public:
 	float txtCursorPosX, txtCursorPosY;
 	float txtCursorCharPosX, txtCursorCharPosY;
 	
-	CGuiLabel *lblAutolockText;
+	float cursorAddrTextX;
+	float cursorAddrTextY;
 	CGuiButton *btnAutolockScrollMode;
 	
 	CSlrString *txtAutolockRasterPC;

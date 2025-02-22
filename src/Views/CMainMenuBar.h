@@ -7,6 +7,7 @@
 #include "CGuiMain.h"
 #include "CGuiViewProgressBarWindow.h"
 #include "CGuiViewSearch.h"
+#include "CGlobalKeyboardCallback.h"
 #include <vector>
 
 class CByteBuffer;
@@ -51,7 +52,7 @@ enum SystemDialogOperation : u8
 };
 
 
-class CMainMenuBar : public CSlrKeyboardShortcutCallback, public CSystemFileDialogCallback, CUiMessageBoxCallback, public CGuiViewProgressBarWindowCallback, public CGuiViewSearchCallback
+class CMainMenuBar : public CSlrKeyboardShortcutCallback, public CSystemFileDialogCallback, CUiMessageBoxCallback, public CGuiViewProgressBarWindowCallback, public CGuiViewSearchCallback, CGlobalKeyboardCallback
 {
 public:
 	CMainMenuBar();
@@ -75,6 +76,9 @@ public:
 	bool waitingForNewLayoutKeyShortcut;
 	virtual bool KeyDown(u32 keyCode, bool isShift, bool isAlt, bool isControl, bool isSuper);
 
+	// for keyboard shortcut
+	virtual void GlobalPreKeyDownCallback(u32 keyCode, bool isShift, bool isAlt, bool isControl, bool isSuper);
+	
 	std::vector<const char *> sidTypes;
 	std::vector<const char *> *c64ModelTypeNames;
 	std::vector<int> *c64ModelTypeIds;
@@ -310,6 +314,7 @@ public:
 	virtual void GuiViewSearchCompleted(u32 index);
 	
 	//
+	char message[1024];
 	
 };
 

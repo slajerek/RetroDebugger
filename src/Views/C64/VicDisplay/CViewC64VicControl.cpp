@@ -51,6 +51,9 @@ CViewC64VicControl::CViewC64VicControl(const char *name, float posX, float posY,
 	forceDataFromRam = false;
 	
 	//
+	cursorAddrTextX = 0.0f;
+	cursorAddrTextY = 0.0f;
+
 	txtAutolockRasterPC = new CSlrString("RASTER");
 	txtAutolockBitmapAddress = new CSlrString("BITMAP");
 	txtAutolockTextAddress = new CSlrString("SCREEN");
@@ -355,14 +358,9 @@ void CViewC64VicControl::AddGuiButtons()
 
 	//
 	float fs = buttonSizeX*2+gapX;
-	
-	lblAutolockText =	new CGuiLabel(new CSlrString("Show addr for:"), px, py, posZ, fs, fontHeight, LABEL_ALIGNED_LEFT, font, fontScale,
-									  0.0f, 0.0f, 0.0f, 0.0f,
-									  1.0f, 1.0f, 1.0f, 1.0f,
-									  0.0f, 0.0f, NULL);
-	lblAutolockText->image = NULL;
-	lblAutolockText->drawFocusBorder = false;
-	this->AddGuiElement(lblAutolockText);
+
+	cursorAddrTextX = px + fontScale * 6.0f;
+	cursorAddrTextY = py;
 	
 	btnAutolockScrollMode = new CGuiButton(NULL, NULL, 
 											 px, py, posZ, fs, buttonSizeY,
@@ -425,7 +423,6 @@ void CViewC64VicControl::HideGuiButtons()
 	btnToggleBreakpoint->visible = false;
 	btnLockCursor->visible = false;
 	btnAutolockScrollMode->visible = false;
-	lblAutolockText->visible = false;
 }
 
 void CViewC64VicControl::SetAutoScrollModeUI(int newMode)
@@ -672,12 +669,12 @@ void CViewC64VicControl::SetPosition(float posX, float posY, float posZ, float s
 	float listGapX = 1.0f;
 	
 	lblScreenAddress->SetPosition(px, py, posZ, lblScreenAddress->sizeX, lblScreenAddress->sizeY);
-	lblScreenAddress->SetFontSize(fontScale);
+	lblScreenAddress->SetFontSize(fontScale*3.0f);
 
 	px += listSizeX;
 	
 	lblCharsetAddress->SetPosition(px, py, posZ, lblCharsetAddress->sizeX, lblCharsetAddress->sizeY);
-	lblCharsetAddress->SetFontSize(fontScale);
+	lblCharsetAddress->SetFontSize(fontScale*3.0f);
 
 	px = startX + listGapX;
 	py += lblScreenAddress->sizeY;
@@ -695,7 +692,7 @@ void CViewC64VicControl::SetPosition(float posX, float posY, float posZ, float s
 	
 	px = startX + listSizeX + listGapX;
 	lblBitmapAddress->SetPosition(px, py, posZ, lblBitmapAddress->sizeX, lblBitmapAddress->sizeY);
-	lblBitmapAddress->SetFontSize(fontScale);
+	lblBitmapAddress->SetFontSize(fontScale*3.0f);
 
 	py += lblBitmapAddress->sizeY;
 	
@@ -706,10 +703,6 @@ void CViewC64VicControl::SetPosition(float posX, float posY, float posZ, float s
 	px = startX + listGapX;
 	py += listBitmapSizeY + listGapY;
 	
-	
-	//py += 4.0f;
-//	py -= 18.0f;
-
 	btnApplyScrollRegister->SetPosition(px, py, posZ, buttonSizeX, buttonSizeY);
 	btnApplyScrollRegister->SetFont(font, fontScale);
 
@@ -753,18 +746,15 @@ void CViewC64VicControl::SetPosition(float posX, float posY, float posZ, float s
 	txtCursorCharPosX = txtCursorPosX;
 	txtCursorCharPosY = py + (1.0f + 5.0f) * scale;
 	
-	py += 14.0f * scale; //buttonSizeY + gapY;
-	
+	py += buttonSizeY + gapY;
 	
 	px = startX + listGapX;
-	lblAutolockText->SetPosition(px, py, posZ, buttonSizeX*2 + gapX, buttonSizeY);
-	lblAutolockText->SetFontSize(fontScale);
-	
-	py += 6.0f * scale;
-	btnAutolockScrollMode->SetPosition(px, py, posZ, buttonSizeX*2+gapX, fontHeight*2);
+	cursorAddrTextX = px + fontScale * 45.4f;
+	cursorAddrTextY = py + buttonSizeY * 0.33f;
+	btnAutolockScrollMode->SetPosition(px, py, posZ, buttonSizeX, buttonSizeY);
 	btnAutolockScrollMode->SetFont(font, fontScale);
 
-	btnLockCursor->visible = false; //SetPosition(px, py, posZ, buttonSizeX*2 + gapX, buttonSizeY);
+	btnLockCursor->visible = false;
 	
 }
 
@@ -1058,6 +1048,13 @@ void CViewC64VicControl::Render()
 			sprintf(buf, "%3d %3d", cx, cy);
 		}
 		this->font->BlitText(buf, txtCursorCharPosX, txtCursorCharPosY, posZ, fontScale);
+	}
+	
+	//
+	if (vicDisplay->rasterCursorAddr >= 0)
+	{
+		sprintf(buf, "%04x", vicDisplay->rasterCursorAddr);
+		this->font->BlitText(buf, cursorAddrTextX, cursorAddrTextY, posZ, fontScale);
 	}
 	
 	//
