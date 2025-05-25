@@ -40,8 +40,10 @@
 /* Types */
 
 #ifndef __cplusplus
+#if !defined(__STDC_VERSION__) || __STDC_VERSION__ < 202311L
 #ifndef bool
 typedef int bool;
+#endif
 #endif
 #endif
 
