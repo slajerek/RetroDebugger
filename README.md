@@ -73,7 +73,6 @@ You need SDL2 and GLEW installed:
 
 Put MTEngineSDL and RetroDebugger folders into the same folder and then compile.
 
-
 ```
 cd RetroDebbugger
 ./build-linux.sh
