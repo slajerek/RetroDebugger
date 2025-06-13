@@ -574,7 +574,7 @@ void CDebugSymbolsSegment::AddWatch(int address, int numberOfValues, CSlrString 
 			representation = WATCH_REPRESENTATION_BIN;
 		}
 		else if (strRepresentation->CompareWith("bin32")
-				 || strRepresentation->CompareWith("bin32"))
+				 || strRepresentation->CompareWith("b32"))
 		{
 			representation = WATCH_REPRESENTATION_BIN;
 		}
