@@ -384,7 +384,7 @@ void CDebugInterfaceVice::UpdateSidDataHistory()
 	
 	sidDataHistory.push_front(sidData);
 	
-	sidDataHistoryCurrentStep++;
+	sidDataHistoryCurrentStep = sidDataHistoryCurrentStep + 1;
 	
 	if (sidDataHistoryCurrentStep >= sidDataHistorySteps)
 	{
@@ -1874,8 +1874,7 @@ static void tape_attach_trap(WORD addr, void *v)
 {
 	char *filePath = (char*)v;
 	tape_image_attach(1, filePath);
-
-	SYS_ReleaseCharBuf(filePath);
+	delete [] filePath;
 }
 
 static void tape_detach_trap(WORD addr, void *v)
@@ -2819,11 +2818,11 @@ void CDebugInterfaceVice::DumpRomsToFolder(const char *folderPath)
 
 void CDebugInterfaceVice::ReadEmbeddedRoms()
 {
-	CByteBuffer::ReadFromFileOrClearBuffer(c64SettingsPathToRomC64Kernal, c64memrom_kernal64_rom, C64_KERNAL_ROM_SIZE);
-	CByteBuffer::ReadFromFileOrClearBuffer(c64SettingsPathToRomC64Basic, c64memrom_basic64_rom, C64_BASIC_ROM_SIZE);
+	CByteBuffer::ReadBufferFromFile(c64SettingsPathToRomC64Kernal, c64memrom_kernal64_rom, C64_KERNAL_ROM_SIZE);
+	CByteBuffer::ReadBufferFromFile(c64SettingsPathToRomC64Basic, c64memrom_basic64_rom, C64_BASIC_ROM_SIZE);
 	CByteBuffer::ReadBufferFromFile(c64SettingsPathToRomC64Chargen, mem_chargen_rom, C64_CHARGEN_ROM_SIZE);
-	CByteBuffer::ReadFromFileOrClearBuffer(c64SettingsPathToRomC64Drive1541, drive_rom1541_embedded, DRIVE_ROM1541_SIZE);
-	CByteBuffer::ReadFromFileOrClearBuffer(c64SettingsPathToRomC64Drive1541ii, drive_rom1541ii_embedded, DRIVE_ROM1541II_SIZE);
+	CByteBuffer::ReadBufferFromFile(c64SettingsPathToRomC64Drive1541, drive_rom1541_embedded, DRIVE_ROM1541_SIZE);
+	CByteBuffer::ReadBufferFromFile(c64SettingsPathToRomC64Drive1541ii, drive_rom1541ii_embedded, DRIVE_ROM1541II_SIZE);
 }
 
 void CDebugInterfaceVice::CheckLoadedRoms()
@@ -2867,7 +2866,7 @@ void CDebugInterfaceVice::CheckLoadedRoms()
 		}
 		else
 		{
-			viewC64->ShowMessageError("C64 ROM files are undefined. Please navigate to Settings and select the appropriate C64 ROMs folder to proceed.");
+//			viewC64->ShowMessageError("C64 ROM files are undefined. Please navigate to Settings and select the appropriate C64 ROMs folder to proceed.");
 		}
 	}
 	

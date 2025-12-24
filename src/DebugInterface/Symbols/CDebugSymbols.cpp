@@ -1603,7 +1603,7 @@ void CDebugSymbols::CreateDefaultSegment()
 // virtual method to create specific symbols segment (for C64 including raster line, VIC, CIA, NMI irqs, for Drive including VIA irqs, etc.)
 CDebugSymbolsSegment *CDebugSymbols::CreateNewDebugSymbolsSegment(CSlrString *name)
 {
-	int segmentNum = segments.size();
+	int segmentNum = (int)segments.size();
 	return CreateNewDebugSymbolsSegment(name, segmentNum);
 }
 

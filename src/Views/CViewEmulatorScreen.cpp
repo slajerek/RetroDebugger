@@ -9,6 +9,11 @@
 #include "CMainMenuBar.h"
 #include "C64Tools.h"
 
+// TODO: generalize CRenderBackendOpenGL4
+#include "CRenderBackendOpenGL4.h"
+#include "CRenderShaderCRTMonitorOpenGL4.h"
+#include "CRenderShaderOpenGL4ShaderToy.h"
+
 CViewEmulatorScreen::CViewEmulatorScreen(const char *name, float posX, float posY, float posZ, float sizeX, float sizeY,
 										 CDebugInterface *debugInterface)
 : CGuiViewMovingPaneImage(name, posX, posY, posZ, sizeX, sizeY)
@@ -17,6 +22,20 @@ CViewEmulatorScreen::CViewEmulatorScreen(const char *name, float posX, float pos
 
 	imGuiNoWindowPadding = true;
 	imGuiNoScrollbar = true;
+	
+	CRenderBackendOpenGL4 *renderBackend = CRenderBackendOpenGL4::GetRenderBackendOpenGL4();
+	shaderCRT = new CRenderShaderCRTMonitorOpenGL4(renderBackend, "CRT Monitor", debugInterface->GetScreenSizeX(), debugInterface->GetScreenSizeY());
+//	shaderCRT = new CRenderShaderOpenGL4ShaderToy(renderBackend, "Shader Toy", (float)debugInterface->GetScreenSizeX(), (float)debugInterface->GetScreenSizeY());
+
+	char *buf = SYS_GetCharBuf();
+	sprintf(buf, "%s##EnableShaderCRT", name);
+	viewC64->config->GetBool(buf, &settingEnableShaderCRT, false);
+	SYS_ReleaseCharBuf(buf);
+
+	if (settingEnableShaderCRT)
+	{
+		SetShader(shaderCRT);
+	}
 	
 	SetMovingPaneStyle(MovingPaneStyle_None);
 	
@@ -28,6 +47,9 @@ void CViewEmulatorScreen::RefreshEmulatorScreenImageData()
 	this->imageData = debugInterface->GetScreenImageData();
 	this->paneWidth = debugInterface->GetScreenSizeX() * debugInterface->screenSupersampleFactor;
 	this->paneHeight = debugInterface->GetScreenSizeY() * debugInterface->screenSupersampleFactor;
+	
+	// this is not correct sometimes
+//	shader->SetResolution((float)paneWidth/4.0f, (float)paneHeight/4.0f);
 	
 	rasterWidth = imageData->width;
 	rasterHeight = imageData->height;
@@ -155,6 +177,25 @@ void CViewEmulatorScreen::RenderContextMenuItems()
 			
 			ImGui::EndMenu();
 		}
+	}
+	
+	if (ImGui::MenuItem("Enable CRT emulation", NULL, (shader != NULL)))
+	{
+		if (shader == NULL)
+		{
+			SetShader(shaderCRT);
+			settingEnableShaderCRT = true;
+		}
+		else
+		{
+			SetShader(NULL);
+			settingEnableShaderCRT = false;
+		}
+		
+		char *buf = SYS_GetCharBuf();
+		sprintf(buf, "%s::EnableShaderCRT", name);
+		viewC64->config->SetBool(buf, &settingEnableShaderCRT);
+		SYS_ReleaseCharBuf(buf);
 	}
 	
 	ImGui::Separator();

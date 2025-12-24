@@ -53,6 +53,11 @@ public:
 	virtual void PostDebugInterfaceKeyUp(u32 keyCode, bool isShift, bool isAlt, bool isControl, bool isSuper);
 	
 	virtual void SetSupersampleFactor(int supersampleFactor);
+	
+	//
+	bool settingEnableShaderCRT;
+	CRenderShader *shaderCRT;
+	
 };
 
 #endif

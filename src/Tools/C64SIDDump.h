@@ -14,4 +14,6 @@ enum {
 void C64SIDHistoryToByteBuffer(std::list<CSidData *> *sidDataHistory, CByteBuffer *byteBuffer, u8 format,
 							int basefreq=0, int basenote=0xb0, int spacing=0, int oldnotefactor=1, int pattspacing=0, int timeseconds=0, int lowres=0);
 
+void C64SIDHistoryFromByteBuffer(std::list<CSidData *> *sidDataHistory, CByteBuffer *byteBuffer, u8 format, bool keepPreviousValueWhenZero);
+
 #endif

@@ -243,11 +243,13 @@ bool CViewC64StateCIA::DoTap(float x, float y)
 	// check if tap register
 	if (showRegistersOnly)
 	{
+		LOGD("showRegistersOnly");
 		float px = posX;
 		editingCIAIndex = -1;
 		
 		if (renderCIA1)
 		{
+			LOGD("renderCIA1");
 			if (x >= posX && x < posX + oneCiaSizeX)
 			{
 				editingCIAIndex = 1;
@@ -255,8 +257,11 @@ bool CViewC64StateCIA::DoTap(float x, float y)
 			}
 		}
 		
+		LOGD("x=%f posx=%f oneCiaSizeX=%f += %f to %f", x, posX, oneCiaSizeX, posX + oneCiaSizeX, posX + oneCiaSizeX*2.0f);
+		
 		if (renderCIA2)
 		{
+			LOGD("renderCIA2");
 			if (x >= posX + oneCiaSizeX && x < posX + oneCiaSizeX * 2.0f)
 			{
 				editingCIAIndex = 2;
@@ -269,8 +274,8 @@ bool CViewC64StateCIA::DoTap(float x, float y)
 			float fs2 = fontSize;
 			float sx = fs2 * 9;
 			
-			float plx = posX;	//+ fontSize * 5.0f
-			float plex = posX + fontSize * 7.0f;
+			float plx = px;	//+ fontSize * 5.0f
+			float plex = px + fontSize * 7.0f;
 			float ply = posY + fontSize;
 			for (int i = 0; i < 0x10; i++)
 			{

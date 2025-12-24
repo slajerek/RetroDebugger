@@ -3,6 +3,9 @@
 #include "CViewC64.h"
 #include "C64SettingsStorage.h"
 #include "CDebugInterfaceC64.h"
+#include "CDebugInterfaceVice.h"
+
+#include "CLayoutParameter.h"
 
 // TODO: refactor this and move logic from C64Screen here
 CViewC64ScreenViewfinder::CViewC64ScreenViewfinder(const char *name, float posX, float posY, float posZ, float sizeX, float sizeY, CViewC64Screen *viewC64Screen, CDebugInterfaceC64 *debugInterface)
@@ -16,8 +19,6 @@ CViewC64ScreenViewfinder::CViewC64ScreenViewfinder(const char *name, float posX,
 
 	// zoomed screen
 	this->zoomedScreenLevel = c64SettingsScreenRasterViewfinderScale;
-
-//	AddLayoutParameter(new CLayoutParameterFloat("Font Size", &fontSize));
 
 	this->SetPosition(posX, posY, posZ, sizeX, sizeY);
 }
@@ -126,6 +127,8 @@ void CViewC64ScreenViewfinder::SetZoomedScreenLevel(float zoomedScreenLevel)
 	}
 	
 	this->zoomedScreenLevel = zoomedScreenLevel;
+	c64SettingsScreenRasterViewfinderScale = zoomedScreenLevel;
+	C64DebuggerStoreSettings();
 
 	UpdateZoomedScreenLevel();
 }
@@ -137,9 +140,35 @@ void CViewC64ScreenViewfinder::UpdateZoomedScreenLevel()
 
 	zoomedScreenRasterScaleFactorX = zoomedScreenImageSizeX / (float)debugInterface->GetScreenSizeX();
 	zoomedScreenRasterScaleFactorY = zoomedScreenImageSizeY / (float)debugInterface->GetScreenSizeY();
-	zoomedScreenRasterOffsetX =  -103.787 * zoomedScreenRasterScaleFactorX;
-	zoomedScreenRasterOffsetY = -15.500 * zoomedScreenRasterScaleFactorY;
 	
+	int borderMode = ((CDebugInterfaceVice *)viewC64->debugInterfaceC64)->GetViciiBorderMode();
+	
+	if (borderMode == VICII_BORDER_MODE_NORMAL)
+	{
+		zoomedScreenRasterOffsetX = -104.0 * zoomedScreenRasterScaleFactorX;
+		zoomedScreenRasterOffsetY =  -16.0 * zoomedScreenRasterScaleFactorY;
+	}
+	else if (borderMode == VICII_BORDER_MODE_FULL)
+	{
+		zoomedScreenRasterOffsetX =  -88.0 * zoomedScreenRasterScaleFactorX;
+		zoomedScreenRasterOffsetY =   -8.0 * zoomedScreenRasterScaleFactorY;
+	}
+	else if (borderMode == VICII_BORDER_MODE_DEBUG)
+	{
+		zoomedScreenRasterOffsetX = 0.0f;
+		zoomedScreenRasterOffsetY = 0.0f;
+	}
+	else if (borderMode == VICII_BORDER_MODE_NO_BORDERS)
+	{
+		zoomedScreenRasterOffsetX = -136.0 * zoomedScreenRasterScaleFactorX;
+		zoomedScreenRasterOffsetY =  -51.0 * zoomedScreenRasterScaleFactorY;
+	}
+	else
+	{
+		LOGError("CViewC64ScreenViewfinder::UpdateZoomedScreenLevel: Unknown border mode %d", borderMode);
+		zoomedScreenRasterOffsetX = -104.0 * zoomedScreenRasterScaleFactorX;
+		zoomedScreenRasterOffsetY =  -16.0 * zoomedScreenRasterScaleFactorY;
+	}
 }
 
 void CViewC64ScreenViewfinder::LayoutParameterChanged(CLayoutParameter *layoutParameter)

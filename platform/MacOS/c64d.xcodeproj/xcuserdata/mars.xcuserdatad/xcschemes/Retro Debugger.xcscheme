@@ -65,6 +65,18 @@
       </BuildableProductRunnable>
       <CommandLineArguments>
          <CommandLineArgument
+            argument = "/Users/mars/develop/MTEngine/_RUNTIME_/Documents/c64/disks/demos/crest\ -\ BluREU_3D/BluREU\ 3D.prg"
+            isEnabled = "YES">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "-reu"
+            isEnabled = "YES">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "/Users/mars/Downloads/out.reu"
+            isEnabled = "YES">
+         </CommandLineArgument>
+         <CommandLineArgument
             argument = "-crtmaker"
             isEnabled = "NO">
          </CommandLineArgument>

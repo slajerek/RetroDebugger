@@ -261,6 +261,9 @@
     <Filter Include="Source Files\src\Remote\WebSockets">
       <UniqueIdentifier>{a4052fb4-3f92-4cde-b656-d483767e28b8}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\src\Tools\Shaders">
+      <UniqueIdentifier>{4f484901-4712-4349-9bf1-3c44a2f2e20d}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\src\Emulators\atari800\a-cartridge.c">
@@ -3895,6 +3898,9 @@
     </ClCompile>
     <ClCompile Include="..\..\..\src\Emulators\vice\ViceInterface\CDebuggerServerApiVice.cpp">
       <Filter>Source Files\src\Emulators\vice\ViceInterface</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Tools\Shaders\CRenderShaderCRTMonitorOpenGL4.cpp">
+      <Filter>Source Files\src\Tools\Shaders</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -8028,6 +8034,9 @@
     </ClInclude>
     <ClInclude Include="..\..\..\src\Emulators\vice\ViceInterface\CDebuggerServerApiVice.h">
       <Filter>Source Files\src\Emulators\vice\ViceInterface</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Tools\Shaders\CRenderShaderCRTMonitorOpenGL4.h">
+      <Filter>Source Files\src\Tools\Shaders</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

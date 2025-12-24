@@ -2723,7 +2723,7 @@ bool CViewDisassembly::KeyDown(u32 keyCode, bool isShift, bool isAlt, bool isCon
 		return true;
 	}
 	
-	if (keyboardShortcut == viewC64->mainMenuBar->kbsStepOverJsr)
+	if (keyboardShortcut == viewC64->mainMenuBar->kbsStepOverSubroutine)
 	{
 		StepOverJsr();
 		viewC64->KeyUpModifierKeys(isShift, isAlt, isControl);
@@ -3590,13 +3590,8 @@ int CViewDisassembly::Assemble(int assembleAddress, char *lineBuffer, int *instr
 		delete textParser;
 		return 0;
 	}
-	else
-	{
-		FAIL("Instruction not found");
-	}
-	
-	delete textParser;
-	return -1;
+
+	FAIL("Instruction not found");
 }
 
 int CViewDisassembly::AssembleFindOp(char *mnemonic)

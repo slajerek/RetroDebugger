@@ -381,8 +381,8 @@ CMainMenuBar::CMainMenuBar()
 	kbsStepOverInstruction = new CSlrKeyboardShortcut(KBZONE_GLOBAL, "Step over instruction", MTKEY_F10, false, false, false, false, this);
 	guiMain->AddKeyboardShortcut(kbsStepOverInstruction);
 
-	kbsStepOverJsr = new CSlrKeyboardShortcut(KBZONE_DISASSEMBLY, "Step over JSR", MTKEY_F10, false, false, true, false, this);
-	guiMain->AddKeyboardShortcut(kbsStepOverJsr);
+	kbsStepOverSubroutine = new CSlrKeyboardShortcut(KBZONE_GLOBAL, "Step over JSR", MTKEY_F10, false, false, true, false, this);
+	guiMain->AddKeyboardShortcut(kbsStepOverSubroutine);
 
 	kbsStepBackInstruction = new CSlrKeyboardShortcut(KBZONE_GLOBAL, "Step back instruction", MTKEY_F10, false, true, false, false, this);
 	guiMain->AddKeyboardShortcut(kbsStepBackInstruction);
@@ -622,9 +622,9 @@ void CMainMenuBar::RenderImGui()
 			
 //			if (isPaused)
 			{
-				if (ImGui::MenuItem("Step Over JSR", kbsStepOverJsr->cstr))
+				if (ImGui::MenuItem("Step Over JSR", kbsStepOverSubroutine->cstr))
 				{
-					kbsStepOverJsr->Run();
+					kbsStepOverSubroutine->Run();
 				}
 			}
 			
@@ -1942,7 +1942,7 @@ void CMainMenuBar::RenderImGui()
 						if (ImGui::MenuItem("Select C64 ROMs folder"))
 						{
 							systemDialogOperation = SystemDialogOperationC64RomsFolder;
-							SYS_DialogPickFolder(this, c64SettingsPathToC64Roms);
+							SYS_DialogPickFolder(this, c64SettingsPathToRomsC64);
 						}
 						ImGui::Separator();
 						if (ImGui::MenuItem("Kernal"))
@@ -3595,6 +3595,16 @@ bool CMainMenuBar::ProcessKeyboardShortcut(u32 zone, u8 actionType, CSlrKeyboard
 	else if (shortcut == kbsStepOverInstruction)
 	{
 		viewC64->StepOverInstruction();
+		return true;
+	}
+	else if (shortcut == kbsStepOverInstruction)
+	{
+		viewC64->StepOverInstruction();
+		return true;
+	}
+	else if (shortcut == kbsStepOverSubroutine)
+	{
+		viewC64->StepOverSubroutine();
 		return true;
 	}
 	else if (shortcut == kbsStepBackInstruction)

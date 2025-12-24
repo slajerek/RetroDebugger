@@ -331,6 +331,7 @@ public:
 	u8 autoScrollMode;
 	void SetAutoScrollMode(int newMode);
 	void SetNextAutoScrollMode();
+	u8 GetAutoScrollMode();
 	
 	//
 	bool applyScrollRegister;

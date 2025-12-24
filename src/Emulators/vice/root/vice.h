@@ -193,4 +193,7 @@ static int noop;
 #undef HAVE_RS232DEV
 #endif
 
+//
+#include <stdint.h>
+
 #endif

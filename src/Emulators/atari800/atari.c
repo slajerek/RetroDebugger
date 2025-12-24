@@ -888,71 +888,94 @@ int Atari800_Initialise(int *argc, const char *argv[])
 
 #endif /* __PLUS */
 
-	/* Auto-start files left on the command line */
-	j = 1; /* diskno */
-	for (i = 1; i < *argc; i++) {
-		if (j > 8) {
-			/* The remaining arguments are not necessary disk images, but ignore them... */
-			Log_print("Too many disk image filenames on the command line (max. 8).");
-			break;
-		}
-		switch (AFILE_OpenFile(argv[i], i == 1, j, FALSE)) {
-			case AFILE_ERROR:
-				Log_print("Error opening \"%s\"", argv[i]);
-				break;
-			case AFILE_ATR:
-			case AFILE_XFD:
-			case AFILE_ATR_GZ:
-			case AFILE_XFD_GZ:
-			case AFILE_DCM:
-			case AFILE_PRO:
-				j++;
-				break;
-			default:
-				break;
-		}
-	}
+	// TODO: removed Atari cmdline init for now TODO: test crash?
+	
+//	/* Auto-start files left on the command line */
+//	j = 1; /* diskno */
+//	for (i = 1; i < *argc; i++) {
+//		if (j > 8) {
+//			/* The remaining arguments are not necessary disk images, but ignore them... */
+//			Log_print("Too many disk image filenames on the command line (max. 8).");
+//			break;
+//		}
+//		switch (AFILE_OpenFile(argv[i], i == 1, j, FALSE)) {
+//			case AFILE_ERROR:
+//				Log_print("Error opening \"%s\"", argv[i]);
+//				break;
+//			case AFILE_ATR:
+//			case AFILE_XFD:
+//			case AFILE_ATR_GZ:
+//			case AFILE_XFD_GZ:
+//			case AFILE_DCM:
+//			case AFILE_PRO:
+//				j++;
+//				break;
+//			default:
+//				break;
+//		}
+//	}
 
 	/* Install requested ROM cartridge */
+	LOGD("1 if Install requested ROM cartridge");
 	if (CARTRIDGE_main.type == CARTRIDGE_UNKNOWN) {
+		LOGD("1  passed Install requested ROM cartridge");
 #ifdef BASIC
 		Log_print("Raw cartridge images not supported in BASIC version!");
 #else /* BASIC */
+		LOGD("1 set UI_is_active TRUE");
 		UI_is_active = TRUE;
+		LOGD("1 CARTRIDGE_SetType: type=%d size=%d", CARTRIDGE_main.type, CARTRIDGE_main.size);
 		CARTRIDGE_SetType(&CARTRIDGE_main, UI_SelectCartType(CARTRIDGE_main.size));
+		LOGD("1 set UI_is_active FALSE");
 		UI_is_active = FALSE;
 #endif /* BASIC */
 	}
 
 	/* Install requested second ROM cartridge, if first is SpartaX */
+	LOGD("2 if Install requested second ROM cartridge");
 	if (CARTRIDGE_piggyback.type == CARTRIDGE_UNKNOWN) {
+		LOGD("2   passed Install requested second ROM cartridge");
 #ifdef BASIC
 		Log_print("Raw cartridge images not supported in BASIC version!");
 #else /* BASIC */
+		LOGD("2 set UI_is_active TRUE");
 		UI_is_active = TRUE;
+		LOGD("2 CARTRIDGE_SetType: type=%d size=%d", CARTRIDGE_piggyback.type, CARTRIDGE_piggyback.size);
 		CARTRIDGE_SetType(&CARTRIDGE_piggyback, UI_SelectCartType(CARTRIDGE_piggyback.size));
+		LOGD("2 set UI_is_active FALSE");
 		UI_is_active = FALSE;
 #endif /* BASIC */
 	}
 #ifdef AF80
+	LOGD("3 if AF80_enabled");
 	/* Insert Austin Franklin 80 column cartridge */
 	if (AF80_enabled) {
+		LOGD("3 AF80_Insert");
 		AF80_InsertRightCartridge();
 	}
 #endif
 	
 	/* Load Atari executable, if any */
+	LOGD("4 run_direct");
 	if (run_direct != NULL)
+	{
+		LOGD("4 BINLOAD_Loader");
 		BINLOAD_Loader(run_direct);
+	}
 
 #ifndef BASIC
 	/* Load state file */
+	LOGD("4 state_file");
 	if (state_file != NULL) {
+		LOGD("4 StateSav_Read");
 		if (StateSav_ReadAtariState(state_file, "rb"))
+			LOGD("4 GTIA_consol");
 			/* Don't press Start nor Option */
 			GTIA_consol_override = 0;
 	}
 #endif
+
+	LOGD("5 signal");
 
 #ifdef HAVE_SIGNAL
 	/* Install CTRL-C Handler */
@@ -977,22 +1000,28 @@ int Atari800_Initialise(int *argc, const char *argv[])
 	
 //	LOGM("DISABLE SOUND");
 //	Sound_enabled = 0;
-	
+
+	LOGD("6 Sound_enabled");
+
 	if (Sound_enabled) {
 		/* Up to this point the Sound_enabled flag indicated that we _want_ to
 		   enable sound. From now on, the flag will indicate whether audio
 		   output is enabled and working. So, since the sound output was not
 		   yet initiated, we set the flag accordingly. */
+		LOGD("6 Sound_enabled=FALSE");
 		Sound_enabled = FALSE;
 		/* Don't worry, Sound_Setup() will set Sound_enabled back to TRUE if
 		   it opens audio output successfully. But Sound_Setup() relies on the
 		   flag being set if and only if audio output is active. */
+		LOGD("6 Sound_Setup");
 		if (Sound_Setup())
 			/* Start sound if opening audio output was successful. */
+				LOGD("6 Sound_Continue");
 				Sound_Continue();
 	}
 #endif /* defined (SOUND) && defined(SOUND_THIN_API) */
 
+	LOGD("7 return TRUE");
 	return TRUE;
 }
 

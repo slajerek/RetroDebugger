@@ -45,6 +45,7 @@ CViewC64SidTrackerHistory::CViewC64SidTrackerHistory(const char *name, float pos
 	viewC64->config->GetBool("ViewC64SidTrackerHistorySidDumpLowResolution", &lowres, false);
 
 	siddumpFileExtensions.push_back(new CSlrString("txt"));
+	siddumpFileExtensions.push_back(new CSlrString("siddump"));
 	csvFileExtensions.push_back(new CSlrString("csv"));
 
 	// this value is calculated automatically
@@ -400,9 +401,8 @@ CViewC64SidTrackerHistory::CViewC64SidTrackerHistory(const char *name, float pos
 	UpdateMidiListSidChannels();
 	
 	///
-	
-
-	
+	isPlayingHistory = false;
+	SYS_StartThread(this);
 }
 
 void CViewC64SidTrackerHistory::UpdateMidiListSidChannels()
@@ -661,9 +661,12 @@ void CViewC64SidTrackerHistory::VSyncStepsAdded()
 void CViewC64SidTrackerHistory::EnsureCorrectScrollPosition()
 {
 	// when we reach end of buffer, then data will be scrolled, but we would like to see all screen filled with data
-	if (scrollPosition >= (int)debugInterface->sidDataHistory.size()-numVisibleTrackLines)
-		scrollPosition = (int)debugInterface->sidDataHistory.size()-numVisibleTrackLines-1;
-	
+//	if (scrollPosition >= (int)debugInterface->sidDataHistory.size()-numVisibleTrackLines)
+//		scrollPosition = (int)debugInterface->sidDataHistory.size()-numVisibleTrackLines-1;
+
+	if (scrollPosition >= (int)debugInterface->sidDataHistory.size())
+		scrollPosition = (int)debugInterface->sidDataHistory.size()-1;
+
 	if (scrollPosition < 0)
 		scrollPosition = 0;
 }
@@ -1294,7 +1297,31 @@ void CViewC64SidTrackerHistory::RenderContextMenuItems()
 		}
 		ImGui::EndMenu();
 	}
+	if (ImGui::MenuItem("Load SidDump history from file"))
+	{
+		sidDumpFormat = SID_HISTORY_FORMAT_SIDDUMP;
+		CSlrString *windowTitle = new CSlrString("Load SID history in SidDump format");
+		CSlrString *defaultFolder;
+		viewC64->config->GetSlrString("ViewC64SidTrackerHistorySidDumpFolder", &defaultFolder, gUTFPathToDocuments);
+		viewC64->ShowDialogOpenFile(this, &siddumpFileExtensions, defaultFolder, windowTitle);
+		delete windowTitle;
+	}
 
+	if (ImGui::MenuItem("Autoplay recorded SID history", NULL, isPlayingHistory))
+	{
+		isPlayingHistory = !isPlayingHistory;
+	}
+	if (ImGui::MenuItem("Scroll play from beginning"))
+	{
+		debugInterface->mutexSidDataHistory->Lock();
+		uint32 historySize = (uint32)debugInterfaceVice->sidDataHistory.size();
+		debugInterface->mutexSidDataHistory->Unlock();
+		
+		SetTracksScrollPos(historySize-1);
+	}
+
+	ImGui::Separator();
+	
 	if (ImGui::Checkbox("Dump SID time in minutes:seconds:frame format", &timeseconds))
 	{
 		viewC64->config->SetBool("ViewC64SidTrackerHistorySidDumpTimeSeconds", &timeseconds);
@@ -1329,6 +1356,55 @@ void CViewC64SidTrackerHistory::RenderContextMenuItems()
 	{
 		viewC64->config->SetInt ("ViewC64SidTrackerHistorySidDumpBaseNote", &basenote);
 	}
+
+	if (ImGui::MenuItem("Reset filter"))
+	{
+		debugInterface->mutexSidDataHistory->Lock();
+		for (std::list<CSidData*>::iterator it = debugInterface->sidDataHistory.begin(); it != debugInterface->sidDataHistory.end(); it++)
+		{
+			CSidData *sidData = *it;
+			sidData->sidRegs[0][0x15] = 0x00;
+			sidData->sidRegs[0][0x16] = 0xF0;
+			sidData->sidRegs[0][0x17] = 0x00;
+			sidData->sidRegs[0][0x18] = 0x0F;
+		}
+		debugInterface->mutexSidDataHistory->Unlock();
+	}
+	
+	if (ImGui::MenuItem("Reset filter mode and volume"))
+	{
+		debugInterface->mutexSidDataHistory->Lock();
+		for (std::list<CSidData*>::iterator it = debugInterface->sidDataHistory.begin(); it != debugInterface->sidDataHistory.end(); it++)
+		{
+			CSidData *sidData = *it;
+			sidData->sidRegs[0][0x18] = 0x0F;
+		}
+		debugInterface->mutexSidDataHistory->Unlock();
+	}
+
+	if (ImGui::MenuItem("Reset filter freq"))
+	{
+		debugInterface->mutexSidDataHistory->Lock();
+		for (std::list<CSidData*>::iterator it = debugInterface->sidDataHistory.begin(); it != debugInterface->sidDataHistory.end(); it++)
+		{
+			CSidData *sidData = *it;
+			sidData->sidRegs[0][0x15] = 0x00;
+			sidData->sidRegs[0][0x16] = 0xF0;
+		}
+		debugInterface->mutexSidDataHistory->Unlock();
+	}
+
+	if (ImGui::MenuItem("Reset filter resonance and routing"))
+	{
+		debugInterface->mutexSidDataHistory->Lock();
+		for (std::list<CSidData*>::iterator it = debugInterface->sidDataHistory.begin(); it != debugInterface->sidDataHistory.end(); it++)
+		{
+			CSidData *sidData = *it;
+			sidData->sidRegs[0][0x17] = 0x00;
+		}
+		debugInterface->mutexSidDataHistory->Unlock();
+	}
+
 	
 	ImGui::Separator();
 }
@@ -1362,6 +1438,65 @@ void CViewC64SidTrackerHistory::SystemDialogFileSaveSelected(CSlrString *path)
 
 void CViewC64SidTrackerHistory::SystemDialogFileSaveCancelled()
 {
+	
+}
+
+void CViewC64SidTrackerHistory::SystemDialogFileOpenSelected(CSlrString *path)
+{
+	LOGD("CViewC64SidTrackerHistory: load");
+//	path->DebugPrint();
+	CByteBuffer *byteBuffer = new CByteBuffer(path);
+	byteBuffer->Rewind();
+	
+	debugInterface->mutexSidDataHistory->Lock();
+
+	C64SIDHistoryFromByteBuffer(&debugInterfaceVice->sidDataHistory, byteBuffer, sidDumpFormat, true);
+
+	debugInterface->mutexSidDataHistory->Unlock();
+	
+//	byteBuffer->storeToFile(path);
+//	delete byteBuffer;
+	
+	CSlrString *str = path->GetFileNameComponentFromPath();
+	str->Concatenate(" loaded");
+	viewC64->ShowMessageInfo(str);
+	delete str;
+	
+	path->DebugPrint();
+	str = path->GetFilePathWithoutFileNameComponentFromPath();
+	viewC64->config->SetSlrString("ViewC64SidTrackerHistorySidDumpFolder", &str);
+	delete str;
+}
+
+void CViewC64SidTrackerHistory::SystemDialogFileOpenCancelled()
+{
+	
+}
+
+// play buffer
+void CViewC64SidTrackerHistory::ThreadRun(void *passData)
+{
+	LOGD("CViewC64SidTrackerHistory::ThreadRun");
+	
+//	debugInterfaceVice->SetDebugMode(DEBUGGER_MODE_PAUSED);
+	
+	while(true)
+	{
+		if (isPlayingHistory == false)
+		{
+			SYS_Sleep(100.0f);
+			continue;
+		}
+		
+		SYS_Sleep(1000.0f / 50.0f);
+		
+		int newScrollPos = scrollPosition -1;
+		if (newScrollPos <= 0)
+		{
+			continue;
+		}
+		SetTracksScrollPos(newScrollPos);
+	}
 	
 }
 

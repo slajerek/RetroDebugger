@@ -67,7 +67,6 @@ public:
 	float zoomedScreenRasterScaleFactorY;
 	float zoomedScreenRasterOffsetX;
 	float zoomedScreenRasterOffsetY;
-
 };
 
 

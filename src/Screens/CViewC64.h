@@ -480,6 +480,7 @@ public:
 	void SwitchIsShowRasterBeam();
 	
 	void StepOverInstruction();
+	void StepOverSubroutine();
 	void StepOneCycle();
 	void StepBackInstruction();
 	void RunContinueEmulation();

@@ -32,7 +32,7 @@ CViewC64AllGraphicsScreensControl::CViewC64AllGraphicsScreensControl(const char 
 
 	//
 	font = viewC64->fontCBMShifted;
-	fontScale = 1.5f;
+	fontScale = 2.5f;
 	fontHeight = font->GetCharHeight('@', fontScale) + 2;
 	fontSize = fontHeight;
 
@@ -43,19 +43,19 @@ CViewC64AllGraphicsScreensControl::CViewC64AllGraphicsScreensControl(const char 
 	float py = startY;
 	float buttonSizeX = 5.96 * fontSize;
 	float buttonSizeY = 2.0f * fontSize;
-	float gap = 5.0f;
-	float mgap = 2.5f;
+	float gap = 0.625f * fontSize;
+	float mgap = 0.3125 * fontSize;
 	float buttonTextOffsetY = 0.67*fontSize;
 
 	btnModeBitmapColorsBlackWhite = new CGuiButtonSwitch(NULL, NULL, NULL,
-										   px, py, posZ, buttonSizeX, buttonSizeY,
-										   new CSlrString("B/W"),
-										   FONT_ALIGN_CENTER, buttonSizeX/2, buttonTextOffsetY,
-										   font, fontScale,
-										   1.0, 1.0, 1.0, 1.0,
-										   1.0, 1.0, 1.0, 1.0,
-										   0.3, 0.3, 0.3, 1.0,
-										   this);
+											px, py, posZ, buttonSizeX, buttonSizeY,
+											new CSlrString("B/W"),
+											FONT_ALIGN_CENTER, buttonSizeX/2, buttonTextOffsetY,
+											font, fontScale,
+											1.0, 1.0, 1.0, 1.0,
+											1.0, 1.0, 1.0, 1.0,
+											0.3, 0.3, 0.3, 1.0,
+											this);
 	btnModeBitmapColorsBlackWhite->SetOn(false);
 	SetSwitchButtonDefaultColors(btnModeBitmapColorsBlackWhite);
 	this->AddGuiElement(btnModeBitmapColorsBlackWhite);
@@ -109,7 +109,7 @@ CViewC64AllGraphicsScreensControl::CViewC64AllGraphicsScreensControl(const char 
 	
 	this->lstCharsetAddresses = new CGuiLockableList(px, py, posZ+0.01, lstFontSize*6.5f, 65.0f, lstFontSize,
 													NULL, 0, false,
-													 viewC64->fontDisassembly,
+													viewC64->fontDisassembly,
 													guiMain->theme->imgBackground, 1.0f,
 													this);
 	this->lstCharsetAddresses->name = "AllGraphics::lstCharsetAddresses";
@@ -152,8 +152,94 @@ CViewC64AllGraphicsScreensControl::CViewC64AllGraphicsScreensControl(const char 
 	SetupMode();
 }
 
-CViewC64AllGraphicsScreensControl::~CViewC64AllGraphicsScreensControl()
+void CViewC64AllGraphicsScreensControl::SetPosition(float posX, float posY, float posZ, float sizeX, float sizeY)
 {
+	CGuiView::SetPosition(posX, posY, posZ, sizeX, sizeY);
+	
+	float fs = 1.0f;
+	
+	float ledX = posX + fs * 20.1725f;
+	float ledY = posY + 0.75f * fs;
+	
+	float ledSizeX = fs*4.0f;
+	float gap = fs * 0.1f;
+	float step = fs * 0.75f;
+	float ledSizeY = fs + gap + gap;
+	float ledSizeY2 = fs + step;
+	
+	float startX = 5;
+	float startY = 5;
+	
+	float px = startX;
+	float py = startY;
+	
+	float buttonSizeX = 5.96 * fs;
+	float buttonSizeY = 2.0f * fs;
+	
+	float lstFontSize = fs;//4.0f;
+	
+	px += buttonSizeX + gap;
+	px += buttonSizeX + gap;
+	px += buttonSizeX*2.0f + gap;
+	px += lstFontSize*6.5f;
+	
+	// we need to scale this
+	float scale = (sizeX / px) * 0.1f;
+	
+	fontScale = 2.5f * scale;
+	fontHeight = font->GetCharHeight('@', fontScale) + 2;
+	fontSize = fontHeight;
+	
+	buttonSizeX = 5.96 * fontSize;
+	buttonSizeY = 2.0f * fontSize;
+	gap = 0.1f * fontSize;
+	startX = posX + 5.0f;
+	startY = posY + 5.0f;
+
+	ledX = posX + fontSize * 20.1725f;
+	ledY = posY + 0.75f * fontSize;
+
+	ledSizeX = fontSize*4.0f;
+	gap = fontSize * 0.1f;
+
+	//
+	px = startX;
+	py = startY;
+	
+	btnModeBitmapColorsBlackWhite->SetPosition(px, py, posZ, buttonSizeX, buttonSizeY);
+	btnModeBitmapColorsBlackWhite->SetFont(font, fontScale);
+	
+	px += buttonSizeX + gap;
+	
+	btnModeHires->SetPosition(px, py, posZ, buttonSizeX, buttonSizeY);
+	btnModeHires->SetFont(font, fontScale);
+	
+	px += buttonSizeX + gap;
+	
+	btnModeMulti->SetPosition(px, py, posZ, buttonSizeX, buttonSizeY);
+	btnModeMulti->SetFont(font, fontScale);
+	
+	//
+	px += buttonSizeX*2.0f + gap;
+	
+	lstFontSize = fontSize;//4.0f;
+	
+	lstCharsetAddresses->SetPosition(px, py, posZ, lstFontSize*6.5f, 65.0f/8.0f * fontSize);
+	lstCharsetAddresses->fontSize = lstFontSize;
+	
+	//
+	
+	//
+	px = startX;
+	py += buttonSizeY + gap;
+	
+	btnShowRAMorIO->SetPosition(px, py, posZ, buttonSizeX, buttonSizeY);
+	btnShowRAMorIO->SetFont(font, fontScale);
+	
+	px += buttonSizeX + gap;
+	
+	btnShowGrid->SetPosition(px, py, posZ, buttonSizeX, buttonSizeY);
+	btnShowGrid->SetFont(font, fontScale);
 }
 
 void CViewC64AllGraphicsScreensControl::SetSwitchButtonDefaultColors(CGuiButtonSwitch *btn)
@@ -230,8 +316,8 @@ void CViewC64AllGraphicsScreensControl::RenderImGui()
 
 void CViewC64AllGraphicsScreensControl::Render()
 {
-	float ledX = posX + fontSize * 20.1725f;
-	float ledY = posY + 6.0f;
+	float ledX = posX + fontSize * 19.3f;
+	float ledY = posY + 0.75f * fontSize;
 
 	float ledSizeX = fontSize*4.0f;
 	float gap = fontSize * 0.1f;
@@ -345,8 +431,8 @@ bool CViewC64AllGraphicsScreensControl::DoTap(float x, float y)
 	//       idea is to sync values with VIC state view. Leds should be replaced with proper buttons and callbacks.
 	//		 the below is just a temporary POC made in a few minutes
 
-	float ledX = posX + fontSize * 20.1725f;
-	float ledY = posY + 6.0f;
+	float ledX = posX + fontSize * 19.3f;
+	float ledY = posY + 0.75f * fontSize;
 
 	float ledSizeX = fontSize*4.0f;
 	float gap = fontSize * 0.1f;
@@ -448,8 +534,8 @@ bool CViewC64AllGraphicsScreensControl::DoRightClick(float x, float y)
 	//       idea is to sync values with VIC state view. Leds should be replaced with proper buttons and callbacks.
 	//		 the below is just a temporary POC made in few minutes
 
-	float ledX = posX + fontSize * 20.1725f;
-	float ledY = posY + 6.0f;
+	float ledX = posX + fontSize * 19.3f;
+	float ledY = posY + 0.75f * fontSize;
 
 	float ledSizeX = fontSize*4.0f;
 	float gap = fontSize * 0.1f;
@@ -665,5 +751,9 @@ void CViewC64AllGraphicsScreensControl::ActivateView()
 void CViewC64AllGraphicsScreensControl::DeactivateView()
 {
 	LOGG("CViewC64AllGraphicsScreensControl::DeactivateView()");
+}
+
+CViewC64AllGraphicsScreensControl::~CViewC64AllGraphicsScreensControl()
+{
 }
 

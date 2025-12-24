@@ -354,7 +354,7 @@ u8 C64VicDisplayCanvasHiresText::PaintDither(bool forceColorReplace, int x, int 
 		color1 = colorLMB;
 		color2 = colorRMB;
 	}
-	else if (colorSource == VICEDITOR_COLOR_SOURCE_RMB)
+	else //if (colorSource == VICEDITOR_COLOR_SOURCE_RMB)
 	{
 		color1 = colorRMB;
 		color2 = colorLMB;

@@ -39,8 +39,6 @@ void TEST_Editor()
 
 void TEST_Editor_Render()
 {
-	return;
-	
 	auto cpos = editor->GetCursorPosition();
 	ImGui::Begin("Source code", nullptr, ImGuiWindowFlags_HorizontalScrollbar | ImGuiWindowFlags_MenuBar);
 			ImGui::SetWindowSize(ImVec2(800, 600), ImGuiCond_FirstUseEver);

@@ -496,10 +496,11 @@ bool CViewC64AllGraphicsCharsetsControl::ButtonSwitchChanged(CGuiButtonSwitch *b
 {
 	LOGD("CViewC64AllGraphicsCharsetsControl::ButtonSwitchChanged");
 	
-//	if (button == btnShowRAMorIO)
-//	{
-//		viewC64->SwitchIsDataDirectlyFromRam(!btnShowRAMorIO->IsOn());
-//	}
+	if (button == btnShowRAMorIO)
+	{
+		viewC64->SwitchIsDataDirectlyFromRam(!btnShowRAMorIO->IsOn());
+		return true;
+	}
 	return false;
 }
 

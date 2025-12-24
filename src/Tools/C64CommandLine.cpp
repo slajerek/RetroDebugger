@@ -27,9 +27,9 @@ extern char *crtMakerConfigFilePath;
 bool c64CommandLineSkipConsoleAttach = false;
 
 #define C64D_PASS_CONFIG_DATA_MARKER	0x029A
-#define C64D_PASS_CONFIG_DATA_VERSION	0x0002
+#define C64D_PASS_CONFIG_DATA_VERSION	0x0003
 
-CSlrMutex *c64DebuggerStartupTasksCallbacksMutex;
+CSlrMutex *c64DebuggerStartupTasksCallbacksMutex = NULL;
 std::list<C64DebuggerStartupTaskCallback *> c64DebuggerStartupTasksCallbacks;
 
 bool isPRGInCommandLine = false;
@@ -37,6 +37,7 @@ bool isD64InCommandLine = false;
 bool isSNAPInCommandLine = false;
 bool isTAPInCommandLine = false;
 bool isCRTInCommandLine = false;
+bool isREUInCommandLine = false;
 
 bool isXEXInCommandLine = false;
 bool isATRInCommandLine = false;
@@ -114,7 +115,7 @@ void c64PrintCommandLineHelp()
 	printHelp("     wait before performing tasks\n");
 	
 #if defined(RUN_COMMODORE64)
-	printHelp("-c64 select emulator: C64 Vice");
+	printHelp("-c64 select emulator: C64 Vice\n");
 	printHelp("-prg <file>\n");
 	printHelp("     load PRG file into memory\n");
 	printHelp("-d64 <file>\n");
@@ -123,6 +124,8 @@ void c64PrintCommandLineHelp()
 	printHelp("     attach TAP file\n");
 	printHelp("-crt <file>\n");
 	printHelp("     attach cartridge\n");
+	printHelp("-reu <file>\n");
+	printHelp("     attach REU\n");
 	printHelp("-snapshot <file>\n");
 	printHelp("     load snapshot from file\n");
 	printHelp("-jmp <addr>\n");
@@ -141,7 +144,7 @@ void c64PrintCommandLineHelp()
 	printHelp("     hard reset machine\n");
 	
 #if defined(RUN_ATARI)
-	printHelp("-atari select emulator: Atari800");
+	printHelp("-atari select emulator: Atari800\n");
 	printHelp("-xex <file>\n");
 	printHelp("     load XEX file into memory\n");
 	printHelp("-atr <file>\n");
@@ -149,7 +152,7 @@ void c64PrintCommandLineHelp()
 #endif
 
 #if defined(RUN_NES)
-	printHelp("-nes select emulator: NestopiaUE");
+	printHelp("-nes select emulator: NestopiaUE\n");
 	printHelp("-ines <file>\n");
 	printHelp("     insert iNES cartridge\n");
 #endif
@@ -189,33 +192,33 @@ char *c64ParseCommandLineGetArgument()
 void C64DebuggerParseCommandLine0()
 {
 	LOGD("C64DebuggerParseCommandLine0");
-	
+
 	if (sysCommandLineArguments.empty())
 		return;
-	
+
 	// check if it's just a single argument with file path (drop file on exe in Win32)
 	if (sysCommandLineArguments.size() == 1)	// 1   , 3 for dev xcode
 	{
 		const char *arg = sysCommandLineArguments[0];
-		
+
 		LOGD("arg=%s", arg);
-		
+
 		if (SYS_FileExists(arg))
 		{
 			// workaround for Windows, so we will not show console when user started by clicking on prg/d64/... file
 			c64CommandLineSkipConsoleAttach = true;
-			
+
 			CSlrString *filePath = new CSlrString(arg);
 			filePath->DebugPrint("filePath=");
-			
+
 			CSlrString *ext = filePath->GetFileExtensionComponentFromPath();
 			ext->DebugPrint("ext=");
-			
+
 #if defined(RUN_COMMODORE64)
 			if (ext->CompareWith("prg") || ext->CompareWith("PRG"))
 			{
 				isPRGInCommandLine = true;
-				
+
 				const char *path = sysCommandLineArguments[0];
 				sysCommandLineArguments.clear();
 				sysCommandLineArguments.push_back("-pass");
@@ -225,7 +228,7 @@ void C64DebuggerParseCommandLine0()
 				sysCommandLineArguments.push_back("-prg");
 				sysCommandLineArguments.push_back(path);
 				sysCommandLineArguments.push_back("-autojmp");
-				
+
 				// TODO: this will be overwritten by settings loader
 				c64SettingsFastBootKernalPatch = true;
 				
@@ -241,14 +244,13 @@ void C64DebuggerParseCommandLine0()
 				// pass to running instance if exists
 				C64DebuggerInitSharedMemory();
 				C64DebuggerPassConfigToRunningInstance();
-				
 				return;
 			}
 			else if (ext->CompareWith("d64") || ext->CompareWith("D64")
 					 || ext->CompareWith("g64") || ext->CompareWith("G64"))
 			{
 				isD64InCommandLine = true;
-				
+
 				const char *path = sysCommandLineArguments[0];
 				
 				sysCommandLineArguments.clear();
@@ -256,96 +258,106 @@ void C64DebuggerParseCommandLine0()
 				sysCommandLineArguments.push_back("-c64");
 				sysCommandLineArguments.push_back("-d64");
 				sysCommandLineArguments.push_back(path);
-				delete filePath;
-				
-				//				c64SettingsPathToD64 = filePath;
-				//				c64SettingsWaitOnStartup = 500;
+
 				delete ext;
-				
+				delete filePath;
+
 				// pass to running instance if exists
 				C64DebuggerInitSharedMemory();
 				C64DebuggerPassConfigToRunningInstance();
-				
 				return;
 			}
 			else if (ext->CompareWith("tap") || ext->CompareWith("TAP")
 					 || ext->CompareWith("t64") || ext->CompareWith("T64"))
 			{
 				isTAPInCommandLine = true;
-				
+
 				const char *path = sysCommandLineArguments[0];
-				
+
 				sysCommandLineArguments.clear();
 				sysCommandLineArguments.push_back("-pass");
 				sysCommandLineArguments.push_back("-c64");
 				sysCommandLineArguments.push_back("-tap");
 				sysCommandLineArguments.push_back(path);
-				delete filePath;
-				
+
 				delete ext;
-				
+				delete filePath;
+
 				// pass to running instance if exists
 				C64DebuggerInitSharedMemory();
 				C64DebuggerPassConfigToRunningInstance();
-				
 				return;
 			}
 			else if (ext->CompareWith("crt") || ext->CompareWith("CRT"))
 			{
 				isCRTInCommandLine = true;
-				
+
 				const char *path = sysCommandLineArguments[0];
-				
+
 				sysCommandLineArguments.clear();
 				sysCommandLineArguments.push_back("-pass");
 				sysCommandLineArguments.push_back("-c64");
 				sysCommandLineArguments.push_back("-crt");
 				sysCommandLineArguments.push_back(path);
-				delete filePath;
-				
-				//				c64SettingsPathToCartridge = filePath;
-				//				c64SettingsWaitOnStartup = 500;
+
 				delete ext;
-				
+				delete filePath;
+
 				// pass to running instance if exists
 				C64DebuggerInitSharedMemory();
 				C64DebuggerPassConfigToRunningInstance();
-				
+				return;
+			}
+			else if (ext->CompareWith("reu") || ext->CompareWith("REU"))
+			{
+				isREUInCommandLine = true;
+
+				const char *path = sysCommandLineArguments[0];
+
+				sysCommandLineArguments.clear();
+				sysCommandLineArguments.push_back("-pass");
+				sysCommandLineArguments.push_back("-c64");
+				sysCommandLineArguments.push_back("-reu");
+				sysCommandLineArguments.push_back(path);
+
+				delete ext;
+				delete filePath;
+
+				// pass to running instance if exists
+				C64DebuggerInitSharedMemory();
+				C64DebuggerPassConfigToRunningInstance();
 				return;
 			}
 			else if (ext->CompareWith("snap") || ext->CompareWith("SNAP")
 					 || ext->CompareWith("vsf") || ext->CompareWith("VSF"))
 			{
 				isSNAPInCommandLine = true;
-				
+
 				const char *path = sysCommandLineArguments[0];
-				
+
 				sysCommandLineArguments.clear();
 				sysCommandLineArguments.push_back("-pass");
 				sysCommandLineArguments.push_back("-c64");
 				sysCommandLineArguments.push_back("-snapshot");
 				sysCommandLineArguments.push_back(path);
-				delete filePath;
-				
-				//				c64SettingsPathToViceSnapshot = filePath;
-				//				c64SettingsWaitOnStartup = 500;
+
 				delete ext;
-				
+				delete filePath;
+
 				// pass to running instance if exists
 				C64DebuggerInitSharedMemory();
 				C64DebuggerPassConfigToRunningInstance();
-				
 				return;
 			}
 #endif
-			
+
 #if defined(RUN_ATARI)
-			//
 			if (ext->CompareWith("xex") || ext->CompareWith("XEX"))
 			{
 				isXEXInCommandLine = true;
-				
+
 				const char *path = sysCommandLineArguments[0];
+
 				sysCommandLineArguments.clear();
 				sysCommandLineArguments.push_back("-pass");
 				sysCommandLineArguments.push_back("-atari");
@@ -354,52 +366,43 @@ void C64DebuggerParseCommandLine0()
 				sysCommandLineArguments.push_back("-xex");
 				sysCommandLineArguments.push_back(path);
 				sysCommandLineArguments.push_back("-autojmp");
-				
+
 				// TODO: this will be overwritten by settings loader
 				c64SettingsFastBootKernalPatch = true;
-				
-				LOGD("delete filePath");
-				delete filePath;
-				
-				//				c64SettingsPathToXEX = filePath;
+
 				c64SettingsWaitOnStartup = 500;
-				//				c64SettingsAutoJmp = true;
-				LOGD("delete ext");
 				delete ext;
-				
+				delete filePath;
+
 				// pass to running instance if exists
 				C64DebuggerInitSharedMemory();
 				C64DebuggerPassConfigToRunningInstance();
-				
 				return;
 			}
 			else if (ext->CompareWith("atr") || ext->CompareWith("ATR"))
 			{
 				isATRInCommandLine = true;
-				
+
 				const char *path = sysCommandLineArguments[0];
-				
+
 				sysCommandLineArguments.clear();
 				sysCommandLineArguments.push_back("-pass");
 				sysCommandLineArguments.push_back("-atari");
 				sysCommandLineArguments.push_back("-atr");
 				sysCommandLineArguments.push_back(path);
-				delete filePath;
-				
-				//				c64SettingsPathToATR = filePath;
-				//				c64SettingsWaitOnStartup = 500;
+
 				delete ext;
-				
+				delete filePath;
+
 				// pass to running instance if exists
 				C64DebuggerInitSharedMemory();
 				C64DebuggerPassConfigToRunningInstance();
-				
 				return;
 			}
 #endif
-			
+
 #if defined(RUN_NES)
-			if (ext->CompareWith("nes"))
+			if (ext->CompareWith("nes") || ext->CompareWith("NES"))
 			{
 				const char *path = sysCommandLineArguments[0];
 				sysCommandLineArguments.clear();
@@ -409,35 +412,27 @@ void C64DebuggerParseCommandLine0()
 				sysCommandLineArguments.push_back("100");
 				sysCommandLineArguments.push_back("-ines");
 				sysCommandLineArguments.push_back(path);
-				
-				LOGD("delete filePath");
-				delete filePath;
-				
+
 				c64SettingsWaitOnStartup = 50;
-				LOGD("delete ext");
 				delete ext;
-				
-				// pass to running instance if exists
+				delete filePath;
+
 				C64DebuggerInitSharedMemory();
 				C64DebuggerPassConfigToRunningInstance();
-				
 				return;
 			}
-
 #endif
-			delete filePath;
 			delete ext;
-			
+			delete filePath;
 		}
 	}
-	
-	
+
 	c64cmdIt = sysCommandLineArguments.begin();
-	
+
 	while(c64cmdIt != sysCommandLineArguments.end())
 	{
 		char *cmd = c64ParseCommandLineGetArgument();
-		
+
 		if (!strcmp(cmd, "help") || !strcmp(cmd, "h")
 			|| !strcmp(cmd, "-help") || !strcmp(cmd, "-h")
 			|| !strcmp(cmd, "--help") || !strcmp(cmd, "--h"))
@@ -445,7 +440,7 @@ void C64DebuggerParseCommandLine0()
 			c64PrintCommandLineHelp();
 			SYS_CleanExit();
 		}
-		
+
 		if (!strcmp(cmd, "version") || !strcmp(cmd, "v")
 			|| !strcmp(cmd, "-version") || !strcmp(cmd, "-v")
 			|| !strcmp(cmd, "--version") || !strcmp(cmd, "--v"))
@@ -453,7 +448,7 @@ void C64DebuggerParseCommandLine0()
 			c64PrintC64DebuggerVersion();
 			SYS_CleanExit();
 		}
-		
+
 		if (!strcmp(cmd, "-pass") || !strcmp(cmd, "pass"))
 		{
 			C64DebuggerInitSharedMemory();
@@ -466,13 +461,13 @@ void C64DebuggerParseCommandLine1()
 {
 	if (sysCommandLineArguments.empty())
 		return;
-	
+
 	c64cmdIt = sysCommandLineArguments.begin();
-	
+
 	while(c64cmdIt != sysCommandLineArguments.end())
 	{
 		char *cmd = c64ParseCommandLineGetArgument();
-		
+
 		if (!strcmp(cmd, "help") || !strcmp(cmd, "h")
 			|| !strcmp(cmd, "-help") || !strcmp(cmd, "-h")
 			|| !strcmp(cmd, "--help") || !strcmp(cmd, "--h"))
@@ -480,7 +475,7 @@ void C64DebuggerParseCommandLine1()
 			c64PrintCommandLineHelp();
 			SYS_CleanExit();
 		}
-		
+
 		if (!strcmp(cmd, "version") || !strcmp(cmd, "v")
 			|| !strcmp(cmd, "-version") || !strcmp(cmd, "-v")
 			|| !strcmp(cmd, "--version") || !strcmp(cmd, "--v"))
@@ -488,7 +483,7 @@ void C64DebuggerParseCommandLine1()
 			c64PrintC64DebuggerVersion();
 			SYS_CleanExit();
 		}
-		
+
 		if (!strcmp(cmd, "-clearsettings") || !strcmp(cmd, "clearsettings"))
 		{
 			c64SettingsSkipConfig = true;
@@ -498,7 +493,6 @@ void C64DebuggerParseCommandLine1()
 	}
 }
 
-///////////
 void C64DebuggerAddStartupTaskCallback(C64DebuggerStartupTaskCallback *callback)
 {
 	c64DebuggerStartupTasksCallbacksMutex->Lock();
@@ -518,7 +512,7 @@ void c64PreRunStartupCallbacks()
 	{
 		LOGD("pre-run c64DebuggerStartupTasksCallbacks");
 		for (std::list<C64DebuggerStartupTaskCallback *>::iterator it = c64DebuggerStartupTasksCallbacks.begin();
-			 it != c64DebuggerStartupTasksCallbacks.end(); it++)
+			 it != c64DebuggerStartupTasksCallbacks.end(); ++it)
 		{
 			C64DebuggerStartupTaskCallback *callback = *it;
 			callback->PreRunStartupTaskCallback();
@@ -538,7 +532,7 @@ void c64PostRunStartupCallbacks()
 		{
 			C64DebuggerStartupTaskCallback *callback = c64DebuggerStartupTasksCallbacks.front();
 			callback->PostRunStartupTaskCallback();
-			
+
 			c64DebuggerStartupTasksCallbacks.pop_front();
 			delete callback;
 		}
@@ -550,34 +544,34 @@ void c64PostRunStartupCallbacks()
 void c64PerformStartupTasksThreaded()
 {
 	LOGM("START c64PerformStartupTasksThreaded");
-	
+
 	SYS_Sleep(100);
 	guiMain->SetApplicationWindowAlwaysOnTop(c64SettingsWindowAlwaysOnTop);
 
 	LOGD("c64CommandLineWindowFullScreen=%s", STRBOOL(c64CommandLineWindowFullScreen));
-	
+
 	if (c64CommandLineWindowFullScreen)
 	{
 		viewC64->GoFullScreen(SetFullScreenMode::MainWindowEnterFullScreen, NULL);
 	}
 
 	c64PreRunStartupCallbacks();
-	
+
 	if (c64CommandLineAudioOutDevice != NULL)
 	{
 		gSoundEngine->LockMutex("c64PerformStartupTasksThreaded/c64CommandLineAudioOutDevice");
 		char *cDeviceName = c64CommandLineAudioOutDevice->GetStdASCII();
-		if (gSoundEngine->SetOutputAudioDevice(cDeviceName) == false)
+		if (!gSoundEngine->SetOutputAudioDevice(cDeviceName))
 		{
 			printInfo("Selected sound out device not found, falling back to default output.\n");
 		}
 		delete [] cDeviceName;
 		gSoundEngine->UnlockMutex("c64PerformStartupTasksThreaded/c64CommandLineAudioOutDevice");
 	}
-	
+
 	// load breakpoints & symbols
 	LOGTODO("c64PerformStartupTasksThreaded: SYMBOLS & BREAKPOINTS FOR BOTH ATARI & C64 + NES. GENERALIZE ME");
-	
+
 	CDebugInterface *debugInterface = NULL;
 	if (viewC64->debugInterfaceC64)
 	{
@@ -587,31 +581,34 @@ void c64PerformStartupTasksThreaded()
 	{
 		debugInterface = viewC64->debugInterfaceAtari;
 	}
-	
-	if (c64SettingsPathToBreakpoints != NULL)
+
+	if (debugInterface)
 	{
-		debugInterface->symbols->DeleteAllBreakpoints();
-		debugInterface->symbols->ParseBreakpoints(c64SettingsPathToBreakpoints);
+		if (c64SettingsPathToBreakpoints != NULL)
+		{
+			debugInterface->symbols->DeleteAllBreakpoints();
+			debugInterface->symbols->ParseBreakpoints(c64SettingsPathToBreakpoints);
+		}
+
+		if (c64SettingsPathToSymbols != NULL)
+		{
+			debugInterface->symbols->DeleteAllSymbols();
+			debugInterface->symbols->ParseSymbols(c64SettingsPathToSymbols);
+		}
+
+		if (c64SettingsPathToWatches != NULL)
+		{
+			debugInterface->symbols->DeleteAllWatches();
+			debugInterface->symbols->ParseWatches(c64SettingsPathToWatches);
+		}
+
+		if (c64SettingsPathToDebugInfo != NULL)
+		{
+			debugInterface->symbols->DeleteAllSymbols();
+			debugInterface->symbols->ParseSourceDebugInfo(c64SettingsPathToDebugInfo);
+		}
 	}
-	
-	if (c64SettingsPathToSymbols != NULL)
-	{
-		debugInterface->symbols->DeleteAllSymbols();
-		debugInterface->symbols->ParseSymbols(c64SettingsPathToSymbols);
-	}
-	
-	if (c64SettingsPathToWatches != NULL)
-	{
-		debugInterface->symbols->DeleteAllWatches();
-		debugInterface->symbols->ParseWatches(c64SettingsPathToWatches);
-	}
-	
-	if (c64SettingsPathToDebugInfo != NULL)
-	{
-		debugInterface->symbols->DeleteAllSymbols();
-		debugInterface->symbols->ParseSourceDebugInfo(c64SettingsPathToDebugInfo);
-	}
-	
+
 	// skip any automatic loading if jukebox is active
 	if (viewC64->viewJukeboxPlaylist != NULL)
 	{
@@ -623,14 +620,14 @@ void c64PerformStartupTasksThreaded()
 			gSoundEngine->UnlockMutex("c64PerformStartupTasksThreaded/viewJukeboxPlaylist");
 			//viewC64->debugInterfaceC64->UnlockMutex();
 		}
-		
+
 		viewC64->viewJukeboxPlaylist->StartPlaylist();
-		
+
 		c64PostRunStartupCallbacks();
 
 		return;
 	}
-	
+
 	if (viewC64->debugInterfaceC64)
 	{
 		// process, order is important
@@ -642,14 +639,6 @@ void c64PerformStartupTasksThreaded()
 		}
 		else
 		{
-			// DONE?: Is it possible to init VICE with proper Engines at startup to not re-create here?
-			// DONE?: Vice 3.1 by default starts with strange model (unknown=99), check cmdline parsing how it's handled in VICE
-			if (c64SettingsC64Model != 0)
-			{
-				//			SYS_Sleep(300);
-				//			viewC64->debugInterface->SetC64ModelType(c64SettingsC64Model);
-			}
-			
 			// setup SID
 			if (c64SettingsSIDEngineModel != 0)
 			{
@@ -657,12 +646,11 @@ void c64PerformStartupTasksThreaded()
 				viewC64->debugInterfaceC64->SetSidType(c64SettingsSIDEngineModel);
 				gSoundEngine->UnlockMutex("c64PerformStartupTasksThreaded");
 			}
-			
-			//
+
 			if (c64SettingsPathToD64 != NULL)
 			{
 				LOGD("isPRGInCommandLine=%s", STRBOOL(isPRGInCommandLine));
-				if (isPRGInCommandLine == false && isD64InCommandLine == true)
+				if (!isPRGInCommandLine && isD64InCommandLine)
 				{
 					// start disk based on settings
 					if (c64SettingsAutoJmpFromInsertedDiskFirstPrg)
@@ -677,153 +665,98 @@ void c64PerformStartupTasksThreaded()
 					viewC64->mainMenuHelper->InsertD64(c64SettingsPathToD64, false, false, 0, false);
 				}
 			}
-			
+
 			if (c64SettingsPathToTAP != NULL)
 			{
-	//			LOGD("isPRGInCommandLine=%s", STRBOOL(isPRGInCommandLine));
-	//			if (isPRGInCommandLine == false && isD64InCommandLine == true)
-	//			{
-	//				// start disk based on settings
-	//				if (c64SettingsAutoJmpFromInsertedDiskFirstPrg)
-	//				{
-	//					SYS_Sleep(100);
-	//				}
-	//				viewC64->viewC64MainMenu->InsertD64(c64SettingsPathToD64, false, c64SettingsAutoJmpFromInsertedDiskFirstPrg, 0, true);
-	//			}
-	//			else
-				{
-					// just load tape, do not start
-					viewC64->mainMenuHelper->LoadTape(c64SettingsPathToTAP, false, false, false);
-				}
-				
+				// just load tape, do not start
+				viewC64->mainMenuHelper->LoadTape(c64SettingsPathToTAP, false, false, false);
 			}
-			
+
 			if (c64SettingsPathToCartridge != NULL)
 			{
 				viewC64->mainMenuHelper->InsertCartridge(c64SettingsPathToCartridge, false);
 				SYS_Sleep(666);
 			}
+
+			LOGD("c64PerformStartupTasksThreaded: c64SettingsPathToReu=%p", c64SettingsPathToReu);
+			if (c64SettingsPathToReu != NULL)
+			{
+				c64SettingsPathToReu->DebugPrint("c64SettingsPathToReu=");
+				viewC64->mainMenuHelper->AttachReu(c64SettingsPathToReu, false, false);
+				C64DebuggerSetSetting("ReuEnabled", &c64SettingsReuEnabled);
+				SYS_Sleep(100);
+			}
 		}
-		
+
 		if (c64SettingsPathToPRG != NULL)
 		{
 			LOGD("c64PerformStartupTasksThreaded: loading PRG, isPRGInCommandLine=%s isD64InCommandLine=%s", STRBOOL(isPRGInCommandLine), STRBOOL(isD64InCommandLine));
 			c64SettingsPathToPRG->DebugPrint("c64SettingsPathToPRG=");
-			
-			if ((isPRGInCommandLine == false) && (isD64InCommandLine == true) && c64SettingsAutoJmpFromInsertedDiskFirstPrg)
+
+			if ((!isPRGInCommandLine) && (isD64InCommandLine) && c64SettingsAutoJmpFromInsertedDiskFirstPrg)
 			{
 				// do not load prg when disk inserted from command line and autostart
 			}
-			else //if (isPRGInCommandLine == true)
+			else
 			{
 				viewC64->mainMenuHelper->LoadPRG(c64SettingsPathToPRG, cmdLineOptionDoAutoJmp, false, true, false);
 			}
 		}
-		
+
 		if (c64CommandLineHardReset)
 		{
 			viewC64->debugInterfaceC64->ResetHard();
 		}
-		
+
 		if (c64SettingsEmulatedMouseC64Enabled)
 		{
 			viewC64->debugInterfaceC64->EmulatedMouseUpdateSettings();
 		}
 	}
-	
-	//	///////////
-	//	if (viewC64->debugInterfaceAtari)
-	//	{
-	//		viewC64->debugInterfaceAtari->SetMachineType(c64SettingsAtariMachineType);
-	//		viewC64->debugInterfaceAtari->SetVideoSystem(c64SettingsAtariVideoSystem);
-	//	}
-	
+
+	// Atari
 	if (viewC64->debugInterfaceAtari)
 	{
-		// process, order is important
-		// we need to create new strings for path as they will be deleted and updated by loaders
-		
-		// TODO: change command line to detect type of snapshot
-		//		if (c64SettingsPathToAtariSnapshot != NULL)
-		//		{
-		//			viewC64->viewAtariSnapshots->LoadSnapshot(c64SettingsPathToAtariSnapshot, false);
-		//			SYS_Sleep(150);
-		//		}
-		//		else
+		if (c64SettingsPathToATR != NULL)
 		{
-			//
-			if (c64SettingsPathToATR != NULL)
+			LOGD("isXEXInCommandLine=%s", STRBOOL(isXEXInCommandLine));
+			if (!isXEXInCommandLine && isATRInCommandLine)
 			{
-				LOGD("isXEXInCommandLine=%s", STRBOOL(isXEXInCommandLine));
-				if (isXEXInCommandLine == false && isATRInCommandLine == true)
+				if (c64SettingsAutoJmpFromInsertedDiskFirstPrg)
 				{
-					// start disk based on settings
-					if (c64SettingsAutoJmpFromInsertedDiskFirstPrg)
-					{
-						SYS_Sleep(100);
-					}
-					viewC64->mainMenuHelper->InsertATR(c64SettingsPathToATR, false, c64SettingsAutoJmpFromInsertedDiskFirstPrg, 0, true);
-					
+					SYS_Sleep(100);
 				}
-				else
-				{
-					// just load disk, do not start, we will start XEX instead
-					viewC64->mainMenuHelper->InsertATR(c64SettingsPathToATR, false, false, 0, false);
-				}
+				viewC64->mainMenuHelper->InsertATR(c64SettingsPathToATR, false, c64SettingsAutoJmpFromInsertedDiskFirstPrg, 0, true);
 			}
-			
-			// TODO: Atari TAPE files
-			//			if (c64SettingsPathToTAP != NULL)
-			//			{
-			//				//			LOGD("isPRGInCommandLine=%s", STRBOOL(isPRGInCommandLine));
-			//				//			if (isPRGInCommandLine == false && isD64InCommandLine == true)
-			//				//			{
-			//				//				// start disk based on settings
-			//				//				if (c64SettingsAutoJmpFromInsertedDiskFirstPrg)
-			//				//				{
-			//				//					SYS_Sleep(100);
-			//				//				}
-			//				//				viewC64->viewC64MainMenu->InsertD64(c64SettingsPathToD64, false, c64SettingsAutoJmpFromInsertedDiskFirstPrg, 0, true);
-			//				//			}
-			//				//			else
-			//				{
-			//					// just load tape, do not start
-			//					viewC64->viewC64MainMenu->LoadTape(c64SettingsPathToTAP, false, false, false);
-			//				}
-			//			}
-			
-			// TODO: ATARI Cartridge command line
-			//			if (c64SettingsPathToCartridge != NULL)
-			//			{
-			//				viewC64->viewC64MainMenu->InsertCartridge(c64SettingsPathToCartridge, false);
-			//				SYS_Sleep(666);
-			//			}
-			
-			if (c64CommandLineHardReset)
+			else
 			{
-				viewC64->debugInterfaceAtari->ResetHard();
+				viewC64->mainMenuHelper->InsertATR(c64SettingsPathToATR, false, false, 0, false);
 			}
 		}
-		
+
+		// TODO: Atari TAPE files and Cartridge support not implemented yet here
+
+		if (c64CommandLineHardReset)
+		{
+			viewC64->debugInterfaceAtari->ResetHard();
+		}
+
 		if (c64SettingsPathToXEX != NULL)
 		{
 			LOGD("c64PerformStartupTasksThreaded: loading XEX, isXEXInCommandLine=%s isATRInCommandLine=%s", STRBOOL(isXEXInCommandLine), STRBOOL(isATRInCommandLine));
 			c64SettingsPathToXEX->DebugPrint("c64SettingsPathToXEX=");
-			
-			if ((isXEXInCommandLine == false) && (isATRInCommandLine == true) && c64SettingsAutoJmpFromInsertedDiskFirstPrg)
+
+			if ((!isXEXInCommandLine) && (isATRInCommandLine) && c64SettingsAutoJmpFromInsertedDiskFirstPrg)
 			{
 				// do not load xex when disk inserted from command line and autostart
 			}
-			else //if (isXEXInCommandLine == true)
+			else
 			{
 				viewC64->mainMenuHelper->LoadXEX(c64SettingsPathToXEX, cmdLineOptionDoAutoJmp, false, true);
 			}
 		}
-		
 	}
-	
-	///////////
-	
+
 	if (viewC64->debugInterfaceNes)
 	{
 		if (c64SettingsPathToNES != NULL)
@@ -834,19 +767,12 @@ void c64PerformStartupTasksThreaded()
 
 	if (c64SettingsJmpOnStartupAddr > 0 && c64SettingsJmpOnStartupAddr < 0x10000)
 	{
-		//SYS_Sleep(150);
-		
 		LOGD("c64PerformStartupTasksThreaded: c64SettingsJmpOnStartupAddr=%04x", c64SettingsJmpOnStartupAddr);
-		
-		viewC64->debugInterfaceC64->MakeJsrC64(c64SettingsJmpOnStartupAddr);
+
+		if (viewC64->debugInterfaceC64)
+			viewC64->debugInterfaceC64->MakeJsrC64(c64SettingsJmpOnStartupAddr);
 	}
-	
-	//
-//	if (viewC64->debugInterfaceC64)
-//	{
-//		viewC64->screenVicEditor->RunDebug();
-//	}
-	
+
 	c64PostRunStartupCallbacks();
 }
 
@@ -856,10 +782,10 @@ class C64PerformStartupTasksThread : public CSlrThread
 	{
 		ThreadSetName("PerformStartupTasks");
 		LOGM("C64PerformStartupTasksThread: ThreadRun");
-		
+
 		if (c64SettingsPathToViceSnapshot != NULL && c64SettingsWaitOnStartup < 150)
 			c64SettingsWaitOnStartup = 150;
-		
+
 		if (c64SettingsPathToAtariSnapshot != NULL && c64SettingsWaitOnStartup < 150)
 			c64SettingsWaitOnStartup = 150;
 
@@ -868,34 +794,32 @@ class C64PerformStartupTasksThread : public CSlrThread
 			LOGD("C64PerformStartupTasksThread: early run, wait 100ms");
 			c64SettingsWaitOnStartup += 100;
 		}
-		
+
 		LOGD("C64PerformStartupTasksThread: c64SettingsWaitOnStartup=%d", c64SettingsWaitOnStartup);
 		SYS_Sleep(c64SettingsWaitOnStartup);
-		
-		c64PerformStartupTasksThreaded();
-	};
-};
 
-////////////////////////
+		c64PerformStartupTasksThreaded();
+	}
+};
 
 void C64DebuggerParseCommandLine2()
 {
 	LOGD("C64DebuggerParseCommandLine2");
-	
+
 	if (sysCommandLineArguments.empty())
 		return;
-	
+
 	c64cmdIt = sysCommandLineArguments.begin();
-	
+
 	LOGD("C64DebuggerParseCommandLine2: iterate");
 	while(c64cmdIt != sysCommandLineArguments.end())
 	{
 		char *cmd = c64ParseCommandLineGetArgument();
-		
+
 		//LOGD("...cmd='%s'", cmd);
-		
+
 		if (cmd[0] == '-')
-			cmd++;
+			++cmd;
 
 		if (!strcmp(cmd, "c64"))
 		{
@@ -967,6 +891,13 @@ void C64DebuggerParseCommandLine2()
 			char *arg = c64ParseCommandLineGetArgument();
 			c64SettingsPathToCartridge = new CSlrString(arg);
 		}
+		else if (!strcmp(cmd, "reu"))
+		{
+			char *arg = c64ParseCommandLineGetArgument();
+			LOGD("C64DebuggerParseCommandLine2: -reu found, path=%s", arg);
+			c64SettingsPathToReu = new CSlrString(arg);
+			c64SettingsReuEnabled = true;
+		}
 		else if (!strcmp(cmd, "snapshot"))
 		{
 			char *arg = c64ParseCommandLineGetArgument();
@@ -993,12 +924,11 @@ void C64DebuggerParseCommandLine2()
 
 		else if (!strcmp(cmd, "jmp"))
 		{
-			int addr;
+			int addr = 0;
 			char *str = c64ParseCommandLineGetArgument();
-			
+
 			if (str[0] == '$' || str[0] == 'x')
 			{
-				// hex
 				str++;
 				sscanf(str, "%x", &addr);
 			}
@@ -1006,16 +936,17 @@ void C64DebuggerParseCommandLine2()
 			{
 				sscanf(str, "%d", &addr);
 			}
-			
+
 			c64SettingsJmpOnStartupAddr = addr;
 		}
 		else if (!strcmp(cmd, "layout"))
 		{
-			int layoutId;
 			char *str = c64ParseCommandLineGetArgument();
-			layoutId = atoi(str)-1;
+			int layoutId = atoi(str) - 1;
+			if (layoutId < 0)
+				layoutId = 0;
 			c64SettingsDefaultScreenLayoutId = layoutId;
-			
+
 			LOGD("c64SettingsDefaultScreenLayoutId=%d", layoutId);
 		}
 		else if (!strcmp(cmd, "wait"))
@@ -1043,7 +974,6 @@ void C64DebuggerParseCommandLine2()
 		{
 			c64CommandLineWindowFullScreen = true;
 		}
-		
 		// TODO: fixme, plugins should also parse command line options
 		else if (!strcmp(cmd, "crtmaker"))
 		{
@@ -1062,13 +992,9 @@ void C64DebuggerPerformStartupTasks()
 	SYS_StartThread(thread, NULL);
 }
 
-//
-
 void C64DebuggerPassConfigToRunningInstance()
 {
-	//NSLog(@"C64DebuggerPassConfigToRunningInstance");
-	
-	if (c64CommandLineSkipConsoleAttach == false)
+	if (!c64CommandLineSkipConsoleAttach)
 	{
 		SYS_AttachConsole();
 	}
@@ -1076,45 +1002,40 @@ void C64DebuggerPassConfigToRunningInstance()
 	c64SettingsPassConfigToRunningInstance = true;
 	printLine("-----< RetroDebugger v%s by Slajerek/Samar >------\n", RETRODEBUGGER_VERSION_STRING);
 	fflush(stdout);
-	
-	//printLine("Passing parameters to running instance\n");
-	
+
 	LOGD("C64DebuggerPassConfigToRunningInstance: C64DebuggerParseCommandLine2");
 	c64SettingsForceUnpause = false;
 	C64DebuggerParseCommandLine2();
-	
+
 	LOGD("C64DebuggerPassConfigToRunningInstance: after C64DebuggerParseCommandLine2");
-	
-	// check if we need just to pass parameters to other running instance
-	// and pass them if necessary
-	
+
 	CByteBuffer *byteBuffer = new CByteBuffer();
 	LOGD("...C64D_PASS_CONFIG_DATA_MARKER");
 	byteBuffer->PutU16(C64D_PASS_CONFIG_DATA_MARKER);
 	byteBuffer->PutU16(C64D_PASS_CONFIG_DATA_VERSION);
-	
+
 	LOGD("... put folder");
 	gUTFPathToCurrentDirectory->DebugPrint("gUTFPathToCurrentDirectory=");
 	byteBuffer->PutSlrString(gUTFPathToCurrentDirectory);
-	
+
 	if (c64SettingsSelectEmulator != EMULATOR_TYPE_UNKNOWN)
 	{
 		byteBuffer->PutU8(C64D_PASS_CONFIG_DATA_SELECT_EMULATOR);
 		byteBuffer->PutU8(c64SettingsSelectEmulator);
 	}
-	
+
 	if (c64SettingsPathToViceSnapshot)
 	{
 		byteBuffer->PutU8(C64D_PASS_CONFIG_DATA_LOAD_SNAPSHOT_VICE);
 		byteBuffer->PutSlrString(c64SettingsPathToViceSnapshot);
 	}
-	
+
 	if (c64SettingsPathToBreakpoints)
 	{
 		byteBuffer->PutU8(C64D_PASS_CONFIG_DATA_BREAKPOINTS_FILE);
 		byteBuffer->PutSlrString(c64SettingsPathToBreakpoints);
 	}
-	
+
 	if (c64SettingsPathToSymbols)
 	{
 		LOGD("c64SettingsPathToSymbols");
@@ -1122,7 +1043,7 @@ void C64DebuggerPassConfigToRunningInstance()
 		byteBuffer->PutU8(C64D_PASS_CONFIG_DATA_SYMBOLS_FILE);
 		byteBuffer->PutSlrString(c64SettingsPathToSymbols);
 	}
-	
+
 	if (c64SettingsPathToWatches)
 	{
 		LOGD("c64SettingsPathToWatches");
@@ -1130,122 +1051,128 @@ void C64DebuggerPassConfigToRunningInstance()
 		byteBuffer->PutU8(C64D_PASS_CONFIG_DATA_WATCHES_FILE);
 		byteBuffer->PutSlrString(c64SettingsPathToWatches);
 	}
-	
+
 	if (c64SettingsPathToDebugInfo)
 	{
 		byteBuffer->PutU8(C64D_PASS_CONFIG_DATA_DEBUG_INFO);
 		byteBuffer->PutSlrString(c64SettingsPathToDebugInfo);
 	}
-	
+
 	if (c64CommandLineHardReset)
 	{
 		byteBuffer->PutU8(C64D_PASS_CONFIG_DATA_HARD_RESET);
 	}
-	
+
 	if (c64SettingsWaitOnStartup > 0)
 	{
 		byteBuffer->PutU8(C64D_PASS_CONFIG_DATA_WAIT);
 		byteBuffer->putInt(c64SettingsWaitOnStartup);
 	}
-	
+
 	if (c64SettingsPathToCartridge)
 	{
 		byteBuffer->PutU8(C64D_PASS_CONFIG_DATA_PATH_TO_CRT);
 		byteBuffer->PutSlrString(c64SettingsPathToCartridge);
 	}
-	
+
+	if (c64SettingsPathToReu)
+	{
+		byteBuffer->PutU8(C64D_PASS_CONFIG_DATA_PATH_TO_REU);
+		byteBuffer->PutSlrString(c64SettingsPathToReu);
+	}
+
 	if (c64SettingsPathToD64)
 	{
 		byteBuffer->PutU8(C64D_PASS_CONFIG_DATA_PATH_TO_D64);
 		byteBuffer->PutSlrString(c64SettingsPathToD64);
 	}
-	
+
 	if (c64SettingsPathToTAP)
 	{
 		byteBuffer->PutU8(C64D_PASS_CONFIG_DATA_PATH_TO_TAP);
 		byteBuffer->PutSlrString(c64SettingsPathToTAP);
 	}
-	
+
 	if (c64SettingsPathToXEX)
 	{
 		byteBuffer->PutU8(C64D_PASS_CONFIG_DATA_PATH_TO_XEX);
 		byteBuffer->PutSlrString(c64SettingsPathToXEX);
 	}
-	
+
 	if (c64SettingsPathToNES)
 	{
 		byteBuffer->PutU8(C64D_PASS_CONFIG_DATA_PATH_TO_NES);
 		byteBuffer->PutSlrString(c64SettingsPathToNES);
 	}
-	
+
 	if (c64SettingsPathToATR)
 	{
 		byteBuffer->PutU8(C64D_PASS_CONFIG_DATA_PATH_TO_ATR);
 		byteBuffer->PutSlrString(c64SettingsPathToATR);
 	}
-	
+
 	if (cmdLineOptionDoAutoJmp)
 	{
 		byteBuffer->PutU8(C64D_PASS_CONFIG_DATA_SET_AUTOJMP);
 		byteBuffer->PutBool(cmdLineOptionDoAutoJmp);
 	}
-	
+
 	if (c64SettingsForceUnpause)
 	{
 		byteBuffer->PutU8(C64D_PASS_CONFIG_DATA_FORCE_UNPAUSE);
 		byteBuffer->PutBool(c64SettingsForceUnpause);
 	}
-	
+
 	if (c64SettingsAutoJmpFromInsertedDiskFirstPrg)
 	{
 		byteBuffer->PutU8(C64D_PASS_CONFIG_DATA_AUTO_RUN_DISK);
 		byteBuffer->PutBool(c64SettingsAutoJmpFromInsertedDiskFirstPrg);
 	}
-	
+
 	if (c64SettingsAutoJmpAlwaysToLoadedPRGAddress)
 	{
 		byteBuffer->PutU8(C64D_PASS_CONFIG_DATA_ALWAYS_JMP);
 		byteBuffer->PutBool(c64SettingsAutoJmpAlwaysToLoadedPRGAddress);
 	}
-	
+
 	if (c64SettingsPathToPRG)
 	{
 		LOGD("c64SettingsPathToPRG");
 		c64SettingsPathToPRG->DebugPrint("c64SettingsPathToPRG=");
-		
+
 		byteBuffer->PutU8(C64D_PASS_CONFIG_DATA_PATH_TO_PRG);
 		byteBuffer->PutSlrString(c64SettingsPathToPRG);
 	}
-	
+
 	if (c64SettingsJmpOnStartupAddr >= 0)
 	{
 		byteBuffer->PutU8(C64D_PASS_CONFIG_DATA_JMP);
 		byteBuffer->putInt(c64SettingsJmpOnStartupAddr);
 	}
-	
+
 	if (c64SettingsDefaultScreenLayoutId >= 0)
 	{
 		LOGD("c64SettingsDefaultScreenLayoutId=%d", c64SettingsDefaultScreenLayoutId);
 		byteBuffer->PutU8(C64D_PASS_CONFIG_DATA_LAYOUT);
 		byteBuffer->putInt(c64SettingsDefaultScreenLayoutId);
 	}
-	
+
 	if (c64CommandLineAudioOutDevice != NULL)
 	{
 		LOGD("c64CommandLineAudioOutDevice");
 		byteBuffer->PutU8(C64D_PASS_CONFIG_DATA_SOUND_DEVICE_OUT);
 		byteBuffer->PutSlrString(c64CommandLineAudioOutDevice);
 	}
-	
+
 	if (c64CommandLineWindowFullScreen)
 	{
 		byteBuffer->PutU8(C64D_PASS_CONFIG_DATA_FULL_SCREEN);
 	}
-	
+
 	LOGD("...C64D_PASS_CONFIG_DATA_EOF");
-	
+
 	byteBuffer->PutU8(C64D_PASS_CONFIG_DATA_EOF);
-	
+
 	int pid = C64DebuggerSendConfiguration(byteBuffer);
 	if (pid > 0)
 	{
@@ -1265,39 +1192,44 @@ void c64PerformNewConfigurationTasksThreaded(CByteBuffer *byteBuffer)
 	LOGD("c64PerformNewConfigurationTasksThreaded");
 	//byteBuffer->DebugPrint();
 	byteBuffer->Rewind();
-	
+
 	u16 marker = byteBuffer->GetU16();
 	if (marker != C64D_PASS_CONFIG_DATA_MARKER)
 	{
 		LOGError("Config data marker not found (received %04x, should be %04x)", marker, C64D_PASS_CONFIG_DATA_MARKER);
+		delete byteBuffer; // prevent leak
 		return;
 	}
-	
+
 	u16 v = byteBuffer->GetU16();
 	if (v != C64D_PASS_CONFIG_DATA_VERSION)
 	{
 		LOGError("Config data version not correct (received %04x, should be %04x)", v, C64D_PASS_CONFIG_DATA_VERSION);
+		delete byteBuffer; // prevent leak
 		return;
 	}
-	
+
 	CSlrString *currentFolder = byteBuffer->GetSlrString();
-	
+
 	LOGD("... got folder");
 	currentFolder->DebugPrint("currentFolder=");
-	
+
 	SYS_SetCurrentFolder(currentFolder);
-	
+
 	delete currentFolder;
 
-	CDebugInterface *debugInterface = viewC64->debugInterfaces.front();
-	
+	CDebugInterface *debugInterface = NULL;
+	if (!viewC64->debugInterfaces.empty())
+		debugInterface = viewC64->debugInterfaces.front();
+
 	// select default emulator as the first that is running
-	for (std::vector<CDebugInterface *>::iterator it = viewC64->debugInterfaces.begin(); it != viewC64->debugInterfaces.end(); it++)
+	for (std::vector<CDebugInterface *>::iterator it = viewC64->debugInterfaces.begin(); it != viewC64->debugInterfaces.end(); ++it)
 	{
 		CDebugInterface *d = *it;
 		if (d->isRunning)
 		{
 			debugInterface = d;
+			break;
 		}
 	}
 
@@ -1305,16 +1237,16 @@ void c64PerformNewConfigurationTasksThreaded(CByteBuffer *byteBuffer)
 	{
 		guiMain->RaiseMainWindow();
 	}
-	
+
 	while(!byteBuffer->IsEof())
 	{
 		uint8 t = byteBuffer->GetU8();
-		
+
 		if (t == C64D_PASS_CONFIG_DATA_EOF)
 			break;
-		
+
 		LOGD("Process passed message=%d", t);
-		
+
 		if (t == C64D_PASS_CONFIG_DATA_WAIT)
 		{
 			int wait = byteBuffer->getInt();
@@ -1326,7 +1258,7 @@ void c64PerformNewConfigurationTasksThreaded(CByteBuffer *byteBuffer)
 			u8 emulatorType = byteBuffer->GetU8();
 			c64SettingsSelectEmulator = emulatorType;
 			debugInterface = viewC64->GetDebugInterface(emulatorType);
-			if (debugInterface->isRunning == false)
+			if (debugInterface && (debugInterface->isRunning == false))
 			{
 				viewC64->StartEmulationThread(debugInterface);
 			}
@@ -1334,53 +1266,68 @@ void c64PerformNewConfigurationTasksThreaded(CByteBuffer *byteBuffer)
 		else if (t == C64D_PASS_CONFIG_DATA_LOAD_SNAPSHOT_VICE)
 		{
 			CSlrString *str = byteBuffer->GetSlrString();
-			viewC64->viewC64Snapshots->LoadSnapshot(str, false, viewC64->debugInterfaceC64);
+			if (viewC64->viewC64Snapshots && viewC64->debugInterfaceC64)
+				viewC64->viewC64Snapshots->LoadSnapshot(str, false, viewC64->debugInterfaceC64);
 			delete str;
-			
+
 			SYS_Sleep(150);
 		}
 		else if (t == C64D_PASS_CONFIG_DATA_LOAD_SNAPSHOT_ATARI800)
 		{
 			CSlrString *str = byteBuffer->GetSlrString();
-			viewC64->viewC64Snapshots->LoadSnapshot(str, false, viewC64->debugInterfaceAtari);
+			if (viewC64->viewC64Snapshots && viewC64->debugInterfaceAtari)
+				viewC64->viewC64Snapshots->LoadSnapshot(str, false, viewC64->debugInterfaceAtari);
 			delete str;
-			
+
 			SYS_Sleep(150);
 		}
 		else if (t == C64D_PASS_CONFIG_DATA_LOAD_SNAPSHOT_NESTOPIA)
 		{
 			CSlrString *str = byteBuffer->GetSlrString();
-			viewC64->viewC64Snapshots->LoadSnapshot(str, false, viewC64->debugInterfaceNes);
+			if (viewC64->viewC64Snapshots && viewC64->debugInterfaceNes)
+				viewC64->viewC64Snapshots->LoadSnapshot(str, false, viewC64->debugInterfaceNes);
 			delete str;
-			
+
 			SYS_Sleep(150);
 		}
 		else if (t == C64D_PASS_CONFIG_DATA_BREAKPOINTS_FILE)
 		{
 			CSlrString *str = byteBuffer->GetSlrString();
-			debugInterface->symbols->DeleteAllBreakpoints();
-			debugInterface->symbols->ParseBreakpoints(str);
+			if (debugInterface && debugInterface->symbols)
+			{
+				debugInterface->symbols->DeleteAllBreakpoints();
+				debugInterface->symbols->ParseBreakpoints(str);
+			}
 			delete str;
 		}
 		else if (t == C64D_PASS_CONFIG_DATA_SYMBOLS_FILE)
 		{
 			CSlrString *str = byteBuffer->GetSlrString();
-			debugInterface->symbols->DeleteAllSymbols();
-			debugInterface->symbols->ParseSymbols(str);
+			if (debugInterface && debugInterface->symbols)
+			{
+				debugInterface->symbols->DeleteAllSymbols();
+				debugInterface->symbols->ParseSymbols(str);
+			}
 			delete str;
 		}
 		else if (t == C64D_PASS_CONFIG_DATA_WATCHES_FILE)
 		{
 			CSlrString *str = byteBuffer->GetSlrString();
-			debugInterface->symbols->DeleteAllWatches();
-			debugInterface->symbols->ParseWatches(str);
+			if (debugInterface && debugInterface->symbols)
+			{
+				debugInterface->symbols->DeleteAllWatches();
+				debugInterface->symbols->ParseWatches(str);
+			}
 			delete str;
 		}
 		else if (t == C64D_PASS_CONFIG_DATA_DEBUG_INFO)
 		{
 			CSlrString *str = byteBuffer->GetSlrString();
-			debugInterface->symbols->DeleteAllSymbols();
-			debugInterface->symbols->ParseSymbols(str);
+			if (debugInterface && debugInterface->symbols)
+			{
+				debugInterface->symbols->DeleteAllSymbols();
+				debugInterface->symbols->ParseSourceDebugInfo(str);
+			}
 			delete str;
 		}
 		else if (t == C64D_PASS_CONFIG_DATA_PATH_TO_D64)
@@ -1400,6 +1347,14 @@ void c64PerformNewConfigurationTasksThreaded(CByteBuffer *byteBuffer)
 			CSlrString *str = byteBuffer->GetSlrString();
 			viewC64->mainMenuHelper->InsertCartridge(str, false);
 			SYS_Sleep(666);
+			delete str;
+		}
+		else if (t == C64D_PASS_CONFIG_DATA_PATH_TO_REU)
+		{
+			CSlrString *str = byteBuffer->GetSlrString();
+			viewC64->mainMenuHelper->AttachReu(str, false, false);
+			C64DebuggerSetSetting("ReuEnabled", &c64SettingsReuEnabled);
+			SYS_Sleep(100);
 			delete str;
 		}
 		else if (t == C64D_PASS_CONFIG_DATA_PATH_TO_XEX)
@@ -1514,14 +1469,12 @@ class C64PerformNewConfigurationTasksThread : public CSlrThread
 	};
 };
 
-
 void C64DebuggerPerformNewConfigurationTasks(CByteBuffer *byteBuffer)
 {
 	CByteBuffer *copyByteBuffer = new CByteBuffer(byteBuffer);
-	
+
 	C64PerformNewConfigurationTasksThread *thread = new C64PerformNewConfigurationTasksThread();
 	SYS_StartThread(thread, copyByteBuffer);
-	
 }
 
 void C64DebuggerStartupTaskCallback::PreRunStartupTaskCallback()
@@ -1532,15 +1485,3 @@ void C64DebuggerStartupTaskCallback::PostRunStartupTaskCallback()
 {
 }
 
-//
-//{
-//	//// TEST
-//	
-//	LOGD("CViewC64::DoTap: TEST C64DebuggerSendConfiguration");
-//	CByteBuffer *b = new CByteBuffer();
-//	b->PutFloat(x);
-//	b->PutFloat(y);
-//	
-//	C64DebuggerSendConfiguration(b);
-//
-//}

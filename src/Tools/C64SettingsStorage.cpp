@@ -113,7 +113,7 @@ uint8 c64SettingsSIDStereo = 0;					// "SidStereo" 0=none, 1=stereo, 2=triple
 uint16 c64SettingsSIDStereoAddress = 0xD420;	// "SidStereoAddressStart"
 uint16 c64SettingsSIDTripleAddress = 0xDF00;	// "SidTripleAddressStart"
 
-extern u8 c64SettingsC64SidImportMode = SID_IMPORT_MODE_PSID64;
+u8 c64SettingsC64SidImportMode = SID_IMPORT_MODE_PSID64;
 
 int c64SettingsDatasetteSpeedTuning = 0;
 int c64SettingsDatasetteZeroGapDelay = 20000;
@@ -955,7 +955,7 @@ void C64DebuggerSetSetting(const char *name, void *value)
 		c64SettingsPathToD64 = new CSlrString((CSlrString*)value);
 		
 		// the setting will be updated later by c64PerformStartupTasksThreaded
-		if (viewC64->debugInterfaceC64 && viewC64->debugInterfaceC64->isRunning)
+		if (viewC64->debugInterfaceC64)
 		{
 			viewC64->mainMenuHelper->InsertD64(c64SettingsPathToD64, false, c64SettingsAutoJmpFromInsertedDiskFirstPrg, 0, true);
 		}
@@ -970,7 +970,7 @@ void C64DebuggerSetSetting(const char *name, void *value)
 		c64SettingsPathToPRG->DebugPrint("PathPRG=");
 
 		// the setting will be updated later by c64PerformStartupTasksThreaded
-		if (viewC64->debugInterfaceC64 && viewC64->debugInterfaceC64->isRunning)
+		if (viewC64->debugInterfaceC64)
 		{
 			viewC64->mainMenuHelper->LoadPRG(c64SettingsPathToPRG, false, false, true, false);
 		}
@@ -983,7 +983,7 @@ void C64DebuggerSetSetting(const char *name, void *value)
 		
 		c64SettingsPathToTAP = new CSlrString((CSlrString*)value);
 		// the setting will be updated later by c64PerformStartupTasksThreaded
-		if (viewC64->debugInterfaceC64 && viewC64->debugInterfaceC64->isRunning)
+		if (viewC64->debugInterfaceC64)
 		{
 			viewC64->mainMenuHelper->LoadTape(c64SettingsPathToTAP, false, false, false);
 		}
@@ -997,9 +997,24 @@ void C64DebuggerSetSetting(const char *name, void *value)
 		c64SettingsPathToCartridge = new CSlrString((CSlrString*)value);
 		
 		// the setting will be updated later by c64PerformStartupTasksThreaded
-		if (viewC64->debugInterfaceC64 && viewC64->debugInterfaceC64->isRunning)
+		if (viewC64->debugInterfaceC64)
 		{
 			viewC64->mainMenuHelper->InsertCartridge(c64SettingsPathToCartridge, false);
+		}
+		return;
+	}
+	else if (!strcmp(name, "PathREU"))
+	{
+		LOGD("C64DebuggerSetSetting: PathREU");
+		if (c64SettingsPathToReu != NULL)
+			delete c64SettingsPathToReu;
+		
+		c64SettingsPathToReu = new CSlrString((CSlrString*)value);
+		
+		// the setting will be updated later by c64PerformStartupTasksThreaded
+		if (viewC64->debugInterfaceC64)
+		{
+			viewC64->mainMenuHelper->AttachReu(c64SettingsPathToReu, false, false);
 		}
 		return;
 	}
@@ -1008,15 +1023,15 @@ void C64DebuggerSetSetting(const char *name, void *value)
 		u16 v = *((u16*)value);
 		c64SettingsScreenSupersampleFactor = v;
 		
-		if (viewC64->debugInterfaceC64 && viewC64->debugInterfaceC64->isRunning)
+		if (viewC64->debugInterfaceC64)
 		{
 			viewC64->viewC64Screen->SetSupersampleFactor(c64SettingsScreenSupersampleFactor);
 		}
-		if (viewC64->debugInterfaceAtari && viewC64->debugInterfaceAtari->isRunning)
+		if (viewC64->debugInterfaceAtari)
 		{
 			viewC64->viewAtariScreen->SetSupersampleFactor(c64SettingsScreenSupersampleFactor);
 		}
-		if (viewC64->debugInterfaceNes && viewC64->debugInterfaceNes->isRunning)
+		if (viewC64->debugInterfaceNes)
 		{
 			viewC64->viewNesScreen->SetSupersampleFactor(c64SettingsScreenSupersampleFactor);
 		}
@@ -1133,7 +1148,7 @@ void C64DebuggerSetSetting(const char *name, void *value)
 			int v = *((int*)value);
 			c64SettingsC64Model = v;
 			
-			if (viewC64->debugInterfaceC64 && viewC64->debugInterfaceC64->isRunning)
+			if (viewC64->debugInterfaceC64)
 			{
 				viewC64->debugInterfaceC64->SetC64ModelType(c64SettingsC64Model);
 			}
@@ -1160,7 +1175,7 @@ void C64DebuggerSetSetting(const char *name, void *value)
 			c64SettingsSIDEngineModel = v;
 			
 			// the setting will be updated later by c64PerformStartupTasksThreaded
-			if (viewC64->debugInterfaceC64 && viewC64->debugInterfaceC64->isRunning)
+			if (viewC64->debugInterfaceC64)
 			{
 				viewC64->debugInterfaceC64->SetSidType(c64SettingsSIDEngineModel);
 			}

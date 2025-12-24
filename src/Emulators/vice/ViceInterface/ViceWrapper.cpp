@@ -707,7 +707,7 @@ void c64d_c64_check_pc_breakpoint(uint16 pc)
 				int rasterY = vicState.raster_line;
 
 				// outside screen (in borders)?
-				if (rasterY < 0x32 || rasterY > 0xFA
+				if (rasterY < 0x33 || rasterY > 0xFB
 					|| rasterX < 0x88 || rasterX > 0x1C7)
 				{
 					c64d_mem_write_c64_no_mark(0xD021, addrBreakpoint->data);

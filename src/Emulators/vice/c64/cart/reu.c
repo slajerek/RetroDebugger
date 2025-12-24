@@ -638,6 +638,8 @@ static int reu_activate(void)
 
     log_message(reu_log, "%dKB unit installed.", reu_size >> 10);
 
+	LOGD("reu_filename=%s", reu_filename);
+	
     if (!util_check_null_string(reu_filename)) {
         if (util_file_load(reu_filename, reu_ram, (size_t)reu_size, UTIL_FILE_LOAD_RAW) < 0) {
             log_error(reu_log, "Reading REU image %s failed.", reu_filename);
@@ -830,11 +832,11 @@ BYTE reu_read_without_sideeffects(WORD addr)
             retval = (rec.transfer_length >> 8) & 0xff;
             break;
         case REU_REG_RW_INTERRUPT:
-            assert(BITS_ARE_ALL_SET(rec.int_mask_reg, REU_REG_RW_INTERRUPT_UNUSED_MASK));
+//            assert(BITS_ARE_ALL_SET(rec.int_mask_reg, REU_REG_RW_INTERRUPT_UNUSED_MASK));
             retval = rec.int_mask_reg;
             break;
         case REU_REG_RW_ADDR_CONTROL:
-            assert(BITS_ARE_ALL_SET(rec.address_control_reg, REU_REG_RW_ADDR_CONTROL_UNUSED_MASK));
+//            assert(BITS_ARE_ALL_SET(rec.address_control_reg, REU_REG_RW_ADDR_CONTROL_UNUSED_MASK));
             retval = rec.address_control_reg;
             break;
     }

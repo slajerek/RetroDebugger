@@ -54,10 +54,10 @@
 		4113CE9825F8AF2000FB1236 /* TextEditor.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4113CE9625F8AF2000FB1236 /* TextEditor.cpp */; };
 		4113CE9B25F8AF6900FB1236 /* TestTextEditor.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4113CE9A25F8AF6900FB1236 /* TestTextEditor.cpp */; };
 		4113F62629E2C5B7002FE970 /* CViewC64KeyMap.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4113F62429E2C5B7002FE970 /* CViewC64KeyMap.cpp */; };
+		411D2E402D71D4D3007714A9 /* CRenderShaderCRTMonitorOpenGL4.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4150D9DB2D71D15B0068351B /* CRenderShaderCRTMonitorOpenGL4.cpp */; };
 		412085D323C76BFC00FBD7C3 /* CMainMenuBar.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 412085D123C76BFC00FBD7C3 /* CMainMenuBar.cpp */; };
 		4121FCE12CC6A1E600095AD3 /* CPipeProtocolDebuggerCallback.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4121FCDA2CC6A1E600095AD3 /* CPipeProtocolDebuggerCallback.cpp */; };
 		4121FCE22CC6A1E600095AD3 /* CDebuggerServerWebSockets.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4121FCDD2CC6A1E600095AD3 /* CDebuggerServerWebSockets.cpp */; };
-		4121FCE62CC6AB3900095AD3 /* C64DebuggerPluginParallax.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4121FCE32CC6AB3900095AD3 /* C64DebuggerPluginParallax.cpp */; };
 		412897CE2B97D5B600495C47 /* CDataAdapterViceC64DirectRam.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 412897C32B97D5B600495C47 /* CDataAdapterViceC64DirectRam.cpp */; };
 		412897CF2B97D5B600495C47 /* CDataAdapterViceC64.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 412897C42B97D5B600495C47 /* CDataAdapterViceC64.cpp */; };
 		412897D02B97D5B600495C47 /* CDataAdapterViceC64Reu.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 412897C52B97D5B600495C47 /* CDataAdapterViceC64Reu.cpp */; };
@@ -76,7 +76,6 @@
 		4137754F2C02245B006BF409 /* C64DebuggerPluginDNDK.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4137754C2C02245B006BF409 /* C64DebuggerPluginDNDK.cpp */; };
 		413EC7D1266E76CC00CB24D2 /* CViewBreakpoints.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 413EC7CE266E76CB00CB24D2 /* CViewBreakpoints.cpp */; };
 		414AD73928797F1200244453 /* CViewC64ScreenViewfinder.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 414AD73728797F1200244453 /* CViewC64ScreenViewfinder.cpp */; };
-		415002322BD68B9800FEFAF4 /* C64DebuggerPluginSlideshow.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4150022E2BD68B9800FEFAF4 /* C64DebuggerPluginSlideshow.cpp */; };
 		4155B3242681DA9A00110009 /* CDebugSymbols.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4155B31D2681D8B600110009 /* CDebugSymbols.cpp */; };
 		4155B3262681DAAB00110009 /* CDebugAsmSource.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4155B31F2681D8B600110009 /* CDebugAsmSource.cpp */; };
 		4155B3282681DABA00110009 /* CDebugSymbolsSegment.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4155B3222681D91700110009 /* CDebugSymbolsSegment.cpp */; };
@@ -135,8 +134,6 @@
 		419703ED28D36FD100DDD728 /* asap.c in Sources */ = {isa = PBXBuildFile; fileRef = 419703E728D36E0A00DDD728 /* asap.c */; };
 		4198907E2684A40900B1AE5C /* CDebugSymbolsSegmentC64.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4198907B2684A40900B1AE5C /* CDebugSymbolsSegmentC64.cpp */; };
 		41B403BD2600EF6B00C271F3 /* ApplicationServices.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 41B403BB2600EF6B00C271F3 /* ApplicationServices.framework */; };
-		41B4D9AB2C8A5D8200E62540 /* C64DebuggerPluginConvolution.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 41B4D9A82C8A5D8200E62540 /* C64DebuggerPluginConvolution.cpp */; };
-		41B4D9B22C8A5E4D00E62540 /* C64DebuggerPluginGalaxy.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 41B4D9AF2C8A5E4D00E62540 /* C64DebuggerPluginGalaxy.cpp */; };
 		41BA937C2AEAACF30006D4F0 /* CViewDataPlot.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 41BA937B2AEAACF30006D4F0 /* CViewDataPlot.cpp */; };
 		41BBDFB326BFF541006ADD98 /* C64DebuggerPluginTemplate.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 41BBDFB226BFF541006ADD98 /* C64DebuggerPluginTemplate.cpp */; };
 		41BFDD152BC84BDE00002182 /* CDataAddressEditBoxDiskContents.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 41BFDD132BC84BDE00002182 /* CDataAddressEditBoxDiskContents.cpp */; };
@@ -1364,8 +1361,6 @@
 		4121FCDB2CC6A1E600095AD3 /* CPipeProtocolDebuggerCallback.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CPipeProtocolDebuggerCallback.h; sourceTree = "<group>"; };
 		4121FCDD2CC6A1E600095AD3 /* CDebuggerServerWebSockets.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = CDebuggerServerWebSockets.cpp; sourceTree = "<group>"; };
 		4121FCDE2CC6A1E600095AD3 /* CDebuggerServerWebSockets.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CDebuggerServerWebSockets.h; sourceTree = "<group>"; };
-		4121FCE32CC6AB3900095AD3 /* C64DebuggerPluginParallax.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = C64DebuggerPluginParallax.cpp; sourceTree = "<group>"; };
-		4121FCE42CC6AB3900095AD3 /* C64DebuggerPluginParallax.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = C64DebuggerPluginParallax.h; sourceTree = "<group>"; };
 		412897C22B97D5B600495C47 /* CDataAdapterViceC64Cartridge.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CDataAdapterViceC64Cartridge.h; sourceTree = "<group>"; };
 		412897C32B97D5B600495C47 /* CDataAdapterViceC64DirectRam.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = CDataAdapterViceC64DirectRam.cpp; sourceTree = "<group>"; };
 		412897C42B97D5B600495C47 /* CDataAdapterViceC64.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = CDataAdapterViceC64.cpp; sourceTree = "<group>"; };
@@ -1408,8 +1403,8 @@
 		414AD73728797F1200244453 /* CViewC64ScreenViewfinder.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = CViewC64ScreenViewfinder.cpp; sourceTree = "<group>"; };
 		414AD73828797F1200244453 /* CViewC64ScreenViewfinder.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CViewC64ScreenViewfinder.h; sourceTree = "<group>"; };
 		414BE0042784F08D00166AE2 /* TODO.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = TODO.txt; path = ../../src/TODO.txt; sourceTree = "<group>"; };
-		4150022E2BD68B9800FEFAF4 /* C64DebuggerPluginSlideshow.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = C64DebuggerPluginSlideshow.cpp; sourceTree = "<group>"; };
-		4150022F2BD68B9800FEFAF4 /* C64DebuggerPluginSlideshow.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = C64DebuggerPluginSlideshow.h; sourceTree = "<group>"; };
+		4150D9DB2D71D15B0068351B /* CRenderShaderCRTMonitorOpenGL4.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = CRenderShaderCRTMonitorOpenGL4.cpp; sourceTree = "<group>"; };
+		4150D9DC2D71D15B0068351B /* CRenderShaderCRTMonitorOpenGL4.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CRenderShaderCRTMonitorOpenGL4.h; sourceTree = "<group>"; };
 		4155B31D2681D8B600110009 /* CDebugSymbols.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = CDebugSymbols.cpp; sourceTree = "<group>"; };
 		4155B31E2681D8B600110009 /* CDebugSymbols.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CDebugSymbols.h; sourceTree = "<group>"; };
 		4155B31F2681D8B600110009 /* CDebugAsmSource.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = CDebugAsmSource.cpp; sourceTree = "<group>"; };
@@ -1573,10 +1568,6 @@
 		41B403AA25FF96B100C271F3 /* icon_tool_on_top_on_gfx.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = icon_tool_on_top_on_gfx.h; sourceTree = "<group>"; };
 		41B403B426009F7C00C271F3 /* FontSweet16mono.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = FontSweet16mono.h; sourceTree = "<group>"; };
 		41B403BB2600EF6B00C271F3 /* ApplicationServices.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ApplicationServices.framework; path = System/Library/Frameworks/ApplicationServices.framework; sourceTree = SDKROOT; };
-		41B4D9A82C8A5D8200E62540 /* C64DebuggerPluginConvolution.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = C64DebuggerPluginConvolution.cpp; sourceTree = "<group>"; };
-		41B4D9A92C8A5D8200E62540 /* C64DebuggerPluginConvolution.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = C64DebuggerPluginConvolution.h; sourceTree = "<group>"; };
-		41B4D9AF2C8A5E4D00E62540 /* C64DebuggerPluginGalaxy.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = C64DebuggerPluginGalaxy.cpp; sourceTree = "<group>"; };
-		41B4D9B02C8A5E4D00E62540 /* C64DebuggerPluginGalaxy.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = C64DebuggerPluginGalaxy.h; sourceTree = "<group>"; };
 		41B5298823992DCB0084F0DB /* MTEngineSDL.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = MTEngineSDL.xcodeproj; path = ../../../MTEngineSDL/platform/MacOS/MTEngineSDL.xcodeproj; sourceTree = "<group>"; };
 		41B5299723992E0F0084F0DB /* OpenGL.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = OpenGL.framework; path = System/Library/Frameworks/OpenGL.framework; sourceTree = SDKROOT; };
 		41B5299923992E140084F0DB /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = System/Library/Frameworks/Cocoa.framework; sourceTree = SDKROOT; };
@@ -4048,15 +4039,6 @@
 			path = ../../src/Remote;
 			sourceTree = "<group>";
 		};
-		4121FCE52CC6AB3900095AD3 /* Parallax */ = {
-			isa = PBXGroup;
-			children = (
-				4121FCE32CC6AB3900095AD3 /* C64DebuggerPluginParallax.cpp */,
-				4121FCE42CC6AB3900095AD3 /* C64DebuggerPluginParallax.h */,
-			);
-			path = Parallax;
-			sourceTree = "<group>";
-		};
 		412897C12B97D5B600495C47 /* Adapters */ = {
 			isa = PBXGroup;
 			children = (
@@ -4110,13 +4092,13 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
-		415002302BD68B9800FEFAF4 /* Slideshow */ = {
+		4150D9DD2D71D15B0068351B /* Shaders */ = {
 			isa = PBXGroup;
 			children = (
-				4150022E2BD68B9800FEFAF4 /* C64DebuggerPluginSlideshow.cpp */,
-				4150022F2BD68B9800FEFAF4 /* C64DebuggerPluginSlideshow.h */,
+				4150D9DB2D71D15B0068351B /* CRenderShaderCRTMonitorOpenGL4.cpp */,
+				4150D9DC2D71D15B0068351B /* CRenderShaderCRTMonitorOpenGL4.h */,
 			);
-			path = Slideshow;
+			path = Shaders;
 			sourceTree = "<group>";
 		};
 		4155B31C2681D8B600110009 /* Symbols */ = {
@@ -4380,24 +4362,6 @@
 			name = src.MacOS;
 			sourceTree = "<group>";
 		};
-		41B4D9AA2C8A5D8200E62540 /* Convolution */ = {
-			isa = PBXGroup;
-			children = (
-				41B4D9A82C8A5D8200E62540 /* C64DebuggerPluginConvolution.cpp */,
-				41B4D9A92C8A5D8200E62540 /* C64DebuggerPluginConvolution.h */,
-			);
-			path = Convolution;
-			sourceTree = "<group>";
-		};
-		41B4D9B12C8A5E4D00E62540 /* Galaxy */ = {
-			isa = PBXGroup;
-			children = (
-				41B4D9AF2C8A5E4D00E62540 /* C64DebuggerPluginGalaxy.cpp */,
-				41B4D9B02C8A5E4D00E62540 /* C64DebuggerPluginGalaxy.h */,
-			);
-			path = Galaxy;
-			sourceTree = "<group>";
-		};
 		41B5298923992DCB0084F0DB /* Products */ = {
 			isa = PBXGroup;
 			children = (
@@ -4454,11 +4418,7 @@
 		41D4A5C823AA0F0F00A54EB2 /* Plugins */ = {
 			isa = PBXGroup;
 			children = (
-				4121FCE52CC6AB3900095AD3 /* Parallax */,
-				41B4D9B12C8A5E4D00E62540 /* Galaxy */,
-				41B4D9AA2C8A5D8200E62540 /* Convolution */,
 				4137754E2C02245B006BF409 /* DNDK */,
-				415002302BD68B9800FEFAF4 /* Slideshow */,
 				4183ACAE2A2B33340029BFAF /* Commando */,
 				415E3E362775FDD2000BFA07 /* CrtMaker */,
 				4110D7D4262BE2A400CF6F36 /* GoatTracker */,
@@ -7023,6 +6983,7 @@
 		41D4AE1323AA0F1100A54EB2 /* Tools */ = {
 			isa = PBXGroup;
 			children = (
+				4150D9DD2D71D15B0068351B /* Shaders */,
 				419703E528D36E0A00DDD728 /* asap */,
 				4113CE9525F8AF2000FB1236 /* TextEditor */,
 				41D4AE1423AA0F1100A54EB2 /* 64tass */,
@@ -7446,6 +7407,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				411D2E402D71D4D3007714A9 /* CRenderShaderCRTMonitorOpenGL4.cpp in Sources */,
 				41805F602BC756CF00344BD9 /* CDataAddressEditBoxHex.cpp in Sources */,
 				41D699732AFA6284008124F6 /* c1541.c in Sources */,
 				410836D02AD15E6D0086B9BA /* C64SIDDump.cpp in Sources */,
@@ -7924,7 +7886,6 @@
 				41C84D6F23C6183B007C0889 /* mon_register.c in Sources */,
 				41C84D7023C6183B007C0889 /* mon_register6502.c in Sources */,
 				41C84D7123C6183B007C0889 /* mon_register6502dtv.c in Sources */,
-				415002322BD68B9800FEFAF4 /* C64DebuggerPluginSlideshow.cpp in Sources */,
 				41C84D7223C6183B007C0889 /* mon_register65816.c in Sources */,
 				41C84D7323C6183B007C0889 /* mon_register6809.c in Sources */,
 				41C84D7423C6183B007C0889 /* mon_registerR65C02.c in Sources */,
@@ -7964,7 +7925,6 @@
 				41C84D9123C6183B007C0889 /* output-text.c in Sources */,
 				41C84D9223C6183B007C0889 /* printer-serial.c in Sources */,
 				41C84D9323C6183B007C0889 /* printer-userport.c in Sources */,
-				4121FCE62CC6AB3900095AD3 /* C64DebuggerPluginParallax.cpp in Sources */,
 				41C84D9423C6183B007C0889 /* printer.c in Sources */,
 				41C84D9523C6183B007C0889 /* raster-cache.c in Sources */,
 				41C84D9623C6183B007C0889 /* raster-canvas.c in Sources */,
@@ -7993,7 +7953,6 @@
 				41C84DAB23C6183B007C0889 /* cmdline.c in Sources */,
 				41C84DAC23C6183B007C0889 /* color.c in Sources */,
 				41EE302925E92A930050257F /* CViewNesPpuPatterns.cpp in Sources */,
-				41B4D9B22C8A5E4D00E62540 /* C64DebuggerPluginGalaxy.cpp in Sources */,
 				41C84DAD23C6183B007C0889 /* datasette.c in Sources */,
 				41C84DAE23C6183B007C0889 /* debug.c in Sources */,
 				41C84DAF23C6183B007C0889 /* dma.c in Sources */,
@@ -8148,7 +8107,6 @@
 				41C84E2F23C6183B007C0889 /* render1x2crt.c in Sources */,
 				41C84E3023C6183B007C0889 /* render2x2.c in Sources */,
 				41C84E3123C6183B007C0889 /* render2x2crt.c in Sources */,
-				41B4D9AB2C8A5D8200E62540 /* C64DebuggerPluginConvolution.cpp in Sources */,
 				416C256A28D6A3DB002BDC0D /* CVicEditorBrush.cpp in Sources */,
 				41C84E3223C6183B007C0889 /* render2x2ntsc.c in Sources */,
 				41C84E3323C6183B007C0889 /* render2x2pal.c in Sources */,
@@ -8771,7 +8729,7 @@
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_INJECT_BASE_ENTITLEMENTS = YES;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 0.64.72;
+				CURRENT_PROJECT_VERSION = 0.64.73;
 				DEVELOPMENT_TEAM = APV7Y7Q9JY;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GCC_C_LANGUAGE_STANDARD = c17;
@@ -8794,8 +8752,8 @@
 					"$(PROJECT_DIR)/lib",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 10.15;
-				MARKETING_VERSION = 0.64.72;
-				ONLY_ACTIVE_ARCH = NO;
+				MARKETING_VERSION = 0.64.73;
+				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = "-Wno-implicit-function-declaration";
 				OTHER_CODE_SIGN_FLAGS = "--deep";
 				OTHER_CPLUSPLUSFLAGS = (
@@ -8817,12 +8775,13 @@
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_INJECT_BASE_ENTITLEMENTS = YES;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 0.64.72;
+				CURRENT_PROJECT_VERSION = 0.64.73;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = APV7Y7Q9JY;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_TESTABILITY = YES;
 				GCC_C_LANGUAGE_STANDARD = c17;
+				GCC_OPTIMIZATION_LEVEL = 3;
 				GCC_PREPROCESSOR_DEFINITIONS = MACOS;
 				HEADER_SEARCH_PATHS = (
 					"$(PROJECT_DIR)/../../../MTEngineSDL/platform/MacOS/src.MacOS/**",
@@ -8839,8 +8798,8 @@
 					"$(PROJECT_DIR)/lib",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 10.15;
-				MARKETING_VERSION = 0.64.72;
-				ONLY_ACTIVE_ARCH = NO;
+				MARKETING_VERSION = 0.64.73;
+				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = "-Wno-implicit-function-declaration";
 				OTHER_CODE_SIGN_FLAGS = "--deep";
 				OTHER_CPLUSPLUSFLAGS = (

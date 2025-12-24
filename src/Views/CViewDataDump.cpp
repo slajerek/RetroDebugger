@@ -660,7 +660,7 @@ void CViewDataDump::UpdateCharacters(bool useColors, u8 colorD021, u8 colorD022,
 		{
 			u8 v;
 			dataAdapter->AdapterReadByte(addr, &v);
-			characterData[7-i] = v;
+			characterData[i] = v;
 			addr++;
 		}
 		
@@ -681,10 +681,6 @@ void CViewDataDump::UpdateCharacters(bool useColors, u8 colorD021, u8 colorD022,
 		{
 			ConvertCharacterDataToImage(characterData, imageData);
 		}
-
-	
-		// TODO: BUG: THESE FONTS ARE FLIPPED VERTICALLY, SHOULD NOT BE: FIX THAT BUG
-		imageData->FlipVertically();
 		
 		// re-bind image
 		image->ReBindImageData(imageData);

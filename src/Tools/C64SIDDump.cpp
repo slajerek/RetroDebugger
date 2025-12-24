@@ -1,5 +1,13 @@
 #include "CDebugInterfaceVice.h"
 #include "C64SIDDump.h"
+#include <list>
+#include <string>
+#include <sstream>
+#include <vector>
+#include <cctype>
+#include <cstdlib>
+#include <cstring>
+#include <algorithm>
 
 // this dumps CSidData history in siddump format, note this is not async, mutex must be locked elsewhere
 // the code below is heavily based on siddump print to file code by Cadaver
@@ -443,4 +451,426 @@ void C64SIDHistoryToByteBuffer(std::list<CSidData *> *sidDataHistory, CByteBuffe
 		frames++;
 	}
 }
+
+
+static inline std::string Trim(const std::string &s)
+{
+	size_t start = 0;
+	while (start < s.size() && std::isspace(static_cast<unsigned char>(s[start])))
+		++start;
+
+	size_t end = s.size();
+	while (end > start && std::isspace(static_cast<unsigned char>(s[end - 1])))
+		--end;
+
+	return s.substr(start, end - start);
+}
+
+static std::vector<std::string> SplitTokens(const std::string &line)
+{
+	std::vector<std::string> tokens;
+	std::istringstream iss(line);
+	std::string tok;
+	while (iss >> tok)
+		tokens.push_back(tok);
+	return tokens;
+}
+
+static bool IsNumber(const std::string &s)
+{
+	if (s.empty())
+		return false;
+	for (char c : s)
+	{
+		if (!std::isdigit(static_cast<unsigned char>(c)))
+			return false;
+	}
+	return true;
+}
+
+// token == ".." / "...." / "." etc.
+static bool IsDots(const std::string &s)
+{
+	if (s.empty())
+		return false;
+	for (char c : s)
+	{
+		if (c != '.')
+			return false;
+	}
+	return true;
+}
+
+// Safe hex parsers with exception handling
+static bool TryParseHex8(const std::string &s, uint8_t &outValue)
+{
+	try
+	{
+		unsigned long v = std::stoul(s, nullptr, 16);
+		if (v > 0xFF)
+			return false;
+		outValue = static_cast<uint8_t>(v & 0xFFu);
+		return true;
+	}
+	catch (const std::exception &)
+	{
+		return false;
+	}
+}
+
+static bool TryParseHex16(const std::string &s, uint16_t &outValue)
+{
+	try
+	{
+		unsigned long v = std::stoul(s, nullptr, 16);
+		if (v > 0xFFFF)
+			return false;
+		outValue = static_cast<uint16_t>(v & 0xFFFFu);
+		return true;
+	}
+	catch (const std::exception &)
+	{
+		return false;
+	}
+}
+
+
+// this loads siddump style file, note is not parsed - only frequency
+void C64SIDHistoryFromByteBuffer(std::list<CSidData *> *sidDataHistory, CByteBuffer *byteBuffer, u8 format, bool keepPreviousValueWhenZero)
+{
+	LOGD("C64SIDHistoryFromByteBuffer");
+	if (format == SID_HISTORY_FORMAT_CSV)
+	{
+		LOGTODO("CSV format for SID history is not supported yet");
+		return;
+	}
+	
+	// TODO: delete objs
+	sidDataHistory->clear();
+	
+	// Copy whole buffer to string
+	std::string text;
+	text.reserve(4096);
+
+	while (!byteBuffer->IsEof())
+	{
+		uint8_t b = byteBuffer->GetByte();
+		text.push_back(static_cast<char>(b));
+	}
+
+	std::istringstream input(text);
+	std::string line;
+
+	CSidData *prevSid = sidDataHistory->empty() ? nullptr : sidDataHistory->back();
+
+	LOGD("C64SIDHistoryFromByteBuffer: parse lines");
+	while (std::getline(input, line))
+	{
+		std::cout << line << std::endl;
+		
+		line = Trim(line);
+		if (line.empty())
+			continue;
+		if (line[0] != '|')
+			continue;
+
+		std::vector<std::string> tokens = SplitTokens(line);
+		if (tokens.size() < 10)
+			continue;
+
+		if (tokens[0] != "|" || tokens[2] != "|" || !IsNumber(tokens[1]))
+			continue;
+
+		const size_t expectedMinTokens = 24 + 5;
+		if (tokens.size() < expectedMinTokens)
+			continue;
+
+		LOGD("tokens.size=%d", tokens.size());
+		
+		CSidData *sidData = new CSidData();
+		std::memset(sidData->sidRegs, 0, sizeof(sidData->sidRegs));
+		u8 *sidRegs = sidData->sidRegs[0];
+
+		u8 *prevRegs = nullptr;
+		if (prevSid)
+			prevRegs = prevSid->sidRegs[0];
+
+		bool frameOk = true;
+
+		// -------- 3 channels --------
+		for (int c = 0; c < 3 && frameOk; ++c)
+		{
+			// Layout per channel (7 tokens + '|'):
+			// base+0: Freq
+			// base+1: Note name (ignored)
+			// base+2: Note value (ignored)
+			// base+3: WF
+			// base+4: ADSR
+			// base+5: Pul
+			// base+6: "|"
+			size_t base = 3 + c * 7;
+
+			const std::string &freqStr = tokens[base + 0];
+			const std::string &wfStr   = tokens[base + 3];
+			const std::string &adsrStr = tokens[base + 4];
+			const std::string &pulStr  = tokens[base + 5];
+
+			bool freqDots = IsDots(freqStr);
+			bool wfDots   = IsDots(wfStr);
+			bool adsrDots = IsDots(adsrStr);
+			bool pulDots  = IsDots(pulStr);
+
+			uint16_t freq = 0;
+			uint8_t  wave = 0;
+			uint16_t adsr = 0;
+			uint16_t pulse = 0;
+
+			// Freq
+			if (freqDots && prevRegs)
+			{
+				int regBasePrev = c * 7;
+				freq = static_cast<uint16_t>(
+					prevRegs[regBasePrev + 0] |
+					(static_cast<uint16_t>(prevRegs[regBasePrev + 1]) << 8));
+			}
+			else if (!freqDots)
+			{
+				if (!TryParseHex16(freqStr, freq))
+				{
+					frameOk = false;
+					break;
+				}
+			}
+
+			// Waveform
+			if (wfDots && prevRegs)
+			{
+				int regBasePrev = c * 7;
+				wave = prevRegs[regBasePrev + 4];
+			}
+			else if (!wfDots)
+			{
+				if (!TryParseHex8(wfStr, wave))
+				{
+					frameOk = false;
+					break;
+				}
+			}
+
+			// ADSR
+			if (adsrDots && prevRegs)
+			{
+				int regBasePrev = c * 7;
+				adsr = static_cast<uint16_t>(
+					(static_cast<uint16_t>(prevRegs[regBasePrev + 5]) << 8) |
+					prevRegs[regBasePrev + 6]);
+			}
+			else if (!adsrDots)
+			{
+				if (!TryParseHex16(adsrStr, adsr))
+				{
+					frameOk = false;
+					break;
+				}
+			}
+
+			// Pulse
+			if (pulDots && prevRegs)
+			{
+				int regBasePrev = c * 7;
+				pulse = static_cast<uint16_t>(
+					prevRegs[regBasePrev + 2] |
+					((prevRegs[regBasePrev + 3] & 0x0F) << 8));
+			}
+			else if (!pulDots)
+			{
+				if (!TryParseHex16(pulStr, pulse))
+				{
+					frameOk = false;
+					break;
+				}
+			}
+
+			pulse &= 0x0FFFu;
+
+			int regBase = c * 7;
+
+			// keepPreviousValueWhenZero (only for literal zero, after dots have been handled)
+			if (keepPreviousValueWhenZero && prevRegs)
+			{
+				if (freq == 0)
+				{
+					uint16_t prevFreq = static_cast<uint16_t>(
+						prevRegs[regBase + 0] |
+						(static_cast<uint16_t>(prevRegs[regBase + 1]) << 8));
+					freq = prevFreq;
+				}
+
+				if (pulse == 0)
+				{
+					uint16_t prevPulse = static_cast<uint16_t>(
+						prevRegs[regBase + 2] |
+						((prevRegs[regBase + 3] & 0x0F) << 8));
+					pulse = prevPulse;
+				}
+
+				if (wave == 0)
+				{
+					uint8_t prevWave = prevRegs[regBase + 4];
+					wave = prevWave;
+				}
+
+				if (adsr == 0)
+				{
+					uint16_t prevAdsr = static_cast<uint16_t>(
+						(static_cast<uint16_t>(prevRegs[regBase + 5]) << 8) |
+						prevRegs[regBase + 6]);
+					adsr = prevAdsr;
+				}
+			}
+
+			// Write SID registers
+			sidRegs[regBase + 0] = static_cast<u8>(freq & 0xFF);
+			sidRegs[regBase + 1] = static_cast<u8>((freq >> 8) & 0xFF);
+
+			sidRegs[regBase + 2] = static_cast<u8>(pulse & 0xFF);
+			sidRegs[regBase + 3] = static_cast<u8>((pulse >> 8) & 0x0F);
+
+			sidRegs[regBase + 4] = wave;
+
+			sidRegs[regBase + 5] = static_cast<u8>((adsr >> 8) & 0xFF);
+			sidRegs[regBase + 6] = static_cast<u8>(adsr & 0xFF);
+		}
+
+		if (!frameOk)
+		{
+			delete sidData;
+			continue;
+		}
+
+		// -------- filter part --------
+		size_t filterBase = 3 + 3 * 7;
+
+		const std::string &fcutStr = tokens[filterBase + 0];
+		const std::string &rcStr   = tokens[filterBase + 1];
+		std::string typToken       = tokens[filterBase + 2];
+		const std::string &volStr  = tokens[filterBase + 3];
+
+		bool fcutDots = IsDots(fcutStr);
+		bool rcDots   = IsDots(rcStr);
+		bool volDots  = IsDots(volStr);
+		bool typDots  = IsDots(typToken);
+
+		uint16_t fcut = 0;
+		uint8_t rc    = 0;
+		uint8_t vol   = 0;
+
+		if (fcutDots && prevRegs)
+		{
+			fcut = static_cast<uint16_t>(
+				prevRegs[0x15] | (static_cast<uint16_t>(prevRegs[0x16]) << 8));
+		}
+		else if (!fcutDots)
+		{
+			if (!TryParseHex16(fcutStr, fcut))
+			{
+				delete sidData;
+				continue;
+			}
+			
+			LOGD("fcut=%04x", fcut);
+		}
+
+		if (rcDots && prevRegs)
+		{
+			rc = prevRegs[0x17];
+		}
+		else if (!rcDots)
+		{
+			if (!TryParseHex8(rcStr, rc))
+			{
+				delete sidData;
+				continue;
+			}
+		}
+
+		if (volDots && prevRegs)
+		{
+			uint8_t prevModeVol = prevRegs[0x18];
+			vol = prevModeVol & 0x0F;
+		}
+		else if (!volDots)
+		{
+			if (!TryParseHex8(volStr, vol))
+			{
+				delete sidData;
+				continue;
+			}
+		}
+		vol &= 0x0F;
+
+		if (keepPreviousValueWhenZero && prevRegs)
+		{
+			if (fcut == 0)
+			{
+				uint16_t prevFcut = static_cast<uint16_t>(
+					prevRegs[0x15] | (static_cast<uint16_t>(prevRegs[0x16]) << 8));
+				fcut = prevFcut;
+			}
+
+			if (rc == 0)
+			{
+				uint8_t prevRc = prevRegs[0x17];
+				rc = prevRc;
+			}
+
+			if (vol == 0)
+			{
+				uint8_t prevModeVol = prevRegs[0x18];
+				uint8_t prevVol = prevModeVol & 0x0F;
+				vol = prevVol;
+			}
+		}
+
+		sidRegs[0x15] = static_cast<u8>(fcut & 0xFF);
+		sidRegs[0x16] = static_cast<u8>((fcut >> 8) & 0xFF);
+		sidRegs[0x17] = rc;
+
+		std::string typUpper = typToken;
+		std::transform(typUpper.begin(), typUpper.end(), typUpper.begin(),
+					   [](unsigned char c) { return static_cast<char>(std::toupper(c)); });
+
+		uint8_t modeBits = 0;
+
+		if (typDots && prevRegs)
+		{
+			uint8_t prevModeVol = prevRegs[0x18];
+			modeBits = prevModeVol & 0xF0;
+		}
+		else if (keepPreviousValueWhenZero && prevRegs && typUpper == "NONE")
+		{
+			uint8_t prevModeVol = prevRegs[0x18];
+			modeBits = prevModeVol & 0xF0;
+		}
+		else
+		{
+			if (typUpper != "NONE" && typUpper != "OFF")
+			{
+				if (typUpper.find('L') != std::string::npos)
+					modeBits |= (1u << 4);
+				if (typUpper.find('B') != std::string::npos)
+					modeBits |= (1u << 5);
+				if (typUpper.find('H') != std::string::npos)
+					modeBits |= (1u << 6);
+			}
+		}
+
+		uint8_t modeVol = static_cast<uint8_t>((modeBits & 0xF0) | (vol & 0x0F));
+		sidRegs[0x18] = modeVol;
+
+		sidDataHistory->push_front(sidData);
+		prevSid = sidData;
+	}
+}
+
 

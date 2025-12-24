@@ -61,3 +61,7 @@ void MT_Render()
 void MT_PostRenderEndFrame()
 {
 }
+
+void MT_Shutdown()
+{
+}

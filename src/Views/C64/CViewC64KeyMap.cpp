@@ -930,7 +930,7 @@ void CViewC64KeyMap::PressSelectedKey(bool updateIfNotFound)
 	
 	if (selectedKeyData != NULL)
 	{
-		int row, col, shift;
+		int row=0, col=0, shift=0;
 		
 		LOGD("row=%d col=%d name=%s size=%d", selectedKeyData->matrixRow, selectedKeyData->matrixCol, selectedKeyData->name1, selectedKeyData->keyCodes.size());
 

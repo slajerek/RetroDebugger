@@ -584,7 +584,7 @@ bool CViewC64CrtMaker::MakeCartridge()
 	addrFileTables = 0x8009;
 	
 	// setup file tables
-	int numFiles = files.size();
+	size_t numFiles = files.size();
 
 	addrFileTableBank 	= addrFileTables;
 	addrFileTableAddrL  = addrFileTables + numFiles*1;

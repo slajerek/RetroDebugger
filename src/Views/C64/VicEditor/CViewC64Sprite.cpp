@@ -240,7 +240,7 @@ void CViewC64Sprite::Render()
 	int spriteId = 0;
 	
 	int spc = (spriteRasterX + 0x18)/8.0f;
-	int spy = spriteRasterY + 0x32;
+	int spy = spriteRasterY + 0x33;
 	
 	viciiState = NULL;
 	
@@ -276,7 +276,7 @@ void CViewC64Sprite::Render()
 			viewC64->fontDisassembly->BlitText(buf, px, py2, -1, 5*scale);
 
 			int sprx = sprite->posX + 0x18;
-			int spry = sprite->posY + 0x32;
+			int spry = sprite->posY + 0x33;
 			
 			py2 += 8.0f*scale;
 			
@@ -573,7 +573,7 @@ void CViewC64Sprite::UpdateSelectedColorInPalette()
 		return;
 
 	int spc = (spriteRasterX + 0x18)/8.0f;
-	int spy = spriteRasterY + 0x32;
+	int spy = spriteRasterY + 0x33;
 
 	if (spy >= 0 && spy < 312
 		&& spc >= 0 && spc < 64)
@@ -716,7 +716,7 @@ void CViewC64Sprite::MoveSelectedSprite(int deltaX, int deltaY)
 	
 	if (deltaY != 0)
 	{
-		int spry = sprite->posY + 0x32;
+		int spry = sprite->posY + 0x33;
 		vicEditor->layerVirtualSprites->ReplacePosY(sprite->posX, sprite->posY, sprite->spriteId, spry + deltaY);
 		spriteRasterY += deltaY;
 	}

@@ -185,7 +185,7 @@ u8 CVicEditorLayerImage::PaintDither(int x, int y, u8 colorLMB, u8 colorRMB, u8 
 		color1 = colorLMB;
 		color2 = colorRMB;
 	}
-	else if (colorSource == VICEDITOR_COLOR_SOURCE_RMB)
+	else //if (colorSource == VICEDITOR_COLOR_SOURCE_RMB)
 	{
 		color1 = colorRMB;
 		color2 = colorLMB;

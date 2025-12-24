@@ -268,6 +268,8 @@ CViewC64VicEditor::CViewC64VicEditor(const char *name, float posX, float posY, f
 	AddLayoutParameter(new CLayoutParameterFloat("Display zoom", true, &viewVicDisplay->scale));
 	AddLayoutParameter(new CLayoutParameterFloat("Display pos X", true, &serializedDisplayX));
 	AddLayoutParameter(new CLayoutParameterFloat("Display pos Y", true, &serializedDisplayY));
+	
+	LOGD("VicEditor: viewVicDisplay->scale=%f serializedDisplayX=%f serializedDisplayY=%f", viewVicDisplay->scale, serializedDisplayX, serializedDisplayY);
 }
 
 CViewC64VicEditor::~CViewC64VicEditor()
@@ -338,6 +340,9 @@ void CViewC64VicEditor::Render()
 {
 //	guiMain->fntConsole->BlitText("CViewVicEditor", posX, posY, 0, 11, 1.0);
 
+//	LOGD("VicEditor::Render viewVicDisplay->scale=%f serializedDisplayX=%f serializedDisplayY=%f", viewVicDisplay->scale, serializedDisplayX, serializedDisplayY);
+//	LOGD("					viewVicDisplay->offsetPosX=%f viewVicDisplay->offsetPosY=%f", viewVicDisplay->offsetPosX, viewVicDisplay->offsetPosY);
+	
 	guiMain->LockMutex();
 	
 	if (viewSprite->btnScanForSprites->IsOn())
@@ -450,7 +455,6 @@ void CViewC64VicEditor::UpdateDisplayRasterPos()
 			float rasterX, rasterY;
 			viewVicDisplay->GetRasterPosFromScreenPos(mouseX, mouseY, &rasterX, &rasterY);
 			
-			
 			//viewVicDisplaySmall->rasterCursorPosX = rasterX;
 			//viewVicDisplaySmall->rasterCursorPosY = rasterY;
 			
@@ -458,6 +462,8 @@ void CViewC64VicEditor::UpdateDisplayRasterPos()
 			viewVicDisplay->rasterCursorPosY = rasterY;
 			viewC64->viewC64VicDisplay->rasterCursorPosX = rasterX;
 			viewC64->viewC64VicDisplay->rasterCursorPosY = rasterY;
+			
+//			LOGD("====]  CViewC64VicEditor::UpdateDisplayRasterPos: %f %f ($%02x $%02x", rasterX, rasterY);
 			
 			// update just the VIC state for main C64View screen to correctly render C64 Sprites
 			vicii_cycle_state_t *displayVicState = viewC64->viewC64VicDisplay->UpdateViciiStateNonVisible(viewC64->viewC64VicDisplay->rasterCursorPosX,
@@ -981,18 +987,6 @@ bool CViewC64VicEditor::KeyDownOnMouseHover(u32 keyCode, bool isShift, bool isAl
 //	}
 
 	return false;
-
-	if (viewC64->mainMenuBar->KeyDown(keyCode, isShift, isAlt, isControl, isSuper))
-	{
-		return true;
-	}
-	
-	if (viewC64->viewC64Screen->KeyDown(keyCode, isShift, isAlt, isControl, isSuper))
-	{
-		return true;
-	}
-
-	return false;
 }
 
 bool CViewC64VicEditor::KeyUpOnMouseHover(u32 keyCode, bool isShift, bool isAlt, bool isControl, bool isSuper)
@@ -1299,7 +1293,7 @@ bool CViewC64VicEditor::DoNotTouchedMove(float x, float y)
 				{
 					float rx, ry;
 					viewVicDisplay->GetRasterPosFromScreenPosWithoutScroll(x, y, &rx, &ry);
-					layerVirtualSprites->UpdateSpriteView((int)rx, (int)ry);
+					layerVirtualSprites->UpdateSpriteView((int)floor(rx), (int)floor(ry));
 				}
 				
 			//	LOGD(" ====== MAIN viewVicDisplay=%x", viewVicDisplay);
@@ -4147,15 +4141,14 @@ bool CViewC64VicEditor::HasContextMenuItems()
 {
 	return false;
 	
-	
-	if (isShowingContextMenu)
-		return true;
-	
-	if (IsInsideView(guiMain->mousePosX, guiMain->mousePosY))
-	{
-		return false;
-	}
-	return true;
+//	if (isShowingContextMenu)
+//		return true;
+//	
+//	if (IsInsideView(guiMain->mousePosX, guiMain->mousePosY))
+//	{
+//		return false;
+//	}
+//	return true;
 }
 
 void CViewC64VicEditor::RenderContextMenuItems()
@@ -4293,10 +4286,11 @@ void CViewC64VicEditor::SerializeLayout(CByteBuffer *byteBuffer)
 	serializedDisplayX = viewVicDisplay->posX - this->posX;
 	serializedDisplayY = viewVicDisplay->posY - this->posY;
 
-	LOGD("display posX=%f posY=%f", viewVicDisplay->posX, viewVicDisplay->posY);
-	LOGD("serializedDisplayX=%f serializedDisplayY=%f", serializedDisplayX, serializedDisplayY);
-	LOGD("posX=%f posY=%f", posX, posY);
-	LOGD("scale=%f", viewVicDisplay->scale);
+	LOGD("CViewC64VicEditor::SerializeLayout");
+	LOGD("...scale=%f", viewVicDisplay->scale);
+	LOGD("...display posX=%f posY=%f", viewVicDisplay->posX, viewVicDisplay->posY);
+	LOGD("...posX=%f posY=%f", posX, posY);
+	LOGD("...serializedDisplayX=%f serializedDisplayY=%f", serializedDisplayX, serializedDisplayY);
 	CGuiView::SerializeLayout(byteBuffer);
 }
 
@@ -4304,11 +4298,12 @@ bool CViewC64VicEditor::DeserializeLayout(CByteBuffer *byteBuffer, int version)
 {
 	CGuiView::DeserializeLayout(byteBuffer, version);
 	
-	LOGD("scale=%f", viewVicDisplay->scale);
-	LOGD("serializedDisplayX=%f serializedDisplayY=%f", serializedDisplayX, serializedDisplayY);
-	LOGD("posX=%f posY=%f", posX, posY);
+	LOGD("CViewC64VicEditor::DeserializeLayout");
+	LOGD("...scale=%f", viewVicDisplay->scale);
+	LOGD("...serializedDisplayX=%f serializedDisplayY=%f", serializedDisplayX, serializedDisplayY);
+	LOGD("...posX=%f posY=%f", posX, posY);
 	
-	viewVicDisplay->SetPosition(serializedDisplayX, serializedDisplayY);
+	viewVicDisplay->SetPosition(serializedDisplayX + posX, serializedDisplayY + posY);
 
 	if (viewVicDisplay->scale < 0.20f)
 		viewVicDisplay->scale = 0.20f;
@@ -4317,6 +4312,6 @@ bool CViewC64VicEditor::DeserializeLayout(CByteBuffer *byteBuffer, int version)
 	
 	viewVicDisplay->UpdateGridLinesVisibleOnCurrentZoom();
 	
-	LOGD("display posX=%f posY=%f", viewVicDisplay->posX, viewVicDisplay->posY);
+	LOGD("...display posX=%f posY=%f", viewVicDisplay->posX, viewVicDisplay->posY);
 	return true;
 }

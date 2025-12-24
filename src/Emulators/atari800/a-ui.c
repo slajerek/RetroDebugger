@@ -4502,7 +4502,7 @@ void UI_Run(void)
 #endif
 	
 	/* flush keypresses */
-	while (PLATFORM_Keyboard() != AKEY_NONE)
+//	while (PLATFORM_Keyboard() != AKEY_NONE)
 		Atari800_Sync();
 
 	UI_alt_function = UI_current_function = -1;

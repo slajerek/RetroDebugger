@@ -188,6 +188,7 @@ include_directories(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Tools/sidplay/sidtune"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Tools/stilview"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Tools/TextEditor"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Tools/Shaders"
 
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Views"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Views/Atari800"
@@ -1460,6 +1461,7 @@ add_executable(retrodebugger
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Tools/libpsid64/libpsid-theme.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Tools/libpsid64/libpsid-screen.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Tools/C64SIDFrequencies.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Tools/Shaders/CRenderShaderCRTMonitorOpenGL4.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Tools/CGuiLockableList.cpp"
 
     "${CMAKE_CURRENT_SOURCE_DIR}/platform/Linux/src.Linux/archdep.c"

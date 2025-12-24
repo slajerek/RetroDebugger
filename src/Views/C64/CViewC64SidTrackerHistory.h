@@ -8,10 +8,11 @@
 #include "CPianoKeyboard.h"
 #include "DebuggerDefs.h"
 #include "SYS_FileSystem.h"
+#include "SYS_Threading.h"
 
 class CDebugInterfaceVice;
 
-class CViewC64SidTrackerHistory : public CGuiView, CGuiButtonSwitchCallback, CGuiListCallback, public CPianoKeyboardCallback, CSystemFileDialogCallback
+class CViewC64SidTrackerHistory : public CGuiView, CGuiButtonSwitchCallback, CGuiListCallback, public CPianoKeyboardCallback, CSystemFileDialogCallback, CSlrThread
 {
 public:
 	CViewC64SidTrackerHistory(const char *name, float posX, float posY, float posZ, float sizeX, float sizeY, CDebugInterfaceVice *debugInterface);
@@ -112,7 +113,13 @@ public:
 	std::list<CSlrString *> csvFileExtensions;
 	virtual void SystemDialogFileSaveSelected(CSlrString *path);
 	virtual void SystemDialogFileSaveCancelled();
+	virtual void SystemDialogFileOpenSelected(CSlrString *path);
+	virtual void SystemDialogFileOpenCancelled();
 	u8 sidDumpFormat;
+	
+	// for playing buffer
+	virtual void ThreadRun(void *passData);
+	int isPlayingHistory;
 };
 
 #endif

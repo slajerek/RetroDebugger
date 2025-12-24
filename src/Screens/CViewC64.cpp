@@ -797,7 +797,7 @@ void CViewC64::InitAtari800()
 	
 	this->debugInterfaces.push_back(this->debugInterfaceAtari);
 
-	LOGM("CViewC64::InitViceC64: done");
+	LOGM("CViewC64::InitAtari800: done");
 }
 
 void CViewC64::InitNestopia()
@@ -1888,7 +1888,7 @@ void CViewC64::RenderImGui()
 //	viewC64Screen->Render();
 //	viewC64Screen->RenderImGui();
 	
-	TEST_Editor_Render();
+//	TEST_Editor_Render();
 }
 
 ///////////////
@@ -1899,15 +1899,18 @@ void CViewC64::UpdateViciiColors()
 	int rasterX = viciiStateToShow.raster_cycle*8;
 	int rasterY = viciiStateToShow.raster_line;
 	
+//	LOGD("rasterX=%x rasterY=%x badline=%d", rasterX, rasterY, viciiStateToShow.bad_line);
+	
 	// update current colors for rendering states
 	
 	this->c64RasterPosToShowX = rasterX;
 	this->c64RasterPosToShowY = rasterY;
 	this->c64RasterPosCharToShowX = (viewC64->viciiStateToShow.raster_cycle - 0x11);
-	this->c64RasterPosCharToShowY = (viewC64->viciiStateToShow.raster_line - 0x32) / 8;
-	
-	//LOGD("       |   rasterCharToShowX=%3d rasterCharToShowY=%3d", rasterCharToShowX, rasterCharToShowY);
-	
+	this->c64RasterPosCharToShowY = (viewC64->viciiStateToShow.raster_line - 0x33) / 8;
+
+	//	LOGD("       |   c64RasterPosToShowX=%3d c64RasterPosToShowY=%3d", c64RasterPosToShowX, c64RasterPosToShowY);
+	//	LOGD("       |   rasterCharToShowX=%3d rasterCharToShowY=%3d", c64RasterPosCharToShowX, c64RasterPosCharToShowY);
+
 	if (c64RasterPosCharToShowX < 0)
 	{
 		c64RasterPosCharToShowX = 0;
@@ -1926,7 +1929,6 @@ void CViewC64::UpdateViciiColors()
 		c64RasterPosCharToShowY = 24;
 	}
 
-	
 	// get current VIC State's pointers and colors
 	u8 *screen_ptr;
 	u8 *color_ram_ptr;
@@ -2023,6 +2025,15 @@ void CViewC64::StepOverInstruction()
 	{
 		CDebugInterface *debugInterface = *it;
 		debugInterface->StepOverInstruction();
+	}
+}
+
+void CViewC64::StepOverSubroutine()
+{
+	for (std::vector<CDebugInterface *>::iterator it = debugInterfaces.begin(); it != debugInterfaces.end(); it++)
+	{
+		CDebugInterface *debugInterface = *it;
+		debugInterface->StepOverSubroutine();
 	}
 }
 

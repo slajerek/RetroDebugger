@@ -1576,8 +1576,8 @@ static void unescape(char *s) {
     while (*s) {
         if (*s == '\\') {
             s++;
-            if (*s == 0) { goto send; }
-            switch (*s) {
+			if (*s == 0) { goto send; }
+			switch (*s) {
                 case '\\': *d = '\\'; break; /* backslash */
                 case 'n': *d = '\n'; break; /* lf */
                 case 'r': *d = '\r'; break; /* cr */

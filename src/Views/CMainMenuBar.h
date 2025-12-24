@@ -234,7 +234,7 @@ public:
 	// disassembly
 	CSlrKeyboardShortcut *kbsToggleBreakpoint;
 	CSlrKeyboardShortcut *kbsMakeJmp;
-	CSlrKeyboardShortcut *kbsStepOverJsr;
+	CSlrKeyboardShortcut *kbsStepOverSubroutine;
 	CSlrKeyboardShortcut *kbsToggleTrackPC;
 	
 	// memory dump & disassembly

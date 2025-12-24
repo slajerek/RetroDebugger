@@ -510,6 +510,7 @@ bool CViewC64AllGraphicsSpritesControl::ButtonSwitchChanged(CGuiButtonSwitch *bu
 	if (button == btnShowRAMorIO)
 	{
 		viewC64->SwitchIsDataDirectlyFromRam(!btnShowRAMorIO->IsOn());
+		return true;
 	}
 	return false;
 }

@@ -404,5 +404,13 @@ extern CDebugInterfaceVice *debugInterfaceVice;
 
 void ViceKeyMapInitDefault();
 
+typedef enum {
+	VICII_BORDER_MODE_NORMAL 		= 0,
+	VICII_BORDER_MODE_FULL	 		= 1,
+	VICII_BORDER_MODE_DEBUG 		= 2,
+	VICII_BORDER_MODE_NO_BORDERS	= 3
+} ViciiBorderMode;
+
+
 #endif
 

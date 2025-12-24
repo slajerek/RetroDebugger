@@ -50,7 +50,7 @@ void CViewFileBrowser::Init(CViewFileBrowserCallback *callback)
 	const char *defaultPath;
 	
 	char *buf = SYS_GetCharBuf();
-	sprintf(buf, "CViewFileBrowser##%s", this->name);
+	sprintf(buf, "CViewFileBrowser::%s", this->name);
 	viewC64->config->GetString(buf, &defaultPath, gPathToDocuments);
 	SYS_ReleaseCharBuf(buf);
 	
@@ -329,7 +329,7 @@ void CViewFileBrowser::SetPath(fs::path newPath)
 	LOGD("CViewFileBrowser::SetPath: currentPath is %s", cPath);
 	
 	char *buf = SYS_GetCharBuf();
-	sprintf(buf, "CViewFileBrowser##%s", this->name);
+	sprintf(buf, "CViewFileBrowser::%s", this->name);
 	viewC64->config->SetString(buf, &cPath);
 	SYS_ReleaseCharBuf(buf);
 

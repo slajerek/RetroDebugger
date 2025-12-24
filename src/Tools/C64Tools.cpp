@@ -1334,6 +1334,9 @@ void GetC64VicAddrFromState(vicii_cycle_state_t *viciiState, int *screenAddr, in
 	*screenAddr = screen_addr;
 	*charsetAddr = charset_addr;
 	*bitmapBank = bitmap_bank;
-	
+}
 
+void C64MapFloatRasterPosToIntRaster(float rasterX, float rasterY, float *rx, float *ry)
+{
+	
 }

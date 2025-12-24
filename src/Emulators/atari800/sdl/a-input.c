@@ -300,7 +300,7 @@ int PLATFORM_Keyboard(void)
 //
 //#ifdef USE_UI_BASIC_ONSCREEN_KEYBOARD
 //	if (!atari_screen_backup)
-//		atari_screen_backup = malloc(Screen_HEIGHT * Screen_WIDTH);
+//		atari_screen_backup = m	alloc(Screen_HEIGHT * Screen_WIDTH);
 //#endif
 //
 //#if HAVE_WINDOWS_H

@@ -1,5 +1,5 @@
 #ifndef _CDebugSymbolsC64_h_
-#define _CDebugSymbolsC64_h
+#define _CDebugSymbolsC64_h_
 
 #include "CDebugSymbols.h"
 

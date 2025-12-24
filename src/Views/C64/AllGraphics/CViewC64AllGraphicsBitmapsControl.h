@@ -63,6 +63,10 @@ public:
 	void ClearGraphicsForcedMode();
 	
 	void SetupMode();
+	
+	// resize
+	virtual void SetPosition(float posX, float posY, float posZ, float sizeX, float sizeY);
+
 };
 
 #endif //_C64_VIEW_ALL_GRAPHICS_

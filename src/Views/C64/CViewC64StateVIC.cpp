@@ -911,7 +911,7 @@ void CViewC64StateVIC::RenderStateVIC(vicii_cycle_state_t *viciiState,
 			
 			sprintf(buf, "Prio.  : ");
 			bits = viciiState->regs[0x1b];
-			for (int z = startId; z < endId; z++)
+			for (i = startId; i < endId; i++)
 			{
 				sprintf(buf2, "%s", ((bits >> i) & 1) ? "Back  " : "Fore  ");
 				strcat(buf, buf2);
@@ -919,9 +919,9 @@ void CViewC64StateVIC::RenderStateVIC(vicii_cycle_state_t *viciiState,
 			fontBytes->BlitText(buf, px, py, posZ, fontSize); py += fontSize;
 			
 			sprintf(buf, "Data   : ");
-			for (int z = startId; z < endId; z++)
+			for (i = startId; i < endId; i++)
 			{
-				int addr = v_bank + viciiState->sprite[z].pointer * 64;
+				int addr = v_bank + viciiState->sprite[i].pointer * 64;
 				sprintf(buf2, "%04x  ", addr);
 				strcat(buf, buf2);
 			}

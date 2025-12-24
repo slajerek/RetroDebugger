@@ -1022,10 +1022,13 @@ void CViewC64VicControl::Render()
 	
 	char buf[32];
 	
-	int rx = (int)(vicDisplay->rasterCursorPosX); // + 0x88);
-	int ry = (int)(vicDisplay->rasterCursorPosY); // + 0x32);
+	int rx = (int)(vicDisplay->rasterCursorPosX);
+	int ry = (int)(vicDisplay->rasterCursorPosY);
 	
-	if (rx >= 0 && rx < 320 && ry >= 0 && ry < 200)
+//	LOGD("vicDisplay->rasterCursorPos %f %f, rxry=%d %d", vicDisplay->rasterCursorPosX, vicDisplay->rasterCursorPosY, rx, ry);
+	
+	if (vicDisplay->rasterCursorPosX >= 0.0f && vicDisplay->rasterCursorPosX < 320.0f
+		&& vicDisplay->rasterCursorPosY >= 0.0f && vicDisplay->rasterCursorPosY < 200.0f)
 	{
 		if (c64SettingsShowPositionsInHex)
 		{
@@ -1051,7 +1054,13 @@ void CViewC64VicControl::Render()
 	}
 	
 	//
-	if (vicDisplay->rasterCursorAddr >= 0)
+	if (vicDisplay->GetAutoScrollMode() == AUTOSCROLL_DISASSEMBLY_RASTER_PC)
+	{
+		int rasterY = viewC64->c64RasterPosToShowY;
+		sprintf(buf, " %03x", rasterY);
+		this->font->BlitText(buf, cursorAddrTextX, cursorAddrTextY, posZ, fontScale);
+	}
+	else if (vicDisplay->rasterCursorAddr >= 0)
 	{
 		sprintf(buf, "%04x", vicDisplay->rasterCursorAddr);
 		this->font->BlitText(buf, cursorAddrTextX, cursorAddrTextY, posZ, fontScale);
@@ -1075,7 +1084,7 @@ void CViewC64VicControl::Render()
 			}
 			else
 			{
-				rasterLine = (int)(vicDisplay->rasterCursorPosY) + 0x32;
+				rasterLine = (int)(vicDisplay->rasterCursorPosY) + 0x33;
 			}
 			
 //			LOGD("rasterLine=%02x", rasterLine);

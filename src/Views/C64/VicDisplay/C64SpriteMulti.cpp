@@ -308,7 +308,7 @@ u8 C64SpriteMulti::PaintDither(bool forceColorReplace, int x, int y, u8 colorLMB
 		color2 = colorRMB;
 		replacementColor = 2;
 	}
-	else if (colorSource == VICEDITOR_COLOR_SOURCE_RMB)
+	else //if (colorSource == VICEDITOR_COLOR_SOURCE_RMB)
 	{
 		color1 = colorRMB;
 		color2 = colorLMB;
