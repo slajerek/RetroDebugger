@@ -785,8 +785,15 @@ namespace Nes
 
 			if (cycles.extCounter <= target)
 			{
-				cycles.extCounter = extChannel->Clock( cycles.extCounter, cycles.fixed, target );
-				NST_ASSERT( cycles.extCounter > target );
+				if (extChannel)
+				{
+					cycles.extCounter = extChannel->Clock( cycles.extCounter, cycles.fixed, target );
+					NST_ASSERT( cycles.extCounter > target );
+				}
+				else
+				{
+					cycles.extCounter = Cpu::CYCLE_MAX;
+				}
 			}
 		}
 

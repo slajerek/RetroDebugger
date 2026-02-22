@@ -59,17 +59,16 @@ CViewDataDump::CViewDataDump(const char *name, float posX, float posY, float pos
 	
 	SetDataAdapter(dataAdapter);
 	
-	fontAtari = viewC64->fontAtari;
+	fontDefaultCBM1 = viewC64->fontDefaultCBM1;
+	fontDefaultCBM2 = viewC64->fontDefaultCBM2;
 	fontCBM1 = viewC64->fontCBM1;
 	fontCBM2 = viewC64->fontCBM2;
-
-	fonts[0] = viewC64->fontCBM1;
-	fonts[1] = viewC64->fontCBM2;
-	fonts[2] = viewC64->fontAtari;
-	fonts[3] = viewC64->fontCBM1;
-	fonts[4] = viewC64->fontCBM1;
+	fontAtari = viewC64->fontAtari;
+	hasCustomChargenRom = viewC64->hasCustomChargenRom;
 
 	selectedCharset = 0;
+	charsetCombo = NULL;
+	RebuildCharsetCombo();
 	fontCharacters = fonts[0];
 
 	fontSize = 7.0f;
@@ -112,8 +111,9 @@ CViewDataDump::CViewDataDump(const char *name, float posX, float posY, float pos
 	AddLayoutParameter(new CLayoutParameterBool("Character graphics", &showCharacters));
 	AddLayoutParameter(new CLayoutParameterBool("Sprites", &showSprites));
 
-	static const char* dataCharsets[] = { "C64 upper case", "C64 lower case", "Atari 800" }; //, "Custom from RAM", "Custom from file" };
-	AddLayoutParameter(new CLayoutParameterCombo("Charset", &selectedCharset, dataCharsets, 3));
+	charsetCombo = new CLayoutParameterCombo("Charset", &selectedCharset, charsetComboItems, 0);
+	RebuildCharsetCombo();
+	AddLayoutParameter(charsetCombo);
 
 	// init images for characters
 	for (int i = 0; i < numberOfCharactersToShow; i++)
@@ -291,12 +291,45 @@ int CViewDataDump::GetAddrFromDataPosition(int dataPositionX, int dataPositionY)
 	return dataShowStart + dataPositionY*numberOfBytesPerLine + dataPositionX + dataAdapter->GetDataOffset();
 }
 
+void CViewDataDump::RebuildCharsetCombo()
+{
+	int n = 0;
+	charsetComboItems[n] = "C64 upper case";  fonts[n] = fontDefaultCBM1; n++;
+	charsetComboItems[n] = "C64 lower case";  fonts[n] = fontDefaultCBM2; n++;
+	if (hasCustomChargenRom)
+	{
+		charsetComboItems[n] = "C64 user ROM upper case";  fonts[n] = fontCBM1; n++;
+		charsetComboItems[n] = "C64 user ROM lower case";  fonts[n] = fontCBM2; n++;
+	}
+	if (fontAtari != NULL)
+	{
+		charsetComboItems[n] = "Atari 800";  fonts[n] = fontAtari; n++;
+	}
+	if (charsetCombo)
+	{
+		charsetCombo->itemsCount = n;
+	}
+	if (selectedCharset >= n)
+	{
+		selectedCharset = 0;
+	}
+}
+
 void CViewDataDump::RenderImGui()
 {
 	PreRenderImGui();
-	
+
+	// Sync user ROM font pointers (may change when custom ROM is loaded at runtime)
+	if (fontCBM1 != viewC64->fontCBM1)
+	{
+		fontCBM1 = viewC64->fontCBM1;
+		fontCBM2 = viewC64->fontCBM2;
+		hasCustomChargenRom = viewC64->hasCustomChargenRom;
+		RebuildCharsetCombo();
+	}
+
 	fontCharacters = fonts[selectedCharset];
-	
+
 	this->Render();
 	CGuiView::PostRenderImGui();
 }
@@ -970,9 +1003,9 @@ void CViewDataDump::ScrollToAddress(int address, bool updateDataShowStart)
 
 	if (this->visible == false || numberOfBytesPerLine == 0)
 		return;
-	
+
 	if (isEditingValue || isEditingValueAddr)
-		CancelEditingHexBox();
+		return;
 
 	if (address >= dataAdapter->AdapterGetDataLength())
 	{
@@ -1039,25 +1072,8 @@ bool CViewDataDump::KeyDown(u32 keyCode, bool isShift, bool isAlt, bool isContro
 	// change charset
 	if ((keyCode == MTKEY_LSHIFT && isAlt) || (keyCode == MTKEY_LALT && isShift))
 	{
-		if (fontCharacters == fontCBM1)
-		{
-			fontCharacters = fontCBM2;
-		}
-		else if (fontCharacters == fontCBM2)
-		{
-			if (fontAtari != NULL)
-			{
-				fontCharacters = fontAtari;
-			}
-			else
-			{
-				fontCharacters = fontCBM1;
-			}
-		}
-		else if (fontCharacters == fontAtari)
-		{
-			fontCharacters = fontCBM1;
-		}
+		selectedCharset = (selectedCharset + 1) % charsetCombo->itemsCount;
+		fontCharacters = fonts[selectedCharset];
 		return false;
 	}
 	
@@ -1691,10 +1707,11 @@ void CViewDataDump::RenderContextMenuItems()
 					ImGui::SameLine();
 
 					ImGui::PushItemWidth(30);
-					ImGuiInputTextFlags defaultHexInputFlags = ImGuiInputTextFlags_CharsHexadecimal | ImGuiInputTextFlags_CharsUppercase | ImGuiInputTextFlags_EnterReturnsTrue;
-					
+					ImGuiInputTextFlags defaultHexInputFlags = ImGuiInputTextFlags_CharsHexadecimal | ImGuiInputTextFlags_CharsUppercase;
+
 					u8 val = memoryBreakpoint->value;
-					if (ImGui::InputScalar("##memoryBreakpointValue", ImGuiDataType_::ImGuiDataType_U8, &val, NULL, NULL, "%02X", defaultHexInputFlags))
+					ImGui::InputScalar("##memoryBreakpointValue", ImGuiDataType_::ImGuiDataType_U8, &val, NULL, NULL, "%02X", defaultHexInputFlags);
+					if (ImGui::IsItemDeactivatedAfterEdit())
 					{
 						memoryBreakpoint->value = val;
 					}

@@ -91,6 +91,7 @@ public:
 	virtual void RestartAudio();
 
 	virtual uint8 *GetCharRom();
+	virtual uint8 *GetDefaultCharRom();
 
 	volatile uint8 machineType;
 	virtual uint8 GetC64MachineType();
@@ -185,6 +186,7 @@ public:
 	virtual void SetByteToRamC64(uint16 addr, uint8 val);
 	virtual uint8 GetByteC64(uint16 addr);
 	virtual uint8 GetByteFromRamC64(uint16 addr);
+	virtual uint8 GetByteC64ForCycleState(uint16 addr, uint8 memory0001, uint8 exrom, uint8 game);
 	virtual void MakeJmpC64(uint16 addr);
 	virtual void MakeJmpNoResetC64(uint16 addr);
 	virtual void MakeJsrC64(uint16 addr);

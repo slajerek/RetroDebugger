@@ -71,6 +71,8 @@ public:
 	
 	virtual void RenderCanvasSpecificGridLines();
 	virtual void RenderCanvasSpecificGridValues();
+	void RenderCycleInfo();
+	void RenderVicWriteGridMarks();
 	
 	virtual void ClearScreen();
 	virtual void ClearScreen(u8 charValue, u8 colorValue);

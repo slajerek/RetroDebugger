@@ -31,7 +31,8 @@ public:
 	
 	CDebugInterfaceC64 *debugInterface;
 
-	float fontSize;	
+	float fontSize;
+	bool hasManualFontSize;
 	
 	virtual void SetPosition(float posX, float posY, float posZ, float sizeX, float sizeY);
 	

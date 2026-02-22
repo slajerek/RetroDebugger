@@ -512,6 +512,19 @@ memmap_mem_read((addr) & 0xff)
 #define PULL()    memmap_mem_read(0x100 + (++reg_sp))
 #define STACK_PEEK()  memmap_mem_read(0x100 + reg_sp)
 
+/* Stack annotation: after PUSH, reg_sp has been decremented, so the pushed byte is at reg_sp+1 */
+#define C64D_ANNOTATE_PUSH(entry_type, irq_source, origin) \
+    if (c64d_main_cpu_stack_entry_types) { \
+        c64d_main_cpu_stack_entry_types[(uint8_t)(reg_sp + 1)] = (entry_type); \
+        c64d_main_cpu_stack_irq_sources[(uint8_t)(reg_sp + 1)] = (irq_source); \
+        c64d_main_cpu_stack_origin_pc[(uint8_t)(reg_sp + 1)] = (origin); \
+    }
+
+/* Interrupt context for DO_IRQBRK: set by caller (BRK macro or IRQ handler) */
+static uint8_t c64d_irqbrk_entry_type_base = C64D_STACK_ENTRY_IRQ_PCH;
+static uint8_t c64d_irqbrk_irq_source = C64D_IRQ_SOURCE_UNKNOWN;
+static int c64d_irq_flag_needs_clear = 0;
+
 #endif /* FEATURE_CPUMEMHISTORY */
 
 inline static BYTE mem_read_check_ba(unsigned int addr)
@@ -1559,10 +1572,13 @@ do {                                                                            
 WORD handler_vector = 0xfffe;                                                                                 \
 \
 PUSH(reg_pc >> 8);                                                                                            \
+C64D_ANNOTATE_PUSH(c64d_irqbrk_entry_type_base, c64d_irqbrk_irq_source, LAST_OPCODE_ADDR);                   \
 CLK_INC();                                                                                                    \
 PUSH(reg_pc & 0xff);                                                                                          \
+C64D_ANNOTATE_PUSH(c64d_irqbrk_entry_type_base + 1, c64d_irqbrk_irq_source, LAST_OPCODE_ADDR);               \
 CLK_INC();                                                                                                    \
 PUSH(LOCAL_STATUS());                                                                                         \
+C64D_ANNOTATE_PUSH(c64d_irqbrk_entry_type_base + 2, c64d_irqbrk_irq_source, LAST_OPCODE_ADDR);               \
 CLK_INC();                                                                                                    \
 \
 /* Process alarms up to this point to get nmi_clk updated. */                                                 \
@@ -1572,8 +1588,13 @@ alarm_context_dispatch(ALARM_CONTEXT, CLK);                                     
 \
 /* If an NMI would occur at this cycle... */                                                                  \
 if ((CPU_INT_STATUS->global_pending_int & IK_NMI) && (CLK >= (CPU_INT_STATUS->nmi_clk + INTERRUPT_DELAY))) {  \
-/* Transform the IRQ/BRK into an NMI. */                                                                  \
+/* Transform the IRQ/BRK into an NMI. Re-annotate the already-pushed bytes. */                            \
 handler_vector = 0xfffa;                                                                                  \
+if (c64d_main_cpu_stack_entry_types) {                                                                    \
+    c64d_main_cpu_stack_entry_types[(uint8_t)(reg_sp + 3)] = C64D_STACK_ENTRY_NMI_PCH;                    \
+    c64d_main_cpu_stack_entry_types[(uint8_t)(reg_sp + 2)] = C64D_STACK_ENTRY_NMI_PCL;                    \
+    c64d_main_cpu_stack_entry_types[(uint8_t)(reg_sp + 1)] = C64D_STACK_ENTRY_NMI_STATUS;                 \
+}                                                                                                         \
 TRACE_NMI();                                                                                              \
 if (monitor_mask[CALLER] & (MI_STEP)) {                                                                   \
 monitor_check_icount_interrupt();                                                                     \
@@ -1612,12 +1633,18 @@ JUMP(addr);                                                                     
 					CLK_INC();                                                 \
 				}                                                              \
 				LOCAL_SET_BREAK(0);                                            \
+				{ uint8_t nmi_src = (machine_context.cia2->c64d_irq_flag) ?    \
+					C64D_IRQ_SOURCE_CIA2_NMI : C64D_IRQ_SOURCE_UNKNOWN;        \
+				machine_context.cia2->c64d_irq_flag = 0;                       \
 				PUSH(reg_pc >> 8);                                             \
+				C64D_ANNOTATE_PUSH(C64D_STACK_ENTRY_NMI_PCH, nmi_src, LAST_OPCODE_ADDR); \
 				CLK_INC();                                                     \
 				PUSH(reg_pc & 0xff);                                           \
+				C64D_ANNOTATE_PUSH(C64D_STACK_ENTRY_NMI_PCL, nmi_src, LAST_OPCODE_ADDR); \
 				CLK_INC();                                                     \
 				PUSH(LOCAL_STATUS());                                          \
-				CLK_INC();                                                     \
+				C64D_ANNOTATE_PUSH(C64D_STACK_ENTRY_NMI_STATUS, nmi_src, LAST_OPCODE_ADDR); \
+				CLK_INC(); }                                                   \
 				addr = LOAD(0xfffa);                                           \
 				CLK_INC();                                                     \
 				addr |= (LOAD(0xfffb) << 8);                                   \
@@ -1641,6 +1668,13 @@ JUMP(addr);                                                                     
 					CLK_INC();                                                 \
 				}                                                              \
 				LOCAL_SET_BREAK(0);                                            \
+				c64d_irqbrk_entry_type_base = C64D_STACK_ENTRY_IRQ_PCH;        \
+				c64d_irqbrk_irq_source = C64D_IRQ_SOURCE_UNKNOWN;              \
+				if (vicii.c64d_irq_flag)                                       \
+					c64d_irqbrk_irq_source = C64D_IRQ_SOURCE_VIC;             \
+				else if (machine_context.cia1->c64d_irq_flag)                  \
+					c64d_irqbrk_irq_source = C64D_IRQ_SOURCE_CIA1;            \
+				c64d_irq_flag_needs_clear = 1;                                 \
 				DO_IRQBRK();                                                   \
 				SET_LAST_OPCODE(0);                                            \
 			}                                                                  \
@@ -2192,6 +2226,8 @@ EXPORT_REGISTERS(); \
 TRACE_BRK();        \
 INC_PC(2);          \
 LOCAL_SET_BREAK(1); \
+c64d_irqbrk_entry_type_base = C64D_STACK_ENTRY_BRK_PCH; \
+c64d_irqbrk_irq_source = C64D_IRQ_SOURCE_UNKNOWN;       \
 DO_IRQBRK();        \
 } while (0)
 		
@@ -2386,8 +2422,10 @@ CLK_INC();                            \
 }                                         \
 INC_PC(2);                                \
 PUSH(((reg_pc) >> 8) & 0xff);             \
+C64D_ANNOTATE_PUSH(C64D_STACK_ENTRY_JSR_PCH, C64D_IRQ_SOURCE_UNKNOWN, LAST_OPCODE_ADDR); \
 CLK_INC();                                \
 PUSH((reg_pc) & 0xff);                    \
+C64D_ANNOTATE_PUSH(C64D_STACK_ENTRY_JSR_PCL, C64D_IRQ_SOURCE_UNKNOWN, LAST_OPCODE_ADDR); \
 CLK_INC();                                \
 addr_msb = LOAD(reg_pc);                  \
 JSR_FIXUP_MSB(addr_msb);                  \
@@ -2467,6 +2505,7 @@ INC_PC(pc_inc);        \
 #define PHA()             \
 do {                  \
 PUSH(reg_a_read); \
+C64D_ANNOTATE_PUSH(C64D_STACK_ENTRY_VALUE, C64D_IRQ_SOURCE_UNKNOWN, LAST_OPCODE_ADDR); \
 CLK_INC();        \
 INC_PC(1);        \
 } while (0)
@@ -2474,6 +2513,7 @@ INC_PC(1);        \
 #define PHP()                           \
 do {                                \
 PUSH(LOCAL_STATUS() | P_BREAK); \
+C64D_ANNOTATE_PUSH(C64D_STACK_ENTRY_STATUS, C64D_IRQ_SOURCE_UNKNOWN, LAST_OPCODE_ADDR); \
 CLK_INC();                      \
 INC_PC(1);                      \
 } while (0)
@@ -2842,15 +2882,15 @@ INC_PC(1);                \
 			
 			{
 				enum cpu_int pending_interrupt;
-				
+
 				if (!(CPU_INT_STATUS->global_pending_int & IK_IRQ)
 					&& (CPU_INT_STATUS->global_pending_int & IK_IRQPEND)
 					&& CPU_INT_STATUS->irq_pending_clk <= CLK) {
 					interrupt_ack_irq(CPU_INT_STATUS);
 				}
-				
+
 				c64d_check_cpu_snapshot_manager_store();
-				
+
 				pending_interrupt = CPU_INT_STATUS->global_pending_int;
 				if (pending_interrupt != IK_NONE)
 				{
@@ -2896,8 +2936,16 @@ INC_PC(1);                \
 							}
 						}
 					}
+
+					// Clear IRQ source flags after both annotation and breakpoint code have used them
+					if (c64d_irq_flag_needs_clear)
+					{
+						vicii.c64d_irq_flag = 0;
+						machine_context.cia1->c64d_irq_flag = 0;
+						c64d_irq_flag_needs_clear = 0;
+					}
 					/////
-					
+
 					if (!(CPU_INT_STATUS->global_pending_int & IK_IRQ)
 						&& CPU_INT_STATUS->global_pending_int & IK_IRQPEND) {
 						CPU_INT_STATUS->global_pending_int &= ~IK_IRQPEND;
@@ -4197,14 +4245,20 @@ int c64d_check_cpu_snapshot_manager_restore()
 //		if (CPU_INT_STATUS->global_pending_int & IK_RESET) {           \
 //			ik |= IK_RESET;                                            \
 //		}
-		
+
 		LOGD("GLOBAL_REGS.pc=%04x", GLOBAL_REGS.pc);
-		
+
 		IMPORT_REGISTERS();
 		viceCurrentC64PC = maincpu_get_pc();
-		
+
 		LOGD("viceCurrentC64PC=%04x reg_pc=%04x", viceCurrentC64PC, reg_pc);
-		
+
+		// Restore c64d_irq_flag from CIA/VIC state (snapshot load clears these)
+		if (vicii.irq_status & 0x80)
+			vicii.c64d_irq_flag = 1;
+		if (machine_context.cia1->irq_enabled)
+			machine_context.cia1->c64d_irq_flag = 1;
+
 		// TODO: this is copy-pasted from CPU emulation, make generic function
 		pending_interrupt = CPU_INT_STATUS->global_pending_int;
 		if (pending_interrupt != IK_NONE)
@@ -4251,8 +4305,16 @@ int c64d_check_cpu_snapshot_manager_restore()
 					}
 				}
 			}
+
+			// Clear IRQ source flags after both annotation and breakpoint code have used them
+			if (c64d_irq_flag_needs_clear)
+			{
+				vicii.c64d_irq_flag = 0;
+				machine_context.cia1->c64d_irq_flag = 0;
+				c64d_irq_flag_needs_clear = 0;
+			}
 			/////
-			
+
 			if (!(CPU_INT_STATUS->global_pending_int & IK_IRQ)
 				&& CPU_INT_STATUS->global_pending_int & IK_IRQPEND) {
 				CPU_INT_STATUS->global_pending_int &= ~IK_IRQPEND;

@@ -11,6 +11,7 @@
 #include "CByteBuffer.h"
 #include "DebuggerDefs.h"
 #include "EmulatorsConfig.h"
+#include "CStackAnnotation.h"
 #include "json.hpp"
 
 #include <map>
@@ -279,6 +280,10 @@ public:
 	CSlrMutex *tasksMutex;
 	virtual void LockTasksMutex();
 	virtual void UnlockTasksMutex();
+
+	// stack annotations (per-byte tracking of what was pushed onto $0100-$01FF)
+	CStackAnnotationData mainCpuStack;
+	virtual const char *GetIrqSourceName(u8 source);
 
 	//
 protected:

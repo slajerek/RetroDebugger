@@ -1,0 +1,66 @@
+<C64debugger version="1.0">
+   <Sources values="INDEX,FILE">
+      0,KickAss.jar:/include/autoinclude.asm
+      1,C:\Users\KimDanielArthur\Dropbox\projects\dankwars\dankwars.asm
+      2,C:\Users\KimDanielArthur\Dropbox\projects\dankwars\ai\joycontrol.asm
+   </Sources>
+
+   <Segment name="Base" dest="Base" values="START,END,FILE_IDX,LINE1,COL1,LINE2,COL2">
+      <Block name="main.prg">
+         $0801,$f834,1,19,16,19,23
+      </Block>
+   </Segment>
+
+
+   <Segment name="Default" dest="" values="START,END,FILE_IDX,LINE1,COL1,LINE2,COL2">
+   </Segment>
+
+
+   <Segment name="Patch" dest="Patch" values="START,END,FILE_IDX,LINE1,COL1,LINE2,COL2">
+      <Block name="Joycontrol1">
+         $a000,$a001,1,8,3,8,5
+         $a002,$a004,2,6,3,6,5
+         $a005,$a006,2,7,11,7,13
+         $a007,$a008,2,8,3,8,5
+         $a009,$a00a,2,9,3,9,5
+         $a00b,$a00c,2,11,3,11,5
+         $a00d,$a00d,2,12,3,12,5
+         $a00e,$a010,2,13,3,13,5
+         $a011,$a011,2,14,3,14,5
+         $a012,$a022,2,17,3,17,7
+      </Block>
+      <Block name="Joycontrol2">
+         $b000,$b002,2,6,3,6,5
+         $b003,$b004,2,7,11,7,13
+         $b005,$b006,2,8,3,8,5
+         $b007,$b008,2,9,3,9,5
+         $b009,$b00a,2,11,3,11,5
+         $b00b,$b00b,2,12,3,12,5
+         $b00c,$b00e,2,13,3,13,5
+         $b00f,$b00f,2,14,3,14,5
+         $b010,$b020,2,17,3,17,7
+      </Block>
+   </Segment>
+
+   <Labels values="SEGMENT,ADDRESS,NAME,START,END,FILE_IDX,LINE1,COL1,LINE2,COL2">
+      Patch,$a000,test,1,6,3,6,7
+      Patch,$a002,Start,2,3,2,3,7
+      Patch,$a005,mylabel,2,7,3,7,10
+      Patch,$a012,Joy2Int,2,16,2,16,9
+      Patch,$b000,Start,2,3,2,3,7
+      Patch,$b003,mylabel,2,7,3,7,10
+      Patch,$b010,Joy2Int,2,16,2,16,9
+   </Labels>
+
+   <Breakpoints values="SEGMENT,ADDRESS,ARGUMENT">
+      Patch,$a000,
+      Patch,$a002,
+      Patch,$a00b,
+      Patch,$b000,
+      Patch,$b009,
+   </Breakpoints>
+
+   <Watchpoints values="SEGMENT,ADDRESS1,ADDRESS2,ARGUMENT">
+   </Watchpoints>
+
+</C64debugger>

@@ -59,7 +59,7 @@ CMainMenuHelper::CMainMenuHelper(float posX, float posY, float posZ, float sizeX
 {
 	this->name = "CViewMainMenu";
 
-	font = viewC64->fontCBMShifted;
+	font = viewC64->fontDefaultCBMShifted;
 	fontScale = 3;
 	fontHeight = font->GetCharHeight('@', fontScale) + 2;
 
@@ -133,6 +133,7 @@ CMainMenuHelper::CMainMenuHelper(float posX, float posY, float posZ, float sizeX
 	if (viewC64->debugInterfaceNes)
 	{
 		openFileExtensions.push_back(new CSlrString("nes"));
+		openFileExtensions.push_back(new CSlrString("fds"));
 	}
 
 	openFileExtensions.push_back(new CSlrString("c64jukebox"));
@@ -434,10 +435,17 @@ void CMainMenuHelper::LoadFile(CSlrString *path)
 	}
 
 	// NES file formats
-	else if (ext->CompareWith("nes"))
+	else if (ext->CompareWith("nes") || ext->CompareWith("fds"))
 	{
-		viewC64->StartEmulationThread(viewC64->debugInterfaceNes);
-		loaded = LoadNES(path, true);
+		if (ext->CompareWith("fds") && !viewC64->debugInterfaceNes->FdsHasBIOS())
+		{
+			viewC64->ShowMessageError("FDS BIOS (disksys.rom) not found. Set NES ROMs folder in Settings/NES.");
+		}
+		else
+		{
+			viewC64->StartEmulationThread(viewC64->debugInterfaceNes);
+			loaded = LoadNES(path, true);
+		}
 	}
 	
 	// other formats

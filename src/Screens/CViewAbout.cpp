@@ -30,7 +30,7 @@ CViewAbout::CViewAbout(float posX, float posY, float posZ, float sizeX, float si
 {
 	this->name = "CViewAbout";
 	
-	font = viewC64->fontCBMShifted;
+	font = viewC64->fontDefaultCBMShifted;
 	fontScale = 1.5;
 	fontHeight = font->GetCharHeight('@', fontScale) + 2;
 	

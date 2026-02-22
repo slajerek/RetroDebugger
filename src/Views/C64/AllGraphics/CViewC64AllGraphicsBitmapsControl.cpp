@@ -14,6 +14,7 @@
 #include "CSlrString.h"
 #include "CViewC64StateVIC.h"
 #include "CViewC64.h"
+#include "CLayoutParameter.h"
 
 // TODO: colour leds are just rectangles with hitbox and lot of copy pasted code, replace them to proper buttons!
 
@@ -31,10 +32,12 @@ CViewC64AllGraphicsBitmapsControl::CViewC64AllGraphicsBitmapsControl(const char 
 	forcedRenderScreenMode = VIEW_C64_ALL_GRAPHICS_FORCED_NONE;
 
 	//
-	font = viewC64->fontCBMShifted;
+	font = viewC64->fontDefaultCBMShifted;
 	fontScale = 2.5f;
 	fontHeight = font->GetCharHeight('@', fontScale) + 2;
 	fontSize = fontHeight;
+	hasManualFontScale = false;
+	AddLayoutParameter(new CLayoutParameterFloat("Font Scale", &fontScale));
 
 	float startX = 5;
 	float startY = 5;
@@ -157,92 +160,134 @@ CViewC64AllGraphicsBitmapsControl::CViewC64AllGraphicsBitmapsControl(const char 
 
 void CViewC64AllGraphicsBitmapsControl::SetPosition(float posX, float posY, float posZ, float sizeX, float sizeY)
 {
-	CGuiView::SetPosition(posX, posY, posZ, sizeX, sizeY);
-	
-	float fs = 1.0f;
-	
-	float ledX = posX + fs * 20.1725f;
-	float ledY = posY + 0.75f * fs;
-	
-	float ledSizeX = fs*4.0f;
-	float gap = fs * 0.1f;
-	float step = fs * 0.75f;
-	float ledSizeY = fs + gap + gap;
-	float ledSizeY2 = fs + step;
-	
-	float startX = 5;
-	float startY = 5;
-	
-	float px = startX;
-	float py = startY;
-	
-	float buttonSizeX = 5.96 * fs;
-	float buttonSizeY = 2.0f * fs;
-	
-	float lstFontSize = fs;//4.0f;
-	
-	px += buttonSizeX + gap;
-	px += buttonSizeX + gap;
-	px += buttonSizeX*2.0f + gap;
-	px += lstFontSize*6.5f;
-	
-	// we need to scale this
-	float scale = (sizeX / px) * 0.1f;
-	
-	fontScale = 2.5f * scale;
+	bool widthChanged = (fabs(sizeX - this->sizeX) > 0.5f);
+
+	if (hasManualFontScale && !widthChanged)
+	{
+		// Width unchanged: keep manually set font scale
+	}
+	else
+	{
+		// Compute total layout width at unit scale to derive fontScale
+		float fs = 1.0f;
+		float gap = fs * 0.1f;
+		float buttonSizeX = 5.96f * fs;
+		float lstFontSize = fs;
+
+		float px = 5;
+		px += buttonSizeX + gap;
+		px += buttonSizeX + gap;
+		px += buttonSizeX * 2.0f + gap;
+		px += lstFontSize * 6.5f;
+
+		float scale = (sizeX / px) * 0.1f;
+		fontScale = 2.5f * scale;
+		if (fontScale < 0.5f) fontScale = 0.5f;
+
+		if (widthChanged)
+			hasManualFontScale = false;
+	}
+
 	fontHeight = font->GetCharHeight('@', fontScale) + 2;
 	fontSize = fontHeight;
-	
-	buttonSizeX = 5.96 * fontSize;
-	buttonSizeY = 2.0f * fontSize;
-	gap = 0.1f * fontSize;
-	startX = posX + 5.0f;
-	startY = posY + 5.0f;
 
-	ledX = posX + fontSize * 20.1725f;
-	ledY = posY + 0.75f * fontSize;
+	CGuiView::SetPosition(posX, posY, posZ, sizeX, sizeY);
+	RepositionButtons();
+}
 
-	ledSizeX = fontSize*4.0f;
-	gap = fontSize * 0.1f;
+void CViewC64AllGraphicsBitmapsControl::LayoutParameterChanged(CLayoutParameter *layoutParameter)
+{
+	if (layoutParameter != NULL)
+	{
+		hasManualFontScale = true;
+	}
+	else
+	{
+		// Check if fontScale differs from auto value
+		float fs = 1.0f;
+		float gap = fs * 0.1f;
+		float buttonSizeX = 5.96f * fs;
+		float lstFontSize = fs;
 
-	//
-	px = startX;
-	py = startY;
-	
+		float px = 5;
+		px += buttonSizeX + gap;
+		px += buttonSizeX + gap;
+		px += buttonSizeX * 2.0f + gap;
+		px += lstFontSize * 6.5f;
+
+		float scale = (sizeX / px) * 0.1f;
+		float autoFontScale = 2.5f * scale;
+
+		if (fabs(fontScale - autoFontScale) > 0.01f)
+		{
+			hasManualFontScale = true;
+		}
+	}
+
+	fontHeight = font->GetCharHeight('@', fontScale) + 2;
+	fontSize = fontHeight;
+
+	RepositionButtons();
+
+	CGuiView::LayoutParameterChanged(layoutParameter);
+}
+
+void CViewC64AllGraphicsBitmapsControl::RepositionButtons()
+{
+	float buttonSizeX = 5.96f * fontSize;
+	float buttonSizeY = 2.0f * fontSize;
+	float gap = 0.1f * fontSize;
+	float startX = posX + 5.0f;
+	float startY = posY + 5.0f;
+
+	float textHeight = font->GetCharHeight('@', fontScale);
+	float textDrawOffsetX = buttonSizeX / 2.0f;
+	float textDrawOffsetY = (buttonSizeY - textHeight) / 2.0f;
+
+	float px = startX;
+	float py = startY;
+
+	// Row 1: B/W, HIRES, MULTI, screen address list
 	btnModeBitmapColorsBlackWhite->SetPosition(px, py, posZ, buttonSizeX, buttonSizeY);
-	btnModeBitmapColorsBlackWhite->SetFont(font, fontScale);
-	
+	btnModeBitmapColorsBlackWhite->fontScale = fontScale;
+	btnModeBitmapColorsBlackWhite->textDrawPosX = textDrawOffsetX;
+	btnModeBitmapColorsBlackWhite->textDrawPosY = textDrawOffsetY;
+
 	px += buttonSizeX + gap;
-	
+
 	btnModeHires->SetPosition(px, py, posZ, buttonSizeX, buttonSizeY);
-	btnModeHires->SetFont(font, fontScale);
-	
+	btnModeHires->fontScale = fontScale;
+	btnModeHires->textDrawPosX = textDrawOffsetX;
+	btnModeHires->textDrawPosY = textDrawOffsetY;
+
 	px += buttonSizeX + gap;
-	
+
 	btnModeMulti->SetPosition(px, py, posZ, buttonSizeX, buttonSizeY);
-	btnModeMulti->SetFont(font, fontScale);
-	
-	//
-	px += buttonSizeX*2.0f + gap;
-	
-	lstFontSize = fontSize;//4.0f;
-	
-	lstScreenAddresses->SetPosition(px, py, posZ, lstFontSize*6.5f, 65.0f/8.0f * fontSize);
+	btnModeMulti->fontScale = fontScale;
+	btnModeMulti->textDrawPosX = textDrawOffsetX;
+	btnModeMulti->textDrawPosY = textDrawOffsetY;
+
+	px += buttonSizeX * 2.0f + gap;
+
+	float lstFontSize = fontSize;
+	lstScreenAddresses->SetPosition(px, py, posZ, lstFontSize * 6.5f, 65.0f / 8.0f * fontSize);
 	lstScreenAddresses->fontSize = lstFontSize;
-	
-	//
-	
-	//
+
+	// Row 2: ROM, GRID
 	px = startX;
 	py += buttonSizeY + gap;
-	
+
 	btnShowRAMorIO->SetPosition(px, py, posZ, buttonSizeX, buttonSizeY);
-	btnShowRAMorIO->SetFont(font, fontScale);
-	
+	btnShowRAMorIO->fontScale = fontScale;
+	btnShowRAMorIO->textDrawPosX = textDrawOffsetX;
+	btnShowRAMorIO->textDrawPosY = textDrawOffsetY;
+
 	px += buttonSizeX + gap;
-	
+
 	btnShowGrid->SetPosition(px, py, posZ, buttonSizeX, buttonSizeY);
-	btnShowGrid->SetFont(font, fontScale);
+	btnShowGrid->fontScale = fontScale;
+	btnShowGrid->textDrawPosX = textDrawOffsetX;
+	btnShowGrid->textDrawPosY = textDrawOffsetY;
 }
 
 void CViewC64AllGraphicsBitmapsControl::SetSwitchButtonDefaultColors(CGuiButtonSwitch *btn)
@@ -315,6 +360,68 @@ void CViewC64AllGraphicsBitmapsControl::RenderImGui()
 	PreRenderImGui();
 	Render();
 	PostRenderImGui();
+}
+
+void CViewC64AllGraphicsBitmapsControl::PostRenderImGui()
+{
+	if (imGuiNoWindowPadding)
+		ImGui::PopStyleVar();
+
+	if (isShowingContextMenu || HasContextMenuItems() || numNotHiddenLayoutParameters > 0)
+	{
+		bool onInteractiveElement = false;
+
+		if (!isShowingContextMenu)
+		{
+			ImVec2 mousePos = ImGui::GetMousePos();
+			float mx = mousePos.x;
+			float my = mousePos.y;
+
+			onInteractiveElement = btnModeBitmapColorsBlackWhite->IsInside(mx, my)
+				|| btnModeHires->IsInside(mx, my)
+				|| btnModeMulti->IsInside(mx, my)
+				|| btnShowRAMorIO->IsInside(mx, my)
+				|| btnShowGrid->IsInside(mx, my)
+				|| lstScreenAddresses->IsInside(mx, my);
+
+			// Check LED area
+			if (!onInteractiveElement)
+			{
+				float ledX = posX + fontSize * 19.3f;
+				float ledY = posY + 0.75f * fontSize;
+				float ledSizeX = fontSize * 4.0f;
+				float step = fontSize * 0.75f;
+				float numLeds = (btnModeHires->IsOn() || btnModeMulti->IsOn()) ? 1.0f : 0.0f;
+
+				if (numLeds > 0)
+				{
+					float ledEndY = ledY + numLeds * (fontSize + step);
+					if (mx >= ledX && mx <= ledX + ledSizeX && my >= ledY && my <= ledEndY)
+						onInteractiveElement = true;
+				}
+			}
+		}
+
+		if (!onInteractiveElement)
+		{
+			if (ImGui::BeginPopupContextWindow("CGuiViewContextMenu"))
+			{
+				RenderContextMenuItems();
+				RenderContextMenuLayoutParameters(false);
+				ImGui::EndPopup();
+			}
+			else
+			{
+				isShowingContextMenu = false;
+			}
+		}
+	}
+
+	ImGui::End();
+
+	bool isFullScreen = (guiMain->viewFullScreen != NULL);
+	if (isFullScreen)
+		ImGui::PopStyleVar(2);
 }
 
 void CViewC64AllGraphicsBitmapsControl::Render()
@@ -580,8 +687,19 @@ bool CViewC64AllGraphicsBitmapsControl::DoRightClick(float x, float y)
 	}
 
 	guiMain->UnlockMutex();
-	
-	return CGuiView::CGuiElement::DoRightClick(x, y);
+
+	// consume right-click on buttons to prevent context menu
+	if (btnModeBitmapColorsBlackWhite->IsInside(x, y)
+		|| btnModeHires->IsInside(x, y)
+		|| btnModeMulti->IsInside(x, y)
+		|| btnShowRAMorIO->IsInside(x, y)
+		|| btnShowGrid->IsInside(x, y)
+		|| lstScreenAddresses->IsInside(x, y))
+	{
+		return true;
+	}
+
+	return false;
 }
 
 bool CViewC64AllGraphicsBitmapsControl::ButtonClicked(CGuiButton *button)

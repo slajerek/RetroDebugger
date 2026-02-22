@@ -25,7 +25,7 @@ CViewColodore::CViewColodore(float posX, float posY, float posZ, float sizeX, fl
 {
 	this->name = "CViewColodore";
 	
-	font = viewC64->fontCBMShifted;
+	font = viewC64->fontDefaultCBMShifted;
 	fontScale = 1.5;
 	fontHeight = font->GetCharHeight('@', fontScale) + 2;
 	

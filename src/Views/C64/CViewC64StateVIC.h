@@ -37,7 +37,8 @@ public:
 	CSlrFont *fontCharacters;
 	
 	float fontSize;
-	
+	bool hasManualFontSize;
+
 	float fontBytesSize;
 
 	virtual void SetPosition(float posX, float posY);

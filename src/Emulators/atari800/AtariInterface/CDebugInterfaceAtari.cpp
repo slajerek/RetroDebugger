@@ -59,7 +59,12 @@ CDebugInterfaceAtari::CDebugInterfaceAtari(CViewC64 *viewC64) //, uint8 *memory)
 	LOGM("CDebugInterfaceAtari: %s init", Atari800_TITLE);
 		
 	debugInterfaceAtari = this;
-	
+
+	// Wire stack annotation pointers for C emulator code
+	atrd_stack_entry_types = mainCpuStack.entryTypes;
+	atrd_stack_irq_sources = mainCpuStack.irqSources;
+	atrd_stack_origin_pc   = mainCpuStack.originPC;
+
 	CreateScreenData();
 	
 	audioChannel = NULL;

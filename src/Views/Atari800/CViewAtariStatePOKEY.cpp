@@ -110,6 +110,7 @@ CViewAtariStatePOKEY::CViewAtariStatePOKEY(const char *name, float posX, float p
 
 	fontBytes = viewC64->fontDisassembly;
 	fontSize = 7.0f;
+	hasManualFontSize = false;
 	AddLayoutParameter(new CLayoutParameterFloat("Font Size", &fontSize));
 
 	showRegistersOnly = false;
@@ -131,6 +132,21 @@ CViewAtariStatePOKEY::CViewAtariStatePOKEY(const char *name, float posX, float p
 
 void CViewAtariStatePOKEY::SetPosition(float posX, float posY, float posZ, float sizeX, float sizeY)
 {
+	bool sizeChanged = (fabs(sizeX - this->sizeX) > 0.5f || fabs(sizeY - this->sizeY) > 0.5f);
+
+	if (hasManualFontSize && !sizeChanged)
+	{
+		// Size unchanged (startup/layout restore): keep manually set font size
+	}
+	else
+	{
+		// Auto-scale: ~80 chars wide (6-group register lines), 12 rows tall
+		fontSize = fmin(sizeX / 80.0f, sizeY / 12.0f);
+
+		if (sizeChanged)
+			hasManualFontSize = false;
+	}
+
 	CGuiView::SetPosition(posX, posY, posZ, sizeX, sizeY);
 	UpdateFontSize();
 }
@@ -220,7 +236,22 @@ void CViewAtariStatePOKEY::UpdateFontSize()
 
 void CViewAtariStatePOKEY::LayoutParameterChanged(CLayoutParameter *layoutParameter)
 {
+	if (layoutParameter != NULL)
+	{
+		hasManualFontSize = true;
+	}
+	else
+	{
+		float autoFontSize = fmin(sizeX / 80.0f, sizeY / 12.0f);
+
+		if (fabs(fontSize - autoFontSize) > 0.01f)
+		{
+			hasManualFontSize = true;
+		}
+	}
+
 	UpdateFontSize();
+	CGuiView::LayoutParameterChanged(layoutParameter);
 }
 
 void CViewAtariStatePOKEY::SetVisible(bool isVisible)

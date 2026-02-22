@@ -57,7 +57,7 @@ CViewC64AllGraphicsBitmaps::CViewC64AllGraphicsBitmaps(const char *name, float p
 	}
 	
 	//
-	font = viewC64->fontCBMShifted;
+	font = viewC64->fontDefaultCBMShifted;
 	fontScale = 0.8;
 	fontHeight = font->GetCharHeight('@', fontScale) + 2;
 	fontSize = fontHeight;
@@ -403,11 +403,38 @@ bool CViewC64AllGraphicsBitmaps::HasContextMenuItems()
 
 void CViewC64AllGraphicsBitmaps::RenderContextMenuItems()
 {
+	if (ImGui::MenuItem("Fit to window"))
+	{
+		ZoomToFit();
+	}
+
+	ImGui::Separator();
 	bool isVisible = viewControl->visible;
 	if (ImGui::MenuItem("All Bitmaps controller", NULL, &isVisible))
 	{
 		viewControl->SetVisible(isVisible);
 	}
+}
+
+void CViewC64AllGraphicsBitmaps::ZoomToFit()
+{
+	float contentWidth = (float)numDisplaysColumns * 320.0f;
+	float contentHeight = (float)numDisplaysRows * 200.0f;
+
+	float zoomX = sizeX / contentWidth;
+	float zoomY = sizeY / contentHeight;
+	currentZoom = fmin(zoomX, zoomY);
+
+	mapSizeX = currentZoom;
+	mapSizeY = currentZoom;
+
+	// Center the content
+	float renderedWidth = contentWidth * currentZoom;
+	float renderedHeight = contentHeight * currentZoom;
+	mapPosX = (sizeX - renderedWidth) / (2.0f * sizeX);
+	mapPosY = (sizeY - renderedHeight) / (2.0f * sizeY);
+
+	UpdatePositionAndZoom();
 }
 
 // bug: this event is not called when layout is set, and button state is updated on keyboard shortcut only

@@ -33,6 +33,7 @@ CViewNesStatePPU::CViewNesStatePPU(const char *name, float posX, float posY, flo
 	this->debugInterface = debugInterface;
 	
 	fontSize = 7.0f;
+	hasManualFontSize = false;
 	AddLayoutParameter(new CLayoutParameterFloat("Font Size", &fontSize));
 
 	fontBytes = viewC64->fontDisassembly;
@@ -48,7 +49,41 @@ CViewNesStatePPU::CViewNesStatePPU(const char *name, float posX, float posY, flo
 
 void CViewNesStatePPU::SetPosition(float posX, float posY, float posZ, float sizeX, float sizeY)
 {
+	bool sizeChanged = (fabs(sizeX - this->sizeX) > 0.5f || fabs(sizeY - this->sizeY) > 0.5f);
+
+	if (hasManualFontSize && !sizeChanged)
+	{
+		// Size unchanged (startup/layout restore): keep manually set font size
+	}
+	else
+	{
+		// Auto-scale: 26 chars wide, 7 rows tall
+		fontSize = fmin(sizeX / 26.0f, sizeY / 7.0f);
+
+		if (sizeChanged)
+			hasManualFontSize = false;
+	}
+
 	CGuiView::SetPosition(posX, posY, posZ, sizeX, sizeY);
+}
+
+void CViewNesStatePPU::LayoutParameterChanged(CLayoutParameter *layoutParameter)
+{
+	if (layoutParameter != NULL)
+	{
+		hasManualFontSize = true;
+	}
+	else
+	{
+		float autoFontSize = fmin(sizeX / 26.0f, sizeY / 7.0f);
+
+		if (fabs(fontSize - autoFontSize) > 0.01f)
+		{
+			hasManualFontSize = true;
+		}
+	}
+
+	CGuiView::LayoutParameterChanged(layoutParameter);
 }
 
 void CViewNesStatePPU::SetVisible(bool isVisible)

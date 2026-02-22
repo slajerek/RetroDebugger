@@ -99,6 +99,7 @@ int c64SettingsEmulationMaximumSpeed = 100;		// percentage
 bool c64SettingsFastBootKernalPatch = false;
 bool c64SettingsEmulateVSPBug = false;
 bool c64SettingsVicSkipDrawingSprites = false;
+uint8 c64SettingsAccessMarkMode = 0; // 0 = access cycle only, 1 = full instruction
 extern bool c64dSkipBogusPageOffsetReadOnSTA;
 
 // TODO: refactor SID to Sid for better readability
@@ -190,6 +191,7 @@ CSlrString *c64SettingsPathToAtariROMs = NULL;
 
 CSlrString *c64SettingsPathToNES = NULL;
 CSlrString *c64SettingsDefaultNESFolder = NULL;
+CSlrString *c64SettingsPathToNESRoms = NULL;
 
 CSlrString *c64SettingsDefaultMemoryDumpFolder = NULL;
 
@@ -280,6 +282,7 @@ int c64SettingsDisassemblyNonExecuteColor = C64D_COLOR_LIGHT_GRAY;
 bool c64SettingsDisassemblyUseNearLabels = true;
 bool c64SettingsDisassemblyUseNearLabelsForJumps = false;
 int c64SettingsDisassemblyNearLabelMaxOffset = 6;
+bool c64SettingsDisassemblyColorizeHexOpcodes = false;
 
 int c64SettingsMenusColorTheme = 0;
 
@@ -425,6 +428,7 @@ void C64DebuggerStoreSettings()
 	storeSettingString(byteBuffer, "PathAtariCart", c64SettingsPathToAtariCartridge);
 	storeSettingString(byteBuffer, "FolderNES", c64SettingsDefaultNESFolder);
 	storeSettingString(byteBuffer, "PathNES", c64SettingsPathToNES);
+	storeSettingString(byteBuffer, "FolderNESRoms", c64SettingsPathToNESRoms);
 
 	storeSettingBool(byteBuffer, "UsePipeIntegration", c64SettingsUsePipeIntegration);
 	
@@ -517,6 +521,7 @@ void C64DebuggerStoreSettings()
 	storeSettingBool(byteBuffer, "EmulateVSPBug", c64SettingsEmulateVSPBug);
 	storeSettingBool(byteBuffer, "VicSkipDrawingSprites", c64SettingsVicSkipDrawingSprites);
 	storeSettingBool(byteBuffer, "SkipBogusPageOffsetReadOnSTA", c64dSkipBogusPageOffsetReadOnSTA);
+	storeSettingU8(byteBuffer, "AccessMarkMode", c64SettingsAccessMarkMode);
 	
 	
 	storeSettingU8(byteBuffer, "VicDisplayBorder", c64SettingsVicDisplayBorderType);
@@ -688,6 +693,7 @@ void C64DebuggerRestoreSettings(uint8 settingsBlockType)
 	gApplicationDefaultConfig->GetBool("DisassemblyUseNearLabels", &c64SettingsDisassemblyUseNearLabels, true);
 	gApplicationDefaultConfig->GetBool("DisassemblyUseNearLabelsForJumps", &c64SettingsDisassemblyUseNearLabelsForJumps, false);
 	gApplicationDefaultConfig->GetInt("DisassemblyNearLabelMaxOffset", &c64SettingsDisassemblyNearLabelMaxOffset, 6);
+	gApplicationDefaultConfig->GetBool("DisassemblyColorizeHexOpcodes", &c64SettingsDisassemblyColorizeHexOpcodes, false);
 
 	gApplicationDefaultConfig->GetBool("RunDebuggerServerWebSockets", &c64SettingsRunDebuggerServerWebSockets, false);
 	gApplicationDefaultConfig->GetInt("RunDebuggerServerWebSocketsPort", &c64SettingsRunDebuggerServerWebSocketsPort, 0x0DEB);
@@ -1340,6 +1346,12 @@ void C64DebuggerSetSetting(const char *name, void *value)
 			c64dSkipBogusPageOffsetReadOnSTA = v;
 			return;
 		}
+		else if (!strcmp(name, "AccessMarkMode"))
+		{
+			uint8 v = *((uint8*)value);
+			c64SettingsAccessMarkMode = v;
+			return;
+		}
 
 		else if (!strcmp(name, "AutoJmpDoReset"))
 		{
@@ -1708,14 +1720,22 @@ void C64DebuggerSetSetting(const char *name, void *value)
 		{
 			if (c64SettingsPathToNES != NULL)
 				delete c64SettingsPathToNES;
-			
+
 			c64SettingsPathToNES = new CSlrString((CSlrString*)value);
-			
+
 			// the setting will be updated later by c64PerformStartupTasksThreaded
 			if (viewC64->debugInterfaceNes && viewC64->debugInterfaceNes->isRunning)
 			{
 				viewC64->mainMenuHelper->LoadNES(c64SettingsPathToNES, false);
 			}
+			return;
+		}
+		else if (!strcmp(name, "FolderNESRoms"))
+		{
+			if (c64SettingsPathToNESRoms != NULL)
+				delete c64SettingsPathToNESRoms;
+
+			c64SettingsPathToNESRoms = new CSlrString((CSlrString*)value);
 			return;
 		}
 

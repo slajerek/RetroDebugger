@@ -83,6 +83,11 @@ volatile unsigned int atrdMainCpuDebugCycle = 0;
 volatile unsigned int atrdMainCpuCycle = 0;
 volatile unsigned int atrdMainCpuPreviousInstructionCycle = 0;
 
+/* Stack annotation pointers (set by CDebugInterfaceAtari) */
+uint8  *atrd_stack_entry_types = NULL;
+uint8  *atrd_stack_irq_sources = NULL;
+uint16 *atrd_stack_origin_pc = NULL;
+
 #define NO_GOTO
 
 #ifdef LIBATARI800
@@ -140,6 +145,14 @@ UBYTE CPU_IRQ;
 #define PL                  MEMORY_dGetByte(0x0100 + ++S)
 #define PH(x)               MEMORY_dPutByte(0x0100 + S--, x)
 #define PHW(x)              PH((x) >> 8); PH((x) & 0xff)
+
+/* Stack annotation: after PH, S has been decremented, so the pushed byte is at S+1 */
+#define ATRD_ANNOTATE_PUSH(entry_type, irq_source, origin) \
+    if (atrd_stack_entry_types) { \
+        atrd_stack_entry_types[(UBYTE)(S + 1)] = (entry_type); \
+        atrd_stack_irq_sources[(UBYTE)(S + 1)] = (irq_source); \
+        atrd_stack_origin_pc[(UBYTE)(S + 1)] = (origin); \
+    }
 
 /* 6502 code fetching */
 #ifdef PC_PTR
@@ -386,9 +399,22 @@ void CPU_NMI(void)
 {
 	UBYTE S = CPU_regS;
 	UBYTE data;
+	UBYTE nmi_src = ATRD_IRQ_SOURCE_UNKNOWN;
+	if (ANTIC_NMIST & 0x80) nmi_src = ATRD_IRQ_SOURCE_ANTIC_DLI;
+	else if (ANTIC_NMIST & 0x40) nmi_src = ATRD_IRQ_SOURCE_ANTIC_VBI;
 
 	PHW(CPU_regPC);
 	PHPB0;
+	/* Annotate: S+3=PCH, S+2=PCL, S+1=STATUS */
+	ATRD_ANNOTATE_PUSH(ATRD_STACK_ENTRY_NMI_STATUS, nmi_src, CPU_regPC);
+	if (atrd_stack_entry_types) {
+		atrd_stack_entry_types[(UBYTE)(S + 2)] = ATRD_STACK_ENTRY_NMI_PCL;
+		atrd_stack_irq_sources[(UBYTE)(S + 2)] = nmi_src;
+		atrd_stack_origin_pc[(UBYTE)(S + 2)] = CPU_regPC;
+		atrd_stack_entry_types[(UBYTE)(S + 3)] = ATRD_STACK_ENTRY_NMI_PCH;
+		atrd_stack_irq_sources[(UBYTE)(S + 3)] = nmi_src;
+		atrd_stack_origin_pc[(UBYTE)(S + 3)] = CPU_regPC;
+	}
 	CPU_SetI;
 	CPU_regPC = MEMORY_dGetWordAligned(0xfffa);
 	CPU_regS = S;
@@ -399,8 +425,18 @@ void CPU_NMI(void)
 /* Check pending IRQ, helps in (not only) Lucasfilm games */
 #define CPUCHECKIRQ \
 	if (CPU_IRQ && !(CPU_regP & CPU_I_FLAG) && ANTIC_xpos < ANTIC_xpos_limit) { \
+		{ UWORD irq_origin = GET_PC(); \
 		PHPC; \
 		PHPB0; \
+		ATRD_ANNOTATE_PUSH(ATRD_STACK_ENTRY_IRQ_STATUS, ATRD_IRQ_SOURCE_POKEY, irq_origin); \
+		if (atrd_stack_entry_types) { \
+			atrd_stack_entry_types[(UBYTE)(S + 2)] = ATRD_STACK_ENTRY_IRQ_PCL; \
+			atrd_stack_irq_sources[(UBYTE)(S + 2)] = ATRD_IRQ_SOURCE_POKEY; \
+			atrd_stack_origin_pc[(UBYTE)(S + 2)] = irq_origin; \
+			atrd_stack_entry_types[(UBYTE)(S + 3)] = ATRD_STACK_ENTRY_IRQ_PCH; \
+			atrd_stack_irq_sources[(UBYTE)(S + 3)] = ATRD_IRQ_SOURCE_POKEY; \
+			atrd_stack_origin_pc[(UBYTE)(S + 3)] = irq_origin; \
+		} } \
 		CPU_SetI; \
 		SET_PC(MEMORY_dGetWordAligned(0xfffe)); \
 		ANTIC_xpos += 7; \
@@ -993,9 +1029,20 @@ INTERRUPT(0xfffe); \
 #endif /* MONITOR_BREAK */
 #endif /* LIBATARI800 */
 		{
+			UWORD brk_addr = GET_PC() - 1;
 			PC++;
 			PHPC;
 			PHPB1;
+			/* Annotate: S+3=PCH, S+2=PCL, S+1=STATUS */
+			ATRD_ANNOTATE_PUSH(ATRD_STACK_ENTRY_BRK_STATUS, ATRD_IRQ_SOURCE_UNKNOWN, brk_addr);
+			if (atrd_stack_entry_types) {
+				atrd_stack_entry_types[(UBYTE)(S + 2)] = ATRD_STACK_ENTRY_BRK_PCL;
+				atrd_stack_irq_sources[(UBYTE)(S + 2)] = ATRD_IRQ_SOURCE_UNKNOWN;
+				atrd_stack_origin_pc[(UBYTE)(S + 2)] = brk_addr;
+				atrd_stack_entry_types[(UBYTE)(S + 3)] = ATRD_STACK_ENTRY_BRK_PCH;
+				atrd_stack_irq_sources[(UBYTE)(S + 3)] = ATRD_IRQ_SOURCE_UNKNOWN;
+				atrd_stack_origin_pc[(UBYTE)(S + 3)] = brk_addr;
+			}
 			CPU_SetI;
 			SET_PC(MEMORY_dGetWordAligned(0xfffe));
 			INC_RET_NESTING;
@@ -1067,6 +1114,7 @@ INTERRUPT(0xfffe); \
 
 	OPCODE(08)				/* PHP */
 		PHPB1;
+		ATRD_ANNOTATE_PUSH(ATRD_STACK_ENTRY_STATUS, ATRD_IRQ_SOURCE_UNKNOWN, GET_PC() - 1);
 		DONE
 
 	OPCODE(09)				/* ORA #ab */
@@ -1181,12 +1229,19 @@ INTERRUPT(0xfffe); \
 	OPCODE(20)				/* JSR abcd */
 		{
 			UWORD retaddr = GET_PC() + 1;
+			UWORD jsr_addr = GET_PC() - 1;
 #ifdef MONITOR_BREAK
-			CPU_remember_JMP[CPU_remember_jmp_curpos] = GET_PC() - 1;
+			CPU_remember_JMP[CPU_remember_jmp_curpos] = jsr_addr;
 			CPU_remember_jmp_curpos = (CPU_remember_jmp_curpos + 1) % CPU_REMEMBER_JMP_STEPS;
 			MONITOR_ret_nesting++;
 #endif
 			PHW(retaddr);
+			ATRD_ANNOTATE_PUSH(ATRD_STACK_ENTRY_JSR_PCL, ATRD_IRQ_SOURCE_UNKNOWN, jsr_addr);
+			if (atrd_stack_entry_types) {
+				atrd_stack_entry_types[(UBYTE)(S + 2)] = ATRD_STACK_ENTRY_JSR_PCH;
+				atrd_stack_irq_sources[(UBYTE)(S + 2)] = ATRD_IRQ_SOURCE_UNKNOWN;
+				atrd_stack_origin_pc[(UBYTE)(S + 2)] = jsr_addr;
+			}
 		}
 		SET_PC(OP_WORD);
 		DONE
@@ -1413,6 +1468,7 @@ INTERRUPT(0xfffe); \
 
 	OPCODE(48)				/* PHA */
 		PH(A);
+		ATRD_ANNOTATE_PUSH(ATRD_STACK_ENTRY_VALUE, ATRD_IRQ_SOURCE_UNKNOWN, GET_PC() - 1);
 		DONE
 
 	OPCODE(49)				/* EOR #ab */

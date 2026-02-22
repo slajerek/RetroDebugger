@@ -68,6 +68,38 @@ struct vicii_cycle_state_s
 	
 	uint8 memory0001;
 	
+	// # of register written this cycle, -1 if none
+	int registerWritten;
+
+	// # of register read this cycle, -1 if none
+	int registerRead;
+
+	// CIA1 register access this cycle, -1 if none
+	int cia1RegisterWritten;
+	int cia1RegisterRead;
+	uint8 cia1WriteValue;
+	uint8 cia1ReadValue;
+
+	// CIA2 register access this cycle, -1 if none
+	int cia2RegisterWritten;
+	int cia2RegisterRead;
+	uint8 cia2WriteValue;
+	uint8 cia2ReadValue;
+
+	// SID register access this cycle, -1 if none
+	int sidRegisterWritten;
+	int sidRegisterRead;
+	uint8 sidWriteValue;
+	uint8 sidReadValue;
+
+	// Memory access tracking for user-defined watch addresses
+	int memAccessAddr;         // watched address accessed this cycle, -1 if none
+	uint8 memAccessValue;      // value (c64d_peek_c64 for reads, param for writes)
+	uint8 memAccessIsWrite;    // 1=write, 0=read
+
+	// ghostbyte: VIC-local address (0x3FFF or 0x39FF if ECM) and value
+	uint16 ghostbyteAddr;
+	uint8 ghostbyteValue;
 };
 
 typedef struct vicii_cycle_state_s vicii_cycle_state_t;
@@ -168,6 +200,26 @@ void c64d_set_color_register(uint8 colorRegisterNum, uint8 value);
 
 extern int c64d_skip_drawing_sprites;
 
+// I/O access tracking globals (set by CIA/SID store/read, consumed by c64d_vicii_copy_state)
+extern int c64d_cia1_register_written;
+extern int c64d_cia1_register_read;
+extern uint8 c64d_cia1_write_value;
+extern uint8 c64d_cia1_read_value;
+extern int c64d_cia2_register_written;
+extern int c64d_cia2_register_read;
+extern uint8 c64d_cia2_write_value;
+extern uint8 c64d_cia2_read_value;
+extern int c64d_sid_register_written;
+extern int c64d_sid_register_read;
+extern uint8 c64d_sid_write_value;
+extern uint8 c64d_sid_read_value;
+
+// Memory access tracking globals (set by c64d_mark_c64_cell_read/write, consumed by c64d_vicii_copy_state)
+extern uint8 c64d_mem_access_watch[65536];
+extern int c64d_mem_access_addr;
+extern uint8 c64d_mem_access_value;
+extern uint8 c64d_mem_access_is_write;
+
 // ROM patch
 extern int c64d_patch_kernal_fast_boot_flag;
 
@@ -176,6 +228,41 @@ extern int c64d_setting_run_sid_when_in_warp;
 
 // run SID emulation at all or always skip?
 extern int c64d_setting_run_sid_emulation;
+
+// Stack annotations (pointers set by C++ debug interface, written by CPU emulation)
+extern uint8  *c64d_main_cpu_stack_entry_types;
+extern uint8  *c64d_main_cpu_stack_irq_sources;
+extern uint16 *c64d_main_cpu_stack_origin_pc;
+extern uint8  *c64d_drive_cpu_stack_entry_types;
+extern uint8  *c64d_drive_cpu_stack_irq_sources;
+extern uint16 *c64d_drive_cpu_stack_origin_pc;
+
+// Stack entry types (must match CStackEntryType enum in CStackAnnotation.h)
+#define C64D_STACK_ENTRY_UNKNOWN     0
+#define C64D_STACK_ENTRY_VALUE       1
+#define C64D_STACK_ENTRY_STATUS      2
+#define C64D_STACK_ENTRY_JSR_PCH     3
+#define C64D_STACK_ENTRY_JSR_PCL     4
+#define C64D_STACK_ENTRY_BRK_PCH     5
+#define C64D_STACK_ENTRY_BRK_PCL     6
+#define C64D_STACK_ENTRY_BRK_STATUS  7
+#define C64D_STACK_ENTRY_IRQ_PCH     8
+#define C64D_STACK_ENTRY_IRQ_PCL     9
+#define C64D_STACK_ENTRY_IRQ_STATUS  10
+#define C64D_STACK_ENTRY_NMI_PCH     11
+#define C64D_STACK_ENTRY_NMI_PCL     12
+#define C64D_STACK_ENTRY_NMI_STATUS  13
+
+// IRQ sources (must match CIrqSource enum in CStackAnnotation.h)
+#define C64D_IRQ_SOURCE_UNKNOWN      0
+#define C64D_IRQ_SOURCE_VIC          1
+#define C64D_IRQ_SOURCE_CIA1         2
+#define C64D_IRQ_SOURCE_CIA2_NMI     3
+#define C64D_IRQ_SOURCE_RESTORE_NMI  4
+#define C64D_IRQ_SOURCE_CARTRIDGE    5
+#define C64D_IRQ_SOURCE_VIA1         6
+#define C64D_IRQ_SOURCE_VIA2         7
+#define C64D_IRQ_SOURCE_IEC          8
 
 // Main CPU cycle of previous instruction
 extern unsigned int c64d_maincpu_current_instruction_clk;

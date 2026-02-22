@@ -19,6 +19,7 @@
 #include "CGuiMain.h"
 
 #include "CDiskImageD64.h"
+#include "CLayoutParameter.h"
 
 extern "C" {
 struct disk_image_s;
@@ -35,9 +36,11 @@ CViewDrive1541Browser::CViewDrive1541Browser(const char *name, float posX, float
 	imGuiNoWindowPadding = true;
 	imGuiNoScrollbar = true;
 
-	font = viewC64->fontCBMShifted;
+	font = viewC64->fontDefaultCBMShifted;
 	fontScale = 3;
 	fontHeight = font->GetCharHeight('@', fontScale);
+	hasManualFontScale = false;
+	AddLayoutParameter(new CLayoutParameterFloat("Font Scale", &fontScale));
 
 	strHeader = NULL;
 	strHeader2 = NULL;
@@ -54,7 +57,11 @@ CViewDrive1541Browser::CViewDrive1541Browser(const char *name, float posX, float
 	dialogOperation = ViewDrive1541FileD64Dialog_None;
 	
 	/// menu
-	viewMenu = new CGuiViewMenu(posX+35, posY+56, -1, sizeX-70, sizeY-76, this);
+	float menuMarginX = fontScale * 12.0f;
+	float menuMarginTop = fontScale * 19.0f;
+	float menuWidthReduction = fontScale * 24.0f;
+	float menuHeightReduction = fontScale * 26.0f;
+	viewMenu = new CGuiViewMenu(posX+menuMarginX, posY+menuMarginTop, -1, sizeX-menuWidthReduction, sizeY-menuHeightReduction, this);
 
 	// TODO: get from media file?
 	this->fullFilePath = "";
@@ -91,8 +98,70 @@ CViewDrive1541Browser::~CViewDrive1541Browser()
 
 void CViewDrive1541Browser::SetPosition(float posX, float posY, float posZ, float sizeX, float sizeY)
 {
+	bool widthChanged = (fabs(sizeX - this->sizeX) > 0.5f);
+
+	if (hasManualFontScale && !widthChanged)
+	{
+		// Width unchanged (startup/layout restore): keep manually set font scale
+	}
+	else
+	{
+		// Width-only autoscale: wider view = larger font, height just shows more entries
+		// A C64 directory line is ~30 chars wide; scale font so text fills the view
+		float charWidth = font->GetCharWidth('@', 1.0f);
+		float contentWidth = 27.0f * charWidth + 24.0f; // ~28 char line + scaled margins
+		fontScale = sizeX / contentWidth;
+
+		if (widthChanged)
+			hasManualFontScale = false;
+	}
+
+	fontHeight = font->GetCharHeight('@', fontScale);
+
 	CGuiView::SetPosition(posX, posY, posZ, sizeX, sizeY);
-	viewMenu->SetPosition(posX+35, posY+56, posZ, sizeX-70, sizeY-76);
+
+	float menuMarginX = fontScale * 12.0f;
+	float menuMarginTop = fontScale * 19.0f;
+	float menuWidthReduction = fontScale * 24.0f;
+	float menuHeightReduction = fontScale * 26.0f;
+	viewMenu->SetPosition(posX+menuMarginX, posY+menuMarginTop, posZ, sizeX-menuWidthReduction, sizeY-menuHeightReduction);
+
+	// Update existing menu item heights to match new fontScale
+	for (std::list<CGuiViewMenuItem *>::iterator it = viewMenu->menuItems.begin();
+		 it != viewMenu->menuItems.end(); it++)
+	{
+		(*it)->height = fontHeight;
+	}
+}
+
+void CViewDrive1541Browser::LayoutParameterChanged(CLayoutParameter *layoutParameter)
+{
+	if (layoutParameter != NULL)
+	{
+		hasManualFontScale = true;
+	}
+	else
+	{
+		float charWidth = font->GetCharWidth('@', 1.0f);
+		float contentWidth = 27.0f * charWidth + 24.0f;
+		float autoFontScale = sizeX / contentWidth;
+
+		if (fabs(fontScale - autoFontScale) > 0.01f)
+		{
+			hasManualFontScale = true;
+		}
+	}
+
+	fontHeight = font->GetCharHeight('@', fontScale);
+
+	// Update menu item heights
+	for (std::list<CGuiViewMenuItem *>::iterator it = viewMenu->menuItems.begin();
+		 it != viewMenu->menuItems.end(); it++)
+	{
+		(*it)->height = fontHeight;
+	}
+
+	CGuiView::LayoutParameterChanged(layoutParameter);
 }
 
 void CViewDrive1541Browser::MenuCallbackItemEntered(CGuiViewMenuItem *menuItem)
@@ -204,8 +273,8 @@ void CViewDrive1541Browser::Render()
 						viewC64->colorsTheme->colorBackgroundFrameG,
 						viewC64->colorsTheme->colorBackgroundFrameB, 1.0);
 		
-	float sb = 20;
-	float gap = 10;
+	float sb = fontScale * 6.7f;
+	float gap = fontScale * 3.3f;
 	
 	float tr = viewC64->colorsTheme->colorTextR;
 	float tg = viewC64->colorsTheme->colorTextG;
@@ -214,7 +283,7 @@ void CViewDrive1541Browser::Render()
 	float lr = viewC64->colorsTheme->colorHeaderLineR;
 	float lg = viewC64->colorsTheme->colorHeaderLineG;
 	float lb = viewC64->colorsTheme->colorHeaderLineB;
-	float lSizeY = 3;
+	float lSizeY = fontScale * 1.0f;
 	
 	float scrx = posX+sb;
 	float scry = posY+sb;
@@ -504,7 +573,11 @@ void CViewDrive1541Browser::RefreshDiskImageMenu()
 		delete this->viewMenu;
 	}
 	
-	viewMenu = new CGuiViewMenu(posX+35, posY+56, -1, sizeX-70, sizeY-76, this);
+	float menuMarginX = fontScale * 12.0f;
+	float menuMarginTop = fontScale * 19.0f;
+	float menuWidthReduction = fontScale * 24.0f;
+	float menuHeightReduction = fontScale * 26.0f;
+	viewMenu = new CGuiViewMenu(posX+menuMarginX, posY+menuMarginTop, -1, sizeX-menuWidthReduction, sizeY-menuHeightReduction, this);
 	
 	if (diskImage->IsDiskAttached() == false)
 	{
@@ -600,7 +673,7 @@ void CViewDrive1541Browser::RefreshDiskImageMenu()
 	
 //	LOGD("diskName='%s' diskId='%s'", diskName, diskId);
 	
-	menuItem = new CViewDrive1541FileD64EntryItem(fontHeight, strD64Header, tr, tg, tb);
+	menuItem = new CViewDrive1541FileD64EntryItem(fontHeight, strD64Header, tr, tg, tb, this);
 	menuItem->canSelect = false;
 	viewMenu->AddMenuItem(menuItem);
 	
@@ -682,7 +755,7 @@ void CViewDrive1541Browser::RefreshDiskImageMenu()
 
 //		strFileEntry->DebugPrint("DiskImageFileEntry: ");
 		
-		menuItem = new CViewDrive1541FileD64EntryItem(fontHeight, strFileEntry, tr, tg, tb);
+		menuItem = new CViewDrive1541FileD64EntryItem(fontHeight, strFileEntry, tr, tg, tb, this);
 		if (fileEntry->fileType == 0x02) // && fileEntry->fileSize > 0)
 		{
 			menuItem->canSelect = true;
@@ -717,7 +790,7 @@ void CViewDrive1541Browser::RefreshDiskImageMenu()
 	strFileEntry->Concatenate((u16)0x05);
 	strFileEntry->Concatenate((u16)0x2E);
 
-	menuItem = new CViewDrive1541FileD64EntryItem(fontHeight, strFileEntry, tr, tg, tb);
+	menuItem = new CViewDrive1541FileD64EntryItem(fontHeight, strFileEntry, tr, tg, tb, this);
 	menuItem->canSelect = false;
 	viewMenu->AddMenuItem(menuItem);
 
@@ -1094,9 +1167,10 @@ void CViewDrive1541Browser::SystemDialogFileSaveCancelled()
 
 
 //
-CViewDrive1541FileD64EntryItem::CViewDrive1541FileD64EntryItem(float height, CSlrString *str, float r, float g, float b)
+CViewDrive1541FileD64EntryItem::CViewDrive1541FileD64EntryItem(float height, CSlrString *str, float r, float g, float b, CViewDrive1541Browser *browser)
 : CViewC64MenuItem(height, str, NULL, r, g, b)
 {
+	this->browser = browser;
 	canSelect = false;
 	fileEntry = NULL;
 }
@@ -1109,7 +1183,7 @@ CViewDrive1541FileD64EntryItem::~CViewDrive1541FileD64EntryItem()
 void CViewDrive1541FileD64EntryItem::RenderItem(float px, float py, float pz)
 {
 	viewC64->fontCBM1->BlitTextColor(str, px, py, pz,
-												  viewC64->mainMenuHelper->fontScale, r, g, b, 1);
+												  browser->fontScale, r, g, b, 1);
 
 }
 

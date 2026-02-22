@@ -69,6 +69,8 @@ public:
 	
 	CViewC64AllGraphicsBitmapsControl *viewControl;
 	
+	void ZoomToFit();
+
 	virtual bool HasContextMenuItems();
 	virtual void RenderContextMenuItems();
 };

@@ -71,6 +71,8 @@ void vicii_irq_sbcoll_set(void)
 {
     vicii.irq_status |= 0x2;
     vicii_irq_set_line();
+    if (vicii.irq_status & 0x80)
+        vicii.c64d_irq_flag = 1;
 }
 
 void vicii_irq_sbcoll_clear(void)
@@ -83,6 +85,8 @@ void vicii_irq_sscoll_set(void)
 {
     vicii.irq_status |= 0x4;
     vicii_irq_set_line();
+    if (vicii.irq_status & 0x80)
+        vicii.c64d_irq_flag = 1;
 }
 
 void vicii_irq_sscoll_clear(void)
@@ -95,6 +99,8 @@ void vicii_irq_lightpen_set(void)
 {
     vicii.irq_status |= 0x8;
     vicii_irq_set_line();
+    if (vicii.irq_status & 0x80)
+        vicii.c64d_irq_flag = 1;
 }
 
 void vicii_irq_lightpen_clear(void)
@@ -117,8 +123,9 @@ void vicii_irq_raster_trigger(void)
 {
     if (!(vicii.irq_status & 0x1)) {
         vicii_irq_raster_set(maincpu_clk);
-		vicii.c64d_irq_flag = 1;
-     }
+        if (vicii.irq_status & 0x80)
+            vicii.c64d_irq_flag = 1;
+    }
 }
 
 void vicii_irq_init(void)

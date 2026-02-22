@@ -61,6 +61,7 @@ public:
 	virtual void InitKeyMap(C64KeyMap *keyMap);
 	
 	virtual uint8 *GetCharRom();
+	virtual uint8 *GetDefaultCharRom();
 	
 	float emulationSpeed, emulationFrameRate;
 
@@ -72,6 +73,9 @@ public:
 	// C64
 	CDebugSymbolsC64 *symbolsC64;	// note this is the same pointer as default from base class CDebugSymbols *symbols
 	
+	// 1541 disk drive stack annotations
+	CStackAnnotationData driveStack;
+
 	// 1541 disk drive
 	CDebugSymbolsDrive1541 *symbolsDrive1541;
 	CDebugDataAdapter *dataAdapterDrive1541;
@@ -176,6 +180,7 @@ public:
 	virtual void SetByteToRamC64(uint16 addr, uint8 val);
 	virtual uint8 GetByteC64(uint16 addr);
 	virtual uint8 GetByteFromRamC64(uint16 addr);
+	virtual uint8 GetByteC64ForCycleState(uint16 addr, uint8 memory0001, uint8 exrom, uint8 game);
 	
 	// make jmp without resetting CPU depending on dataAdapter
 	virtual void MakeJmpNoReset(CDataAdapter *dataAdapter, uint16 addr);

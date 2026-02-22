@@ -69,6 +69,8 @@ public:
 	
 	CViewC64AllGraphicsScreensControl *viewControl;
 	
+	void ZoomToFit();
+
 	virtual bool HasContextMenuItems();
 	virtual void RenderContextMenuItems();
 };

@@ -35,6 +35,8 @@ class CVicEditorLayerC64Canvas;
 class CVicEditorLayerC64Sprites;
 class CVicEditorLayerVirtualSprites;
 class CVicEditorLayerUnrestrictedBitmap;
+class CVicEditorLayerIoAccess;
+class CVicEditorLayerMemoryAccess;
 class CVicEditorLayerImage;
 
 class CViewC64VicEditor : public CGuiView, public CViewC64PaletteCallback, public CSlrKeyboardShortcutCallback, CGlobalOSWindowChangedCallback, CSystemFileDialogCallback, CRecentlyOpenedFilesCallback
@@ -111,11 +113,16 @@ public:
 	CVicEditorLayerC64Sprites *layerC64Sprites;
 	CVicEditorLayerVirtualSprites *layerVirtualSprites;
 	CVicEditorLayerUnrestrictedBitmap *layerUnrestrictedBitmap;
+	CVicEditorLayerIoAccess *layerIoAccess;
+	CVicEditorLayerMemoryAccess *layerMemoryAccess;
 	CVicEditorLayerImage *layerReferenceImage;
 	
 	CVicEditorLayer *selectedLayer;
 	void SelectLayer(CVicEditorLayer *layer);
 	void UpdateReferenceLayers();
+
+	void LoadLayerVisibilityFromConfig();
+	void SaveLayerVisibilityToConfig();
 	
 	//
 	void SetSpritesFramesVisible(bool showSpriteFrames);

@@ -71,8 +71,16 @@
 
 static BYTE cia1_cra = 0;
 
+extern int c64d_cia1_register_written;
+extern int c64d_cia1_register_read;
+extern unsigned char c64d_cia1_write_value;
+extern unsigned char c64d_cia1_read_value;
+
 void cia1_store(WORD addr, BYTE data)
 {
+    c64d_cia1_register_written = addr & 0xf;
+    c64d_cia1_write_value = data;
+
     if ((addr & 0xf) == CIA_CRA) {
         cia1_cra = data;
     }
@@ -82,7 +90,10 @@ void cia1_store(WORD addr, BYTE data)
 
 BYTE cia1_read(WORD addr)
 {
-    return ciacore_read(machine_context.cia1, addr);
+    BYTE val = ciacore_read(machine_context.cia1, addr);
+    c64d_cia1_register_read = addr & 0xf;
+    c64d_cia1_read_value = val;
+    return val;
 }
 
 BYTE cia1_peek(WORD addr)

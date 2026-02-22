@@ -43,7 +43,7 @@ public:
 	char *assembleTextBuf;
 	void GenerateCode();
 
-	const ImGuiInputTextFlags defaultHexInputFlags = ImGuiInputTextFlags_CharsHexadecimal | ImGuiInputTextFlags_CharsUppercase | ImGuiInputTextFlags_EnterReturnsTrue;
+	const ImGuiInputTextFlags defaultHexInputFlags = ImGuiInputTextFlags_CharsHexadecimal | ImGuiInputTextFlags_CharsUppercase;
 
 	// for save/open dialogs
 	virtual void SystemDialogFileOpenSelected(CSlrString *path);

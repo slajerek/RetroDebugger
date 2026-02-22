@@ -75,7 +75,7 @@ void CViewDebugEventsHistory::RenderImGui()
 		{
 			CDebugEvent *event = it->second;
 			
-//			if (Selectable("##nolabel", false, ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowItemOverlap))
+//			if (Selectable("##nolabel", false, ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowOverlap))
 //			{
 //				ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg1, hoveredRowBgColor);
 //			}
@@ -86,7 +86,7 @@ void CViewDebugEventsHistory::RenderImGui()
 			sprintf(buf, "%d", event->cycle);
 			
 			const bool itemIsSelected = (event->cycle == currentCycle);
-			ImGuiSelectableFlags selectableFlags = ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowItemOverlap;
+			ImGuiSelectableFlags selectableFlags = ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowOverlap;
 			if (ImGui::Selectable(buf, itemIsSelected, selectableFlags, ImVec2(0, 0)))
 			{
 				debugInterface->snapshotsManager->RestoreSnapshotByCycle(event->cycle);

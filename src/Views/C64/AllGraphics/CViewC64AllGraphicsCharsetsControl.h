@@ -17,10 +17,14 @@ public:
 	virtual ~CViewC64AllGraphicsCharsetsControl();
 
 	CDebugInterfaceC64 *debugInterface;
-	
+
+	virtual void SetPosition(float posX, float posY, float posZ, float sizeX, float sizeY);
+	virtual void LayoutParameterChanged(CLayoutParameter *layoutParameter);
+
 	virtual void Render();
 	virtual void Render(float posX, float posY);
 	virtual void RenderImGui();
+	virtual void PostRenderImGui();
 	virtual void DoLogic();
 
 	virtual bool DoTap(float x, float y);
@@ -34,6 +38,7 @@ public:
 	float fontScale;
 	float fontHeight;
 	float fontSize;
+	bool hasManualFontScale;
 
 	bool ButtonClicked(CGuiButton *button);
 	bool ButtonPressed(CGuiButton *button);
@@ -57,6 +62,7 @@ public:
 	void ClearGraphicsForcedMode();
 
 	void SetupMode();
+	void RepositionButtons();
 };
 
 #endif //_C64_VIEW_ALL_GRAPHICS_

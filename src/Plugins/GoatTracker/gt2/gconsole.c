@@ -386,7 +386,7 @@ void fliptoscreen(void)
         {
 			unsigned char *chptr = &chardata[(*sptr & 0xffff)*16];
 				
-			unsigned char *dptr = ((unsigned char*)rgbaPixelsBuffer) + y *16 * pitch + x*8; //+1;
+			unsigned char *dptr = ((unsigned char*)rgbaPixelsBuffer) + y*16*pitch + x*8*4;
 
           unsigned char bgcolor = (*sptr) >> 20;
           unsigned char fgcolor = ((*sptr) >> 16) & 0xf;
@@ -509,7 +509,7 @@ void fliptoscreen(void)
 				*dptr++ = 255; //gfx_sdlpalette[bgcolor].a;
 			}
 
-            dptr += MAX_COLUMNS*8*4 - 8*4;
+            dptr += pitch - 8*4;
           }
         }
       }

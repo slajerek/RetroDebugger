@@ -1088,43 +1088,90 @@ int CViewDisassembly::RenderDisassemblyLine(float px, float py, int addr, uint8 
 				else
 				{
 					sprintfHexCode8(buf1, o[i]);
+					if (c64SettingsDisassemblyColorizeHexOpcodes)
+					{
+						int byteAddr = (addr + i) % memoryLength;
+						CDebugMemoryCell *byteCell = debugMemory->GetMemoryCell(byteAddr);
+						float markerX = fontSize * 2.0f;
+						if (byteCell->isExecuteCode)
+						{
+							BlitFilledRectangle(rx, py, posZ, markerX, fontSize,
+								colorExecuteCodeR, colorExecuteCodeG, colorExecuteCodeB, colorExecuteCodeA);
+						}
+						else if (byteCell->isExecuteArgument)
+						{
+							BlitFilledRectangle(rx, py, posZ, markerX, fontSize,
+								colorExecuteArgumentR, colorExecuteArgumentG, colorExecuteArgumentB, colorExecuteArgumentA);
+						}
+						BlitFilledRectangle(rx, py, posZ, markerX, fontSize,
+							byteCell->sr, byteCell->sg, byteCell->sb, byteCell->sa);
+					}
 					fontDisassembly->BlitTextColor(buf1, rx, py, posZ, fontSize, cr, cg, cb, ca);
 				}
-				
+
 				rx += fontSize3;
 			}
 		}
 		else
 		{
-			strcpy(buf1, "         ");
-			
-			switch (length)
+			if (c64SettingsDisassemblyColorizeHexOpcodes)
 			{
-				case 1:
-					//sprintf(buf1, "%2.2x       ", op);
-					// "xx       "
-					sprintfHexCode8WithoutZeroEnding(buf1, op);
-					break;
-					
-				case 2:
-					//sprintf(buf1, "%2.2x %2.2x    ", op, lo);
-					// "xx xx    "
-					sprintfHexCode8WithoutZeroEnding(buf1, op);
-					sprintfHexCode8WithoutZeroEnding(buf1+3, lo);
-					break;
-					
-				case 3:
-					//sprintf(buf1, "%2.2x %2.2x %2.2x ", op, lo, hi);
-					// "xx xx xx "
-					sprintfHexCode8WithoutZeroEnding(buf1, op);
-					sprintfHexCode8WithoutZeroEnding(buf1+3, lo);
-					sprintfHexCode8WithoutZeroEnding(buf1+6, hi);
-					break;
+				uint8 bytes[3] = { op, lo, hi };
+				float rx = px;
+				float markerX = fontSize * 2.0f;
+				for (int i = 0; i < length; i++)
+				{
+					int byteAddr = (addr + i) % memoryLength;
+					CDebugMemoryCell *byteCell = debugMemory->GetMemoryCell(byteAddr);
+					if (byteCell->isExecuteCode)
+					{
+						BlitFilledRectangle(rx, py, posZ, markerX, fontSize,
+							colorExecuteCodeR, colorExecuteCodeG, colorExecuteCodeB, colorExecuteCodeA);
+					}
+					else if (byteCell->isExecuteArgument)
+					{
+						BlitFilledRectangle(rx, py, posZ, markerX, fontSize,
+							colorExecuteArgumentR, colorExecuteArgumentG, colorExecuteArgumentB, colorExecuteArgumentA);
+					}
+					BlitFilledRectangle(rx, py, posZ, markerX, fontSize,
+						byteCell->sr, byteCell->sg, byteCell->sb, byteCell->sa);
+					sprintfHexCode8(buf1, bytes[i]);
+					fontDisassembly->BlitTextColor(buf1, rx, py, posZ, fontSize, cr, cg, cb, ca);
+					rx += fontSize3;
+				}
 			}
-			
-			strcpy(bufHexCodes, buf1);
-			strcat(bufHexCodes, buf2);
-			fontDisassembly->BlitTextColor(bufHexCodes, px, py, posZ, fontSize, cr, cg, cb, ca);
+			else
+			{
+				strcpy(buf1, "         ");
+
+				switch (length)
+				{
+					case 1:
+						//sprintf(buf1, "%2.2x       ", op);
+						// "xx       "
+						sprintfHexCode8WithoutZeroEnding(buf1, op);
+						break;
+
+					case 2:
+						//sprintf(buf1, "%2.2x %2.2x    ", op, lo);
+						// "xx xx    "
+						sprintfHexCode8WithoutZeroEnding(buf1, op);
+						sprintfHexCode8WithoutZeroEnding(buf1+3, lo);
+						break;
+
+					case 3:
+						//sprintf(buf1, "%2.2x %2.2x %2.2x ", op, lo, hi);
+						// "xx xx xx "
+						sprintfHexCode8WithoutZeroEnding(buf1, op);
+						sprintfHexCode8WithoutZeroEnding(buf1+3, lo);
+						sprintfHexCode8WithoutZeroEnding(buf1+6, hi);
+						break;
+				}
+
+				strcpy(bufHexCodes, buf1);
+				strcat(bufHexCodes, buf2);
+				fontDisassembly->BlitTextColor(bufHexCodes, px, py, posZ, fontSize, cr, cg, cb, ca);
+			}
 		}
 
 		px += fontSize9;
@@ -1173,7 +1220,12 @@ int CViewDisassembly::RenderDisassemblyLine(float px, float py, int addr, uint8 
 	MnemonicWithArgumentToStr(addr, op, lo, hi, buf);
 	
 	px += mnemonicsOffsetX;
-	
+
+	if (c64SettingsDisassemblyColorizeHexOpcodes)
+	{
+		RenderColoredArgBackground(px, py, posZ, addr, op, lo, hi);
+	}
+
 	if (editCursorPos != EDIT_CURSOR_POS_MNEMONIC)
 	{
 		fontDisassembly->BlitTextColor(buf, px, py, -1, fontSize, cr, cg, cb, ca);
@@ -1235,6 +1287,119 @@ int CViewDisassembly::RenderDisassemblyLine(float px, float py, int addr, uint8 
 	
 	return numBytesPerOp;
 	
+}
+
+// Draw colored background rects behind hex argument digits in the mnemonic
+// mnemonicPx is the pixel x where the mnemonic text starts (e.g. "LDA 1234")
+void CViewDisassembly::RenderColoredArgBackground(float mnemonicPx, float py, float posZ, u16 addr, u8 op, u8 lo, u8 hi)
+{
+	// Skip if labels are being displayed instead of hex arguments
+	bool showArgumentLabel = showArgumentLabels && symbols->currentSegment;
+	if (showArgumentLabel)
+	{
+		char labelText[512];
+		int addrMode = opcodes[op].addressingMode;
+		bool hasLabel = false;
+		switch (addrMode)
+		{
+			case ADDR_ZP: case ADDR_ZPX: case ADDR_ZPY:
+			case ADDR_IZX: case ADDR_IZY:
+				hasLabel = FindLabelText(op, lo, labelText);
+				break;
+			case ADDR_ABS: case ADDR_ABX: case ADDR_ABY: case ADDR_IND:
+				hasLabel = FindLabelText(op, (hi << 8) | lo, labelText);
+				break;
+			case ADDR_REL:
+				hasLabel = FindLabelText(op, ((addr + 2) + (int8)lo) & 0xFFFF, labelText);
+				break;
+			default:
+				break;
+		}
+		if (hasLabel)
+			return;
+	}
+
+	float markerX = fontSize * 2.0f;
+	int addrMode = opcodes[op].addressingMode;
+
+	// Struct to describe where each byte's rect should be drawn
+	// charOffset = character offset from start of mnemonic text where the hex digits for this byte appear
+	// byteAddr = memory address of this byte in the instruction stream
+	struct ByteRect { int charOffset; int byteAddr; };
+	ByteRect rects[2];
+	int numRects = 0;
+
+	// "XXX " = 4 chars prefix, then argument string starts
+	// Within argument string, hex chars appear at known offsets per addressing mode
+	switch (addrMode)
+	{
+		case ADDR_IMM:  // #xx
+			rects[0] = { 4 + 1, (addr + 1) % memoryLength }; // '#' then xx
+			numRects = 1;
+			break;
+		case ADDR_ZP:   // xx
+			rects[0] = { 4, (addr + 1) % memoryLength };
+			numRects = 1;
+			break;
+		case ADDR_ZPX:  // xx,x
+		case ADDR_ZPY:  // xx,y
+			rects[0] = { 4, (addr + 1) % memoryLength };
+			numRects = 1;
+			break;
+		case ADDR_IZX:  // (xx,x)
+		case ADDR_IZY:  // (xx),y
+			rects[0] = { 4 + 1, (addr + 1) % memoryLength }; // '(' then xx
+			numRects = 1;
+			break;
+		case ADDR_ABS:  // xxxx  — hi at offset 0, lo at offset 2
+			rects[0] = { 4, (addr + 2) % memoryLength };     // hi byte
+			rects[1] = { 4 + 2, (addr + 1) % memoryLength }; // lo byte
+			numRects = 2;
+			break;
+		case ADDR_ABX:  // xxxx,x
+		case ADDR_ABY:  // xxxx,y
+			rects[0] = { 4, (addr + 2) % memoryLength };
+			rects[1] = { 4 + 2, (addr + 1) % memoryLength };
+			numRects = 2;
+			break;
+		case ADDR_IND:  // (xxxx)
+			rects[0] = { 4 + 1, (addr + 2) % memoryLength }; // '(' then hi
+			rects[1] = { 4 + 3, (addr + 1) % memoryLength }; // lo
+			numRects = 2;
+			break;
+		case ADDR_REL:  // xxxx (branch target, derived from lo byte)
+			rects[0] = { 4, (addr + 1) % memoryLength };     // all 4 chars from lo byte
+			numRects = 1;
+			markerX = fontSize * 4.0f; // 4 hex chars for the branch target
+			break;
+		default:
+			return;
+	}
+
+	float savedMarkerX = markerX;
+	for (int i = 0; i < numRects; i++)
+	{
+		// For REL, the single rect covers 4 chars; for all others, markerX = fontSize*2
+		if (addrMode == ADDR_REL)
+			markerX = fontSize * 4.0f;
+		else
+			markerX = fontSize * 2.0f;
+
+		float rx = mnemonicPx + rects[i].charOffset * fontSize;
+		CDebugMemoryCell *byteCell = debugMemory->GetMemoryCell(rects[i].byteAddr);
+		if (byteCell->isExecuteCode)
+		{
+			BlitFilledRectangle(rx, py, posZ, markerX, fontSize,
+				colorExecuteCodeR, colorExecuteCodeG, colorExecuteCodeB, colorExecuteCodeA);
+		}
+		else if (byteCell->isExecuteArgument)
+		{
+			BlitFilledRectangle(rx, py, posZ, markerX, fontSize,
+				colorExecuteArgumentR, colorExecuteArgumentG, colorExecuteArgumentB, colorExecuteArgumentA);
+		}
+		BlitFilledRectangle(rx, py, posZ, markerX, fontSize,
+			byteCell->sr, byteCell->sg, byteCell->sb, byteCell->sa);
+	}
 }
 
 bool CViewDisassembly::FindLabelText(u8 op, u16 addr, char *buf)
@@ -1781,13 +1946,30 @@ void CViewDisassembly::RenderHexLine(float px, float py, int addr)
 		else
 		{
 			sprintfHexCode8(buf1, op);
+			if (c64SettingsDisassemblyColorizeHexOpcodes)
+			{
+				CDebugMemoryCell *byteCell = debugMemory->GetMemoryCell(addr % memoryLength);
+				float markerX = fontSize * 2.0f;
+				if (byteCell->isExecuteCode)
+				{
+					BlitFilledRectangle(px, py, posZ, markerX, fontSize,
+						colorExecuteCodeR, colorExecuteCodeG, colorExecuteCodeB, colorExecuteCodeA);
+				}
+				else if (byteCell->isExecuteArgument)
+				{
+					BlitFilledRectangle(px, py, posZ, markerX, fontSize,
+						colorExecuteArgumentR, colorExecuteArgumentG, colorExecuteArgumentB, colorExecuteArgumentA);
+				}
+				BlitFilledRectangle(px, py, posZ, markerX, fontSize,
+					byteCell->sr, byteCell->sg, byteCell->sb, byteCell->sa);
+			}
 			fontDisassembly->BlitTextColor(buf1, px, py, posZ, fontSize, cr, cg, cb, ca);
 		}
-		
+
 		px += fontSize9;
 		px += fontSize;
 	}
-	
+
 	px += mnemonicsOffsetX;
 
 	if (editCursorPos != EDIT_CURSOR_POS_MNEMONIC)

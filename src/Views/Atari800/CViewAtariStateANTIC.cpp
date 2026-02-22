@@ -34,6 +34,7 @@ CViewAtariStateANTIC::CViewAtariStateANTIC(const char *name, float posX, float p
 	imGuiNoScrollbar = true;
 
 	fontSize = 7.0f;
+	hasManualFontSize = false;
 	AddLayoutParameter(new CLayoutParameterFloat("Font Size", &fontSize));
 
 	fontBytes = viewC64->fontDisassembly;
@@ -51,7 +52,43 @@ CViewAtariStateANTIC::CViewAtariStateANTIC(const char *name, float posX, float p
 
 void CViewAtariStateANTIC::SetPosition(float posX, float posY, float posZ, float sizeX, float sizeY)
 {
+	bool sizeChanged = (fabs(sizeX - this->sizeX) > 0.5f || fabs(sizeY - this->sizeY) > 0.5f);
+
+	if (hasManualFontSize && !sizeChanged)
+	{
+		// Size unchanged (startup/layout restore): keep manually set font size
+	}
+	else
+	{
+		// Auto-scale: 48 chars wide (24 registers + 24 display list), 8 rows tall
+		fontSize = fmin(sizeX / 48.0f, sizeY / 8.0f);
+
+		if (sizeChanged)
+			hasManualFontSize = false;
+	}
+
 	CGuiView::SetPosition(posX, posY, posZ, sizeX, sizeY);
+}
+
+void CViewAtariStateANTIC::LayoutParameterChanged(CLayoutParameter *layoutParameter)
+{
+	if (layoutParameter != NULL)
+	{
+		// User manually changed font size via context menu
+		hasManualFontSize = true;
+	}
+	else
+	{
+		// Layout restore: check if saved fontSize differs from auto-scaled value
+		float autoFontSize = fmin(sizeX / 48.0f, sizeY / 8.0f);
+
+		if (fabs(fontSize - autoFontSize) > 0.01f)
+		{
+			hasManualFontSize = true;
+		}
+	}
+
+	CGuiView::LayoutParameterChanged(layoutParameter);
 }
 
 void CViewAtariStateANTIC::DoLogic()

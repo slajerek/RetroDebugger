@@ -50,12 +50,40 @@ int c64d_setting_run_sid_emulation = 1;
 
 int c64d_skip_drawing_sprites = 0;
 
+// I/O access tracking globals
+int c64d_cia1_register_written = -1;
+int c64d_cia1_register_read = -1;
+uint8 c64d_cia1_write_value = 0;
+uint8 c64d_cia1_read_value = 0;
+int c64d_cia2_register_written = -1;
+int c64d_cia2_register_read = -1;
+uint8 c64d_cia2_write_value = 0;
+uint8 c64d_cia2_read_value = 0;
+int c64d_sid_register_written = -1;
+int c64d_sid_register_read = -1;
+uint8 c64d_sid_write_value = 0;
+uint8 c64d_sid_read_value = 0;
+
+// Memory access tracking globals
+uint8 c64d_mem_access_watch[65536] = { 0 };
+int c64d_mem_access_addr = -1;
+uint8 c64d_mem_access_value = 0;
+uint8 c64d_mem_access_is_write = 0;
+
 volatile int c64d_start_frame_for_snapshots_manager = 0;
 volatile unsigned int c64d_maincpu_previous_instruction_clk = 0;
 volatile unsigned int c64d_maincpu_previous2_instruction_clk = 0;
 
 uint16 viceCurrentC64PC;
 uint16 viceCurrentDiskPC[4];
+
+// Stack annotation pointers (set by CDebugInterfaceVice to point into CStackAnnotationData arrays)
+uint8  *c64d_main_cpu_stack_entry_types = NULL;
+uint8  *c64d_main_cpu_stack_irq_sources = NULL;
+uint16 *c64d_main_cpu_stack_origin_pc = NULL;
+uint8  *c64d_drive_cpu_stack_entry_types = NULL;
+uint8  *c64d_drive_cpu_stack_irq_sources = NULL;
+uint16 *c64d_drive_cpu_stack_origin_pc = NULL;
 
 extern "C" {
 extern int c64d_profiler_is_active;
@@ -122,23 +150,31 @@ bool c64dSkipBogusPageOffsetReadOnSTA = false;
 void c64d_mark_c64_cell_read(uint16 addr)
 {
 //	LOGD("c64d_mark_c64_cell_read=%04x", addr);
-	
+
+	// Detect bogus page-offset reads (dummy reads on indexed store instructions)
+	// Always check this for mem_access watch filtering, regardless of the SkipBogus setting
 	bool isBogusPageOffsetRead = false;
-	if (c64dSkipBogusPageOffsetReadOnSTA)
 	{
 		int pc = viceCurrentC64PC;
-//		LOGD("c64d_mark_c64_cell_read pc=%04x", pc);
 		u8 opcode = c64d_peek_c64(pc);
 		if (opcode == 0x9D || opcode == 0x95 || opcode == 0x99 || opcode == 0x81 || opcode == 0x91
 			|| opcode == 0x94 || opcode == 0x96)
 		{
 			isBogusPageOffsetRead = true;
-//			LOGD("...bogus page read=true");
 		}
-
 	}
-	
-	if (!isBogusPageOffsetRead)
+
+	// Memory access watch tracking: always skip bogus reads so the VIC editor
+	// layer only marks cycles with real data accesses, not dummy page-offset reads
+	if (c64d_mem_access_watch[addr] && !isBogusPageOffsetRead)
+	{
+		c64d_mem_access_addr = addr;
+		c64d_mem_access_value = c64d_peek_c64(addr);
+		c64d_mem_access_is_write = 0;
+	}
+
+	// CellRead and breakpoint behavior: unchanged, gated by c64dSkipBogusPageOffsetReadOnSTA
+	if (!isBogusPageOffsetRead || !c64dSkipBogusPageOffsetReadOnSTA)
 	{
 		debugInterfaceVice->symbols->memory->CellRead(addr, viceCurrentC64PC, vicii.raster_line, vicii.raster_cycle);
 	}
@@ -146,11 +182,11 @@ void c64d_mark_c64_cell_read(uint16 addr)
 	// skip checking breakpoints when quick fast-forward/restoring snapshot
 	if (debugInterfaceVice->snapshotsManager->IsPerformingSnapshotRestore())
 		return;
-	
-	if (!isBogusPageOffsetRead)
+
+	if (!isBogusPageOffsetRead || !c64dSkipBogusPageOffsetReadOnSTA)
 	{
 		debugInterfaceVice->LockMutex();
-		
+
 		CDebugSymbolsSegment *segment = debugInterfaceVice->symbols->currentSegment;
 		if (segment)
 		{
@@ -168,6 +204,13 @@ void c64d_mark_c64_cell_read(uint16 addr)
 
 void c64d_mark_c64_cell_write(uint16 addr, uint8 value)
 {
+	if (c64d_mem_access_watch[addr])
+	{
+		c64d_mem_access_addr = addr;
+		c64d_mem_access_value = value;
+		c64d_mem_access_is_write = 1;
+	}
+
 	debugInterfaceVice->symbols->memory->CellWrite(addr, value, viceCurrentC64PC, vicii.raster_line, vicii.raster_cycle);
 	
 	// skip checking breakpoints when quick fast-forward/restoring snapshot
@@ -854,6 +897,45 @@ void c64d_vicii_copy_state(vicii_cycle_state_t *viciiCopy)
 	
 	//LOGD("mem01=%02x", c64d_peek_memory0001());
 	viciiCopy->memory0001 = c64d_peek_memory0001();
+	
+	viciiCopy->registerWritten = vicii.prev_register_written;
+	viciiCopy->registerRead = vicii.prev_register_read;
+
+	// CIA1
+	viciiCopy->cia1RegisterWritten = c64d_cia1_register_written;
+	viciiCopy->cia1RegisterRead = c64d_cia1_register_read;
+	viciiCopy->cia1WriteValue = c64d_cia1_write_value;
+	viciiCopy->cia1ReadValue = c64d_cia1_read_value;
+	c64d_cia1_register_written = -1;
+	c64d_cia1_register_read = -1;
+
+	// CIA2
+	viciiCopy->cia2RegisterWritten = c64d_cia2_register_written;
+	viciiCopy->cia2RegisterRead = c64d_cia2_register_read;
+	viciiCopy->cia2WriteValue = c64d_cia2_write_value;
+	viciiCopy->cia2ReadValue = c64d_cia2_read_value;
+	c64d_cia2_register_written = -1;
+	c64d_cia2_register_read = -1;
+
+	// SID
+	viciiCopy->sidRegisterWritten = c64d_sid_register_written;
+	viciiCopy->sidRegisterRead = c64d_sid_register_read;
+	viciiCopy->sidWriteValue = c64d_sid_write_value;
+	viciiCopy->sidReadValue = c64d_sid_read_value;
+	c64d_sid_register_written = -1;
+	c64d_sid_register_read = -1;
+
+	// Memory access tracking
+	viciiCopy->memAccessAddr = c64d_mem_access_addr;
+	viciiCopy->memAccessValue = c64d_mem_access_value;
+	viciiCopy->memAccessIsWrite = c64d_mem_access_is_write;
+	c64d_mem_access_addr = -1;
+
+	// ghostbyte: 0x3FFF normally, 0x39FF when ECM (bit 6 of $D011)
+	uint16 ghostLocalAddr = (vicii.regs[0x11] & 0x40) ? 0x39FF : 0x3FFF;
+	int ghostPhysAddr = ((ghostLocalAddr + vicii.vbank_phi1) & vicii.vaddr_mask_phi1) | vicii.vaddr_offset_phi1;
+	viciiCopy->ghostbyteAddr = ghostLocalAddr;
+	viciiCopy->ghostbyteValue = vicii.ram_base_phi1[ghostPhysAddr];
 }
 
 void c64d_vicii_copy_state_data(vicii_cycle_state_t *viciiDest, vicii_cycle_state_t *viciiSrc)
@@ -922,6 +1004,28 @@ void c64d_vicii_copy_state_data(vicii_cycle_state_t *viciiDest, vicii_cycle_stat
 	// TODO: ???
 	viciiDest->memory0001 = viciiSrc->memory0001;
 	
+	viciiDest->registerWritten = viciiSrc->registerWritten;
+	viciiDest->registerRead = viciiSrc->registerRead;
+
+	viciiDest->cia1RegisterWritten = viciiSrc->cia1RegisterWritten;
+	viciiDest->cia1RegisterRead = viciiSrc->cia1RegisterRead;
+	viciiDest->cia1WriteValue = viciiSrc->cia1WriteValue;
+	viciiDest->cia1ReadValue = viciiSrc->cia1ReadValue;
+	viciiDest->cia2RegisterWritten = viciiSrc->cia2RegisterWritten;
+	viciiDest->cia2RegisterRead = viciiSrc->cia2RegisterRead;
+	viciiDest->cia2WriteValue = viciiSrc->cia2WriteValue;
+	viciiDest->cia2ReadValue = viciiSrc->cia2ReadValue;
+	viciiDest->sidRegisterWritten = viciiSrc->sidRegisterWritten;
+	viciiDest->sidRegisterRead = viciiSrc->sidRegisterRead;
+	viciiDest->sidWriteValue = viciiSrc->sidWriteValue;
+	viciiDest->sidReadValue = viciiSrc->sidReadValue;
+
+	viciiDest->memAccessAddr = viciiSrc->memAccessAddr;
+	viciiDest->memAccessValue = viciiSrc->memAccessValue;
+	viciiDest->memAccessIsWrite = viciiSrc->memAccessIsWrite;
+
+	viciiDest->ghostbyteAddr = viciiSrc->ghostbyteAddr;
+	viciiDest->ghostbyteValue = viciiSrc->ghostbyteValue;
 }
 
 

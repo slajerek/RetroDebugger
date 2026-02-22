@@ -29,15 +29,31 @@ CViewEmulationCounters::CViewEmulationCounters(char *name, float posX, float pos
 	imGuiNoScrollbar = true;
 
 	fontSize = 7.0f;
+	hasManualFontSize = false;
 	AddLayoutParameter(new CLayoutParameterFloat("Font Size", &fontSize));
 
 	fontBytes = viewC64->fontDisassembly;
-	
+
 	this->SetPosition(posX, posY, posZ, sizeX, sizeY);
 }
 
 void CViewEmulationCounters::SetPosition(float posX, float posY, float posZ, float sizeX, float sizeY)
 {
+	bool sizeChanged = (fabs(sizeX - this->sizeX) > 0.5f || fabs(sizeY - this->sizeY) > 0.5f);
+
+	if (hasManualFontSize && !sizeChanged)
+	{
+		// Size unchanged (startup/layout restore): keep manually set font size
+	}
+	else
+	{
+		// Auto-scale: 16 chars wide, 3 rows tall
+		fontSize = fmin(sizeX / 16.0f, sizeY / 3.0f);
+
+		if (sizeChanged)
+			hasManualFontSize = false;
+	}
+
 	CGuiView::SetPosition(posX, posY, posZ, sizeX, sizeY);
 }
 
@@ -123,5 +139,21 @@ void CViewEmulationCounters::RenderContextMenuItems()
 
 void CViewEmulationCounters::LayoutParameterChanged(CLayoutParameter *layoutParameter)
 {
+	if (layoutParameter != NULL)
+	{
+		// User manually changed font size via context menu
+		hasManualFontSize = true;
+	}
+	else
+	{
+		// Layout restore: check if saved fontSize differs from auto-scaled value
+		float autoFontSize = fmin(sizeX / 16.0f, sizeY / 3.0f);
+
+		if (fabs(fontSize - autoFontSize) > 0.01f)
+		{
+			hasManualFontSize = true;
+		}
+	}
+
 	CGuiView::LayoutParameterChanged(layoutParameter);
 }

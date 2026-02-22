@@ -38,10 +38,34 @@ CDebugInterface::CDebugInterface(CViewC64 *viewC64)
 	viewDisassembly = NULL;
 	
 	this->debugMode = DEBUGGER_MODE_RUNNING;
+
+	mainCpuStack.Clear();
 }
 
 CDebugInterface::~CDebugInterface()
 {
+}
+
+const char *CDebugInterface::GetIrqSourceName(u8 source)
+{
+	switch ((CIrqSource)source)
+	{
+		case IRQ_SOURCE_VIC:         return "VIC";
+		case IRQ_SOURCE_CIA1:        return "CIA1";
+		case IRQ_SOURCE_CIA2_NMI:    return "CIA2";
+		case IRQ_SOURCE_RESTORE_NMI: return "RESTORE";
+		case IRQ_SOURCE_CARTRIDGE:   return "CART";
+		case IRQ_SOURCE_VIA1:        return "VIA1";
+		case IRQ_SOURCE_VIA2:        return "VIA2";
+		case IRQ_SOURCE_IEC:         return "IEC";
+		case IRQ_SOURCE_POKEY:       return "POKEY";
+		case IRQ_SOURCE_ANTIC_DLI:   return "DLI";
+		case IRQ_SOURCE_ANTIC_VBI:   return "VBI";
+		case IRQ_SOURCE_PPU_NMI:     return "PPU";
+		case IRQ_SOURCE_APU:         return "APU";
+		case IRQ_SOURCE_MAPPER:      return "MAPPER";
+		default:                     return "?";
+	}
 }
 
 void CDebugInterface::Shutdown()

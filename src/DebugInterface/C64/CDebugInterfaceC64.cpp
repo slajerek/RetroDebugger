@@ -38,6 +38,7 @@ CDebugInterfaceC64::CDebugInterfaceC64(CViewC64 *viewC64)
 	debugMode = DEBUGGER_MODE_RUNNING;
 	isDebugOn = true;
 	debugOnDrive1541 = false;
+	driveStack.Clear();
 		
 	for (int i = 0; i < C64_NUM_DRIVES; i++)
 	{
@@ -131,6 +132,12 @@ void CDebugInterfaceC64::InitKeyMap(C64KeyMap *keyMap)
 uint8 *CDebugInterfaceC64::GetCharRom()
 {
 	LOGTODO("CDebugInterfaceC64::GetCharRom");
+	return NULL;
+}
+
+uint8 *CDebugInterfaceC64::GetDefaultCharRom()
+{
+	LOGTODO("CDebugInterfaceC64::GetDefaultCharRom");
 	return NULL;
 }
 
@@ -452,6 +459,12 @@ uint8 CDebugInterfaceC64::GetByteC64(uint16 addr)
 uint8 CDebugInterfaceC64::GetByteFromRamC64(uint16 addr)
 {
 	LOGTODO("CDebugInterfaceC64::GetByteFromRamC64");
+	return 0;
+}
+
+uint8 CDebugInterfaceC64::GetByteC64ForCycleState(uint16 addr, uint8 memory0001, uint8 exrom, uint8 game)
+{
+	LOGTODO("CDebugInterfaceC64::GetByteC64ForCycleState");
 	return 0;
 }
 

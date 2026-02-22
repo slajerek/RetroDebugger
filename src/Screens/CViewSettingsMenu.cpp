@@ -57,7 +57,7 @@ CViewSettingsMenu::CViewSettingsMenu(float posX, float posY, float posZ, float s
 {
 	this->name = "CViewSettingsMenu";
 
-	font = viewC64->fontCBMShifted;
+	font = viewC64->fontDefaultCBMShifted;
 	fontScale = 2.7;
 	fontHeight = font->GetCharHeight('@', fontScale) + 3;
 

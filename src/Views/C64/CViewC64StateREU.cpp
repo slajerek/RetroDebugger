@@ -30,6 +30,7 @@ CViewC64StateREU::CViewC64StateREU(const char *name, float posX, float posY, flo
 	fontBytes = viewC64->fontDisassembly;
 	
 	fontSize = 7.0f;
+	hasManualFontSize = false;
 	AddLayoutParameter(new CLayoutParameterFloat("Font Size", &fontSize));
 
 	showRegistersOnly = false;
@@ -42,11 +43,40 @@ CViewC64StateREU::CViewC64StateREU(const char *name, float posX, float posY, flo
 
 void CViewC64StateREU::SetPosition(float posX, float posY, float posZ, float sizeX, float sizeY)
 {
+	bool sizeChanged = (fabs(sizeX - this->sizeX) > 0.5f || fabs(sizeY - this->sizeY) > 0.5f);
+
+	if (hasManualFontSize && !sizeChanged)
+	{
+		// Size unchanged (startup/layout restore): keep manually set font size
+	}
+	else
+	{
+		// Auto-scale: 20 chars wide, 8 rows tall
+		fontSize = fmin(sizeX / 18.0f, sizeY / 7.0f);
+
+		if (sizeChanged)
+			hasManualFontSize = false;
+	}
+
 	CGuiView::SetPosition(posX, posY, posZ, sizeX, sizeY);
 }
 
 void CViewC64StateREU::LayoutParameterChanged(CLayoutParameter *layoutParameter)
 {
+	if (layoutParameter != NULL)
+	{
+		hasManualFontSize = true;
+	}
+	else
+	{
+		float autoFontSize = fmin(sizeX / 18.0f, sizeY / 7.0f);
+
+		if (fabs(fontSize - autoFontSize) > 0.01f)
+		{
+			hasManualFontSize = true;
+		}
+	}
+
 	CGuiView::LayoutParameterChanged(layoutParameter);
 }
 

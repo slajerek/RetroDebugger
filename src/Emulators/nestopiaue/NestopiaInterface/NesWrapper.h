@@ -32,12 +32,31 @@ unsigned char nesd_peek_io(unsigned short addr);
 unsigned char nesd_peek_safe_io(unsigned short addr);
 
 
+// FDS (Famicom Disk System)
+bool nesd_fds_set_bios(const char *biosPath);
+bool nesd_fds_has_bios();
+bool nesd_fds_insert_disk(unsigned int disk, unsigned int side);
+bool nesd_fds_eject_disk();
+bool nesd_fds_change_side();
+int nesd_fds_get_num_disks();
+int nesd_fds_get_current_disk();
+int nesd_fds_get_current_disk_side();
+bool nesd_fds_is_any_disk_inserted();
+bool nesd_is_fds();
+
 bool nesd_is_debug_on();
 void nesd_update_cpu_pc_by_emulator(uint16 cpuPC);
 void nesd_mark_cell_read(uint16 addr);
 void nesd_mark_cell_write(uint16 addr, uint8 value);
 void nesd_mark_cell_execute(uint16 addr, uint8 opcode);
 void nesd_check_pc_breakpoint(uint16 pc);
+
+extern uint8  *nesd_main_cpu_stack_entry_types;
+extern uint8  *nesd_main_cpu_stack_irq_sources;
+extern uint16 *nesd_main_cpu_stack_origin_pc;
+void nesd_annotate_stack_push(uint8 stackPos, uint8 entryType, uint8 irqSource, uint16 originPC);
+void nesd_set_cpu_pc_and_clear_interrupts(uint16 addr);
+void nesd_ensure_cpu_ram_mapped();
 
 int nesd_is_performing_snapshot_restore();
 int nesd_check_snapshot_restore();

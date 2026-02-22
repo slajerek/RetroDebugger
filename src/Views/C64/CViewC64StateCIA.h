@@ -28,6 +28,7 @@ public:
 	
 	CSlrFont *fontBytes;
 	float fontSize;
+	bool hasManualFontSize;
 
 	CDebugInterfaceC64 *debugInterface;
 	

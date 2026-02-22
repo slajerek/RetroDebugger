@@ -101,6 +101,9 @@ extern int c64SettingsSidDataHistoryMaxSize;
 extern bool c64SettingsEmulateVSPBug;
 extern bool c64SettingsVicSkipDrawingSprites;
 
+// 0 = mark only the actual access cycle, 1 = mark all cycles of the instruction
+extern uint8 c64SettingsAccessMarkMode;
+
 extern uint8 c64SettingsVicStateRecordingMode;
 extern uint16 c64SettingsVicPalette;
 extern bool c64SettingsRenderScreenNearest;
@@ -174,6 +177,7 @@ extern CSlrString *c64SettingsDefaultAtariCartridgeFolder;
 
 extern CSlrString *c64SettingsPathToNES;
 extern CSlrString *c64SettingsDefaultNESFolder;
+extern CSlrString *c64SettingsPathToNESRoms;
 
 extern CSlrString *c64SettingsPathToSymbols;
 extern CSlrString *c64SettingsPathToWatches;
@@ -254,6 +258,7 @@ extern int c64SettingsDisassemblyNonExecuteColor;
 extern bool c64SettingsDisassemblyUseNearLabels;
 extern bool c64SettingsDisassemblyUseNearLabelsForJumps;
 extern int c64SettingsDisassemblyNearLabelMaxOffset;
+extern bool c64SettingsDisassemblyColorizeHexOpcodes;
 
 extern int c64SettingsMenusColorTheme;
 

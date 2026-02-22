@@ -174,6 +174,9 @@
     <Filter Include="Source Files\src\Views\Nes">
       <UniqueIdentifier>{ba968487-a7df-4af1-b108-daa60f1dc9f1}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\src\Tests">
+      <UniqueIdentifier>{c3b7f9a1-2d4e-4f8b-a1c6-9e3d5f7b2a08}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Source Files\src\Tools\asm6">
       <UniqueIdentifier>{48f56abb-df51-4e5d-834f-87a3936a0ab2}</UniqueIdentifier>
     </Filter>
@@ -2393,8 +2396,35 @@
     <ClCompile Include="..\..\..\src\Views\Nes\CViewNesStatePPU.cpp">
       <Filter>Source Files\src\Views\Nes</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\src\Views\C64\CViewC64EmulationCounters.cpp">
-      <Filter>Source Files\src\Views\C64</Filter>
+    <ClCompile Include="..\..\..\src\Tests\CTest.cpp">
+      <Filter>Source Files\src\Tests</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Tests\CTestRunner.cpp">
+      <Filter>Source Files\src\Tests</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Tests\CTestSuite.cpp">
+      <Filter>Source Files\src\Tests</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Tests\CTestEmulatorStartup.cpp">
+      <Filter>Source Files\src\Tests</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Tests\CTestVicEditorZoom.cpp">
+      <Filter>Source Files\src\Tests</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Tests\CTestVicEditorCursor.cpp">
+      <Filter>Source Files\src\Tests</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Tests\CTestOpenAllViews.cpp">
+      <Filter>Source Files\src\Tests</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Tests\CTestStackAnnotation.cpp">
+      <Filter>Source Files\src\Tests</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Tests\CTestMemoryAccessTiming.cpp">
+      <Filter>Source Files\src\Tests</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Tests\CImGuiTests.cpp">
+      <Filter>Source Files\src\Tests</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\Views\C64\CViewC64Screen.cpp">
       <Filter>Source Files\src\Views\C64</Filter>
@@ -3653,6 +3683,12 @@
     <ClCompile Include="..\..\..\src\Views\C64\VicEditor\Layers\CVicEditorLayerVirtualSprites.cpp">
       <Filter>Source Files\src\Views\C64\VicEditor\Layers</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\src\Views\C64\VicEditor\Layers\CVicEditorLayerIoAccess.cpp">
+      <Filter>Source Files\src\Views\C64\VicEditor\Layers</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Views\C64\VicEditor\Layers\CVicEditorLayerMemoryAccess.cpp">
+      <Filter>Source Files\src\Views\C64\VicEditor\Layers</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\..\src\Screens\VicEditor\C64DisplayListCodeGenerator.cpp">
       <Filter>Source Files\src\Screens\VicEditor</Filter>
     </ClCompile>
@@ -3675,6 +3711,12 @@
       <Filter>Source Files\src\Views\C64\VicEditor</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\Views\C64\VicEditor\CViewC64VicEditorCreateNewPicture.cpp">
+      <Filter>Source Files\src\Views\C64\VicEditor</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Views\C64\VicEditor\CViewC64IoAccess.cpp">
+      <Filter>Source Files\src\Views\C64\VicEditor</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Views\C64\VicEditor\CViewC64MemoryAccess.cpp">
       <Filter>Source Files\src\Views\C64\VicEditor</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\Views\C64\VicEditor\CViewC64VicEditorDisplayPreview.cpp">
@@ -3719,6 +3761,9 @@
     <ClCompile Include="..\..\..\src\Views\C64\CViewC64KeyMap.cpp">
       <Filter>Source Files\src\Views</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\src\Views\C64\CViewC64MemoryBank.cpp">
+      <Filter>Source Files\src\Views</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\..\src\Views\CViewDataMonitor.cpp">
       <Filter>Source Files\src\Views</Filter>
     </ClCompile>
@@ -3735,6 +3780,9 @@
       <Filter>Source Files\src\Views</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\Views\CViewFileBrowser.cpp">
+      <Filter>Source Files\src\Views</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Views\CViewStack.cpp">
       <Filter>Source Files\src\Views</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\Plugins\Commando\C64DebuggerPluginCommandoTrainer.cpp">
@@ -6361,8 +6409,35 @@
     <ClInclude Include="..\..\..\src\Views\Nes\CViewNesStatePPU.h">
       <Filter>Source Files\src\Views\Nes</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\src\Views\C64\CViewC64EmulationCounters.h">
-      <Filter>Source Files\src\Views\C64</Filter>
+    <ClInclude Include="..\..\..\src\Tests\CTest.h">
+      <Filter>Source Files\src\Tests</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Tests\CTestRunner.h">
+      <Filter>Source Files\src\Tests</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Tests\CTestSuite.h">
+      <Filter>Source Files\src\Tests</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Tests\ITestCallback.h">
+      <Filter>Source Files\src\Tests</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Tests\CTestEmulatorStartup.h">
+      <Filter>Source Files\src\Tests</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Tests\CTestVicEditorZoom.h">
+      <Filter>Source Files\src\Tests</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Tests\CTestVicEditorCursor.h">
+      <Filter>Source Files\src\Tests</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Tests\CTestOpenAllViews.h">
+      <Filter>Source Files\src\Tests</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Tests\CTestStackAnnotation.h">
+      <Filter>Source Files\src\Tests</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Tests\CTestMemoryAccessTiming.h">
+      <Filter>Source Files\src\Tests</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\src\Views\C64\CViewC64Screen.h">
       <Filter>Source Files\src\Views\C64</Filter>
@@ -7756,6 +7831,12 @@
     <ClInclude Include="..\..\..\src\Views\C64\VicEditor\Layers\CVicEditorLayerVirtualSprites.h">
       <Filter>Source Files\src\Views\C64\VicEditor\Layers</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\src\Views\C64\VicEditor\Layers\CVicEditorLayerIoAccess.h">
+      <Filter>Source Files\src\Views\C64\VicEditor\Layers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Views\C64\VicEditor\Layers\CVicEditorLayerMemoryAccess.h">
+      <Filter>Source Files\src\Views\C64\VicEditor\Layers</Filter>
+    </ClInclude>
     <ClInclude Include="..\..\..\src\Screens\VicEditor\C64DisplayListCodeGenerator.h">
       <Filter>Source Files\src\Screens\VicEditor</Filter>
     </ClInclude>
@@ -7778,6 +7859,12 @@
       <Filter>Source Files\src\Views\C64\VicEditor</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\src\Views\C64\VicEditor\CViewC64VicEditorCreateNewPicture.h">
+      <Filter>Source Files\src\Views\C64\VicEditor</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Views\C64\VicEditor\CViewC64IoAccess.h">
+      <Filter>Source Files\src\Views\C64\VicEditor</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Views\C64\VicEditor\CViewC64MemoryAccess.h">
       <Filter>Source Files\src\Views\C64\VicEditor</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\src\Views\C64\VicEditor\CViewC64VicEditorDisplayPreview.h">
@@ -7825,6 +7912,9 @@
     <ClInclude Include="..\..\..\src\Views\C64\CViewC64KeyMap.h">
       <Filter>Source Files\src\Views</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\src\Views\C64\CViewC64MemoryBank.h">
+      <Filter>Source Files\src\Views</Filter>
+    </ClInclude>
     <ClInclude Include="..\..\..\src\Embedded\FontExoMedium.h">
       <Filter>Source Files\src\Embedded</Filter>
     </ClInclude>
@@ -7862,6 +7952,9 @@
       <Filter>Source Files\src\Views</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\src\Views\CViewFileBrowser.h">
+      <Filter>Source Files\src\Views</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Views\CViewStack.h">
       <Filter>Source Files\src\Views</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\src\Plugins\Commando\C64DebuggerPluginCommandoTrainer.h">

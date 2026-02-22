@@ -62,8 +62,16 @@ static int pa_ddr_change = 0;
 
 static BYTE cia2_cra = 0;
 
+extern int c64d_cia2_register_written;
+extern int c64d_cia2_register_read;
+extern unsigned char c64d_cia2_write_value;
+extern unsigned char c64d_cia2_read_value;
+
 void cia2_store(WORD addr, BYTE data)
 {
+    c64d_cia2_register_written = addr & 0xf;
+    c64d_cia2_write_value = data;
+
     if ((addr & 0xf) == CIA_CRA) {
         cia2_cra = data;
     }
@@ -79,7 +87,10 @@ void cia2_store(WORD addr, BYTE data)
 
 BYTE cia2_read(WORD addr)
 {
-    return ciacore_read(machine_context.cia2, addr);
+    BYTE val = ciacore_read(machine_context.cia2, addr);
+    c64d_cia2_register_read = addr & 0xf;
+    c64d_cia2_read_value = val;
+    return val;
 }
 
 BYTE cia2_peek(WORD addr)

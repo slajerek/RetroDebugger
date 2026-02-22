@@ -105,7 +105,8 @@ void C64DebuggerPluginDNDK::RenderImGui()
 	}
 
 	val = debugInterfaceNes->GetByte(0x06d0);
-	if (ImGui::InputScalar("Location", ImGuiDataType_::ImGuiDataType_U8, &val, NULL, NULL, "%02X", defaultHexInputFlags))
+	ImGui::InputScalar("Location", ImGuiDataType_::ImGuiDataType_U8, &val, NULL, NULL, "%02X", defaultHexInputFlags);
+	if (ImGui::IsItemDeactivatedAfterEdit())
 	{
 		debugInterfaceNes->SetByte(0x06d0, val);
 	}

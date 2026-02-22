@@ -17,9 +17,12 @@ CViewBaseStateCPU::CViewBaseStateCPU(const char *name, float posX, float posY, f
 
 	this->font = viewC64->fontDisassembly;
 	fontSize = 7.0f;
-	AddLayoutParameter(new CLayoutParameterFloat("Font Size", &fontSize));
+	numCharacterColumns = 51.0f;
+	hasManualFontSize = false;
 
 	this->editingCpuRegisterIndex = -1;
+
+	AddLayoutParameter(new CLayoutParameterFloat("Font Size", &fontSize));
 	
 	editBoxHex = new CGuiEditHex(this);
 	editBoxHex->isCapitalLetters = false;
@@ -34,22 +37,59 @@ void CViewBaseStateCPU::SetFont(CSlrFont *font, float fontSize)
 {
 	this->font = font;
 	this->fontSize = fontSize;
-	
-	CGuiView::SetPosition(posX, posY, posZ, fontSize*51, fontSize*2);
+
+	CGuiView::SetPosition(posX, posY, posZ, fontSize*numCharacterColumns, fontSize*2);
 }
 
 void CViewBaseStateCPU::SetPosition(float posX, float posY)
 {
-	CGuiView::SetPosition(posX, posY, posZ, fontSize*51, fontSize*2);
+	CGuiView::SetPosition(posX, posY, posZ, fontSize*numCharacterColumns, fontSize*2);
 }
 
 void CViewBaseStateCPU::SetPosition(float posX, float posY, float posZ, float sizeX, float sizeY)
 {
+	bool sizeChanged = (fabs(sizeX - this->sizeX) > 0.5f || fabs(sizeY - this->sizeY) > 0.5f);
+
+	if (hasManualFontSize && !sizeChanged)
+	{
+		// Size unchanged (startup/layout restore): keep manually set font size
+	}
+	else
+	{
+		// Auto-scale: size changed (user resize) or no manual font size
+		fontSize = sizeX / numCharacterColumns;
+		float maxFontSizeByHeight = sizeY / 2.0f;
+		if (fontSize > maxFontSizeByHeight)
+			fontSize = maxFontSizeByHeight;
+
+		if (sizeChanged)
+			hasManualFontSize = false;
+	}
+
 	CGuiView::SetPosition(posX, posY, posZ, sizeX, sizeY);
 }
 
 void CViewBaseStateCPU::LayoutParameterChanged(CLayoutParameter *layoutParameter)
 {
+	if (layoutParameter != NULL)
+	{
+		// User manually changed font size via context menu
+		hasManualFontSize = true;
+	}
+	else
+	{
+		// Layout restore (deserialization): check if saved fontSize differs from auto-scaled value
+		float autoFontSize = sizeX / numCharacterColumns;
+		float maxFontSizeByHeight = sizeY / 2.0f;
+		if (autoFontSize > maxFontSizeByHeight)
+			autoFontSize = maxFontSizeByHeight;
+
+		if (fabs(fontSize - autoFontSize) > 0.01f)
+		{
+			hasManualFontSize = true;
+		}
+	}
+
 	CGuiView::LayoutParameterChanged(layoutParameter);
 }
 
@@ -79,7 +119,7 @@ void CViewBaseStateCPU::Render()
 	if (debugInterface->GetDebugMode() != DEBUGGER_MODE_RUNNING)
 	{
 		br = 0.5; bg = 0.0f; bb = 0.0f;
-		BlitFilledRectangle(px-fontSize*0.3f, py-fontSize*0.3f, -1, fontSize*49.6f, fontSize*2.3f, br, bg, bb, 1.00f);
+		BlitFilledRectangle(px-fontSize*0.3f, py-fontSize*0.3f, -1, fontSize*(numCharacterColumns-1.0f), fontSize*2.3f, br, bg, bb, 1.00f);
 	}
 
 	this->RenderRegisters();

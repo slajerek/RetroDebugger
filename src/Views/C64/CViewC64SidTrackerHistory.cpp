@@ -55,7 +55,7 @@ CViewC64SidTrackerHistory::CViewC64SidTrackerHistory(const char *name, float pos
 	fontSize = 9;
 	AddLayoutParameter(new CLayoutParameterFloat("Font Size", &fontSize));
 
-	CSlrFont *fontButton = viewC64->fontCBMShifted;
+	CSlrFont *fontButton = viewC64->fontDefaultCBMShifted;
 	float fontScale = 1.8;
 	float fontHeight = fontButton->GetCharHeight('@', fontScale) + 2;
 	

@@ -78,7 +78,7 @@ CViewC64AllGraphics::CViewC64AllGraphics(const char *name, float posX, float pos
 	}
 	
 	//
-	font = viewC64->fontCBMShifted;
+	font = viewC64->fontDefaultCBMShifted;
 	fontScale = 0.8;
 	fontHeight = font->GetCharHeight('@', fontScale) + 2;
 	fontSize = fontHeight;

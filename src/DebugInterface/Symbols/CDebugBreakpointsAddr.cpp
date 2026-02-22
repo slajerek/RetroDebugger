@@ -325,7 +325,7 @@ void CDebugBreakpointsAddr::RenderImGui()
 	// shold we evaluate Enter press as adding the breakpoint or closing the combo?
 	bool skipClosePopupByEnterPressInThisFrame = false;
 
-	if (ImGui::Button("+") || (ImGui::IsWindowFocused() && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Enter))))
+	if (ImGui::Button("+") || (ImGui::IsWindowFocused() && ImGui::IsKeyPressed(ImGuiKey_Enter)))
 	{
 		ImGui::OpenPopup("addAddrBreakpointPopup");
 		
@@ -384,7 +384,7 @@ void CDebugBreakpointsAddr::RenderImGui()
 		}
 		
 		bool finalizeAddingBreakpoint = buttonAddClicked
-			|| (!skipClosePopupByEnterPressInThisFrame && ImGui::IsWindowFocused() && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Enter)));
+			|| (!skipClosePopupByEnterPressInThisFrame && ImGui::IsWindowFocused() && ImGui::IsKeyPressed(ImGuiKey_Enter));
 		
 //		if (ImGui::Button("Create PC Breakpoint"))
 //		{

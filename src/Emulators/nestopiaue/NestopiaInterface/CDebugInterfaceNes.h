@@ -148,7 +148,19 @@ public:
 	virtual void SupportsBreakpoints(bool *writeBreakpoint, bool *readBreakpoint);
 
 	virtual CDebuggerApi *GetDebuggerApi();
-	
+
+	// FDS (Famicom Disk System)
+	bool IsFDS();
+	bool FdsInsertDisk(int disk, int side);
+	bool FdsEjectDisk();
+	bool FdsChangeSide();
+	int FdsGetNumDisks();
+	int FdsGetCurrentDisk();
+	int FdsGetCurrentDiskSide();
+	bool FdsIsAnyDiskInserted();
+	bool FdsHasBIOS();
+	bool FdsSetBIOS(const char *biosPath);
+
 	//	virtual uint8 GetByteFromRamC64(uint16 addr);
 //	virtual void MakeJmpC64(uint16 addr);
 //	virtual void MakeJmpNoResetC64(uint16 addr);

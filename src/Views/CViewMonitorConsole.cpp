@@ -21,6 +21,9 @@
 #include "CDebugMemoryCell.h"
 #include "CLayoutParameter.h"
 #include "EmulatorsConfig.h"
+#include "SYS_Funct.h"
+#include "CDebugSymbolsSegment.h"
+#include "CDebugBreakpointsData.h"
 
 #define C64DEBUGGER_MONITOR_HISTORY_FILE_VERSION	1
 
@@ -46,7 +49,7 @@ CViewMonitorConsole::CViewMonitorConsole(char *name, float posX, float posY, flo
 	imGuiNoWindowPadding = true;
 	imGuiNoScrollbar = true;
 
-	this->viewConsole = new CGuiViewConsole(posX, posY, posZ, sizeX, sizeY, viewC64->fontCBMShifted, 2.00f, 10, true, this);
+	this->viewConsole = new CGuiViewConsole(posX, posY, posZ, sizeX, sizeY, viewC64->fontDefaultCBMShifted, 2.00f, 10, true, this);
 	
 	this->viewConsole->SetPrompt(".");
 
@@ -56,7 +59,8 @@ CViewMonitorConsole::CViewMonitorConsole(char *name, float posX, float posY, flo
 	this->viewConsole->textColorA = 1.0f;
 
 	addrStart = addrEnd = 0;
-	
+	assembleNextAddress = -1;
+
 	this->device = C64MONITOR_DEVICE_C64;
 	this->dataAdapter = debugInterface->GetDataAdapter();
 	
@@ -243,16 +247,16 @@ void CViewMonitorConsole::GuiViewConsoleExecuteCommand(char *commandText)
 		{
 			std::list<char *>::iterator commandLineHistoryIt = viewConsole->commandLineHistory.end();
 			commandLineHistoryIt--;
-			if ((*commandLineHistoryIt)[0] == 'D')
+			if ((*commandLineHistoryIt)[0] == 'D' || (*commandLineHistoryIt)[0] == 'd')
 			{
 				addrStart = addrEnd;
 				addrEnd = addrStart + C64MONITOR_DISASSEMBLY_STEP;
 				DoDisassembleMemory(addrStart, addrEnd, false, NULL);
-				
+
 				this->viewConsole->mutex->Unlock();
 				return;
 			}
-			else if ((*commandLineHistoryIt)[0] == 'M')
+			else if ((*commandLineHistoryIt)[0] == 'M' || (*commandLineHistoryIt)[0] == 'm')
 			{
 				addrStart = addrEnd;
 				addrEnd = addrStart + C64MONITOR_DUMP_MEMORY_STEP;
@@ -266,13 +270,15 @@ void CViewMonitorConsole::GuiViewConsoleExecuteCommand(char *commandText)
 	}
 	
 	
-	char *buf = SYS_GetCharBuf();
-	sprintf(buf, "%s%s", this->viewConsole->prompt, commandText);
-	
-	this->viewConsole->PrintLine(buf);
-	
-	SYS_ReleaseCharBuf(buf); buf = NULL;
-	
+	// Echo the command line (skip for assemble command — it prints its own output)
+	if (commandText[0] != 'A' && commandText[0] != 'a')
+	{
+		char *buf = SYS_GetCharBuf();
+		sprintf(buf, "%s%s", this->viewConsole->prompt, commandText);
+		this->viewConsole->PrintLine(buf);
+		SYS_ReleaseCharBuf(buf);
+	}
+
 	if (c64SettingsUseNativeEmulatorMonitor && debugInterface->IsCodeMonitorSupported())
 	{
 		this->viewConsole->mutex->Unlock();
@@ -370,6 +376,14 @@ void CViewMonitorConsole::GuiViewConsoleExecuteCommand(char *commandText)
 		{
 			CommandMemoryDump();
 		}
+		else if (token->CompareWith("A") || token->CompareWith("a"))
+		{
+			CommandAssemble();
+		}
+		else if (token->CompareWith("B") || token->CompareWith("b"))
+		{
+			CommandBreakpoint();
+		}
 
 		else if (token->CompareWith("VICE") || token->CompareWith("vice"))
 		{
@@ -397,7 +411,14 @@ void CViewMonitorConsole::GuiViewConsoleExecuteCommand(char *commandText)
 	delete strCommandText; strCommandText = NULL;
 	
 	this->viewConsole->ResetCommandLine();
-	
+
+	if (assembleNextAddress >= 0)
+	{
+		sprintf(viewConsole->commandLine, "A %04X ", assembleNextAddress);
+		viewConsole->commandLineCursorPos = (int)strlen(viewConsole->commandLine);
+		assembleNextAddress = -1;
+	}
+
 	StoreMonitorHistory();
 
 	this->viewConsole->mutex->Unlock();
@@ -473,8 +494,11 @@ void CViewMonitorConsole::CommandHelp()
 	this->viewConsole->PrintLine("    disassemble memory (with option NH without hex)");
 	this->viewConsole->PrintLine("G <address>");
 	this->viewConsole->PrintLine("    jmp to address");
-
-
+	this->viewConsole->PrintLine("A <address> <mnemonic> [operand]");
+	this->viewConsole->PrintLine("    assemble instruction at address");
+	this->viewConsole->PrintLine("B [<address>] [<address><op><value>]");
+	this->viewConsole->PrintLine("    list, toggle PC, or set memory breakpoint");
+	this->viewConsole->PrintLine("    ops: = == != < <= > >=");
 }
 
 void CViewMonitorConsole::CommandGoJMP()
@@ -1797,27 +1821,7 @@ bool CViewMonitorConsole::DoDisassembleMemory(int startAddress, int endAddress, 
 		}
 	}
 	
-	// TODO: refactor this
-	// TODO: this is quick temporary fix, we need to generalize this and move memory cells to debugInterface/adapter
-	if (this->debugInterface == viewC64->debugInterfaceC64)
-	{
-		if (device == C64MONITOR_DEVICE_DISK1541_8)
-		{
-			debugSymbols = viewC64->debugInterfaceC64->symbolsDrive1541;
-		}
-		else
-		{
-			debugSymbols = viewC64->debugInterfaceC64->symbols;
-		}
-	}
-	else if (this->debugInterface == viewC64->debugInterfaceAtari)
-	{
-		debugSymbols = debugInterface->symbols;
-	}
-	else if (this->debugInterface == viewC64->debugInterfaceNes)
-	{
-		debugSymbols = debugInterface->symbols;
-	}
+	UpdateDebugSymbols();
 
 
 	memoryLength = dataAdapter->AdapterGetDataLength();
@@ -2288,6 +2292,761 @@ void CViewMonitorConsole::DisassemblyPrint(CByteBuffer *byteBuffer, char *text)
 		byteBuffer->PutByte(*t);
 		t++;
 	}
+}
+
+////
+// Breakpoints
+
+void CViewMonitorConsole::UpdateDebugSymbols()
+{
+	if (this->debugInterface == viewC64->debugInterfaceC64)
+	{
+		if (device == C64MONITOR_DEVICE_DISK1541_8)
+		{
+			debugSymbols = viewC64->debugInterfaceC64->symbolsDrive1541;
+		}
+		else
+		{
+			debugSymbols = viewC64->debugInterfaceC64->symbols;
+		}
+	}
+	else
+	{
+		debugSymbols = debugInterface->symbols;
+	}
+}
+
+static bool IsHexChar(char c)
+{
+	return (c >= '0' && c <= '9') || (c >= 'A' && c <= 'F') || (c >= 'a' && c <= 'f');
+}
+
+void CViewMonitorConsole::CommandBreakpoint()
+{
+	UpdateDebugSymbols();
+
+	if (debugSymbols == NULL || debugSymbols->currentSegment == NULL)
+	{
+		this->viewConsole->PrintLine("No debug symbols available.");
+		return;
+	}
+
+	CDebugSymbolsSegment *segment = debugSymbols->currentSegment;
+
+	CSlrString *token;
+
+	// No arguments → list all breakpoints
+	if (!GetToken(&token))
+	{
+		char *buf = SYS_GetCharBuf();
+		bool anyFound = false;
+
+		// iterate all breakpoint types
+		for (std::map<int, CDebugBreakpointsAddr *>::iterator typeIt = segment->breakpointsByType.begin();
+			 typeIt != segment->breakpointsByType.end(); typeIt++)
+		{
+			int type = typeIt->first;
+			CDebugBreakpointsAddr *bps = typeIt->second;
+
+			for (std::map<int, CDebugBreakpointAddr *>::iterator it = bps->breakpoints.begin();
+				 it != bps->breakpoints.end(); it++)
+			{
+				int addr = it->first;
+				CDebugBreakpointAddr *bp = it->second;
+
+				if (type == BREAKPOINT_TYPE_DATA)
+				{
+					CDebugBreakpointData *dataBp = (CDebugBreakpointData *)bp;
+					const char *compStr = CDebugBreakpointsData::DataBreakpointComparisonToStr(dataBp->comparison);
+					sprintf(buf, " MEM %04X %s %02X", addr, compStr, dataBp->value);
+				}
+				else if (type == BREAKPOINT_TYPE_RASTER_LINE)
+				{
+					sprintf(buf, " RST %04X", addr);
+				}
+				else
+				{
+					sprintf(buf, " PC  %04X", addr);
+				}
+
+				viewConsole->PrintLine(buf);
+				anyFound = true;
+			}
+		}
+
+		if (!anyFound)
+		{
+			viewConsole->PrintLine("No breakpoints set.");
+		}
+
+		SYS_ReleaseCharBuf(buf);
+		return;
+	}
+
+	// Join all remaining tokens into one string (no spaces)
+	char *rawText = SYS_GetCharBuf();
+	rawText[0] = 0x00;
+	while (GetToken(&token))
+	{
+		tokenIndex++;
+		char *tokenStr = token->GetStdASCII();
+		strcat(rawText, tokenStr);
+		delete [] tokenStr;
+	}
+
+	// Strip '$' characters
+	char *cleanText = SYS_GetCharBuf();
+	char *src = rawText;
+	char *dst = cleanText;
+	while (*src)
+	{
+		if (*src != '$')
+		{
+			*dst = *src;
+			dst++;
+		}
+		src++;
+	}
+	*dst = 0x00;
+
+	// Find the first non-hex character to split address from operator
+	int i = 0;
+	while (cleanText[i] && IsHexChar(cleanText[i]))
+	{
+		i++;
+	}
+
+	if (i == 0)
+	{
+		this->viewConsole->PrintLine("Bad address value.");
+		SYS_ReleaseCharBuf(rawText);
+		SYS_ReleaseCharBuf(cleanText);
+		return;
+	}
+
+	// Parse address
+	char addrStr[8];
+	if (i > 6) i = 6;
+	strncpy(addrStr, cleanText, i);
+	addrStr[i] = 0x00;
+	int addr;
+	sscanf(addrStr, "%x", &addr);
+
+	if (addr < 0x0000 || addr > 0xFFFF)
+	{
+		this->viewConsole->PrintLine("Bad address value.");
+		SYS_ReleaseCharBuf(rawText);
+		SYS_ReleaseCharBuf(cleanText);
+		return;
+	}
+
+	// No operator → toggle PC breakpoint
+	if (cleanText[i] == 0x00)
+	{
+		char *buf = SYS_GetCharBuf();
+
+		debugInterface->LockMutex();
+
+		CDebugBreakpointsAddr *breakpointsPC = segment->breakpointsPC;
+		CDebugBreakpointAddr *existingBp = breakpointsPC->GetBreakpoint(addr);
+
+		if (existingBp != NULL)
+		{
+			breakpointsPC->renderBreakpoints.erase(addr);
+			breakpointsPC->DeleteBreakpoint(addr);
+			sprintf(buf, "Breakpoint removed at %04X", addr);
+		}
+		else
+		{
+			CDebugBreakpointAddr *bp = new CDebugBreakpointAddr(debugSymbols, addr);
+			bp->actions = ADDR_BREAKPOINT_ACTION_STOP;
+			breakpointsPC->AddBreakpoint(bp);
+			breakpointsPC->renderBreakpoints[addr] = bp;
+			sprintf(buf, "Breakpoint set at %04X", addr);
+		}
+
+		debugInterface->UnlockMutex();
+
+		viewConsole->PrintLine(buf);
+		SYS_ReleaseCharBuf(buf);
+		SYS_ReleaseCharBuf(rawText);
+		SYS_ReleaseCharBuf(cleanText);
+		return;
+	}
+
+	// Parse operator
+	DataBreakpointComparison comparison;
+	int opLen = 0;
+	char opChar = cleanText[i];
+
+	if (opChar == '!' && cleanText[i + 1] == '=')
+	{
+		comparison = MEMORY_BREAKPOINT_NOT_EQUAL;
+		opLen = 2;
+	}
+	else if (opChar == '=' && cleanText[i + 1] == '=')
+	{
+		comparison = MEMORY_BREAKPOINT_EQUAL;
+		opLen = 2;
+	}
+	else if (opChar == '=')
+	{
+		comparison = MEMORY_BREAKPOINT_EQUAL;
+		opLen = 1;
+	}
+	else if (opChar == '<' && cleanText[i + 1] == '=')
+	{
+		comparison = MEMORY_BREAKPOINT_LESS_OR_EQUAL;
+		opLen = 2;
+	}
+	else if (opChar == '<')
+	{
+		comparison = MEMORY_BREAKPOINT_LESS;
+		opLen = 1;
+	}
+	else if (opChar == '>' && cleanText[i + 1] == '=')
+	{
+		comparison = MEMORY_BREAKPOINT_GREATER_OR_EQUAL;
+		opLen = 2;
+	}
+	else if (opChar == '>')
+	{
+		comparison = MEMORY_BREAKPOINT_GREATER;
+		opLen = 1;
+	}
+	else
+	{
+		this->viewConsole->PrintLine("Bad operator. Use = == != < <= > >=");
+		SYS_ReleaseCharBuf(rawText);
+		SYS_ReleaseCharBuf(cleanText);
+		return;
+	}
+
+	// Parse value after operator
+	char *valueStr = cleanText + i + opLen;
+	if (*valueStr == 0x00)
+	{
+		this->viewConsole->PrintLine("Missing value after operator.");
+		SYS_ReleaseCharBuf(rawText);
+		SYS_ReleaseCharBuf(cleanText);
+		return;
+	}
+
+	// Verify all chars are hex
+	for (int j = 0; valueStr[j]; j++)
+	{
+		if (!IsHexChar(valueStr[j]))
+		{
+			this->viewConsole->PrintLine("Bad value.");
+			SYS_ReleaseCharBuf(rawText);
+			SYS_ReleaseCharBuf(cleanText);
+			return;
+		}
+	}
+
+	int value;
+	sscanf(valueStr, "%x", &value);
+
+	if (value < 0x00 || value > 0xFF)
+	{
+		this->viewConsole->PrintLine("Bad value (must be 00-FF).");
+		SYS_ReleaseCharBuf(rawText);
+		SYS_ReleaseCharBuf(cleanText);
+		return;
+	}
+
+	// Add/toggle memory breakpoint
+	char *buf = SYS_GetCharBuf();
+
+	debugInterface->LockMutex();
+
+	CDebugBreakpointsData *breakpointsData = segment->breakpointsData;
+	CDebugBreakpointAddr *existingBp = breakpointsData->GetBreakpoint(addr);
+
+	if (existingBp != NULL)
+	{
+		CDebugBreakpointData *existingDataBp = (CDebugBreakpointData *)existingBp;
+
+		if (existingDataBp->comparison == comparison && existingDataBp->value == value)
+		{
+			// Exact match → remove
+			breakpointsData->renderBreakpoints.erase(addr);
+			breakpointsData->DeleteBreakpoint(addr);
+			const char *compStr = CDebugBreakpointsData::DataBreakpointComparisonToStr(comparison);
+			sprintf(buf, "Memory breakpoint removed: %04X %s %02X", addr, compStr, value);
+		}
+		else
+		{
+			// Different condition → replace
+			breakpointsData->renderBreakpoints.erase(addr);
+			breakpointsData->DeleteBreakpoint(addr);
+			CDebugBreakpointData *bp = new CDebugBreakpointData(addr, MEMORY_BREAKPOINT_ACCESS_WRITE, comparison, value);
+			breakpointsData->AddBreakpoint(bp);
+			segment->breakOnMemory = true;
+			const char *compStr = CDebugBreakpointsData::DataBreakpointComparisonToStr(comparison);
+			sprintf(buf, "Memory breakpoint changed: %04X %s %02X", addr, compStr, value);
+		}
+	}
+	else
+	{
+		segment->AddBreakpointMemory(addr, MEMORY_BREAKPOINT_ACCESS_WRITE, comparison, value);
+		const char *compStr = CDebugBreakpointsData::DataBreakpointComparisonToStr(comparison);
+		sprintf(buf, "Memory breakpoint set: %04X %s %02X", addr, compStr, value);
+	}
+
+	debugInterface->UnlockMutex();
+
+	viewConsole->PrintLine(buf);
+	SYS_ReleaseCharBuf(buf);
+
+	SYS_ReleaseCharBuf(rawText);
+	SYS_ReleaseCharBuf(cleanText);
+}
+
+////
+// Assembler
+
+void CViewMonitorConsole::CommandAssemble()
+{
+	int assembleAddress;
+
+	if (GetTokenValueHex(&assembleAddress) == false)
+	{
+		this->viewConsole->PrintLine("Usage: A <address> <mnemonic> [operand]");
+		return;
+	}
+
+	if (assembleAddress < 0x0000 || assembleAddress > 0xFFFF)
+	{
+		this->viewConsole->PrintLine("Bad address value.");
+		return;
+	}
+
+	// Collect remaining tokens as mnemonic string
+	char *mnemonicText = SYS_GetCharBuf();
+	mnemonicText[0] = 0x00;
+
+	CSlrString *token;
+	bool first = true;
+	while (GetToken(&token))
+	{
+		tokenIndex++;
+		char *tokenStr = token->GetStdASCII();
+		if (!first)
+		{
+			strcat(mnemonicText, " ");
+		}
+		strcat(mnemonicText, tokenStr);
+		delete [] tokenStr;
+		first = false;
+	}
+
+	// If no mnemonic, exit assembly mode
+	if (mnemonicText[0] == 0x00)
+	{
+		SYS_ReleaseCharBuf(mnemonicText);
+		return;
+	}
+
+	// Remove '$' characters (assembler is hex-only)
+	char *cleanBuffer = SYS_GetCharBuf();
+	char *src = mnemonicText;
+	char *dst = cleanBuffer;
+	while (*src)
+	{
+		if (*src != '$')
+		{
+			*dst = *src;
+			dst++;
+		}
+		src++;
+	}
+	*dst = 0x00;
+
+	// Assemble the instruction
+	int instructionOpCode = -1;
+	uint16 instructionValue = 0x0000;
+	char *errorMessage = SYS_GetCharBuf();
+
+	int ret = AssembleInstruction(assembleAddress, cleanBuffer, &instructionOpCode, &instructionValue, errorMessage);
+
+	if (ret == -1)
+	{
+		this->viewConsole->PrintLine(errorMessage);
+		// Stay in assembly mode at same address
+		assembleNextAddress = assembleAddress;
+		SYS_ReleaseCharBuf(errorMessage);
+		SYS_ReleaseCharBuf(cleanBuffer);
+		SYS_ReleaseCharBuf(mnemonicText);
+		return;
+	}
+
+	// Write bytes to memory
+	bool isDataAvailable;
+	int instrLength = opcodes[instructionOpCode].addressingLength;
+
+	switch (instrLength)
+	{
+		case 1:
+			dataAdapter->AdapterWriteByte(assembleAddress, instructionOpCode, &isDataAvailable);
+			break;
+		case 2:
+			dataAdapter->AdapterWriteByte(assembleAddress, instructionOpCode, &isDataAvailable);
+			dataAdapter->AdapterWriteByte(assembleAddress + 1, (instructionValue & 0xFF), &isDataAvailable);
+			break;
+		case 3:
+			dataAdapter->AdapterWriteByte(assembleAddress, instructionOpCode, &isDataAvailable);
+			dataAdapter->AdapterWriteByte(assembleAddress + 1, (instructionValue & 0x00FF), &isDataAvailable);
+			dataAdapter->AdapterWriteByte(assembleAddress + 2, ((instructionValue >> 8) & 0x00FF), &isDataAvailable);
+			break;
+	}
+
+	// Print result line using DisassembleLine
+	uint8 op, lo, hi;
+	op = lo = hi = 0;
+	dataAdapter->AdapterReadByte(assembleAddress, &op, &isDataAvailable);
+	if (instrLength >= 2)
+		dataAdapter->AdapterReadByte(assembleAddress + 1, &lo, &isDataAvailable);
+	if (instrLength >= 3)
+		dataAdapter->AdapterReadByte(assembleAddress + 2, &hi, &isDataAvailable);
+
+	CByteBuffer *byteBuffer = new CByteBuffer();
+	disassembleHexCodes = true;
+	DisassembleLine(assembleAddress, op, lo, hi, byteBuffer);
+	byteBuffer->PutByte(0x00);
+
+	char *resultBuf = SYS_GetCharBuf();
+	sprintf(resultBuf, ">  %s", (char*)byteBuffer->data);
+	this->viewConsole->PrintLine(resultBuf);
+	SYS_ReleaseCharBuf(resultBuf);
+	delete byteBuffer;
+
+	// Set next address for continuation
+	assembleNextAddress = (assembleAddress + instrLength) & 0xFFFF;
+
+	SYS_ReleaseCharBuf(errorMessage);
+	SYS_ReleaseCharBuf(cleanBuffer);
+	SYS_ReleaseCharBuf(mnemonicText);
+}
+
+#define ASSEMBLE_FAIL(ErrorMessage)  delete textParser; \
+									strcpy(errorMessageBuf, (ErrorMessage)); \
+									return -1;
+
+int CViewMonitorConsole::AssembleInstruction(int assembleAddress, char *lineBuffer, int *instructionOpCode, uint16 *instructionValue, char *errorMessageBuf)
+{
+	CSlrTextParser *textParser = new CSlrTextParser(lineBuffer);
+	textParser->ToUpper();
+
+	char mnemonic[4] = {0x00};
+	textParser->GetChars(mnemonic, 3);
+
+	int baseOp = AssembleFindOp(mnemonic);
+
+	if (baseOp < 0)
+	{
+		ASSEMBLE_FAIL("Unknown mnemonic");
+	}
+
+	AssembleToken token = AssembleGetToken(textParser);
+	if (token == TOKEN_UNKNOWN)
+	{
+		ASSEMBLE_FAIL("Bad instruction");
+	}
+
+	OpcodeAddressingMode addressingMode = ADDR_UNKNOWN;
+
+	// BRK
+	if (token == TOKEN_EOF)
+	{
+		addressingMode = ADDR_IMP;
+	}
+	// LDA $00...
+	else if (token == TOKEN_HEX_VALUE)
+	{
+		*instructionValue = textParser->GetHexNumber();
+
+		token = AssembleGetToken(textParser);
+
+		if (token == TOKEN_UNKNOWN)
+		{
+			ASSEMBLE_FAIL("Bad instruction");
+		}
+		// LDA $0000
+		else if (token == TOKEN_EOF)
+		{
+			if (*instructionValue < 0x0100)
+			{
+				addressingMode = ADDR_ZP;
+			}
+			else
+			{
+				addressingMode = ADDR_ABS;
+			}
+		}
+		// LDA $0000,
+		else if (token == TOKEN_COMMA)
+		{
+			token = AssembleGetToken(textParser);
+
+			// LDA $0000,X
+			if (token == TOKEN_X)
+			{
+				if (*instructionValue < 0x0100)
+				{
+					addressingMode = ADDR_ZPX;
+				}
+				else
+				{
+					addressingMode = ADDR_ABX;
+				}
+
+				token = AssembleGetToken(textParser);
+				if (token != TOKEN_EOF)
+				{
+					ASSEMBLE_FAIL("Extra tokens at end of line");
+				}
+			}
+			// LDA $0000,Y
+			else if (token == TOKEN_Y)
+			{
+				if (*instructionValue < 0x0100)
+				{
+					addressingMode = ADDR_ZPY;
+				}
+				else
+				{
+					addressingMode = ADDR_ABY;
+				}
+
+				token = AssembleGetToken(textParser);
+				if (token != TOKEN_EOF)
+				{
+					ASSEMBLE_FAIL("Extra tokens at end of line");
+				}
+			}
+			else
+			{
+				ASSEMBLE_FAIL("X or Y expected");
+			}
+		}
+		else
+		{
+			ASSEMBLE_FAIL("Bad instruction");
+		}
+	}
+	// LDA #$00
+	else if (token == TOKEN_IMMEDIATE)
+	{
+		token = AssembleGetToken(textParser);
+
+		if (token == TOKEN_HEX_VALUE)
+		{
+			*instructionValue = textParser->GetHexNumber();
+			addressingMode = ADDR_IMM;
+
+			token = AssembleGetToken(textParser);
+			if (token != TOKEN_EOF)
+			{
+				ASSEMBLE_FAIL("Extra tokens at end of line");
+			}
+		}
+		else
+		{
+			ASSEMBLE_FAIL("Not a number after #");
+		}
+	}
+	// LDA (
+	else if (token == TOKEN_LEFT_PARENTHESIS)
+	{
+		token = AssembleGetToken(textParser);
+
+		// LDA ($00...
+		if (token == TOKEN_HEX_VALUE)
+		{
+			*instructionValue = textParser->GetHexNumber();
+
+			token = AssembleGetToken(textParser);
+
+			// LDA ($00)...
+			if (token == TOKEN_RIGHT_PARENTHESIS)
+			{
+				token = AssembleGetToken(textParser);
+				if (token == TOKEN_EOF)
+				{
+					addressingMode = ADDR_IND;
+				}
+				else if (token == TOKEN_COMMA)
+				{
+					token = AssembleGetToken(textParser);
+
+					// LDA ($00),Y
+					if (token == TOKEN_Y)
+					{
+						addressingMode = ADDR_IZY;
+						token = AssembleGetToken(textParser);
+						if (token != TOKEN_EOF)
+						{
+							ASSEMBLE_FAIL("Extra tokens at end of line");
+						}
+					}
+					else
+					{
+						ASSEMBLE_FAIL("Only Y allowed");
+					}
+				}
+				else
+				{
+					ASSEMBLE_FAIL("Bad instruction");
+				}
+			}
+			// LDA ($00,X)
+			else if (token == TOKEN_COMMA)
+			{
+				token = AssembleGetToken(textParser);
+				if (token == TOKEN_X)
+				{
+					token = AssembleGetToken(textParser);
+					if (token == TOKEN_RIGHT_PARENTHESIS)
+					{
+						addressingMode = ADDR_IZX;
+						token = AssembleGetToken(textParser);
+						if (token != TOKEN_EOF)
+						{
+							ASSEMBLE_FAIL("Extra tokens at end of line");
+						}
+					}
+					else
+					{
+						ASSEMBLE_FAIL(") expected");
+					}
+				}
+				else
+				{
+					ASSEMBLE_FAIL("Only X allowed");
+				}
+			}
+			else
+			{
+				ASSEMBLE_FAIL(") or , expected");
+			}
+		}
+		else
+		{
+			ASSEMBLE_FAIL("Number expected");
+		}
+	}
+	else
+	{
+		ASSEMBLE_FAIL("Bad instruction");
+	}
+
+	// check branching
+	if (addressingMode == ADDR_ABS || addressingMode == ADDR_ZP)
+	{
+		*instructionOpCode = AssembleFindOp(mnemonic, ADDR_REL);
+		if (*instructionOpCode != -1)
+		{
+			addressingMode = ADDR_REL;
+			int16 branchValue = ((*instructionValue) - (assembleAddress + 2)) & 0xFFFF;
+			if (branchValue < -0x80 || branchValue > 0x7F)
+			{
+				ASSEMBLE_FAIL("Branch address too far");
+			}
+			*instructionValue = branchValue & 0x00FF;
+		}
+	}
+
+	if (*instructionOpCode == -1)
+	{
+		*instructionOpCode = AssembleFindOp(mnemonic, addressingMode);
+
+		if (*instructionOpCode == -1)
+		{
+			*instructionOpCode = AssembleFindOp(mnemonic, ADDR_ABS);
+		}
+	}
+
+	// found opcode?
+	if (*instructionOpCode != -1)
+	{
+		delete textParser;
+		return 0;
+	}
+
+	ASSEMBLE_FAIL("Instruction not found");
+}
+
+#undef ASSEMBLE_FAIL
+
+int CViewMonitorConsole::AssembleFindOp(char *mnemonic)
+{
+	for (int i = 0; i < 256; i++)
+	{
+		const char *m = opcodes[i].name;
+		if (!strcmp(mnemonic, m))
+			return i;
+	}
+
+	return -1;
+}
+
+int CViewMonitorConsole::AssembleFindOp(char *mnemonic, OpcodeAddressingMode addressingMode)
+{
+	// try to find standard opcode first
+	for (int i = 0; i < 256; i++)
+	{
+		const char *m = opcodes[i].name;
+		if (!strcmp(mnemonic, m) && opcodes[i].addressingMode == addressingMode
+			&& opcodes[i].isIllegal == false)
+			return i;
+	}
+
+	// then illegals
+	for (int i = 0; i < 256; i++)
+	{
+		const char *m = opcodes[i].name;
+		if (!strcmp(mnemonic, m) && opcodes[i].addressingMode == addressingMode)
+			return i;
+	}
+
+	return -1;
+}
+
+AssembleToken CViewMonitorConsole::AssembleGetToken(CSlrTextParser *textParser)
+{
+	textParser->ScrollWhiteChars();
+
+	char chr = textParser->GetChar();
+
+	if (chr == 0x00)
+		return TOKEN_EOF;
+
+	if (FUN_IsHexDigit(chr))
+	{
+		textParser->ScrollBack();
+		return TOKEN_HEX_VALUE;
+	}
+
+	if (chr == '#')
+		return TOKEN_IMMEDIATE;
+
+	if (chr == '(')
+		return TOKEN_LEFT_PARENTHESIS;
+
+	if (chr == ')')
+		return TOKEN_RIGHT_PARENTHESIS;
+
+	if (chr == ',')
+		return TOKEN_COMMA;
+
+	if (chr == 'X')
+		return TOKEN_X;
+
+	if (chr == 'Y')
+		return TOKEN_Y;
+
+	return TOKEN_UNKNOWN;
 }
 
 // Layout

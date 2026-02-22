@@ -42,7 +42,7 @@ CViewC64VicEditorCreateNewPicture::CViewC64VicEditorCreateNewPicture(const char 
 	float sx = sizeX - 5.0f;
 	float sy = sizeY; //57;
 	
-	font = viewC64->fontCBMShifted;
+	font = viewC64->fontDefaultCBMShifted;
 	fontScale = 3.0f;
 	float fontHeight = this->vicEditor->fontHeight;
 

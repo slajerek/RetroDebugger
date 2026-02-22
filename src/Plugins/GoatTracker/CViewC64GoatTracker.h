@@ -27,7 +27,10 @@ public:
 	
 	virtual bool DoDoubleTap(float x, float y);
 	virtual bool DoFinishDoubleTap(float posX, float posY);
-	
+
+	virtual bool DoRightClick(float x, float y);
+	virtual bool DoFinishRightClick(float x, float y);
+
 	virtual bool DoMove(float x, float y, float distX, float distY, float diffX, float diffY);
 	virtual bool FinishMove(float x, float y, float distX, float distY, float accelerationX, float accelerationY);
 	
@@ -57,6 +60,8 @@ public:
 	//
 	CImageData *imageDataScreen;
 	CSlrImage *imageScreen;
+	float screenTexEndX;
+	float screenTexEndY;
 	
 	//
 	CSlrMutex *mutex;

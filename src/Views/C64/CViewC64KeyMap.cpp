@@ -37,7 +37,7 @@ CViewC64KeyMap::CViewC64KeyMap(float posX, float posY, float posZ, float sizeX, 
 	
 	extKeyMap.push_back(new CSlrString("c64kbm"));
 
-	font = viewC64->fontCBMShifted;
+	font = viewC64->fontDefaultCBMShifted;
 	
 	fontScale = 2;
 	fontWidth = font->GetCharWidth('@', fontScale);
@@ -122,7 +122,7 @@ CViewC64KeyMap::CViewC64KeyMap(float posX, float posY, float posZ, float sizeX, 
 	fontScale = 1.5;
 	fontHeight = font->GetCharHeight(' ', fontScale) + 2;
 	fontWidth = font->GetCharWidth(' ', fontScale)+2;
-	fontProp = viewC64->fontCBMShifted; //guiMain->fntEngineDefault;
+	fontProp = viewC64->fontDefaultCBMShifted; //guiMain->fntEngineDefault;
 	fontPropScale = 1.25f;
 	fontPropHeight = fontProp->GetCharHeight('X', fontPropScale) + 4.5;
 	

@@ -49,7 +49,7 @@ void CViewC64StateCPU::Render()
 	if (viewC64->viewC64StateVIC->GetIsLockedState())
 	{
 		br = 0.35f; bg = 0.0f; bb = 0.0f;
-		BlitFilledRectangle(px-fontSize*0.3f, py-fontSize*0.3f, -1, fontSize*49.6f, fontSize*2.3f, br, bg, bb, 1.00f);
+		BlitFilledRectangle(px-fontSize*0.3f, py-fontSize*0.3f, -1, fontSize*(numCharacterColumns-1.0f), fontSize*2.3f, br, bg, bb, 1.00f);
 	}
 	//////////////////
 

@@ -159,6 +159,8 @@ void c64PrintCommandLineHelp()
 
 	printHelp("-soundout <\"device name\" | device number>\n");
 	printHelp("     set sound out device by name or number\n");
+	printHelp("-detacheverything\n");
+	printHelp("     detach all media (disk, cartridge, tape, PRG)\n");
 	printHelp("-fullscreen\n");
 	printHelp("     start in full screen mode\n");
 	printHelp("-playlist <file>\n");
@@ -504,6 +506,7 @@ CSlrString *c64CommandLineAudioOutDevice = NULL;
 
 bool c64CommandLineHardReset = false;
 bool c64CommandLineWindowFullScreen = false;
+bool c64CommandLineDetachEverything = false;
 
 void c64PreRunStartupCallbacks()
 {
@@ -970,6 +973,10 @@ void C64DebuggerParseCommandLine2()
 		{
 			c64CommandLineHardReset = true;
 		}
+		else if (!strcmp(cmd, "detacheverything"))
+		{
+			c64CommandLineDetachEverything = true;
+		}
 		else if (!strcmp(cmd, "fullscreen"))
 		{
 			c64CommandLineWindowFullScreen = true;
@@ -1167,6 +1174,11 @@ void C64DebuggerPassConfigToRunningInstance()
 	if (c64CommandLineWindowFullScreen)
 	{
 		byteBuffer->PutU8(C64D_PASS_CONFIG_DATA_FULL_SCREEN);
+	}
+
+	if (c64CommandLineDetachEverything)
+	{
+		byteBuffer->PutU8(C64D_PASS_CONFIG_DATA_DETACH_EVERYTHING);
 	}
 
 	LOGD("...C64D_PASS_CONFIG_DATA_EOF");
@@ -1432,6 +1444,43 @@ void c64PerformNewConfigurationTasksThreaded(CByteBuffer *byteBuffer)
 		else if (t == C64D_PASS_CONFIG_DATA_HARD_RESET)
 		{
 			debugInterface->ResetHard();
+		}
+		else if (t == C64D_PASS_CONFIG_DATA_DETACH_EVERYTHING)
+		{
+			LOGD("C64D_PASS_CONFIG_DATA_DETACH_EVERYTHING");
+			SYS_Sleep(100);
+			guiMain->LockMutex();
+			for (CDebugInterface *di : viewC64->debugInterfaces)
+			{
+				if (di->isRunning)
+				{
+					di->DetachEverything();
+					di->ClearDebugMarkers();
+					di->SetDebugMode(DEBUGGER_MODE_RUNNING);
+				}
+			}
+			if (c64SettingsPathToD64)
+			{
+				delete c64SettingsPathToD64;
+				c64SettingsPathToD64 = NULL;
+			}
+			if (c64SettingsPathToCartridge)
+			{
+				delete c64SettingsPathToCartridge;
+				c64SettingsPathToCartridge = NULL;
+			}
+			if (c64SettingsPathToPRG)
+			{
+				delete c64SettingsPathToPRG;
+				c64SettingsPathToPRG = NULL;
+			}
+			if (c64SettingsPathToTAP)
+			{
+				delete c64SettingsPathToTAP;
+				c64SettingsPathToTAP = NULL;
+			}
+			guiMain->UnlockMutex();
+			LOGD("C64D_PASS_CONFIG_DATA_DETACH_EVERYTHING done");
 		}
 		else if (t == C64D_PASS_CONFIG_DATA_FULL_SCREEN)
 		{

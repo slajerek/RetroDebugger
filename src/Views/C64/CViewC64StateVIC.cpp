@@ -38,6 +38,7 @@ CViewC64StateVIC::CViewC64StateVIC(const char *name, float posX, float posY, flo
 	previousIsLockedStateFrameNum = 0;
 
 	fontSize = 7.0f;
+	hasManualFontSize = false;
 	AddLayoutParameter(new CLayoutParameterFloat("Font Size", &fontSize));
 
 	fontBytes = viewC64->fontDisassembly;
@@ -96,6 +97,21 @@ void CViewC64StateVIC::SetPosition(float posX, float posY)
 
 void CViewC64StateVIC::SetPosition(float posX, float posY, float posZ, float sizeX, float sizeY)
 {
+	bool sizeChanged = (fabs(sizeX - this->sizeX) > 0.5f || fabs(sizeY - this->sizeY) > 0.5f);
+
+	if (hasManualFontSize && !sizeChanged)
+	{
+		// Size unchanged (startup/layout restore): keep manually set font size
+	}
+	else
+	{
+		// Auto-scale: 59 chars wide, 32 rows tall
+		fontSize = fmin(sizeX / 57.0f, sizeY / 32.0f);
+
+		if (sizeChanged)
+			hasManualFontSize = false;
+	}
+
 	CGuiView::SetPosition(posX, posY, posZ, sizeX, sizeY);
 }
 
@@ -106,6 +122,20 @@ void CViewC64StateVIC::SetPosition(float posX, float posY, float sizeX, float si
 
 void CViewC64StateVIC::LayoutParameterChanged(CLayoutParameter *layoutParameter)
 {
+	if (layoutParameter != NULL)
+	{
+		hasManualFontSize = true;
+	}
+	else
+	{
+		float autoFontSize = fmin(sizeX / 57.0f, sizeY / 32.0f);
+
+		if (fabs(fontSize - autoFontSize) > 0.01f)
+		{
+			hasManualFontSize = true;
+		}
+	}
+
 	CGuiView::LayoutParameterChanged(layoutParameter);
 }
 
@@ -154,6 +184,22 @@ void CViewC64StateVIC::Render()
 	// render colors
 	if (isVertical == false)
 	{
+		// ghostbyte info on the right side, aligned with raster line
+		{
+			vicii_cycle_state_t *viciiState = &(viewC64->viciiStateToShow);
+			float gbX = posX + fontSize * 37.0f;
+			float gbY = posY;
+
+			char gbBuf[64];
+			uint8 val = viciiState->ghostbyteValue;
+			sprintf(gbBuf, "%04x: %02x %c%c%c%c%c%c%c%c", viciiState->ghostbyteAddr, val,
+				(val & 0x80) ? '1' : '0', (val & 0x40) ? '1' : '0',
+				(val & 0x20) ? '1' : '0', (val & 0x10) ? '1' : '0',
+				(val & 0x08) ? '1' : '0', (val & 0x04) ? '1' : '0',
+				(val & 0x02) ? '1' : '0', (val & 0x01) ? '1' : '0');
+			viewC64->fontDisassembly->BlitText(gbBuf, gbX, gbY, posZ, fontSize);
+		}
+
 		float ledX = posX + fontSize * 37.0f;
 		float ledY = posY + fontSize * 4.5;
 		

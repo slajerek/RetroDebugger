@@ -24,9 +24,9 @@ CVicEditorLayerImage::CVicEditorLayerImage(CViewC64VicEditor *vicEditor, char *l
 	image->LoadImageForRebinding(imageData, RESOURCE_PRIORITY_STATIC);
 	VID_PostImageBinding(image, NULL, BINDING_MODE_DONT_FREE_IMAGEDATA);
 	
-	// c64 screen texture boundaries
-	screenTexEndX = (float)debugInterface->GetScreenSizeX() / 512.0f;
-	screenTexEndY = 1.0f - (float)debugInterface->GetScreenSizeY() / 512.0f;
+	// texture boundaries match bitmap data size (384x272), not Vice screen size
+	screenTexEndX = 384.0f / 512.0f;
+	screenTexEndY = 272.0f / 512.0f;
 	
 	this->ClearScreen();
 
@@ -59,7 +59,7 @@ void CVicEditorLayerImage::RenderMain(vicii_cycle_state_t *viciiState)
 			 vicEditor->viewVicDisplay->visibleScreenPosY, -1,
 			 vicEditor->viewVicDisplay->visibleScreenSizeX,
 			 vicEditor->viewVicDisplay->visibleScreenSizeY,
-			 0.0f, 1.0f, screenTexEndX, screenTexEndY);
+			 0.0f, 0.0f, screenTexEndX, screenTexEndY);
 		
 	}
 	
@@ -78,7 +78,7 @@ void CVicEditorLayerImage::RenderPreview(vicii_cycle_state_t *viciiState)
 			 vicEditor->viewVicDisplay->visibleScreenPosY, -1,
 			 vicEditor->viewVicDisplay->visibleScreenSizeX,
 			 vicEditor->viewVicDisplay->visibleScreenSizeY,
-			 0.0f, 1.0f, screenTexEndX, screenTexEndY);
+			 0.0f, 0.0f, screenTexEndX, screenTexEndY);
 		
 	}
 }

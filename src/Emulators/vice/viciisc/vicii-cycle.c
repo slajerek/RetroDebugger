@@ -253,6 +253,11 @@ static inline void next_vicii_cycle(void)
     if (vicii.raster_cycle == (unsigned int)vicii.cycles_per_line) {
         vicii.raster_cycle = 0;
     }
+	
+	vicii.prev_register_written = vicii.register_written;
+	vicii.register_written = -1;
+	vicii.prev_register_read = vicii.register_read;
+	vicii.register_read = -1;
 }
 
 int vicii_cycle(void)

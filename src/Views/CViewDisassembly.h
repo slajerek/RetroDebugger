@@ -83,6 +83,7 @@ public:
 	int RenderDisassemblyLine(float px, float py, int addr, uint8 op, uint8 lo, uint8 hi);
 	void MnemonicWithArgumentToStr(u16 addr, u8 op, u8 lo, u8 hi, char *buf);
 	void MnemonicWithDollarArgumentToStr(u16 addr, u8 op, u8 lo, u8 hi, char *buf);
+	void RenderColoredArgBackground(float mnemonicPx, float py, float posZ, u16 addr, u8 op, u8 lo, u8 hi);
 	void RenderHexLine(float px, float py, int addr);
 	
 	int UpdateDisassemblyOpcodeLine(float py, int addr, uint8 op, uint8 lo, uint8 hi);

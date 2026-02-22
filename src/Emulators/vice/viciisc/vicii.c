@@ -384,6 +384,10 @@ void vicii_powerup(void)
     vicii.light_pen.trigger_cycle = CLOCK_MAX;
     vicii.vbank_phi1 = 0;
     vicii.vbank_phi2 = 0;
+    vicii.register_written = -1;
+    vicii.prev_register_written = -1;
+    vicii.register_read = -1;
+    vicii.prev_register_read = -1;
 
     vicii_reset();
 

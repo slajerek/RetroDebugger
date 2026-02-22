@@ -217,21 +217,31 @@ void c64d_store_sid_data(BYTE *sidDataStore, int sidNum)
 
 /* ------------------------------------------------------------------------- */
 
+extern int c64d_sid_register_written;
+extern int c64d_sid_register_read;
+extern unsigned char c64d_sid_write_value;
+extern unsigned char c64d_sid_read_value;
+
 BYTE sid_read(WORD addr)
 {
+    BYTE val;
     if (sid_stereo >= 1
         && addr >= sid_stereo_address_start
         && addr < sid_stereo_address_end) {
-        return sid_read_chip(addr, 1);
+        val = sid_read_chip(addr, 1);
     }
-
-    if (sid_stereo >= 2
+    else if (sid_stereo >= 2
         && addr >= sid_triple_address_start
         && addr < sid_triple_address_end) {
-        return sid_read_chip(addr, 2);
+        val = sid_read_chip(addr, 2);
+    }
+    else {
+        val = sid_read_chip(addr, 0);
     }
 
-    return sid_read_chip(addr, 0);
+    c64d_sid_register_read = addr & 0x1f;
+    c64d_sid_read_value = val;
+    return val;
 }
 
 BYTE sid_peek(WORD addr)
@@ -263,6 +273,9 @@ BYTE sid3_read(WORD addr)
 
 void sid_store(WORD addr, BYTE byte)
 {
+    c64d_sid_register_written = addr & 0x1f;
+    c64d_sid_write_value = byte;
+
     if (sid_stereo >= 1
         && addr >= sid_stereo_address_start
         && addr < sid_stereo_address_end) {

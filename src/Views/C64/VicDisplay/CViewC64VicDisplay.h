@@ -90,7 +90,10 @@ public:
 	virtual bool DoRightClick(float x, float y);
 
 	virtual bool DoScrollWheel(float deltaX, float deltaY);
-	
+
+	virtual bool KeyDownOnMouseHover(u32 keyCode, bool isShift, bool isAlt, bool isControl, bool isSuper);
+	virtual bool KeyUpGlobal(u32 keyCode, bool isShift, bool isAlt, bool isControl, bool isSuper);
+
 	// multi touch
 	virtual bool DoMultiTap(COneTouchData *touch, float x, float y);
 	virtual bool DoMultiMove(COneTouchData *touch, float x, float y);
@@ -112,6 +115,19 @@ public:
 	
 	//
 	float scale;
+
+	// zoom and pan (standalone mode)
+	bool isZoomPanEnabled;
+	float userZoom;
+	float panOffsetX, panOffsetY;
+	bool isPanning;
+	float prevPanMouseX, prevPanMouseY;
+	float windowPosX, windowPosY, windowSizeX, windowSizeY;
+
+	float GetBaseScale();
+	void ResetZoomPan();
+	void RecalcZoomedDisplayPosition();
+	void ClampPanOffset();
 	
 	//
 	void GetRasterPosFromScreenPos(float x, float y, float *rasterX, float *rasterY);
@@ -277,7 +293,9 @@ public:
 	
 	void InitGridLinesColorFromSettings();
 	
-	void RenderRasterCursor(int rasterX, int rasterY);
+	void RenderRasterCursor(int rasterX, int rasterY,
+						   float lineExtentPosX = -1, float lineExtentPosY = -1,
+						   float lineExtentSizeX = -1, float lineExtentSizeY = -1);
 	void RenderRasterCursorOnForeground(int rasterX, int rasterY);
 
 	void RenderBadLines();

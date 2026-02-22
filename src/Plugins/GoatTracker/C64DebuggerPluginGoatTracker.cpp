@@ -50,7 +50,7 @@ extern "C" {
 
 	unsigned int gtGetGfxPitch()
 	{
-		return pluginGoatTracker->view->imageDataScreen->width;
+		return pluginGoatTracker->view->imageDataScreen->width * 4;
 	}
 	
 	void gtForwardEvents()

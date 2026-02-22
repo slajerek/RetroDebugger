@@ -28,6 +28,8 @@
 #include "CGuiViewProgressBarWindow.h"
 #include "SYS_Threading.h"
 
+class CTestRunner;
+
 extern "C"
 {
 #include "ViceWrapper.h"
@@ -90,6 +92,8 @@ class CViewDrive1541Browser;
 class CViewDrive1541DiskData;
 class CViewDrive1541BreakpointsIrq;
 class CViewC64StateREU;
+class CViewC64MemoryBank;
+class CViewStack;
 class CViewC64AllGraphicsBitmaps;
 class CViewC64AllGraphicsBitmapsControl;
 class CViewC64AllGraphicsScreens;
@@ -103,6 +107,8 @@ class CViewC64ColorRamScreen;
 class CViewC64VicEditor;
 class CViewC64VicEditorPreview;
 class CViewC64VicEditorLayers;
+class CViewC64IoAccess;
+class CViewC64MemoryAccess;
 class CViewC64Charset;
 class CViewC64Palette;
 class CViewC64Sprite;
@@ -112,7 +118,6 @@ class CViewEmulationCounters;
 class CViewTimeline;
 class CViewInputEvents;
 class CViewMonitorConsole;
-class CGuiViewUiDebug;
 
 class CViewAtariScreen;
 class CViewAtariStateCPU;
@@ -256,7 +261,6 @@ public:
 	CViewSnapshots *viewC64Snapshots;
 	CViewColodore *viewColodore;
 	CViewAbout *viewAbout;
-	CGuiViewUiDebug *viewUiDebug;
 
 	int currentScreenLayoutId;
 	
@@ -314,6 +318,9 @@ public:
 	CViewDrive1541StateVIA *viewDrive1541StateVIA;
 	CViewDrive1541Led *viewDrive1541Led;
 	CViewC64StateREU *viewC64StateREU;
+	CViewC64MemoryBank *viewC64MemoryBank;
+	CViewStack *viewC64Stack;
+	CViewStack *viewDrive1541Stack;
 	CViewEmulationCounters *viewC64EmulationCounters;
 
 	CViewEmulationState *viewEmulationState;
@@ -347,6 +354,8 @@ public:
 	CViewC64VicEditorPreview *viewVicEditorPreview;
 //	CViewVicEditorCreateNewPicture *viewVicEditorCreateNewPicture;
 	CViewC64VicEditorLayers *viewVicEditorLayers;
+	CViewC64IoAccess *viewC64IoAccess;
+	CViewC64MemoryAccess *viewC64MemoryAccess;
 	CViewC64Charset *viewC64Charset;
 	CViewC64Palette *viewC64Palette;
 	CViewC64Sprite *viewC64Sprite;
@@ -377,6 +386,7 @@ public:
 	CViewEmulationCounters *viewAtariEmulationCounters;
 	CViewSnapshots *viewAtariSnapshots;
 	CViewTimeline *viewAtariTimeline;
+	CViewStack *viewAtariStack;
 
 	// NES
 	void InitNestopiaViews();
@@ -409,6 +419,7 @@ public:
 	CViewInputEvents *viewNesInputEvents;
 	CViewSnapshots *viewNesSnapshots;
 	CViewTimeline *viewNesTimeline;
+	CViewStack *viewNesStack;
 
 	//
 	CViewAudioMixer *viewAudioMixer;
@@ -504,12 +515,20 @@ public:
 	CSlrFont *fontCBM1;
 	CSlrFont *fontCBM2;
 	CSlrFont *fontCBMShifted;
+
+	CSlrFont *fontDefaultCBM1;        // default chargen, uppercase+graphics (screen codes)
+	CSlrFont *fontDefaultCBM2;        // default chargen, lowercase+uppercase (screen codes)
+	CSlrFont *fontDefaultCBMShifted;  // default chargen, lowercase+uppercase (PETSCII)
 	
 	CSlrFont *fontAtari;
 	
 	ImFont *imFontDefault;
 //	ImFont *imFontPro;
 //	ImFont *imFontSweet16;
+
+	volatile bool userFontsNeedRecreation;
+	bool hasCustomChargenRom;
+	void RecreateUserFonts();
 
 	void CreateFonts();
 	void Create8BitFonts();
@@ -639,6 +658,9 @@ public:
 	// remote debugger
 	CPipeProtocolDebuggerCallback *pipeProtocolCallback;
 	CDebuggerServer *debuggerServer;
+
+	// test runner
+	CTestRunner *testRunner;
 };
 
 extern CViewC64 *viewC64;

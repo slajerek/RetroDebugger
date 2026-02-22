@@ -50,6 +50,7 @@ public:
 	
 	CSlrFont *font;
 	float fontScale;
+	float scale;
 	
 	virtual bool ButtonSwitchChanged(CGuiButtonSwitch *button);
 	virtual void ListElementSelected(CGuiList *listBox);

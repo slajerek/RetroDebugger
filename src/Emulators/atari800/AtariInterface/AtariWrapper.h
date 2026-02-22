@@ -77,6 +77,33 @@ extern volatile unsigned int atrdMainCpuDebugCycle;
 extern volatile unsigned int atrdMainCpuCycle;
 extern volatile unsigned int atrdMainCpuPreviousInstructionCycle;
 
+// Stack annotations (pointers set by CDebugInterfaceAtari, written by CPU emulation)
+extern uint8  *atrd_stack_entry_types;
+extern uint8  *atrd_stack_irq_sources;
+extern uint16 *atrd_stack_origin_pc;
+
+// Stack entry types (must match CStackEntryType enum in CStackAnnotation.h)
+#define ATRD_STACK_ENTRY_UNKNOWN     0
+#define ATRD_STACK_ENTRY_VALUE       1
+#define ATRD_STACK_ENTRY_STATUS      2
+#define ATRD_STACK_ENTRY_JSR_PCH     3
+#define ATRD_STACK_ENTRY_JSR_PCL     4
+#define ATRD_STACK_ENTRY_BRK_PCH     5
+#define ATRD_STACK_ENTRY_BRK_PCL     6
+#define ATRD_STACK_ENTRY_BRK_STATUS  7
+#define ATRD_STACK_ENTRY_IRQ_PCH     8
+#define ATRD_STACK_ENTRY_IRQ_PCL     9
+#define ATRD_STACK_ENTRY_IRQ_STATUS  10
+#define ATRD_STACK_ENTRY_NMI_PCH     11
+#define ATRD_STACK_ENTRY_NMI_PCL     12
+#define ATRD_STACK_ENTRY_NMI_STATUS  13
+
+// IRQ sources (must match CIrqSource enum in CStackAnnotation.h)
+#define ATRD_IRQ_SOURCE_UNKNOWN      0
+#define ATRD_IRQ_SOURCE_POKEY        9
+#define ATRD_IRQ_SOURCE_ANTIC_DLI    10
+#define ATRD_IRQ_SOURCE_ANTIC_VBI    11
+
 void c64d_show_message(char *message);
 
 #endif

@@ -393,7 +393,7 @@ CMainMenuBar::CMainMenuBar()
 	kbsStepBackNumberOfCycles = new CSlrKeyboardShortcut(KBZONE_GLOBAL, "Step back number of cycles", MTKEY_F10, true, true, false, false, this);
 	guiMain->AddKeyboardShortcut(kbsStepBackNumberOfCycles);
 
-	kbsStepOneCycle = new CSlrKeyboardShortcut(KBZONE_GLOBAL, "Step one cycle", MTKEY_F10, true, false, false, false, this);
+	kbsStepOneCycle = new CSlrKeyboardShortcut(KBZONE_GLOBAL, "Step One Cycle", MTKEY_F10, true, false, false, false, this);
 	guiMain->AddKeyboardShortcut(kbsStepOneCycle);
 
 	kbsRunContinueEmulation = new CSlrKeyboardShortcut(KBZONE_GLOBAL, "Run/Continue code", MTKEY_F11, false, false, false, false, this);
@@ -424,7 +424,7 @@ CMainMenuBar::CMainMenuBar()
 	kbsToggleMulticolorImageDump = new CSlrKeyboardShortcut(KBZONE_GLOBAL, "Show multicolor data", 'k', false, false, true, false, this);
 	guiMain->AddKeyboardShortcut(kbsToggleMulticolorImageDump);
 
-	kbsShowRasterBeam = new CSlrKeyboardShortcut(KBZONE_GLOBAL, "Show Raster Beam", 'e', false, false, true, false, this);
+	kbsShowRasterBeam = new CSlrKeyboardShortcut(KBZONE_GLOBAL, "Show raster beam", 'e', false, false, true, false, this);
 	guiMain->AddKeyboardShortcut(kbsShowRasterBeam);
 
 	kbsSaveScreenImageAsPNG = new CSlrKeyboardShortcut(KBZONE_GLOBAL, "Save screenshot as PNG", 'p', true, false, true, false, this);
@@ -506,7 +506,72 @@ void CMainMenuBar::RenderImGui()
 					kbsInsertNextD64->Run();
 				}
 			}
-			
+
+			// NES FDS disk management
+			if (viewC64->debugInterfaceNes && viewC64->debugInterfaceNes->isRunning && viewC64->debugInterfaceNes->IsFDS())
+			{
+				ImGui::Separator();
+
+				// Show current disk status
+				if (viewC64->debugInterfaceNes->FdsIsAnyDiskInserted())
+				{
+					int curDisk = viewC64->debugInterfaceNes->FdsGetCurrentDisk();
+					int curSide = viewC64->debugInterfaceNes->FdsGetCurrentDiskSide();
+					char diskInfo[64];
+					sprintf(diskInfo, "NES Disk: %d Side %c", curDisk + 1, curSide == 0 ? 'A' : 'B');
+					ImGui::TextDisabled("%s", diskInfo);
+				}
+				else
+				{
+					ImGui::TextDisabled("NES Disk: none");
+				}
+
+				if (viewC64->debugInterfaceNes->FdsIsAnyDiskInserted())
+				{
+					if (ImGui::MenuItem("Eject NES Disk"))
+					{
+						viewC64->debugInterfaceNes->FdsEjectDisk();
+						viewC64->ShowMessage("NES disk ejected");
+					}
+				}
+
+				int numDisks = viewC64->debugInterfaceNes->FdsGetNumDisks();
+				if (numDisks > 0)
+				{
+					if (ImGui::BeginMenu("Insert NES Disk"))
+					{
+						int curDisk = viewC64->debugInterfaceNes->FdsGetCurrentDisk();
+						int curSide = viewC64->debugInterfaceNes->FdsGetCurrentDiskSide();
+
+						for (int d = 0; d < numDisks; d++)
+						{
+							for (int s = 0; s < 2; s++)
+							{
+								char label[64];
+								sprintf(label, "Disk %d Side %c", d + 1, s == 0 ? 'A' : 'B');
+								bool isCurrent = (d == curDisk && s == curSide);
+								if (ImGui::MenuItem(label, NULL, isCurrent))
+								{
+									viewC64->debugInterfaceNes->FdsInsertDisk(d, s);
+									viewC64->ShowMessage("Inserted %s", label);
+								}
+							}
+						}
+						ImGui::EndMenu();
+					}
+				}
+
+				if (viewC64->debugInterfaceNes->FdsIsAnyDiskInserted())
+				{
+					if (ImGui::MenuItem("Flip NES Disk Side"))
+					{
+						viewC64->debugInterfaceNes->FdsChangeSide();
+						int curSide = viewC64->debugInterfaceNes->FdsGetCurrentDiskSide();
+						viewC64->ShowMessage("NES disk flipped to side %c", curSide == 0 ? 'A' : 'B');
+					}
+				}
+			}
+
 			if (ImGui::MenuItem("File browser", "", &viewC64->viewFileBrowser->visible))
 			{
 				viewC64->viewFileBrowser->SetVisible(true);
@@ -620,12 +685,14 @@ void CMainMenuBar::RenderImGui()
 				kbsStepOverInstruction->Run();
 			}
 			
-//			if (isPaused)
+			if (ImGui::MenuItem("Step One Cycle", kbsStepOneCycle->cstr))
 			{
-				if (ImGui::MenuItem("Step Over JSR", kbsStepOverSubroutine->cstr))
-				{
-					kbsStepOverSubroutine->Run();
-				}
+				kbsStepOneCycle->Run();
+			}
+
+			if (ImGui::MenuItem("Step Over JSR", kbsStepOverSubroutine->cstr))
+			{
+				kbsStepOverSubroutine->Run();
 			}
 			
 			if (ImGui::MenuItem("Backstep", kbsStepBackInstruction->cstr))
@@ -662,7 +729,8 @@ void CMainMenuBar::RenderImGui()
 				int stepNumberOfFrames = 10;
 				gApplicationDefaultConfig->GetInt("StepNumberOfFrames", &stepNumberOfFrames, 10);
 
-				if (ImGui::InputInt("Number of Frames", &stepNumberOfFrames, 0, 0, ImGuiInputTextFlags_EnterReturnsTrue))
+				ImGui::InputInt("Number of Frames", &stepNumberOfFrames, 0, 0);
+				if (ImGui::IsItemDeactivatedAfterEdit())
 				{
 					gApplicationDefaultConfig->SetInt("StepNumberOfFrames", &stepNumberOfFrames);
 				}
@@ -683,7 +751,8 @@ void CMainMenuBar::RenderImGui()
 				int stepNumberOfCycles = 10;
 				gApplicationDefaultConfig->GetInt("StepNumberOfCycles", &stepNumberOfCycles, 10);
 
-				if (ImGui::InputInt("Number of Cycles", &stepNumberOfCycles, 0, 0, ImGuiInputTextFlags_EnterReturnsTrue))
+				ImGui::InputInt("Number of Cycles", &stepNumberOfCycles, 0, 0);
+				if (ImGui::IsItemDeactivatedAfterEdit())
 				{
 					gApplicationDefaultConfig->SetInt("StepNumberOfCycles", &stepNumberOfCycles);
 				}
@@ -1289,7 +1358,8 @@ void CMainMenuBar::RenderImGui()
 						}
 
 						int step = 10; int step_fast = 100;
-						if (ImGui::InputScalar("Wait after Reset", ImGuiDataType_::ImGuiDataType_U32, &c64SettingsAutoJmpWaitAfterReset, &step, &step_fast, "%d", ImGuiInputTextFlags_CharsDecimal | ImGuiInputTextFlags_EnterReturnsTrue))
+						ImGui::InputScalar("Wait after Reset", ImGuiDataType_::ImGuiDataType_U32, &c64SettingsAutoJmpWaitAfterReset, &step, &step_fast, "%d", ImGuiInputTextFlags_CharsDecimal);
+						if (ImGui::IsItemDeactivatedAfterEdit())
 						{
 							C64DebuggerStoreSettings();
 						}
@@ -1442,7 +1512,7 @@ void CMainMenuBar::RenderImGui()
 					ImGui::Separator();
 					
 					/////
-					ImGui::PushItemFlag(ImGuiItemFlags_SelectableDontClosePopup, true);
+					ImGui::PushItemFlag(ImGuiItemFlags_AutoClosePopups, false);
 
 					if (ImGui::BeginMenu("VIC"))
 					{
@@ -1513,7 +1583,7 @@ void CMainMenuBar::RenderImGui()
 							viewC64->debugInterfaceC64->SetSkipDrawingSprites(c64SettingsVicSkipDrawingSprites);
 							C64DebuggerStoreSettings();
 						}
-						
+
 						ImGui::EndMenu();
 					}
 					
@@ -1901,7 +1971,7 @@ void CMainMenuBar::RenderImGui()
 						ImGui::EndMenu();
 					}
 					
-//					was above ImGui::PushItemFlag(ImGuiItemFlags_SelectableDontClosePopup, true);
+//					was above ImGui::PushItemFlag(ImGuiItemFlags_AutoClosePopups, false);
 					ImGui::PopItemFlag();
 					
 					if (ImGui::MenuItem("Fast boot kernal patch", NULL, &c64SettingsFastBootKernalPatch))
@@ -1920,7 +1990,24 @@ void CMainMenuBar::RenderImGui()
 					{
 						C64DebuggerStoreSettings();
 					}
-					
+
+					{
+						const char *markModeLabels[] = { "Access cycle only", "Full instruction" };
+						int currentMode = (int)c64SettingsAccessMarkMode;
+						if (ImGui::BeginMenu("I/O & Memory Access marking"))
+						{
+							for (int i = 0; i < 2; i++)
+							{
+								if (ImGui::MenuItem(markModeLabels[i], NULL, currentMode == i))
+								{
+									c64SettingsAccessMarkMode = (uint8)i;
+									C64DebuggerStoreSettings();
+								}
+							}
+							ImGui::EndMenu();
+						}
+					}
+
 					ImGui::Separator();
 					
 					bool isVisible = viewC64->viewC64KeyMap->visible;
@@ -2072,12 +2159,35 @@ void CMainMenuBar::RenderImGui()
 					ImGui::EndMenu();
 				}
 			}
-			
+			if (viewC64->debugInterfaceNes)
+			{
+				if (ImGui::BeginMenu("NES##Settings"))
+				{
+					if (ImGui::MenuItem("Select NES ROMs folder"))
+					{
+						systemDialogOperation = SystemDialogOperationNESRomsFolder;
+						SYS_DialogPickFolder(this, c64SettingsPathToNESRoms);
+					}
+
+					bool hasBios = viewC64->debugInterfaceNes->FdsHasBIOS();
+					if (hasBios)
+					{
+						ImGui::TextDisabled("FDS BIOS: loaded");
+					}
+					else
+					{
+						ImGui::TextDisabled("FDS BIOS: not found");
+					}
+
+					ImGui::EndMenu();
+				}
+			}
+
 			ImGui::Separator();
 
 			if (ImGui::BeginMenu("UI"))
 			{
-				ImGui::PushItemFlag(ImGuiItemFlags_SelectableDontClosePopup, true);
+				ImGui::PushItemFlag(ImGuiItemFlags_AutoClosePopups, false);
 								
 				if (ImGui::BeginMenu("Memory map"))
 				{
@@ -2195,6 +2305,11 @@ void CMainMenuBar::RenderImGui()
 						C64DebuggerStoreSettings();
 					}
 					
+					if (ImGui::MenuItem("Colorize hex opcodes", NULL, &c64SettingsDisassemblyColorizeHexOpcodes))
+					{
+						viewC64->config->SetBool("DisassemblyColorizeHexOpcodes", &c64SettingsDisassemblyColorizeHexOpcodes);
+					}
+
 					if (ImGui::MenuItem("Use near labels", NULL, &c64SettingsDisassemblyUseNearLabels))
 					{
 						viewC64->config->SetBool("DisassemblyUseNearLabels", &c64SettingsDisassemblyUseNearLabels);
@@ -2209,7 +2324,7 @@ void CMainMenuBar::RenderImGui()
 							c64SettingsDisassemblyNearLabelMaxOffset = 0;
 						viewC64->config->SetInt("DisassemblyNearLabelMaxOffset", &c64SettingsDisassemblyNearLabelMaxOffset);
 					}
-					
+
 					ImGui::EndMenu();
 				}
 				
@@ -2255,7 +2370,8 @@ void CMainMenuBar::RenderImGui()
 
 				if (ImGui::BeginMenu("Default font"))
 				{
-					if (ImGui::InputFloat("Font size", &(gDefaultFontSize), 0.5, 1, "%.1f", ImGuiInputTextFlags_EnterReturnsTrue))
+					ImGui::InputFloat("Font size", &(gDefaultFontSize), 0.5, 1, "%.1f");
+					if (ImGui::IsItemDeactivatedAfterEdit())
 					{
 						gDefaultFontSize = URANGE(4, gDefaultFontSize, 64);
 						viewC64->config->SetFloat("uiDefaultFontSize", &(gDefaultFontSize));
@@ -2527,7 +2643,8 @@ void CMainMenuBar::RenderImGui()
 					}
 					C64DebuggerStoreSettings();
 				}
-				if (ImGui::InputInt("Port", &c64SettingsRunDebuggerServerWebSocketsPort, 0, 0, ImGuiInputTextFlags_EnterReturnsTrue))
+				ImGui::InputInt("Port", &c64SettingsRunDebuggerServerWebSocketsPort, 0, 0);
+				if (ImGui::IsItemDeactivatedAfterEdit())
 				{
 					guiMain->ShowMessageBox("Required restart", "To apply changes to the WebSocket server port setting, please restart the server.");
 					viewC64->DebuggerServerWebSocketsSetPort(c64SettingsRunDebuggerServerWebSocketsPort);
@@ -2874,10 +2991,10 @@ void CMainMenuBar::RenderImGui()
 			ImGui::MenuItem("ImGui Plot demo", "", &show_implot_demo);
 			ImGui::MenuItem("ImGui About", "", &show_app_about);
 			ImGui::Separator();
-			if (ImGui::MenuItem("MTEngineSDL test", "", &(viewC64->viewUiDebug->visible)))
+			if (ImGui::MenuItem("MTEngineSDL test", "", &(guiMain->viewUiDebug->visible)))
 			{
-				guiMain->AddViewSkippingLayout(viewC64->viewUiDebug);
-				viewC64->viewUiDebug->SetFocus();
+				guiMain->AddViewSkippingLayout(guiMain->viewUiDebug);
+				guiMain->viewUiDebug->SetFocus();
 			}
 
 			bool isVisible = viewC64->viewMessages->visible;
@@ -2888,8 +3005,7 @@ void CMainMenuBar::RenderImGui()
 			}
 
 #if !defined(GLOBAL_DEBUG_OFF)
-			isVisible = guiViewDebugLog->visible;
-			if (ImGui::MenuItem("Debug Log", "", &isVisible))
+			if (ImGui::MenuItem("Debug Log", "", &guiViewDebugLog->visible))
 			{
 				guiViewDebugLog->SetFocus();
 				guiMain->StoreLayoutInSettingsAtEndOfThisFrame();
@@ -4572,14 +4688,43 @@ void CMainMenuBar::SystemDialogFileOpenSelected(CSlrString *path)
 		C64DebuggerStoreSettings();
 		
 		guiMain->ShowMessageBox("Information", "Atari ROMs folder selected. Please restart Retro Debugger to finalize and confirm the Atari ROMs path.", this);
-		
+
 		/*
 		 TODO: someday soon maybe
 		guiMain->LockMutex();
-		
+
 		viewC64->debugInterfaceAtari->RestartEmulation();
-		
+
 		guiMain->UnlockMutex();*/
+	}
+	else if (systemDialogOperation == SystemDialogOperationNESRomsFolder)
+	{
+		if (c64SettingsPathToNESRoms != NULL)
+		{
+			delete c64SettingsPathToNESRoms;
+		}
+
+		c64SettingsPathToNESRoms = new CSlrString(path);
+
+		// Try to load BIOS from the selected folder
+		char *nesRomsPath = path->GetStdASCII();
+		char biosPath[512];
+		sprintf(biosPath, "%s%cdisksys.rom", nesRomsPath, SYS_FILE_SYSTEM_PATH_SEPARATOR);
+		STRFREE(nesRomsPath);
+
+		if (viewC64->debugInterfaceNes)
+		{
+			if (viewC64->debugInterfaceNes->FdsSetBIOS(biosPath))
+			{
+				viewC64->ShowMessage("FDS BIOS loaded");
+			}
+			else
+			{
+				viewC64->ShowMessage("disksys.rom not found in selected folder");
+			}
+		}
+
+		C64DebuggerStoreSettings();
 	}
 }
 

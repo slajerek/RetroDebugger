@@ -48,6 +48,7 @@ enum SystemDialogOperation : u8
 	SystemDialogOperationC64ProfilerFile,
 	SystemDialogOperationSaveTimeline,
 	SystemDialogOperationLoadTimeline,
+	SystemDialogOperationNESRomsFolder,
 	SystemDialogOperationClearSettings
 };
 

@@ -47,6 +47,7 @@
 #include "CDebugSymbolsSegment.h"
 #include "CDebugMemory.h"
 #include "CDebugEventsHistory.h"
+#include "C64SettingsStorage.h"
 #include <string.h>
 
 // TODO: considering that Nestopia is C++ we need to move this below to CDebugInterfaceNes and access nesEmulator through interface
@@ -54,6 +55,20 @@
 
 volatile int nesd_debug_mode;
 volatile unsigned int nesdFrame;
+
+uint8  *nesd_main_cpu_stack_entry_types = NULL;
+uint8  *nesd_main_cpu_stack_irq_sources = NULL;
+uint16 *nesd_main_cpu_stack_origin_pc = NULL;
+
+void nesd_annotate_stack_push(uint8 stackPos, uint8 entryType, uint8 irqSource, uint16 originPC)
+{
+	if (nesd_main_cpu_stack_entry_types)
+	{
+		nesd_main_cpu_stack_entry_types[stackPos] = entryType;
+		nesd_main_cpu_stack_irq_sources[stackPos] = irqSource;
+		nesd_main_cpu_stack_origin_pc[stackPos] = originPC;
+	}
+}
 
 Nes::Api::Emulator nesEmulator;
 
@@ -141,21 +156,36 @@ bool NestopiaUE_Initialize()
 
 #if defined(WIN32)
 	sprintf(db_path, ".\\NstDatabase.xml");
-	sprintf(romPath, ".\\disksys.rom");
 	sprintf(samp_dir, ".");
 #elif defined(LINUX)
 	sprintf(db_path, "./NstDatabase.xml");
-	sprintf(romPath, "./disksys.rom");
 	sprintf(samp_dir, ".");
 #else
 	sprintf(db_path, "/Users/mars/develop/MTEngine/_RUNTIME_/Documents/nes/NstDatabase.xml");
-	sprintf(romPath, "/Users/mars/develop/MTEngine/_RUNTIME_/Documents/nes/disksys.rom");
 	sprintf(samp_dir, "/Users/mars/develop/MTEngine/_RUNTIME_/Documents/nes");
-	//	sprintf(db_path, "NstDatabase.xml");
-	//	sprintf(romPath, "disksys.rom");
-	//	sprintf(samp_dir, "nes");
 #endif
-	LOGTODO("ROM path is %s", romPath);
+
+	// Try user-configured NES ROMs folder first, then platform-specific fallback
+	bool biosPathFound = false;
+	if (c64SettingsPathToNESRoms != NULL)
+	{
+		char *nesRomsPath = c64SettingsPathToNESRoms->GetStdASCII();
+		sprintf(romPath, "%s%cdisksys.rom", nesRomsPath, SYS_FILE_SYSTEM_PATH_SEPARATOR);
+		STRFREE(nesRomsPath);
+		biosPathFound = true;
+	}
+
+	if (!biosPathFound)
+	{
+#if defined(WIN32)
+		sprintf(romPath, ".\\disksys.rom");
+#elif defined(LINUX)
+		sprintf(romPath, "./disksys.rom");
+#else
+		sprintf(romPath, "disksys.rom");
+#endif
+	}
+	LOGM("NES BIOS path: %s", romPath);
 	
 	LOGM("NstDatabase.xml path: %s", db_path);
 	
@@ -330,16 +360,8 @@ bool nesd_unload_cartridge()
 {
 	debugInterfaceNes->LockMutex();
 	nesd_sound_lock("nesd_insert_cartridge");
-	
+
 	machine->Unload();
-	
-	if (machine->Unload())
-	{
-		LOGError("Nestopia: Unload failed");
-		nesd_sound_unlock("nesd_insert_cartridge");
-		debugInterfaceNes->UnlockMutex();
-		return false;
-	}
 
 	nesd_set_defaults();
 	machine->Power(true);
@@ -1830,6 +1852,80 @@ u8 nesd_get_api_input_buttons()
 	return input->pad->buttons;
 }
 
+// FDS (Famicom Disk System) wrapper functions
+bool nesd_fds_set_bios(const char *biosPath)
+{
+	if (!fds) return false;
+
+	std::ifstream *bios_file = new std::ifstream(biosPath, std::ifstream::in|std::ifstream::binary);
+	if (bios_file->is_open())
+	{
+		fds->SetBIOS(bios_file);
+		LOGM("nesd_fds_set_bios: loaded BIOS from %s", biosPath);
+		return true;
+	}
+	else
+	{
+		delete bios_file;
+		LOGError("nesd_fds_set_bios: failed to open %s", biosPath);
+		return false;
+	}
+}
+
+bool nesd_fds_has_bios()
+{
+	if (!fds) return false;
+	return fds->HasBIOS();
+}
+
+bool nesd_fds_insert_disk(unsigned int disk, unsigned int side)
+{
+	if (!fds) return false;
+	return NES_SUCCEEDED(fds->InsertDisk(disk, side));
+}
+
+bool nesd_fds_eject_disk()
+{
+	if (!fds) return false;
+	return NES_SUCCEEDED(fds->EjectDisk());
+}
+
+bool nesd_fds_change_side()
+{
+	if (!fds) return false;
+	return NES_SUCCEEDED(fds->ChangeSide());
+}
+
+int nesd_fds_get_num_disks()
+{
+	if (!fds) return 0;
+	return fds->GetNumDisks();
+}
+
+int nesd_fds_get_current_disk()
+{
+	if (!fds) return -1;
+	return fds->GetCurrentDisk();
+}
+
+int nesd_fds_get_current_disk_side()
+{
+	if (!fds) return -1;
+	return fds->GetCurrentDiskSide();
+}
+
+bool nesd_fds_is_any_disk_inserted()
+{
+	if (!fds) return false;
+	return fds->IsAnyDiskInserted();
+}
+
+bool nesd_is_fds()
+{
+	if (!machine) return false;
+	return machine->Is(Nes::Api::Machine::DISK);
+}
+
 void nesd_sound_pause()
 {
 	debugInterfaceNes->audioChannel->bypass = true;
@@ -1866,6 +1962,31 @@ void nesd_mutex_lock()
 void nesd_mutex_unlock()
 {
 	debugInterfaceNes->UnlockMutex();
+}
+
+void nesd_ensure_cpu_ram_mapped()
+{
+	Core::Machine& machine = nesEmulator;
+	// Re-register CPU RAM handlers for $0000-$1FFF
+	// This is needed when the machine is powered off (all map entries are Nop)
+	machine.cpu.map(0x0000, 0x07FF).Set(&machine.cpu.ram, &Core::Cpu::Ram::Peek_Ram_0, &Core::Cpu::Ram::Poke_Ram_0);
+	machine.cpu.map(0x0800, 0x0FFF).Set(&machine.cpu.ram, &Core::Cpu::Ram::Peek_Ram_1, &Core::Cpu::Ram::Poke_Ram_1);
+	machine.cpu.map(0x1000, 0x17FF).Set(&machine.cpu.ram, &Core::Cpu::Ram::Peek_Ram_2, &Core::Cpu::Ram::Poke_Ram_2);
+	machine.cpu.map(0x1800, 0x1FFF).Set(&machine.cpu.ram, &Core::Cpu::Ram::Peek_Ram_3, &Core::Cpu::Ram::Poke_Ram_3);
+}
+
+void nesd_set_cpu_pc_and_clear_interrupts(uint16 addr)
+{
+	Core::Machine& machine = nesEmulator;
+	nesd_ensure_cpu_ram_mapped();
+	machine.cpu.pc = addr;
+	machine.cpu.interrupt.nmiClock = Core::Cpu::CYCLE_MAX;
+	machine.cpu.interrupt.irqClock = Core::Cpu::CYCLE_MAX;
+	machine.cpu.interrupt.low = 0;
+	// Reset cycle counter so CPU has a full frame budget to execute
+	machine.cpu.cycles.count = 0;
+	// Disable PPU NMI generation (clear bit 7 of PPUCTRL)
+	machine.ppu.regs.ctrl[0] &= ~Core::Ppu::Regs::CTRL0_NMI;
 }
 
 #else
@@ -1925,8 +2046,21 @@ uint8 nesd_get_apu_register(uint16 addr) { return 0; }
 bool nesd_is_pal() { return false; }
 double nesd_get_cpu_clock_frquency() { return 0.0; }
 
+bool nesd_fds_set_bios(const char *biosPath) { return false; }
+bool nesd_fds_has_bios() { return false; }
+bool nesd_fds_insert_disk(unsigned int disk, unsigned int side) { return false; }
+bool nesd_fds_eject_disk() { return false; }
+bool nesd_fds_change_side() { return false; }
+int nesd_fds_get_num_disks() { return 0; }
+int nesd_fds_get_current_disk() { return -1; }
+int nesd_fds_get_current_disk_side() { return -1; }
+bool nesd_fds_is_any_disk_inserted() { return false; }
+bool nesd_is_fds() { return false; }
+
 //void nesd_audio_callback(unsigned char *stream, int numSamples) {}
 void nesd_sound_lock() {}
 void nesd_sound_unlock() {}
+void nesd_set_cpu_pc_and_clear_interrupts(uint16 addr) {}
+void nesd_ensure_cpu_ram_mapped() {}
 
 #endif

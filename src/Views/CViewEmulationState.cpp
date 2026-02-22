@@ -24,6 +24,7 @@ CViewEmulationState::CViewEmulationState(const char *name, float posX, float pos
 	imGuiNoScrollbar = true;
 
 	fontSize = 10.0f;
+	hasManualFontSize = false;
 	AddLayoutParameter(new CLayoutParameterFloat("Font Size", &fontSize));
 
 	fontBytes = viewC64->fontDisassembly;
@@ -32,11 +33,42 @@ CViewEmulationState::CViewEmulationState(const char *name, float posX, float pos
 
 void CViewEmulationState::SetPosition(float posX, float posY, float posZ, float sizeX, float sizeY)
 {
+	bool sizeChanged = (fabs(sizeX - this->sizeX) > 0.5f || fabs(sizeY - this->sizeY) > 0.5f);
+
+	if (hasManualFontSize && !sizeChanged)
+	{
+		// Size unchanged (startup/layout restore): keep manually set font size
+	}
+	else
+	{
+		// Auto-scale: ~43 chars wide, 1 row tall
+		fontSize = fmin(sizeX / 35.0f, sizeY);
+
+		if (sizeChanged)
+			hasManualFontSize = false;
+	}
+
 	CGuiView::SetPosition(posX, posY, posZ, sizeX, sizeY);
 }
 
 void CViewEmulationState::LayoutParameterChanged(CLayoutParameter *layoutParameter)
 {
+	if (layoutParameter != NULL)
+	{
+		// User manually changed font size via context menu
+		hasManualFontSize = true;
+	}
+	else
+	{
+		// Layout restore: check if saved fontSize differs from auto-scaled value
+		float autoFontSize = fmin(sizeX / 35.0f, sizeY);
+
+		if (fabs(fontSize - autoFontSize) > 0.01f)
+		{
+			hasManualFontSize = true;
+		}
+	}
+
 	CGuiView::LayoutParameterChanged(layoutParameter);
 }
 
@@ -50,10 +82,18 @@ void CViewEmulationState::Render()
 	float py = posY;
 	
 	char buf[128];
+	bool isWarp = debugInterface->GetSettingIsWarpSpeed();
 	sprintf (buf, "Emulation speed: %6.2f%% FPS: %4.1f  %s",
 			 debugInterface->emulationSpeed, debugInterface->emulationFrameRate,
-			(debugInterface->GetSettingIsWarpSpeed() ? "(Warp)" : ""));
-	fontBytes->BlitText(buf, px, py, posZ, fontSize);
+			(isWarp ? "(Warp)" : ""));
+	if (isWarp)
+	{
+		fontBytes->BlitTextColor(buf, px, py, posZ, fontSize, 1.0f, 0.8f, 0.2f, 1.0f);
+	}
+	else
+	{
+		fontBytes->BlitText(buf, px, py, posZ, fontSize);
+	}
 }
 
 void CViewEmulationState::RenderImGui()

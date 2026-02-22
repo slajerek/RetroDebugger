@@ -68,6 +68,8 @@ public:
 	void ClearCursorPos();
 	void ClearGraphicsForcedMode();
 	
+	void ZoomToFit();
+
 	virtual bool HasContextMenuItems();
 	virtual void RenderContextMenuItems();
 };

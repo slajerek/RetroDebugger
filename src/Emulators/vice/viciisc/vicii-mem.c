@@ -331,7 +331,8 @@ inline static void sprite_color_store(WORD addr, BYTE value)
 /* Store a value in a VIC-II register.  */
 void vicii_store(WORD addr, BYTE value)
 {
-    addr &= 0x3f;
+//	ViceLOGD("vicii_store: write %x %x", addr, value);
+	vicii.register_written = addr;
 
     vicii.last_bus_phi2 = value;
 
@@ -551,6 +552,7 @@ BYTE vicii_read(WORD addr)
 {
     BYTE value;
     addr &= 0x3f;
+    vicii.register_read = addr;
 
     VICII_DEBUG_REGISTER(("READ $D0%02X at cycle %d of current_line $%04X:",
                           addr, vicii.raster_cycle, vicii.raster_line));

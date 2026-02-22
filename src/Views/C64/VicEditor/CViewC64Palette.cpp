@@ -39,7 +39,7 @@ CViewC64Palette::CViewC64Palette(const char *name, float posX, float posY, float
 	this->isVertical = false;
 //	AddLayoutParameter(new CLayoutParameterBool("Vertical layout", &isVertical));
 
-	this->font = viewC64->fontCBMShifted;
+	this->font = viewC64->fontDefaultCBMShifted;
 	this->fontScale = 1;
 	this->fontCharacterWidth = 1;
 	

@@ -105,7 +105,7 @@ void CViewFileBrowser::RenderImGui()
 				// we have a separate list of const char* filenames because this does not work correctly here: entry.path().filename().c_str();
 				const char *entryName = *itFilename;
 				
-				ImGuiSelectableFlags selectableFlags = ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowItemOverlap;
+				ImGuiSelectableFlags selectableFlags = ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowOverlap;
 				if (ImGui::Selectable(entryName, isItemSelected, selectableFlags, ImVec2(0, 0)))
 				{
 					selectedEntry = it;
@@ -163,11 +163,11 @@ void CViewFileBrowser::RenderImGui()
 		// TODO: join two ifs below
 		if (IsWindowFocused())
 		{
-			if (IsKeyPressed(GetKeyIndex(ImGuiKey_UpArrow))
-				|| IsKeyPressed(GetKeyIndex(ImGuiKey_DownArrow)))
+			if (IsKeyPressed(ImGuiKey_UpArrow)
+				|| IsKeyPressed(ImGuiKey_DownArrow))
 			{
 				// navigation
-				if (IsKeyPressed(GetKeyIndex(ImGuiKey_UpArrow)))
+				if (IsKeyPressed(ImGuiKey_UpArrow))
 				{
 					if (selectedEntry != pathEntries.begin())
 					{
@@ -176,7 +176,7 @@ void CViewFileBrowser::RenderImGui()
 					}
 				}
 
-				if (IsKeyPressed(GetKeyIndex(ImGuiKey_DownArrow)))
+				if (IsKeyPressed(ImGuiKey_DownArrow))
 				{
 					auto newEntry = std::next(selectedEntry);
 					if (newEntry != pathEntries.end())

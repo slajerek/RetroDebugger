@@ -42,7 +42,7 @@ CViewC64CrtMaker::CViewC64CrtMaker(float posX, float posY, float posZ, float siz
 	this->plugin = plugin;
 	this->api = plugin->api;
 	
-	font = viewC64->fontCBMShifted;
+	font = viewC64->fontDefaultCBMShifted;
 	fontScale = 1.5;
 	fontHeight = font->GetCharHeight('@', fontScale) + 2;
 	

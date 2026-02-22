@@ -30,6 +30,7 @@
 #include "api/NstApiUser.hpp"
 
 #include "NesWrapper.h"
+#include "CStackAnnotation.h"
 
 #include "DBG_Log.h"
 #include "CByteBuffer.h"
@@ -1344,6 +1345,8 @@ namespace Nes
 			// 6502 trap, return address pushed on the stack is
 			// one byte prior to the next instruction
 
+			nesd_annotate_stack_push(sp, STACK_ENTRY_JSR_PCH, IRQ_SOURCE_UNKNOWN, pc - 1);
+			nesd_annotate_stack_push((sp - 1) & 0xFF, STACK_ENTRY_JSR_PCL, IRQ_SOURCE_UNKNOWN, pc - 1);
 			Push16( pc + 1 );
 			pc = map.Peek16( pc );
 			cycles.count += cycles.clock[JSR_CYCLES-1];
@@ -1616,6 +1619,7 @@ namespace Nes
 		NST_SINGLE_CALL void Cpu::Pha()
 		{
 			cycles.count += cycles.clock[PHA_CYCLES-1];
+			nesd_annotate_stack_push(sp, STACK_ENTRY_VALUE, IRQ_SOURCE_UNKNOWN, pc - 1);
 			Push8( a );
 		}
 
@@ -1624,6 +1628,7 @@ namespace Nes
 			// 6502 trap, B flag joins the club
 
 			cycles.count += cycles.clock[PHP_CYCLES-1];
+			nesd_annotate_stack_push(sp, STACK_ENTRY_STATUS, IRQ_SOURCE_UNKNOWN, pc - 1);
 			Push8( flags.Pack() | Flags::B );
 		}
 
@@ -1881,7 +1886,10 @@ namespace Nes
 			NST_DEBUG_MSG("6502 BRK");
 
 			opcode = map.Peek8( pc );
+			nesd_annotate_stack_push(sp, STACK_ENTRY_BRK_PCH, IRQ_SOURCE_UNKNOWN, pc - 1);
+			nesd_annotate_stack_push((sp - 1) & 0xFF, STACK_ENTRY_BRK_PCL, IRQ_SOURCE_UNKNOWN, pc - 1);
 			Push16( pc + 1 );
+			nesd_annotate_stack_push(sp, STACK_ENTRY_BRK_STATUS, IRQ_SOURCE_UNKNOWN, pc - 1);
 			Push8( flags.Pack() | Flags::B );
 			flags.i = Flags::I;
 
@@ -1936,12 +1944,33 @@ namespace Nes
 		void Cpu::DoISR(const uint vector)
 		{
 //			LOGD("Cpu::DoISR: frame=%d instr=%d cycle=%d round=%d", nesdFrame, nesdMainCpuCycle, cycles.count, cycles.round);
-			
+
 			NST_ASSERT( interrupt.irqClock == CYCLE_MAX );
 
 			if (!jammed)
 			{
+				uint8 irqSource = IRQ_SOURCE_UNKNOWN;
+				uint8 entryTypeBase;
+				if (vector == NMI_VECTOR)
+				{
+					irqSource = IRQ_SOURCE_PPU_NMI;
+					entryTypeBase = STACK_ENTRY_NMI_PCH;
+				}
+				else
+				{
+					entryTypeBase = STACK_ENTRY_IRQ_PCH;
+					if (interrupt.low & IRQ_EXT)
+						irqSource = IRQ_SOURCE_MAPPER;
+					else if (interrupt.low & IRQ_FRAME)
+						irqSource = IRQ_SOURCE_APU;
+					else if (interrupt.low & IRQ_DMC)
+						irqSource = IRQ_SOURCE_APU;
+				}
+
+				nesd_annotate_stack_push(sp, entryTypeBase, irqSource, pc);
+				nesd_annotate_stack_push((sp - 1) & 0xFF, entryTypeBase + 1, irqSource, pc);
 				Push16( pc );
+				nesd_annotate_stack_push(sp, entryTypeBase + 2, irqSource, pc);
 				Push8( flags.Pack() );
 				flags.i = Flags::I;
 

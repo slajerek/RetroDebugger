@@ -174,11 +174,11 @@ void CDebugAsmSource::ParseXML(CByteBuffer *byteBuffer, CDebugInterface *debugIn
 		LOGD("... added source id: %d", asmSourceFile->sourceId);
 		asmSourceFile->sourceFilePath->DebugPrint("...    source file path=");
 		
-		LOGD("CSlrString::DeleteVectorElements(words): 1 words=%x", words);
-		CSlrString::DeleteVectorElements(words);
+		LOGD("CSlrString::DeleteVector(words): 1 words=%x", words);
+		CSlrString::DeleteVector(words);
 	}
-	LOGD("	CSlrString::DeleteVectorElements(lines): 2 lines=%x", lines);
-	CSlrString::DeleteVectorElements(lines);
+	LOGD("	CSlrString::DeleteVector(lines): 2 lines=%x", lines);
+	CSlrString::DeleteVector(lines);
 	delete strSources;
 	
 	LOGD("== Segments");
@@ -298,11 +298,11 @@ void CDebugAsmSource::ParseXML(CByteBuffer *byteBuffer, CDebugInterface *debugIn
 				{
 					LOGError("Wrong format for source code address mapping"); // at line #%d", lineNum);
 				}
-				LOGD("CSlrString::DeleteVectorElements(words): 3 words=%x", words);
-				CSlrString::DeleteVectorElements(words);
+				LOGD("CSlrString::DeleteVector(words): 3 words=%x", words);
+				CSlrString::DeleteVector(words);
 			}
-			LOGD("CSlrString::DeleteVectorElements(lines): 4 lines=%x", lines);
-			CSlrString::DeleteVectorElements(lines);
+			LOGD("CSlrString::DeleteVector(lines): 4 lines=%x", lines);
+			CSlrString::DeleteVector(lines);
 			delete strBlock;
 		}
 	}
@@ -338,7 +338,7 @@ void CDebugAsmSource::ParseXML(CByteBuffer *byteBuffer, CDebugInterface *debugIn
 			if (words->size() < 3)
 			{
 				LOGError("Not enough words for label definition (%d words)", words->size()); // at line #%d", tag.line);
-				CSlrString::DeleteVectorElements(words);
+				CSlrString::DeleteVector(words);
 				continue;
 			}
 //			if (words->size() > 3)
@@ -357,7 +357,7 @@ void CDebugAsmSource::ParseXML(CByteBuffer *byteBuffer, CDebugInterface *debugIn
 			{
 				segmentName->DebugPrint("segment=");
 				LOGError("ParseLabels: segment not found");
-				CSlrString::DeleteVectorElements(words);
+				CSlrString::DeleteVector(words);
 				continue;
 			}
 
@@ -367,8 +367,8 @@ void CDebugAsmSource::ParseXML(CByteBuffer *byteBuffer, CDebugInterface *debugIn
 				segment->AddCodeLabel(address, labelNameStr);
 			}
 
-			LOGD("CSlrString::DeleteVectorElements(words): 5");
-			CSlrString::DeleteVectorElements(words);
+			LOGD("CSlrString::DeleteVector(words): 5");
+			CSlrString::DeleteVector(words);
 		}
 	}
 	
@@ -402,7 +402,7 @@ void CDebugAsmSource::ParseXML(CByteBuffer *byteBuffer, CDebugInterface *debugIn
 			if (words->size() < 2)
 			{
 				LOGError("Wrong format for watches (%d words)", words->size()); // at line #%d", tag.line);
-				CSlrString::DeleteVectorElements(words);
+				CSlrString::DeleteVector(words);
 				continue;
 			}
 			
@@ -433,14 +433,14 @@ void CDebugAsmSource::ParseXML(CByteBuffer *byteBuffer, CDebugInterface *debugIn
 			{
 				segmentName->DebugPrint("segment=");
 				LOGError("ParseWatches: segment not found");
-				CSlrString::DeleteVectorElements(words);
+				CSlrString::DeleteVector(words);
 				continue;
 			}
 			
 			segment->AddWatch(address, numberOfValues, strRepresentation);
 
-			LOGD("CSlrString::DeleteVectorElements(words): 6 words=%x", words);
-			CSlrString::DeleteVectorElements(words);
+			LOGD("CSlrString::DeleteVector(words): 6 words=%x", words);
+			CSlrString::DeleteVector(words);
 		}
 	}
 
@@ -483,7 +483,7 @@ void CDebugAsmSource::ParseXML(CByteBuffer *byteBuffer, CDebugInterface *debugIn
 			{
 				segmentName->DebugPrint("segment=");
 				LOGError("ParseBreakpoints: segment not found");
-				CSlrString::DeleteVectorElements(breakpointWords);
+				CSlrString::DeleteVector(breakpointWords);
 				continue;
 			}
 
@@ -491,16 +491,16 @@ void CDebugAsmSource::ParseXML(CByteBuffer *byteBuffer, CDebugInterface *debugIn
 			{
 				segment->AddBreakpointPC(breakpointAddress);
 
-				LOGD("CSlrString::DeleteVectorElements(breakpointWords): 7 breakpointWords=%x", breakpointWords);
-				CSlrString::DeleteVectorElements(breakpointWords);
+				LOGD("CSlrString::DeleteVector(breakpointWords): 7 breakpointWords=%x", breakpointWords);
+				CSlrString::DeleteVector(breakpointWords);
 				continue;
 			}
 
 			if (breakpointWords->size() != 5)
 			{
 				LOGError("ParseBreakpoints: unknown format (num elements=%d)", breakpointWords->size());
-				LOGD("CSlrString::DeleteVectorElements(breakpointWords): 8 breakpointWords=%x", breakpointWords);
-				CSlrString::DeleteVectorElements(breakpointWords);
+				LOGD("CSlrString::DeleteVector(breakpointWords): 8 breakpointWords=%x", breakpointWords);
+				CSlrString::DeleteVector(breakpointWords);
 				continue;
 			}
 			
@@ -651,13 +651,13 @@ void CDebugAsmSource::ParseXML(CByteBuffer *byteBuffer, CDebugInterface *debugIn
 				break;
 			}
 			
-			LOGD("CSlrString::DeleteVectorElements(words): 9 words=%x", words);
-			CSlrString::DeleteVectorElements(words);
-			LOGD("CSlrString::DeleteVectorElements(breakpointWords): 10 breakpointWords=%x", breakpointWords);
-			CSlrString::DeleteVectorElements(breakpointWords);
+			LOGD("CSlrString::DeleteVector(words): 9 words=%x", words);
+			CSlrString::DeleteVector(words);
+			LOGD("CSlrString::DeleteVector(breakpointWords): 10 breakpointWords=%x", breakpointWords);
+			CSlrString::DeleteVector(breakpointWords);
 		}
-		LOGD("CSlrString::DeleteVectorElements(lines): 11 lines=%x", lines);
-		CSlrString::DeleteVectorElements(lines);
+		LOGD("CSlrString::DeleteVector(lines): 11 lines=%x", lines);
+		CSlrString::DeleteVector(lines);
 		delete strBreakpoints;
 	}
 	

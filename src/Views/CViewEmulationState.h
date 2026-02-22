@@ -23,8 +23,9 @@ public:
 
 	virtual bool DoTap(float x, float y);
 
-	CSlrFont *fontBytes;	
+	CSlrFont *fontBytes;
 	float fontSize;
+	bool hasManualFontSize;
 	
 	virtual void SetPosition(float posX, float posY, float posZ, float sizeX, float sizeY);
 

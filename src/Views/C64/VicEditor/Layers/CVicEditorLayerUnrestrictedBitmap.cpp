@@ -25,9 +25,9 @@ CVicEditorLayerUnrestrictedBitmap::CVicEditorLayerUnrestrictedBitmap(CViewC64Vic
 	imageUnrestricted->LoadImageForRebinding(imageDataUnrestricted, RESOURCE_PRIORITY_STATIC);
 	VID_PostImageBinding(imageUnrestricted, NULL, BINDING_MODE_DONT_FREE_IMAGEDATA);
 	
-	// c64 screen texture boundaries
-	screenTexEndX = (float)debugInterface->GetScreenSizeX() / 512.0f;
-	screenTexEndY = 1.0f - (float)debugInterface->GetScreenSizeY() / 512.0f;
+	// texture boundaries match bitmap data size (384x272), not Vice screen size
+	screenTexEndX = 384.0f / 512.0f;
+	screenTexEndY = 272.0f / 512.0f;
 	
 	///
 	
@@ -57,7 +57,7 @@ void CVicEditorLayerUnrestrictedBitmap::RenderMain(vicii_cycle_state_t *viciiSta
 			 vicEditor->viewVicDisplay->visibleScreenPosY, -1,
 			 vicEditor->viewVicDisplay->visibleScreenSizeX,
 			 vicEditor->viewVicDisplay->visibleScreenSizeY,
-			 0.0f, 1.0f, screenTexEndX, screenTexEndY);
+			 0.0f, 0.0f, screenTexEndX, screenTexEndY);
 		
 	}
 	
@@ -75,7 +75,7 @@ void CVicEditorLayerUnrestrictedBitmap::RenderPreview(vicii_cycle_state_t *vicii
 			 vicEditor->viewVicDisplay->visibleScreenPosY, -1,
 			 vicEditor->viewVicDisplay->visibleScreenSizeX,
 			 vicEditor->viewVicDisplay->visibleScreenSizeY,
-			 0.0f, 1.0f, screenTexEndX, screenTexEndY);
+			 0.0f, 0.0f, screenTexEndX, screenTexEndY);
 		
 	}
 }

@@ -257,6 +257,16 @@ struct vicii_s {
     struct video_chip_cap_s *video_chip_cap;
 
     unsigned int int_num;
+	
+	// which register was written in this cycle
+	int register_written;
+	// saved copy from previous cycle (for state capture after next_vicii_cycle clears it)
+	int prev_register_written;
+
+	// which register was read in this cycle
+	int register_read;
+	// saved copy from previous cycle
+	int prev_register_read;
 };
 typedef struct vicii_s vicii_t;
 

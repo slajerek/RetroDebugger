@@ -54,7 +54,7 @@ CViewC64Sprite::CViewC64Sprite(const char *name, float posX, float posY, float p
 	spriteRasterY = -1;
 	
 	//
-	font = viewC64->fontCBMShifted;
+	font = viewC64->fontDefaultCBMShifted;
 	fontScale = 1;
 	fontWidth = font->GetCharWidth('@', fontScale);
 	fontHeight = font->GetCharHeight('@', fontScale) + 2;
@@ -172,8 +172,9 @@ void CViewC64Sprite::SetPosition(float posX, float posY, float posZ, float sizeX
 	LOGD("CViewC64Sprite::SetPosition: %f %f", posX, posY);
 
 	scale = sizeX / 98.00f;
-	
+
 	LOGD("scale=%f", scale);
+	fontScale = scale;
 	fontSize = 5.0f*scale;
 
 	buttonSizeX = 30.0f*scale;
@@ -185,22 +186,25 @@ void CViewC64Sprite::SetPosition(float posX, float posY, float posZ, float sizeX
 	// update buttons
 	float px = 2.5f*scale; //posX + 2.5f;
 	float py = 5.0f*scale + spriteSizeY + 3.0f*scale; //posY + 5.0f + 28.0f + 3.0f;
-	
+
 	float gpx = 1.9f*scale;
-	
+
 	LOGD("bt   %f %f", buttonSizeX, buttonSizeY);
-	
+
 	LOGD("multi: %f %f", px, py);
 	btnIsMultiColor->SetPositionOffset(px, py);
 	btnIsMultiColor->SetSize(buttonSizeX, buttonSizeY);
+	btnIsMultiColor->SetFontScale(fontScale);
 	px += buttonSizeX + gpx;
 	LOGD("strX : %f %f", px, py);
 	btnIsStretchX->SetPositionOffset(px, py);
 	btnIsStretchX->SetSize(buttonSizeX, buttonSizeY);
+	btnIsStretchX->SetFontScale(fontScale);
 	px += buttonSizeX + gpx;
 	LOGD("strY : %f %f", px, py);
 	btnIsStretchY->SetPositionOffset(px, py);
 	btnIsStretchY->SetSize(buttonSizeX, buttonSizeY);
+	btnIsStretchY->SetFontScale(fontScale);
 
 	py += buttonSizeY + 6.0f*scale;
 
@@ -209,6 +213,7 @@ void CViewC64Sprite::SetPosition(float posX, float posY, float posZ, float sizeX
 	px = sizeX - buttonSizeX - 3.0f*scale;	//posX +
 	btnScanForSprites->SetPositionOffset(px, py);
 	btnScanForSprites->SetSize(buttonSizeX, buttonSizeY);
+	btnScanForSprites->SetFontScale(fontScale);
 	
 	CGuiView::SetPosition(posX, posY, posZ, sizeX, sizeY);
 }

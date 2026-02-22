@@ -35,9 +35,11 @@ public:
 	
 	CDebugInterfaceNes *debugInterface;
 
-	float fontSize;	
-	
+	float fontSize;
+	bool hasManualFontSize;
+
 	virtual void SetPosition(float posX, float posY, float posZ, float sizeX, float sizeY);
+	virtual void LayoutParameterChanged(CLayoutParameter *layoutParameter);
 	virtual void SetVisible(bool isVisible);
 	virtual void Render();
 	virtual void RenderImGui();

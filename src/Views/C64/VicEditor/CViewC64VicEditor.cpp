@@ -33,7 +33,10 @@
 #include "CVicEditorLayerC64Sprites.h"
 #include "CVicEditorLayerVirtualSprites.h"
 #include "CVicEditorLayerUnrestrictedBitmap.h"
+#include "CVicEditorLayerIoAccess.h"
+#include "CVicEditorLayerMemoryAccess.h"
 #include "CVicEditorLayerImage.h"
+#include "CDebugInterfaceVice.h"
 
 extern "C" {
 	extern void c64_glue_set_vbank(int vbank, int ddr_flag);
@@ -68,7 +71,7 @@ CViewC64VicEditor::CViewC64VicEditor(const char *name, float posX, float posY, f
 	imGuiNoWindowPadding = true;
 	imGuiNoScrollbar = true;
 	
-	font = viewC64->fontCBMShifted;
+	font = viewC64->fontDefaultCBMShifted;
 	fontScale = 5.0f;//1.5;
 	fontHeight = font->GetCharHeight('@', fontScale) + 2;
 	
@@ -116,8 +119,36 @@ CViewC64VicEditor::CViewC64VicEditor(const char *name, float posX, float posY, f
 	
 	layerUnrestrictedBitmap = new CVicEditorLayerUnrestrictedBitmap(this, "Unrestricted");
 	layers.push_back(layerUnrestrictedBitmap);
-	
+
+	layerIoAccess = new CVicEditorLayerIoAccess(this);
+	layers.push_back(layerIoAccess);
+
+	layerMemoryAccess = new CVicEditorLayerMemoryAccess(this);
+	layers.push_back(layerMemoryAccess);
+
+	LoadLayerVisibilityFromConfig();
+	layerIoAccess->LoadColorsFromConfig();
+	layerMemoryAccess->LoadFromConfig();
+
+	viewC64->config->GetBool("VicEditorShowBadLines", &viewVicDisplay->showBadLines, false);
+
+	// Restore selected layer from config
 	this->selectedLayer = NULL;
+	char savedLayerName[128];
+	viewC64->config->GetString("VicEditorSelectedLayer", savedLayerName, sizeof(savedLayerName), "");
+	if (savedLayerName[0] != '\0')
+	{
+		for (auto it = layers.begin(); it != layers.end(); it++)
+		{
+			CVicEditorLayer *layer = *it;
+			if (strcmp(layer->layerName, savedLayerName) == 0)
+			{
+				this->selectedLayer = layer;
+				layer->LayerSelected(true);
+				break;
+			}
+		}
+	}
 	
 	//
 	importFileExtensions.push_back(new CSlrString("vce"));
@@ -276,6 +307,28 @@ CViewC64VicEditor::~CViewC64VicEditor()
 {
 }
 
+void CViewC64VicEditor::LoadLayerVisibilityFromConfig()
+{
+	char key[128];
+	for (auto it = layers.begin(); it != layers.end(); it++)
+	{
+		CVicEditorLayer *layer = *it;
+		snprintf(key, sizeof(key), "VicEditorLayer.%s.Visible", layer->layerName);
+		viewC64->config->GetBool(key, &layer->isVisible, layer->isVisible);
+	}
+}
+
+void CViewC64VicEditor::SaveLayerVisibilityToConfig()
+{
+	char key[128];
+	for (auto it = layers.begin(); it != layers.end(); it++)
+	{
+		CVicEditorLayer *layer = *it;
+		snprintf(key, sizeof(key), "VicEditorLayer.%s.Visible", layer->layerName);
+		viewC64->config->SetBool(key, &layer->isVisible);
+	}
+}
+
 void CViewC64VicEditor::SetHelperViews(CViewC64VicControl *viewVicControl, CViewC64VicEditorLayers *viewLayers, CViewC64Charset *viewCharset, CViewC64Palette *viewPalette, CViewC64Sprite *viewSprite)
 {
 	this->viewVicControl = viewVicControl;
@@ -398,13 +451,79 @@ void CViewC64VicEditor::Render()
 		
 		layer->RenderGridMain(viciiState);
 	}
-	
-	
+
+	if (viewVicDisplay->showBadLines)
+	{
+		viewVicDisplay->RenderBadLines();
+	}
+
 	if (viewC64->isShowingRasterCross)
 	{
-		// now we have 2 different vic displays, render cursor based on original vic display
-		viewVicDisplay->RenderCursor(viewC64->viewC64VicDisplay->rasterCursorPosX,
-										 viewC64->viewC64VicDisplay->rasterCursorPosY);
+		// Render raster cross with bounds matching the Vice border mode,
+		// not limited to the display's showDisplayBorderType
+		int rasterX = viewC64->c64RasterPosToShowX;
+		int rasterY = viewC64->c64RasterPosToShowY;
+
+		CDebugInterfaceVice *debugInterfaceVice = (CDebugInterfaceVice*)debugInterface;
+		int borderMode = debugInterfaceVice->GetViciiBorderMode();
+
+		int minX, maxX, minY, maxY;
+		if (borderMode == 2) // DEBUG_BORDERS: full frame 504x312
+		{
+			minX = 0x000; maxX = 0x1F8; minY = 0x000; maxY = 0x138;
+		}
+		else if (borderMode == 1) // FULL_BORDERS: 408x293 at (88,8)
+		{
+			minX = 0x058; maxX = 0x1F0; minY = 0x008; maxY = 0x12D;
+		}
+		else if (borderMode == 3) // NO_BORDERS: 320x200 at (136,51)
+		{
+			minX = 0x088; maxX = 0x1C8; minY = 0x033; maxY = 0x0FB;
+		}
+		else // NORMAL_BORDERS: 384x272 at (104,16)
+		{
+			minX = 0x068; maxX = 0x1E8; minY = 0x010; maxY = 0x120;
+		}
+
+		if (rasterX >= minX && rasterX < maxX && rasterY >= minY && rasterY < maxY)
+		{
+			// Convert full-frame coords to interior-relative coords
+			int rx = rasterX - 0x88;
+			int ry = rasterY - 0x33;
+
+			// Compute cursor line extent matching the rendered content area for current border mode
+			float lpx, lpy, lsx, lsy;
+			if (borderMode == 2) // DEBUG_BORDERS
+			{
+				lpx = viewVicDisplay->visibleScreenPosX + (-104)*viewVicDisplay->rasterScaleFactorX;
+				lpy = viewVicDisplay->visibleScreenPosY + (-16)*viewVicDisplay->rasterScaleFactorY;
+				lsx = viewVicDisplay->visibleScreenSizeX * (504.0f/384.0f);
+				lsy = viewVicDisplay->visibleScreenSizeY * (312.0f/272.0f);
+			}
+			else if (borderMode == 1) // FULL_BORDERS
+			{
+				lpx = viewVicDisplay->visibleScreenPosX + (-16)*viewVicDisplay->rasterScaleFactorX;
+				lpy = viewVicDisplay->visibleScreenPosY + (8-16)*viewVicDisplay->rasterScaleFactorY;
+				lsx = viewVicDisplay->visibleScreenSizeX * (408.0f/384.0f);
+				lsy = viewVicDisplay->visibleScreenSizeY * (293.0f/272.0f);
+			}
+			else if (borderMode == 3) // NO_BORDERS
+			{
+				lpx = viewVicDisplay->visibleScreenPosX + 32*viewVicDisplay->rasterScaleFactorX;
+				lpy = viewVicDisplay->visibleScreenPosY + (51-16)*viewVicDisplay->rasterScaleFactorY;
+				lsx = viewVicDisplay->visibleScreenSizeX * (320.0f/384.0f);
+				lsy = viewVicDisplay->visibleScreenSizeY * (200.0f/272.0f);
+			}
+			else // NORMAL_BORDERS
+			{
+				lpx = viewVicDisplay->visibleScreenPosX;
+				lpy = viewVicDisplay->visibleScreenPosY;
+				lsx = viewVicDisplay->visibleScreenSizeX;
+				lsy = viewVicDisplay->visibleScreenSizeY;
+			}
+
+			viewVicDisplay->RenderRasterCursor(rx, ry, lpx, lpy, lsx, lsy);
+		}
 	}
 	
 	//
@@ -438,36 +557,67 @@ void CViewC64VicEditor::UpdateDisplayRasterPos()
 	
 	if (!viewC64->viewC64VicDisplay->isCursorLocked)
 	{
-		if ( (guiMain->FindTopWindow(mouseX, mouseY) == this))
+		// Compute rendered area bounds based on Vice border mode
+		// (layers extend beyond fullScanScreen when Vice uses wider borders)
+		float renderPosX, renderPosY, renderEndX, renderEndY;
 		{
-			LOGG("CViewC64VicEditor::UpdateDisplayRasterPos: IsInsideView(%3.2f, %3.2f)=%s", mouseX, mouseY, STRBOOL(IsInsideView(mouseX, mouseY)));
-			
-			if (viewVicDisplay)
+			CDebugInterfaceVice *div = (CDebugInterfaceVice*)debugInterface;
+			int borderMode = div->GetViciiBorderMode();
+			float vspX = viewVicDisplay->visibleScreenPosX;
+			float vspY = viewVicDisplay->visibleScreenPosY;
+			float vssX = viewVicDisplay->visibleScreenSizeX;
+			float vssY = viewVicDisplay->visibleScreenSizeY;
+			float rsfX = viewVicDisplay->rasterScaleFactorX;
+			float rsfY = viewVicDisplay->rasterScaleFactorY;
+
+			if (borderMode == 2) // DEBUG_BORDERS
 			{
-				LOGG("CViewC64VicEditor::UpdateDisplayRasterPos: IsInsideScreen(%3.2f, %3.2f)=%s", mouseX, mouseY, STRBOOL(viewVicDisplay->IsInsideScreen(mouseX, mouseY)));
+				renderPosX = vspX + (-104) * rsfX;
+				renderPosY = vspY + (-16) * rsfY;
+				renderEndX = renderPosX + vssX * (504.0f / 384.0f);
+				renderEndY = renderPosY + vssY * (312.0f / 272.0f);
+			}
+			else if (borderMode == 1) // FULL_BORDERS
+			{
+				renderPosX = vspX + (-16) * rsfX;
+				renderPosY = vspY + (8 - 16) * rsfY;
+				renderEndX = renderPosX + vssX * (408.0f / 384.0f);
+				renderEndY = renderPosY + vssY * (293.0f / 272.0f);
+			}
+			else if (borderMode == 3) // NO_BORDERS
+			{
+				renderPosX = vspX + 32 * rsfX;
+				renderPosY = vspY + (51 - 16) * rsfY;
+				renderEndX = renderPosX + vssX * (320.0f / 384.0f);
+				renderEndY = renderPosY + vssY * (200.0f / 272.0f);
+			}
+			else // NORMAL_BORDERS
+			{
+				renderPosX = vspX;
+				renderPosY = vspY;
+				renderEndX = vspX + vssX;
+				renderEndY = vspY + vssY;
 			}
 		}
 
+		bool isInsideRenderedScreen = (mouseX >= renderPosX && mouseX <= renderEndX
+									   && mouseY >= renderPosY && mouseY <= renderEndY);
+
 		if ( (guiMain->FindTopWindow(mouseX, mouseY) == this)
 			&& IsInsideView(mouseX, mouseY)
-			&& viewVicDisplay->IsInsideScreen(mouseX, mouseY))
+			&& isInsideRenderedScreen)
 		{
+			// Use absolute raster coords (without scroll) so the cursor always
+			// tracks the mouse position regardless of scroll register changes
 			float rasterX, rasterY;
-			viewVicDisplay->GetRasterPosFromScreenPos(mouseX, mouseY, &rasterX, &rasterY);
-			
-			//viewVicDisplaySmall->rasterCursorPosX = rasterX;
-			//viewVicDisplaySmall->rasterCursorPosY = rasterY;
-			
+			viewVicDisplay->GetRasterPosFromScreenPosWithoutScroll(mouseX, mouseY, &rasterX, &rasterY);
+
 			viewVicDisplay->rasterCursorPosX = rasterX;
 			viewVicDisplay->rasterCursorPosY = rasterY;
 			viewC64->viewC64VicDisplay->rasterCursorPosX = rasterX;
 			viewC64->viewC64VicDisplay->rasterCursorPosY = rasterY;
-			
-//			LOGD("====]  CViewC64VicEditor::UpdateDisplayRasterPos: %f %f ($%02x $%02x", rasterX, rasterY);
-			
-			// update just the VIC state for main C64View screen to correctly render C64 Sprites
-			vicii_cycle_state_t *displayVicState = viewC64->viewC64VicDisplay->UpdateViciiStateNonVisible(viewC64->viewC64VicDisplay->rasterCursorPosX,
-																	   viewC64->viewC64VicDisplay->rasterCursorPosY);
+
+			vicii_cycle_state_t *displayVicState = viewC64->viewC64VicDisplay->UpdateViciiStateNonVisible(rasterX, rasterY);
 
 			viewC64->viewC64VicDisplay->UpdateAutoscrollDisassembly(false);
 //			LOGD("update %f %f", rasterX, rasterY);			
@@ -1408,13 +1558,14 @@ void CViewC64VicEditor::CheckDisplayBoundaries(float *px, float *py)
 		borderX = 0x21 * viewVicDisplay->rasterScaleFactorX;
 	}
 
-	LOGD("CheckDisplayBoundaries: px=%f py=%f posX=%f posY=%f displayX=%f displayY=%f",
-		 *px, *py, posX, posY, viewVicDisplay->posX, viewVicDisplay->posY);
+//	LOGD("CheckDisplayBoundaries: px=%f py=%f posX=%f posY=%f displayX=%f displayY=%f",
+//		 *px, *py, posX, posY, viewVicDisplay->posX, viewVicDisplay->posY);
 	
-//	// sanity check
-//	if (*px < posX || *py + viewVicDisplay->sizeY < posY || *px > posX+sizeX || *py > posY+sizeY)
-	if (*px < -10000 || *py < -10000 || *px > 10000 || *py > 10000)
+//	// sanity check: only guard against NaN/Inf, not against large coordinates
+//	// (large coordinates are normal at high zoom with anchor far from display origin)
+	if (isnan(*px) || isnan(*py) || isinf(*px) || isinf(*py))
 	{
+		LOGD("CheckDisplayBoundaries: CLAMPING NaN/Inf px=%f py=%f to (0,0)", *px, *py);
 		*px = 0;
 		*py = 0;
 	}
@@ -1472,7 +1623,7 @@ void CViewC64VicEditor::ZoomDisplay(float newScale, float anchorX, float anchorY
 		
 	float cx = anchorX;
 	float cy = anchorY;
-	
+
 //	if (viewVicDisplaySmall->IsInsideView(cx, cy))
 //	{
 //		viewVicDisplay->SetDisplayScale(newScale);
@@ -1483,16 +1634,20 @@ void CViewC64VicEditor::ZoomDisplay(float newScale, float anchorX, float anchorY
 	{
 		float px, py;
 		viewVicDisplay->GetRasterPosFromScreenPosWithoutScroll(cx, cy, &px, &py);
-		
+
 		viewVicDisplay->SetDisplayScale(newScale);
-		
+
 		float pcx, pcy;
 		viewVicDisplay->GetScreenPosFromRasterPosWithoutScroll(px, py, &pcx, &pcy);
-		
-		MoveDisplayDiff(cx-pcx-viewVicDisplay->posOffsetX, cy-pcy-viewVicDisplay->posOffsetY);
+
+		float diffX = cx-pcx-viewVicDisplay->posOffsetX;
+		float diffY = cy-pcy-viewVicDisplay->posOffsetY;
+
+		MoveDisplayDiff(diffX, diffY);
 	}
-	
+
 	UpdateDisplayFrame();
+
 	viewVicDisplay->UpdateGridLinesVisibleOnCurrentZoom();
 
 	guiMain->UnlockMutex();
@@ -1506,14 +1661,16 @@ void CViewC64VicEditor::SelectLayer(CVicEditorLayer *layer)
 	{
 		this->selectedLayer->LayerSelected(false);
 	}
-	
+
 	this->selectedLayer = layer;
-	
+
 	if (this->selectedLayer != NULL)
 	{
 		this->selectedLayer->LayerSelected(true);
 	}
-	
+
+	viewC64->config->SetString("VicEditorSelectedLayer", layer ? layer->layerName : "");
+
 	UnlockMutex();
 }
 
@@ -4218,7 +4375,20 @@ void CViewC64VicEditor::RenderContextMenuItems()
 	{
 		SetSpritesFramesVisible(showSpritesFrames);
 	}
-	
+
+	bool showRasterBeam = viewC64->isShowingRasterCross;
+	if (ImGui::MenuItem("Show raster beam", viewC64->mainMenuBar->kbsShowRasterBeam->cstr, &showRasterBeam))
+	{
+		viewC64->SwitchIsShowRasterBeam();
+	}
+
+	bool showBadLines = viewVicDisplay->showBadLines;
+	if (ImGui::MenuItem("Show badlines", NULL, &showBadLines))
+	{
+		viewVicDisplay->showBadLines = showBadLines;
+		viewC64->config->SetBool("VicEditorShowBadLines", &viewVicDisplay->showBadLines);
+	}
+
 	if (ImGui::BeginMenu("Image grid"))
 	{
 		if (ImGui::MenuItem("Show grid lines", kbsVicEditorShowGrid->cstr, &viewVicDisplay->showGridLines))

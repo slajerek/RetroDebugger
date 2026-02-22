@@ -37,6 +37,7 @@ public:
 	virtual ~CViewDrive1541Browser();
 
 	virtual void SetPosition(float posX, float posY, float posZ, float sizeX, float sizeY);
+	virtual void LayoutParameterChanged(CLayoutParameter *layoutParameter);
 
 	virtual void Render();
 	virtual void Render(float posX, float posY);
@@ -79,6 +80,7 @@ public:
 	CSlrFont *font;
 	float fontScale;
 	float fontHeight;
+	bool hasManualFontScale;
 	float tr;
 	float tg;
 	float tb;
@@ -139,13 +141,14 @@ public:
 class CViewDrive1541FileD64EntryItem : public CViewC64MenuItem
 {
 public:
-	CViewDrive1541FileD64EntryItem(float height, CSlrString *str, float r, float g, float b);
+	CViewDrive1541FileD64EntryItem(float height, CSlrString *str, float r, float g, float b, CViewDrive1541Browser *browser);
 	~CViewDrive1541FileD64EntryItem();
-	
+
 	virtual void RenderItem(float px, float py, float pz);
-	
+
+	CViewDrive1541Browser *browser;
 	bool canSelect;
-	
+
 	DiskImageFileEntry *fileEntry;
 };
 

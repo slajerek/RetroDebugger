@@ -1260,6 +1260,154 @@ BYTE c64d_peek_c64(WORD addr)
 	return mem_ram[addr];
 }
 
+BYTE c64d_peek_c64_for_cycle(WORD addr, BYTE memory0001, BYTE exrom_state, BYTE game_state)
+{
+	int addrHi;
+	int exrom;
+	int game;
+	BYTE basic_in;
+	BYTE kernal_in;
+	BYTE char_in;
+	BYTE io_in;
+	BYTE mem01;
+	BYTE ret;
+
+	if (addr == 0x0000 || addr == 0x0001)
+	{
+		return mem_ram[addr];
+	}
+
+	addrHi = addr >> 0x0c;
+
+	// exrom & game are inverted as in c64d_peek_c64
+	exrom = !exrom_state;
+	game = !game_state;
+
+	mem01 = memory0001 & 0x07;
+
+	basic_in = (memory0001 & 0x03) == 0x03;
+	kernal_in = memory0001 & 2;
+	char_in = (memory0001 & 3) && ~(memory0001 & 4);
+	io_in = (memory0001 & 3) && (memory0001 & 4);
+
+	switch (addrHi)
+	{
+		case 0x00:
+			return mem_ram[addr];
+		case 0x01:
+		case 0x02:
+		case 0x03:
+		case 0x04:
+		case 0x05:
+		case 0x06:
+		case 0x07:
+			if (exrom == 1 && game == 0)
+			{
+				generic_peek_mem((struct export_s*)&export, addr, &ret);
+				return ret;
+			}
+			else
+			{
+				return mem_ram[addr];
+			}
+		case 0x08:
+		case 0x09:
+			if (exrom == 1 && game == 0)
+			{
+				generic_peek_mem((struct export_s*)&export, addr, &ret);
+				return ret;
+			}
+			else if (exrom == 0)
+			{
+				if ((mem01 & 0x02) && (mem01 & 0x01))
+				{
+					generic_peek_mem((struct export_s*)&export, addr, &ret);
+					return ret;
+				}
+				else
+				{
+					return mem_ram[addr];
+				}
+			}
+			else
+			{
+				return mem_ram[addr];
+			}
+		case 0x0a:
+		case 0x0b:
+			if (exrom == 1 && game == 0)
+			{
+				generic_peek_mem((struct export_s*)&export, addr, &ret);
+				return ret;
+			}
+			else if (game == 1)
+			{
+				if (basic_in)
+				{
+					return c64memrom_basic64_rom[addr & 0x1fff];
+				}
+				else
+				{
+					return mem_ram[addr];
+				}
+			}
+			else
+			{
+				if (basic_in)
+				{
+					generic_peek_mem((struct export_s*)&export, addr, &ret);
+					return ret;
+				}
+				else
+				{
+					return mem_ram[addr];
+				}
+			}
+		case 0x0c:
+			if (exrom == 1 && game == 0)
+			{
+				generic_peek_mem((struct export_s*)&export, addr, &ret);
+				return ret;
+			}
+			else
+			{
+				return mem_ram[addr];
+			}
+		case 0x0d:
+			{
+				if (io_in)
+				{
+					return c64d_peek_io(addr);
+				}
+				else if (char_in)
+				{
+					return mem_chargen_rom[addr & 0x0fff];
+				}
+				else
+				{
+					return mem_ram[addr];
+				}
+			}
+		case 0x0e:
+		case 0x0f:
+			if (exrom == 1 && game == 0)
+			{
+				generic_peek_mem((struct export_s*)&export, addr, &ret);
+				return ret;
+			}
+			else if (kernal_in)
+			{
+				return c64memrom_kernal64_rom[addr & 0x1fff];
+			}
+			else
+			{
+				return mem_ram[addr];
+			}
+	}
+
+	return mem_ram[addr];
+}
+
 void c64d_peek_memory_c64(BYTE *buffer, int addrStart, int addrEnd)
 {
 	int addr;

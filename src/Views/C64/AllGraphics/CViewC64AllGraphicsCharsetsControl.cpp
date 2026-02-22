@@ -14,6 +14,7 @@
 #include "CSlrString.h"
 #include "CViewC64StateVIC.h"
 #include "CViewC64.h"
+#include "CLayoutParameter.h"
 
 // TODO: colour leds are just rectangles with hitbox and lot of copy pasted code, replace them to proper buttons!
 
@@ -31,10 +32,12 @@ CViewC64AllGraphicsCharsetsControl::CViewC64AllGraphicsCharsetsControl(const cha
 	forcedRenderScreenMode = VIEW_C64_ALL_GRAPHICS_FORCED_NONE;
 
 	//
-	font = viewC64->fontCBMShifted;
+	font = viewC64->fontDefaultCBMShifted;
 	fontScale = 1.5f;
 	fontHeight = font->GetCharHeight('@', fontScale) + 2;
 	fontSize = fontHeight;
+	hasManualFontScale = false;
+	AddLayoutParameter(new CLayoutParameterFloat("Font Scale", &fontScale));
 
 	float startX = 5;
 	float startY = 5;
@@ -132,6 +135,112 @@ CViewC64AllGraphicsCharsetsControl::~CViewC64AllGraphicsCharsetsControl()
 {
 }
 
+void CViewC64AllGraphicsCharsetsControl::SetPosition(float posX, float posY, float posZ, float sizeX, float sizeY)
+{
+	bool widthChanged = (fabs(sizeX - this->sizeX) > 0.5f);
+
+	if (hasManualFontScale && !widthChanged)
+	{
+		// Width unchanged: keep manually set font scale
+	}
+	else
+	{
+		// Width-only autoscale: content extends to ~24.2 * fontSize
+		float targetFontSize = sizeX / 24.2f;
+		float baseCharHeight = font->GetCharHeight('@', 1.0f);
+		fontScale = (targetFontSize - 2.0f) / baseCharHeight;
+		if (fontScale < 0.5f) fontScale = 0.5f;
+
+		if (widthChanged)
+			hasManualFontScale = false;
+	}
+
+	fontHeight = font->GetCharHeight('@', fontScale) + 2;
+	fontSize = fontHeight;
+
+	CGuiView::SetPosition(posX, posY, posZ, sizeX, sizeY);
+	RepositionButtons();
+}
+
+void CViewC64AllGraphicsCharsetsControl::LayoutParameterChanged(CLayoutParameter *layoutParameter)
+{
+	if (layoutParameter != NULL)
+	{
+		hasManualFontScale = true;
+	}
+	else
+	{
+		float targetFontSize = sizeX / 24.2f;
+		float baseCharHeight = font->GetCharHeight('@', 1.0f);
+		float autoFontScale = (targetFontSize - 2.0f) / baseCharHeight;
+
+		if (fabs(fontScale - autoFontScale) > 0.01f)
+		{
+			hasManualFontScale = true;
+		}
+	}
+
+	fontHeight = font->GetCharHeight('@', fontScale) + 2;
+	fontSize = fontHeight;
+
+	RepositionButtons();
+
+	CGuiView::LayoutParameterChanged(layoutParameter);
+}
+
+void CViewC64AllGraphicsCharsetsControl::RepositionButtons()
+{
+	float startX = posX + fontSize * 0.33f;
+	float startY = posY + fontSize * 0.33f;
+
+	float px = startX;
+	float py = startY;
+	float buttonSizeX = 5.96f * fontSize;
+	float buttonSizeY = 2.0f * fontSize;
+	float gap = fontSize * 0.33f;
+
+	// For UTF buttons, textDrawPosX/Y are the direct draw offsets
+	float textHeight = font->GetCharHeight('@', fontScale);
+	float textDrawOffsetX = buttonSizeX / 2.0f;
+	float textDrawOffsetY = (buttonSizeY - textHeight) / 2.0f;
+
+	// Row 1: B/W, HIRES, MULTI
+	btnModeBitmapColorsBlackWhite->SetPosition(px, py, posZ, buttonSizeX, buttonSizeY);
+	btnModeBitmapColorsBlackWhite->fontScale = fontScale;
+	btnModeBitmapColorsBlackWhite->textDrawPosX = textDrawOffsetX;
+	btnModeBitmapColorsBlackWhite->textDrawPosY = textDrawOffsetY;
+
+	px += buttonSizeX + gap;
+
+	btnModeHires->SetPosition(px, py, posZ, buttonSizeX, buttonSizeY);
+	btnModeHires->fontScale = fontScale;
+	btnModeHires->textDrawPosX = textDrawOffsetX;
+	btnModeHires->textDrawPosY = textDrawOffsetY;
+
+	px += buttonSizeX + gap;
+
+	btnModeMulti->SetPosition(px, py, posZ, buttonSizeX, buttonSizeY);
+	btnModeMulti->fontScale = fontScale;
+	btnModeMulti->textDrawPosX = textDrawOffsetX;
+	btnModeMulti->textDrawPosY = textDrawOffsetY;
+
+	// Row 2: ROM, GRID
+	px = startX;
+	py += buttonSizeY + gap;
+
+	btnShowRAMorIO->SetPosition(px, py, posZ, buttonSizeX, buttonSizeY);
+	btnShowRAMorIO->fontScale = fontScale;
+	btnShowRAMorIO->textDrawPosX = textDrawOffsetX;
+	btnShowRAMorIO->textDrawPosY = textDrawOffsetY;
+
+	px += buttonSizeX + gap;
+
+	btnShowGrid->SetPosition(px, py, posZ, buttonSizeX, buttonSizeY);
+	btnShowGrid->fontScale = fontScale;
+	btnShowGrid->textDrawPosX = textDrawOffsetX;
+	btnShowGrid->textDrawPosY = textDrawOffsetY;
+}
+
 void CViewC64AllGraphicsCharsetsControl::SetSwitchButtonDefaultColors(CGuiButtonSwitch *btn)
 {
 	btn->buttonSwitchOffColorR = 0.0f;
@@ -188,19 +297,6 @@ void CViewC64AllGraphicsCharsetsControl::SetupMode()
 	btnModeHires->SetVisible(true);
 	btnModeMulti->SetVisible(true);
 
-	switch(forcedRenderScreenMode)
-	{
-		case VIEW_C64_ALL_GRAPHICS_FORCED_GRAY:
-			viewC64->viewC64MemoryDataDump->renderDataWithColors = false;
-			break;
-		case VIEW_C64_ALL_GRAPHICS_FORCED_HIRES:
-			viewC64->viewC64MemoryDataDump->renderDataWithColors = false;
-			break;
-		case VIEW_C64_ALL_GRAPHICS_FORCED_MULTI:
-			viewC64->viewC64MemoryDataDump->renderDataWithColors = true;
-			break;
-	}
-
 	guiMain->UnlockMutex();
 }
 
@@ -216,10 +312,67 @@ void CViewC64AllGraphicsCharsetsControl::RenderImGui()
 	PostRenderImGui();
 }
 
+void CViewC64AllGraphicsCharsetsControl::PostRenderImGui()
+{
+	if (imGuiNoWindowPadding)
+		ImGui::PopStyleVar();
+
+	if (isShowingContextMenu || HasContextMenuItems() || numNotHiddenLayoutParameters > 0)
+	{
+		bool onInteractiveElement = false;
+
+		if (!isShowingContextMenu)
+		{
+			ImVec2 mousePos = ImGui::GetMousePos();
+			float mx = mousePos.x;
+			float my = mousePos.y;
+
+			onInteractiveElement = btnModeBitmapColorsBlackWhite->IsInside(mx, my)
+				|| btnModeHires->IsInside(mx, my)
+				|| btnModeMulti->IsInside(mx, my)
+				|| btnShowRAMorIO->IsInside(mx, my)
+				|| btnShowGrid->IsInside(mx, my);
+
+			// Check LED area (visible when MULTI is on)
+			if (!onInteractiveElement && btnModeMulti->IsOn())
+			{
+				float ledX = posX + fontSize * 19.7f;
+				float ledY = posY + fontSize * 0.5f;
+				float ledSizeX = fontSize * 4.0f;
+				float step = fontSize * 0.75f;
+				float ledEndY = ledY + 4.0f * (fontSize + step);
+
+				if (mx >= ledX && mx <= ledX + ledSizeX && my >= ledY && my <= ledEndY)
+					onInteractiveElement = true;
+			}
+		}
+
+		if (!onInteractiveElement)
+		{
+			if (ImGui::BeginPopupContextWindow("CGuiViewContextMenu"))
+			{
+				RenderContextMenuItems();
+				RenderContextMenuLayoutParameters(false);
+				ImGui::EndPopup();
+			}
+			else
+			{
+				isShowingContextMenu = false;
+			}
+		}
+	}
+
+	ImGui::End();
+
+	bool isFullScreen = (guiMain->viewFullScreen != NULL);
+	if (isFullScreen)
+		ImGui::PopStyleVar(2);
+}
+
 void CViewC64AllGraphicsCharsetsControl::Render()
 {
-	float ledX = posX + fontSize * 20.1725f;
-	float ledY = posY + 6.0f;
+	float ledX = posX + fontSize * 19.7f;
+	float ledY = posY + fontSize * 0.5f;
 
 	float ledSizeX = fontSize*4.0f;
 	float gap = fontSize * 0.1f;
@@ -281,8 +434,8 @@ bool CViewC64AllGraphicsCharsetsControl::DoTap(float x, float y)
 	//       idea is to sync values with VIC state view. Leds should be replaced with proper buttons and callbacks.
 	//		 the below is just a temporary POC made in a few minutes
 
-	float ledX = posX + fontSize * 20.1725f;
-	float ledY = posY + 6.0f;
+	float ledX = posX + fontSize * 19.7f;
+	float ledY = posY + fontSize * 0.5f;
 
 	float ledSizeX = fontSize*4.0f;
 	float gap = fontSize * 0.1f;
@@ -345,8 +498,8 @@ bool CViewC64AllGraphicsCharsetsControl::DoRightClick(float x, float y)
 	//       idea is to sync values with VIC state view. Leds should be replaced with proper buttons and callbacks.
 	//		 the below is just a temporary POC made in few minutes
 
-	float ledX = posX + fontSize * 20.1725f;
-	float ledY = posY + 6.0f;
+	float ledX = posX + fontSize * 19.7f;
+	float ledY = posY + fontSize * 0.5f;
 
 	float ledSizeX = fontSize*4.0f;
 	float gap = fontSize * 0.1f;
@@ -392,8 +545,18 @@ bool CViewC64AllGraphicsCharsetsControl::DoRightClick(float x, float y)
 		}
 	}
 	guiMain->UnlockMutex();
-	
-	return CGuiView::CGuiElement::DoRightClick(x, y);
+
+	// consume right-click on buttons to prevent context menu
+	if (btnModeBitmapColorsBlackWhite->IsInside(x, y)
+		|| btnModeHires->IsInside(x, y)
+		|| btnModeMulti->IsInside(x, y)
+		|| btnShowRAMorIO->IsInside(x, y)
+		|| btnShowGrid->IsInside(x, y))
+	{
+		return true;
+	}
+
+	return false;
 }
 
 bool CViewC64AllGraphicsCharsetsControl::ButtonClicked(CGuiButton *button)
@@ -407,7 +570,6 @@ bool CViewC64AllGraphicsCharsetsControl::ButtonPressed(CGuiButton *button)
 	
 	if (button == btnModeBitmapColorsBlackWhite)
 	{
-		viewC64->viewC64MemoryDataDump->renderDataWithColors = false;
 		if (forcedRenderScreenMode != VIEW_C64_ALL_GRAPHICS_FORCED_GRAY)
 		{
 			btnModeMulti->SetOn(false);
@@ -424,21 +586,6 @@ bool CViewC64AllGraphicsCharsetsControl::ButtonPressed(CGuiButton *button)
 	}
 	else if (button == btnModeHires)
 	{
-		// is it already set?
-		if (forcedRenderScreenMode == VIEW_C64_ALL_GRAPHICS_FORCED_HIRES)
-		{
-			// switch to multi
-			viewC64->viewC64MemoryDataDump->renderDataWithColors = true;
-
-			btnModeBitmapColorsBlackWhite->SetOn(false);
-			btnModeHires->SetOn(false);
-			btnModeMulti->SetOn(true);
-			forcedRenderScreenMode = VIEW_C64_ALL_GRAPHICS_FORCED_MULTI;
-			SetLockableButtonDefaultColors(btnModeMulti);
-			return true;
-		}
-
-		viewC64->viewC64MemoryDataDump->renderDataWithColors = false;
 		if (forcedRenderScreenMode != VIEW_C64_ALL_GRAPHICS_FORCED_HIRES)
 		{
 			btnModeBitmapColorsBlackWhite->SetOn(false);
@@ -455,20 +602,6 @@ bool CViewC64AllGraphicsCharsetsControl::ButtonPressed(CGuiButton *button)
 	}
 	else if (button == btnModeMulti)
 	{
-		if (forcedRenderScreenMode == VIEW_C64_ALL_GRAPHICS_FORCED_MULTI)
-		{
-			// switch to hires
-			viewC64->viewC64MemoryDataDump->renderDataWithColors = false;
-
-			btnModeBitmapColorsBlackWhite->SetOn(false);
-			btnModeMulti->SetOn(false);
-			btnModeHires->SetOn(true);
-			forcedRenderScreenMode = VIEW_C64_ALL_GRAPHICS_FORCED_HIRES;
-			SetLockableButtonDefaultColors(btnModeHires);
-			return true;
-		}
-
-		viewC64->viewC64MemoryDataDump->renderDataWithColors = true;
 		if (forcedRenderScreenMode != VIEW_C64_ALL_GRAPHICS_FORCED_MULTI)
 		{
 			btnModeBitmapColorsBlackWhite->SetOn(false);

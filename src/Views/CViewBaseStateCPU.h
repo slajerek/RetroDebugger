@@ -39,6 +39,8 @@ public:
 
 	CSlrFont *font;
 	float fontSize;
+	float numCharacterColumns;
+	bool hasManualFontSize;
 	void SetFont(CSlrFont *font, float fontSize);
 	
 	virtual void SetPosition(float posX, float posY);

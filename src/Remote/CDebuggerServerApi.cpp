@@ -310,7 +310,7 @@ void CDebuggerServerApi::RegisterEndpoints(CDebuggerServer *server)
 			{
 				memoryAccess = MEMORY_BREAKPOINT_ACCESS_WRITE;
 			}
-			else server->PrepareResult(HTTP_BAD_REQUEST, token, j, NULL, 0);
+			else return server->PrepareResult(HTTP_BAD_REQUEST, token, j, NULL, 0);
 		}
 		
 		DataBreakpointComparison comparison = DataBreakpointComparison::MEMORY_BREAKPOINT_EQUAL;

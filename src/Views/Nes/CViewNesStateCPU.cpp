@@ -21,7 +21,8 @@ CViewNesStateCPU::CViewNesStateCPU(const char *name, float posX, float posY, flo
 : CViewBaseStateCPU(name, posX, posY, posZ, sizeX, sizeY, debugInterface)
 {
 	this->numRegisters = 6;
-	
+	numCharacterColumns = 44.0f;
+
 	regs = (register_def*)&nes_cpu_regs;
 }
 

@@ -42,7 +42,7 @@ CViewSnapshots::CViewSnapshots(float posX, float posY, float posZ, float sizeX, 
 
 	prevView = viewC64;
 
-	font = viewC64->fontCBMShifted;
+	font = viewC64->fontDefaultCBMShifted;
 	fontScale = 3;
 	fontHeight = font->GetCharHeight('@', fontScale) + 2;
 

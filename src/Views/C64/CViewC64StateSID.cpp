@@ -66,7 +66,7 @@ CViewC64StateSID::CViewC64StateSID(const char *name, float posX, float posY, flo
 	showAllSidChips = true;
 	AddLayoutParameter(new CLayoutParameterBool("Show all SID chips", &showAllSidChips));
 
-	font = viewC64->fontCBMShifted;
+	font = viewC64->fontDefaultCBMShifted;
 	fontScale = 0.8;
 	fontHeight = font->GetCharHeight('@', fontScale) + 2;
 	

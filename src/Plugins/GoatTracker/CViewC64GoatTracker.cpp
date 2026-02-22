@@ -18,6 +18,7 @@
 #include "CViewDataMap.h"
 #include "CGuiMain.h"
 #include "CGuiEvent.h"
+#include "SYS_Funct.h"
 
 extern "C" {
 #include "bme_cfg.h"
@@ -38,18 +39,23 @@ CViewC64GoatTracker::CViewC64GoatTracker(float posX, float posY, float posZ, flo
 	
 	mutex = new CSlrMutex("CViewC64GoatTracker");
 	
-	font = viewC64->fontCBMShifted;
+	font = viewC64->fontDefaultCBMShifted;
 	fontScale = 1.5;
 	fontHeight = font->GetCharHeight('@', fontScale) + 2;
 	
-	// TODO: create CSlrImage(width, height, type) that allocs imagedata with raster^2 and does not delete it after binding so can be reused
-	imageDataScreen = new CImageData(MAX_COLUMNS*8, MAX_ROWS*16, IMG_TYPE_RGBA);
+	int rasterW = NextPow2(MAX_COLUMNS * 8);
+	int rasterH = NextPow2(MAX_ROWS * 16);
+	imageDataScreen = new CImageData(rasterW, rasterH, IMG_TYPE_RGBA);
 	imageDataScreen->AllocImage(false, true);
-		
+
+	screenTexEndX = (float)(MAX_COLUMNS * 8) / (float)rasterW;
+	screenTexEndY = (float)(MAX_ROWS * 16) / (float)rasterH;
+
 	imageScreen = new CSlrImage(true, false);
-	imageScreen->LoadImage(imageDataScreen, RESOURCE_PRIORITY_STATIC, false);
+	imageScreen->LoadImageForRebinding(imageDataScreen, RESOURCE_PRIORITY_STATIC);
 	imageScreen->resourceType = RESOURCE_TYPE_IMAGE_DYNAMIC;
-	VID_PostImageBinding(imageScreen, NULL);
+	imageScreen->resourceIsActive = true;
+	VID_PostImageBinding(imageScreen, NULL, BINDING_MODE_DONT_FREE_IMAGEDATA);
 }
 
 CViewC64GoatTracker::~CViewC64GoatTracker()
@@ -69,8 +75,8 @@ void CViewC64GoatTracker::RenderImGui()
 {
 //	LOGD("CViewC64GoatTracker::RenderImGui");
 	
-	float w = (float)imageDataScreen->width;
-	float h = (float)imageDataScreen->height;
+	float w = (float)(MAX_COLUMNS * 8);
+	float h = (float)(MAX_ROWS * 16);
 
 	this->imGuiWindowAspectRatio = w/h;
 	this->imGuiWindowKeepAspectRatio = true;
@@ -95,9 +101,8 @@ void CViewC64GoatTracker::RenderImGui()
 		 posX,
 		 posY, -1,
 		 sizeX,
-		 sizeY);
-	//, 0, 0, 1, 1); //,
-//		 0.0f, 0.0f, screenTexEndX, screenTexEndY);
+		 sizeY,
+		 0.0f, 0.0f, screenTexEndX, screenTexEndY);
 	
 	
 //	ImGui::Text("Test");
@@ -158,6 +163,34 @@ bool CViewC64GoatTracker::DoFinishDoubleTap(float x, float y)
 {
 	LOGG("CViewC64GoatTracker::DoFinishTap: %f %f", x, y);
 	return CGuiView::DoFinishDoubleTap(x, y);
+}
+
+bool CViewC64GoatTracker::DoRightClick(float x, float y)
+{
+	float xp = ((x - posX) / sizeX) * (float)(MAX_COLUMNS*8);
+	float yp = ((y - posY) / sizeY) * (float)(MAX_ROWS*16);
+
+	unsigned int xi = (unsigned int)xp;
+	unsigned int yi = (unsigned int)yp;
+
+	CGuiEventMouse *eventMouse = new CGuiEventMouse(GUI_EVENT_MOUSE_RIGHT_BUTTON_DOWN, xi, yi);
+	AddEvent(eventMouse);
+
+	return true;
+}
+
+bool CViewC64GoatTracker::DoFinishRightClick(float x, float y)
+{
+	float xp = ((x - posX) / sizeX) * (float)(MAX_COLUMNS*8);
+	float yp = ((y - posY) / sizeY) * (float)(MAX_ROWS*16);
+
+	unsigned int xi = (unsigned int)xp;
+	unsigned int yi = (unsigned int)yp;
+
+	CGuiEventMouse *eventMouse = new CGuiEventMouse(GUI_EVENT_MOUSE_RIGHT_BUTTON_UP, xi, yi);
+	AddEvent(eventMouse);
+
+	return true;
 }
 
 bool CViewC64GoatTracker::DoMove(float x, float y, float distX, float distY, float diffX, float diffY)
@@ -290,6 +323,17 @@ void CViewC64GoatTracker::ForwardEvents()
 			{
 				LOGD("GUI_EVENT_MOUSE_LEFT_BUTTON_UP");
 				win_mousebuttons &= ~MOUSEB_LEFT;
+			}
+			else if (eventMouse->mouseState == GUI_EVENT_MOUSE_RIGHT_BUTTON_DOWN)
+			{
+				LOGD("GUI_EVENT_MOUSE_RIGHT_BUTTON_DOWN");
+				win_mousebuttons |= MOUSEB_RIGHT;
+				break;
+			}
+			else if (eventMouse->mouseState == GUI_EVENT_MOUSE_RIGHT_BUTTON_UP)
+			{
+				LOGD("GUI_EVENT_MOUSE_RIGHT_BUTTON_UP");
+				win_mousebuttons &= ~MOUSEB_RIGHT;
 			}
 			
 			LOGD("eventMouse->x=%d eventMouse->y=%d win_mousexpos=%d win_mouseypos=%d",

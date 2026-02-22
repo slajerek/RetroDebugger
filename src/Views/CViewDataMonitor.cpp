@@ -154,7 +154,8 @@ void CViewDataMonitor::RenderImGui()
 
 	SameLine();
 	PushItemWidth(ImGui::GetFontSize() * 2.0);
-	if (InputScalar("##DataMonitorPrevValue", ImGuiDataType_::ImGuiDataType_U8, &filterPrevValue, NULL, NULL, "%02X", defaultHexInputFlags))
+	InputScalar("##DataMonitorPrevValue", ImGuiDataType_::ImGuiDataType_U8, &filterPrevValue, NULL, NULL, "%02X", defaultHexInputFlags);
+	if (IsItemDeactivatedAfterEdit())
 	{
 		viewC64->config->SetInt("CViewDataMonitorFilterPrevValue", &filterPrevValue);
 		filterShowOnlyWhenMatchesPrevValue = true;
@@ -169,7 +170,8 @@ void CViewDataMonitor::RenderImGui()
 
 	SameLine();
 	PushItemWidth(ImGui::GetFontSize() * 2.0);
-	if (InputScalar("##DataMonitorCurrentValue", ImGuiDataType_::ImGuiDataType_U8, &filterCurrentValue, NULL, NULL, "%02X", defaultHexInputFlags))
+	InputScalar("##DataMonitorCurrentValue", ImGuiDataType_::ImGuiDataType_U8, &filterCurrentValue, NULL, NULL, "%02X", defaultHexInputFlags);
+	if (IsItemDeactivatedAfterEdit())
 	{
 		viewC64->config->SetInt("CViewDataMonitorFilterCurrentValue", &filterCurrentValue);
 		filterShowOnlyWhenMatchesCurrentValue = true;

@@ -29,7 +29,8 @@ CViewC64StateCIA::CViewC64StateCIA(const char *name, float posX, float posY, flo
 
 	renderCIA1 = true;
 	renderCIA2 = true;
-	
+	hasManualFontSize = false;
+
 	SetFontSize(7.0f);
 	AddLayoutParameter(new CLayoutParameterFloat("Font Size", &fontSize));
 	
@@ -52,14 +53,55 @@ void CViewC64StateCIA::SetFontSize(float fontSize)
 
 void CViewC64StateCIA::SetPosition(float posX, float posY, float posZ, float sizeX, float sizeY)
 {
+	bool sizeChanged = (fabs(sizeX - this->sizeX) > 0.5f || fabs(sizeY - this->sizeY) > 0.5f);
+
+	if (hasManualFontSize && !sizeChanged)
+	{
+		// Size unchanged (startup/layout restore): keep manually set font size
+	}
+	else
+	{
+		// Auto-scale: size changed (user resize) or no manual font size
+		int numCIAs = (renderCIA1 ? 1 : 0) + (renderCIA2 ? 1 : 0);
+		if (numCIAs > 0)
+		{
+			oneCiaSizeX = sizeX / (float)numCIAs;
+			fontSize = fmin(oneCiaSizeX / 28.0f, sizeY / 12.0f);
+		}
+
+		if (sizeChanged)
+			hasManualFontSize = false;
+	}
+
 	CGuiView::SetPosition(posX, posY, posZ, sizeX, sizeY);
 }
 
 void CViewC64StateCIA::LayoutParameterChanged(CLayoutParameter *layoutParameter)
 {
+	if (layoutParameter != NULL)
+	{
+		// User manually changed font size via context menu
+		hasManualFontSize = true;
+		SetFontSize(fontSize);
+	}
+	else
+	{
+		// Layout restore: check if saved fontSize differs from auto-scaled value
+		int numCIAs = (renderCIA1 ? 1 : 0) + (renderCIA2 ? 1 : 0);
+		if (numCIAs > 0)
+		{
+			float autoOneCiaSizeX = sizeX / (float)numCIAs;
+			float autoFontSize = fmin(autoOneCiaSizeX / 28.0f, sizeY / 12.0f);
+
+			if (fabs(fontSize - autoFontSize) > 0.01f)
+			{
+				hasManualFontSize = true;
+			}
+		}
+		SetFontSize(fontSize);
+	}
+
 	CGuiView::LayoutParameterChanged(layoutParameter);
-	
-	SetFontSize(fontSize);
 }
 
 void CViewC64StateCIA::DoLogic()

@@ -43,7 +43,7 @@ CViewC64AllGraphicsSprites::CViewC64AllGraphicsSprites(const char *name, float p
 	this->spriteSizeYB = 21.0f * spriteScaleB;
 
 	//
-	font = viewC64->fontCBMShifted;
+	font = viewC64->fontDefaultCBMShifted;
 	fontScale = 0.8;
 	fontHeight = font->GetCharHeight('@', fontScale) + 2;
 	fontSize = fontHeight;
@@ -418,11 +418,39 @@ bool CViewC64AllGraphicsSprites::HasContextMenuItems()
 
 void CViewC64AllGraphicsSprites::RenderContextMenuItems()
 {
+	if (ImGui::MenuItem("Fit to window"))
+	{
+		ZoomToFit();
+	}
+
+	ImGui::Separator();
 	bool isVisible = viewC64->viewC64AllGraphicsSpritesControl->visible;
 	if (ImGui::MenuItem("All Sprites controller", NULL, &isVisible))
 	{
 		viewC64->viewC64AllGraphicsSpritesControl->SetVisible(isVisible);
 	}
+}
+
+void CViewC64AllGraphicsSprites::ZoomToFit()
+{
+	// 1024 sprites in 32 columns x 32 rows, each sprite is 24x21 pixels
+	float contentWidth = 32.0f * 24.0f;
+	float contentHeight = 32.0f * 21.0f;
+
+	float zoomX = sizeX / contentWidth;
+	float zoomY = sizeY / contentHeight;
+	currentZoom = fmin(zoomX, zoomY);
+
+	mapSizeX = currentZoom;
+	mapSizeY = currentZoom;
+
+	// Center the content
+	float renderedWidth = contentWidth * currentZoom;
+	float renderedHeight = contentHeight * currentZoom;
+	mapPosX = (sizeX - renderedWidth) / (2.0f * sizeX);
+	mapPosY = (sizeY - renderedHeight) / (2.0f * sizeY);
+
+	UpdatePositionAndZoom();
 }
 
 // bug: this event is not called when layout is set, and button state is updated on keyboard shortcut only

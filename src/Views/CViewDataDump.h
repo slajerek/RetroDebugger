@@ -13,6 +13,7 @@ class CSlrMutex;
 class CViewDataMap;
 class CDebugInterface;
 class CViewDisassembly;
+class CLayoutParameterCombo;
 class CDebugSymbols;
 class CDebugDataAdapter;
 class CDebugMemory;
@@ -95,11 +96,17 @@ public:
 	std::list<CSlrImage *> spritesImages;
 
 	int selectedCharset;
+	CSlrFont *fontDefaultCBM1;
+	CSlrFont *fontDefaultCBM2;
 	CSlrFont *fontCBM1;
 	CSlrFont *fontCBM2;
 	CSlrFont *fontAtari;
-	
+	bool hasCustomChargenRom;
+
 	CSlrFont *fonts[5];
+	const char *charsetComboItems[5];
+	CLayoutParameterCombo *charsetCombo;
+	void RebuildCharsetCombo();
 
 	// editing values
 	bool isEditingValue;

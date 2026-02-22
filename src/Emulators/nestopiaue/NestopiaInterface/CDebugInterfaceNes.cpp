@@ -88,7 +88,11 @@ CDebugInterfaceNes::CDebugInterfaceNes(CViewC64 *viewC64) //, uint8 *memory)
 	symbolsPpuNmt->CreateDefaultSegment();
 	
 	isDebugOn = true;
-	
+
+	nesd_main_cpu_stack_entry_types = mainCpuStack.entryTypes;
+	nesd_main_cpu_stack_irq_sources = mainCpuStack.irqSources;
+	nesd_main_cpu_stack_origin_pc   = mainCpuStack.originPC;
+
 	if (NestopiaUE_Initialize())
 	{
 		isInitialised = true;
@@ -362,9 +366,10 @@ CDebugDataAdapter *CDebugInterfaceNes::GetDataAdapter()
 void CDebugInterfaceNes::MakeJmpNoReset(CDataAdapter *dataAdapter, uint16 addr)
 {
 	this->LockMutex();
-	
-//	c64d_atari_set_cpu_pc(addr);
-	
+
+	Nes::Core::Machine& machine = nesEmulator;
+	machine.cpu.pc = addr;
+
 	this->UnlockMutex();
 }
 
@@ -754,5 +759,56 @@ void CDebugInterfaceNes::SupportsBreakpoints(bool *writeBreakpoint, bool *readBr
 CDebuggerApi *CDebugInterfaceNes::GetDebuggerApi()
 {
 	return new CDebuggerApiNestopia(this);
+}
+
+// FDS (Famicom Disk System)
+bool CDebugInterfaceNes::IsFDS()
+{
+	return nesd_is_fds();
+}
+
+bool CDebugInterfaceNes::FdsInsertDisk(int disk, int side)
+{
+	return nesd_fds_insert_disk(disk, side);
+}
+
+bool CDebugInterfaceNes::FdsEjectDisk()
+{
+	return nesd_fds_eject_disk();
+}
+
+bool CDebugInterfaceNes::FdsChangeSide()
+{
+	return nesd_fds_change_side();
+}
+
+int CDebugInterfaceNes::FdsGetNumDisks()
+{
+	return nesd_fds_get_num_disks();
+}
+
+int CDebugInterfaceNes::FdsGetCurrentDisk()
+{
+	return nesd_fds_get_current_disk();
+}
+
+int CDebugInterfaceNes::FdsGetCurrentDiskSide()
+{
+	return nesd_fds_get_current_disk_side();
+}
+
+bool CDebugInterfaceNes::FdsIsAnyDiskInserted()
+{
+	return nesd_fds_is_any_disk_inserted();
+}
+
+bool CDebugInterfaceNes::FdsHasBIOS()
+{
+	return nesd_fds_has_bios();
+}
+
+bool CDebugInterfaceNes::FdsSetBIOS(const char *biosPath)
+{
+	return nesd_fds_set_bios(biosPath);
 }
 

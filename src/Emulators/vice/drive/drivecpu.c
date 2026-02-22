@@ -836,6 +836,16 @@ JUMP(GLOBAL_REGS.pc);                              \
 #ifndef PULL
 #define PULL()    ((PAGE_ONE)[(++reg_sp)])
 #endif
+
+/* Drive CPU stack annotation: after PUSH, reg_sp has been decremented */
+#define C64D_DRIVE_ANNOTATE_PUSH(entry_type, irq_source, origin) \
+    if (c64d_drive_cpu_stack_entry_types) { \
+        c64d_drive_cpu_stack_entry_types[(uint8_t)(reg_sp + 1)] = (entry_type); \
+        c64d_drive_cpu_stack_irq_sources[(uint8_t)(reg_sp + 1)] = (irq_source); \
+        c64d_drive_cpu_stack_origin_pc[(uint8_t)(reg_sp + 1)] = (origin); \
+    }
+
+static uint8_t c64d_drive_irqbrk_irq_source = C64D_IRQ_SOURCE_UNKNOWN;
 		
 #ifdef VICE_DEBUG
 #define TRACE_NMI(clk)                        \
@@ -887,16 +897,33 @@ FETCH_PARAM(reg_pc);                                                       \
 CLK_ADD(CLK, 1);                                                           \
 }                                                                              \
 LOCAL_SET_BREAK(0);                                                            \
+/* Detect IRQ source for annotation */                                         \
+c64d_drive_irqbrk_irq_source = C64D_IRQ_SOURCE_UNKNOWN;                       \
+if (drive_context[0]->via1d1541->c64d_irq_flagged)                             \
+    c64d_drive_irqbrk_irq_source = C64D_IRQ_SOURCE_VIA1;                      \
+else if (drive_context[0]->via2->c64d_irq_flagged)                             \
+    c64d_drive_irqbrk_irq_source = C64D_IRQ_SOURCE_VIA2;                      \
+else if (ik & (IK_IRQ | IK_IRQPEND))                                          \
+    c64d_drive_irqbrk_irq_source = C64D_IRQ_SOURCE_IEC;                       \
 PUSH(reg_pc >> 8);                                                             \
+C64D_DRIVE_ANNOTATE_PUSH(C64D_STACK_ENTRY_IRQ_PCH, c64d_drive_irqbrk_irq_source, LAST_OPCODE_ADDR); \
 PUSH(reg_pc & 0xff);                                                           \
+C64D_DRIVE_ANNOTATE_PUSH(C64D_STACK_ENTRY_IRQ_PCL, c64d_drive_irqbrk_irq_source, LAST_OPCODE_ADDR); \
 CLK_ADD(CLK, 2);                                                               \
 PUSH(LOCAL_STATUS());                                                          \
+C64D_DRIVE_ANNOTATE_PUSH(C64D_STACK_ENTRY_IRQ_STATUS, c64d_drive_irqbrk_irq_source, LAST_OPCODE_ADDR); \
 CLK_ADD(CLK, 1);                                                               \
 LOCAL_SET_INTERRUPT(1);                                                        \
 CPU_DELAY_CLK; /* process alarms for cartridge freeze */                       \
 PROCESS_ALARMS;                                                                \
 if ((CPU_INT_STATUS->global_pending_int & IK_NMI)                              \
 && (CLK >= (CPU_INT_STATUS->nmi_clk + INTERRUPT_DELAY))) {                 \
+/* Re-annotate as NMI */                                                    \
+if (c64d_drive_cpu_stack_entry_types) {                                     \
+    c64d_drive_cpu_stack_entry_types[(uint8_t)(reg_sp + 3)] = C64D_STACK_ENTRY_NMI_PCH;   \
+    c64d_drive_cpu_stack_entry_types[(uint8_t)(reg_sp + 2)] = C64D_STACK_ENTRY_NMI_PCL;   \
+    c64d_drive_cpu_stack_entry_types[(uint8_t)(reg_sp + 1)] = C64D_STACK_ENTRY_NMI_STATUS; \
+}                                                                           \
 TRACE_NMI(CLK - NMI_CYCLES + 2);                                           \
 interrupt_ack_nmi(CPU_INT_STATUS);                                         \
 JUMP(LOAD_ADDR(0xfffa));                                                   \
@@ -1281,14 +1308,23 @@ EXPORT_REGISTERS();                                                             
 INC_PC(2);                                                                                \
 LOCAL_SET_BREAK(1);                                                                       \
 PUSH(reg_pc >> 8);                                                                        \
+C64D_DRIVE_ANNOTATE_PUSH(C64D_STACK_ENTRY_BRK_PCH, C64D_IRQ_SOURCE_UNKNOWN, LAST_OPCODE_ADDR); \
 PUSH(reg_pc & 0xff);                                                                      \
+C64D_DRIVE_ANNOTATE_PUSH(C64D_STACK_ENTRY_BRK_PCL, C64D_IRQ_SOURCE_UNKNOWN, LAST_OPCODE_ADDR); \
 CLK_ADD(CLK, CLK_BRK - 3);                                                                \
 PUSH(LOCAL_STATUS());                                                                     \
+C64D_DRIVE_ANNOTATE_PUSH(C64D_STACK_ENTRY_BRK_STATUS, C64D_IRQ_SOURCE_UNKNOWN, LAST_OPCODE_ADDR); \
 CLK_ADD(CLK, 1);                                                                          \
 CPU_DELAY_CLK  /* process alarms for cartridge freeze */                                  \
 PROCESS_ALARMS                                                                            \
 if ((CPU_INT_STATUS->global_pending_int & IK_NMI)                                         \
 && (CLK >= (CPU_INT_STATUS->nmi_clk + INTERRUPT_DELAY))) {                            \
+/* BRK transformed into NMI — re-annotate */                                          \
+if (c64d_drive_cpu_stack_entry_types) {                                                \
+    c64d_drive_cpu_stack_entry_types[(uint8_t)(reg_sp + 3)] = C64D_STACK_ENTRY_NMI_PCH;   \
+    c64d_drive_cpu_stack_entry_types[(uint8_t)(reg_sp + 2)] = C64D_STACK_ENTRY_NMI_PCL;   \
+    c64d_drive_cpu_stack_entry_types[(uint8_t)(reg_sp + 1)] = C64D_STACK_ENTRY_NMI_STATUS; \
+}                                                                                      \
 LOCAL_SET_INTERRUPT(1);                                                               \
 TRACE_NMI(CLK - CLK_BRK);                                                             \
 if (monitor_mask[CALLER] & (MI_STEP)) {                                               \
@@ -1550,7 +1586,9 @@ CLK_ADD(CLK, 1);                              \
 INC_PC(2);                                    \
 CLK_ADD(CLK, 2);                              \
 PUSH(((reg_pc) >> 8) & 0xff);                 \
+C64D_DRIVE_ANNOTATE_PUSH(C64D_STACK_ENTRY_JSR_PCH, C64D_IRQ_SOURCE_UNKNOWN, LAST_OPCODE_ADDR); \
 PUSH((reg_pc) & 0xff);                        \
+C64D_DRIVE_ANNOTATE_PUSH(C64D_STACK_ENTRY_JSR_PCL, C64D_IRQ_SOURCE_UNKNOWN, LAST_OPCODE_ADDR); \
 tmp_addr = (p1 | (FETCH_PARAM(reg_pc) << 8)); \
 CLK_ADD(CLK, CLK_JSR_INT_CYCLE);              \
 JUMP(tmp_addr);                               \
@@ -1672,13 +1710,15 @@ INC_PC(3);       \
 do {                              \
 CLK_ADD(CLK, CLK_STACK_PUSH); \
 PUSH(reg_a_read);             \
+C64D_DRIVE_ANNOTATE_PUSH(C64D_STACK_ENTRY_VALUE, C64D_IRQ_SOURCE_UNKNOWN, LAST_OPCODE_ADDR); \
 INC_PC(1);                    \
 } while (0)
-		
+
 #define PHP()                           \
 do {                                \
 CLK_ADD(CLK, CLK_STACK_PUSH);   \
 PUSH(LOCAL_STATUS() | P_BREAK); \
+C64D_DRIVE_ANNOTATE_PUSH(C64D_STACK_ENTRY_STATUS, C64D_IRQ_SOURCE_UNKNOWN, LAST_OPCODE_ADDR); \
 INC_PC(1);                      \
 } while (0)
 		

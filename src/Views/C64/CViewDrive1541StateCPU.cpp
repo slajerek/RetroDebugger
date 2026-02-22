@@ -18,6 +18,7 @@ CViewDrive1541StateCPU::CViewDrive1541StateCPU(const char *name, float posX, flo
 {
 	this->numRegisters = 6;
 	regs = (register_def*)&drive1541_cpu_regs;
+	numCharacterColumns = 30.0f;
 
 	this->font = viewC64->fontDisassembly;
 }

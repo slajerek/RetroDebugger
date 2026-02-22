@@ -87,7 +87,7 @@ CViewDataMap::CViewDataMap(const char *name, float posX, float posY, float posZ,
 	this->updateMapNumberOfFps = 25.0f;
 	this->shouldRebindImage = false;
 	
-	this->font = viewC64->fontCBMShifted;
+	this->font = viewC64->fontDefaultCBMShifted;
 	this->fontScale = 0.11f;
 
 	// alloc with safe margin to avoid comparison in cells marking (it is quicker)

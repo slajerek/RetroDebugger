@@ -6,6 +6,7 @@
 #include "CViewC64.h"
 #include "CMainMenuBar.h"
 #include "CGuiLockableList.h"
+#include "C64SettingsStorage.h"
 
 CViewTimeline::CViewTimeline(const char *name, float posX, float posY, float posZ, float sizeX, float sizeY, CDebugInterface *debugInterface)
 : CGuiView(name, posX, posY, posZ, sizeX, sizeY)
@@ -41,6 +42,12 @@ void CViewTimeline::DoLogic()
 void CViewTimeline::RenderImGui()
 {
 	PreRenderImGui();
+	if (!c64SettingsSnapshotsRecordIsActive)
+	{
+		ImGui::Text("Timeline not available. Turn on Record snapshots history in Settings.");
+		PostRenderImGui();
+		return;
+	}
 	Render();
 	PostRenderImGui();
 }
@@ -243,20 +250,19 @@ bool CViewTimeline::HasContextMenuItems()
 
 void CViewTimeline::RenderContextMenuItems()
 {
-	if (ImGui::MenuItem("Save timeline"))
+	if (ImGui::MenuItem("Save timeline", NULL, false, c64SettingsSnapshotsRecordIsActive))
 	{
 		viewC64->mainMenuBar->OpenDialogSaveTimeline(debugInterface);
 	}
-	ImGui::Separator();
 	if (ImGui::MenuItem("Load timeline"))
 	{
 		viewC64->mainMenuBar->OpenDialogLoadTimeline();
 	}
-	if (ImGui::MenuItem("Clear timeline"))
+	if (ImGui::MenuItem("Clear timeline", NULL, false, c64SettingsSnapshotsRecordIsActive))
 	{
 		debugInterface->snapshotsManager->ClearSnapshotsHistory();
 	}
-	
+
 	ImGui::Separator();
 	RenderMenuGoTo(false);
 
@@ -294,6 +300,49 @@ void CViewTimeline::RenderContextMenuItems()
 		}
 		ImGui::EndMenu();
 	}
+	ImGui::Separator();
+	if (ImGui::BeginMenu("Config"))
+	{
+		if (ImGui::MenuItem("Record snapshots history", "", &c64SettingsSnapshotsRecordIsActive))
+		{
+			C64DebuggerSetSetting("SnapshotsManagerIsActive", &(c64SettingsSnapshotsRecordIsActive));
+			C64DebuggerStoreSettings();
+		}
+
+		int step = 1; int step_fast = 10;
+		if (ImGui::InputScalar("Snapshots interval (frames)",
+							   ImGuiDataType_::ImGuiDataType_U32, &c64SettingsSnapshotsIntervalNumFrames, &step, &step_fast, "%d",
+							   ImGuiInputTextFlags_CharsDecimal))
+		{
+			if (c64SettingsSnapshotsIntervalNumFrames < 1)
+			{
+				c64SettingsSnapshotsIntervalNumFrames = 1;
+			}
+			C64DebuggerSetSetting("SnapshotsManagerStoreInterval", &c64SettingsSnapshotsIntervalNumFrames);
+			C64DebuggerStoreSettings();
+		}
+
+		step = 10; step_fast = 100;
+		if (ImGui::InputScalar("Max number of snapshots",
+							   ImGuiDataType_::ImGuiDataType_U32, &c64SettingsSnapshotsLimit, &step, &step_fast, "%d",
+							   ImGuiInputTextFlags_CharsDecimal))
+		{
+			if (c64SettingsSnapshotsLimit < 2)
+			{
+				c64SettingsSnapshotsLimit = 2;
+			}
+			C64DebuggerSetSetting("SnapshotsManagerLimit", &c64SettingsSnapshotsLimit);
+			C64DebuggerStoreSettings();
+		}
+		int level = (int)c64SettingsTimelineSaveZlibCompressionLevel;
+		if (ImGui::InputInt("Save timeline compression level", &level))
+		{
+			c64SettingsTimelineSaveZlibCompressionLevel = URANGE(1, level, 9);
+			C64DebuggerStoreSettings();
+		}
+
+		ImGui::EndMenu();
+	}
 }
 
 void CViewTimeline::RenderMenuGoTo(bool withEmulatorName)
@@ -309,7 +358,8 @@ void CViewTimeline::RenderMenuGoTo(bool withEmulatorName)
 	}
 
 	sprintf(buf, "Go to%s frame##%x", bufEmulatorName, this);
-	if (ImGui::InputInt(buf, &goToFrameNum, 1, 10, ImGuiInputTextFlags_EnterReturnsTrue))
+	ImGui::InputInt(buf, &goToFrameNum, 1, 10);
+	if (ImGui::IsItemDeactivatedAfterEdit())
 	{
 		enteredGoToFrameNum = goToFrameNum;
 		debugInterface->snapshotsManager->RestoreSnapshotByFrame(goToFrameNum);
@@ -322,7 +372,8 @@ void CViewTimeline::RenderMenuGoTo(bool withEmulatorName)
 
 	int goToCycleNum = GetCurrentCycleNum();
 	sprintf(buf, "Go to%s cycle##%x", bufEmulatorName, this);
-	if (ImGui::InputInt(buf, &goToCycleNum, 1, 10, ImGuiInputTextFlags_EnterReturnsTrue))
+	ImGui::InputInt(buf, &goToCycleNum, 1, 10);
+	if (ImGui::IsItemDeactivatedAfterEdit())
 	{
 		enteredGoToCycleNum = goToCycleNum;
 		debugInterface->snapshotsManager->RestoreSnapshotByCycle(goToCycleNum);

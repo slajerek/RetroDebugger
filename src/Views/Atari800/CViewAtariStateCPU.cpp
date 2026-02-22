@@ -21,7 +21,8 @@ CViewAtariStateCPU::CViewAtariStateCPU(const char *name, float posX, float posY,
 : CViewBaseStateCPU(name, posX, posY, posZ, sizeX, sizeY, debugInterface)
 {
 	this->numRegisters = 6;
-	
+	numCharacterColumns = 31.0f;
+
 	regs = (register_def*)&atari_cpu_regs;
 }
 

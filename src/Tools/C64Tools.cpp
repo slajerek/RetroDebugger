@@ -1058,7 +1058,7 @@ void RenderColorRectangleWithHexCode(float px, float py, float ledSizeX, float l
 	char buf[2];
 	Byte2Hex1digitR(color, buf);
 	buf[1] = 0x00;
-	viewC64->fontDisassembly->BlitText(buf, px + ledSizeX/2.0f - fontSize/2.0f, py+0.5f, -1, fontSize);
+	viewC64->fontDisassembly->BlitText(buf, px + ledSizeX/2.0f - fontSize/2.0f, py + (ledSizeY - fontSize) / 2.0f, -1, fontSize);
 }
 
 uint16 GetSidAddressByChipNum(int chipNum)

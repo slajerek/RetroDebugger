@@ -46,7 +46,7 @@ CViewC64AllGraphicsCharsets::CViewC64AllGraphicsCharsets(const char *name, float
 	this->charsetsOffsetY = 1.0f;
 	
 	//
-	font = viewC64->fontCBMShifted;
+	font = viewC64->fontDefaultCBMShifted;
 	fontScale = 0.8;
 	fontHeight = font->GetCharHeight('@', fontScale) + 2;
 	fontSize = fontHeight;
@@ -488,11 +488,41 @@ bool CViewC64AllGraphicsCharsets::HasContextMenuItems()
 
 void CViewC64AllGraphicsCharsets::RenderContextMenuItems()
 {
+	if (ImGui::MenuItem("Fit to window"))
+	{
+		ZoomToFit();
+	}
+
+	ImGui::Separator();
 	bool isVisible = viewC64->viewC64AllGraphicsCharsetsControl->visible;
 	if (ImGui::MenuItem("All Charsets controller", NULL, &isVisible))
 	{
 		viewC64->viewC64AllGraphicsCharsetsControl->SetVisible(isVisible);
 	}
+}
+
+void CViewC64AllGraphicsCharsets::ZoomToFit()
+{
+	// 32 charsets in 4 columns x 8 rows, each charset is 256x64 pixels
+	int numColumns = (0x10000 / 0x0800) / 8;  // 4
+	int numRows = 8;
+	float contentWidth = (float)numColumns * 256.0f;
+	float contentHeight = (float)numRows * 64.0f;
+
+	float zoomX = sizeX / contentWidth;
+	float zoomY = sizeY / contentHeight;
+	currentZoom = fmin(zoomX, zoomY);
+
+	mapSizeX = currentZoom;
+	mapSizeY = currentZoom;
+
+	// Center the content
+	float renderedWidth = contentWidth * currentZoom;
+	float renderedHeight = contentHeight * currentZoom;
+	mapPosX = (sizeX - renderedWidth) / (2.0f * sizeX);
+	mapPosY = (sizeY - renderedHeight) / (2.0f * sizeY);
+
+	UpdatePositionAndZoom();
 }
 
 // bug: this event is not called when layout is set, and button state is updated on keyboard shortcut only

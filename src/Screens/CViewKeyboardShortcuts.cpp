@@ -36,7 +36,7 @@ CViewKeyboardShortcuts::CViewKeyboardShortcuts(float posX, float posY, float pos
 
 	extKeyboardShortucts.push_back(new CSlrString("kbs"));
 
-	font = viewC64->fontCBMShifted;
+	font = viewC64->fontDefaultCBMShifted;
 	fontScale = 2.7;
 	fontHeight = font->GetCharHeight('@', fontScale) + 3;
 

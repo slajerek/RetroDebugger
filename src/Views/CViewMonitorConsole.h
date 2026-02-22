@@ -6,6 +6,8 @@
 #include "CViewC64.h"
 #include "SYS_FileSystem.h"
 #include "CDebugInterface.h"
+#include "C64Opcodes.h"
+#include "CViewDisassembly.h"
 
 class CDataAdapter;
 class CDebugSymbols;
@@ -67,7 +69,16 @@ public:
 	void CommandGoJMP();
 	void CommandDisassemble();
 	void CommandDoDisassemble();
-	
+
+	void CommandAssemble();
+	int AssembleInstruction(int assembleAddress, char *mnemonicText, int *instructionOpCode, uint16 *instructionValue, char *errorMessageBuf);
+	int AssembleFindOp(char *mnemonic);
+	int AssembleFindOp(char *mnemonic, OpcodeAddressingMode addressingMode);
+	AssembleToken AssembleGetToken(CSlrTextParser *textParser);
+
+	void CommandBreakpoint();
+	void UpdateDebugSymbols();
+
 	int saveFileType;
 	
 	bool memoryDumpAsPRG;
@@ -90,6 +101,7 @@ public:
 	CDataAdapter *dataAdapter;
 	
 	int addrStart, addrEnd;
+	int assembleNextAddress;
 	uint8 *memory;
 	int memoryLength;
 	CDebugSymbols *debugSymbols;

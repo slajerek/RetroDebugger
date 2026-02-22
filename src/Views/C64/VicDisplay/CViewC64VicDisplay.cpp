@@ -93,7 +93,7 @@ void CViewC64VicDisplay::Initialize(CDebugInterfaceC64 *debugInterface)
 	
 	this->autoScrollMode = AUTOSCROLL_DISASSEMBLY_UNKNOWN;
 	
-	font = viewC64->fontCBMShifted;
+	font = viewC64->fontDefaultCBMShifted;
 	fontScale = 0.8;
 	fontHeight = font->GetCharHeight('@', fontScale) + 2;
 	
@@ -205,7 +205,19 @@ void CViewC64VicDisplay::Initialize(CDebugInterfaceC64 *debugInterface)
 	InitRasterColorsFromScheme();
 	
 	applyScrollRegister = false;
-	
+
+	isZoomPanEnabled = false;
+	userZoom = 1.0f;
+	panOffsetX = 0.0f;
+	panOffsetY = 0.0f;
+	isPanning = false;
+	prevPanMouseX = 0.0f;
+	prevPanMouseY = 0.0f;
+	windowPosX = posX;
+	windowPosY = posY;
+	windowSizeX = sizeX;
+	windowSizeY = sizeY;
+
 	arrowKeyDown = false;
 	foundMemoryCellPC = false;
 	
@@ -305,7 +317,14 @@ void CViewC64VicDisplay::SetShowDisplayBorderType(u8 borderType)
 {
 //	LOGD("SetShowDisplayBorderType: %d", borderType);
 	this->showDisplayBorderType = borderType;
-	
+
+	if (isZoomPanEnabled)
+	{
+		ClampPanOffset();
+		RecalcZoomedDisplayPosition();
+		return;
+	}
+
 	// update positions based on visibility of the border
 	this->SetPosition(this->posX, this->posY);
 }
@@ -314,7 +333,18 @@ void CViewC64VicDisplay::SetPosition(float posX, float posY, float posZ, float s
 {
 //	LOGD("CViewC64VicDisplay::SetPosition");
 	CGuiView::SetPosition(posX, posY, posZ, sizeX, sizeY);
-	
+
+	if (isZoomPanEnabled)
+	{
+		windowPosX = posX;
+		windowPosY = posY;
+		windowSizeX = sizeX;
+		windowSizeY = sizeY;
+		ClampPanOffset();
+		RecalcZoomedDisplayPosition();
+		return;
+	}
+
 	// recalc new scale
 	float sx = 320.0f; float sy = 200.0f;
 	float newScale = 1.0f;
@@ -343,12 +373,21 @@ void CViewC64VicDisplay::SetPosition(float posX, float posY, float posZ, float s
 //	{
 //		newScale = sizeY / sy;
 //	}
-	
+
 	this->SetDisplayPosition(posX, posY, newScale, this->updateViewAspectRatio);
 }
 
 void CViewC64VicDisplay::SetPosition(float posX, float posY)
 {
+	if (isZoomPanEnabled)
+	{
+		windowPosX = posX;
+		windowPosY = posY;
+		CGuiView::SetPosition(posX, posY, posZ, windowSizeX, windowSizeY);
+		ClampPanOffset();
+		RecalcZoomedDisplayPosition();
+		return;
+	}
 	this->SetDisplayPosition(posX, posY, scale, this->updateViewAspectRatio);
 }
 
@@ -416,6 +455,95 @@ void CViewC64VicDisplay::SetDisplayPosition(float posX, float posY, float scale,
 void CViewC64VicDisplay::SetDisplayScale(float scale)
 {
 	this->SetDisplayPosition(this->posX, this->posY, scale, false);
+}
+
+float CViewC64VicDisplay::GetBaseScale()
+{
+	float baseWidth;
+	if (showDisplayBorderType == VIC_DISPLAY_SHOW_BORDER_FULL)
+	{
+		baseWidth = 504.0f * 0.6349f;
+	}
+	else if (showDisplayBorderType == VIC_DISPLAY_SHOW_BORDER_VISIBLE_AREA)
+	{
+		baseWidth = 384.0f * 0.7353f;
+	}
+	else
+	{
+		baseWidth = 320.0f;
+	}
+	return windowSizeX / baseWidth;
+}
+
+void CViewC64VicDisplay::ResetZoomPan()
+{
+	userZoom = 1.0f;
+	panOffsetX = 0.0f;
+	panOffsetY = 0.0f;
+	RecalcZoomedDisplayPosition();
+}
+
+void CViewC64VicDisplay::RecalcZoomedDisplayPosition()
+{
+	float effectiveScale = GetBaseScale() * userZoom;
+	this->scale = effectiveScale;
+
+	float dPosX = windowPosX + panOffsetX;
+	float dPosY = windowPosY + panOffsetY;
+
+	if (showDisplayBorderType == VIC_DISPLAY_SHOW_BORDER_FULL)
+	{
+		this->SetScreenAndDisplaySize(dPosX, dPosY, 504.0f * 0.6349f * effectiveScale, 312.0f * 0.6349f * effectiveScale);
+	}
+	else if (showDisplayBorderType == VIC_DISPLAY_SHOW_BORDER_VISIBLE_AREA)
+	{
+		this->SetScreenAndDisplaySize(dPosX + 33.0f * 0.7353f * effectiveScale, dPosY, 384.0f * 0.7353f * effectiveScale, 272.0f * 0.7353f * effectiveScale);
+	}
+	else
+	{
+		this->SetScreenAndDisplaySize(dPosX, dPosY, 320.0f * effectiveScale, 200.0f * effectiveScale);
+	}
+
+	UpdateRasterCrossFactors();
+	UpdateGridLinesVisibleOnCurrentZoom();
+}
+
+void CViewC64VicDisplay::ClampPanOffset()
+{
+	float effectiveScale = GetBaseScale() * userZoom;
+	float contentW, contentH;
+
+	if (showDisplayBorderType == VIC_DISPLAY_SHOW_BORDER_FULL)
+	{
+		contentW = 504.0f * 0.6349f * effectiveScale;
+		contentH = 312.0f * 0.6349f * effectiveScale;
+	}
+	else if (showDisplayBorderType == VIC_DISPLAY_SHOW_BORDER_VISIBLE_AREA)
+	{
+		contentW = 384.0f * 0.7353f * effectiveScale;
+		contentH = 272.0f * 0.7353f * effectiveScale;
+	}
+	else
+	{
+		contentW = 320.0f * effectiveScale;
+		contentH = 200.0f * effectiveScale;
+	}
+
+	// Don't allow gaps: content must cover the window
+	if (panOffsetX > 0.0f)
+		panOffsetX = 0.0f;
+	if (panOffsetY > 0.0f)
+		panOffsetY = 0.0f;
+	if (panOffsetX + contentW < windowSizeX)
+		panOffsetX = windowSizeX - contentW;
+	if (panOffsetY + contentH < windowSizeY)
+		panOffsetY = windowSizeY - contentH;
+
+	// If content is smaller than window (userZoom ~1.0), center it
+	if (contentW <= windowSizeX)
+		panOffsetX = 0.0f;
+	if (contentH <= windowSizeY)
+		panOffsetY = 0.0f;
 }
 
 void CViewC64VicDisplay::SetScreenAndDisplaySize(float dPosX, float dPosY, float dSizeX, float dSizeY)
@@ -938,7 +1066,7 @@ void CViewC64VicDisplay::UpdateDisplayPosFromScrollRegister(vicii_cycle_state_t 
 		float yScroll = (float)(scrollInRasterPixelsY);
 		
 		displayPosWithScrollX = displayPosX + xScroll * rasterScaleFactorX;
-		displayPosWithScrollY = displayPosY + yScroll * rasterScaleFactorX;
+		displayPosWithScrollY = displayPosY + yScroll * rasterScaleFactorY;
 		
 //		LOGD("displayPosX=%3f  xScroll=%3f (%3f) displayPosWithScrollX=%3f",
 //			 displayPosX, xScroll, xScroll * rasterScaleFactorX, displayPosWithScrollX);
@@ -1145,41 +1273,26 @@ void CViewC64VicDisplay::Render()
 	
 	BlitFilledRectangle(posX, posY, posZ, sizeX, sizeY, 0, 0, 0, 0.7f);
 
-	
-	// Render the VIC Display
-//	VID_SetClipping(this->fullScanScreenPosX, this->fullScanScreenPosY, this->fullScanScreenSizeX, this->fullScanScreenSizeY);
-	
-	this->RenderDisplay();
+	bool needsClipping = isZoomPanEnabled && userZoom > 1.001f;
+	if (needsClipping)
+	{
+		VID_SetClipping((int)windowPosX, (int)windowPosY, (int)windowSizeX, (int)windowSizeY);
+	}
 
-//	VID_ResetClipping();
+	this->RenderDisplay();
 
 	if (showGridLines)
 	{
 		this->RenderGridLines();
 	}
-	
+
 	const float lineWidth = 1.25f;//0.7f;
-	
+
 	if (renderDisplayFrame)
 	{
 		BlitRectangle(displayFrameScreenPosX, displayFrameScreenPosY, this->posZ,
 					  displayFrameScreenSizeX, displayFrameScreenSizeY, 0.43f, 0.45f, 0.43f, 1.0f, lineWidth);
 	}
-
-	
-//	BlitRectangle(this->posX, this->posY, this->posZ, this->screenSizeX, this->screenSizeY,
-	//0.3f, 0.3f, 0.3f, 0.7f, lineWidth);
-
-	//	BlitRectangle(this->posX, this->posY, this->posZ, this->displaySizeX, this->displaySizeY,
-	//0.3f, 1.0f, 0.3f, 0.7f, lineWidth);
-	
-	
-//	BlitRectangle(displayFrameScreenPosX, displayFrameScreenPosY, this->posZ,
-//				  displayFrameScreenSizeX, displayFrameScreenSizeY, 1.0f, 0.1f, 0.1f, 1.0f, 4.0f);
-
-
-//	BlitRectangle(viewC64->viewC64Screen->posX, viewC64->viewC64Screen->posY, viewC64->viewC64Screen->posZ,
-//				  viewC64->viewC64Screen->sizeX, viewC64->viewC64Screen->sizeY, 0.3f, 0.3f, 0.3f, 0.7f, lineWidth);
 
 	if (showRasterCursor)
 	{
@@ -1190,15 +1303,17 @@ void CViewC64VicDisplay::Render()
 	{
 		this->RenderBadLines();
 	}
-	
+
 	if (showBreakpointsLines)
 	{
 		this->RenderBreakpointsLines();
 	}
-	
-	
-	//BlitRectangle(lblAutolockScrollMode->posX, lblAutolockScrollMode->posY, posZ, lblAutolockScrollMode->sizeX, lblAutolockScrollMode->sizeY, 1, 1, 0, 1);
-	
+
+	if (needsClipping)
+	{
+		VID_ResetClipping();
+	}
+
 	// render UI
 	CGuiView::Render();
 	
@@ -1970,19 +2085,29 @@ void CViewC64VicDisplay::SetDisplayFrameRaster(float rasterX, float rasterY, flo
 	UpdateDisplayFrameScreen();
 }
 
-void CViewC64VicDisplay::RenderRasterCursor(int rasterX, int rasterY)
+void CViewC64VicDisplay::RenderRasterCursor(int rasterX, int rasterY,
+											 float lineExtentPosX, float lineExtentPosY,
+											 float lineExtentSizeX, float lineExtentSizeY)
 {
 //	LOGD("RenderRasterCursor %d %d", rasterX, rasterY);
 //	LOGD("....  viewC64->viciiStateToShow.raster_line=%02x", viewC64->viciiStateToShow.raster_line);
 
-	float cx = displayPosWithScrollX + (float)rasterX * rasterScaleFactorX  + rasterCrossOffsetX;
-	float cy = displayPosWithScrollY + (float)rasterY * rasterScaleFactorY  + rasterCrossOffsetY;
-	
+	// Use displayPosX/Y (not scroll-adjusted) because rasterCursorPos is in absolute
+	// raster space. This ensures the cursor is always at the mouse position regardless
+	// of scroll register changes between frames.
+	float cx = displayPosX + (float)rasterX * rasterScaleFactorX  + rasterCrossOffsetX;
+	float cy = displayPosY + (float)rasterY * rasterScaleFactorY  + rasterCrossOffsetY;
+
+	// Use caller-provided line extents if given, otherwise default to fullScan area
+	float lx = (lineExtentPosX >= 0) ? lineExtentPosX : posX;
+	float ly = (lineExtentPosY >= 0) ? lineExtentPosY : posY;
+	float lsx = (lineExtentSizeX >= 0) ? lineExtentSizeX : fullScanScreenSizeX;
+	float lsy = (lineExtentSizeY >= 0) ? lineExtentSizeY : fullScanScreenSizeY;
 
 	/// long screen line
-	BlitFilledRectangle(posX, cy - rasterCrossWidth2, posZ, fullScanScreenSizeX, rasterCrossWidth,
+	BlitFilledRectangle(lx, cy - rasterCrossWidth2, posZ, lsx, rasterCrossWidth,
 						rasterLongScrenLineR, rasterLongScrenLineG, rasterLongScrenLineB, rasterLongScrenLineA);
-	BlitFilledRectangle(cx - rasterCrossWidth2, posY, posZ, rasterCrossWidth, fullScanScreenSizeY,
+	BlitFilledRectangle(cx - rasterCrossWidth2, ly, posZ, rasterCrossWidth, lsy,
 						rasterLongScrenLineR, rasterLongScrenLineG, rasterLongScrenLineB, rasterLongScrenLineA);
 
 	// red cross
@@ -2011,8 +2136,8 @@ void CViewC64VicDisplay::RenderRasterCursor(int rasterX, int rasterY)
 
 void CViewC64VicDisplay::RenderRasterCursorOnForeground(int rasterX, int rasterY)
 {
-	float cx = displayPosWithScrollX + (float)rasterX * rasterScaleFactorX  + rasterCrossOffsetX;
-	float cy = displayPosWithScrollY + (float)rasterY * rasterScaleFactorY  + rasterCrossOffsetY;
+	float cx = displayPosX + (float)rasterX * rasterScaleFactorX  + rasterCrossOffsetX;
+	float cy = displayPosY + (float)rasterY * rasterScaleFactorY  + rasterCrossOffsetY;
 	
 
 	/// long screen line
@@ -2049,23 +2174,48 @@ void CViewC64VicDisplay::RenderBadLines()
 {
 //	LOGD("CViewC64VicDisplay::RenderBadLines");
 
+	CDebugInterfaceVice *debugInterfaceVice = (CDebugInterfaceVice*)debugInterface;
+	int borderMode = debugInterfaceVice->GetViciiBorderMode();
+
+	float lx, lw;
+	if (borderMode == VICII_NORMAL_BORDERS)
+	{
+		lx = visibleScreenPosX;
+		lw = visibleScreenSizeX;
+	}
+	else if (borderMode == VICII_FULL_BORDERS)
+	{
+		lx = visibleScreenPosX + (-16) * rasterScaleFactorX;
+		lw = visibleScreenSizeX * (408.0f / 384.0f);
+	}
+	else if (borderMode == VICII_DEBUG_BORDERS)
+	{
+		lx = visibleScreenPosX + (-104) * rasterScaleFactorX;
+		lw = visibleScreenSizeX * (504.0f / 384.0f);
+	}
+	else // VICII_NO_BORDERS
+	{
+		lx = visibleScreenPosX + 32 * rasterScaleFactorX;
+		lw = visibleScreenSizeX * (320.0f / 384.0f);
+	}
+
 	float cy = displayPosY + rasterCrossOffsetY - (0x34 * rasterScaleFactorY) + rasterScaleFactorY/2.0f;
-	
+
 	for (int rasterLine = 0; rasterLine < 312; rasterLine++)
 	{
 		vicii_cycle_state_t *viciiState = c64d_get_vicii_state_for_raster_line(rasterLine);
-		
+
 		if (viciiState->bad_line)
 		{
-			BlitFilledRectangle(posX, cy, posZ, sizeX, rasterScaleFactorY, 0.0f, 1.0f, 1.0f, c64SettingsScreenGridLinesAlpha);
+			BlitFilledRectangle(lx, cy, posZ, lw, rasterScaleFactorY, 0.0f, 1.0f, 1.0f, c64SettingsScreenGridLinesAlpha);
 		}
-		
+
 		uint8 irqMask = viciiState->regs[0x1a];
 		if (irqMask & 0x01 && rasterLine == viciiState->raster_irq_line)
 		{
-			BlitFilledRectangle(posX, cy, posZ, sizeX, rasterScaleFactorY, 1.0f, 1.0f, 0.0f, c64SettingsScreenGridLinesAlpha * 0.75f);
+			BlitFilledRectangle(lx, cy, posZ, lw, rasterScaleFactorY, 1.0f, 1.0f, 0.0f, c64SettingsScreenGridLinesAlpha * 0.75f);
 		}
-		
+
 		cy += rasterScaleFactorY;
 	}
 }
@@ -2288,7 +2438,7 @@ void CViewC64VicDisplay::UpdateRasterCursorPos()
 //			rasterCursorPosX = (px / displaySizeX * 320.0f);
 //			rasterCursorPosY = (py / displaySizeY * 200.0f);
 
-			GetRasterPosFromScreenPos(guiMain->mousePosX, guiMain->mousePosY, &rasterCursorPosX, &rasterCursorPosY);
+			GetRasterPosFromScreenPosWithoutScroll(guiMain->mousePosX, guiMain->mousePosY, &rasterCursorPosX, &rasterCursorPosY);
 //			LOGD("mousePosX=%f rasterCursorPosX=%f  mousePosY=%f rasterCursorPosY=%f   (%02x %02x)", guiMain->mousePosX, rasterCursorPosX, guiMain->mousePosY, rasterCursorPosY, (int)rasterCursorPosX, (int)rasterCursorPosY);
 			
 			
@@ -2331,6 +2481,11 @@ bool CViewC64VicDisplay::DoFinishTap(float x, float y)
 bool CViewC64VicDisplay::DoDoubleTap(float x, float y)
 {
 	LOGG("CViewC64VicDisplay::DoDoubleTap:  x=%f y=%f", x, y);
+	if (isZoomPanEnabled && userZoom > 1.001f)
+	{
+		ResetZoomPan();
+		return true;
+	}
 	return CGuiView::DoDoubleTap(x, y);
 }
 
@@ -2366,6 +2521,19 @@ bool CViewC64VicDisplay::DoNotTouchedMove(float x, float y)
 {
 //	LOGI("CViewC64VicDisplay::DoNotTouchedMove (this=%x)", this);
 
+	if (isZoomPanEnabled && isPanning)
+	{
+		float dx = x - prevPanMouseX;
+		float dy = y - prevPanMouseY;
+		prevPanMouseX = x;
+		prevPanMouseY = y;
+		panOffsetX += dx;
+		panOffsetY += dy;
+		ClampPanOffset();
+		RecalcZoomedDisplayPosition();
+		return true;
+	}
+
 	if (!isCursorLocked)
 	{
 		if (IsTopWindow())
@@ -2398,32 +2566,42 @@ bool CViewC64VicDisplay::FinishMove(float x, float y, float distX, float distY, 
 
 bool CViewC64VicDisplay::DoScrollWheel(float deltaX, float deltaY)
 {
-	// TODO: fix me
+	if (isZoomPanEnabled)
+	{
+		float zoomSpeed = 0.05f;
+		if (guiMain->isShiftPressed)
+			zoomSpeed = 0.15f;
+
+		float oldZoom = userZoom;
+		float newZoom = userZoom + deltaY * zoomSpeed * userZoom;
+		if (newZoom < 1.0f) newZoom = 1.0f;
+		if (newZoom > 60.0f) newZoom = 60.0f;
+		if (newZoom == oldZoom) return true;
+
+		// Zoom-to-cursor: keep the raster position under mouse stable
+		float mx = guiMain->mousePosX;
+		float my = guiMain->mousePosY;
+		float rasterX, rasterY;
+		GetRasterPosFromScreenPosWithoutScroll(mx, my, &rasterX, &rasterY);
+
+		userZoom = newZoom;
+		ClampPanOffset();
+		RecalcZoomedDisplayPosition();
+
+		// Find where that raster position ended up after zoom
+		float newScreenX, newScreenY;
+		GetScreenPosFromRasterPosWithoutScroll(rasterX, rasterY, &newScreenX, &newScreenY);
+
+		// Adjust pan to keep cursor stable
+		panOffsetX += mx - newScreenX;
+		panOffsetY += my - newScreenY;
+		ClampPanOffset();
+		RecalcZoomedDisplayPosition();
+
+		return true;
+	}
+
 	return false;
-	
-	if (c64SettingsUseMultiTouchInMemoryMap)
-	{
-		float f = 2.0f;
-		MoveDisplayDiff(deltaX * f, deltaY * f);
-	}
-	else
-	{
-		if (c64SettingsMemoryMapInvertControl)
-		{
-			deltaY = -deltaY;
-		}
-		
-		// scale
-		float dy = deltaY * 0.25f;
-		
-		float newScale = this->scale + dy;
-		
-		LOGG("CViewC64VicDisplay::DoScrollWheel:  %f %f %f", this->scale, dy, newScale);
-		
-		ZoomDisplay(newScale);
-	}
-	
-	return true;
 }
 
 void CViewC64VicDisplay::MoveDisplayDiff(float diffX, float diffY)
@@ -2554,22 +2732,34 @@ bool CViewC64VicDisplay::InitZoom()
 
 bool CViewC64VicDisplay::DoZoomBy(float x, float y, float zoomValue, float difference)
 {
-	// TODO: fix me
+	if (isZoomPanEnabled)
+	{
+		float oldZoom = userZoom;
+		float newZoom = userZoom + difference * 0.05f * userZoom;
+		if (newZoom < 1.0f) newZoom = 1.0f;
+		if (newZoom > 60.0f) newZoom = 60.0f;
+		if (newZoom == oldZoom) return true;
+
+		// Zoom-to-cursor
+		float rasterX, rasterY;
+		GetRasterPosFromScreenPosWithoutScroll(x, y, &rasterX, &rasterY);
+
+		userZoom = newZoom;
+		ClampPanOffset();
+		RecalcZoomedDisplayPosition();
+
+		float newScreenX, newScreenY;
+		GetScreenPosFromRasterPosWithoutScroll(rasterX, rasterY, &newScreenX, &newScreenY);
+
+		panOffsetX += x - newScreenX;
+		panOffsetY += y - newScreenY;
+		ClampPanOffset();
+		RecalcZoomedDisplayPosition();
+
+		return true;
+	}
+
 	return false;
-	
-	// scale
-	float dy = difference * 0.25f;
-	
-	float newScale = this->scale + dy;
-	
-	LOGG("CViewC64VicDisplay::DoZoomBy:  %f %f %f", this->scale, dy, newScale);
-	
-	this->SetDisplayScale(newScale);
-	
-//	ZoomDisplay(newScale);
-	
-	
-	return true;
 }
 
 bool CViewC64VicDisplay::DoMultiTap(COneTouchData *touch, float x, float y)
@@ -2906,6 +3096,28 @@ bool CViewC64VicDisplay::KeyUp(u32 keyCode, bool isShift, bool isAlt, bool isCon
 	}
 
 	return CGuiView::KeyUp(keyCode, isShift, isAlt, isControl, isSuper);
+}
+
+bool CViewC64VicDisplay::KeyDownOnMouseHover(u32 keyCode, bool isShift, bool isAlt, bool isControl, bool isSuper)
+{
+	if (isZoomPanEnabled && keyCode == MTKEY_SPACEBAR && userZoom > 1.001f)
+	{
+		isPanning = true;
+		prevPanMouseX = guiMain->mousePosX;
+		prevPanMouseY = guiMain->mousePosY;
+		return true;
+	}
+	return CGuiView::KeyDownOnMouseHover(keyCode, isShift, isAlt, isControl, isSuper);
+}
+
+bool CViewC64VicDisplay::KeyUpGlobal(u32 keyCode, bool isShift, bool isAlt, bool isControl, bool isSuper)
+{
+	if (isZoomPanEnabled && keyCode == MTKEY_SPACEBAR)
+	{
+		isPanning = false;
+		return true;
+	}
+	return CGuiView::KeyUpGlobal(keyCode, isShift, isAlt, isControl, isSuper);
 }
 
 void CViewC64VicDisplay::ActivateView()
