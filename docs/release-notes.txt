@@ -1,4 +1,4 @@
-Retro Debugger v0.64.76
+Retro Debugger v0.64.76 (22nd of February - my birthday celebration and 10-years anniversary of the C64 Debugger development)
 Added: I/O and Memory Access layers in VIC Editor and C64 I/O and Memory Access views to configure them, L-click on register to set color, R-click to on/off (idea by Digger/Elysium)
 Added: Ghostbyte in C64 VIC state (idea by Jetboy/Elysium)
 Added: #84 Option to colorize Disassembly hex and arguments based on access: Settings/UI/Colorize hex opcodes
