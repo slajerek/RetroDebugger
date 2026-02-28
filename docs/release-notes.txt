@@ -1,3 +1,48 @@
+Retro Debugger v0.64.76
+Added: I/O and Memory Access layers in VIC Editor and C64 I/O and Memory Access views to configure them, L-click on register to set color, R-click to on/off (idea by Digger/Elysium)
+Added: Ghostbyte in C64 VIC state (idea by Jetboy/Elysium)
+Added: #84 Option to colorize Disassembly hex and arguments based on access: Settings/UI/Colorize hex opcodes
+Added: Zoom reset to fit window context menu item in All Graphics views (requested by Steve West)
+Added: #48 Support FDS (Famicom Disk System) files for NES
+Added: Added A (assemble) and B (set/remove breakpoint) commands in Code Monitor view (#47)
+Added: C64 Memory Bank view that shows memory mapping at $0001 (idea by Jarkko Lehti)
+Added: Stack view to show what's pushed on Stack ($100)
+Added: VIC Display zoom/panning like in VIC Editor
+Bug fixed: Painting on VIC Editor's unrestricted bitmap did not work
+Bug fixed: Some views (like Atari Counters) could start with empty interior but refreshed after first view resize
+Bug fixed: #81 When VIC Display is locked Data Dump can't edit values
+Bug fixed: #34, #92 Monitor console and VIC Control shows wrong glyphs for some characters/symbols when Japanese C64 charset ROM is loaded
+Bug fixed: GoatTracker plugin was not rendering correctly
+...And a lot of other minor UI changes, glitches and bug fixes
+
+Retro Debugger v0.64.74 (Xmas 24 Dec'25 release)
+Bug fixed: VIC Display bitmap/text Y pixel line was off 1 pixel (thanks to Brush/Elysium for reporting)
+Bug fixed: VIC Editor screen may become blank when view is not displayed between app restarts (issue #79)
+Bug fixed: VIC Status wrongly presented all sprites priority as foreground (thanks to Steve West for reporting)
+Bug fixed: All Sprites Control, All Charsets Control "ROM" switch did not change state (thanks to Steve West for reporting)
+Bug fixed: CIA2 registers were not selectable in CIA registers view (thanks to Steve West for reporting)
+Big fixed: Step-over-JSR keyboard shortcut was working only in Disassembly view
+Bug fixed: Opening tape t64 file may cause a crash a few seconds later (thanks to Bacchus/Fairlight for reporting)
+Bug fixed: C64 Viewfinder did not update the position offset when the Vice border mode was changed in Settings
+Bug fixed: Intermittent edge-case crash while loading debug symbols (thanks to Brush/Elysium for reporting and help with debugging)
+Bug fixed macOS: Sometimes Open/Save/Pick Folder dialogs were shown below the main app window
+Bug fixed PR #97: CVE-2019-17544 Fix potential vulnerable clone function (thanks to npt-1707)
+Added: Show raster-y position in VIC Control when raster mode is selected
+Added: CRT-monitor shader
+Added: Load and play *.siddump in SID Tracker View
+
+Retro Debugger v0.64.72 (22nd of February - my birthday celebration and BCC Party release)
+Bug fixed #73: crash when rewinding code (thanks to Tom Telmo and Isildur for testing)
+Bug fixed #69: command line arguments buffer overflow
+Bug fixed #76: added another workaround to Vice's ciacore_peek to avoid side effects, now returns at least partial state of CIA PRA
+Bug fixed: VIC Display ctrl+arrow event was consumed by keyboard shortcut (thanks to Tom Telmo for reporting)
+Bug fixed: VIC Control labels font size was not scaling with view (thanks to Bacchus/Fairlight and others for reporting)
+Bug fixed: Adding keyboard shortcut to workspace was not working in some edge cases (thanks DKT/Samar for reporting)
+Changed #64: C64 keyboard mapping was not saved as default configuration
+Changed: added address in VIC Control and reorganized layout (thanks for Bacchus/Fairlight for the idea)
+Added: VIC Editor reset zoom level (workaround for bug #79)
+Added Linux: New build script build-linux.sh
+
 Retro Debugger v0.64.70 (Xmas 24 Dec'24 release)
 Added: Remote debug WebSockets server on port $0DEB (thanks to Mojzesh for thorough testing, bug fixing and valuable assistance)
        Check out the library and a great example of usage in Go, created by Mojzesh: https://github.com/mojzesh/c64d-ws-client
