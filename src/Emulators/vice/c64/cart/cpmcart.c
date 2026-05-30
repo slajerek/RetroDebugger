@@ -48,139 +48,30 @@
 #include "monitor.h"
 #include "resources.h"
 #include "snapshot.h"
-#include "translate.h"
 #include "vicetypes.h"
 #include "z80regs.h"
 
-#ifdef Z80_4MHZ
-#define CLK_ADD(clock, amount) clock = z80cpu_clock_add(clock, amount)
-#else
-#define CLK_ADD(clock, amount) clock += amount
-#endif
+#define CLK maincpu_clk
 
-static BYTE reg_a = 0;
-static BYTE reg_b = 0;
-static BYTE reg_c = 0;
-static BYTE reg_d = 0;
-static BYTE reg_e = 0;
-static BYTE reg_f = 0;
-static BYTE reg_h = 0;
-static BYTE reg_l = 0;
-static BYTE reg_ixh = 0;
-static BYTE reg_ixl = 0;
-static BYTE reg_iyh = 0;
-static BYTE reg_iyl = 0;
-static WORD reg_sp = 0;
-static DWORD z80_reg_pc = 0;
-static BYTE reg_i = 0;
-static BYTE reg_r = 0;
-
-static BYTE iff1 = 0;
-static BYTE iff2 = 0;
-static BYTE im_mode = 0;
-
-static BYTE reg_a2 = 0;
-static BYTE reg_b2 = 0;
-static BYTE reg_c2 = 0;
-static BYTE reg_d2 = 0;
-static BYTE reg_e2 = 0;
-static BYTE reg_f2 = 0;
-static BYTE reg_h2 = 0;
-static BYTE reg_l2 = 0;
+z80_regs_t z80_regs;
 
 static int z80_started = 0;
 static int cpmcart_enabled = 0;
 
-static read_func_ptr_t cpmcart_mem_read_tab[0x101];
-static store_func_ptr_t cpmcart_mem_write_tab[0x101];
-
-static BYTE cpmcart_wrap_read(WORD addr)
+static uint8_t cpmcart_wrap_read(uint16_t addr)
 {
-    DWORD address = ((DWORD)addr + 0x1000) & 0xffff;
-    return cpmcart_mem_read_tab[addr >> 8]((WORD)address);
+    uint32_t address = ((uint32_t)addr + 0x1000) & 0xffff;
+    return mem_dma_read((uint16_t)address);
 }
 
-static void cpmcart_wrap_store(WORD addr, BYTE value)
+static void cpmcart_wrap_store(uint16_t addr, uint8_t value)
 {
-    DWORD address = ((DWORD)addr + 0x1000) & 0xffff;
+    uint32_t address = ((uint32_t)addr + 0x1000) & 0xffff;
 
-    cpmcart_mem_write_tab[addr >> 8]((WORD)address, value);
+    mem_dma_store((uint16_t)address, value);
 }
 
-static void set_read_item(int index, BYTE (*func)(WORD addr))
-{
-    cpmcart_mem_read_tab[index] = func;
-}
-
-static void set_write_item(int index, void (*func)(WORD addr, BYTE val))
-{
-    cpmcart_mem_write_tab[index] = func;
-}
-
-static void cpmcart_mem_init(void)
-{
-    int i;
-
-    /* z80 $0000-$bfff -> c64 $1000-$cfff (RAM) */
-    for (i = 0; i < 0xc0; ++i) {
-        set_read_item(i, ram_read);
-        set_write_item(i, ram_store);
-    }
-
-    /* z80 $c000-$c7ff -> c64 $d000-$d7ff (VICII/SID I/O) */
-    set_read_item(0xc0, c64io_d000_read);
-    set_write_item(0xc0, c64io_d000_store);
-    set_read_item(0xc1, c64io_d100_read);
-    set_write_item(0xc1, c64io_d100_store);
-    set_read_item(0xc2, c64io_d200_read);
-    set_write_item(0xc2, c64io_d200_store);
-    set_read_item(0xc3, c64io_d300_read);
-    set_write_item(0xc3, c64io_d300_store);
-    set_read_item(0xc4, c64io_d400_read);
-    set_write_item(0xc4, c64io_d400_store);
-    set_read_item(0xc5, c64io_d500_read);
-    set_write_item(0xc5, c64io_d500_store);
-    set_read_item(0xc6, c64io_d600_read);
-    set_write_item(0xc6, c64io_d600_store);
-    set_read_item(0xc7, c64io_d700_read);
-    set_write_item(0xc7, c64io_d700_store);
-
-    /* z80 $c800-$cbff -> c64 $d800-$dbff (VICII colorram) */
-    for (i = 0xc8; i <= 0xcb; ++i) {
-        set_read_item(i, colorram_read);
-        set_write_item(i, colorram_store);
-    }
-
-    /* z80 $cc00-$ccff -> c64 $dc00-$dcff (CIA1) */
-    set_read_item(0xcc, cia1_read);
-    set_write_item(0xcc, cia1_store);
-
-    /* z80 $cd00-$cdff -> c64 $dd00-$ddff (CIA1) */
-    set_read_item(0xcd, cia2_read);
-    set_write_item(0xcd, cia2_store);
-
-    /* z80 $ce00-$ceff -> c64 $de00-$deff (I/O-1) */
-    set_read_item(0xce, c64io_de00_read);
-    set_write_item(0xce, c64io_de00_store);
-
-    /* z80 $cf00-$cfff -> c64 $df00-$dfff (I/O-2) */
-    set_read_item(0xcf, c64io_df00_read);
-    set_write_item(0xcf, c64io_df00_store);
-
-    /* z80 $d000-$efff -> c64 $e000-$ffff (RAM) */
-    for (i = 0xd0; i < 0xf0; ++i) {
-        set_read_item(i, ram_read);
-        set_write_item(i, ram_store);
-    }
-
-    /* z80 $f000-$ffff -> c64 $0000-$0fff (RAM) */
-    for (i = 0xf0; i < 0x100; ++i) {
-        set_read_item(i, ram_read);
-        set_write_item(i, ram_store);
-    }
-}
-
-static void cpmcart_io_store(WORD addr, BYTE byte)
+static void cpmcart_io_store(uint16_t addr, uint8_t byte)
 {
     int val = byte & 1;
 
@@ -203,18 +94,20 @@ static int cpmcart_dump(void)
 }
 
 static io_source_t cpmcart_device = {
-    "CP/M Cartridge",
-    IO_DETACH_RESOURCE,
-    "CPMCart",
-    0xde00, 0xdeff, 0xff,
-    0,
-    cpmcart_io_store,
-    NULL, /* no read */
-    NULL, /* no peek */
-    cpmcart_dump,
-    CARTRIDGE_CPM,
-    0,
-    0
+    "CP/M Cartridge",     /* name of the device */
+    IO_DETACH_RESOURCE,   /* use resource to detach the device when involved in a read-collision */
+    "CPMCart",            /* resource to set to '0' */
+    0xde00, 0xdeff, 0xff, /* range of the device, address is ignored, reg:$de00, mirrors:$de01-$deff */
+    0,                    /* read is never valid, device is write only */
+    cpmcart_io_store,     /* store function */
+    NULL,                 /* NO poke function */
+    NULL,                 /* NO read function */
+    NULL,                 /* NO peek function */
+    cpmcart_dump,         /* device state information dump function */
+    CARTRIDGE_CPM,        /* cartridge ID */
+    IO_PRIO_NORMAL,       /* normal priority, device read needs to be checked for collisions */
+    0,                    /* insertion order, gets filled in by the registration function */
+    IO_MIRROR_NONE        /* NO mirroring */
 };
 
 static io_source_list_t *cpmcart_list_item = NULL;
@@ -245,6 +138,16 @@ static int set_cpmcart_enabled(int value, void *param)
     return 0;
 }
 
+int cpmcart_enable(void)
+{
+    return set_cpmcart_enabled(1, (void*)1);
+}
+
+int cpmcart_disable(void)
+{
+    return set_cpmcart_enabled(0, (void*)1);
+}
+
 static const resource_int_t resources_int[] = {
     { "CPMCart", 0, RES_EVENT_STRICT, (resource_value_t)0,
       &cpmcart_enabled, set_cpmcart_enabled, NULL },
@@ -253,23 +156,17 @@ static const resource_int_t resources_int[] = {
 
 int cpmcart_resources_init(void)
 {
-    cpmcart_mem_init();
-
     return resources_register_int(resources_int);
 }
 
 static const cmdline_option_t cmdline_options[] =
 {
-    { "-cpmcart", SET_RESOURCE, 0,
+    { "-cpmcart", SET_RESOURCE, CMDLINE_ATTRIB_NONE,
       NULL, NULL, "CPMCart", (resource_value_t)1,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_ENABLE_CPM_CART,
-      NULL, NULL },
-    { "+cpmcart", SET_RESOURCE, 0,
+      NULL, "Enable the CP/M cartridge" },
+    { "+cpmcart", SET_RESOURCE, CMDLINE_ATTRIB_NONE,
       NULL, NULL, "CPMCart", (resource_value_t)0,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_DISABLE_CPM_CART,
-      NULL, NULL },
+      NULL, "Disable the CP/M cartridge" },
     CMDLINE_LIST_END
 };
 
@@ -301,13 +198,11 @@ void cpmcart_ba_register(cpmcart_ba_check_callback_t *ba_check,
     cpmcart_ba.enabled = 1;
 }
 
+static void z80core_reset(void);
+
 void cpmcart_reset(void)
 {
-    z80_reg_pc = 0;
-    z80_regs.reg_pc = 0;
-    iff1 = 0;
-    iff2 = 0;
-    im_mode = 0;
+    z80core_reset();
 }
 
 #define JUMP(addr)                                      \
@@ -315,9 +210,9 @@ void cpmcart_reset(void)
         z80_reg_pc = (addr);                            \
     } while (0)
 
-#define LOAD(addr) (cpmcart_wrap_read((WORD)(addr)))
+#define LOAD(addr) (cpmcart_wrap_read((uint16_t)(addr)))
 
-#define STORE(addr, value) (cpmcart_wrap_store((WORD)(addr), (BYTE)(value)))
+#define STORE(addr, value) (cpmcart_wrap_store((uint16_t)(addr), (uint8_t)(value)))
 
 /* undefine IN and OUT first for platforms that have them already defined as something else */
 #undef IN
@@ -325,25 +220,6 @@ void cpmcart_reset(void)
 
 #undef OUT
 #define OUT(addr, value) STORE(addr, value)
-
-#define opcode_t DWORD
-
-#define FETCH_OPCODE(o) ((o) = (LOAD(z80_reg_pc)               \
-                                | (LOAD(z80_reg_pc + 1) << 8)  \
-                                | (LOAD(z80_reg_pc + 2) << 16) \
-                                | (LOAD(z80_reg_pc + 3) << 24)))
-
-#define p0 (opcode & 0xff)
-#define p1 ((opcode >> 8) & 0xff)
-#define p2 ((opcode >> 16) & 0xff)
-#define p3 (opcode >> 24)
-
-#define p12 ((opcode >> 8) & 0xffff)
-#define p23 ((opcode >> 16) & 0xffff)
-
-#define CLK maincpu_clk
-
-#define INC_PC(value) (z80_reg_pc += (value))
 
 #ifdef Z80_4MHZ
 static int z80_half_cycle = 0;
@@ -389,6 +265,132 @@ void cpmcart_clock_stretch(void)
 
 /* ------------------------------------------------------------------------- */
 
+#define Z80_SET_DMA_REQUEST(x)
+#define Z80_LOOP_COND z80_started
+
+
+//#include "z80core.c"
+///
+///
+///
+/// z80core.c starts
+
+
+/*
+ * z80core.c
+ *
+ * Written by
+ *  Andreas Boose <viceteam@t-online.de>
+ *
+ * This file is part of VICE, the Versatile Commodore Emulator.
+ * See README for copyright notice.
+ *
+ *  This program is free software; you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation; either version 2 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program; if not, write to the Free Software
+ *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA
+ *  02111-1307  USA.
+ *
+ */
+
+#ifdef Z80_4MHZ
+#define CLK_ADD(clock, amount) clock = z80cpu_clock_add(clock, amount)
+#else
+#define CLK_ADD(clock, amount) clock += amount
+#endif
+
+static uint8_t reg_a = 0;
+static uint8_t reg_b = 0;
+static uint8_t reg_c = 0;
+static uint8_t reg_d = 0;
+static uint8_t reg_e = 0;
+static uint8_t reg_f = 0;
+static uint8_t reg_h = 0;
+static uint8_t reg_l = 0;
+static uint8_t reg_ixh = 0;
+static uint8_t reg_ixl = 0;
+static uint8_t reg_iyh = 0;
+static uint8_t reg_iyl = 0;
+static uint16_t reg_sp = 0;
+static uint32_t z80_reg_pc = 0;
+static uint8_t reg_i = 0;
+static uint8_t reg_r = 0;
+
+static uint8_t iff1 = 0;
+static uint8_t iff2 = 0;
+static uint8_t im_mode = 0;
+
+static uint8_t reg_a2 = 0;
+static uint8_t reg_b2 = 0;
+static uint8_t reg_c2 = 0;
+static uint8_t reg_d2 = 0;
+static uint8_t reg_e2 = 0;
+static uint8_t reg_f2 = 0;
+static uint8_t reg_h2 = 0;
+static uint8_t reg_l2 = 0;
+
+static uint8_t iff1_1 = 0;
+static uint8_t iff2_1 = 0;
+static uint8_t iff1_2 = 0;
+static uint8_t iff2_2 = 0;
+
+static uint8_t halt = 0;
+
+/* See: https://gist.github.com/drhelius/8497817
+   for proper implementation of the BIT flags.
+   Called either memptr or WZ (reg_wz) */
+static uint16_t reg_wz = 0;
+
+enum INST_MODE_s {
+    INST_NONE,
+    INST_IX,
+    INST_IY
+};
+typedef enum INST_MODE_s INST_MODE_t;
+static INST_MODE_t inst_mode = INST_NONE;
+
+static void z80core_reset(void)
+{
+    z80_reg_pc = 0;
+    z80_regs.reg_pc = 0;
+    iff1 = 0;
+    iff2 = 0;
+    im_mode = 0;
+    iff1_1 = 0;
+    iff2_1 = 0;
+    iff1_2 = 0;
+    iff2_2 = 0;
+    halt = 0;
+}
+
+#define opcode_t uint32_t
+
+#define FETCH_OPCODE(o) ((o) = (LOAD(z80_reg_pc)               \
+                                | (LOAD(z80_reg_pc + 1) << 8)  \
+                                | (LOAD(z80_reg_pc + 2) << 16) \
+                                | (LOAD(z80_reg_pc + 3) << 24)))
+
+#define p0 (opcode & 0xff)
+#define p1 ((opcode >> 8) & 0xff)
+#define p2 ((opcode >> 16) & 0xff)
+#define p3 (opcode >> 24)
+
+#define p12 ((opcode >> 8) & 0xffff)
+#define p23 ((opcode >> 16) & 0xffff)
+
+#define INC_PC(value) (z80_reg_pc += (value))
+
+/* ------------------------------------------------------------------------- */
+
 static unsigned int z80_last_opcode_info;
 static unsigned int z80_last_opcode_addr;
 
@@ -426,8 +428,22 @@ static unsigned int z80_last_opcode_addr;
 #define IX_WORD() ((reg_ixh << 8) | reg_ixl)
 #define IY_WORD() ((reg_iyh << 8) | reg_iyl)
 
+/* reg_wz needs to be set whenever IX+d or XY+d is used; can't use a macro */
+static inline uint16_t IX_WORD_OFF(int8_t offset)
+{
+    reg_wz = IX_WORD() + (signed char)(offset);
+    return reg_wz;
+}
+
+static inline uint16_t IY_WORD_OFF(int8_t offset)
+{
+    reg_wz = IY_WORD() + (signed char)(offset);
+    return reg_wz;
+}
+#if 0
 #define IX_WORD_OFF(offset) (IX_WORD() + (signed char)(offset))
 #define IY_WORD_OFF(offset) (IY_WORD() + (signed char)(offset))
+#endif
 
 #define DEC_BC_WORD() \
     do {              \
@@ -522,6 +538,8 @@ static unsigned int z80_last_opcode_addr;
 #define Z_FLAG  0x40
 #define S_FLAG  0x80
 
+#define U35_FLAG (U3_FLAG | U5_FLAG)
+
 #define LOCAL_SET_CARRY(val)  \
     do {                      \
         if (val) {            \
@@ -583,7 +601,8 @@ static unsigned int z80_last_opcode_addr;
 #define LOCAL_ZERO()      (reg_f & Z_FLAG)
 #define LOCAL_SIGN()      (reg_f & S_FLAG)
 
-static const BYTE SZP[256] = {
+#if 0
+static const uint8_t SZP[256] = {
     P_FLAG | Z_FLAG,               0,               0,          P_FLAG,
                   0,          P_FLAG,          P_FLAG,               0,
                   0,          P_FLAG,          P_FLAG,               0,
@@ -649,10 +668,267 @@ static const BYTE SZP[256] = {
              S_FLAG, S_FLAG | P_FLAG, S_FLAG | P_FLAG,          S_FLAG,
     S_FLAG | P_FLAG,          S_FLAG,          S_FLAG, S_FLAG | P_FLAG
 };
+#endif
+static const uint8_t SZP[256] = {
+    P_FLAG | Z_FLAG,
+    0,
+    0,
+    P_FLAG,
+    0,
+    P_FLAG,
+    P_FLAG,
+    0,
+    U3_FLAG,
+    U3_FLAG | P_FLAG,
+    U3_FLAG | P_FLAG,
+    U3_FLAG,
+    U3_FLAG | P_FLAG,
+    U3_FLAG,
+    U3_FLAG,
+    U3_FLAG | P_FLAG,
+    0,
+    P_FLAG,
+    P_FLAG,
+    0,
+    P_FLAG,
+    0,
+    0,
+    P_FLAG,
+    U3_FLAG | P_FLAG,
+    U3_FLAG,
+    U3_FLAG,
+    U3_FLAG | P_FLAG,
+    U3_FLAG,
+    U3_FLAG | P_FLAG,
+    U3_FLAG | P_FLAG,
+    U3_FLAG,
+    U5_FLAG,
+    U5_FLAG | P_FLAG,
+    U5_FLAG | P_FLAG,
+    U5_FLAG,
+    U5_FLAG | P_FLAG,
+    U5_FLAG,
+    U5_FLAG,
+    U5_FLAG | P_FLAG,
+    U5_FLAG | U3_FLAG | P_FLAG,
+    U5_FLAG | U3_FLAG,
+    U5_FLAG | U3_FLAG,
+    U5_FLAG | U3_FLAG | P_FLAG,
+    U5_FLAG | U3_FLAG,
+    U5_FLAG | U3_FLAG | P_FLAG,
+    U5_FLAG | U3_FLAG | P_FLAG,
+    U5_FLAG | U3_FLAG,
+    U5_FLAG | P_FLAG,
+    U5_FLAG,
+    U5_FLAG,
+    U5_FLAG | P_FLAG,
+    U5_FLAG,
+    U5_FLAG | P_FLAG,
+    U5_FLAG | P_FLAG,
+    U5_FLAG,
+    U5_FLAG | U3_FLAG,
+    U5_FLAG | U3_FLAG | P_FLAG,
+    U5_FLAG | U3_FLAG | P_FLAG,
+    U5_FLAG | U3_FLAG,
+    U5_FLAG | U3_FLAG | P_FLAG,
+    U5_FLAG | U3_FLAG,
+    U5_FLAG | U3_FLAG,
+    U5_FLAG | U3_FLAG | P_FLAG,
+    0,
+    P_FLAG,
+    P_FLAG,
+    0,
+    P_FLAG,
+    0,
+    0,
+    P_FLAG,
+    U3_FLAG | P_FLAG,
+    U3_FLAG,
+    U3_FLAG,
+    U3_FLAG | P_FLAG,
+    U3_FLAG,
+    U3_FLAG | P_FLAG,
+    U3_FLAG | P_FLAG,
+    U3_FLAG,
+    P_FLAG,
+    0,
+    0,
+    P_FLAG,
+    0,
+    P_FLAG,
+    P_FLAG,
+    0,
+    U3_FLAG,
+    U3_FLAG | P_FLAG,
+    U3_FLAG | P_FLAG,
+    U3_FLAG,
+    U3_FLAG | P_FLAG,
+    U3_FLAG,
+    U3_FLAG,
+    U3_FLAG | P_FLAG,
+    U5_FLAG | P_FLAG,
+    U5_FLAG,
+    U5_FLAG,
+    U5_FLAG | P_FLAG,
+    U5_FLAG,
+    U5_FLAG | P_FLAG,
+    U5_FLAG | P_FLAG,
+    U5_FLAG,
+    U5_FLAG | U3_FLAG,
+    U5_FLAG | U3_FLAG | P_FLAG,
+    U5_FLAG | U3_FLAG | P_FLAG,
+    U5_FLAG | U3_FLAG,
+    U5_FLAG | U3_FLAG | P_FLAG,
+    U5_FLAG | U3_FLAG,
+    U5_FLAG | U3_FLAG,
+    U5_FLAG | U3_FLAG | P_FLAG,
+    U5_FLAG,
+    U5_FLAG | P_FLAG,
+    U5_FLAG | P_FLAG,
+    U5_FLAG,
+    U5_FLAG | P_FLAG,
+    U5_FLAG,
+    U5_FLAG,
+    U5_FLAG | P_FLAG,
+    U5_FLAG | U3_FLAG | P_FLAG,
+    U5_FLAG | U3_FLAG,
+    U5_FLAG | U3_FLAG,
+    U5_FLAG | U3_FLAG | P_FLAG,
+    U5_FLAG | U3_FLAG,
+    U5_FLAG | U3_FLAG | P_FLAG,
+    U5_FLAG | U3_FLAG | P_FLAG,
+    U5_FLAG | U3_FLAG,
+    S_FLAG,
+    S_FLAG | P_FLAG,
+    S_FLAG | P_FLAG,
+    S_FLAG,
+    S_FLAG | P_FLAG,
+    S_FLAG,
+    S_FLAG,
+    S_FLAG | P_FLAG,
+    U3_FLAG | S_FLAG | P_FLAG,
+    U3_FLAG | S_FLAG,
+    U3_FLAG | S_FLAG,
+    U3_FLAG | S_FLAG | P_FLAG,
+    U3_FLAG | S_FLAG,
+    U3_FLAG | S_FLAG | P_FLAG,
+    U3_FLAG | S_FLAG | P_FLAG,
+    U3_FLAG | S_FLAG,
+    S_FLAG | P_FLAG,
+    S_FLAG,
+    S_FLAG,
+    S_FLAG | P_FLAG,
+    S_FLAG,
+    S_FLAG | P_FLAG,
+    S_FLAG | P_FLAG,
+    S_FLAG,
+    U3_FLAG | S_FLAG,
+    U3_FLAG | S_FLAG | P_FLAG,
+    U3_FLAG | S_FLAG | P_FLAG,
+    U3_FLAG | S_FLAG,
+    U3_FLAG | S_FLAG | P_FLAG,
+    U3_FLAG | S_FLAG,
+    U3_FLAG | S_FLAG,
+    U3_FLAG | S_FLAG | P_FLAG,
+    U5_FLAG | S_FLAG | P_FLAG,
+    U5_FLAG | S_FLAG,
+    U5_FLAG | S_FLAG,
+    U5_FLAG | S_FLAG | P_FLAG,
+    U5_FLAG | S_FLAG,
+    U5_FLAG | S_FLAG | P_FLAG,
+    U5_FLAG | S_FLAG | P_FLAG,
+    U5_FLAG | S_FLAG,
+    U5_FLAG | U3_FLAG | S_FLAG,
+    U5_FLAG | U3_FLAG | S_FLAG | P_FLAG,
+    U5_FLAG | U3_FLAG | S_FLAG | P_FLAG,
+    U5_FLAG | U3_FLAG | S_FLAG,
+    U5_FLAG | U3_FLAG | S_FLAG | P_FLAG,
+    U5_FLAG | U3_FLAG | S_FLAG,
+    U5_FLAG | U3_FLAG | S_FLAG,
+    U5_FLAG | U3_FLAG | S_FLAG | P_FLAG,
+    U5_FLAG | S_FLAG,
+    U5_FLAG | S_FLAG | P_FLAG,
+    U5_FLAG | S_FLAG | P_FLAG,
+    U5_FLAG | S_FLAG,
+    U5_FLAG | S_FLAG | P_FLAG,
+    U5_FLAG | S_FLAG,
+    U5_FLAG | S_FLAG,
+    U5_FLAG | S_FLAG | P_FLAG,
+    U5_FLAG | U3_FLAG | S_FLAG | P_FLAG,
+    U5_FLAG | U3_FLAG | S_FLAG,
+    U5_FLAG | U3_FLAG | S_FLAG,
+    U5_FLAG | U3_FLAG | S_FLAG | P_FLAG,
+    U5_FLAG | U3_FLAG | S_FLAG,
+    U5_FLAG | U3_FLAG | S_FLAG | P_FLAG,
+    U5_FLAG | U3_FLAG | S_FLAG | P_FLAG,
+    U5_FLAG | U3_FLAG | S_FLAG,
+    S_FLAG | P_FLAG,
+    S_FLAG,
+    S_FLAG,
+    S_FLAG | P_FLAG,
+    S_FLAG,
+    S_FLAG | P_FLAG,
+    S_FLAG | P_FLAG,
+    S_FLAG,
+    U3_FLAG | S_FLAG,
+    U3_FLAG | S_FLAG | P_FLAG,
+    U3_FLAG | S_FLAG | P_FLAG,
+    U3_FLAG | S_FLAG,
+    U3_FLAG | S_FLAG | P_FLAG,
+    U3_FLAG | S_FLAG,
+    U3_FLAG | S_FLAG,
+    U3_FLAG | S_FLAG | P_FLAG,
+    S_FLAG,
+    S_FLAG | P_FLAG,
+    S_FLAG | P_FLAG,
+    S_FLAG,
+    S_FLAG | P_FLAG,
+    S_FLAG,
+    S_FLAG,
+    S_FLAG | P_FLAG,
+    U3_FLAG | S_FLAG | P_FLAG,
+    U3_FLAG | S_FLAG,
+    U3_FLAG | S_FLAG,
+    U3_FLAG | S_FLAG | P_FLAG,
+    U3_FLAG | S_FLAG,
+    U3_FLAG | S_FLAG | P_FLAG,
+    U3_FLAG | S_FLAG | P_FLAG,
+    U3_FLAG | S_FLAG,
+    U5_FLAG | S_FLAG,
+    U5_FLAG | S_FLAG | P_FLAG,
+    U5_FLAG | S_FLAG | P_FLAG,
+    U5_FLAG | S_FLAG,
+    U5_FLAG | S_FLAG | P_FLAG,
+    U5_FLAG | S_FLAG,
+    U5_FLAG | S_FLAG,
+    U5_FLAG | S_FLAG | P_FLAG,
+    U5_FLAG | U3_FLAG | S_FLAG | P_FLAG,
+    U5_FLAG | U3_FLAG | S_FLAG,
+    U5_FLAG | U3_FLAG | S_FLAG,
+    U5_FLAG | U3_FLAG | S_FLAG | P_FLAG,
+    U5_FLAG | U3_FLAG | S_FLAG,
+    U5_FLAG | U3_FLAG | S_FLAG | P_FLAG,
+    U5_FLAG | U3_FLAG | S_FLAG | P_FLAG,
+    U5_FLAG | U3_FLAG | S_FLAG,
+    U5_FLAG | S_FLAG | P_FLAG,
+    U5_FLAG | S_FLAG,
+    U5_FLAG | S_FLAG,
+    U5_FLAG | S_FLAG | P_FLAG,
+    U5_FLAG | S_FLAG,
+    U5_FLAG | S_FLAG | P_FLAG,
+    U5_FLAG | S_FLAG | P_FLAG,
+    U5_FLAG | S_FLAG,
+    U5_FLAG | U3_FLAG | S_FLAG,
+    U5_FLAG | U3_FLAG | S_FLAG | P_FLAG,
+    U5_FLAG | U3_FLAG | S_FLAG | P_FLAG,
+    U5_FLAG | U3_FLAG | S_FLAG,
+    U5_FLAG | U3_FLAG | S_FLAG | P_FLAG,
+    U5_FLAG | U3_FLAG | S_FLAG,
+    U5_FLAG | U3_FLAG | S_FLAG,
+    U5_FLAG | U3_FLAG | S_FLAG | P_FLAG,
+};
 
 /* ------------------------------------------------------------------------- */
-
-z80_regs_t z80_regs;
 
 static void import_registers(void)
 {
@@ -669,7 +945,7 @@ static void import_registers(void)
     reg_iyh = z80_regs.reg_iy >> 8;
     reg_iyl = z80_regs.reg_iy & 0xff;
     reg_sp = z80_regs.reg_sp;
-    z80_reg_pc = (DWORD)z80_regs.reg_pc;
+    z80_reg_pc = (uint32_t)z80_regs.reg_pc;
     reg_i = z80_regs.reg_i;
     reg_r = z80_regs.reg_r;
     reg_a2 = z80_regs.reg_af2 >> 8;
@@ -691,7 +967,7 @@ static void export_registers(void)
     z80_regs.reg_ix = (reg_ixh << 8) | reg_ixl;
     z80_regs.reg_iy = (reg_iyh << 8) | reg_iyl;
     z80_regs.reg_sp = reg_sp;
-    z80_regs.reg_pc = (WORD)z80_reg_pc;
+    z80_regs.reg_pc = (uint16_t)z80_reg_pc;
     z80_regs.reg_i = reg_i;
     z80_regs.reg_r = reg_r;
     z80_regs.reg_af2 = (reg_a2 << 8) | reg_f2;
@@ -704,70 +980,77 @@ static void export_registers(void)
 
 /* Interrupt handling.  */
 
+/* FIXME: Only IM 1 is really supported; don't trust others or their timing. */
+
 #define DO_INTERRUPT(int_kind)                                                            \
     do {                                                                                  \
-        BYTE ik = (int_kind);                                                             \
+        uint8_t ik = (int_kind);                                                             \
                                                                                           \
         if (ik & (IK_IRQ | IK_NMI)) {                                                     \
             if ((ik & IK_NMI) && 0) {                                                     \
-            } else if ((ik & IK_IRQ) && iff1 && !OPINFO_DISABLES_IRQ(LAST_OPCODE_INFO)) { \
-                WORD jumpdst;                                                             \
+            } else if ((ik & IK_IRQ) && iff1) {                                           \
+                uint16_t jumpdst;                                                             \
                 if (monitor_mask[e_comp_space] & (MI_STEP)) {                             \
                     monitor_check_icount_interrupt();                                     \
                 }                                                                         \
-                CLK_ADD(CLK, 4);                                                          \
+                halt = 0;                                                                 \
+                CLK_ADD(CLK, 7);                                                          \
                 --reg_sp;                                                                 \
-                STORE((reg_sp), ((BYTE)(z80_reg_pc >> 8)));                               \
-                CLK_ADD(CLK, 4);                                                          \
+                STORE((reg_sp), ((uint8_t)(z80_reg_pc >> 8)));                               \
+                CLK_ADD(CLK, 3);                                                          \
                 --reg_sp;                                                                 \
-                STORE((reg_sp), ((BYTE)(z80_reg_pc & 0xff)));                             \
+                STORE((reg_sp), ((uint8_t)(z80_reg_pc & 0xff)));                             \
                 iff1 = 0;                                                                 \
                 iff2 = 0;                                                                 \
+                iff1_1 = 0;                                                               \
+                iff2_1 = 0;                                                               \
+                iff1_2 = 0;                                                               \
+                iff2_2 = 0;                                                               \
                 if (im_mode == 1) {                                                       \
                     jumpdst = 0x38;                                                       \
-                    CLK_ADD(CLK, 4);                                                      \
-                    JUMP(jumpdst);                                                        \
                     CLK_ADD(CLK, 3);                                                      \
+                    JUMP(jumpdst);                                                        \
                 } else {                                                                  \
                     jumpdst = (LOAD(reg_i << 8) << 8);                                    \
-                    CLK_ADD(CLK, 4);                                                      \
+                    CLK_ADD(CLK, 3);                                                      \
                     jumpdst |= (LOAD((reg_i << 8) + 1));                                  \
                     JUMP(jumpdst);                                                        \
-                    CLK_ADD(CLK, 3);                                                      \
+                    CLK_ADD(CLK, 6);                                                      \
                 }                                                                         \
+                interrupt_ack_irq(cpu_int_status);                                        \
             }                                                                             \
         }                                                                                 \
         if (ik & (IK_TRAP | IK_RESET)) {                                                  \
             if (ik & IK_TRAP) {                                                           \
                 export_registers();                                                       \
-                interrupt_do_trap(cpu_int_status, (WORD)z80_reg_pc);                      \
+                interrupt_do_trap(cpu_int_status, (uint16_t)z80_reg_pc);                      \
                 import_registers();                                                       \
                 if (cpu_int_status->global_pending_int & IK_RESET) {                      \
                     ik |= IK_RESET;                                                       \
                 }                                                                         \
             }                                                                             \
             if (ik & IK_RESET) {                                                          \
-                interrupt_ack_reset(cpu_int_status);                                      \
                 maincpu_reset();                                                          \
+                interrupt_ack_reset(cpu_int_status);                                      \
             }                                                                             \
         }                                                                                 \
         if (ik & (IK_MONITOR)) {                                                          \
-            if (monitor_force_import(e_comp_space)) {                                     \
+            if (monitor_mask[e_comp_space] & (MI_STEP)) {                                 \
+                export_registers();                                                       \
+                monitor_check_icount((uint16_t)z80_reg_pc);                               \
                 import_registers();                                                       \
             }                                                                             \
-            if (monitor_mask[e_comp_space]) {                                             \
-                export_registers();                                                       \
-            }                                                                             \
-            if (monitor_mask[e_comp_space] & (MI_STEP)) {                                 \
-                monitor_check_icount((WORD)z80_reg_pc);                                   \
-            }                                                                             \
             if (monitor_mask[e_comp_space] & (MI_BREAK)) {                                \
-                if (monitor_check_breakpoints(e_comp_space, (WORD)z80_reg_pc)) {          \
+                export_registers();                                                       \
+                if (monitor_check_breakpoints(e_comp_space, (uint16_t)z80_reg_pc)) {      \
                     monitor_startup(e_comp_space);                                        \
                 }                                                                         \
+                import_registers();                                                       \
             }                                                                             \
             if (monitor_mask[e_comp_space] & (MI_WATCH)) {                                \
-                monitor_check_watchpoints(LAST_OPCODE_ADDR, (WORD)z80_reg_pc);            \
+                export_registers();                                                       \
+                monitor_check_watchpoints(LAST_OPCODE_ADDR, (uint16_t)z80_reg_pc);        \
+                import_registers();                                                       \
             }                                                                             \
         }                                                                                 \
     } while (0)
@@ -778,14 +1061,14 @@ static void export_registers(void)
 
 #define ADC(loadval, clk_inc1, clk_inc2, pc_inc)                                    \
     do {                                                                            \
-        BYTE tmp, carry, value;                                                     \
+        uint8_t tmp, carry, value;                                                     \
                                                                                     \
         CLK_ADD(CLK, clk_inc1);                                                     \
-        value = (BYTE)(loadval);                                                    \
+        value = (uint8_t)(loadval);                                                    \
         carry = LOCAL_CARRY();                                                      \
         tmp = reg_a + value + carry;                                                \
         reg_f = SZP[tmp];                                                           \
-        LOCAL_SET_CARRY((WORD)((WORD)reg_a + (WORD)value + (WORD)(carry)) & 0x100); \
+        LOCAL_SET_CARRY((uint16_t)((uint16_t)reg_a + (uint16_t)value + (uint16_t)(carry)) & 0x100); \
         LOCAL_SET_HALFCARRY((reg_a ^ value ^ tmp) & H_FLAG);                        \
         LOCAL_SET_PARITY((~(reg_a ^ value)) & (reg_a ^ tmp) & 0x80);                \
         reg_a = tmp;                                                                \
@@ -795,49 +1078,53 @@ static void export_registers(void)
 
 #define ADCHLREG(reg_valh, reg_vall)                                                       \
     do {                                                                                   \
-        DWORD tmp, carry;                                                                  \
+        uint32_t tmp, carry;                                                                  \
                                                                                            \
         carry = LOCAL_CARRY();                                                             \
-        tmp = (DWORD)((reg_h << 8) + reg_l) + (DWORD)((reg_valh << 8) + reg_vall) + carry; \
+        tmp = (uint32_t)((reg_h << 8) + reg_l) + (uint32_t)((reg_valh << 8) + reg_vall) + carry; \
         LOCAL_SET_ZERO(!(tmp & 0xffff));                                                   \
         LOCAL_SET_NADDSUB(0);                                                              \
         LOCAL_SET_SIGN(tmp & 0x8000);                                                      \
         LOCAL_SET_CARRY(tmp & 0x10000);                                                    \
         LOCAL_SET_HALFCARRY(((tmp >> 8) ^ reg_valh ^ reg_h) & H_FLAG);                     \
         LOCAL_SET_PARITY((~(reg_h ^ reg_valh)) & (reg_valh ^ (tmp >> 8)) & 0x80);          \
-        reg_h = (BYTE)(tmp >> 8);                                                          \
-        reg_l = (BYTE)(tmp & 0xff);                                                        \
+        reg_h = (uint8_t)(tmp >> 8);                                                          \
+        reg_l = (uint8_t)(tmp & 0xff);                                                        \
+        reg_f = (reg_f & ~(U35_FLAG)) | (reg_h & U35_FLAG);                                \
         CLK_ADD(CLK, 15);                                                                  \
         INC_PC(2);                                                                         \
     } while (0)
 
 #define ADCHLSP()                                                                           \
     do {                                                                                    \
-        DWORD tmp, carry;                                                                   \
+        uint32_t tmp, carry;                                                                   \
                                                                                             \
         carry = LOCAL_CARRY();                                                              \
-        tmp = (DWORD)((reg_h << 8) + reg_l) + (DWORD)(reg_sp) + carry;                      \
+        tmp = (uint32_t)((reg_h << 8) + reg_l) + (uint32_t)(reg_sp) + carry;                      \
+        reg_wz = HL_WORD();                                                                 \
+        reg_wz++;                                                                           \
         LOCAL_SET_ZERO(!(tmp & 0xffff));                                                    \
         LOCAL_SET_NADDSUB(0);                                                               \
         LOCAL_SET_SIGN(tmp & 0x8000);                                                       \
         LOCAL_SET_CARRY(tmp & 0x10000);                                                     \
         LOCAL_SET_HALFCARRY(((tmp >> 8) ^ (reg_sp >> 8) ^ reg_h) & H_FLAG);                 \
         LOCAL_SET_PARITY((~(reg_h ^ (reg_sp >> 8))) & ((reg_sp >> 8) ^ (tmp >> 8)) & 0x80); \
-        reg_h = (BYTE)(tmp >> 8);                                                           \
-        reg_l = (BYTE)(tmp & 0xff);                                                         \
+        reg_h = (uint8_t)(tmp >> 8);                                                           \
+        reg_l = (uint8_t)(tmp & 0xff);                                                         \
+        reg_f = (reg_f & ~(U35_FLAG)) | (reg_h & U35_FLAG);                                 \
         CLK_ADD(CLK, 15);                                                                   \
         INC_PC(2);                                                                          \
     } while (0)
 
 #define ADD(loadval, clk_inc1, clk_inc2, pc_inc)                     \
     do {                                                             \
-        BYTE tmp, value;                                             \
+        uint8_t tmp, value;                                             \
                                                                      \
         CLK_ADD(CLK, clk_inc1);                                      \
-        value = (BYTE)(loadval);                                     \
+        value = (uint8_t)(loadval);                                     \
         tmp = reg_a + value;                                         \
         reg_f = SZP[tmp];                                            \
-        LOCAL_SET_CARRY((WORD)((WORD)reg_a + (WORD)value) & 0x100);  \
+        LOCAL_SET_CARRY((uint16_t)((uint16_t)reg_a + (uint16_t)value) & 0x100);  \
         LOCAL_SET_HALFCARRY((reg_a ^ value ^ tmp) & H_FLAG);         \
         LOCAL_SET_PARITY((~(reg_a ^ value)) & (reg_a ^ tmp) & 0x80); \
         reg_a = tmp;                                                 \
@@ -847,28 +1134,34 @@ static void export_registers(void)
 
 #define ADDXXREG(reg_dsth, reg_dstl, reg_valh, reg_vall, clk_inc, pc_inc)                \
     do {                                                                                 \
-        DWORD tmp;                                                                       \
+        uint32_t tmp;                                                                       \
                                                                                          \
-        tmp = (DWORD)((reg_dsth << 8) + reg_dstl) + (DWORD)((reg_valh << 8) + reg_vall); \
+        tmp = (uint32_t)((reg_dsth << 8) + reg_dstl) + (uint32_t)((reg_valh << 8) + reg_vall); \
         LOCAL_SET_NADDSUB(0);                                                            \
         LOCAL_SET_CARRY(tmp & 0x10000);                                                  \
         LOCAL_SET_HALFCARRY(((tmp >> 8) ^ reg_valh ^ reg_dsth) & H_FLAG);                \
-        reg_dsth = (BYTE)(tmp >> 8);                                                     \
-        reg_dstl = (BYTE)(tmp & 0xff);                                                   \
+        reg_wz = (reg_dsth << 8) | reg_dstl;                                             \
+        reg_wz++;                                                                        \
+        reg_dsth = (uint8_t)(tmp >> 8);                                                     \
+        reg_dstl = (uint8_t)(tmp & 0xff);                                                   \
+        reg_f = (reg_f & ~(U35_FLAG)) | (reg_dsth & U35_FLAG);                           \
         CLK_ADD(CLK, clk_inc);                                                           \
         INC_PC(pc_inc);                                                                  \
     } while (0)
 
 #define ADDXXSP(reg_dsth, reg_dstl, clk_inc, pc_inc)                           \
     do {                                                                       \
-        DWORD tmp;                                                             \
+        uint32_t tmp;                                                             \
                                                                                \
-        tmp = (DWORD)((reg_dsth << 8) + reg_dstl) + (DWORD)(reg_sp);           \
+        tmp = (uint32_t)((reg_dsth << 8) + reg_dstl) + (uint32_t)(reg_sp);           \
         LOCAL_SET_NADDSUB(0);                                                  \
         LOCAL_SET_CARRY(tmp & 0x10000);                                        \
         LOCAL_SET_HALFCARRY(((tmp >> 8) ^ (reg_sp >> 8) ^ reg_dsth) & H_FLAG); \
-        reg_dsth = (BYTE)(tmp >> 8);                                           \
-        reg_dstl = (BYTE)(tmp & 0xff);                                         \
+        reg_wz = (reg_dsth << 8) | reg_dstl;                                   \
+        reg_wz++;                                                              \
+        reg_dsth = (uint8_t)(tmp >> 8);                                           \
+        reg_dstl = (uint8_t)(tmp & 0xff);                                         \
+        reg_f = (reg_f & ~(U35_FLAG)) | (reg_dsth & U35_FLAG);                    \
         CLK_ADD(CLK, clk_inc);                                                 \
         INC_PC(pc_inc);                                                        \
     } while (0)
@@ -883,12 +1176,32 @@ static void export_registers(void)
         INC_PC(pc_inc);                        \
     } while (0)
 
+/* reg_wz is used here to determine F5 and F3 */
 #define BIT(reg_val, value, clk_inc1, clk_inc2, pc_inc) \
     do {                                                \
+        uint8_t tmp;                                    \
         CLK_ADD(CLK, clk_inc1);                         \
+        tmp = (reg_val) & (1 << value);                 \
         LOCAL_SET_NADDSUB(0);                           \
         LOCAL_SET_HALFCARRY(1);                         \
-        LOCAL_SET_ZERO(!((reg_val) & (1 << value)));    \
+        LOCAL_SET_ZERO(!tmp);                           \
+        LOCAL_SET_PARITY(!tmp);                         \
+        reg_f = (reg_f & ~(S_FLAG | U35_FLAG)) | (tmp & S_FLAG) | (reg_val & U35_FLAG); \
+        CLK_ADD(CLK, clk_inc2);                         \
+        INC_PC(pc_inc);                                 \
+    } while (0)
+
+/* reg_wz is used here to determine F5 and F3 */
+#define BIT16(reg_val, value, clk_inc1, clk_inc2, pc_inc) \
+    do {                                                \
+        uint8_t tmp;                                    \
+        CLK_ADD(CLK, clk_inc1);                         \
+        tmp = (reg_val) & (1 << value);                 \
+        LOCAL_SET_NADDSUB(0);                           \
+        LOCAL_SET_HALFCARRY(1);                         \
+        LOCAL_SET_ZERO(!tmp);                           \
+        LOCAL_SET_PARITY(!tmp);                         \
+        reg_f = (reg_f & ~(S_FLAG | U35_FLAG)) | (tmp & S_FLAG) | ((reg_wz >> 8) & U35_FLAG); \
         CLK_ADD(CLK, clk_inc2);                         \
         INC_PC(pc_inc);                                 \
     } while (0)
@@ -900,7 +1213,7 @@ static void export_registers(void)
                                                                     \
             dest_addr = z80_reg_pc + pc_inc + (signed char)(value); \
             z80_reg_pc = dest_addr & 0xffff;                        \
-            CLK_ADD(CLK, 7);                                        \
+            CLK_ADD(CLK, 12);                                        \
         } else {                                                    \
             CLK_ADD(CLK, 7);                                        \
             INC_PC(pc_inc);                                         \
@@ -912,10 +1225,10 @@ static void export_registers(void)
         INC_PC(pc_inc);                                     \
         CLK_ADD(CLK, clk_inc1);                             \
         --reg_sp;                                           \
-        STORE((reg_sp), ((BYTE)(z80_reg_pc >> 8)));         \
+        STORE((reg_sp), ((uint8_t)(z80_reg_pc >> 8)));         \
         CLK_ADD(CLK, clk_inc2);                             \
         --reg_sp;                                           \
-        STORE((reg_sp), ((BYTE)(z80_reg_pc & 0xff)));       \
+        STORE((reg_sp), ((uint8_t)(z80_reg_pc & 0xff)));       \
         JUMP(reg_val);                                      \
         CLK_ADD(CLK, clk_inc3);                             \
     } while (0)
@@ -930,34 +1243,42 @@ static void export_registers(void)
         }                                                                          \
     } while (0)
 
+/* note that bits 5 and 3 are set based on previous flag and A */
+/* this passes zexall, but see:
+   https://github.com/hoglet67/Z80Decoder/wiki/Undocumented-Flags#scfccf
+*/
 #define CCF(clk_inc, pc_inc)                  \
     do {                                      \
         LOCAL_SET_HALFCARRY((LOCAL_CARRY())); \
         LOCAL_SET_CARRY(!(LOCAL_CARRY()));    \
         LOCAL_SET_NADDSUB(0);                 \
+        reg_f = reg_f | (reg_a & U35_FLAG);   \
         CLK_ADD(CLK, clk_inc);                \
         INC_PC(pc_inc);                       \
     } while (0)
 
+/* Bits 3 and 5 of flag based on passed value */
 #define CP(loadval, clk_inc1, clk_inc2, pc_inc)                   \
     do {                                                          \
-        BYTE tmp, value;                                          \
+        uint8_t tmp, value;                                          \
                                                                   \
         CLK_ADD(CLK, clk_inc1);                                   \
-        value = (BYTE)(loadval);                                  \
+        value = (uint8_t)(loadval);                                  \
         tmp = reg_a - value;                                      \
         reg_f = N_FLAG | SZP[tmp];                                \
         LOCAL_SET_CARRY(value > reg_a);                           \
         LOCAL_SET_HALFCARRY((reg_a ^ value ^ tmp) & H_FLAG);      \
         LOCAL_SET_PARITY((reg_a ^ value) & (reg_a ^ tmp) & 0x80); \
+        reg_f = (reg_f & ~(U35_FLAG)) | (value & U35_FLAG);       \
         CLK_ADD(CLK, clk_inc2);                                   \
         INC_PC(pc_inc);                                           \
     } while (0)
 
-#define CPDI(HL_FUNC)                                      \
+#define CPDI(HL_FUNC,WZ_FUNC)                              \
     do {                                                   \
-        BYTE val, tmp;                                     \
+        uint8_t val, tmp;                                     \
                                                            \
+        WZ_FUNC;                                           \
         CLK_ADD(CLK, 4);                                   \
         val = LOAD(HL_WORD());                             \
         tmp = reg_a - val;                                 \
@@ -966,26 +1287,32 @@ static void export_registers(void)
         reg_f = N_FLAG | SZP[tmp] | LOCAL_CARRY();         \
         LOCAL_SET_HALFCARRY((reg_a ^ val ^ tmp) & H_FLAG); \
         LOCAL_SET_PARITY(reg_b | reg_c);                   \
-        CLK_ADD(CLK, 1);                                   \
+        tmp = tmp - (LOCAL_HALFCARRY() ? 1 : 0);           \
+        reg_f = (reg_f & ~(U35_FLAG)) | (tmp & U3_FLAG) | ((tmp << 4) & U5_FLAG); \
+        CLK_ADD(CLK, 12);                                  \
         INC_PC(2);                                         \
     } while (0)
 
 #define CPDIR(HL_FUNC)                                         \
     do {                                                       \
-        BYTE val, tmp;                                         \
+        uint8_t val, tmp;                                         \
                                                                \
         CLK_ADD(CLK, 4);                                       \
         val = LOAD(HL_WORD());                                 \
         tmp = reg_a - val;                                     \
         HL_FUNC;                                               \
         DEC_BC_WORD();                                         \
-        CLK_ADD(CLK, 17);                                      \
+        CLK_ADD(CLK, 12);                                      \
+        reg_wz = z80_reg_pc + 1;                               \
         if (!(BC_WORD() && tmp)) {                             \
             reg_f = N_FLAG | SZP[tmp] | LOCAL_CARRY();         \
             LOCAL_SET_HALFCARRY((reg_a ^ val ^ tmp) & H_FLAG); \
             LOCAL_SET_PARITY(reg_b | reg_c);                   \
-            CLK_ADD(CLK, 5);                                   \
+            tmp = tmp - (LOCAL_HALFCARRY() ? 1 : 0);           \
+            reg_f = (reg_f & ~(U35_FLAG)) | (tmp & U3_FLAG) | ((tmp << 4) & U5_FLAG); \
             INC_PC(2);                                         \
+        } else {                                               \
+            CLK_ADD(CLK, 5);                                   \
         }                                                      \
     } while (0)
 
@@ -994,13 +1321,14 @@ static void export_registers(void)
         reg_a ^= 0xff;          \
         LOCAL_SET_NADDSUB(1);   \
         LOCAL_SET_HALFCARRY(1); \
+        reg_f = (reg_f & ~(U35_FLAG)) | (reg_a & U35_FLAG); \
         CLK_ADD(CLK, clk_inc);  \
         INC_PC(pc_inc);         \
     } while (0)
 
 #define DAA(clk_inc, pc_inc)                                                                                         \
     do {                                                                                                             \
-        WORD tmp;                                                                                                    \
+        uint16_t tmp;                                                                                                    \
                                                                                                                      \
         tmp = reg_a | (LOCAL_CARRY() ? 0x100 : 0) | (LOCAL_HALFCARRY() ? 0x200 : 0) | (LOCAL_NADDSUB() ? 0x400 : 0); \
         reg_a = daa_reg_a[tmp];                                                                                      \
@@ -1011,7 +1339,7 @@ static void export_registers(void)
 
 #define DECXXIND(reg_val, clk_inc1, clk_inc2, clk_inc3, pc_inc) \
     do {                                                        \
-        BYTE tmp;                                               \
+        uint8_t tmp;                                               \
                                                                 \
         CLK_ADD(CLK, clk_inc1);                                 \
         tmp = LOAD((reg_val));                                  \
@@ -1045,11 +1373,16 @@ static void export_registers(void)
 #define DJNZ(value, pc_inc)           \
     do {                              \
         reg_b--;                      \
+        CLK_ADD(CLK, 1);              \
         BRANCH(reg_b, value, pc_inc); \
     } while (0)
 
 #define DI(clk_inc, pc_inc)    \
     do {                       \
+        iff1_2 = 0;            \
+        iff2_2 = 0;            \
+        iff1_1 = 0;            \
+        iff2_1 = 0;            \
         iff1 = 0;              \
         iff2 = 0;              \
         OPCODE_DISABLES_IRQ(); \
@@ -1057,18 +1390,27 @@ static void export_registers(void)
         INC_PC(pc_inc);        \
     } while (0)
 
+/* Back to back EIs results in interrupts being delayed until one instruction after the last EI.
+   So we set iff1_1 and iff2_1 to 0.
+   See:
+   http://www.visual6502.org/JSSim/expert-z80.html?a=0&d=ed56fbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfb0000000000000000&a=38&d=c9&int0=48&steps=200&graphics=false
+*/
+
 #define EI(clk_inc, pc_inc)    \
     do {                       \
-        iff1 = 1;              \
-        iff2 = 1;              \
-        OPCODE_DISABLES_IRQ(); \
+        iff1_2 = 1;            \
+        iff2_2 = 1;            \
+        iff1_1 = 0;            \
+        iff2_1 = 0;            \
+        OPCODE_ENABLES_IRQ();  \
         CLK_ADD(CLK, clk_inc); \
         INC_PC(pc_inc);        \
+        OPCODE_DELAYS_INTERRUPT();\
     } while (0)
 
 #define EXAFAF(clk_inc, pc_inc) \
     do {                        \
-        BYTE tmpl, tmph;        \
+        uint8_t tmpl, tmph;     \
                                 \
         tmph = reg_a;           \
         tmpl = reg_f;           \
@@ -1082,7 +1424,7 @@ static void export_registers(void)
 
 #define EXX(clk_inc, pc_inc)   \
     do {                       \
-        BYTE tmpl, tmph;       \
+        uint8_t tmpl, tmph;       \
                                \
         tmph = reg_b;          \
         tmpl = reg_c;          \
@@ -1108,7 +1450,7 @@ static void export_registers(void)
 
 #define EXDEHL(clk_inc, pc_inc) \
     do {                        \
-        BYTE tmpl, tmph;        \
+        uint8_t tmpl, tmph;        \
                                 \
         tmph = reg_d;           \
         tmpl = reg_e;           \
@@ -1122,7 +1464,7 @@ static void export_registers(void)
 
 #define EXXXSP(reg_valh, reg_vall, clk_inc1, clk_inc2, clk_inc3, clk_inc4, clk_inc5, pc_inc) \
     do {                                                                                     \
-        BYTE tmpl, tmph;                                                                     \
+        uint8_t tmpl, tmph;                                                                     \
                                                                                              \
         tmph = reg_valh;                                                                     \
         tmpl = reg_vall;                                                                     \
@@ -1130,6 +1472,7 @@ static void export_registers(void)
         reg_valh = LOAD(reg_sp + 1);                                                         \
         CLK_ADD(CLK, clk_inc2);                                                              \
         reg_vall = LOAD(reg_sp);                                                             \
+        reg_wz = (reg_valh << 8) | reg_vall;                                                 \
         CLK_ADD(CLK, clk_inc3);                                                              \
         STORE((reg_sp + 1), tmph);                                                           \
         CLK_ADD(CLK, clk_inc4);                                                              \
@@ -1142,6 +1485,8 @@ static void export_registers(void)
 #define HALT()           \
     do {                 \
         CLK_ADD(CLK, 4); \
+        INC_PC(1);       \
+        halt = 1;        \
     } while (0)
 
 #define IM(value)        \
@@ -1153,34 +1498,52 @@ static void export_registers(void)
 
 #define INA(value, clk_inc1, clk_inc2, pc_inc) \
     do {                                       \
+        uint16_t tmp;                          \
         CLK_ADD(CLK, clk_inc1);                \
-        reg_a = IN((reg_a << 8) | value);      \
+        tmp = (reg_a << 8) | value;            \
+        reg_a = IN(tmp);                       \
         CLK_ADD(CLK, clk_inc2);                \
+        reg_wz = tmp + 1;                      \
         INC_PC(pc_inc);                        \
     } while (0)
 
+#ifdef Z80_4MHZ
+#define INBC(reg_val, clk_inc1, clk_inc2, pc_inc)    \
+    do {                                             \
+        uint8_t tmp = z80_half_cycle;                \
+        CLK_ADD(CLK, (clk_inc1 + tmp) );             \
+        reg_val = IN(BC_WORD());                     \
+        reg_f = SZP[reg_val & 0xffu] | LOCAL_CARRY(); \
+        CLK_ADD(CLK, (clk_inc2 - tmp) );             \
+        reg_wz = BC_WORD() + 1;                      \
+        INC_PC(pc_inc);                              \
+    } while (0)
+#else
 #define INBC(reg_val, clk_inc1, clk_inc2, pc_inc)    \
     do {                                             \
         CLK_ADD(CLK, clk_inc1);                      \
         reg_val = IN(BC_WORD());                     \
-        reg_f = SZP[reg_val & 0xff] | LOCAL_CARRY(); \
+        reg_f = SZP[reg_val & 0xffu] | LOCAL_CARRY(); \
         CLK_ADD(CLK, clk_inc2);                      \
+        reg_wz = BC_WORD() + 1;                      \
         INC_PC(pc_inc);                              \
     } while (0)
+#endif
 
 #define INBC0(clk_inc1, clk_inc2, pc_inc) \
     do {                                  \
-        BYTE tmp;                         \
+        uint8_t tmp;                         \
         CLK_ADD(CLK, clk_inc1);           \
         tmp = IN(BC_WORD());              \
         reg_f = SZP[tmp] | LOCAL_CARRY(); \
         CLK_ADD(CLK, clk_inc2);           \
+        reg_wz = BC_WORD() + 1;           \
         INC_PC(pc_inc);                   \
     } while (0)
 
 #define INCXXIND(reg_val, clk_inc1, clk_inc2, clk_inc3, pc_inc) \
     do {                                                        \
-        BYTE tmp;                                               \
+        uint8_t tmp;                                               \
                                                                 \
         CLK_ADD(CLK, clk_inc1);                                 \
         tmp = LOAD((reg_val));                                  \
@@ -1206,13 +1569,14 @@ static void export_registers(void)
 
 #define INDI(HL_FUNC)           \
     do {                        \
-        BYTE tmp;               \
+        uint8_t tmp;               \
                                 \
         CLK_ADD(CLK, 4);        \
         tmp = IN(BC_WORD());    \
         CLK_ADD(CLK, 4);        \
         STORE(HL_WORD(), tmp);  \
         HL_FUNC;                \
+        reg_wz = BC_WORD() + 1; \
         reg_b--;                \
         reg_f = N_FLAG;         \
         LOCAL_SET_ZERO(!reg_b); \
@@ -1222,7 +1586,7 @@ static void export_registers(void)
 
 #define INDIR(HL_FUNC)               \
     do {                             \
-        BYTE tmp;                    \
+        uint8_t tmp;                    \
                                      \
         CLK_ADD(CLK, 4);             \
         tmp = IN(BC_WORD());         \
@@ -1230,11 +1594,13 @@ static void export_registers(void)
         STORE(HL_WORD(), tmp);       \
         HL_FUNC;                     \
         reg_b--;                     \
+        reg_wz = z80_reg_pc + 1;     \
         if (!reg_b) {                \
             CLK_ADD(CLK, 4);         \
             reg_f = N_FLAG | Z_FLAG; \
             INC_PC(2);               \
         } else {                     \
+            CLK_ADD(CLK, 9);         \
             reg_f = N_FLAG;          \
         }                            \
         CLK_ADD(CLK, 4);             \
@@ -1268,7 +1634,7 @@ static void export_registers(void)
 
 #define LDDI(DE_FUNC, HL_FUNC)           \
     do {                                 \
-        BYTE tmp;                        \
+        uint8_t tmp;                        \
                                          \
         CLK_ADD(CLK, 4);                 \
         tmp = LOAD(HL_WORD());           \
@@ -1280,13 +1646,15 @@ static void export_registers(void)
         LOCAL_SET_NADDSUB(0);            \
         LOCAL_SET_PARITY(reg_b | reg_c); \
         LOCAL_SET_HALFCARRY(0);          \
-        CLK_ADD(CLK, 12);                \
+        tmp = tmp + reg_a;               \
+        reg_f = (reg_f & ~(U35_FLAG)) | (tmp & U3_FLAG) | ((tmp << 4) & U5_FLAG); \
+        CLK_ADD(CLK, 8);                 \
         INC_PC(2);                       \
     } while (0)
 
 #define LDDIR(DE_FUNC, HL_FUNC)     \
     do {                            \
-        BYTE tmp;                   \
+        uint8_t tmp;                   \
                                     \
         CLK_ADD(CLK, 4);            \
         tmp = LOAD(HL_WORD());      \
@@ -1295,13 +1663,17 @@ static void export_registers(void)
         DEC_BC_WORD();              \
         DE_FUNC;                    \
         HL_FUNC;                    \
-        CLK_ADD(CLK, 13);           \
+        CLK_ADD(CLK, 8);            \
+        reg_wz = z80_reg_pc + 1;    \
         if (!(BC_WORD())) {         \
             LOCAL_SET_NADDSUB(0);   \
             LOCAL_SET_PARITY(0);    \
             LOCAL_SET_HALFCARRY(0); \
-            CLK_ADD(CLK, 5);        \
+            tmp = tmp + reg_a;      \
+            reg_f = (reg_f & ~(U35_FLAG)) | (tmp & U3_FLAG) | ((tmp << 4) & U5_FLAG); \
             INC_PC(2);              \
+        } else {                    \
+            CLK_ADD(CLK, 5);        \
         }                           \
     } while (0)
 
@@ -1312,13 +1684,14 @@ static void export_registers(void)
         CLK_ADD(CLK, clk_inc2);                                              \
         reg_valh = LOAD((val) + 1);                                          \
         CLK_ADD(CLK, clk_inc3);                                              \
+        reg_wz = (val) + 1;                                                  \
         INC_PC(pc_inc);                                                      \
     } while (0)
 
 #define LDSP(value, clk_inc1, clk_inc2, pc_inc) \
     do {                                        \
         CLK_ADD(CLK, clk_inc1);                 \
-        reg_sp = (WORD)(value);                 \
+        reg_sp = (uint16_t)(value);                 \
         CLK_ADD(CLK, clk_inc2);                 \
         INC_PC(pc_inc);                         \
     } while (0)
@@ -1329,33 +1702,46 @@ static void export_registers(void)
         reg_sp = LOAD(value);                                \
         CLK_ADD(CLK, clk_inc2);                              \
         reg_sp |= LOAD(value + 1) << 8;                      \
+        reg_wz = value + 1;                                  \
         CLK_ADD(CLK, clk_inc3);                              \
         INC_PC(pc_inc);                                      \
     } while (0)
 
 #define LDREG(reg_dest, value, clk_inc1, clk_inc2, pc_inc) \
     do {                                                   \
-        BYTE tmp;                                          \
+        uint8_t tmp;                                          \
                                                            \
         CLK_ADD(CLK, clk_inc1);                            \
-        tmp = (BYTE)(value);                               \
+        tmp = (uint8_t)(value);                               \
         reg_dest = tmp;                                    \
         CLK_ADD(CLK, clk_inc2);                            \
+        INC_PC(pc_inc);                                    \
+    } while (0)
+
+#define LDREGWZ(reg_dest, addr, clk_inc1, clk_inc2, pc_inc) \
+    do {                                                   \
+        uint8_t tmp;                                          \
+                                                           \
+        CLK_ADD(CLK, clk_inc1);                            \
+        tmp = (uint8_t)(LOAD(addr));                       \
+        reg_dest = tmp;                                    \
+        CLK_ADD(CLK, clk_inc2);                            \
+        reg_wz = addr + 1;                                 \
         INC_PC(pc_inc);                                    \
     } while (0)
 
 #define LDW(value, reg_valh, reg_vall, clk_inc1, clk_inc2, pc_inc) \
     do {                                                           \
         CLK_ADD(CLK, clk_inc1);                                    \
-        reg_vall = (BYTE)((value) & 0xff);                         \
-        reg_valh = (BYTE)((value) >> 8);                           \
+        reg_vall = (uint8_t)((value) & 0xff);                         \
+        reg_valh = (uint8_t)((value) >> 8);                           \
         CLK_ADD(CLK, clk_inc2);                                    \
         INC_PC(pc_inc);                                            \
     } while (0)
 
 #define NEG()                                        \
     do {                                             \
-        BYTE tmp;                                    \
+        uint8_t tmp;                                    \
                                                      \
         tmp = 0 - reg_a;                             \
         reg_f = N_FLAG | SZP[tmp];                   \
@@ -1390,48 +1776,64 @@ static void export_registers(void)
         INC_PC(pc_inc);                         \
     } while (0)
 
+#ifdef Z80_4MHZ
+#define OUTBC(value, clk_inc1, clk_inc2, pc_inc)    \
+    do {                                            \
+        uint8_t tmp = z80_half_cycle;               \
+        CLK_ADD(CLK, (clk_inc1 + tmp) );            \
+        OUT(BC_WORD(), value);                      \
+        CLK_ADD(CLK, (clk_inc2 - tmp) );            \
+        reg_wz = BC_WORD() + 1;                     \
+        INC_PC(pc_inc);                             \
+    } while (0)
+#else
 #define OUTBC(value, clk_inc1, clk_inc2, pc_inc) \
     do {                                         \
         CLK_ADD(CLK, clk_inc1);                  \
         OUT(BC_WORD(), value);                   \
         CLK_ADD(CLK, clk_inc2);                  \
+        reg_wz = BC_WORD() + 1;                  \
         INC_PC(pc_inc);                          \
     } while (0)
+#endif
 
 #define OUTDI(HL_FUNC)          \
     do {                        \
-        BYTE tmp;               \
+        uint8_t tmp;               \
                                 \
         CLK_ADD(CLK, 4);        \
+        reg_b--;                \
+        reg_wz = BC_WORD() + 1; \
         tmp = LOAD(HL_WORD());  \
         CLK_ADD(CLK, 4);        \
         OUT(BC_WORD(), tmp);    \
         HL_FUNC;                \
-        reg_b--;                \
         reg_f = N_FLAG;         \
         LOCAL_SET_ZERO(!reg_b); \
+        CLK_ADD(CLK, 4);        \
         CLK_ADD(CLK, 4);        \
         INC_PC(2);              \
     } while (0)
 
 #define OTDIR(HL_FUNC)               \
     do {                             \
-        BYTE tmp;                    \
+        uint8_t tmp;                    \
                                      \
         CLK_ADD(CLK, 4);             \
+        reg_b--;                     \
         tmp = LOAD(HL_WORD());       \
         CLK_ADD(CLK, 4);             \
         OUT(BC_WORD(), tmp);         \
         HL_FUNC;                     \
-        reg_b--;                     \
+        reg_wz = z80_reg_pc + 1;     \
         if (!reg_b) {                \
-            CLK_ADD(CLK, 4);         \
             reg_f = N_FLAG | Z_FLAG; \
             INC_PC(2);               \
         } else {                     \
             reg_f = N_FLAG;          \
+            CLK_ADD(CLK, 5);         \
         }                            \
-        CLK_ADD(CLK, 4);             \
+        CLK_ADD(CLK, 8);             \
     } while (0)
 
 #define POP(reg_valh, reg_vall, pc_inc) \
@@ -1467,7 +1869,7 @@ static void export_registers(void)
 
 #define RESXX(value, addr, clk_inc1, clk_inc2, clk_inc3, pc_inc) \
     do {                                                         \
-        BYTE tmp;                                                \
+        uint8_t tmp;                                                \
                                                                  \
         CLK_ADD(CLK, clk_inc1);                                  \
         tmp = LOAD((addr));                                      \
@@ -1480,7 +1882,7 @@ static void export_registers(void)
 
 #define RESXXREG(value, reg_val, addr, clk_inc1, clk_inc2, clk_inc3, pc_inc) \
     do {                                                                     \
-        BYTE tmp;                                                            \
+        uint8_t tmp;                                                            \
                                                                              \
         CLK_ADD(CLK, clk_inc1);                                              \
         tmp = LOAD((addr));                                                  \
@@ -1494,7 +1896,7 @@ static void export_registers(void)
 
 #define RET(clk_inc1, clk_inc2, clk_inc3) \
     do {                                  \
-        WORD tmp;                         \
+        uint16_t tmp;                         \
                                           \
         CLK_ADD(CLK, clk_inc1);           \
         tmp = LOAD(reg_sp);               \
@@ -1517,7 +1919,7 @@ static void export_registers(void)
 
 #define RETNI()                         \
     do {                                \
-        WORD tmp;                       \
+        uint16_t tmp;                       \
                                         \
         CLK_ADD(CLK, 4);                \
         tmp = LOAD(reg_sp);             \
@@ -1526,12 +1928,12 @@ static void export_registers(void)
         reg_sp += 2;                    \
         iff1 = iff2;                    \
         JUMP(tmp);                      \
-        CLK_ADD(CLK, 2);                \
+        CLK_ADD(CLK, 6);                \
     } while (0)
 
 #define RL(reg_val)                               \
     do {                                          \
-        BYTE rot;                                 \
+        uint8_t rot;                                 \
                                                   \
         rot = (reg_val & 0x80) ? C_FLAG : 0;      \
         reg_val = (reg_val << 1) | LOCAL_CARRY(); \
@@ -1542,20 +1944,21 @@ static void export_registers(void)
 
 #define RLA(clk_inc, pc_inc)                  \
     do {                                      \
-        BYTE rot;                             \
+        uint8_t rot;                             \
                                               \
         rot = (reg_a & 0x80) ? C_FLAG : 0;    \
         reg_a = (reg_a << 1) | LOCAL_CARRY(); \
         LOCAL_SET_CARRY(rot);                 \
         LOCAL_SET_NADDSUB(0);                 \
         LOCAL_SET_HALFCARRY(0);               \
+        reg_f = (reg_f & ~(U35_FLAG)) | (reg_a & U35_FLAG); \
         CLK_ADD(CLK, clk_inc);                \
         INC_PC(pc_inc);                       \
     } while (0)
 
 #define RLC(reg_val)                         \
     do {                                     \
-        BYTE rot;                            \
+        uint8_t rot;                            \
                                              \
         rot = (reg_val & 0x80) ? C_FLAG : 0; \
         reg_val = (reg_val << 1) | rot;      \
@@ -1566,20 +1969,21 @@ static void export_registers(void)
 
 #define RLCA(clk_inc, pc_inc)              \
     do {                                   \
-        BYTE rot;                          \
+        uint8_t rot;                          \
                                            \
         rot = (reg_a & 0x80) ? C_FLAG : 0; \
         reg_a = (reg_a << 1) | rot;        \
         LOCAL_SET_CARRY(rot);              \
         LOCAL_SET_NADDSUB(0);              \
         LOCAL_SET_HALFCARRY(0);            \
+        reg_f = (reg_f & ~(U35_FLAG)) | (reg_a & U35_FLAG); \
         CLK_ADD(CLK, clk_inc);             \
         INC_PC(pc_inc);                    \
     } while (0)
 
 #define RLCXX(addr, clk_inc1, clk_inc2, clk_inc3, pc_inc) \
     do {                                                  \
-        BYTE rot, tmp;                                    \
+        uint8_t rot, tmp;                                    \
                                                           \
         CLK_ADD(CLK, clk_inc1);                           \
         tmp = LOAD((addr));                               \
@@ -1594,7 +1998,7 @@ static void export_registers(void)
 
 #define RLCXXREG(reg_val, addr, clk_inc1, clk_inc2, clk_inc3, pc_inc) \
     do {                                                              \
-        BYTE rot, tmp;                                                \
+        uint8_t rot, tmp;                                                \
                                                                       \
         CLK_ADD(CLK, clk_inc1);                                       \
         tmp = LOAD((addr));                                           \
@@ -1610,9 +2014,11 @@ static void export_registers(void)
 
 #define RLD()                                          \
     do {                                               \
-        BYTE tmp;                                      \
+        uint8_t tmp;                                      \
                                                        \
-        tmp = LOAD(HL_WORD());                         \
+        reg_wz = HL_WORD();                            \
+        tmp = LOAD(reg_wz);                            \
+        reg_wz++;                                      \
         CLK_ADD(CLK, 8);                               \
         STORE(HL_WORD(), (tmp << 4) | (reg_a & 0x0f)); \
         reg_a = (tmp >> 4) | (reg_a & 0xf0);           \
@@ -1623,7 +2029,7 @@ static void export_registers(void)
 
 #define RLXX(addr, clk_inc1, clk_inc2, clk_inc3, pc_inc) \
     do {                                                 \
-        BYTE rot, tmp;                                   \
+        uint8_t rot, tmp;                                   \
                                                          \
         CLK_ADD(CLK, clk_inc1);                          \
         tmp = LOAD((addr));                              \
@@ -1638,7 +2044,7 @@ static void export_registers(void)
 
 #define RLXXREG(reg_val, addr, clk_inc1, clk_inc2, clk_inc3, pc_inc) \
     do {                                                             \
-        BYTE rot, tmp;                                               \
+        uint8_t rot, tmp;                                               \
                                                                      \
         CLK_ADD(CLK, clk_inc1);                                      \
         tmp = LOAD((addr));                                          \
@@ -1654,7 +2060,7 @@ static void export_registers(void)
 
 #define RR(reg_val)                                            \
     do {                                                       \
-        BYTE rot;                                              \
+        uint8_t rot;                                              \
                                                                \
         rot = reg_val & C_FLAG;                                \
         reg_val = (reg_val >> 1) | (LOCAL_CARRY() ? 0x80 : 0); \
@@ -1665,20 +2071,21 @@ static void export_registers(void)
 
 #define RRA(clk_inc, pc_inc)                               \
     do {                                                   \
-        BYTE rot;                                          \
+        uint8_t rot;                                          \
                                                            \
         rot = reg_a & C_FLAG;                              \
         reg_a = (reg_a >> 1) | (LOCAL_CARRY() ? 0x80 : 0); \
         LOCAL_SET_CARRY(rot);                              \
         LOCAL_SET_NADDSUB(0);                              \
         LOCAL_SET_HALFCARRY(0);                            \
+        reg_f = (reg_f & ~(U35_FLAG)) | (reg_a & U35_FLAG); \
         CLK_ADD(CLK, clk_inc);                             \
         INC_PC(pc_inc);                                    \
     } while (0)
 
 #define RRC(reg_val)                                   \
     do {                                               \
-        BYTE rot;                                      \
+        uint8_t rot;                                      \
                                                        \
         rot = reg_val & C_FLAG;                        \
         reg_val = (reg_val >> 1) | ((rot) ? 0x80 : 0); \
@@ -1689,20 +2096,21 @@ static void export_registers(void)
 
 #define RRCA(clk_inc, pc_inc)                      \
     do {                                           \
-        BYTE rot;                                  \
+        uint8_t rot;                                  \
                                                    \
         rot = reg_a & C_FLAG;                      \
         reg_a = (reg_a >> 1) | ((rot) ? 0x80 : 0); \
         LOCAL_SET_CARRY(rot);                      \
         LOCAL_SET_NADDSUB(0);                      \
         LOCAL_SET_HALFCARRY(0);                    \
+        reg_f = (reg_f & ~(U35_FLAG)) | (reg_a & U35_FLAG); \
         CLK_ADD(CLK, clk_inc);                     \
         INC_PC(pc_inc);                            \
     } while (0)
 
 #define RRCXX(addr, clk_inc1, clk_inc2, clk_inc3, pc_inc) \
     do {                                                  \
-        BYTE rot, tmp;                                    \
+        uint8_t rot, tmp;                                    \
                                                           \
         CLK_ADD(CLK, clk_inc1);                           \
         tmp = LOAD((addr));                               \
@@ -1717,7 +2125,7 @@ static void export_registers(void)
 
 #define RRCXXREG(reg_val, addr, clk_inc1, clk_inc2, clk_inc3, pc_inc) \
     do {                                                              \
-        BYTE rot, tmp;                                                \
+        uint8_t rot, tmp;                                                \
                                                                       \
         CLK_ADD(CLK, clk_inc1);                                       \
         tmp = LOAD((addr));                                           \
@@ -1733,9 +2141,11 @@ static void export_registers(void)
 
 #define RRD()                                        \
     do {                                             \
-        BYTE tmp;                                    \
+        uint8_t tmp;                                    \
                                                      \
-        tmp = LOAD(HL_WORD());                       \
+        reg_wz = HL_WORD();                          \
+        tmp = LOAD(reg_wz);                          \
+        reg_wz++;                                    \
         CLK_ADD(CLK, 8);                             \
         STORE(HL_WORD(), (tmp >> 4) | (reg_a << 4)); \
         reg_a = (tmp & 0x0f) | (reg_a & 0xf0);       \
@@ -1746,7 +2156,7 @@ static void export_registers(void)
 
 #define RRXX(addr, clk_inc1, clk_inc2, clk_inc3, pc_inc) \
     do {                                                 \
-        BYTE rot, tmp;                                   \
+        uint8_t rot, tmp;                                   \
                                                          \
         CLK_ADD(CLK, clk_inc1);                          \
         tmp = LOAD((addr));                              \
@@ -1761,7 +2171,7 @@ static void export_registers(void)
 
 #define RRXXREG(reg_val, addr, clk_inc1, clk_inc2, clk_inc3, pc_inc) \
     do {                                                             \
-        BYTE rot, tmp;                                               \
+        uint8_t rot, tmp;                                               \
                                                                      \
         CLK_ADD(CLK, clk_inc1);                                      \
         tmp = LOAD((addr));                                          \
@@ -1777,64 +2187,73 @@ static void export_registers(void)
 
 #define SBCHLREG(reg_valh, reg_vall)                                                     \
     do {                                                                                 \
-        DWORD tmp;                                                                       \
-        BYTE carry;                                                                      \
+        uint32_t tmp;                                                                       \
+        uint8_t carry;                                                                      \
                                                                                          \
         carry = LOCAL_CARRY();                                                           \
-        tmp = (DWORD)(HL_WORD()) - (DWORD)((reg_valh << 8) + reg_vall) - (DWORD)(carry); \
+        tmp = (uint32_t)(HL_WORD()) - (uint32_t)((reg_valh << 8) + reg_vall) - (uint32_t)(carry); \
+        reg_wz = HL_WORD();                                                              \
+        reg_wz++;                                                                        \
         reg_f = N_FLAG;                                                                  \
         LOCAL_SET_CARRY(tmp & 0x10000);                                                  \
         LOCAL_SET_HALFCARRY((reg_h ^ reg_valh ^ (tmp >> 8)) & H_FLAG);                   \
         LOCAL_SET_PARITY(((reg_h ^ (tmp >> 8)) & (reg_h ^ reg_valh)) & 0x80);            \
         LOCAL_SET_ZERO(!(tmp & 0xffff));                                                 \
         LOCAL_SET_SIGN(tmp & 0x8000);                                                    \
-        reg_h = (BYTE)(tmp >> 8);                                                        \
-        reg_l = (BYTE)(tmp & 0xff);                                                      \
+        reg_h = (uint8_t)(tmp >> 8);                                                        \
+        reg_l = (uint8_t)(tmp & 0xff);                                                      \
+        reg_f = (reg_f & ~(U35_FLAG)) | (reg_h & U35_FLAG);                              \
         CLK_ADD(CLK, 15);                                                                \
         INC_PC(2);                                                                       \
     } while (0)
 
 #define SBCHLSP()                                                                  \
     do {                                                                           \
-        DWORD tmp;                                                                 \
-        BYTE carry;                                                                \
+        uint32_t tmp;                                                                 \
+        uint8_t carry;                                                                \
                                                                                    \
         carry = LOCAL_CARRY();                                                     \
-        tmp = (DWORD)(HL_WORD()) - (DWORD)reg_sp - (DWORD)(carry);                 \
+        tmp = (uint32_t)(HL_WORD()) - (uint32_t)reg_sp - (uint32_t)(carry);                 \
         reg_f = N_FLAG;                                                            \
         LOCAL_SET_CARRY(tmp & 0x10000);                                            \
         LOCAL_SET_HALFCARRY((reg_h ^ (reg_sp >> 8) ^ (tmp >> 8)) & H_FLAG);        \
         LOCAL_SET_PARITY(((reg_h ^ (tmp >> 8)) & (reg_h ^ (reg_sp >> 8))) & 0x80); \
         LOCAL_SET_ZERO(!(tmp & 0xffff));                                           \
         LOCAL_SET_SIGN(tmp & 0x8000);                                              \
-        reg_h = (BYTE)(tmp >> 8);                                                  \
-        reg_l = (BYTE)(tmp & 0xff);                                                \
+        reg_h = (uint8_t)(tmp >> 8);                                                  \
+        reg_l = (uint8_t)(tmp & 0xff);                                                \
+        reg_f = (reg_f & ~(U35_FLAG)) | (reg_h & U35_FLAG);                        \
         CLK_ADD(CLK, 15);                                                          \
         INC_PC(2);                                                                 \
     } while (0)
 
 #define SBC(loadval, clk_inc1, clk_inc2, pc_inc)                      \
     do {                                                              \
-        BYTE tmp, carry, value;                                       \
+        uint8_t tmp, carry, value;                                       \
                                                                       \
         CLK_ADD(CLK, clk_inc1);                                       \
-        value = (BYTE)(loadval);                                      \
+        value = (uint8_t)(loadval);                                      \
         carry = LOCAL_CARRY();                                        \
         tmp = reg_a - value - carry;                                  \
         reg_f = N_FLAG | SZP[tmp];                                    \
         LOCAL_SET_HALFCARRY((reg_a ^ value ^ tmp) & H_FLAG);          \
         LOCAL_SET_PARITY((reg_a ^ value) & (reg_a ^ tmp) & 0x80);     \
-        LOCAL_SET_CARRY((WORD)((WORD)value + (WORD)(carry)) > reg_a); \
+        LOCAL_SET_CARRY((uint16_t)((uint16_t)value + (uint16_t)(carry)) > reg_a); \
         reg_a = tmp;                                                  \
         CLK_ADD(CLK, clk_inc2);                                       \
         INC_PC(pc_inc);                                               \
     } while (0)
 
+/* note that bits 5 and 3 are set based on previous flag and A */
+/* this passes zexall, but see:
+   https://github.com/hoglet67/Z80Decoder/wiki/Undocumented-Flags#scfccf
+*/
 #define SCF(clk_inc, pc_inc)    \
     do {                        \
         LOCAL_SET_CARRY(1);     \
         LOCAL_SET_HALFCARRY(0); \
         LOCAL_SET_NADDSUB(0);   \
+        reg_f = reg_f | (reg_a & U35_FLAG); \
         CLK_ADD(CLK, clk_inc);  \
         INC_PC(pc_inc);         \
     } while (0)
@@ -1848,7 +2267,7 @@ static void export_registers(void)
 
 #define SETXX(value, addr, clk_inc1, clk_inc2, clk_inc3, pc_inc) \
     do {                                                         \
-        BYTE tmp;                                                \
+        uint8_t tmp;                                                \
                                                                  \
         CLK_ADD(CLK, clk_inc1);                                  \
         tmp = LOAD((addr));                                      \
@@ -1861,7 +2280,7 @@ static void export_registers(void)
 
 #define SETXXREG(value, reg_val, addr, clk_inc1, clk_inc2, clk_inc3, pc_inc) \
     do {                                                                     \
-        BYTE tmp;                                                            \
+        uint8_t tmp;                                                            \
                                                                              \
         CLK_ADD(CLK, clk_inc1);                                              \
         tmp = LOAD((addr));                                                  \
@@ -1875,7 +2294,7 @@ static void export_registers(void)
 
 #define SLA(reg_val)                         \
     do {                                     \
-        BYTE rot;                            \
+        uint8_t rot;                            \
                                              \
         rot = (reg_val & 0x80) ? C_FLAG : 0; \
         reg_val <<= 1;                       \
@@ -1886,7 +2305,7 @@ static void export_registers(void)
 
 #define SLAXX(addr, clk_inc1, clk_inc2, clk_inc3, pc_inc) \
     do {                                                  \
-        BYTE rot, tmp;                                    \
+        uint8_t rot, tmp;                                    \
                                                           \
         CLK_ADD(CLK, clk_inc1);                           \
         tmp = LOAD((addr));                               \
@@ -1901,7 +2320,7 @@ static void export_registers(void)
 
 #define SLAXXREG(reg_val, addr, clk_inc1, clk_inc2, clk_inc3, pc_inc) \
     do {                                                              \
-        BYTE rot, tmp;                                                \
+        uint8_t rot, tmp;                                                \
                                                                       \
         CLK_ADD(CLK, clk_inc1);                                       \
         tmp = LOAD((addr));                                           \
@@ -1917,7 +2336,7 @@ static void export_registers(void)
 
 #define SLL(reg_val)                         \
     do {                                     \
-        BYTE rot;                            \
+        uint8_t rot;                            \
                                              \
         rot = (reg_val & 0x80) ? C_FLAG : 0; \
         reg_val = (reg_val << 1) | 1;        \
@@ -1928,7 +2347,7 @@ static void export_registers(void)
 
 #define SLLXX(addr, clk_inc1, clk_inc2, clk_inc3, pc_inc) \
     do {                                                  \
-        BYTE rot, tmp;                                    \
+        uint8_t rot, tmp;                                    \
                                                           \
         CLK_ADD(CLK, clk_inc1);                           \
         tmp = LOAD((addr));                               \
@@ -1943,7 +2362,7 @@ static void export_registers(void)
 
 #define SLLXXREG(reg_val, addr, clk_inc1, clk_inc2, clk_inc3, pc_inc) \
     do {                                                              \
-        BYTE rot, tmp;                                                \
+        uint8_t rot, tmp;                                                \
                                                                       \
         CLK_ADD(CLK, clk_inc1);                                       \
         tmp = LOAD((addr));                                           \
@@ -1959,7 +2378,7 @@ static void export_registers(void)
 
 #define SRA(reg_val)                                 \
     do {                                             \
-        BYTE rot;                                    \
+        uint8_t rot;                                    \
                                                      \
         rot = reg_val & C_FLAG;                      \
         reg_val = (reg_val >> 1) | (reg_val & 0x80); \
@@ -1970,7 +2389,7 @@ static void export_registers(void)
 
 #define SRAXX(addr, clk_inc1, clk_inc2, clk_inc3, pc_inc) \
     do {                                                  \
-        BYTE rot, tmp;                                    \
+        uint8_t rot, tmp;                                    \
                                                           \
         CLK_ADD(CLK, clk_inc1);                           \
         tmp = LOAD((addr));                               \
@@ -1985,7 +2404,7 @@ static void export_registers(void)
 
 #define SRAXXREG(reg_val, addr, clk_inc1, clk_inc2, clk_inc3, pc_inc) \
     do {                                                              \
-        BYTE rot, tmp;                                                \
+        uint8_t rot, tmp;                                                \
                                                                       \
         CLK_ADD(CLK, clk_inc1);                                       \
         tmp = LOAD((addr));                                           \
@@ -2001,7 +2420,7 @@ static void export_registers(void)
 
 #define SRL(reg_val)                \
     do {                            \
-        BYTE rot;                   \
+        uint8_t rot;                   \
                                     \
         rot = reg_val & C_FLAG;     \
         reg_val >>= 1;              \
@@ -2012,7 +2431,7 @@ static void export_registers(void)
 
 #define SRLXX(addr, clk_inc1, clk_inc2, clk_inc3, pc_inc) \
     do {                                                  \
-        BYTE rot, tmp;                                    \
+        uint8_t rot, tmp;                                    \
                                                           \
         CLK_ADD(CLK, clk_inc1);                           \
         tmp = LOAD((addr));                               \
@@ -2027,7 +2446,7 @@ static void export_registers(void)
 
 #define SRLXXREG(reg_val, addr, clk_inc1, clk_inc2, clk_inc3, pc_inc) \
     do {                                                              \
-        BYTE rot, tmp;                                                \
+        uint8_t rot, tmp;                                                \
                                                                       \
         CLK_ADD(CLK, clk_inc1);                                       \
         tmp = LOAD((addr));                                           \
@@ -2044,20 +2463,22 @@ static void export_registers(void)
 #define STW(addr, reg_valh, reg_vall, clk_inc1, clk_inc2, clk_inc3, pc_inc) \
     do {                                                                    \
         CLK_ADD(CLK, clk_inc1);                                             \
-        STORE((WORD)(addr), reg_vall);                                      \
+        STORE((uint16_t)(addr), reg_vall);                                      \
         CLK_ADD(CLK, clk_inc2);                                             \
-        STORE((WORD)(addr + 1), reg_valh);                                  \
+        STORE((uint16_t)(addr + 1), reg_valh);                                  \
         CLK_ADD(CLK, clk_inc3);                                             \
+        reg_wz = addr + 1;                                                  \
         INC_PC(pc_inc);                                                     \
     } while (0)
 
 #define STSPW(addr, clk_inc1, clk_inc2, clk_inc3, pc_inc) \
     do {                                                  \
         CLK_ADD(CLK, clk_inc1);                           \
-        STORE((WORD)(addr), (reg_sp & 0xff));             \
+        STORE((uint16_t)(addr), (reg_sp & 0xff));             \
         CLK_ADD(CLK, clk_inc2);                           \
-        STORE((WORD)(addr + 1), (reg_sp >> 8));           \
+        STORE((uint16_t)(addr + 1), (reg_sp >> 8));           \
         CLK_ADD(CLK, clk_inc3);                           \
+        reg_wz = addr + 1;                                \
         INC_PC(pc_inc);                                   \
     } while (0)
 
@@ -2069,12 +2490,21 @@ static void export_registers(void)
         INC_PC(pc_inc);                                  \
     } while (0)
 
+#define STREGWZ(addr, reg_val, clk_inc1, clk_inc2, pc_inc) \
+    do {                                                 \
+        CLK_ADD(CLK, clk_inc1);                          \
+        STORE(addr, reg_val);                            \
+        CLK_ADD(CLK, clk_inc2);                          \
+        reg_wz = ((addr + 1) & 0xff) | (reg_val << 8);   \
+        INC_PC(pc_inc);                                  \
+    } while (0)
+
 #define SUB(loadval, clk_inc1, clk_inc2, pc_inc)                  \
     do {                                                          \
-        BYTE tmp, value;                                          \
+        uint8_t tmp, value;                                          \
                                                                   \
         CLK_ADD(CLK, clk_inc1);                                   \
-        value = (BYTE)(loadval);                                  \
+        value = (uint8_t)(loadval);                                  \
         tmp = reg_a - value;                                      \
         reg_f = N_FLAG | SZP[tmp];                                \
         LOCAL_SET_HALFCARRY((reg_a ^ value ^ tmp) & H_FLAG);      \
@@ -2099,7 +2529,7 @@ static void export_registers(void)
 
 /* Extended opcodes.  */
 
-static void opcode_cb(BYTE ip1, BYTE ip2, BYTE ip3, WORD ip12, WORD ip23)
+static void opcode_cb(uint8_t ip1, uint8_t ip2, uint8_t ip3, uint16_t ip12, uint16_t ip23)
 {
     switch (ip1) {
         case 0x00: /* RLC B */
@@ -2313,7 +2743,7 @@ static void opcode_cb(BYTE ip1, BYTE ip2, BYTE ip3, WORD ip12, WORD ip23)
             BIT(reg_l, 0, 0, 8, 2);
             break;
         case 0x46: /* BIT (HL) 0 */
-            BIT(LOAD(HL_WORD()), 0, 4, 8, 2);
+            BIT16(LOAD(HL_WORD()), 0, 4, 8, 2);
             break;
         case 0x47: /* BIT A 0 */
             BIT(reg_a, 0, 0, 8, 2);
@@ -2337,7 +2767,7 @@ static void opcode_cb(BYTE ip1, BYTE ip2, BYTE ip3, WORD ip12, WORD ip23)
             BIT(reg_l, 1, 0, 8, 2);
             break;
         case 0x4e: /* BIT (HL) 1 */
-            BIT(LOAD(HL_WORD()), 1, 4, 8, 2);
+            BIT16(LOAD(HL_WORD()), 1, 4, 8, 2);
             break;
         case 0x4f: /* BIT A 1 */
             BIT(reg_a, 1, 0, 8, 2);
@@ -2361,7 +2791,7 @@ static void opcode_cb(BYTE ip1, BYTE ip2, BYTE ip3, WORD ip12, WORD ip23)
             BIT(reg_l, 2, 0, 8, 2);
             break;
         case 0x56: /* BIT (HL) 2 */
-            BIT(LOAD(HL_WORD()), 2, 4, 8, 2);
+            BIT16(LOAD(HL_WORD()), 2, 4, 8, 2);
             break;
         case 0x57: /* BIT A 2 */
             BIT(reg_a, 2, 0, 8, 2);
@@ -2385,7 +2815,7 @@ static void opcode_cb(BYTE ip1, BYTE ip2, BYTE ip3, WORD ip12, WORD ip23)
             BIT(reg_l, 3, 0, 8, 2);
             break;
         case 0x5e: /* BIT (HL) 3 */
-            BIT(LOAD(HL_WORD()), 3, 4, 8, 2);
+            BIT16(LOAD(HL_WORD()), 3, 4, 8, 2);
             break;
         case 0x5f: /* BIT A 3 */
             BIT(reg_a, 3, 0, 8, 2);
@@ -2409,7 +2839,7 @@ static void opcode_cb(BYTE ip1, BYTE ip2, BYTE ip3, WORD ip12, WORD ip23)
             BIT(reg_l, 4, 0, 8, 2);
             break;
         case 0x66: /* BIT (HL) 4 */
-            BIT(LOAD(HL_WORD()), 4, 4, 8, 2);
+            BIT16(LOAD(HL_WORD()), 4, 4, 8, 2);
             break;
         case 0x67: /* BIT A 4 */
             BIT(reg_a, 4, 0, 8, 2);
@@ -2433,7 +2863,7 @@ static void opcode_cb(BYTE ip1, BYTE ip2, BYTE ip3, WORD ip12, WORD ip23)
             BIT(reg_l, 5, 0, 8, 2);
             break;
         case 0x6e: /* BIT (HL) 5 */
-            BIT(LOAD(HL_WORD()), 5, 4, 8, 2);
+            BIT16(LOAD(HL_WORD()), 5, 4, 8, 2);
             break;
         case 0x6f: /* BIT A 5 */
             BIT(reg_a, 5, 0, 8, 2);
@@ -2457,7 +2887,7 @@ static void opcode_cb(BYTE ip1, BYTE ip2, BYTE ip3, WORD ip12, WORD ip23)
             BIT(reg_l, 6, 0, 8, 2);
             break;
         case 0x76: /* BIT (HL) 6 */
-            BIT(LOAD(HL_WORD()), 6, 4, 8, 2);
+            BIT16(LOAD(HL_WORD()), 6, 4, 8, 2);
             break;
         case 0x77: /* BIT A 6 */
             BIT(reg_a, 6, 0, 8, 2);
@@ -2481,7 +2911,7 @@ static void opcode_cb(BYTE ip1, BYTE ip2, BYTE ip3, WORD ip12, WORD ip23)
             BIT(reg_l, 7, 0, 8, 2);
             break;
         case 0x7e: /* BIT (HL) 7 */
-            BIT(LOAD(HL_WORD()), 7, 4, 8, 2);
+            BIT16(LOAD(HL_WORD()), 7, 4, 8, 2);
             break;
         case 0x7f: /* BIT A 7 */
             BIT(reg_a, 7, 0, 8, 2);
@@ -2875,202 +3305,243 @@ static void opcode_cb(BYTE ip1, BYTE ip2, BYTE ip3, WORD ip12, WORD ip23)
     }
 }
 
-static void opcode_dd_cb(BYTE iip2, BYTE iip3, WORD iip23)
+#undef INSTS
+#define INSTS(IX,IY)         \
+    do {                     \
+        switch (inst_mode) { \
+            case INST_IX:    \
+                IX;          \
+                break;       \
+            case INST_IY:    \
+                IY;          \
+                break;       \
+            default:         \
+                break;       \
+        }                    \
+    } while (0)
+
+#define INSTS_SH(func, XY, cyc, inc) \
+    INSTS(func(IX_##XY, 0, 0, cyc, inc), \
+          func(IY_##XY, 0, 0, cyc, inc));
+
+#define INSTS_SHREG(func, reg, XY, cyc, inc) \
+    INSTS(func(reg, IX_##XY, 0, 0, cyc, inc), \
+          func(reg, IY_##XY, 0 ,0, cyc, inc));
+
+#define INSTS_RS(func, bit, XY, cyc, inc) \
+    INSTS(func(bit, IX_##XY, 0, 0, cyc, inc), \
+          func(bit, IY_##XY, 0, 0, cyc, inc));
+
+#define INSTS_RSREG(func, bit, reg, XY, cyc, inc) \
+    INSTS(func(bit, reg, IX_##XY, 0, 0, cyc, inc), \
+          func(bit, reg, IY_##XY, 0, 0, cyc, inc));
+
+#define INSTS_BIT(XY, bit, cyc, inc) \
+    INSTS(BIT16(LOAD(IX_##XY), bit, 0, cyc, inc), \
+          BIT16(LOAD(IY_##XY), bit, 0, cyc, inc));
+
+/* use macros to reduce source code and make this more managable. */
+/* "Ir" is either IX or IY. The macros above do the code expansion to
+   handle both the IX and IY cases. */
+static void opcode_ddfd_cb(uint8_t iip2, uint8_t iip3, uint16_t iip23)
 {
+    /* effecitively read 0xcb */
+    CLK_ADD(CLK, 4);
+    INC_PC(1);
     switch (iip3) {
-        case 0x00: /* RLC (IX+d),B */
-            RLCXXREG(reg_b, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0x00: /* RLC (Ir+d),B */
+            INSTS_SHREG(RLCXXREG, reg_b, WORD_OFF(iip2), 15, 2);
             break;
-        case 0x01: /* RLC (IX+d),C */
-            RLCXXREG(reg_c, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0x01: /* RLC (Ir+d),C */
+            INSTS_SHREG(RLCXXREG, reg_c, WORD_OFF(iip2), 15, 2);
             break;
-        case 0x02: /* RLC (IX+d),D */
-            RLCXXREG(reg_d, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0x02: /* RLC (Ir+d),D */
+            INSTS_SHREG(RLCXXREG, reg_d, WORD_OFF(iip2), 15, 2);
             break;
-        case 0x03: /* RLC (IX+d),E */
-            RLCXXREG(reg_e, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0x03: /* RLC (Ir+d),E */
+            INSTS_SHREG(RLCXXREG, reg_e, WORD_OFF(iip2), 15, 2);
             break;
-        case 0x04: /* RLC (IX+d),H */
-            RLCXXREG(reg_h, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0x04: /* RLC (Ir+d),H */
+            INSTS_SHREG(RLCXXREG, reg_h, WORD_OFF(iip2), 15, 2);
             break;
-        case 0x05: /* RLC (IX+d),L */
-            RLCXXREG(reg_l, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0x05: /* RLC (Ir+d),L */
+            INSTS_SHREG(RLCXXREG, reg_l, WORD_OFF(iip2), 15, 2);
             break;
-        case 0x06: /* RLC (IX+d) */
-            RLCXX(IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0x06: /* RLC (Ir+d) */
+            INSTS_SH(RLCXX, WORD_OFF(iip2), 15, 2);
             break;
-        case 0x07: /* RLC (IX+d),A */
-            RLCXXREG(reg_a, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0x07: /* RLC (Ir+d),A */
+            INSTS_SHREG(RLCXXREG, reg_a, WORD_OFF(iip2), 15, 2);
             break;
-        case 0x08: /* RRC (IX+d),B */
-            RRCXXREG(reg_b, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0x08: /* RRC (Ir+d),B */
+            INSTS_SHREG(RRCXXREG, reg_b, WORD_OFF(iip2), 15, 2);
             break;
-        case 0x09: /* RRC (IX+d),C */
-            RRCXXREG(reg_c, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0x09: /* RRC (Ir+d),C */
+            INSTS_SHREG(RRCXXREG, reg_c, WORD_OFF(iip2), 15, 2);
             break;
-        case 0x0a: /* RRC (IX+d),D */
-            RRCXXREG(reg_d, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0x0a: /* RRC (Ir+d),D */
+            INSTS_SHREG(RRCXXREG, reg_d, WORD_OFF(iip2), 15, 2);
             break;
-        case 0x0b: /* RRC (IX+d),E */
-            RRCXXREG(reg_e, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0x0b: /* RRC (Ir+d),E */
+            INSTS_SHREG(RRCXXREG, reg_e, WORD_OFF(iip2), 15, 2);
             break;
-        case 0x0c: /* RRC (IX+d),H */
-            RRCXXREG(reg_h, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0x0c: /* RRC (Ir+d),H */
+            INSTS_SHREG(RRCXXREG, reg_h, WORD_OFF(iip2), 15, 2);
             break;
-        case 0x0d: /* RRC (IX+d),L */
-            RRCXXREG(reg_l, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0x0d: /* RRC (Ir+d),L */
+            INSTS_SHREG(RRCXXREG, reg_l, WORD_OFF(iip2), 15, 2);
             break;
-        case 0x0e: /* RRC (IX+d) */
-            RRCXX(IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0x0e: /* RRC (Ir+d) */
+            INSTS_SH(RRCXX, WORD_OFF(iip2), 15, 2);
             break;
-        case 0x0f: /* RRC (IX+d),A */
-            RRCXXREG(reg_a, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0x0f: /* RRC (Ir+d),A */
+            INSTS_SHREG(RRCXXREG, reg_a, WORD_OFF(iip2), 15, 2);
             break;
-        case 0x10: /* RL (IX+d),B */
-            RLXXREG(reg_b, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0x10: /* RL (Ir+d),B */
+            INSTS_SHREG(RLXXREG, reg_b, WORD_OFF(iip2), 15, 2);
             break;
-        case 0x11: /* RL (IX+d),C */
-            RLXXREG(reg_c, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0x11: /* RL (Ir+d),C */
+            INSTS_SHREG(RLXXREG, reg_c, WORD_OFF(iip2), 15, 2);
             break;
-        case 0x12: /* RL (IX+d),D */
-            RLXXREG(reg_d, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0x12: /* RL (Ir+d),D */
+            INSTS_SHREG(RLXXREG, reg_d, WORD_OFF(iip2), 15, 2);
             break;
-        case 0x13: /* RL (IX+d),E */
-            RLXXREG(reg_e, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0x13: /* RL (Ir+d),E */
+            INSTS_SHREG(RLXXREG, reg_e, WORD_OFF(iip2), 15, 2);
             break;
-        case 0x14: /* RL (IX+d),H */
-            RLXXREG(reg_h, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0x14: /* RL (Ir+d),H */
+            INSTS_SHREG(RLXXREG, reg_h, WORD_OFF(iip2), 15, 2);
             break;
-        case 0x15: /* RL (IX+d),L */
-            RLXXREG(reg_l, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0x15: /* RL (Ir+d),L */
+            INSTS_SHREG(RLXXREG, reg_l, WORD_OFF(iip2), 15, 2);
             break;
-        case 0x16: /* RL (IX+d) */
-            RLXX(IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0x16: /* RL (Ir+d) */
+            INSTS_SH(RLXX, WORD_OFF(iip2), 15, 2);
             break;
-        case 0x17: /* RL (IX+d),A */
-            RLXXREG(reg_a, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0x17: /* RL (Ir+d),A */
+            INSTS_SHREG(RLXXREG, reg_a, WORD_OFF(iip2), 15, 2);
             break;
-        case 0x18: /* RR (IX+d),B */
-            RRXXREG(reg_b, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0x18: /* RR (Ir+d),B */
+            INSTS_SHREG(RRXXREG, reg_b, WORD_OFF(iip2), 15, 2);
             break;
-        case 0x19: /* RR (IX+d),C */
-            RRXXREG(reg_c, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0x19: /* RR (Ir+d),C */
+            INSTS_SHREG(RRXXREG, reg_c, WORD_OFF(iip2), 15, 2);
             break;
-        case 0x1a: /* RR (IX+d),D */
-            RRXXREG(reg_d, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0x1a: /* RR (Ir+d),D */
+            INSTS_SHREG(RRXXREG, reg_d, WORD_OFF(iip2), 15, 2);
             break;
-        case 0x1b: /* RR (IX+d),E */
-            RRXXREG(reg_e, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0x1b: /* RR (Ir+d),E */
+            INSTS_SHREG(RRXXREG, reg_e, WORD_OFF(iip2), 15, 2);
             break;
-        case 0x1c: /* RR (IX+d),H */
-            RRXXREG(reg_h, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0x1c: /* RR (Ir+d),H */
+            INSTS_SHREG(RRXXREG, reg_h, WORD_OFF(iip2), 15, 2);
             break;
-        case 0x1d: /* RR (IX+d),L */
-            RRXXREG(reg_l, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0x1d: /* RR (Ir+d),L */
+            INSTS_SHREG(RRXXREG, reg_l, WORD_OFF(iip2), 15, 2);
             break;
-        case 0x1e: /* RR (IX+d) */
-            RRXX(IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0x1e: /* RR (Ir+d) */
+            INSTS_SH(RRXX, WORD_OFF(iip2), 15, 2);
             break;
-        case 0x1f: /* RR (IX+d),A */
-            RRXXREG(reg_a, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0x1f: /* RR (Ir+d),A */
+            INSTS_SHREG(RRXXREG, reg_a, WORD_OFF(iip2), 15, 2);
             break;
-        case 0x20: /* SLA (IX+d),B */
-            SLAXXREG(reg_b, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0x20: /* SLA (Ir+d),B */
+            INSTS_SHREG(SLAXXREG, reg_b, WORD_OFF(iip2), 15, 2);
             break;
-        case 0x21: /* SLA (IX+d),C */
-            SLAXXREG(reg_c, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0x21: /* SLA (Ir+d),C */
+            INSTS_SHREG(SLAXXREG, reg_c, WORD_OFF(iip2), 15, 2);
             break;
-        case 0x22: /* SLA (IX+d),D */
-            SLAXXREG(reg_d, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0x22: /* SLA (Ir+d),D */
+            INSTS_SHREG(SLAXXREG, reg_d, WORD_OFF(iip2), 15, 2);
             break;
-        case 0x23: /* SLA (IX+d),E */
-            SLAXXREG(reg_e, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0x23: /* SLA (Ir+d),E */
+            INSTS_SHREG(SLAXXREG, reg_e, WORD_OFF(iip2), 15, 2);
             break;
-        case 0x24: /* SLA (IX+d),H */
-            SLAXXREG(reg_h, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0x24: /* SLA (Ir+d),H */
+            INSTS_SHREG(SLAXXREG, reg_h, WORD_OFF(iip2), 15, 2);
             break;
-        case 0x25: /* SLA (IX+d),L */
-            SLAXXREG(reg_l, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0x25: /* SLA (Ir+d),L */
+            INSTS_SHREG(SLAXXREG, reg_l, WORD_OFF(iip2), 15, 2);
             break;
-        case 0x26: /* SLA (IX+d) */
-            SLAXX(IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0x26: /* SLA (Ir+d) */
+            INSTS_SH(SLAXX, WORD_OFF(iip2), 15, 2);
             break;
-        case 0x27: /* SLA (IX+d),A */
-            SLAXXREG(reg_a, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0x27: /* SLA (Ir+d),A */
+            INSTS_SHREG(SLAXXREG, reg_a, WORD_OFF(iip2), 15, 2);
             break;
-        case 0x28: /* SRA (IX+d),B */
-            SRAXXREG(reg_b, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0x28: /* SRA (Ir+d),B */
+            INSTS_SHREG(SRAXXREG, reg_b, WORD_OFF(iip2), 15, 2);
             break;
-        case 0x29: /* SRA (IX+d),C */
-            SRAXXREG(reg_c, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0x29: /* SRA (Ir+d),C */
+            INSTS_SHREG(SRAXXREG, reg_c, WORD_OFF(iip2), 15, 2);
             break;
-        case 0x2a: /* SRA (IX+d),D */
-            SRAXXREG(reg_d, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0x2a: /* SRA (Ir+d),D */
+            INSTS_SHREG(SRAXXREG, reg_d, WORD_OFF(iip2), 15, 2);
             break;
-        case 0x2b: /* SRA (IX+d),E */
-            SRAXXREG(reg_e, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0x2b: /* SRA (Ir+d),E */
+            INSTS_SHREG(SRAXXREG, reg_e, WORD_OFF(iip2), 15, 2);
             break;
-        case 0x2c: /* SRA (IX+d),H */
-            SRAXXREG(reg_h, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0x2c: /* SRA (Ir+d),H */
+            INSTS_SHREG(SRAXXREG, reg_h, WORD_OFF(iip2), 15, 2);
             break;
-        case 0x2d: /* SRA (IX+d),L */
-            SRAXXREG(reg_l, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0x2d: /* SRA (Ir+d),L */
+            INSTS_SHREG(SRAXXREG, reg_l, WORD_OFF(iip2), 15, 2);
             break;
-        case 0x2e: /* SRA (IX+d) */
-            SRAXX(IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0x2e: /* SRA (Ir+d) */
+            INSTS_SH(SRAXX, WORD_OFF(iip2), 15, 2);
             break;
-        case 0x2f: /* SRA (IX+d),A */
-            SRAXXREG(reg_a, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0x2f: /* SRA (Ir+d),A */
+            INSTS_SHREG(SRAXXREG, reg_a, WORD_OFF(iip2), 15, 2);
             break;
-        case 0x30: /* SLL (IX+d),B */
-            SLLXXREG(reg_b, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0x30: /* SLL (Ir+d),B */
+            INSTS_SHREG(SLLXXREG, reg_b, WORD_OFF(iip2), 15, 2);
             break;
-        case 0x31: /* SLL (IX+d),C */
-            SLLXXREG(reg_c, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0x31: /* SLL (Ir+d),C */
+            INSTS_SHREG(SLLXXREG, reg_c, WORD_OFF(iip2), 15, 2);
             break;
-        case 0x32: /* SLL (IX+d),D */
-            SLLXXREG(reg_d, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0x32: /* SLL (Ir+d),D */
+            INSTS_SHREG(SLLXXREG, reg_d, WORD_OFF(iip2), 15, 2);
             break;
-        case 0x33: /* SLL (IX+d),E */
-            SLLXXREG(reg_e, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0x33: /* SLL (Ir+d),E */
+            INSTS_SHREG(SLLXXREG, reg_e, WORD_OFF(iip2), 15, 2);
             break;
-        case 0x34: /* SLL (IX+d),H */
-            SLLXXREG(reg_h, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0x34: /* SLL (Ir+d),H */
+            INSTS_SHREG(SLLXXREG, reg_h, WORD_OFF(iip2), 15, 2);
             break;
-        case 0x35: /* SLL (IX+d),L */
-            SLLXXREG(reg_l, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0x35: /* SLL (Ir+d),L */
+            INSTS_SHREG(SLLXXREG, reg_l, WORD_OFF(iip2), 15, 2);
             break;
-        case 0x36: /* SLL (IX+d) */
-            SLLXX(IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0x36: /* SLL (Ir+d) */
+            INSTS_SH(SLLXX, WORD_OFF(iip2), 15, 2);
             break;
-        case 0x37: /* SLL (IX+d),A */
-            SLLXXREG(reg_a, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0x37: /* SLL (Ir+d),A */
+            INSTS_SHREG(SLLXXREG, reg_a, WORD_OFF(iip2), 15, 2);
             break;
-        case 0x38: /* SRL (IX+d),B */
-            SRLXXREG(reg_b, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0x38: /* SRL (Ir+d),B */
+            INSTS_SHREG(SRLXXREG, reg_b, WORD_OFF(iip2), 15, 2);
             break;
-        case 0x39: /* SRL (IX+d),C */
-            SRLXXREG(reg_c, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0x39: /* SRL (Ir+d),C */
+            INSTS_SHREG(SRLXXREG, reg_c, WORD_OFF(iip2), 15, 2);
             break;
-        case 0x3a: /* SRL (IX+d),D */
-            SRLXXREG(reg_d, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0x3a: /* SRL (Ir+d),D */
+            INSTS_SHREG(SRLXXREG, reg_d, WORD_OFF(iip2), 15, 2);
             break;
-        case 0x3b: /* SRL (IX+d),E */
-            SRLXXREG(reg_e, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0x3b: /* SRL (Ir+d),E */
+            INSTS_SHREG(SRLXXREG, reg_e, WORD_OFF(iip2), 15, 2);
             break;
-        case 0x3c: /* SRL (IX+d),H */
-            SRLXXREG(reg_h, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0x3c: /* SRL (Ir+d),H */
+            INSTS_SHREG(SRLXXREG, reg_h, WORD_OFF(iip2), 15, 2);
             break;
-        case 0x3d: /* SRL (IX+d),L */
-            SRLXXREG(reg_l, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0x3d: /* SRL (Ir+d),L */
+            INSTS_SHREG(SRLXXREG, reg_l, WORD_OFF(iip2), 15, 2);
             break;
-        case 0x3e: /* SRL (IX+d) */
-            SRLXX(IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0x3e: /* SRL (Ir+d) */
+            INSTS_SH(SRLXX, WORD_OFF(iip2), 15, 2);
             break;
-        case 0x3f: /* SRL (IX+d),A */
-            SRLXXREG(reg_a, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0x3f: /* SRL (Ir+d),A */
+            INSTS_SHREG(SRLXXREG, reg_a, WORD_OFF(iip2), 15, 2);
             break;
-        case 0x40: /* BIT (IX+d) 0 */
+        case 0x40: /* BIT (Ir+d) 0 */
         case 0x41:
         case 0x42:
         case 0x43:
@@ -3078,9 +3549,9 @@ static void opcode_dd_cb(BYTE iip2, BYTE iip3, WORD iip23)
         case 0x45:
         case 0x46:
         case 0x47:
-            BIT(LOAD(IX_WORD_OFF(iip2)), 0, 8, 12, 4);
+            INSTS_BIT(WORD_OFF(iip2), 0, 12, 2);
             break;
-        case 0x48: /* BIT (IX+d) 1 */
+        case 0x48: /* BIT (Ir+d) 1 */
         case 0x49:
         case 0x4a:
         case 0x4b:
@@ -3088,9 +3559,9 @@ static void opcode_dd_cb(BYTE iip2, BYTE iip3, WORD iip23)
         case 0x4d:
         case 0x4e:
         case 0x4f:
-            BIT(LOAD(IX_WORD_OFF(iip2)), 1, 8, 12, 4);
+            INSTS_BIT(WORD_OFF(iip2), 1, 12, 2);
             break;
-        case 0x50: /* BIT (IX+d) 2 */
+        case 0x50: /* BIT (Ir+d) 2 */
         case 0x51:
         case 0x52:
         case 0x53:
@@ -3098,9 +3569,9 @@ static void opcode_dd_cb(BYTE iip2, BYTE iip3, WORD iip23)
         case 0x55:
         case 0x56:
         case 0x57:
-            BIT(LOAD(IX_WORD_OFF(iip2)), 2, 8, 12, 4);
+            INSTS_BIT(WORD_OFF(iip2), 2, 12, 2);
             break;
-        case 0x58: /* BIT (IX+d) 3 */
+        case 0x58: /* BIT (Ir+d) 3 */
         case 0x59:
         case 0x5a:
         case 0x5b:
@@ -3108,9 +3579,9 @@ static void opcode_dd_cb(BYTE iip2, BYTE iip3, WORD iip23)
         case 0x5d:
         case 0x5e:
         case 0x5f:
-            BIT(LOAD(IX_WORD_OFF(iip2)), 3, 8, 12, 4);
+            INSTS_BIT(WORD_OFF(iip2), 3, 12, 2);
             break;
-        case 0x60: /* BIT (IX+d) 4 */
+        case 0x60: /* BIT (Ir+d) 4 */
         case 0x61:
         case 0x62:
         case 0x63:
@@ -3118,9 +3589,9 @@ static void opcode_dd_cb(BYTE iip2, BYTE iip3, WORD iip23)
         case 0x65:
         case 0x66:
         case 0x67:
-            BIT(LOAD(IX_WORD_OFF(iip2)), 4, 8, 12, 4);
+            INSTS_BIT(WORD_OFF(iip2), 4, 12, 2);
             break;
-        case 0x68: /* BIT (IX+d) 5 */
+        case 0x68: /* BIT (Ir+d) 5 */
         case 0x69:
         case 0x6a:
         case 0x6b:
@@ -3128,9 +3599,9 @@ static void opcode_dd_cb(BYTE iip2, BYTE iip3, WORD iip23)
         case 0x6d:
         case 0x6e:
         case 0x6f:
-            BIT(LOAD(IX_WORD_OFF(iip2)), 5, 8, 12, 4);
+            INSTS_BIT(WORD_OFF(iip2), 5, 12, 2);
             break;
-        case 0x70: /* BIT (IX+d) 6 */
+        case 0x70: /* BIT (Ir+d) 6 */
         case 0x71:
         case 0x72:
         case 0x73:
@@ -3138,9 +3609,9 @@ static void opcode_dd_cb(BYTE iip2, BYTE iip3, WORD iip23)
         case 0x75:
         case 0x76:
         case 0x77:
-            BIT(LOAD(IX_WORD_OFF(iip2)), 6, 8, 12, 4);
+            INSTS_BIT(WORD_OFF(iip2), 6, 12, 2);
             break;
-        case 0x78: /* BIT (IX+d) 7 */
+        case 0x78: /* BIT (Ir+d) 7 */
         case 0x79:
         case 0x7a:
         case 0x7b:
@@ -3148,1054 +3619,406 @@ static void opcode_dd_cb(BYTE iip2, BYTE iip3, WORD iip23)
         case 0x7d:
         case 0x7e:
         case 0x7f:
-            BIT(LOAD(IX_WORD_OFF(iip2)), 7, 8, 12, 4);
+            INSTS_BIT(WORD_OFF(iip2), 7, 12, 2);
             break;
-        case 0x80: /* RES (IX+d),B 0 */
-            RESXXREG(0, reg_b, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0x80: /* RES (Ir+d),B 0 */
+            INSTS_RSREG(RESXXREG, 0, reg_b, WORD_OFF(iip2), 15, 2);
             break;
-        case 0x81: /* RES (IX+d),C 0 */
-            RESXXREG(0, reg_c, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0x81: /* RES (Ir+d),C 0 */
+            INSTS_RSREG(RESXXREG, 0, reg_c, WORD_OFF(iip2), 15, 2);
             break;
-        case 0x82: /* RES (IX+d),D 0 */
-            RESXXREG(0, reg_d, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0x82: /* RES (Ir+d),D 0 */
+            INSTS_RSREG(RESXXREG, 0, reg_d, WORD_OFF(iip2), 15, 2);
             break;
-        case 0x83: /* RES (IX+d),E 0 */
-            RESXXREG(0, reg_e, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0x83: /* RES (Ir+d),E 0 */
+            INSTS_RSREG(RESXXREG, 0, reg_e, WORD_OFF(iip2), 15, 2);
             break;
-        case 0x84: /* RES (IX+d),H 0 */
-            RESXXREG(0, reg_h, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0x84: /* RES (Ir+d),H 0 */
+            INSTS_RSREG(RESXXREG, 0, reg_h, WORD_OFF(iip2), 15, 2);
             break;
-        case 0x85: /* RES (IX+d),L 0 */
-            RESXXREG(0, reg_l, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0x85: /* RES (Ir+d),L 0 */
+            INSTS_RSREG(RESXXREG, 0, reg_l, WORD_OFF(iip2), 15, 2);
             break;
-        case 0x86: /* RES (IX+d) 0 */
-            RESXX(0, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0x86: /* RES (Ir+d) 0 */
+            INSTS_RS(RESXX, 0, WORD_OFF(iip2), 15, 2);
             break;
-        case 0x87: /* RES (IX+d),A 0 */
-            RESXXREG(0, reg_a, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0x87: /* RES (Ir+d),A 0 */
+            INSTS_RSREG(RESXXREG, 0, reg_a, WORD_OFF(iip2), 15, 2);
             break;
-        case 0x88: /* RES (IX+d),B 1 */
-            RESXXREG(1, reg_b, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0x88: /* RES (Ir+d),B 1 */
+            INSTS_RSREG(RESXXREG, 1, reg_b, WORD_OFF(iip2), 15, 2);
             break;
-        case 0x89: /* RES (IX+d),C 1 */
-            RESXXREG(1, reg_c, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0x89: /* RES (Ir+d),C 1 */
+            INSTS_RSREG(RESXXREG, 1, reg_c, WORD_OFF(iip2), 15, 2);
             break;
-        case 0x8a: /* RES (IX+d),D 1 */
-            RESXXREG(1, reg_d, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0x8a: /* RES (Ir+d),D 1 */
+            INSTS_RSREG(RESXXREG, 1, reg_d, WORD_OFF(iip2), 15, 2);
             break;
-        case 0x8b: /* RES (IX+d),E 1 */
-            RESXXREG(1, reg_e, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0x8b: /* RES (Ir+d),E 1 */
+            INSTS_RSREG(RESXXREG, 1, reg_e, WORD_OFF(iip2), 15, 2);
             break;
-        case 0x8c: /* RES (IX+d),H 1 */
-            RESXXREG(1, reg_h, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0x8c: /* RES (Ir+d),H 1 */
+            INSTS_RSREG(RESXXREG, 1, reg_h, WORD_OFF(iip2), 15, 2);
             break;
-        case 0x8d: /* RES (IX+d),L 1 */
-            RESXXREG(1, reg_l, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0x8d: /* RES (Ir+d),L 1 */
+            INSTS_RSREG(RESXXREG, 1, reg_l, WORD_OFF(iip2), 15, 2);
             break;
-        case 0x8e: /* RES (IX+d) 1 */
-            RESXX(1, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0x8e: /* RES (Ir+d) 1 */
+            INSTS_RS(RESXX, 1, WORD_OFF(iip2), 15, 2);
             break;
-        case 0x8f: /* RES (IX+d),A 1 */
-            RESXXREG(1, reg_a, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0x8f: /* RES (Ir+d),A 1 */
+            INSTS_RSREG(RESXXREG, 1, reg_a, WORD_OFF(iip2), 15, 2);
             break;
-        case 0x90: /* RES (IX+d),B 2 */
-            RESXXREG(2, reg_b, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0x90: /* RES (Ir+d),B 2 */
+            INSTS_RSREG(RESXXREG, 2, reg_b, WORD_OFF(iip2), 15, 2);
             break;
-        case 0x91: /* RES (IX+d),C 2 */
-            RESXXREG(2, reg_c, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0x91: /* RES (Ir+d),C 2 */
+            INSTS_RSREG(RESXXREG, 2, reg_c, WORD_OFF(iip2), 15, 2);
             break;
-        case 0x92: /* RES (IX+d),D 2 */
-            RESXXREG(2, reg_d, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0x92: /* RES (Ir+d),D 2 */
+            INSTS_RSREG(RESXXREG, 2, reg_d, WORD_OFF(iip2), 15, 2);
             break;
-        case 0x93: /* RES (IX+d),E 2 */
-            RESXXREG(2, reg_e, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0x93: /* RES (Ir+d),E 2 */
+            INSTS_RSREG(RESXXREG, 2, reg_e, WORD_OFF(iip2), 15, 2);
             break;
-        case 0x94: /* RES (IX+d),H 2 */
-            RESXXREG(2, reg_h, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0x94: /* RES (Ir+d),H 2 */
+            INSTS_RSREG(RESXXREG, 2, reg_h, WORD_OFF(iip2), 15, 2);
             break;
-        case 0x95: /* RES (IX+d),L 2 */
-            RESXXREG(2, reg_l, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0x95: /* RES (Ir+d),L 2 */
+            INSTS_RSREG(RESXXREG, 2, reg_l, WORD_OFF(iip2), 15, 2);
             break;
-        case 0x96: /* RES (IX+d) 2 */
-            RESXX(2, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0x96: /* RES (Ir+d) 2 */
+            INSTS_RS(RESXX, 2, WORD_OFF(iip2), 15, 2);
             break;
-        case 0x97: /* RES (IX+d),A 2 */
-            RESXXREG(2, reg_a, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0x97: /* RES (Ir+d),A 2 */
+            INSTS_RSREG(RESXXREG, 2, reg_a, WORD_OFF(iip2), 15, 2);
             break;
-        case 0x98: /* RES (IX+d),B 3 */
-            RESXXREG(3, reg_b, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0x98: /* RES (Ir+d),B 3 */
+            INSTS_RSREG(RESXXREG, 3, reg_b, WORD_OFF(iip2), 15, 2);
             break;
-        case 0x99: /* RES (IX+d),C 3 */
-            RESXXREG(3, reg_c, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0x99: /* RES (Ir+d),C 3 */
+            INSTS_RSREG(RESXXREG, 3, reg_c, WORD_OFF(iip2), 15, 2);
             break;
-        case 0x9a: /* RES (IX+d),D 3 */
-            RESXXREG(3, reg_d, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0x9a: /* RES (Ir+d),D 3 */
+            INSTS_RSREG(RESXXREG, 3, reg_d, WORD_OFF(iip2), 15, 2);
             break;
-        case 0x9b: /* RES (IX+d),E 3 */
-            RESXXREG(3, reg_e, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0x9b: /* RES (Ir+d),E 3 */
+            INSTS_RSREG(RESXXREG, 3, reg_e, WORD_OFF(iip2), 15, 2);
             break;
-        case 0x9c: /* RES (IX+d),H 3 */
-            RESXXREG(3, reg_h, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0x9c: /* RES (Ir+d),H 3 */
+            INSTS_RSREG(RESXXREG, 3, reg_h, WORD_OFF(iip2), 15, 2);
             break;
-        case 0x9d: /* RES (IX+d),L 3 */
-            RESXXREG(3, reg_l, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0x9d: /* RES (Ir+d),L 3 */
+            INSTS_RSREG(RESXXREG, 3, reg_l, WORD_OFF(iip2), 15, 2);
             break;
-        case 0x9e: /* RES (IX+d) 3 */
-            RESXX(3, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0x9e: /* RES (Ir+d) 3 */
+            INSTS_RS(RESXX, 3, WORD_OFF(iip2), 15, 2);
             break;
-        case 0x9f: /* RES (IX+d),A 3 */
-            RESXXREG(3, reg_a, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0x9f: /* RES (Ir+d),A 3 */
+            INSTS_RSREG(RESXXREG, 3, reg_a, WORD_OFF(iip2), 15, 2);
             break;
-        case 0xa0: /* RES (IX+d),B 4 */
-            RESXXREG(4, reg_b, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0xa0: /* RES (Ir+d),B 4 */
+            INSTS_RSREG(RESXXREG, 4, reg_b, WORD_OFF(iip2), 15, 2);
             break;
-        case 0xa1: /* RES (IX+d),C 4 */
-            RESXXREG(4, reg_c, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0xa1: /* RES (Ir+d),C 4 */
+            INSTS_RSREG(RESXXREG, 4, reg_c, WORD_OFF(iip2), 15, 2);
             break;
-        case 0xa2: /* RES (IX+d),D 4 */
-            RESXXREG(4, reg_d, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0xa2: /* RES (Ir+d),D 4 */
+            INSTS_RSREG(RESXXREG, 4, reg_d, WORD_OFF(iip2), 15, 2);
             break;
-        case 0xa3: /* RES (IX+d),E 4 */
-            RESXXREG(4, reg_e, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0xa3: /* RES (Ir+d),E 4 */
+            INSTS_RSREG(RESXXREG, 4, reg_e, WORD_OFF(iip2), 15, 2);
             break;
-        case 0xa4: /* RES (IX+d),H 4 */
-            RESXXREG(4, reg_h, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0xa4: /* RES (Ir+d),H 4 */
+            INSTS_RSREG(RESXXREG, 4, reg_h, WORD_OFF(iip2), 15, 2);
             break;
-        case 0xa5: /* RES (IX+d),L 4 */
-            RESXXREG(4, reg_l, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0xa5: /* RES (Ir+d),L 4 */
+            INSTS_RSREG(RESXXREG, 4, reg_l, WORD_OFF(iip2), 15, 2);
             break;
-        case 0xa6: /* RES (IX+d) 4 */
-            RESXX(4, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0xa6: /* RES (Ir+d) 4 */
+            INSTS_RS(RESXX, 4, WORD_OFF(iip2), 15, 2);
             break;
-        case 0xa7: /* RES (IX+d),A 4 */
-            RESXXREG(4, reg_a, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0xa7: /* RES (Ir+d),A 4 */
+            INSTS_RSREG(RESXXREG, 4, reg_a, WORD_OFF(iip2), 15, 2);
             break;
-        case 0xa8: /* RES (IX+d),B 5 */
-            RESXXREG(5, reg_b, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0xa8: /* RES (Ir+d),B 5 */
+            INSTS_RSREG(RESXXREG, 5, reg_b, WORD_OFF(iip2), 15, 2);
             break;
-        case 0xa9: /* RES (IX+d),C 5 */
-            RESXXREG(5, reg_c, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0xa9: /* RES (Ir+d),C 5 */
+            INSTS_RSREG(RESXXREG, 5, reg_c, WORD_OFF(iip2), 15, 2);
             break;
-        case 0xaa: /* RES (IX+d),D 5 */
-            RESXXREG(5, reg_d, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0xaa: /* RES (Ir+d),D 5 */
+            INSTS_RSREG(RESXXREG, 5, reg_d, WORD_OFF(iip2), 15, 2);
             break;
-        case 0xab: /* RES (IX+d),E 5 */
-            RESXXREG(5, reg_e, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0xab: /* RES (Ir+d),E 5 */
+            INSTS_RSREG(RESXXREG, 5, reg_e, WORD_OFF(iip2), 15, 2);
             break;
-        case 0xac: /* RES (IX+d),H 5 */
-            RESXXREG(5, reg_h, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0xac: /* RES (Ir+d),H 5 */
+            INSTS_RSREG(RESXXREG, 5, reg_h, WORD_OFF(iip2), 15, 2);
             break;
-        case 0xad: /* RES (IX+d),L 5 */
-            RESXXREG(5, reg_l, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0xad: /* RES (Ir+d),L 5 */
+            INSTS_RSREG(RESXXREG, 5, reg_l, WORD_OFF(iip2), 15, 2);
             break;
-        case 0xae: /* RES (IX+d) 5 */
-            RESXX(5, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0xae: /* RES (Ir+d) 5 */
+            INSTS_RS(RESXX, 5, WORD_OFF(iip2), 15, 2);
             break;
-        case 0xaf: /* RES (IX+d),A 5 */
-            RESXXREG(5, reg_a, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0xaf: /* RES (Ir+d),A 5 */
+            INSTS_RSREG(RESXXREG, 5, reg_a, WORD_OFF(iip2), 15, 2);
             break;
-        case 0xb0: /* RES (IX+d),B 6 */
-            RESXXREG(6, reg_b, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0xb0: /* RES (Ir+d),B 6 */
+            INSTS_RSREG(RESXXREG, 6, reg_b, WORD_OFF(iip2), 15, 2);
             break;
-        case 0xb1: /* RES (IX+d),C 6 */
-            RESXXREG(6, reg_c, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0xb1: /* RES (Ir+d),C 6 */
+            INSTS_RSREG(RESXXREG, 6, reg_c, WORD_OFF(iip2), 15, 2);
             break;
-        case 0xb2: /* RES (IX+d),D 6 */
-            RESXXREG(6, reg_d, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0xb2: /* RES (Ir+d),D 6 */
+            INSTS_RSREG(RESXXREG, 6, reg_d, WORD_OFF(iip2), 15, 2);
             break;
-        case 0xb3: /* RES (IX+d),E 6 */
-            RESXXREG(6, reg_e, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0xb3: /* RES (Ir+d),E 6 */
+            INSTS_RSREG(RESXXREG, 6, reg_e, WORD_OFF(iip2), 15, 2);
             break;
-        case 0xb4: /* RES (IX+d),H 6 */
-            RESXXREG(6, reg_h, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0xb4: /* RES (Ir+d),H 6 */
+            INSTS_RSREG(RESXXREG, 6, reg_h, WORD_OFF(iip2), 15, 2);
             break;
-        case 0xb5: /* RES (IX+d),L 6 */
-            RESXXREG(6, reg_l, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0xb5: /* RES (Ir+d),L 6 */
+            INSTS_RSREG(RESXXREG, 6, reg_l, WORD_OFF(iip2), 15, 2);
             break;
-        case 0xb6: /* RES (IX+d) 6 */
-            RESXX(6, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0xb6: /* RES (Ir+d) 6 */
+            INSTS_RS(RESXX, 6, WORD_OFF(iip2), 15, 2);
             break;
-        case 0xb7: /* RES (IX+d),A 6 */
-            RESXXREG(6, reg_a, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0xb7: /* RES (Ir+d),A 6 */
+            INSTS_RSREG(RESXXREG, 6, reg_a, WORD_OFF(iip2), 15, 2);
             break;
-        case 0xb8: /* RES (IX+d),B 7 */
-            RESXXREG(7, reg_b, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0xb8: /* RES (Ir+d),B 7 */
+            INSTS_RSREG(RESXXREG, 7, reg_b, WORD_OFF(iip2), 15, 2);
             break;
-        case 0xb9: /* RES (IX+d),C 7 */
-            RESXXREG(7, reg_c, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0xb9: /* RES (Ir+d),C 7 */
+            INSTS_RSREG(RESXXREG, 7, reg_c, WORD_OFF(iip2), 15, 2);
             break;
-        case 0xba: /* RES (IX+d),D 7 */
-            RESXXREG(7, reg_d, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0xba: /* RES (Ir+d),D 7 */
+            INSTS_RSREG(RESXXREG, 7, reg_d, WORD_OFF(iip2), 15, 2);
             break;
-        case 0xbb: /* RES (IX+d),E 7 */
-            RESXXREG(7, reg_e, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0xbb: /* RES (Ir+d),E 7 */
+            INSTS_RSREG(RESXXREG, 7, reg_e, WORD_OFF(iip2), 15, 2);
             break;
-        case 0xbc: /* RES (IX+d),H 7 */
-            RESXXREG(7, reg_h, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0xbc: /* RES (Ir+d),H 7 */
+            INSTS_RSREG(RESXXREG, 7, reg_h, WORD_OFF(iip2), 15, 2);
             break;
-        case 0xbd: /* RES (IX+d),L 7 */
-            RESXXREG(7, reg_l, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0xbd: /* RES (Ir+d),L 7 */
+            INSTS_RSREG(RESXXREG, 7, reg_l, WORD_OFF(iip2), 15, 2);
             break;
-        case 0xbe: /* RES (IX+d) 7 */
-            RESXX(7, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0xbe: /* RES (Ir+d) 7 */
+            INSTS_RS(RESXX, 7, WORD_OFF(iip2), 15, 2);
             break;
-        case 0xbf: /* RES (IX+d),A 7 */
-            RESXXREG(7, reg_a, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0xbf: /* RES (Ir+d),A 7 */
+            INSTS_RSREG(RESXXREG, 7, reg_a, WORD_OFF(iip2), 15, 2);
             break;
-        case 0xc0: /* SET (IX+d),B 0 */
-            SETXXREG(0, reg_b, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0xc0: /* SET (Ir+d),B 0 */
+            INSTS_RSREG(SETXXREG, 0, reg_b, WORD_OFF(iip2), 15, 2);
             break;
-        case 0xc1: /* SET (IX+d),C 0 */
-            SETXXREG(0, reg_c, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0xc1: /* SET (Ir+d),C 0 */
+            INSTS_RSREG(SETXXREG, 0, reg_c, WORD_OFF(iip2), 15, 2);
             break;
-        case 0xc2: /* SET (IX+d),D 0 */
-            SETXXREG(0, reg_d, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0xc2: /* SET (Ir+d),D 0 */
+            INSTS_RSREG(SETXXREG, 0, reg_d, WORD_OFF(iip2), 15, 2);
             break;
-        case 0xc3: /* SET (IX+d),E 0 */
-            SETXXREG(0, reg_e, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0xc3: /* SET (Ir+d),E 0 */
+            INSTS_RSREG(SETXXREG, 0, reg_e, WORD_OFF(iip2), 15, 2);
             break;
-        case 0xc4: /* SET (IX+d),H 0 */
-            SETXXREG(0, reg_h, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0xc4: /* SET (Ir+d),H 0 */
+            INSTS_RSREG(SETXXREG, 0, reg_h, WORD_OFF(iip2), 15, 2);
             break;
-        case 0xc5: /* SET (IX+d),L 0 */
-            SETXXREG(0, reg_l, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0xc5: /* SET (Ir+d),L 0 */
+            INSTS_RSREG(SETXXREG, 0, reg_l, WORD_OFF(iip2), 15, 2);
             break;
-        case 0xc6: /* SET (IX+d) 0 */
-            SETXX(0, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0xc6: /* SET (Ir+d) 0 */
+            INSTS_RS(SETXX, 0, WORD_OFF(iip2), 15, 2);
             break;
-        case 0xc7: /* SET (IX+d),A 0 */
-            SETXXREG(0, reg_a, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0xc7: /* SET (Ir+d),A 0 */
+            INSTS_RSREG(SETXXREG, 0, reg_a, WORD_OFF(iip2), 15, 2);
             break;
-        case 0xc8: /* SET (IX+d),B 1 */
-            SETXXREG(1, reg_b, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0xc8: /* SET (Ir+d),B 1 */
+            INSTS_RSREG(SETXXREG, 1, reg_b, WORD_OFF(iip2), 15, 2);
             break;
-        case 0xc9: /* SET (IX+d),C 1 */
-            SETXXREG(1, reg_c, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0xc9: /* SET (Ir+d),C 1 */
+            INSTS_RSREG(SETXXREG, 1, reg_c, WORD_OFF(iip2), 15, 2);
             break;
-        case 0xca: /* SET (IX+d),D 1 */
-            SETXXREG(1, reg_d, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0xca: /* SET (Ir+d),D 1 */
+            INSTS_RSREG(SETXXREG, 1, reg_d, WORD_OFF(iip2), 15, 2);
             break;
-        case 0xcb: /* SET (IX+d),E 1 */
-            SETXXREG(1, reg_e, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0xcb: /* SET (Ir+d),E 1 */
+            INSTS_RSREG(SETXXREG, 1, reg_e, WORD_OFF(iip2), 15, 2);
             break;
-        case 0xcc: /* SET (IX+d),H 1 */
-            SETXXREG(1, reg_h, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0xcc: /* SET (Ir+d),H 1 */
+            INSTS_RSREG(SETXXREG, 1, reg_h, WORD_OFF(iip2), 15, 2);
             break;
-        case 0xcd: /* SET (IX+d),L 1 */
-            SETXXREG(1, reg_l, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0xcd: /* SET (Ir+d),L 1 */
+            INSTS_RSREG(SETXXREG, 1, reg_l, WORD_OFF(iip2), 15, 2);
             break;
-        case 0xce: /* SET (IX+d) 1 */
-            SETXX(1, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0xce: /* SET (Ir+d) 1 */
+            INSTS_RS(SETXX, 1, WORD_OFF(iip2), 15, 2);
             break;
-        case 0xcf: /* SET (IX+d),A 1 */
-            SETXXREG(1, reg_a, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0xcf: /* SET (Ir+d),A 1 */
+            INSTS_RSREG(SETXXREG, 1, reg_a, WORD_OFF(iip2), 15, 2);
             break;
-        case 0xd0: /* SET (IX+d),B 2 */
-            SETXXREG(2, reg_b, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0xd0: /* SET (Ir+d),B 2 */
+            INSTS_RSREG(SETXXREG, 2, reg_b, WORD_OFF(iip2), 15, 2);
             break;
-        case 0xd1: /* SET (IX+d),C 2 */
-            SETXXREG(2, reg_c, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0xd1: /* SET (Ir+d),C 2 */
+            INSTS_RSREG(SETXXREG, 2, reg_c, WORD_OFF(iip2), 15, 2);
             break;
-        case 0xd2: /* SET (IX+d),D 2 */
-            SETXXREG(2, reg_d, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0xd2: /* SET (Ir+d),D 2 */
+            INSTS_RSREG(SETXXREG, 2, reg_d, WORD_OFF(iip2), 15, 2);
             break;
-        case 0xd3: /* SET (IX+d),E 2 */
-            SETXXREG(2, reg_e, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0xd3: /* SET (Ir+d),E 2 */
+            INSTS_RSREG(SETXXREG, 2, reg_e, WORD_OFF(iip2), 15, 2);
             break;
-        case 0xd4: /* SET (IX+d),H 2 */
-            SETXXREG(2, reg_h, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0xd4: /* SET (Ir+d),H 2 */
+            INSTS_RSREG(SETXXREG, 2, reg_h, WORD_OFF(iip2), 15, 2);
             break;
-        case 0xd5: /* SET (IX+d),L 2 */
-            SETXXREG(2, reg_l, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0xd5: /* SET (Ir+d),L 2 */
+            INSTS_RSREG(SETXXREG, 2, reg_l, WORD_OFF(iip2), 15, 2);
             break;
-        case 0xd6: /* SET (IX+d) 2 */
-            SETXX(2, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0xd6: /* SET (Ir+d) 2 */
+            INSTS_RS(SETXX, 2, WORD_OFF(iip2), 15, 2);
             break;
-        case 0xd7: /* SET (IX+d),A 2 */
-            SETXXREG(2, reg_a, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0xd7: /* SET (Ir+d),A 2 */
+            INSTS_RSREG(SETXXREG, 2, reg_a, WORD_OFF(iip2), 15, 2);
             break;
-        case 0xd8: /* SET (IX+d),B 3 */
-            SETXXREG(3, reg_b, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0xd8: /* SET (Ir+d),B 3 */
+            INSTS_RSREG(SETXXREG, 3, reg_b, WORD_OFF(iip2), 15, 2);
             break;
-        case 0xd9: /* SET (IX+d),C 3 */
-            SETXXREG(3, reg_c, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0xd9: /* SET (Ir+d),C 3 */
+            INSTS_RSREG(SETXXREG, 3, reg_c, WORD_OFF(iip2), 15, 2);
             break;
-        case 0xda: /* SET (IX+d),D 3 */
-            SETXXREG(3, reg_d, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0xda: /* SET (Ir+d),D 3 */
+            INSTS_RSREG(SETXXREG, 3, reg_d, WORD_OFF(iip2), 15, 2);
             break;
-        case 0xdb: /* SET (IX+d),E 3 */
-            SETXXREG(3, reg_e, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0xdb: /* SET (Ir+d),E 3 */
+            INSTS_RSREG(SETXXREG, 3, reg_e, WORD_OFF(iip2), 15, 2);
             break;
-        case 0xdc: /* SET (IX+d),H 3 */
-            SETXXREG(3, reg_h, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0xdc: /* SET (Ir+d),H 3 */
+            INSTS_RSREG(SETXXREG, 3, reg_h, WORD_OFF(iip2), 15, 2);
             break;
-        case 0xdd: /* SET (IX+d),L 3 */
-            SETXXREG(3, reg_l, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0xdd: /* SET (Ir+d),L 3 */
+            INSTS_RSREG(SETXXREG, 3, reg_l, WORD_OFF(iip2), 15, 2);
             break;
-        case 0xde: /* SET (IX+d) 3 */
-            SETXX(3, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0xde: /* SET (Ir+d) 3 */
+            INSTS_RS(SETXX, 3, WORD_OFF(iip2), 15, 2);
             break;
-        case 0xdf: /* SET (IX+d),A 3 */
-            SETXXREG(3, reg_a, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0xdf: /* SET (Ir+d),A 3 */
+            INSTS_RSREG(SETXXREG, 3, reg_a, WORD_OFF(iip2), 15, 2);
             break;
-        case 0xe0: /* SET (IX+d),B 4 */
-            SETXXREG(4, reg_b, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0xe0: /* SET (Ir+d),B 4 */
+            INSTS_RSREG(SETXXREG, 4, reg_b, WORD_OFF(iip2), 15, 2);
             break;
-        case 0xe1: /* SET (IX+d),C 4 */
-            SETXXREG(4, reg_c, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0xe1: /* SET (Ir+d),C 4 */
+            INSTS_RSREG(SETXXREG, 4, reg_c, WORD_OFF(iip2), 15, 2);
             break;
-        case 0xe2: /* SET (IX+d),D 4 */
-            SETXXREG(4, reg_d, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0xe2: /* SET (Ir+d),D 4 */
+            INSTS_RSREG(SETXXREG, 4, reg_d, WORD_OFF(iip2), 15, 2);
             break;
-        case 0xe3: /* SET (IX+d),E 4 */
-            SETXXREG(4, reg_e, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0xe3: /* SET (Ir+d),E 4 */
+            INSTS_RSREG(SETXXREG, 4, reg_e, WORD_OFF(iip2), 15, 2);
             break;
-        case 0xe4: /* SET (IX+d),H 4 */
-            SETXXREG(4, reg_h, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0xe4: /* SET (Ir+d),H 4 */
+            INSTS_RSREG(SETXXREG, 4, reg_h, WORD_OFF(iip2), 15, 2);
             break;
-        case 0xe5: /* SET (IX+d),L 4 */
-            SETXXREG(4, reg_l, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0xe5: /* SET (Ir+d),L 4 */
+            INSTS_RSREG(SETXXREG, 4, reg_l, WORD_OFF(iip2), 15, 2);
             break;
-        case 0xe6: /* SET (IX+d) 4 */
-            SETXX(4, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0xe6: /* SET (Ir+d) 4 */
+            INSTS_RS(SETXX, 4, WORD_OFF(iip2), 15, 2);
             break;
-        case 0xe7: /* SET (IX+d),A 4 */
-            SETXXREG(4, reg_a, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0xe7: /* SET (Ir+d),A 4 */
+            INSTS_RSREG(SETXXREG, 4, reg_a, WORD_OFF(iip2), 15, 2);
             break;
-        case 0xe8: /* SET (IX+d),B 5 */
-            SETXXREG(5, reg_b, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0xe8: /* SET (Ir+d),B 5 */
+            INSTS_RSREG(SETXXREG, 5, reg_b, WORD_OFF(iip2), 15, 2);
             break;
-        case 0xe9: /* SET (IX+d),C 5 */
-            SETXXREG(5, reg_c, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0xe9: /* SET (Ir+d),C 5 */
+            INSTS_RSREG(SETXXREG, 5, reg_c, WORD_OFF(iip2), 15, 2);
             break;
-        case 0xea: /* SET (IX+d),D 5 */
-            SETXXREG(5, reg_d, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0xea: /* SET (Ir+d),D 5 */
+            INSTS_RSREG(SETXXREG, 5, reg_d, WORD_OFF(iip2), 15, 2);
             break;
-        case 0xeb: /* SET (IX+d),E 5 */
-            SETXXREG(5, reg_e, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0xeb: /* SET (Ir+d),E 5 */
+            INSTS_RSREG(SETXXREG, 5, reg_e, WORD_OFF(iip2), 15, 2);
             break;
-        case 0xec: /* SET (IX+d),H 5 */
-            SETXXREG(5, reg_h, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0xec: /* SET (Ir+d),H 5 */
+            INSTS_RSREG(SETXXREG, 5, reg_h, WORD_OFF(iip2), 15, 2);
             break;
-        case 0xed: /* SET (IX+d),L 5 */
-            SETXXREG(5, reg_l, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0xed: /* SET (Ir+d),L 5 */
+            INSTS_RSREG(SETXXREG, 5, reg_l, WORD_OFF(iip2), 15, 2);
             break;
-        case 0xee: /* SET (IX+d) 5 */
-            SETXX(5, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0xee: /* SET (Ir+d) 5 */
+            INSTS_RS(SETXX, 5, WORD_OFF(iip2), 15, 2);
             break;
-        case 0xef: /* SET (IX+d),A 5 */
-            SETXXREG(5, reg_a, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0xef: /* SET (Ir+d),A 5 */
+            INSTS_RSREG(SETXXREG, 5, reg_a, WORD_OFF(iip2), 15, 2);
             break;
-        case 0xf0: /* SET (IX+d),B 6 */
-            SETXXREG(6, reg_b, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0xf0: /* SET (Ir+d),B 6 */
+            INSTS_RSREG(SETXXREG, 6, reg_b, WORD_OFF(iip2), 15, 2);
             break;
-        case 0xf1: /* SET (IX+d),C 6 */
-            SETXXREG(6, reg_c, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0xf1: /* SET (Ir+d),C 6 */
+            INSTS_RSREG(SETXXREG, 6, reg_c, WORD_OFF(iip2), 15, 2);
             break;
-        case 0xf2: /* SET (IX+d),D 6 */
-            SETXXREG(6, reg_d, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0xf2: /* SET (Ir+d),D 6 */
+            INSTS_RSREG(SETXXREG, 6, reg_d, WORD_OFF(iip2), 15, 2);
             break;
-        case 0xf3: /* SET (IX+d),E 6 */
-            SETXXREG(6, reg_e, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0xf3: /* SET (Ir+d),E 6 */
+            INSTS_RSREG(SETXXREG, 6, reg_e, WORD_OFF(iip2), 15, 2);
             break;
-        case 0xf4: /* SET (IX+d),H 6 */
-            SETXXREG(6, reg_h, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0xf4: /* SET (Ir+d),H 6 */
+            INSTS_RSREG(SETXXREG, 6, reg_h, WORD_OFF(iip2), 15, 2);
             break;
-        case 0xf5: /* SET (IX+d),L 6 */
-            SETXXREG(6, reg_l, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0xf5: /* SET (Ir+d),L 6 */
+            INSTS_RSREG(SETXXREG, 6, reg_l, WORD_OFF(iip2), 15, 2);
             break;
-        case 0xf6: /* SET (IX+d) 6 */
-            SETXX(6, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0xf6: /* SET (Ir+d) 6 */
+            INSTS_RS(SETXX, 6, WORD_OFF(iip2), 15, 2);
             break;
-        case 0xf7: /* SET (IX+d),A 6 */
-            SETXXREG(6, reg_a, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0xf7: /* SET (Ir+d),A 6 */
+            INSTS_RSREG(SETXXREG, 6, reg_a, WORD_OFF(iip2), 15, 2);
             break;
-        case 0xf8: /* SET (IX+d),B 7 */
-            SETXXREG(7, reg_b, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0xf8: /* SET (Ir+d),B 7 */
+            INSTS_RSREG(SETXXREG, 7, reg_b, WORD_OFF(iip2), 15, 2);
             break;
-        case 0xf9: /* SET (IX+d),C 7 */
-            SETXXREG(7, reg_c, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0xf9: /* SET (Ir+d),C 7 */
+            INSTS_RSREG(SETXXREG, 7, reg_c, WORD_OFF(iip2), 15, 2);
             break;
-        case 0xfa: /* SET (IX+d),D 7 */
-            SETXXREG(7, reg_d, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0xfa: /* SET (Ir+d),D 7 */
+            INSTS_RSREG(SETXXREG, 7, reg_d, WORD_OFF(iip2), 15, 2);
             break;
-        case 0xfb: /* SET (IX+d),E 7 */
-            SETXXREG(7, reg_e, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0xfb: /* SET (Ir+d),E 7 */
+            INSTS_RSREG(SETXXREG, 7, reg_e, WORD_OFF(iip2), 15, 2);
             break;
-        case 0xfc: /* SET (IX+d),H 7 */
-            SETXXREG(7, reg_h, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0xfc: /* SET (Ir+d),H 7 */
+            INSTS_RSREG(SETXXREG, 7, reg_h, WORD_OFF(iip2), 15, 2);
             break;
-        case 0xfd: /* SET (IX+d),L 7 */
-            SETXXREG(7, reg_l, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0xfd: /* SET (Ir+d),L 7 */
+            INSTS_RSREG(SETXXREG, 7, reg_l, WORD_OFF(iip2), 15, 2);
             break;
-        case 0xfe: /* SET (IX+d) 7 */
-            SETXX(7, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0xfe: /* SET (Ir+d) 7 */
+            INSTS_RS(SETXX, 7, WORD_OFF(iip2), 15, 2);
             break;
-        case 0xff: /* SET (IX+d),A 7 */
-            SETXXREG(7, reg_a, IX_WORD_OFF(iip2), 4, 4, 15, 4);
+        case 0xff: /* SET (Ir+d),A 7 */
+            INSTS_RSREG(SETXXREG, 7, reg_a, WORD_OFF(iip2), 15, 2);
             break;
         default:
-            INC_PC(4);
+            /* all 256 instances covered */
+            break;
     }
 }
 
-static void opcode_dd(BYTE ip1, BYTE ip2, BYTE ip3, WORD ip12, WORD ip23)
-{
-    switch (ip1) {
-        case 0x00: /* NOP */
-            NOP(8, 2);
-            break;
-        case 0x01: /* LD BC # */
-            LDW(ip23, reg_b, reg_c, 10, 0, 4);
-            break;
-        case 0x02: /* LD (BC) A */
-            STREG(BC_WORD(), reg_a, 8, 3, 2);
-            break;
-        case 0x03: /* INC BC */
-            DECINC(INC_BC_WORD(), 10, 2);
-            break;
-        case 0x04: /* INC B */
-            INCREG(reg_b, 7, 2);
-            break;
-        case 0x05: /* DEC B */
-            DECREG(reg_b, 7, 2);
-            break;
-        case 0x06: /* LD B # */
-            LDREG(reg_b, ip2, 4, 5, 3);
-            break;
-        case 0x07: /* RLCA */
-            RLCA(8, 2);
-            break;
-        case 0x08: /* EX AF AF' */
-            EXAFAF(12, 2);
-            break;
-        case 0x09: /* ADD IX BC */
-            ADDXXREG(reg_ixh, reg_ixl, reg_b, reg_c, 15, 2);
-            break;
-        case 0x0a: /* LD A (BC) */
-            LDREG(reg_a, LOAD(BC_WORD()), 8, 3, 2);
-            break;
-        case 0x0b: /* DEC BC */
-            DECINC(DEC_BC_WORD(), 10, 2);
-            break;
-        case 0x0c: /* INC C */
-            INCREG(reg_c, 7, 2);
-            break;
-        case 0x0d: /* DEC C */
-            DECREG(reg_c, 7, 2);
-            break;
-        case 0x0e: /* LD C # */
-            LDREG(reg_c, ip2, 4, 5, 3);
-            break;
-        case 0x0f: /* RRCA */
-            RRCA(8, 2);
-            break;
-        case 0x10: /* DJNZ */
-            DJNZ(ip2, 3);
-            break;
-        case 0x11: /* LD DE # */
-            LDW(ip23, reg_d, reg_e, 10, 0, 4);
-            break;
-        case 0x12: /* LD (DE) A */
-            STREG(DE_WORD(), reg_a, 8, 3, 2);
-            break;
-        case 0x13: /* INC DE */
-            DECINC(INC_DE_WORD(), 10, 2);
-            break;
-        case 0x14: /* INC D */
-            INCREG(reg_d, 7, 2);
-            break;
-        case 0x15: /* DEC D */
-            DECREG(reg_d, 7, 2);
-            break;
-        case 0x16: /* LD D # */
-            LDREG(reg_d, ip2, 4, 5, 3);
-            break;
-        case 0x17: /* RLA */
-            RLA(8, 2);
-            break;
-        case 0x19: /* ADD IX DE */
-            ADDXXREG(reg_ixh, reg_ixl, reg_d, reg_e, 15, 2);
-            break;
-        case 0x1a: /* LD A DE */
-            LDREG(reg_a, LOAD(DE_WORD()), 8, 3, 2);
-            break;
-        case 0x1b: /* DEC DE */
-            DECINC(DEC_DE_WORD(), 10, 2);
-            break;
-        case 0x1c: /* INC E */
-            INCREG(reg_e, 7, 2);
-            break;
-        case 0x1d: /* DEC E */
-            DECREG(reg_e, 7, 2);
-            break;
-        case 0x1e: /* LD E # */
-            LDREG(reg_e, ip2, 4, 5, 3);
-            break;
-        case 0x1f: /* RRA */
-            RRA(8, 2);
-            break;
-        case 0x20: /* JR NZ */
-            BRANCH(!LOCAL_ZERO(), ip2, 3);
-            break;
-        case 0x21: /* LD IX # */
-            LDW(ip23, reg_ixh, reg_ixl, 10, 4, 4);
-            break;
-        case 0x22: /* LD (WORD) IX */
-            STW(ip23, reg_ixh, reg_ixl, 4, 9, 7, 4);
-            break;
-        case 0x23: /* INC IX */
-            DECINC(INC_IX_WORD(), 10, 2);
-            break;
-        case 0x24: /* INC IXH */
-            INCREG(reg_ixh, 7, 2);
-            break;
-        case 0x25: /* DEC IXH */
-            DECREG(reg_ixh, 7, 2);
-            break;
-        case 0x26: /* LD IXH # */
-            LDREG(reg_ixh, ip2, 4, 5, 3);
-            break;
-        case 0x27: /* DAA */
-            DAA(8, 2);
-            break;
-        case 0x29: /* ADD IX IX */
-            ADDXXREG(reg_ixh, reg_ixl, reg_ixh, reg_ixl, 15, 2);
-            break;
-        case 0x28: /* JR Z */
-            BRANCH(LOCAL_ZERO(), ip2, 3);
-            break;
-        case 0x2a: /* LD IX (WORD) */
-            LDIND(ip23, reg_ixh, reg_ixl, 4, 4, 12, 4);
-            break;
-        case 0x2b: /* DEC IX */
-            DECINC(DEC_IX_WORD(), 10, 2);
-            break;
-        case 0x2c: /* INC IXL */
-            INCREG(reg_ixl, 7, 2);
-            break;
-        case 0x2d: /* DEC IXL */
-            DECREG(reg_ixl, 7, 2);
-            break;
-        case 0x2e: /* LD IXL # */
-            LDREG(reg_ixl, ip2, 4, 5, 3);
-            break;
-        case 0x2f: /* CPL */
-            CPL(8, 2);
-            break;
-        case 0x30: /* JR NC */
-            BRANCH(!LOCAL_CARRY(), ip2, 3);
-            break;
-        case 0x31: /* LD SP # */
-            LDSP(ip23, 10, 0, 4);
-            break;
-        case 0x32: /* LD (WORD) A */
-            STREG(ip23, reg_a, 10, 7, 4);
-            break;
-        case 0x33: /* INC SP */
-            DECINC(reg_sp++, 10, 2);
-            break;
-        case 0x34: /* INC (IX+d) */
-            INCXXIND(IX_WORD_OFF(ip2), 4, 7, 12, 3);
-            break;
-        case 0x35: /* DEC (IX+d) */
-            DECXXIND(IX_WORD_OFF(ip2), 4, 7, 12, 3);
-            break;
-        case 0x36: /* LD (IX+d) # */
-            STREG(IX_WORD_OFF(ip2), ip3, 8, 11, 4);
-            break;
-        case 0x37: /* SCF */
-            SCF(8, 2);
-            break;
-        case 0x38: /* JR C */
-            BRANCH(LOCAL_CARRY(), ip2, 3);
-            break;
-        case 0x39: /* ADD IX SP */
-            ADDXXSP(reg_ixh, reg_ixl, 15, 2);
-            break;
-        case 0x3a: /* LD A (WORD) */
-            LDREG(reg_a, LOAD(ip23), 10, 7, 4);
-            break;
-        case 0x3b: /* DEC SP */
-            DECINC(reg_sp--, 10, 2);
-            break;
-        case 0x3c: /* INC A */
-            INCREG(reg_a, 7, 2);
-            break;
-        case 0x3d: /* DEC A */
-            DECREG(reg_a, 7, 2);
-            break;
-        case 0x3e: /* LD A # */
-            LDREG(reg_a, ip2, 4, 5, 3);
-            break;
-        case 0x3f: /* CCF */
-            CCF(8, 2);
-            break;
-        case 0x40: /* LD B B */
-            LDREG(reg_b, reg_b, 0, 4, 2);
-            break;
-        case 0x41: /* LD B C */
-            LDREG(reg_b, reg_c, 0, 4, 2);
-            break;
-        case 0x42: /* LD B D */
-            LDREG(reg_b, reg_d, 0, 4, 2);
-            break;
-        case 0x43: /* LD B E */
-            LDREG(reg_b, reg_e, 0, 4, 2);
-            break;
-        case 0x44: /* LD B IXH */
-            LDREG(reg_b, reg_ixh, 0, 4, 2);
-            break;
-        case 0x45: /* LD B IXL */
-            LDREG(reg_b, reg_ixl, 0, 4, 2);
-            break;
-        case 0x46: /* LD B (IX+d) */
-            LDREG(reg_b, LOAD(IX_WORD_OFF(ip2)), 8, 11, 3);
-            break;
-        case 0x47: /* LD B A */
-            LDREG(reg_b, reg_a, 0, 4, 2);
-            break;
-        case 0x48: /* LD C B */
-            LDREG(reg_c, reg_b, 0, 4, 2);
-            break;
-        case 0x49: /* LD C C */
-            LDREG(reg_c, reg_c, 0, 4, 2);
-            break;
-        case 0x4a: /* LD C D */
-            LDREG(reg_c, reg_d, 0, 4, 2);
-            break;
-        case 0x4b: /* LD C E */
-            LDREG(reg_c, reg_e, 0, 4, 2);
-            break;
-        case 0x4c: /* LD C IXH */
-            LDREG(reg_c, reg_ixh, 0, 4, 2);
-            break;
-        case 0x4d: /* LD C IXL */
-            LDREG(reg_c, reg_ixl, 0, 4, 2);
-            break;
-        case 0x4e: /* LD C (IX+d) */
-            LDREG(reg_c, LOAD(IX_WORD_OFF(ip2)), 8, 11, 3);
-            break;
-        case 0x4f: /* LD C A */
-            LDREG(reg_c, reg_a, 0, 4, 2);
-            break;
-        case 0x50: /* LD D B */
-            LDREG(reg_d, reg_b, 0, 4, 2);
-            break;
-        case 0x51: /* LD D C */
-            LDREG(reg_d, reg_c, 0, 4, 2);
-            break;
-        case 0x52: /* LD D D */
-            LDREG(reg_d, reg_d, 0, 4, 2);
-            break;
-        case 0x53: /* LD D E */
-            LDREG(reg_d, reg_e, 0, 4, 2);
-            break;
-        case 0x54: /* LD D IXH */
-            LDREG(reg_d, reg_ixh, 0, 4, 2);
-            break;
-        case 0x55: /* LD D L */
-            LDREG(reg_d, reg_ixl, 0, 4, 2);
-            break;
-        case 0x56: /* LD D (IX+d) */
-            LDREG(reg_d, LOAD(IX_WORD_OFF(ip2)), 8, 11, 3);
-            break;
-        case 0x57: /* LD D A */
-            LDREG(reg_d, reg_a, 0, 4, 2);
-            break;
-        case 0x58: /* LD E B */
-            LDREG(reg_e, reg_b, 0, 4, 2);
-            break;
-        case 0x59: /* LD E C */
-            LDREG(reg_e, reg_c, 0, 4, 2);
-            break;
-        case 0x5a: /* LD E D */
-            LDREG(reg_e, reg_d, 0, 4, 2);
-            break;
-        case 0x5b: /* LD E E */
-            LDREG(reg_e, reg_e, 0, 4, 2);
-            break;
-        case 0x5c: /* LD E IXH */
-            LDREG(reg_e, reg_ixh, 0, 4, 2);
-            break;
-        case 0x5d: /* LD E IXL */
-            LDREG(reg_e, reg_ixl, 0, 4, 2);
-            break;
-        case 0x5e: /* LD E (IX+d) */
-            LDREG(reg_e, LOAD(IX_WORD_OFF(ip2)), 8, 11, 3);
-            break;
-        case 0x5f: /* LD E A */
-            LDREG(reg_e, reg_a, 0, 4, 2);
-            break;
-        case 0x60: /* LD IXH B */
-            LDREG(reg_ixh, reg_b, 0, 4, 2);
-            break;
-        case 0x61: /* LD IXH C */
-            LDREG(reg_ixh, reg_c, 0, 4, 2);
-            break;
-        case 0x62: /* LD IXH D */
-            LDREG(reg_ixh, reg_d, 0, 4, 2);
-            break;
-        case 0x63: /* LD IXH E */
-            LDREG(reg_ixh, reg_e, 0, 4, 2);
-            break;
-        case 0x64: /* LD IXH IXH */
-            LDREG(reg_ixh, reg_ixh, 0, 4, 2);
-            break;
-        case 0x65: /* LD IXH IXL */
-            LDREG(reg_ixh, reg_ixl, 0, 4, 2);
-            break;
-        case 0x66: /* LD H (IX+d) */
-            LDREG(reg_h, LOAD(IX_WORD_OFF(ip2)), 8, 11, 3);
-            break;
-        case 0x67: /* LD IXH A */
-            LDREG(reg_ixh, reg_a, 0, 4, 2);
-            break;
-        case 0x68: /* LD IXL B */
-            LDREG(reg_ixl, reg_b, 0, 4, 2);
-            break;
-        case 0x69: /* LD IXL C */
-            LDREG(reg_ixl, reg_c, 0, 4, 2);
-            break;
-        case 0x6a: /* LD IXL D */
-            LDREG(reg_ixl, reg_d, 0, 4, 2);
-            break;
-        case 0x6b: /* LD IXL E */
-            LDREG(reg_ixl, reg_e, 0, 4, 2);
-            break;
-        case 0x6c: /* LD IXL IXH */
-            LDREG(reg_ixl, reg_ixh, 0, 4, 2);
-            break;
-        case 0x6d: /* LD IXL IXL */
-            LDREG(reg_ixl, reg_ixl, 0, 4, 2);
-            break;
-        case 0x6e: /* LD L (IX+d) */
-            LDREG(reg_l, LOAD(IX_WORD_OFF(ip2)), 8, 11, 3);
-            break;
-        case 0x6f: /* LD IXL A */
-            LDREG(reg_ixl, reg_a, 0, 4, 2);
-            break;
-        case 0x70: /* LD (IX+d) B */
-            STREG(IX_WORD_OFF(ip2), reg_b, 8, 11, 3);
-            break;
-        case 0x71: /* LD (IX+d) C */
-            STREG(IX_WORD_OFF(ip2), reg_c, 8, 11, 3);
-            break;
-        case 0x72: /* LD (IX+d) D */
-            STREG(IX_WORD_OFF(ip2), reg_d, 8, 11, 3);
-            break;
-        case 0x73: /* LD (IX+d) E */
-            STREG(IX_WORD_OFF(ip2), reg_e, 8, 11, 3);
-            break;
-        case 0x74: /* LD (IX+d) H */
-            STREG(IX_WORD_OFF(ip2), reg_h, 8, 11, 3);
-            break;
-        case 0x75: /* LD (IX+d) L */
-            STREG(IX_WORD_OFF(ip2), reg_l, 8, 11, 3);
-            break;
-        case 0x76: /* HALT */
-            HALT();
-            break;
-        case 0x77: /* LD (IX+d) A */
-            STREG(IX_WORD_OFF(ip2), reg_a, 8, 11, 3);
-            break;
-        case 0x78: /* LD A B */
-            LDREG(reg_a, reg_b, 0, 4, 2);
-            break;
-        case 0x79: /* LD A C */
-            LDREG(reg_a, reg_c, 0, 4, 2);
-            break;
-        case 0x7a: /* LD A D */
-            LDREG(reg_a, reg_d, 0, 4, 2);
-            break;
-        case 0x7b: /* LD A E */
-            LDREG(reg_a, reg_e, 0, 4, 2);
-            break;
-        case 0x7c: /* LD A IXH */
-            LDREG(reg_a, reg_ixh, 0, 4, 2);
-            break;
-        case 0x7d: /* LD A IXL */
-            LDREG(reg_a, reg_ixl, 0, 4, 2);
-            break;
-        case 0x7e: /* LD A (IX+d) */
-            LDREG(reg_a, LOAD(IX_WORD_OFF(ip2)), 8, 11, 3);
-            break;
-        case 0x7f: /* LD A A */
-            LDREG(reg_a, reg_a, 0, 4, 2);
-            break;
-        case 0x80: /* ADD B */
-            ADD(reg_b, 0, 4, 2);
-            break;
-        case 0x81: /* ADD C */
-            ADD(reg_c, 0, 4, 2);
-            break;
-        case 0x82: /* ADD D */
-            ADD(reg_d, 0, 4, 2);
-            break;
-        case 0x83: /* ADD E */
-            ADD(reg_e, 0, 4, 2);
-            break;
-        case 0x84: /* ADD IXH */
-            ADD(reg_ixh, 0, 4, 2);
-            break;
-        case 0x85: /* ADD IXL */
-            ADD(reg_ixl, 0, 4, 2);
-            break;
-        case 0x86: /* ADD (IX+d) */
-            ADD(LOAD(IX_WORD_OFF(ip2)), 8, 11, 3);
-            break;
-        case 0x87: /* ADD A */
-            ADD(reg_a, 0, 4, 2);
-            break;
-        case 0x88: /* ADC B */
-            ADC(reg_b, 0, 4, 2);
-            break;
-        case 0x89: /* ADC C */
-            ADC(reg_c, 0, 4, 2);
-            break;
-        case 0x8a: /* ADC D */
-            ADC(reg_d, 0, 4, 2);
-            break;
-        case 0x8b: /* ADC E */
-            ADC(reg_e, 0, 4, 2);
-            break;
-        case 0x8c: /* ADC IXH */
-            ADC(reg_ixh, 0, 4, 2);
-            break;
-        case 0x8d: /* ADC IXL */
-            ADC(reg_ixl, 0, 4, 2);
-            break;
-        case 0x8e: /* ADC (IX+d) */
-            ADC(LOAD(IX_WORD_OFF(ip2)), 8, 11, 3);
-            break;
-        case 0x8f: /* ADC A */
-            ADC(reg_a, 0, 4, 2);
-            break;
-        case 0x90: /* SUB B */
-            SUB(reg_b, 0, 4, 2);
-            break;
-        case 0x91: /* SUB C */
-            SUB(reg_c, 0, 4, 2);
-            break;
-        case 0x92: /* SUB D */
-            SUB(reg_d, 0, 4, 2);
-            break;
-        case 0x93: /* SUB E */
-            SUB(reg_e, 0, 4, 2);
-            break;
-        case 0x94: /* SUB IXH */
-            SUB(reg_ixh, 0, 4, 2);
-            break;
-        case 0x95: /* SUB IXL */
-            SUB(reg_ixl, 0, 4, 2);
-            break;
-        case 0x96: /* SUB (IX+d) */
-            SUB(LOAD(IX_WORD_OFF(ip2)), 8, 11, 3);
-            break;
-        case 0x97: /* SUB A */
-            SUB(reg_a, 0, 4, 2);
-            break;
-        case 0x98: /* SBC B */
-            SBC(reg_b, 0, 4, 2);
-            break;
-        case 0x99: /* SBC C */
-            SBC(reg_c, 0, 4, 2);
-            break;
-        case 0x9a: /* SBC D */
-            SBC(reg_d, 0, 4, 2);
-            break;
-        case 0x9b: /* SBC E */
-            SBC(reg_e, 0, 4, 2);
-            break;
-        case 0x9c: /* SBC IXH */
-            SBC(reg_ixh, 0, 4, 2);
-            break;
-        case 0x9d: /* SBC IXL */
-            SBC(reg_ixl, 0, 4, 2);
-            break;
-        case 0x9e: /* SBC (IX+d) */
-            SBC(LOAD(IX_WORD_OFF(ip2)), 8, 11, 3);
-            break;
-        case 0x9f: /* SBC A */
-            SBC(reg_a, 0, 4, 2);
-            break;
-        case 0xa0: /* AND B */
-            AND(reg_b, 0, 4, 2);
-            break;
-        case 0xa1: /* AND C */
-            AND(reg_c, 0, 4, 2);
-            break;
-        case 0xa2: /* AND D */
-            AND(reg_d, 0, 4, 2);
-            break;
-        case 0xa3: /* AND E */
-            AND(reg_e, 0, 4, 2);
-            break;
-        case 0xa4: /* AND IXH */
-            AND(reg_ixh, 0, 4, 2);
-            break;
-        case 0xa5: /* AND IXL */
-            AND(reg_ixl, 0, 4, 2);
-            break;
-        case 0xa6: /* AND (IX+d) */
-            AND(LOAD(IX_WORD_OFF(ip2)), 8, 11, 3);
-            break;
-        case 0xa7: /* AND A */
-            AND(reg_a, 0, 4, 2);
-            break;
-        case 0xa8: /* XOR B */
-            XOR(reg_b, 0, 4, 2);
-            break;
-        case 0xa9: /* XOR C */
-            XOR(reg_c, 0, 4, 2);
-            break;
-        case 0xaa: /* XOR D */
-            XOR(reg_d, 0, 4, 2);
-            break;
-        case 0xab: /* XOR E */
-            XOR(reg_e, 0, 4, 2);
-            break;
-        case 0xac: /* XOR IXH */
-            XOR(reg_ixh, 0, 4, 2);
-            break;
-        case 0xad: /* XOR IXL */
-            XOR(reg_ixl, 0, 4, 2);
-            break;
-        case 0xae: /* XOR (IX+d) */
-            XOR(LOAD(IX_WORD_OFF(ip2)), 8, 11, 3);
-            break;
-        case 0xaf: /* XOR A */
-            XOR(reg_a, 0, 4, 2);
-            break;
-        case 0xb0: /* OR B */
-            OR(reg_b, 0, 4, 2);
-            break;
-        case 0xb1: /* OR C */
-            OR(reg_c, 0, 4, 2);
-            break;
-        case 0xb2: /* OR D */
-            OR(reg_d, 0, 4, 2);
-            break;
-        case 0xb3: /* OR E */
-            OR(reg_e, 0, 4, 2);
-            break;
-        case 0xb4: /* OR IXH */
-            OR(reg_ixh, 0, 4, 2);
-            break;
-        case 0xb5: /* OR IXL */
-            OR(reg_ixl, 0, 4, 2);
-            break;
-        case 0xb6: /* OR (IX+d) */
-            OR(LOAD(IX_WORD_OFF(ip2)), 8, 11, 3);
-            break;
-        case 0xb7: /* OR A */
-            OR(reg_a, 0, 4, 2);
-            break;
-        case 0xb8: /* CP B */
-            CP(reg_b, 0, 4, 2);
-            break;
-        case 0xb9: /* CP C */
-            CP(reg_c, 0, 4, 2);
-            break;
-        case 0xba: /* CP D */
-            CP(reg_d, 0, 4, 2);
-            break;
-        case 0xbb: /* CP E */
-            CP(reg_e, 0, 4, 2);
-            break;
-        case 0xbc: /* CP IXH */
-            CP(reg_ixh, 0, 4, 2);
-            break;
-        case 0xbd: /* CP IXL */
-            CP(reg_ixl, 0, 4, 2);
-            break;
-        case 0xbe: /* CP (IX+d) */
-            CP(LOAD(IX_WORD_OFF(ip2)), 8, 11, 3);
-            break;
-        case 0xbf: /* CP A */
-            CP(reg_a, 0, 4, 2);
-            break;
-        case 0xc1: /* POP BC */
-            POP(reg_b, reg_c, 2);
-            break;
-        case 0xc5: /* PUSH BC */
-            PUSH(reg_b, reg_c, 2);
-            break;
-        case 0xcb: /* OPCODE DD CB */
-            opcode_dd_cb((BYTE)ip2, (BYTE)ip3, (WORD)ip23);
-            break;
-        case 0xd1: /* POP DE */
-            POP(reg_d, reg_e, 2);
-            break;
-        case 0xd3: /* OUT A */
-            OUTA(ip2, 8, 7, 3);
-            break;
-        case 0xd5: /* PUSH DE */
-            PUSH(reg_d, reg_e, 2);
-            break;
-        case 0xd9: /* EXX */
-            EXX(12, 2);
-            break;
-        case 0xdb: /* IN A */
-            INA(ip2, 8, 7, 3);
-            break;
-        case 0xdd: /* Skip DD */
-            NOP(4, 1);
-            break;
-        case 0xe1: /* POP IX */
-            POP(reg_ixh, reg_ixl, 2);
-            break;
-        case 0xe3: /* EX IX (SP) */
-            EXXXSP(reg_ixh, reg_ixl, 4, 4, 4, 4, 7, 2);
-            break;
-        case 0xe5: /* PUSH IX */
-            PUSH(reg_ixh, reg_ixl, 2);
-            break;
-        case 0xe9: /* LD PC IX */
-            JMP((IX_WORD()), 8);
-            break;
-        case 0xeb:
-            EXDEHL(8, 2);
-            break;
-        case 0xed: /* Skip DD */
-            NOP(4, 1);
-            break;
-        case 0xf1: /* POP AF */
-            POP(reg_a, reg_f, 2);
-            break;
-        case 0xf3: /* DI */
-            DI(8, 2);
-            break;
-        case 0xf5: /* PUSH AF */
-            PUSH(reg_a, reg_f, 2);
-            break;
-        case 0xf9: /* LD SP IX */
-            LDSP(IX_WORD(), 4, 6, 2);
-            break;
-        case 0xfb: /* EI */
-            EI(8, 2);
-            break;
-        case 0xfd: /* Skip DD */
-            NOP(4, 1);
-            break;
-        default:
-#ifdef DEBUG_Z80
-            log_message(LOG_DEFAULT,
-                        "%i PC %04x A%02x F%02x B%02x C%02x D%02x E%02x H%02x L%02x SP%04x OP DD %02x %02x %02x.",
-                        (int)(CLK), (unsigned int)(z80_reg_pc), reg_a, reg_f, reg_b, reg_c, reg_d, reg_e, reg_h, reg_l, reg_sp, ip1, ip2, ip3);
-#endif
-            INC_PC(2);
-    }
-}
-
-static void opcode_ed(BYTE ip1, BYTE ip2, BYTE ip3, WORD ip12, WORD ip23)
+static void opcode_ed(uint8_t ip1, uint8_t ip2, uint8_t ip3, uint16_t ip12, uint16_t ip23)
 {
     switch (ip1) {
         case 0x40: /* IN B BC */
-            INBC(reg_b, 4, 8, 2);
+            INBC(reg_b, 10, 2, 2);
             break;
         case 0x41: /* OUT BC B */
-            OUTBC(reg_b, 4, 8, 2);
+            OUTBC(reg_b, 10, 2, 2);
             break;
         case 0x42: /* SBC HL BC */
             SBCHLREG(reg_b, reg_c);
@@ -4216,10 +4039,10 @@ static void opcode_ed(BYTE ip1, BYTE ip2, BYTE ip3, WORD ip12, WORD ip23)
             LDREG(reg_i, reg_a, 6, 3, 2);
             break;
         case 0x48: /* IN C BC */
-            INBC(reg_c, 4, 8, 2);
+            INBC(reg_c, 10, 2, 2);
             break;
         case 0x49: /* OUT BC C */
-            OUTBC(reg_c, 4, 8, 2);
+            OUTBC(reg_c, 10, 2, 2);
             break;
         case 0x4a: /* ADC HL BC */
             ADCHLREG(reg_b, reg_c);
@@ -4227,23 +4050,35 @@ static void opcode_ed(BYTE ip1, BYTE ip2, BYTE ip3, WORD ip12, WORD ip23)
         case 0x4b: /* LD BC (WORD) */
             LDIND(ip23, reg_b, reg_c, 4, 4, 12, 4);
             break;
+        case 0x4c: /* undoc NEG */
+            NEG();
+            break;
         case 0x4d: /* RETI */
             RETNI();
             break;
+        case 0x4e: /* undoc IM0 */
+            IM(0);
+            break;
         case 0x4f: /* LD R A FIXME: Not emulated.  */
-            NOP(8, 2);
+            NOP(9, 2);
             break;
         case 0x50: /* IN D BC */
-            INBC(reg_d, 4, 8, 2);
+            INBC(reg_d, 10, 2, 2);
             break;
         case 0x51: /* OUT BC D */
-            OUTBC(reg_d, 4, 8, 2);
+            OUTBC(reg_d, 10, 2, 2);
             break;
         case 0x52: /* SBC HL DE */
             SBCHLREG(reg_d, reg_e);
             break;
         case 0x53: /* LD (WORD) DE */
             STW(ip23, reg_d, reg_e, 4, 13, 3, 4);
+            break;
+        case 0x54: /* undoc NEG */
+            NEG();
+            break;
+        case 0x55: /* undoc RETN */
+            RETNI();
             break;
         case 0x56: /* IM1 */
             IM(1);
@@ -4252,10 +4087,10 @@ static void opcode_ed(BYTE ip1, BYTE ip2, BYTE ip3, WORD ip12, WORD ip23)
             LDAIR(reg_i);
             break;
         case 0x58: /* IN E BC */
-            INBC(reg_e, 4, 8, 2);
+            INBC(reg_e, 10, 2, 2);
             break;
         case 0x59: /* OUT BC E */
-            OUTBC(reg_e, 4, 8, 2);
+            OUTBC(reg_e, 10, 2, 2);
             break;
         case 0x5a: /* ADC HL DE */
             ADCHLREG(reg_d, reg_e);
@@ -4263,17 +4098,23 @@ static void opcode_ed(BYTE ip1, BYTE ip2, BYTE ip3, WORD ip12, WORD ip23)
         case 0x5b: /* LD DE (WORD) */
             LDIND(ip23, reg_d, reg_e, 4, 4, 12, 4);
             break;
+        case 0x5c: /* undoc NEG */
+            NEG();
+            break;
+        case 0x5d: /* undoc RETN */
+            RETNI();
+            break;
         case 0x5e: /* IM2 */
             IM(2);
             break;
         case 0x5f: /* LD A R */
-            LDAIR((BYTE)(CLK & 0xff));
+            LDAIR((uint8_t)(CLK & 0xff));
             break;
         case 0x60: /* IN H BC */
-            INBC(reg_h, 4, 8, 2);
+            INBC(reg_h, 10, 2, 2);
             break;
         case 0x61: /* OUT BC H */
-            OUTBC(reg_h, 4, 8, 2);
+            OUTBC(reg_h, 10, 2, 2);
             break;
         case 0x62: /* SBC HL HL */
             SBCHLREG(reg_h, reg_l);
@@ -4281,14 +4122,23 @@ static void opcode_ed(BYTE ip1, BYTE ip2, BYTE ip3, WORD ip12, WORD ip23)
         case 0x63: /* LD (WORD) HL */
             STW(ip23, reg_h, reg_l, 4, 13, 3, 4);
             break;
+        case 0x64: /* undoc NEG */
+            NEG();
+            break;
+        case 0x65: /* undoc RETN */
+            RETNI();
+            break;
+        case 0x66: /* undoc IM0 */
+            IM(0);
+            break;
         case 0x67: /* RRD */
             RRD();
             break;
         case 0x68: /* IN L BC */
-            INBC(reg_l, 4, 8, 2);
+            INBC(reg_l, 10, 2, 2);
             break;
         case 0x69: /* OUT BC L */
-            OUTBC(reg_l, 4, 8, 2);
+            OUTBC(reg_l, 10, 2, 2);
             break;
         case 0x6a: /* ADC HL HL */
             ADCHLREG(reg_h, reg_l);
@@ -4296,14 +4146,23 @@ static void opcode_ed(BYTE ip1, BYTE ip2, BYTE ip3, WORD ip12, WORD ip23)
         case 0x6b: /* LD HL (WORD) */
             LDIND(ip23, reg_h, reg_l, 4, 4, 12, 4);
             break;
+        case 0x6c: /* undoc NEG */
+            NEG();
+            break;
+        case 0x6d: /* undoc RETN */
+            RETNI();
+            break;
+        case 0x6e: /* undoc IM0 */
+            IM(0);
+            break;
         case 0x6f: /* RLD */
             RLD();
             break;
         case 0x70: /* IN F BC */
-            INBC0(4, 8, 2);
+            INBC0(10, 2, 2);
             break;
         case 0x71: /* OUT BC #0 */
-            OUTBC(0, 4, 8, 2);
+            OUTBC(0, 10, 2, 2);
             break;
         case 0x72: /* SBC HL SP */
             SBCHLSP();
@@ -4311,11 +4170,23 @@ static void opcode_ed(BYTE ip1, BYTE ip2, BYTE ip3, WORD ip12, WORD ip23)
         case 0x73: /* LD (WORD) SP */
             STSPW(ip23, 4, 13, 3, 4);
             break;
+        case 0x74: /* undoc NEG */
+            NEG();
+            break;
+        case 0x75: /* undoc RETN */
+            RETNI();
+            break;
+        case 0x76: /* undoc IM1 */
+            IM(1);
+            break;
+        case 0x77: /* undoc NOP */
+            NOP(8, 2);
+            break;
         case 0x78: /* IN A BC */
-            INBC(reg_a, 4, 8, 2);
+            INBC(reg_a, 10, 2, 2);
             break;
         case 0x79: /* OUT BC A */
-            OUTBC(reg_a, 4, 8, 2);
+            OUTBC(reg_a, 10, 2, 2);
             break;
         case 0x7a: /* ADC HL SP */
             ADCHLSP();
@@ -4323,13 +4194,26 @@ static void opcode_ed(BYTE ip1, BYTE ip2, BYTE ip3, WORD ip12, WORD ip23)
         case 0x7b: /* LD SP (WORD) */
             LDSPIND(ip23, 4, 4, 12, 4);
             break;
+        case 0x7c: /* undoc NEG */
+            NEG();
+            break;
+        case 0x7d: /* undoc RETN */
+            RETNI();
+            break;
+        case 0x7e: /* undoc IM2 */
+            IM(2);
+            break;
+        case 0x7f: /* undoc NOP */
+            NOP(8, 2);
+            break;
         case 0xa0: /* LDI */
             LDDI(INC_DE_WORD(), INC_HL_WORD());
             break;
         case 0xa1: /* CPI */
-            CPDI(INC_HL_WORD());
+            CPDI(INC_HL_WORD(),reg_wz++);
             break;
         case 0xa2: /* INI */
+            CLK_ADD(CLK, 4);
             INDI(INC_HL_WORD());
             break;
         case 0xa3: /* OUTI */
@@ -4339,9 +4223,10 @@ static void opcode_ed(BYTE ip1, BYTE ip2, BYTE ip3, WORD ip12, WORD ip23)
             LDDI(DEC_DE_WORD(), DEC_HL_WORD());
             break;
         case 0xa9: /* CPD */
-            CPDI(DEC_HL_WORD());
+            CPDI(DEC_HL_WORD(),reg_wz--);
             break;
         case 0xaa: /* IND */
+            CLK_ADD(CLK, 4);
             INDI(DEC_HL_WORD());
             break;
         case 0xab: /* OUTD */
@@ -4384,1337 +4269,46 @@ static void opcode_ed(BYTE ip1, BYTE ip2, BYTE ip3, WORD ip12, WORD ip23)
             NOP(8, 2);
             break;
         default:
+            NOP(8, 2);
 #ifdef DEBUG_Z80
             log_message(LOG_DEFAULT,
                         "%i PC %04x A%02x F%02x B%02x C%02x D%02x E%02x H%02x L%02x SP%04x OP ED %02x %02x %02x.",
                         (int)(CLK), (unsigned int)(z80_reg_pc), reg_a, reg_f, reg_b, reg_c, reg_d, reg_e, reg_h, reg_l, reg_sp, ip1, ip2, ip3);
 #endif
-            INC_PC(2);
-    }
-}
-
-static void opcode_fd_cb(BYTE iip2, BYTE iip3, WORD iip23)
-{
-    switch (iip3) {
-        case 0x00: /* RLC (IY+d),B */
-            RLCXXREG(reg_b, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0x01: /* RLC (IY+d),C */
-            RLCXXREG(reg_c, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0x02: /* RLC (IY+d),D */
-            RLCXXREG(reg_d, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0x03: /* RLC (IY+d),E */
-            RLCXXREG(reg_e, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0x04: /* RLC (IY+d),H */
-            RLCXXREG(reg_h, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0x05: /* RLC (IY+d),L */
-            RLCXXREG(reg_l, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0x06: /* RLC (IY+d) */
-            RLCXX(IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0x07: /* RLC (IY+d),A */
-            RLCXXREG(reg_a, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0x08: /* RRC (IY+d),B */
-            RRCXXREG(reg_b, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0x09: /* RRC (IY+d),C */
-            RRCXXREG(reg_c, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0x0a: /* RRC (IY+d),D */
-            RRCXXREG(reg_d, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0x0b: /* RRC (IY+d),E */
-            RRCXXREG(reg_e, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0x0c: /* RRC (IY+d),H */
-            RRCXXREG(reg_h, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0x0d: /* RRC (IY+d),L */
-            RRCXXREG(reg_l, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0x0e: /* RRC (IY+d) */
-            RRCXX(IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0x0f: /* RRC (IY+d),A */
-            RRCXXREG(reg_a, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0x10: /* RL (IY+d),B */
-            RLXXREG(reg_b, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0x11: /* RL (IY+d),C */
-            RLXXREG(reg_c, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0x12: /* RL (IY+d),D */
-            RLXXREG(reg_d, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0x13: /* RL (IY+d),E */
-            RLXXREG(reg_e, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0x14: /* RL (IY+d),H */
-            RLXXREG(reg_h, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0x15: /* RL (IY+d),L */
-            RLXXREG(reg_l, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0x16: /* RL (IY+d) */
-            RLXX(IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0x17: /* RL (IY+d),A */
-            RLXXREG(reg_a, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0x18: /* RR (IY+d),B */
-            RRXXREG(reg_b, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0x19: /* RR (IY+d),C */
-            RRXXREG(reg_c, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0x1a: /* RR (IY+d),D */
-            RRXXREG(reg_d, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0x1b: /* RR (IY+d),E */
-            RRXXREG(reg_e, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0x1c: /* RR (IY+d),H */
-            RRXXREG(reg_h, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0x1d: /* RR (IY+d),L */
-            RRXXREG(reg_l, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0x1e: /* RR (IY+d) */
-            RRXX(IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0x1f: /* RR (IY+d),A */
-            RRXXREG(reg_a, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0x20: /* SLA (IY+d),B */
-            SLAXXREG(reg_b, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0x21: /* SLA (IY+d),C */
-            SLAXXREG(reg_c, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0x22: /* SLA (IY+d),D */
-            SLAXXREG(reg_d, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0x23: /* SLA (IY+d),E */
-            SLAXXREG(reg_e, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0x24: /* SLA (IY+d),H */
-            SLAXXREG(reg_h, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0x25: /* SLA (IY+d),L */
-            SLAXXREG(reg_l, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0x26: /* SLA (IY+d) */
-            SLAXX(IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0x27: /* SLA (IY+d),A */
-            SLAXXREG(reg_a, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0x28: /* SRA (IY+d),B */
-            SRAXXREG(reg_b, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0x29: /* SRA (IY+d),C */
-            SRAXXREG(reg_c, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0x2a: /* SRA (IY+d),D */
-            SRAXXREG(reg_d, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0x2b: /* SRA (IY+d),E */
-            SRAXXREG(reg_e, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0x2c: /* SRA (IY+d),H */
-            SRAXXREG(reg_h, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0x2d: /* SRA (IY+d),L */
-            SRAXXREG(reg_l, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0x2e: /* SRA (IY+d) */
-            SRAXX(IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0x2f: /* SRA (IY+d),A */
-            SRAXXREG(reg_a, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0x30: /* SLL (IY+d),B */
-            SLLXXREG(reg_b, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0x31: /* SLL (IY+d),C */
-            SLLXXREG(reg_c, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0x32: /* SLL (IY+d),D */
-            SLLXXREG(reg_d, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0x33: /* SLL (IY+d),E */
-            SLLXXREG(reg_e, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0x34: /* SLL (IY+d),H */
-            SLLXXREG(reg_h, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0x35: /* SLL (IY+d),L */
-            SLLXXREG(reg_l, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0x36: /* SLL (IY+d) */
-            SLLXX(IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0x37: /* SLL (IY+d),A */
-            SLLXXREG(reg_a, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0x38: /* SRL (IY+d),B */
-            SRLXXREG(reg_b, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0x39: /* SRL (IY+d),C */
-            SRLXXREG(reg_c, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0x3a: /* SRL (IY+d),D */
-            SRLXXREG(reg_d, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0x3b: /* SRL (IY+d),E */
-            SRLXXREG(reg_e, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0x3c: /* SRL (IY+d),H */
-            SRLXXREG(reg_h, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0x3d: /* SRL (IY+d),L */
-            SRLXXREG(reg_l, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0x3e: /* SRL (IY+d) */
-            SRLXX(IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0x3f: /* SRL (IY+d),A */
-            SRLXXREG(reg_a, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0x40: /* BIT (IY+d) 0 */
-        case 0x41:
-        case 0x42:
-        case 0x43:
-        case 0x44:
-        case 0x45:
-        case 0x46:
-        case 0x47:
-            BIT(LOAD(IY_WORD_OFF(iip2)), 0, 8, 12, 4);
-            break;
-        case 0x48: /* BIT (IY+d) 1 */
-        case 0x49:
-        case 0x4a:
-        case 0x4b:
-        case 0x4c:
-        case 0x4d:
-        case 0x4e:
-        case 0x4f:
-            BIT(LOAD(IY_WORD_OFF(iip2)), 1, 8, 12, 4);
-            break;
-        case 0x50: /* BIT (IY+d) 2 */
-        case 0x51:
-        case 0x52:
-        case 0x53:
-        case 0x54:
-        case 0x55:
-        case 0x56:
-        case 0x57:
-            BIT(LOAD(IY_WORD_OFF(iip2)), 2, 8, 12, 4);
-            break;
-        case 0x58: /* BIT (IY+d) 3 */
-        case 0x59:
-        case 0x5a:
-        case 0x5b:
-        case 0x5c:
-        case 0x5d:
-        case 0x5e:
-        case 0x5f:
-            BIT(LOAD(IY_WORD_OFF(iip2)), 3, 8, 12, 4);
-            break;
-        case 0x60: /* BIT (IY+d) 4 */
-        case 0x61:
-        case 0x62:
-        case 0x63:
-        case 0x64:
-        case 0x65:
-        case 0x66:
-        case 0x67:
-            BIT(LOAD(IY_WORD_OFF(iip2)), 4, 8, 12, 4);
-            break;
-        case 0x68: /* BIT (IY+d) 5 */
-        case 0x69:
-        case 0x6a:
-        case 0x6b:
-        case 0x6c:
-        case 0x6d:
-        case 0x6e:
-        case 0x6f:
-            BIT(LOAD(IY_WORD_OFF(iip2)), 5, 8, 12, 4);
-            break;
-        case 0x70: /* BIT (IY+d) 6 */
-        case 0x71:
-        case 0x72:
-        case 0x73:
-        case 0x74:
-        case 0x75:
-        case 0x76:
-        case 0x77:
-            BIT(LOAD(IY_WORD_OFF(iip2)), 6, 8, 12, 4);
-            break;
-        case 0x78: /* BIT (IY+d) 7 */
-        case 0x79:
-        case 0x7a:
-        case 0x7b:
-        case 0x7c:
-        case 0x7d:
-        case 0x7e:
-        case 0x7f:
-            BIT(LOAD(IY_WORD_OFF(iip2)), 7, 8, 12, 4);
-            break;
-        case 0x80: /* RES (IY+d),B 0 */
-            RESXXREG(0, reg_b, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0x81: /* RES (IY+d),C 0 */
-            RESXXREG(0, reg_c, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0x82: /* RES (IY+d),D 0 */
-            RESXXREG(0, reg_d, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0x83: /* RES (IY+d),E 0 */
-            RESXXREG(0, reg_e, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0x84: /* RES (IY+d),H 0 */
-            RESXXREG(0, reg_h, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0x85: /* RES (IY+d),L 0 */
-            RESXXREG(0, reg_l, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0x86: /* RES (IY+d) 0 */
-            RESXX(0, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0x87: /* RES (IY+d),A 0 */
-            RESXXREG(0, reg_a, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0x88: /* RES (IY+d),B 1 */
-            RESXXREG(1, reg_b, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0x89: /* RES (IY+d),C 1 */
-            RESXXREG(1, reg_c, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0x8a: /* RES (IY+d),D 1 */
-            RESXXREG(1, reg_d, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0x8b: /* RES (IY+d),E 1 */
-            RESXXREG(1, reg_e, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0x8c: /* RES (IY+d),H 1 */
-            RESXXREG(1, reg_h, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0x8d: /* RES (IY+d),L 1 */
-            RESXXREG(1, reg_l, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0x8e: /* RES (IY+d) 1 */
-            RESXX(1, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0x8f: /* RES (IY+d),A 1 */
-            RESXXREG(1, reg_a, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0x90: /* RES (IY+d),B 2 */
-            RESXXREG(2, reg_b, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0x91: /* RES (IY+d),C 2 */
-            RESXXREG(2, reg_c, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0x92: /* RES (IY+d),D 2 */
-            RESXXREG(2, reg_d, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0x93: /* RES (IY+d),E 2 */
-            RESXXREG(2, reg_e, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0x94: /* RES (IY+d),H 2 */
-            RESXXREG(2, reg_h, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0x95: /* RES (IY+d),L 2 */
-            RESXXREG(2, reg_l, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0x96: /* RES (IY+d) 2 */
-            RESXX(2, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0x97: /* RES (IY+d),A 2 */
-            RESXXREG(2, reg_a, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0x98: /* RES (IY+d),B 3 */
-            RESXXREG(3, reg_b, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0x99: /* RES (IY+d),C 3 */
-            RESXXREG(3, reg_c, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0x9a: /* RES (IY+d),D 3 */
-            RESXXREG(3, reg_d, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0x9b: /* RES (IY+d),E 3 */
-            RESXXREG(3, reg_e, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0x9c: /* RES (IY+d),H 3 */
-            RESXXREG(3, reg_h, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0x9d: /* RES (IY+d),L 3 */
-            RESXXREG(3, reg_l, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0x9e: /* RES (IY+d) 3 */
-            RESXX(3, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0x9f: /* RES (IY+d),A 3 */
-            RESXXREG(3, reg_a, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0xa0: /* RES (IY+d),B 4 */
-            RESXXREG(4, reg_b, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0xa1: /* RES (IY+d),C 4 */
-            RESXXREG(4, reg_c, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0xa2: /* RES (IY+d),D 4 */
-            RESXXREG(4, reg_d, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0xa3: /* RES (IY+d),E 4 */
-            RESXXREG(4, reg_e, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0xa4: /* RES (IY+d),H 4 */
-            RESXXREG(4, reg_h, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0xa5: /* RES (IY+d),L 4 */
-            RESXXREG(4, reg_l, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0xa6: /* RES (IY+d) 4 */
-            RESXX(4, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0xa7: /* RES (IY+d),A 4 */
-            RESXXREG(4, reg_a, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0xa8: /* RES (IY+d),B 5 */
-            RESXXREG(5, reg_b, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0xa9: /* RES (IY+d),C 5 */
-            RESXXREG(5, reg_c, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0xaa: /* RES (IY+d),D 5 */
-            RESXXREG(5, reg_d, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0xab: /* RES (IY+d),E 5 */
-            RESXXREG(5, reg_e, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0xac: /* RES (IY+d),H 5 */
-            RESXXREG(5, reg_h, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0xad: /* RES (IY+d),L 5 */
-            RESXXREG(5, reg_l, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0xae: /* RES (IY+d) 5 */
-            RESXX(5, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0xaf: /* RES (IY+d),A 5 */
-            RESXXREG(5, reg_a, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0xb0: /* RES (IY+d),B 6 */
-            RESXXREG(6, reg_b, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0xb1: /* RES (IY+d),C 6 */
-            RESXXREG(6, reg_c, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0xb2: /* RES (IY+d),D 6 */
-            RESXXREG(6, reg_d, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0xb3: /* RES (IY+d),E 6 */
-            RESXXREG(6, reg_e, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0xb4: /* RES (IY+d),H 6 */
-            RESXXREG(6, reg_h, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0xb5: /* RES (IY+d),L 6 */
-            RESXXREG(6, reg_l, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0xb6: /* RES (IY+d) 6 */
-            RESXX(6, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0xb7: /* RES (IY+d),A 6 */
-            RESXXREG(6, reg_a, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0xb8: /* RES (IY+d),B 7 */
-            RESXXREG(7, reg_b, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0xb9: /* RES (IY+d),C 7 */
-            RESXXREG(7, reg_c, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0xba: /* RES (IY+d),D 7 */
-            RESXXREG(7, reg_d, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0xbb: /* RES (IY+d),E 7 */
-            RESXXREG(7, reg_e, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0xbc: /* RES (IY+d),H 7 */
-            RESXXREG(7, reg_h, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0xbd: /* RES (IY+d),L 7 */
-            RESXXREG(7, reg_l, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0xbe: /* RES (IY+d) 7 */
-            RESXX(7, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0xbf: /* RES (IY+d),A 7 */
-            RESXXREG(7, reg_a, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0xc0: /* SET (IY+d),B 0 */
-            SETXXREG(0, reg_b, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0xc1: /* SET (IY+d),C 0 */
-            SETXXREG(0, reg_c, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0xc2: /* SET (IY+d),D 0 */
-            SETXXREG(0, reg_d, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0xc3: /* SET (IY+d),E 0 */
-            SETXXREG(0, reg_e, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0xc4: /* SET (IY+d),H 0 */
-            SETXXREG(0, reg_h, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0xc5: /* SET (IY+d),L 0 */
-            SETXXREG(0, reg_l, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0xc6: /* SET (IY+d) 0 */
-            SETXX(0, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0xc7: /* SET (IY+d),A 0 */
-            SETXXREG(0, reg_a, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0xc8: /* SET (IY+d),B 1 */
-            SETXXREG(1, reg_b, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0xc9: /* SET (IY+d),C 1 */
-            SETXXREG(1, reg_c, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0xca: /* SET (IY+d),D 1 */
-            SETXXREG(1, reg_d, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0xcb: /* SET (IY+d),E 1 */
-            SETXXREG(1, reg_e, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0xcc: /* SET (IY+d),H 1 */
-            SETXXREG(1, reg_h, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0xcd: /* SET (IY+d),L 1 */
-            SETXXREG(1, reg_l, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0xce: /* SET (IY+d) 1 */
-            SETXX(1, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0xcf: /* SET (IY+d),A 1 */
-            SETXXREG(1, reg_a, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0xd0: /* SET (IY+d),B 2 */
-            SETXXREG(2, reg_b, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0xd1: /* SET (IY+d),C 2 */
-            SETXXREG(2, reg_c, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0xd2: /* SET (IY+d),D 2 */
-            SETXXREG(2, reg_d, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0xd3: /* SET (IY+d),E 2 */
-            SETXXREG(2, reg_e, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0xd4: /* SET (IY+d),H 2 */
-            SETXXREG(2, reg_h, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0xd5: /* SET (IY+d),L 2 */
-            SETXXREG(2, reg_l, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0xd6: /* SET (IY+d) 2 */
-            SETXX(2, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0xd7: /* SET (IY+d),A 2 */
-            SETXXREG(2, reg_a, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0xd8: /* SET (IY+d),B 3 */
-            SETXXREG(3, reg_b, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0xd9: /* SET (IY+d),C 3 */
-            SETXXREG(3, reg_c, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0xda: /* SET (IY+d),D 3 */
-            SETXXREG(3, reg_d, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0xdb: /* SET (IY+d),E 3 */
-            SETXXREG(3, reg_e, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0xdc: /* SET (IY+d),H 3 */
-            SETXXREG(3, reg_h, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0xdd: /* SET (IY+d),L 3 */
-            SETXXREG(3, reg_l, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0xde: /* SET (IY+d) 3 */
-            SETXX(3, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0xdf: /* SET (IY+d),A 3 */
-            SETXXREG(3, reg_a, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0xe0: /* SET (IY+d),B 4 */
-            SETXXREG(4, reg_b, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0xe1: /* SET (IY+d),C 4 */
-            SETXXREG(4, reg_c, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0xe2: /* SET (IY+d),D 4 */
-            SETXXREG(4, reg_d, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0xe3: /* SET (IY+d),E 4 */
-            SETXXREG(4, reg_e, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0xe4: /* SET (IY+d),H 4 */
-            SETXXREG(4, reg_h, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0xe5: /* SET (IY+d),L 4 */
-            SETXXREG(4, reg_l, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0xe6: /* SET (IY+d) 4 */
-            SETXX(4, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0xe7: /* SET (IY+d),A 4 */
-            SETXXREG(4, reg_a, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0xe8: /* SET (IY+d),B 5 */
-            SETXXREG(5, reg_b, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0xe9: /* SET (IY+d),C 5 */
-            SETXXREG(5, reg_c, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0xea: /* SET (IY+d),D 5 */
-            SETXXREG(5, reg_d, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0xeb: /* SET (IY+d),E 5 */
-            SETXXREG(5, reg_e, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0xec: /* SET (IY+d),H 5 */
-            SETXXREG(5, reg_h, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0xed: /* SET (IY+d),L 5 */
-            SETXXREG(5, reg_l, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0xee: /* SET (IY+d) 5 */
-            SETXX(5, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0xef: /* SET (IY+d),A 5 */
-            SETXXREG(5, reg_a, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0xf0: /* SET (IY+d),B 6 */
-            SETXXREG(6, reg_b, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0xf1: /* SET (IY+d),C 6 */
-            SETXXREG(6, reg_c, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0xf2: /* SET (IY+d),D 6 */
-            SETXXREG(6, reg_d, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0xf3: /* SET (IY+d),E 6 */
-            SETXXREG(6, reg_e, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0xf4: /* SET (IY+d),H 6 */
-            SETXXREG(6, reg_h, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0xf5: /* SET (IY+d),L 6 */
-            SETXXREG(6, reg_l, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0xf6: /* SET (IY+d) 6 */
-            SETXX(6, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0xf7: /* SET (IY+d),A 6 */
-            SETXXREG(6, reg_a, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0xf8: /* SET (IY+d),B 7 */
-            SETXXREG(7, reg_b, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0xf9: /* SET (IY+d),C 7 */
-            SETXXREG(7, reg_c, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0xfa: /* SET (IY+d),D 7 */
-            SETXXREG(7, reg_d, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0xfb: /* SET (IY+d),E 7 */
-            SETXXREG(7, reg_e, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0xfc: /* SET (IY+d),H 7 */
-            SETXXREG(7, reg_h, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0xfd: /* SET (IY+d),L 7 */
-            SETXXREG(7, reg_l, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0xfe: /* SET (IY+d) 7 */
-            SETXX(7, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        case 0xff: /* SET (IY+d),A 7 */
-            SETXXREG(7, reg_a, IY_WORD_OFF(iip2), 4, 4, 15, 4);
-            break;
-        default:
-            INC_PC(4);
-    }
-}
-
-static void opcode_fd(BYTE ip1, BYTE ip2, BYTE ip3, WORD ip12, WORD ip23)
-{
-    switch (ip1) {
-        case 0x00: /* NOP */
-            NOP(8, 2);
-            break;
-        case 0x01: /* LD BC # */
-            LDW(ip23, reg_b, reg_c, 10, 0, 4);
-            break;
-        case 0x02: /* LD (BC) A */
-            STREG(BC_WORD(), reg_a, 8, 3, 2);
-            break;
-        case 0x03: /* INC BC */
-            DECINC(INC_BC_WORD(), 10, 2);
-            break;
-        case 0x04: /* INC B */
-            INCREG(reg_b, 7, 2);
-            break;
-        case 0x05: /* DEC B */
-            DECREG(reg_b, 7, 2);
-            break;
-        case 0x06: /* LD B # */
-            LDREG(reg_b, ip2, 4, 5, 3);
-            break;
-        case 0x07: /* RLCA */
-            RLCA(8, 2);
-            break;
-        case 0x08: /* EX AF AF' */
-            EXAFAF(12, 2);
-            break;
-        case 0x09: /* ADD IY BC */
-            ADDXXREG(reg_iyh, reg_iyl, reg_b, reg_c, 15, 2);
-            break;
-        case 0x0a: /* LD A (BC) */
-            LDREG(reg_a, LOAD(BC_WORD()), 8, 3, 2);
-            break;
-        case 0x0b: /* DEC BC */
-            DECINC(DEC_BC_WORD(), 10, 2);
-            break;
-        case 0x0c: /* INC C */
-            INCREG(reg_c, 7, 2);
-            break;
-        case 0x0d: /* DEC C */
-            DECREG(reg_c, 7, 2);
-            break;
-        case 0x0e: /* LD C # */
-            LDREG(reg_c, ip2, 4, 5, 3);
-            break;
-        case 0x0f: /* RRCA */
-            RRCA(8, 2);
-            break;
-        case 0x10: /* DJNZ */
-            DJNZ(ip2, 3);
-            break;
-        case 0x11: /* LD DE # */
-            LDW(ip23, reg_d, reg_e, 10, 0, 4);
-            break;
-        case 0x12: /* LD (DE) A */
-            STREG(DE_WORD(), reg_a, 8, 3, 2);
-            break;
-        case 0x13: /* INC DE */
-            DECINC(INC_DE_WORD(), 10, 2);
-            break;
-        case 0x14: /* INC D */
-            INCREG(reg_d, 7, 2);
-            break;
-        case 0x15: /* DEC D */
-            DECREG(reg_d, 7, 2);
-            break;
-        case 0x16: /* LD D # */
-            LDREG(reg_d, ip2, 4, 5, 3);
-            break;
-        case 0x17: /* RLA */
-            RLA(8, 2);
-            break;
-        case 0x19: /* ADD IY DE */
-            ADDXXREG(reg_iyh, reg_iyl, reg_d, reg_e, 15, 2);
-            break;
-        case 0x1a: /* LD A (DE) */
-            LDREG(reg_a, LOAD(DE_WORD()), 8, 3, 2);
-            break;
-        case 0x1b: /* DEC DE */
-            DECINC(DEC_DE_WORD(), 10, 2);
-            break;
-        case 0x1c: /* INC E */
-            INCREG(reg_e, 7, 2);
-            break;
-        case 0x1d: /* DEC E */
-            DECREG(reg_e, 7, 2);
-            break;
-        case 0x1e: /* LD E # */
-            LDREG(reg_e, ip2, 4, 5, 3);
-            break;
-        case 0x1f: /* RRA */
-            RRA(8, 2);
-            break;
-        case 0x20: /* JR NZ */
-            BRANCH(!LOCAL_ZERO(), ip2, 3);
-            break;
-        case 0x21: /* LD IY # */
-            LDW(ip23, reg_iyh, reg_iyl, 10, 4, 4);
-            break;
-        case 0x22: /* LD (WORD) IY */
-            STW(ip23, reg_iyh, reg_iyl, 4, 9, 7, 4);
-            break;
-        case 0x23: /* INC IY */
-            DECINC(INC_IY_WORD(), 10, 2);
-            break;
-        case 0x24: /* INC IYH */
-            INCREG(reg_iyh, 7, 2);
-            break;
-        case 0x25: /* DEC IYH */
-            DECREG(reg_iyh, 7, 2);
-            break;
-        case 0x26: /* LD IYH # */
-            LDREG(reg_iyh, ip2, 4, 5, 3);
-            break;
-        case 0x27: /* DAA */
-            DAA(8, 2);
-            break;
-        case 0x28: /* JR Z */
-            BRANCH(LOCAL_ZERO(), ip2, 3);
-            break;
-        case 0x29: /* ADD IY IY */
-            ADDXXREG(reg_iyh, reg_iyl, reg_iyh, reg_iyl, 15, 2);
-            break;
-        case 0x2a: /* LD IY (WORD) */
-            LDIND(ip23, reg_iyh, reg_iyl, 4, 4, 12, 4);
-            break;
-        case 0x2b: /* DEC IY */
-            DECINC(DEC_IY_WORD(), 10, 2);
-            break;
-        case 0x2c: /* INC IYL */
-            INCREG(reg_iyl, 7, 2);
-            break;
-        case 0x2d: /* DEC IYL */
-            DECREG(reg_iyl, 7, 2);
-            break;
-        case 0x2e: /* LD IYL # */
-            LDREG(reg_iyl, ip2, 4, 5, 3);
-            break;
-        case 0x2f: /* CPL */
-            CPL(8, 2);
-            break;
-        case 0x30: /* JR NC */
-            BRANCH(!LOCAL_CARRY(), ip2, 3);
-            break;
-        case 0x31: /* LD SP # */
-            LDSP(ip23, 10, 0, 4);
-            break;
-        case 0x32: /* LD (WORD) A */
-            STREG(ip23, reg_a, 10, 7, 4);
-            break;
-        case 0x33: /* INC SP */
-            DECINC(reg_sp++, 10, 2);
-            break;
-        case 0x34: /* INC (IY+d) */
-            INCXXIND(IY_WORD_OFF(ip2), 4, 7, 12, 3);
-            break;
-        case 0x35: /* DEC (IY+d) */
-            DECXXIND(IY_WORD_OFF(ip2), 4, 7, 12, 3);
-            break;
-        case 0x36: /* LD (IY+d) # */
-            STREG(IY_WORD_OFF(ip2), ip3, 8, 11, 4);
-            break;
-        case 0x37: /* SCF */
-            SCF(8, 2);
-            break;
-        case 0x38: /* JR C */
-            BRANCH(LOCAL_CARRY(), ip2, 3);
-            break;
-        case 0x39: /* ADD IY SP */
-            ADDXXSP(reg_iyh, reg_iyl, 15, 2);
-            break;
-        case 0x3a: /* LD A (WORD) */
-            LDREG(reg_a, LOAD(ip23), 10, 7, 4);
-            break;
-        case 0x3b: /* DEC SP */
-            DECINC(reg_sp--, 10, 2);
-            break;
-        case 0x3c: /* INC A */
-            INCREG(reg_a, 7, 2);
-            break;
-        case 0x3d: /* DEC A */
-            DECREG(reg_a, 7, 2);
-            break;
-        case 0x3e: /* LD A # */
-            LDREG(reg_a, ip2, 4, 5, 3);
-            break;
-        case 0x3f: /* CCF */
-            CCF(8, 2);
-            break;
-        case 0x40: /* LD B B */
-            LDREG(reg_b, reg_b, 0, 4, 2);
-            break;
-        case 0x41: /* LD B C */
-            LDREG(reg_b, reg_c, 0, 4, 2);
-            break;
-        case 0x42: /* LD B D */
-            LDREG(reg_b, reg_d, 0, 4, 2);
-            break;
-        case 0x43: /* LD B E */
-            LDREG(reg_b, reg_e, 0, 4, 2);
-            break;
-        case 0x44: /* LD B IYH */
-            LDREG(reg_b, reg_iyh, 0, 4, 2);
-            break;
-        case 0x45: /* LD B IYL */
-            LDREG(reg_b, reg_iyl, 0, 4, 2);
-            break;
-        case 0x46: /* LD B (IY+d) */
-            LDREG(reg_b, LOAD(IY_WORD_OFF(ip2)), 8, 11, 3);
-            break;
-        case 0x47: /* LD B A */
-            LDREG(reg_b, reg_a, 0, 4, 2);
-            break;
-        case 0x48: /* LD C B */
-            LDREG(reg_c, reg_b, 0, 4, 2);
-            break;
-        case 0x49: /* LD C C */
-            LDREG(reg_c, reg_c, 0, 4, 2);
-            break;
-        case 0x4a: /* LD C D */
-            LDREG(reg_c, reg_d, 0, 4, 2);
-            break;
-        case 0x4b: /* LD C E */
-            LDREG(reg_c, reg_e, 0, 4, 2);
-            break;
-        case 0x4c: /* LD C IYH */
-            LDREG(reg_c, reg_iyh, 0, 4, 2);
-            break;
-        case 0x4d: /* LD C IYL */
-            LDREG(reg_c, reg_iyl, 0, 4, 2);
-            break;
-        case 0x4e: /* LD C (IY+d) */
-            LDREG(reg_c, LOAD(IY_WORD_OFF(ip2)), 8, 11, 3);
-            break;
-        case 0x4f: /* LD C A */
-            LDREG(reg_c, reg_a, 0, 4, 2);
-            break;
-        case 0x50: /* LD D B */
-            LDREG(reg_d, reg_b, 0, 4, 2);
-            break;
-        case 0x51: /* LD D C */
-            LDREG(reg_d, reg_c, 0, 4, 2);
-            break;
-        case 0x52: /* LD D D */
-            LDREG(reg_d, reg_d, 0, 4, 2);
-            break;
-        case 0x53: /* LD D E */
-            LDREG(reg_d, reg_e, 0, 4, 2);
-            break;
-        case 0x54: /* LD D IYH */
-            LDREG(reg_d, reg_iyh, 0, 4, 2);
-            break;
-        case 0x55: /* LD D IYL */
-            LDREG(reg_d, reg_iyl, 0, 4, 2);
-            break;
-        case 0x56: /* LD D (IY+d) */
-            LDREG(reg_d, LOAD(IY_WORD_OFF(ip2)), 8, 11, 3);
-            break;
-        case 0x57: /* LD D A */
-            LDREG(reg_d, reg_a, 0, 4, 2);
-            break;
-        case 0x58: /* LD E B */
-            LDREG(reg_e, reg_b, 0, 4, 2);
-            break;
-        case 0x59: /* LD E C */
-            LDREG(reg_e, reg_c, 0, 4, 2);
-            break;
-        case 0x5a: /* LD E D */
-            LDREG(reg_e, reg_d, 0, 4, 2);
-            break;
-        case 0x5b: /* LD E E */
-            LDREG(reg_e, reg_e, 0, 4, 2);
-            break;
-        case 0x5c: /* LD E IYH */
-            LDREG(reg_e, reg_iyh, 0, 4, 2);
-            break;
-        case 0x5d: /* LD E IYL */
-            LDREG(reg_e, reg_iyl, 0, 4, 2);
-            break;
-        case 0x5e: /* LD E (IY+d) */
-            LDREG(reg_e, LOAD(IY_WORD_OFF(ip2)), 8, 11, 3);
-            break;
-        case 0x5f: /* LD E A */
-            LDREG(reg_e, reg_a, 0, 4, 2);
-            break;
-        case 0x60: /* LD IYH B */
-            LDREG(reg_iyh, reg_b, 0, 4, 2);
-            break;
-        case 0x61: /* LD IYH C */
-            LDREG(reg_iyh, reg_c, 0, 4, 2);
-            break;
-        case 0x62: /* LD IYH D */
-            LDREG(reg_iyh, reg_d, 0, 4, 2);
-            break;
-        case 0x63: /* LD IYH E */
-            LDREG(reg_iyh, reg_e, 0, 4, 2);
-            break;
-        case 0x64: /* LD IYH IYH */
-            LDREG(reg_iyh, reg_iyh, 0, 4, 2);
-            break;
-        case 0x65: /* LD IYH IYL */
-            LDREG(reg_iyh, reg_iyl, 0, 4, 2);
-            break;
-        case 0x66: /* LD H (IY+d) */
-            LDREG(reg_h, LOAD(IY_WORD_OFF(ip2)), 8, 11, 3);
-            break;
-        case 0x67: /* LD IYH A */
-            LDREG(reg_iyh, reg_a, 0, 4, 2);
-            break;
-        case 0x68: /* LD IYL B */
-            LDREG(reg_iyl, reg_b, 0, 4, 2);
-            break;
-        case 0x69: /* LD IYL C */
-            LDREG(reg_iyl, reg_c, 0, 4, 2);
-            break;
-        case 0x6a: /* LD IYL D */
-            LDREG(reg_iyl, reg_d, 0, 4, 2);
-            break;
-        case 0x6b: /* LD IYL E */
-            LDREG(reg_iyl, reg_e, 0, 4, 2);
-            break;
-        case 0x6c: /* LD IYL IYH */
-            LDREG(reg_iyl, reg_iyh, 0, 4, 2);
-            break;
-        case 0x6d: /* LD IYL IYL */
-            LDREG(reg_iyl, reg_iyl, 0, 4, 2);
-            break;
-        case 0x6e: /* LD L (IY+d) */
-            LDREG(reg_l, LOAD(IY_WORD_OFF(ip2)), 8, 11, 3);
-            break;
-        case 0x6f: /* LD IYL A */
-            LDREG(reg_iyl, reg_a, 0, 4, 2);
-            break;
-        case 0x70: /* LD (IY+d) B */
-            STREG(IY_WORD_OFF(ip2), reg_b, 8, 11, 3);
-            break;
-        case 0x71: /* LD (IY+d) C */
-            STREG(IY_WORD_OFF(ip2), reg_c, 8, 11, 3);
-            break;
-        case 0x72: /* LD (IY+d) D */
-            STREG(IY_WORD_OFF(ip2), reg_d, 8, 11, 3);
-            break;
-        case 0x73: /* LD (IY+d) E */
-            STREG(IY_WORD_OFF(ip2), reg_e, 8, 11, 3);
-            break;
-        case 0x74: /* LD (IY+d) H */
-            STREG(IY_WORD_OFF(ip2), reg_h, 8, 11, 3);
-            break;
-        case 0x75: /* LD (IY+d) L */
-            STREG(IY_WORD_OFF(ip2), reg_l, 8, 11, 3);
-            break;
-        case 0x76: /* HALT */
-            HALT();
-            break;
-        case 0x77: /* LD (IY+d) A */
-            STREG(IY_WORD_OFF(ip2), reg_a, 8, 11, 3);
-            break;
-        case 0x78: /* LD A B */
-            LDREG(reg_a, reg_b, 0, 4, 2);
-            break;
-        case 0x79: /* LD A C */
-            LDREG(reg_a, reg_c, 0, 4, 2);
-            break;
-        case 0x7a: /* LD A D */
-            LDREG(reg_a, reg_d, 0, 4, 2);
-            break;
-        case 0x7b: /* LD A E */
-            LDREG(reg_a, reg_e, 0, 4, 2);
-            break;
-        case 0x7c: /* LD A IYH */
-            LDREG(reg_a, reg_iyh, 0, 4, 2);
-            break;
-        case 0x7d: /* LD A IYL */
-            LDREG(reg_a, reg_iyl, 0, 4, 2);
-            break;
-        case 0x7e: /* LD A (IY+d) */
-            LDREG(reg_a, LOAD(IY_WORD_OFF(ip2)), 8, 11, 3);
-            break;
-        case 0x7f: /* LD A A */
-            LDREG(reg_a, reg_a, 0, 4, 2);
-            break;
-        case 0x80: /* ADD B */
-            ADD(reg_b, 0, 4, 2);
-            break;
-        case 0x81: /* ADD C */
-            ADD(reg_c, 0, 4, 2);
-            break;
-        case 0x82: /* ADD D */
-            ADD(reg_d, 0, 4, 2);
-            break;
-        case 0x83: /* ADD E */
-            ADD(reg_e, 0, 4, 2);
-            break;
-        case 0x84: /* ADD IYH */
-            ADD(reg_iyh, 0, 4, 2);
-            break;
-        case 0x85: /* ADD IYL */
-            ADD(reg_iyl, 0, 4, 2);
-            break;
-        case 0x86: /* ADD (IY+d) */
-            ADD(LOAD(IY_WORD_OFF(ip2)), 8, 11, 3);
-            break;
-        case 0x87: /* ADD A */
-            ADD(reg_a, 0, 4, 2);
-            break;
-        case 0x88: /* ADC B */
-            ADC(reg_b, 0, 4, 2);
-            break;
-        case 0x89: /* ADC C */
-            ADC(reg_c, 0, 4, 2);
-            break;
-        case 0x8a: /* ADC D */
-            ADC(reg_d, 0, 4, 2);
-            break;
-        case 0x8b: /* ADC E */
-            ADC(reg_e, 0, 4, 2);
-            break;
-        case 0x8c: /* ADC IYH */
-            ADC(reg_iyh, 0, 4, 2);
-            break;
-        case 0x8d: /* ADC IYL */
-            ADC(reg_iyl, 0, 4, 2);
-            break;
-        case 0x8e: /* ADC (IY+d) */
-            ADC(LOAD(IY_WORD_OFF(ip2)), 8, 11, 3);
-            break;
-        case 0x8f: /* ADC A */
-            ADC(reg_a, 0, 4, 2);
-            break;
-        case 0x90: /* SUB B */
-            SUB(reg_b, 0, 4, 2);
-            break;
-        case 0x91: /* SUB C */
-            SUB(reg_c, 0, 4, 2);
-            break;
-        case 0x92: /* SUB D */
-            SUB(reg_d, 0, 4, 2);
-            break;
-        case 0x93: /* SUB E */
-            SUB(reg_e, 0, 4, 2);
-            break;
-        case 0x94: /* SUB IYH */
-            SUB(reg_iyh, 0, 4, 2);
-            break;
-        case 0x95: /* SUB IYL */
-            SUB(reg_iyl, 0, 4, 2);
-            break;
-        case 0x96: /* SUB (IY+d) */
-            SUB(LOAD(IY_WORD_OFF(ip2)), 8, 11, 3);
-            break;
-        case 0x97: /* SUB A */
-            SUB(reg_a, 0, 4, 2);
-            break;
-        case 0x98: /* SBC B */
-            SBC(reg_b, 0, 4, 2);
-            break;
-        case 0x99: /* SBC C */
-            SBC(reg_c, 0, 4, 2);
-            break;
-        case 0x9a: /* SBC D */
-            SBC(reg_d, 0, 4, 2);
-            break;
-        case 0x9b: /* SBC E */
-            SBC(reg_e, 0, 4, 2);
-            break;
-        case 0x9c: /* SBC IYH */
-            SBC(reg_iyh, 0, 4, 2);
-            break;
-        case 0x9d: /* SBC IYL */
-            SBC(reg_iyl, 0, 4, 2);
-            break;
-        case 0x9e: /* SBC (IY+d) */
-            SBC(LOAD(IY_WORD_OFF(ip2)), 8, 11, 3);
-            break;
-        case 0x9f: /* SBC A */
-            SBC(reg_a, 0, 4, 2);
-            break;
-        case 0xa0: /* AND B */
-            AND(reg_b, 0, 4, 2);
-            break;
-        case 0xa1: /* AND C */
-            AND(reg_c, 0, 4, 2);
-            break;
-        case 0xa2: /* AND D */
-            AND(reg_d, 0, 4, 2);
-            break;
-        case 0xa3: /* AND E */
-            AND(reg_e, 0, 4, 2);
-            break;
-        case 0xa4: /* AND IYH */
-            AND(reg_iyh, 0, 4, 2);
-            break;
-        case 0xa5: /* AND IYL */
-            AND(reg_iyl, 0, 4, 2);
-            break;
-        case 0xa6: /* AND (IY+d) */
-            AND(LOAD(IY_WORD_OFF(ip2)), 8, 11, 3);
-            break;
-        case 0xa7: /* AND A */
-            AND(reg_a, 0, 4, 2);
-            break;
-        case 0xa8: /* XOR B */
-            XOR(reg_b, 0, 4, 2);
-            break;
-        case 0xa9: /* XOR C */
-            XOR(reg_c, 0, 4, 2);
-            break;
-        case 0xaa: /* XOR D */
-            XOR(reg_d, 0, 4, 2);
-            break;
-        case 0xab: /* XOR E */
-            XOR(reg_e, 0, 4, 2);
-            break;
-        case 0xac: /* XOR IYH */
-            XOR(reg_iyh, 0, 4, 2);
-            break;
-        case 0xad: /* XOR IYL */
-            XOR(reg_iyl, 0, 4, 2);
-            break;
-        case 0xae: /* XOR (IY+d) */
-            XOR(LOAD(IY_WORD_OFF(ip2)), 8, 11, 3);
-            break;
-        case 0xaf: /* XOR A */
-            XOR(reg_a, 0, 4, 2);
-            break;
-        case 0xb0: /* OR B */
-            OR(reg_b, 0, 4, 2);
-            break;
-        case 0xb1: /* OR C */
-            OR(reg_c, 0, 4, 2);
-            break;
-        case 0xb2: /* OR D */
-            OR(reg_d, 0, 4, 2);
-            break;
-        case 0xb3: /* OR E */
-            OR(reg_e, 0, 4, 2);
-            break;
-        case 0xb4: /* OR IYH */
-            OR(reg_iyh, 0, 4, 2);
-            break;
-        case 0xb5: /* OR IYL */
-            OR(reg_iyl, 0, 4, 2);
-            break;
-        case 0xb6: /* OR (IY+d) */
-            OR(LOAD(IY_WORD_OFF(ip2)), 8, 11, 3);
-            break;
-        case 0xb7: /* OR A */
-            OR(reg_a, 0, 4, 2);
-            break;
-        case 0xb8: /* CP B */
-            CP(reg_b, 0, 4, 2);
-            break;
-        case 0xb9: /* CP C */
-            CP(reg_c, 0, 4, 2);
-            break;
-        case 0xba: /* CP D */
-            CP(reg_d, 0, 4, 2);
-            break;
-        case 0xbb: /* CP E */
-            CP(reg_e, 0, 4, 2);
-            break;
-        case 0xbc: /* CP IYH */
-            CP(reg_iyh, 0, 4, 2);
-            break;
-        case 0xbd: /* CP IYL */
-            CP(reg_iyl, 0, 4, 2);
-            break;
-        case 0xbe: /* CP (IY+d) */
-            CP(LOAD(IY_WORD_OFF(ip2)), 8, 11, 3);
-            break;
-        case 0xbf: /* CP A */
-            CP(reg_a, 0, 4, 2);
-            break;
-        case 0xc1: /* POP BC */
-            POP(reg_b, reg_c, 2);
-            break;
-        case 0xc5: /* PUSH BC */
-            PUSH(reg_b, reg_c, 2);
-            break;
-        case 0xcb: /* OPCODE FD CB */
-            opcode_fd_cb((BYTE)ip2, (BYTE)ip3, (WORD)ip23);
-            break;
-        case 0xd1: /* POP DE */
-            POP(reg_d, reg_e, 2);
-            break;
-        case 0xd3: /* OUT A */
-            OUTA(ip2, 8, 7, 3);
-            break;
-        case 0xd5: /* PUSH DE */
-            PUSH(reg_d, reg_e, 2);
-            break;
-        case 0xd9: /* EXX */
-            EXX(12, 2);
-            break;
-        case 0xdb: /* IN A */
-            INA(ip2, 8, 7, 3);
-            break;
-        case 0xdd: /* Skip FD */
-            NOP(4, 1);
-            break;
-        case 0xe1: /* POP IY */
-            POP(reg_iyh, reg_iyl, 2);
-            break;
-        case 0xe3: /* EX IY (SP) */
-            EXXXSP(reg_iyh, reg_iyl, 4, 4, 4, 4, 7, 2);
-            break;
-        case 0xe5: /* PUSH IY */
-            PUSH(reg_iyh, reg_iyl, 2);
-            break;
-        case 0xe9: /* LD PC IY */
-            JMP((IY_WORD()), 8);
-            break;
-        case 0xeb:
-            EXDEHL(8, 2);
-            break;
-        case 0xed: /* Skip FD */
-            NOP(4, 1);
-            break;
-        case 0xf1: /* POP AF */
-            POP(reg_a, reg_f, 2);
-            break;
-        case 0xf3: /* DI */
-            DI(8, 2);
-            break;
-        case 0xf5: /* PUSH AF */
-            PUSH(reg_a, reg_f, 2);
-            break;
-        case 0xf9: /* LD SP IY */
-            LDSP(IY_WORD(), 4, 6, 2);
-            break;
-        case 0xfb: /* EI */
-            EI(8, 2);
-            break;
-        case 0xfd: /* Skip FD */
-            NOP(4, 1);
-            break;
-        default:
-#ifdef DEBUG_Z80
-            log_message(LOG_DEFAULT,
-                        "%i PC %04x A%02x F%02x B%02x C%02x D%02x E%02x H%02x L%02x SP%04x OP FD %02x %02x %02x.",
-                        (int)(CLK), (unsigned int)z80_reg_pc, reg_a, reg_f, reg_b, reg_c, reg_d, reg_e, reg_h, reg_l, reg_sp, ip1, ip2, ip3);
-#endif
-            INC_PC(2);
     }
 }
 
 /* ------------------------------------------------------------------------- */
 
 /* Z80 mainloop.  */
+#undef INSTS
+#define INSTS(INONE,IX,IY)   \
+    do {                     \
+        switch (inst_mode) { \
+            case INST_IX:    \
+                IX;          \
+                break;       \
+            case INST_IY:    \
+                IY;          \
+                break;       \
+            default:         \
+                INONE;       \
+                break;       \
+        }                    \
+    } while (0)
 
-void cpmcart_mainloop(interrupt_cpu_status_t *cpu_int_status, alarm_context_t *cpu_alarm_context)
+/* use macros to reduce source code and make this more managable. */
+/* INSTS macro handles the base, 0xdd, and 0xfd opcodes. */
+/* When a 0xdd or 0xfd is encountered, inst_mode is set and the "next"
+   instruction is fetched but sets the proper addressing. */
+/* This lets us cover the undocuemented 0xdd and 0xfd opcodes easier too. */
+static void z80_maincpu_loop(interrupt_cpu_status_t *cpu_int_status, alarm_context_t *cpu_alarm_context)
 {
     opcode_t opcode;
 
     import_registers();
+
+    Z80_SET_DMA_REQUEST(0)
 
     do {
         while (CLK >= alarm_context_next_pending_clk(cpu_alarm_context)) {
@@ -5732,7 +4326,20 @@ void cpmcart_mainloop(interrupt_cpu_status_t *cpu_int_status, alarm_context_t *c
             }
         }
 
-        SET_LAST_ADDR(reg_pc);
+        /* delay IFFs 2 instructions */
+        iff1 = iff1_1;
+        iff2 = iff2_1;
+        iff1_1 = iff1_2;
+        iff2_1 = iff2_2;
+
+        if (halt) {
+            CLK_ADD(CLK, 4);
+            cpu_int_status->num_dma_per_opcode = 0;
+            continue;
+        }
+
+        SET_LAST_ADDR(z80_reg_pc);
+fetchmore:
         FETCH_OPCODE(opcode);
 
 #ifdef VICE_DEBUG
@@ -5754,7 +4361,7 @@ void cpmcart_mainloop(interrupt_cpu_status_t *cpu_int_status, alarm_context_t *c
                 LDW(p12, reg_b, reg_c, 10, 0, 3);
                 break;
             case 0x02: /* LD (BC) A */
-                STREG(BC_WORD(), reg_a, 4, 3, 1);
+                STREGWZ(BC_WORD(), reg_a, 4, 3, 1);
                 break;
             case 0x03: /* INC BC */
                 DECINC(INC_BC_WORD(), 6, 1);
@@ -5772,13 +4379,15 @@ void cpmcart_mainloop(interrupt_cpu_status_t *cpu_int_status, alarm_context_t *c
                 RLCA(4, 1);
                 break;
             case 0x08: /* EX AF AF' */
-                EXAFAF(8, 1);
+                EXAFAF(4, 1);
                 break;
-            case 0x09: /* ADD HL BC */
-                ADDXXREG(reg_h, reg_l, reg_b, reg_c, 11, 1);
+            case 0x09: /* ADD HL BC; ADD IX BC; ADD IY BC */
+                INSTS(ADDXXREG(reg_h, reg_l, reg_b, reg_c, 11, 1),
+                      ADDXXREG(reg_ixh, reg_ixl, reg_b, reg_c, 11, 1),
+                      ADDXXREG(reg_iyh, reg_iyl, reg_b, reg_c, 11, 1));
                 break;
             case 0x0a: /* LD A (BC) */
-                LDREG(reg_a, LOAD(BC_WORD()), 4, 3, 1);
+                LDREGWZ(reg_a, BC_WORD(), 4, 3, 1);
                 break;
             case 0x0b: /* DEC BC */
                 DECINC(DEC_BC_WORD(), 6, 1);
@@ -5802,7 +4411,7 @@ void cpmcart_mainloop(interrupt_cpu_status_t *cpu_int_status, alarm_context_t *c
                 LDW(p12, reg_d, reg_e, 10, 0, 3);
                 break;
             case 0x12: /* LD (DE) A */
-                STREG(DE_WORD(), reg_a, 4, 3, 1);
+                STREGWZ(DE_WORD(), reg_a, 4, 3, 1);
                 break;
             case 0x13: /* INC DE */
                 DECINC(INC_DE_WORD(), 6, 1);
@@ -5822,8 +4431,10 @@ void cpmcart_mainloop(interrupt_cpu_status_t *cpu_int_status, alarm_context_t *c
             case 0x18: /* JR */
                 BRANCH(1, p1, 2);
                 break;
-            case 0x19: /* ADD HL DE */
-                ADDXXREG(reg_h, reg_l, reg_d, reg_e, 11, 1);
+            case 0x19: /* ADD HL DE; ADD IX DE; ADD IY DE */
+                INSTS(ADDXXREG(reg_h, reg_l, reg_d, reg_e, 11, 1),
+                      ADDXXREG(reg_ixh, reg_ixl, reg_d, reg_e, 11, 1),
+                      ADDXXREG(reg_iyh, reg_iyl, reg_d, reg_e, 11, 1));
                 break;
             case 0x1a: /* LD A (DE) */
                 LDREG(reg_a, LOAD(DE_WORD()), 4, 3, 1);
@@ -5846,23 +4457,35 @@ void cpmcart_mainloop(interrupt_cpu_status_t *cpu_int_status, alarm_context_t *c
             case 0x20: /* JR NZ */
                 BRANCH(!LOCAL_ZERO(), p1, 2);
                 break;
-            case 0x21: /* LD HL # */
-                LDW(p12, reg_h, reg_l, 10, 0, 3);
+            case 0x21: /* LD HL # ; LD IX #; LD IY # */
+                INSTS(LDW(p12, reg_h, reg_l, 10, 0, 3),
+                      LDW(p12, reg_ixh, reg_ixl, 10, 0, 3),
+                      LDW(p12, reg_iyh, reg_iyl, 10, 0, 3));
                 break;
-            case 0x22: /* LD (WORD) HL */
-                STW(p12, reg_h, reg_l, 4, 9, 3, 3);
+            case 0x22: /* LD (WORD) HL; LD (WORD) IX; LD (WORD) IY */
+                INSTS(STW(p12, reg_h, reg_l, 4, 9, 3, 3),
+                      STW(p12, reg_ixh, reg_ixl, 4, 9, 3, 3),
+                      STW(p12, reg_iyh, reg_iyl, 4, 9, 3, 3));
                 break;
-            case 0x23: /* INC HL */
-                DECINC(INC_HL_WORD(), 6, 1);
+            case 0x23: /* INC HL ; INC IX; INC IY */
+                INSTS(DECINC(INC_HL_WORD(), 6, 1),
+                      DECINC(INC_IX_WORD(), 6, 1),
+                      DECINC(INC_IY_WORD(), 6, 1));
                 break;
-            case 0x24: /* INC H */
-                INCREG(reg_h, 4, 1);
+            case 0x24: /* INC H ; INC IXH ; INC IYH */
+                INSTS(INCREG(reg_h, 4, 1),
+                      INCREG(reg_ixh, 4, 1),
+                      INCREG(reg_iyh, 4, 1));
                 break;
-            case 0x25: /* DEC H */
-                DECREG(reg_h, 4, 1);
+            case 0x25: /* DEC H ; DEC IXH ; DEC IYH */
+                INSTS(DECREG(reg_h, 4, 1),
+                      DECREG(reg_ixh, 4, 1),
+                      DECREG(reg_iyh, 4, 1));
                 break;
-            case 0x26: /* LD H # */
-                LDREG(reg_h, p1, 4, 3, 2);
+            case 0x26: /* LD H # ; LD IXH # ; LD IYH # */
+                INSTS(LDREG(reg_h, p1, 4, 3, 2),
+                      LDREG(reg_ixh, p1, 4, 3, 2),
+                      LDREG(reg_iyh, p1, 4, 3, 2));
                 break;
             case 0x27: /* DAA */
                 DAA(4, 1);
@@ -5870,23 +4493,35 @@ void cpmcart_mainloop(interrupt_cpu_status_t *cpu_int_status, alarm_context_t *c
             case 0x28: /* JR Z */
                 BRANCH(LOCAL_ZERO(), p1, 2);
                 break;
-            case 0x29: /* ADD HL HL */
-                ADDXXREG(reg_h, reg_l, reg_h, reg_l, 11, 1);
+            case 0x29: /* ADD HL HL ; ADD IX IX ; ADD IY IY */
+                INSTS(ADDXXREG(reg_h, reg_l, reg_h, reg_l, 11, 1),
+                      ADDXXREG(reg_ixh, reg_ixl, reg_ixh, reg_ixl, 11, 1),
+                      ADDXXREG(reg_iyh, reg_iyl, reg_iyh, reg_iyl, 11, 1));
                 break;
-            case 0x2a: /* LD HL (WORD) */
-                LDIND(p12, reg_h, reg_l, 4, 4, 8, 3);
+            case 0x2a: /* LD HL (WORD) ; LD IX (WORD) ; LD IY (WORD) */
+                INSTS(LDIND(p12, reg_h, reg_l, 4, 4, 8, 3),
+                      LDIND(p12, reg_ixh, reg_ixl, 4, 4, 8, 3),
+                      LDIND(p12, reg_iyh, reg_iyl, 4, 4, 8, 3));
                 break;
-            case 0x2b: /* DEC HL */
-                DECINC(DEC_HL_WORD(), 6, 1);
+            case 0x2b: /* DEC HL ; DEC IX ; DEC IY */
+                INSTS(DECINC(DEC_HL_WORD(), 6, 1),
+                      DECINC(DEC_IX_WORD(), 6, 1),
+                      DECINC(DEC_IY_WORD(), 6, 1));
                 break;
-            case 0x2c: /* INC L */
-                INCREG(reg_l, 4, 1);
+            case 0x2c: /* INC L ; INC IXL ; DEC IYL */
+                INSTS(INCREG(reg_l, 4, 1),
+                      INCREG(reg_ixl, 4, 1),
+                      INCREG(reg_iyl, 4, 1));
                 break;
-            case 0x2d: /* DEC L */
-                DECREG(reg_l, 4, 1);
+            case 0x2d: /* DEC L ; DEC IXL ; DEC IYL */
+                INSTS(DECREG(reg_l, 4, 1),
+                      DECREG(reg_ixl, 4, 1),
+                      DECREG(reg_iyl, 4, 1));
                 break;
-            case 0x2e: /* LD L # */
-                LDREG(reg_l, p1, 4, 3, 2);
+            case 0x2e: /* LD L # ; LD IXL # ; LD IYL # */
+                INSTS(LDREG(reg_l, p1, 4, 3, 2),
+                      LDREG(reg_ixl, p1, 4, 3, 2),
+                      LDREG(reg_iyl, p1, 4, 3, 2));
                 break;
             case 0x2f: /* CPL */
                 CPL(4, 1);
@@ -5898,19 +4533,25 @@ void cpmcart_mainloop(interrupt_cpu_status_t *cpu_int_status, alarm_context_t *c
                 LDSP(p12, 10, 0, 3);
                 break;
             case 0x32: /* LD (WORD) A */
-                STREG(p12, reg_a, 10, 3, 3);
+                STREGWZ(p12, reg_a, 10, 3, 3);
                 break;
             case 0x33: /* INC SP */
                 DECINC(reg_sp++, 6, 1);
                 break;
-            case 0x34: /* INC (HL) */
-                INCXXIND(HL_WORD(), 4, 4, 3, 1);
+            case 0x34: /* INC (HL) ; INC (IX+d) ; INC (IY+d) */
+                INSTS(INCXXIND(HL_WORD(), 4, 4, 3, 1),
+                      INCXXIND(IX_WORD_OFF(p1), 0, 7, 12, 2),
+                      INCXXIND(IY_WORD_OFF(p1), 0, 7, 12, 2));
                 break;
-            case 0x35: /* DEC (HL) */
-                DECXXIND(HL_WORD(), 4, 4, 3, 1);
+            case 0x35: /* DEC (HL) ; DEC (IX+d) ; DEC (IY+d) */
+                INSTS(DECXXIND(HL_WORD(), 4, 4, 3, 1),
+                      DECXXIND(IX_WORD_OFF(p1), 0, 7, 12, 2),
+                      DECXXIND(IY_WORD_OFF(p1), 0, 7, 12, 2));
                 break;
-            case 0x36: /* LD (HL) # */
-                STREG(HL_WORD(), p1, 8, 2, 2);
+            case 0x36: /* LD (HL) # ; LD (IX+d) # ; LD (IY+d) # */
+                INSTS(STREG(HL_WORD(), p1, 8, 2, 2),
+                      STREG(IX_WORD_OFF(p1), p2, 8, 7, 3),
+                      STREG(IY_WORD_OFF(p1), p2, 8, 7, 3));
                 break;
             case 0x37: /* SCF */
                 SCF(4, 1);
@@ -5918,11 +4559,13 @@ void cpmcart_mainloop(interrupt_cpu_status_t *cpu_int_status, alarm_context_t *c
             case 0x38: /* JR C */
                 BRANCH(LOCAL_CARRY(), p1, 2);
                 break;
-            case 0x39: /* ADD HL SP */
-                ADDXXSP(reg_h, reg_l, 11, 1);
+            case 0x39: /* ADD HL SP ; ADD IX SP ; ADD IY SP */
+                INSTS(ADDXXSP(reg_h, reg_l, 11, 1),
+                      ADDXXSP(reg_ixh, reg_ixl, 11, 1),
+                      ADDXXSP(reg_iyh, reg_iyl, 11, 1));
                 break;
             case 0x3a: /* LD A (WORD) */
-                LDREG(reg_a, LOAD(p12), 10, 3, 3);
+                LDREGWZ(reg_a, p12, 10, 3, 3);
                 break;
             case 0x3b: /* DEC SP */
                 DECINC(reg_sp--, 6, 1);
@@ -5951,14 +4594,20 @@ void cpmcart_mainloop(interrupt_cpu_status_t *cpu_int_status, alarm_context_t *c
             case 0x43: /* LD B E */
                 LDREG(reg_b, reg_e, 0, 4, 1);
                 break;
-            case 0x44: /* LD B H */
-                LDREG(reg_b, reg_h, 0, 4, 1);
+            case 0x44: /* LD B H ; LD B IXH ; LD B IYH */
+                INSTS(LDREG(reg_b, reg_h, 0, 4, 1),
+                      LDREG(reg_b, reg_ixh, 0, 4, 1),
+                      LDREG(reg_b, reg_iyh, 0, 4, 1));
                 break;
-            case 0x45: /* LD B L */
-                LDREG(reg_b, reg_l, 0, 4, 1);
+            case 0x45: /* LD B L ; LD B IXL ; LD B IYL */
+                INSTS(LDREG(reg_b, reg_l, 0, 4, 1),
+                      LDREG(reg_b, reg_ixl, 0, 4, 1),
+                      LDREG(reg_b, reg_iyl, 0, 4, 1));
                 break;
-            case 0x46: /* LD B (HL) */
-                LDREG(reg_b, LOAD(HL_WORD()), 4, 3, 1);
+            case 0x46: /* LD B (HL) ; LD B (IX+d) ; LD B (IY+d) */
+                INSTS(LDREG(reg_b, LOAD(HL_WORD()), 4, 3, 1),
+                      LDREG(reg_b, LOAD(IX_WORD_OFF(p1)), 4, 11, 2),
+                      LDREG(reg_b, LOAD(IY_WORD_OFF(p1)), 4, 11, 2));
                 break;
             case 0x47: /* LD B A */
                 LDREG(reg_b, reg_a, 0, 4, 1);
@@ -5975,14 +4624,20 @@ void cpmcart_mainloop(interrupt_cpu_status_t *cpu_int_status, alarm_context_t *c
             case 0x4b: /* LD C E */
                 LDREG(reg_c, reg_e, 0, 4, 1);
                 break;
-            case 0x4c: /* LD C H */
-                LDREG(reg_c, reg_h, 0, 4, 1);
+            case 0x4c: /* LD C H ; LD C IXH ; LD C IYH */
+                INSTS(LDREG(reg_c, reg_h, 0, 4, 1),
+                      LDREG(reg_c, reg_ixh, 0, 4, 1),
+                      LDREG(reg_c, reg_iyh, 0, 4, 1));
                 break;
-            case 0x4d: /* LD C L */
-                LDREG(reg_c, reg_l, 0, 4, 1);
+            case 0x4d: /* LD C L ; LD C IXL ; LD C IYL */
+                INSTS(LDREG(reg_c, reg_l, 0, 4, 1),
+                      LDREG(reg_c, reg_ixl, 0, 4, 1),
+                      LDREG(reg_c, reg_iyl, 0, 4, 1));
                 break;
-            case 0x4e: /* LD C (HL) */
-                LDREG(reg_c, LOAD(HL_WORD()), 4, 3, 1);
+            case 0x4e: /* LD C (HL) ; LD C (IX+d) ; LD C (IY+d) */
+                INSTS(LDREG(reg_c, LOAD(HL_WORD()), 4, 3, 1),
+                      LDREG(reg_c, LOAD(IX_WORD_OFF(p1)), 4, 11, 2),
+                      LDREG(reg_c, LOAD(IY_WORD_OFF(p1)), 4, 11, 2));
                 break;
             case 0x4f: /* LD C A */
                 LDREG(reg_c, reg_a, 0, 4, 1);
@@ -5999,14 +4654,20 @@ void cpmcart_mainloop(interrupt_cpu_status_t *cpu_int_status, alarm_context_t *c
             case 0x53: /* LD D E */
                 LDREG(reg_d, reg_e, 0, 4, 1);
                 break;
-            case 0x54: /* LD D H */
-                LDREG(reg_d, reg_h, 0, 4, 1);
+            case 0x54: /* LD D H ; LD D IXH ; LD D IYH */
+                INSTS(LDREG(reg_d, reg_h, 0, 4, 1),
+                      LDREG(reg_d, reg_ixh, 0, 4, 1),
+                      LDREG(reg_d, reg_iyh, 0, 4, 1));
                 break;
-            case 0x55: /* LD D L */
-                LDREG(reg_d, reg_l, 0, 4, 1);
+            case 0x55: /* LD D L ; LD D IXL ; LD D IYL */
+                INSTS(LDREG(reg_d, reg_l, 0, 4, 1),
+                      LDREG(reg_d, reg_ixl, 0, 4, 1),
+                      LDREG(reg_d, reg_iyl, 0, 4, 1));
                 break;
-            case 0x56: /* LD D (HL) */
-                LDREG(reg_d, LOAD(HL_WORD()), 4, 3, 1);
+            case 0x56: /* LD D (HL) ; LD D (IX+d) ; LD D (IY+d) */
+                INSTS(LDREG(reg_d, LOAD(HL_WORD()), 4, 3, 1),
+                      LDREG(reg_d, LOAD(IX_WORD_OFF(p1)), 4, 11, 2),
+                      LDREG(reg_d, LOAD(IY_WORD_OFF(p1)), 4, 11, 2));
                 break;
             case 0x57: /* LD D A */
                 LDREG(reg_d, reg_a, 0, 4, 1);
@@ -6023,89 +4684,141 @@ void cpmcart_mainloop(interrupt_cpu_status_t *cpu_int_status, alarm_context_t *c
             case 0x5b: /* LD E E */
                 LDREG(reg_e, reg_e, 0, 4, 1);
                 break;
-            case 0x5c: /* LD E H */
-                LDREG(reg_e, reg_h, 0, 4, 1);
+            case 0x5c: /* LD E H ; LD E IXH ; LD E IYH */
+                INSTS(LDREG(reg_e, reg_h, 0, 4, 1),
+                      LDREG(reg_e, reg_ixh, 0, 4, 1),
+                      LDREG(reg_e, reg_iyh, 0, 4, 1));
                 break;
-            case 0x5d: /* LD E L */
-                LDREG(reg_e, reg_l, 0, 4, 1);
+            case 0x5d: /* LD E L ; LD E IXL ; LD E IYL */
+                INSTS(LDREG(reg_e, reg_l, 0, 4, 1),
+                      LDREG(reg_e, reg_ixl, 0, 4, 1),
+                      LDREG(reg_e, reg_iyl, 0, 4, 1));
                 break;
-            case 0x5e: /* LD E (HL) */
-                LDREG(reg_e, LOAD(HL_WORD()), 4, 3, 1);
+            case 0x5e: /* LD E (HL) ; LD E (IX+d) ; LD E (IY+d) */
+                INSTS(LDREG(reg_e, LOAD(HL_WORD()), 4, 3, 1),
+                      LDREG(reg_e, LOAD(IX_WORD_OFF(p1)), 4, 11, 2),
+                      LDREG(reg_e, LOAD(IY_WORD_OFF(p1)), 4, 11, 2));
                 break;
             case 0x5f: /* LD E A */
                 LDREG(reg_e, reg_a, 0, 4, 1);
                 break;
-            case 0x60: /* LD H B */
-                LDREG(reg_h, reg_b, 0, 4, 1);
+            case 0x60: /* LD H B ; LD IXH B ; LD IYH B */
+                INSTS(LDREG(reg_h, reg_b, 0, 4, 1),
+                      LDREG(reg_ixh, reg_b, 0, 4, 1),
+                      LDREG(reg_iyh, reg_b, 0, 4, 1));
                 break;
-            case 0x61: /* LD H C */
-                LDREG(reg_h, reg_c, 0, 4, 1);
+            case 0x61: /* LD H C ; LD IXH C ; LD IYH C */
+                INSTS(LDREG(reg_h, reg_c, 0, 4, 1),
+                      LDREG(reg_ixh, reg_c, 0, 4, 1),
+                      LDREG(reg_iyh, reg_c, 0, 4, 1));
                 break;
-            case 0x62: /* LD H D */
-                LDREG(reg_h, reg_d, 0, 4, 1);
+            case 0x62: /* LD H D ; LD IXH D ; LD IYH D */
+                INSTS(LDREG(reg_h, reg_d, 0, 4, 1),
+                      LDREG(reg_ixh, reg_d, 0, 4, 1),
+                      LDREG(reg_iyh, reg_d, 0, 4, 1));
                 break;
-            case 0x63: /* LD H E */
-                LDREG(reg_h, reg_e, 0, 4, 1);
+            case 0x63: /* LD H E ; LD IXH E ; LD IYH E */
+                INSTS(LDREG(reg_h, reg_e, 0, 4, 1),
+                      LDREG(reg_ixh, reg_e, 0, 4, 1),
+                      LDREG(reg_iyh, reg_e, 0, 4, 1));
                 break;
-            case 0x64: /* LD H H */
-                LDREG(reg_h, reg_h, 0, 4, 1);
+            case 0x64: /* LD H H ; LD IXH IXH; LD IYH IYH */
+                INSTS(LDREG(reg_h, reg_h, 0, 4, 1),
+                      LDREG(reg_ixh, reg_ixh, 0, 4, 1),
+                      LDREG(reg_iyh, reg_iyh, 0, 4, 1));
                 break;
-            case 0x65: /* LD H L */
-                LDREG(reg_h, reg_l, 0, 4, 1);
+            case 0x65: /* LD H L ; LD IXH IXL ; LD IYH IYL */
+                INSTS(LDREG(reg_h, reg_l, 0, 4, 1),
+                      LDREG(reg_ixh, reg_ixl, 0, 4, 1),
+                      LDREG(reg_iyh, reg_iyl, 0, 4, 1));
                 break;
-            case 0x66: /* LD H (HL) */
-                LDREG(reg_h, LOAD(HL_WORD()), 4, 3, 1);
+            case 0x66: /* LD H (HL) ; LD H (IX+d) ; LD H (IY+d) */
+                INSTS(LDREG(reg_h, LOAD(HL_WORD()), 4, 3, 1),
+                      LDREG(reg_h, LOAD(IX_WORD_OFF(p1)), 4, 11, 2),
+                      LDREG(reg_h, LOAD(IY_WORD_OFF(p1)), 4, 11, 2));
                 break;
-            case 0x67: /* LD H A */
-                LDREG(reg_h, reg_a, 0, 4, 1);
+            case 0x67: /* LD H A ; LD IXH A ; LD IYH A */
+                INSTS(LDREG(reg_h, reg_a, 0, 4, 1),
+                      LDREG(reg_ixh, reg_a, 0, 4, 1),
+                      LDREG(reg_iyh, reg_a, 0, 4, 1));
                 break;
-            case 0x68: /* LD L B */
-                LDREG(reg_l, reg_b, 0, 4, 1);
+            case 0x68: /* LD L B ; LD IXH B ; LD IYH B */
+                INSTS(LDREG(reg_l, reg_b, 0, 4, 1),
+                      LDREG(reg_ixl, reg_b, 0, 4, 1),
+                      LDREG(reg_iyl, reg_b, 0, 4, 1));
                 break;
-            case 0x69: /* LD L C */
-                LDREG(reg_l, reg_c, 0, 4, 1);
+            case 0x69: /* LD L C ; LD IXH C ; LD IYH C */
+                INSTS(LDREG(reg_l, reg_c, 0, 4, 1),
+                      LDREG(reg_ixl, reg_c, 0, 4, 1),
+                      LDREG(reg_iyl, reg_c, 0, 4, 1));
                 break;
-            case 0x6a: /* LD L D */
-                LDREG(reg_l, reg_d, 0, 4, 1);
+            case 0x6a: /* LD L D ; LD IXH D ; LD IYH D */
+                INSTS(LDREG(reg_l, reg_d, 0, 4, 1),
+                      LDREG(reg_ixl, reg_d, 0, 4, 1),
+                      LDREG(reg_iyl, reg_d, 0, 4, 1));
                 break;
-            case 0x6b: /* LD L E */
-                LDREG(reg_l, reg_e, 0, 4, 1);
+            case 0x6b: /* LD L E ; LD IXH E ; LD IYH E */
+                INSTS(LDREG(reg_l, reg_e, 0, 4, 1),
+                      LDREG(reg_ixl, reg_e, 0, 4, 1),
+                      LDREG(reg_iyl, reg_e, 0, 4, 1));
                 break;
-            case 0x6c: /* LD L H */
-                LDREG(reg_l, reg_h, 0, 4, 1);
+            case 0x6c: /* LD L H ; LD IXL LXH ; LD IYL IYH */
+                INSTS(LDREG(reg_l, reg_h, 0, 4, 1),
+                      LDREG(reg_ixl, reg_ixh, 0, 4, 1),
+                      LDREG(reg_iyl, reg_iyh, 0, 4, 1));
                 break;
-            case 0x6d: /* LD L L */
-                LDREG(reg_l, reg_l, 0, 4, 1);
+            case 0x6d: /* LD L L ; LD IXL IXL ; LD IYL IYL */
+                INSTS(LDREG(reg_l, reg_l, 0, 4, 1),
+                      LDREG(reg_ixl, reg_ixl, 0, 4, 1),
+                      LDREG(reg_iyl, reg_iyl, 0, 4, 1));
                 break;
-            case 0x6e: /* LD L (HL) */
-                LDREG(reg_l, LOAD(HL_WORD()), 4, 3, 1);
+            case 0x6e: /* LD L (HL) ; LD L (IX+d) ; LD L (IY+d) */
+                INSTS(LDREG(reg_l, LOAD(HL_WORD()), 4, 3, 1),
+                      LDREG(reg_l, LOAD(IX_WORD_OFF(p1)), 4, 11, 2),
+                      LDREG(reg_l, LOAD(IY_WORD_OFF(p1)), 4, 11, 2));
                 break;
-            case 0x6f: /* LD L A */
-                LDREG(reg_l, reg_a, 0, 4, 1);
+            case 0x6f: /* LD L A ; LD IXL A ; LD IYL A */
+                INSTS(LDREG(reg_l, reg_a, 0, 4, 1),
+                      LDREG(reg_ixl, reg_a, 0, 4, 1),
+                      LDREG(reg_iyl, reg_a, 0, 4, 1));
                 break;
-            case 0x70: /* LD (HL) B */
-                STREG(HL_WORD(), reg_b, 4, 3, 1);
+            case 0x70: /* LD (HL) B ; LD (IX+d) B ; LD (IY+d) B */
+                INSTS(STREG(HL_WORD(), reg_b, 4, 3, 1),
+                      STREG(IX_WORD_OFF(p1), reg_b, 4, 11, 2),
+                      STREG(IY_WORD_OFF(p1), reg_b, 4, 11, 2));
                 break;
-            case 0x71: /* LD (HL) C */
-                STREG(HL_WORD(), reg_c, 4, 3, 1);
+            case 0x71: /* LD (HL) C ; LD (IX+d) C ; LD (IY+d) C */
+                INSTS(STREG(HL_WORD(), reg_c, 4, 3, 1),
+                      STREG(IX_WORD_OFF(p1), reg_c, 4, 11, 2),
+                      STREG(IY_WORD_OFF(p1), reg_c, 4, 11, 2));
                 break;
-            case 0x72: /* LD (HL) D */
-                STREG(HL_WORD(), reg_d, 4, 3, 1);
+            case 0x72: /* LD (HL) D ; LD (IX+d) D ; LD (IY+d) D */
+                INSTS(STREG(HL_WORD(), reg_d, 4, 3, 1),
+                      STREG(IX_WORD_OFF(p1), reg_d, 4, 11, 2),
+                      STREG(IY_WORD_OFF(p1), reg_d, 4, 11, 2));
                 break;
-            case 0x73: /* LD (HL) E */
-                STREG(HL_WORD(), reg_e, 4, 3, 1);
+            case 0x73: /* LD (HL) E ; LD (IX+d) E ; LD (IY+d) E */
+                INSTS(STREG(HL_WORD(), reg_e, 4, 3, 1),
+                      STREG(IX_WORD_OFF(p1), reg_e, 4, 11, 2),
+                      STREG(IY_WORD_OFF(p1), reg_e, 4, 11, 2));
                 break;
-            case 0x74: /* LD (HL) H */
-                STREG(HL_WORD(), reg_h, 4, 3, 1);
+            case 0x74: /* LD (HL) H ; LD (IX+d) H ; LD (IY+d) H */
+                INSTS(STREG(HL_WORD(), reg_h, 4, 3, 1),
+                      STREG(IX_WORD_OFF(p1), reg_h, 4, 11, 2),
+                      STREG(IY_WORD_OFF(p1), reg_h, 4, 11, 2));
                 break;
-            case 0x75: /* LD (HL) L */
-                STREG(HL_WORD(), reg_l, 4, 3, 1);
+            case 0x75: /* LD (HL) L ; LD (IX+d) L ; LD (IY+d) L */
+                INSTS(STREG(HL_WORD(), reg_l, 4, 3, 1),
+                      STREG(IX_WORD_OFF(p1), reg_l, 4, 11, 2),
+                      STREG(IY_WORD_OFF(p1), reg_l, 4, 11, 2));
                 break;
             case 0x76: /* HALT */
                 HALT();
                 break;
-            case 0x77: /* LD (HL) A */
-                STREG(HL_WORD(), reg_a, 4, 3, 1);
+            case 0x77: /* LD (HL) A ; LD (IX+d) A ; LD (IY+d) A */
+                INSTS(STREG(HL_WORD(), reg_a, 4, 3, 1),
+                      STREG(IX_WORD_OFF(p1), reg_a, 4, 11, 2),
+                      STREG(IY_WORD_OFF(p1), reg_a, 4, 11, 2));
                 break;
             case 0x78: /* LD A B */
                 LDREG(reg_a, reg_b, 0, 4, 1);
@@ -6119,14 +4832,20 @@ void cpmcart_mainloop(interrupt_cpu_status_t *cpu_int_status, alarm_context_t *c
             case 0x7b: /* LD A E */
                 LDREG(reg_a, reg_e, 0, 4, 1);
                 break;
-            case 0x7c: /* LD A H */
-                LDREG(reg_a, reg_h, 0, 4, 1);
+            case 0x7c: /* LD A H ; LD A IXH ; LD A IYH */
+                INSTS(LDREG(reg_a, reg_h, 0, 4, 1),
+                      LDREG(reg_a, reg_ixh, 0, 4, 1),
+                      LDREG(reg_a, reg_iyh, 0, 4, 1));
                 break;
-            case 0x7d: /* LD A L */
-                LDREG(reg_a, reg_l, 0, 4, 1);
+            case 0x7d: /* LD A L ; LD A IXL ; LD A IYL */
+                INSTS(LDREG(reg_a, reg_l, 0, 4, 1),
+                      LDREG(reg_a, reg_ixl, 0, 4, 1),
+                      LDREG(reg_a, reg_iyl, 0, 4, 1));
                 break;
-            case 0x7e: /* LD A (HL) */
-                LDREG(reg_a, LOAD(HL_WORD()), 4, 3, 1);
+            case 0x7e: /* LD A (HL) ; LD A (IX+d) ; LD A (IY+d) */
+                INSTS(LDREG(reg_a, LOAD(HL_WORD()), 4, 3, 1),
+                      LDREG(reg_a, LOAD(IX_WORD_OFF(p1)), 4, 11, 2),
+                      LDREG(reg_a, LOAD(IY_WORD_OFF(p1)), 4, 11, 2));
                 break;
             case 0x7f: /* LD A A */
                 LDREG(reg_a, reg_a, 0, 4, 1);
@@ -6143,14 +4862,20 @@ void cpmcart_mainloop(interrupt_cpu_status_t *cpu_int_status, alarm_context_t *c
             case 0x83: /* ADD E */
                 ADD(reg_e, 0, 4, 1);
                 break;
-            case 0x84: /* ADD H */
-                ADD(reg_h, 0, 4, 1);
+            case 0x84: /* ADD H ; ADD IXH ; ADD IYH */
+                INSTS(ADD(reg_h, 0, 4, 1),
+                      ADD(reg_ixh, 0, 4, 1),
+                      ADD(reg_iyh, 0, 4, 1));
                 break;
-            case 0x85: /* ADD L */
-                ADD(reg_l, 0, 4, 1);
+            case 0x85: /* ADD L ; ADD IXL ; ADD IYL */
+                INSTS(ADD(reg_l, 0, 4, 1),
+                      ADD(reg_ixl, 0, 4, 1),
+                      ADD(reg_iyl, 0, 4, 1));
                 break;
-            case 0x86: /* ADD (HL) */
-                ADD(LOAD(HL_WORD()), 4, 3, 1);
+            case 0x86: /* ADD (HL) ; ADD (IX+d) ; ADD (IY+d) */
+                INSTS(ADD(LOAD(HL_WORD()), 4, 3, 1),
+                      ADD(LOAD(IX_WORD_OFF(p1)), 4, 11, 2),
+                      ADD(LOAD(IY_WORD_OFF(p1)), 4, 11, 2));
                 break;
             case 0x87: /* ADD A */
                 ADD(reg_a, 0, 4, 1);
@@ -6167,14 +4892,20 @@ void cpmcart_mainloop(interrupt_cpu_status_t *cpu_int_status, alarm_context_t *c
             case 0x8b: /* ADC E */
                 ADC(reg_e, 0, 4, 1);
                 break;
-            case 0x8c: /* ADC H */
-                ADC(reg_h, 0, 4, 1);
+            case 0x8c: /* ADC H ; ADC IXH ; ADC IYH */
+                INSTS(ADC(reg_h, 0, 4, 1),
+                      ADC(reg_ixh, 0, 4, 1),
+                      ADC(reg_iyh, 0, 4, 1));
                 break;
-            case 0x8d: /* ADC L */
-                ADC(reg_l, 0, 4, 1);
+            case 0x8d: /* ADC L ; ADC IXL ; ADC IYL */
+                INSTS(ADC(reg_l, 0, 4, 1),
+                      ADC(reg_ixl, 0, 4, 1),
+                      ADC(reg_iyl, 0, 4, 1));
                 break;
-            case 0x8e: /* ADC (HL) */
-                ADC(LOAD(HL_WORD()), 4, 3, 1);
+            case 0x8e: /* ADC (HL) ; ADC (IX+d) ; ADC (IY+d) */
+                INSTS(ADC(LOAD(HL_WORD()), 4, 3, 1),
+                      ADC(LOAD(IX_WORD_OFF(p1)), 4, 11, 2),
+                      ADC(LOAD(IY_WORD_OFF(p1)), 4, 11, 2));
                 break;
             case 0x8f: /* ADC A */
                 ADC(reg_a, 0, 4, 1);
@@ -6191,14 +4922,20 @@ void cpmcart_mainloop(interrupt_cpu_status_t *cpu_int_status, alarm_context_t *c
             case 0x93: /* SUB E */
                 SUB(reg_e, 0, 4, 1);
                 break;
-            case 0x94: /* SUB H */
-                SUB(reg_h, 0, 4, 1);
+            case 0x94: /* SUB H ; SUB IXH ; SUB IYH */
+                INSTS(SUB(reg_h, 0, 4, 1),
+                      SUB(reg_ixh, 0, 4, 1),
+                      SUB(reg_iyh, 0, 4, 1));
                 break;
-            case 0x95: /* SUB L */
-                SUB(reg_l, 0, 4, 1);
+            case 0x95: /* SUB L ; SUB IXL ; SUB IYL */
+                INSTS(SUB(reg_l, 0, 4, 1),
+                      SUB(reg_ixl, 0, 4, 1),
+                      SUB(reg_iyl, 0, 4, 1));
                 break;
-            case 0x96: /* SUB (HL) */
-                SUB(LOAD(HL_WORD()), 4, 3, 1);
+            case 0x96: /* SUB (HL) ; SUB (IX+d) ; SUB (IY+d) */
+                INSTS(SUB(LOAD(HL_WORD()), 4, 3, 1),
+                      SUB(LOAD(IX_WORD_OFF(p1)), 4, 11, 2),
+                      SUB(LOAD(IY_WORD_OFF(p1)), 4, 11, 2));
                 break;
             case 0x97: /* SUB A */
                 SUB(reg_a, 0, 4, 1);
@@ -6215,14 +4952,20 @@ void cpmcart_mainloop(interrupt_cpu_status_t *cpu_int_status, alarm_context_t *c
             case 0x9b: /* SBC E */
                 SBC(reg_e, 0, 4, 1);
                 break;
-            case 0x9c: /* SBC H */
-                SBC(reg_h, 0, 4, 1);
+            case 0x9c: /* SBC H ; SBC IXH ; SBC IYH */
+                INSTS(SBC(reg_h, 0, 4, 1),
+                      SBC(reg_ixh, 0, 4, 1),
+                      SBC(reg_iyh, 0, 4, 1));
                 break;
-            case 0x9d: /* SBC L */
-                SBC(reg_l, 0, 4, 1);
+            case 0x9d: /* SBC L ; SBC IXL ; SBC IYL */
+                INSTS(SBC(reg_l, 0, 4, 1),
+                      SBC(reg_ixl, 0, 4, 1),
+                      SBC(reg_iyl, 0, 4, 1));
                 break;
-            case 0x9e: /* SBC (HL) */
-                SBC(LOAD(HL_WORD()), 4, 3, 1);
+            case 0x9e: /* SBC (HL) ; SBC (IX+d) ; SBC (IY+d) */
+                INSTS(SBC(LOAD(HL_WORD()), 4, 3, 1),
+                      SBC(LOAD(IX_WORD_OFF(p1)), 4, 11, 2),
+                      SBC(LOAD(IY_WORD_OFF(p1)), 4, 11, 2));
                 break;
             case 0x9f: /* SBC A */
                 SBC(reg_a, 0, 4, 1);
@@ -6239,14 +4982,20 @@ void cpmcart_mainloop(interrupt_cpu_status_t *cpu_int_status, alarm_context_t *c
             case 0xa3: /* AND E */
                 AND(reg_e, 0, 4, 1);
                 break;
-            case 0xa4: /* AND H */
-                AND(reg_h, 0, 4, 1);
+            case 0xa4: /* AND H ; AND IXH ; AND IYH */
+                INSTS(AND(reg_h, 0, 4, 1),
+                      AND(reg_ixh, 0, 4, 1),
+                      AND(reg_iyh, 0, 4, 1));
                 break;
-            case 0xa5: /* AND L */
-                AND(reg_l, 0, 4, 1);
+            case 0xa5: /* AND L ; AND IXL ; AND IYL */
+                INSTS(AND(reg_l, 0, 4, 1),
+                      AND(reg_ixl, 0, 4, 1),
+                      AND(reg_iyl, 0, 4, 1));
                 break;
-            case 0xa6: /* AND (HL) */
-                AND(LOAD(HL_WORD()), 4, 3, 1);
+            case 0xa6: /* AND (HL) ; AND (IX+d) ; AND (IY+d) */
+                INSTS(AND(LOAD(HL_WORD()), 4, 3, 1),
+                      AND(LOAD(IX_WORD_OFF(p1)), 4, 11, 2),
+                      AND(LOAD(IY_WORD_OFF(p1)), 4, 11, 2));
                 break;
             case 0xa7: /* AND A */
                 AND(reg_a, 0, 4, 1);
@@ -6263,14 +5012,20 @@ void cpmcart_mainloop(interrupt_cpu_status_t *cpu_int_status, alarm_context_t *c
             case 0xab: /* XOR E */
                 XOR(reg_e, 0, 4, 1);
                 break;
-            case 0xac: /* XOR H */
-                XOR(reg_h, 0, 4, 1);
+            case 0xac: /* XOR H ; XOR IXH ; XOR IYH */
+                INSTS(XOR(reg_h, 0, 4, 1),
+                      XOR(reg_ixh, 0, 4, 1),
+                      XOR(reg_iyh, 0, 4, 1));
                 break;
-            case 0xad: /* XOR L */
-                XOR(reg_l, 0, 4, 1);
+            case 0xad: /* XOR L ; XOR IXL ; XOR IYL */
+                INSTS(XOR(reg_l, 0, 4, 1),
+                      XOR(reg_ixl, 0, 4, 1),
+                      XOR(reg_iyl, 0, 4, 1));
                 break;
-            case 0xae: /* XOR (HL) */
-                XOR(LOAD(HL_WORD()), 4, 3, 1);
+            case 0xae: /* XOR (HL) ; XOR (IX+d) ; XOR (IY+d) */
+                INSTS(XOR(LOAD(HL_WORD()), 4, 3, 1),
+                      XOR(LOAD(IX_WORD_OFF(p1)), 4, 11, 2),
+                      XOR(LOAD(IY_WORD_OFF(p1)), 4, 11, 2));
                 break;
             case 0xaf: /* XOR A */
                 XOR(reg_a, 0, 4, 1);
@@ -6287,14 +5042,20 @@ void cpmcart_mainloop(interrupt_cpu_status_t *cpu_int_status, alarm_context_t *c
             case 0xb3: /* OR E */
                 OR(reg_e, 0, 4, 1);
                 break;
-            case 0xb4: /* OR H */
-                OR(reg_h, 0, 4, 1);
+            case 0xb4: /* OR H ; OR IXH ; OR IYH */
+                INSTS(OR(reg_h, 0, 4, 1),
+                      OR(reg_ixh, 0, 4, 1),
+                      OR(reg_iyh, 0, 4, 1));
                 break;
-            case 0xb5: /* OR L */
-                OR(reg_l, 0, 4, 1);
+            case 0xb5: /* OR L ; OR IYL ; OR IYL */
+                INSTS(OR(reg_l, 0, 4, 1),
+                      OR(reg_ixl, 0, 4, 1),
+                      OR(reg_iyl, 0, 4, 1));
                 break;
-            case 0xb6: /* OR (HL) */
-                OR(LOAD(HL_WORD()), 4, 3, 1);
+            case 0xb6: /* OR (HL) ; OR (IX+d) ; OR (IY+d) */
+                INSTS(OR(LOAD(HL_WORD()), 4, 3, 1),
+                      OR(LOAD(IX_WORD_OFF(p1)), 4, 11, 2),
+                      OR(LOAD(IY_WORD_OFF(p1)), 4, 11, 2));
                 break;
             case 0xb7: /* OR A */
                 OR(reg_a, 0, 4, 1);
@@ -6311,20 +5072,26 @@ void cpmcart_mainloop(interrupt_cpu_status_t *cpu_int_status, alarm_context_t *c
             case 0xbb: /* CP E */
                 CP(reg_e, 0, 4, 1);
                 break;
-            case 0xbc: /* CP H */
-                CP(reg_h, 0, 4, 1);
+            case 0xbc: /* CP H ; CP IXH ; CP IYH */
+                INSTS(CP(reg_h, 0, 4, 1),
+                      CP(reg_ixh, 0, 4, 1),
+                      CP(reg_iyh, 0, 4, 1));
                 break;
-            case 0xbd: /* CP L */
-                CP(reg_l, 0, 4, 1);
+            case 0xbd: /* CP L ; CP IXL ; CP IYL */
+                INSTS(CP(reg_l, 0, 4, 1),
+                      CP(reg_ixl, 0, 4, 1),
+                      CP(reg_iyl, 0, 4, 1));
                 break;
-            case 0xbe: /* CP (HL) */
-                CP(LOAD(HL_WORD()), 4, 3, 1);
+            case 0xbe: /* CP (HL) ; CP (IX+d) ; CP (IY+d) */
+                INSTS(CP(LOAD(HL_WORD()), 4, 3, 1),
+                      CP(LOAD(IX_WORD_OFF(p1)), 4, 11, 2),
+                      CP(LOAD(IY_WORD_OFF(p1)), 4, 11, 2));
                 break;
             case 0xbf: /* CP A */
                 CP(reg_a, 0, 4, 1);
                 break;
             case 0xc0: /* RET NZ */
-                RET_COND(!LOCAL_ZERO(), 4, 4, 2, 5, 1);
+                RET_COND(!LOCAL_ZERO(), 5, 3, 3, 5, 1);
                 break;
             case 0xc1: /* POP BC */
                 POP(reg_b, reg_c, 1);
@@ -6336,7 +5103,7 @@ void cpmcart_mainloop(interrupt_cpu_status_t *cpu_int_status, alarm_context_t *c
                 JMP(p12, 10);
                 break;
             case 0xc4: /* CALL NZ */
-                CALL_COND(p12, !LOCAL_ZERO(), 3, 3, 4, 10, 3);
+                CALL_COND(p12, !LOCAL_ZERO(), 3, 3, 11, 10, 3);
                 break;
             case 0xc5: /* PUSH BC */
                 PUSH(reg_b, reg_c, 1);
@@ -6348,7 +5115,7 @@ void cpmcart_mainloop(interrupt_cpu_status_t *cpu_int_status, alarm_context_t *c
                 CALL(0x00, 3, 3, 5, 1);
                 break;
             case 0xc8: /* RET Z */
-                RET_COND(LOCAL_ZERO(), 4, 4, 2, 5, 1);
+                RET_COND(LOCAL_ZERO(), 5, 3, 3, 5, 1);
                 break;
             case 0xc9: /* RET */
                 RET(4, 4, 2);
@@ -6357,10 +5124,12 @@ void cpmcart_mainloop(interrupt_cpu_status_t *cpu_int_status, alarm_context_t *c
                 JMP_COND(p12, LOCAL_ZERO(), 10, 10);
                 break;
             case 0xcb: /* OPCODE CB */
-                opcode_cb((BYTE)p1, (BYTE)p2, (BYTE)p3, (WORD)p12, (WORD)p23);
+                INSTS(opcode_cb((uint8_t)p1, (uint8_t)p2, (uint8_t)p3, (uint16_t)p12, (uint16_t)p23),
+                      opcode_ddfd_cb((uint8_t)p1, (uint8_t)p2, (uint16_t)p12),
+                      opcode_ddfd_cb((uint8_t)p1, (uint8_t)p2, (uint16_t)p12));
                 break;
             case 0xcc: /* CALL Z */
-                CALL_COND(p12, LOCAL_ZERO(), 3, 3, 4, 10, 3);
+                CALL_COND(p12, LOCAL_ZERO(), 3, 3, 11, 10, 3);
                 break;
             case 0xcd: /* CALL */
                 CALL(p12, 3, 3, 11, 3);
@@ -6372,7 +5141,7 @@ void cpmcart_mainloop(interrupt_cpu_status_t *cpu_int_status, alarm_context_t *c
                 CALL(0x08, 3, 3, 5, 1);
                 break;
             case 0xd0: /* RET NC */
-                RET_COND(!LOCAL_CARRY(), 4, 4, 2, 5, 1);
+                RET_COND(!LOCAL_CARRY(), 5, 3, 3, 5, 1);
                 break;
             case 0xd1: /* POP DE */
                 POP(reg_d, reg_e, 1);
@@ -6384,7 +5153,7 @@ void cpmcart_mainloop(interrupt_cpu_status_t *cpu_int_status, alarm_context_t *c
                 OUTA(p1, 4, 7, 2);
                 break;
             case 0xd4: /* CALL NC */
-                CALL_COND(p12, !LOCAL_CARRY(), 3, 3, 4, 10, 3);
+                CALL_COND(p12, !LOCAL_CARRY(), 3, 3, 11, 10, 3);
                 break;
             case 0xd5: /* PUSH DE */
                 PUSH(reg_d, reg_e, 1);
@@ -6396,10 +5165,10 @@ void cpmcart_mainloop(interrupt_cpu_status_t *cpu_int_status, alarm_context_t *c
                 CALL(0x10, 3, 3, 5, 1);
                 break;
             case 0xd8: /* RET C */
-                RET_COND(LOCAL_CARRY(), 4, 4, 2, 5, 1);
+                RET_COND(LOCAL_CARRY(), 5, 3, 3, 5, 1);
                 break;
             case 0xd9: /* EXX */
-                EXX(8, 1);
+                EXX(4, 1);
                 break;
             case 0xda: /* JP C */
                 JMP_COND(p12, LOCAL_CARRY(), 10, 10);
@@ -6408,10 +5177,10 @@ void cpmcart_mainloop(interrupt_cpu_status_t *cpu_int_status, alarm_context_t *c
                 INA(p1, 4, 7, 2);
                 break;
             case 0xdc: /* CALL C */
-                CALL_COND(p12, LOCAL_CARRY(), 3, 3, 4, 10, 3);
+                CALL_COND(p12, LOCAL_CARRY(), 3, 3, 11, 10, 3);
                 break;
             case 0xdd: /*  OPCODE DD */
-                opcode_dd((BYTE)p1, (BYTE)p2, (BYTE)p3, (WORD)p12, (WORD)p23);
+                INSTS(inst_mode = INST_IX; CLK_ADD(CLK, 4); INC_PC(1); goto fetchmore, NOP(4,1), NOP(4,1));
                 break;
             case 0xde: /* SBC # */
                 SBC(p1, 4, 3, 2);
@@ -6420,22 +5189,28 @@ void cpmcart_mainloop(interrupt_cpu_status_t *cpu_int_status, alarm_context_t *c
                 CALL(0x18, 3, 3, 5, 1);
                 break;
             case 0xe0: /* RET PO */
-                RET_COND(!LOCAL_PARITY(), 4, 4, 2, 5, 1);
+                RET_COND(!LOCAL_PARITY(), 5, 3, 3, 5, 1);
                 break;
-            case 0xe1: /* POP HL */
-                POP(reg_h, reg_l, 1);
+            case 0xe1: /* POP HL ; POP IX; POP IY */
+                INSTS(POP(reg_h, reg_l, 1),
+                      POP(reg_ixh, reg_ixl, 1),
+                      POP(reg_iyh, reg_iyl, 1));
                 break;
             case 0xe2: /* JP PO */
                 JMP_COND(p12, !LOCAL_PARITY(), 10, 10);
                 break;
-            case 0xe3: /* EX HL (SP) */
-                EXXXSP(reg_h, reg_l, 4, 4, 4, 4, 3, 1);
+            case 0xe3: /* EX HL (SP) ; EX IX (SP) ; EX IY (SP) */
+                INSTS(EXXXSP(reg_h, reg_l, 4, 4, 4, 4, 3, 1),
+                      EXXXSP(reg_ixh, reg_ixl, 4, 4, 4, 4, 3, 1),
+                      EXXXSP(reg_iyh, reg_iyl, 4, 4, 4, 4, 3, 1));
                 break;
             case 0xe4: /* CALL PO */
-                CALL_COND(p12, !LOCAL_PARITY(), 3, 3, 4, 10, 3);
+                CALL_COND(p12, !LOCAL_PARITY(), 3, 3, 11, 10, 3);
                 break;
-            case 0xe5: /* PUSH HL */
-                PUSH(reg_h, reg_l, 1);
+            case 0xe5: /* PUSH HL ; PUSH IX; PUSH IY */
+                INSTS(PUSH(reg_h, reg_l, 1),
+                      PUSH(reg_ixh, reg_ixl, 1),
+                      PUSH(reg_iyh, reg_iyl, 1));
                 break;
             case 0xe6: /* AND # */
                 AND(p1, 4, 3, 2);
@@ -6444,10 +5219,12 @@ void cpmcart_mainloop(interrupt_cpu_status_t *cpu_int_status, alarm_context_t *c
                 CALL(0x20, 3, 3, 5, 1);
                 break;
             case 0xe8: /* RET PE */
-                RET_COND(LOCAL_PARITY(), 4, 4, 2, 5, 1);
+                RET_COND(LOCAL_PARITY(), 5, 3, 3, 5, 1);
                 break;
-            case 0xe9: /* LD PC HL */
-                JMP((HL_WORD()), 4);
+            case 0xe9: /* LD PC HL ; LD PC IX ; LD PC IY */
+                INSTS(JMP((HL_WORD()), 4),
+                      JMP((IX_WORD()), 4),
+                      JMP((IY_WORD()), 4));
                 break;
             case 0xea: /* JP PE */
                 JMP_COND(p12, LOCAL_PARITY(), 10, 10);
@@ -6456,10 +5233,10 @@ void cpmcart_mainloop(interrupt_cpu_status_t *cpu_int_status, alarm_context_t *c
                 EXDEHL(4, 1);
                 break;
             case 0xec: /* CALL PE */
-                CALL_COND(p12, LOCAL_PARITY(), 3, 3, 4, 10, 3);
+                CALL_COND(p12, LOCAL_PARITY(), 3, 3, 11, 10, 3);
                 break;
             case 0xed: /* OPCODE ED */
-                opcode_ed((BYTE)p1, (BYTE)p2, (BYTE)p3, (WORD)p12, (WORD)p23);
+                opcode_ed((uint8_t)p1, (uint8_t)p2, (uint8_t)p3, (uint16_t)p12, (uint16_t)p23);
                 break;
             case 0xee: /* XOR # */
                 XOR(p1, 4, 3, 2);
@@ -6468,7 +5245,7 @@ void cpmcart_mainloop(interrupt_cpu_status_t *cpu_int_status, alarm_context_t *c
                 CALL(0x28, 3, 3, 5, 1);
                 break;
             case 0xf0: /* RET P */
-                RET_COND(!LOCAL_SIGN(), 4, 4, 2, 5, 1);
+                RET_COND(!LOCAL_SIGN(), 5, 3, 3, 5, 1);
                 break;
             case 0xf1: /* POP AF */
                 POP(reg_a, reg_f, 1);
@@ -6480,7 +5257,7 @@ void cpmcart_mainloop(interrupt_cpu_status_t *cpu_int_status, alarm_context_t *c
                 DI(4, 1);
                 break;
             case 0xf4: /* CALL P */
-                CALL_COND(p12, !LOCAL_SIGN(), 3, 3, 4, 10, 3);
+                CALL_COND(p12, !LOCAL_SIGN(), 3, 3, 11, 10, 3);
                 break;
             case 0xf5: /* PUSH AF */
                 PUSH(reg_a, reg_f, 1);
@@ -6492,10 +5269,12 @@ void cpmcart_mainloop(interrupt_cpu_status_t *cpu_int_status, alarm_context_t *c
                 CALL(0x30, 3, 3, 5, 1);
                 break;
             case 0xf8: /* RET M */
-                RET_COND(LOCAL_SIGN(), 4, 4, 2, 5, 1);
+                RET_COND(LOCAL_SIGN(), 5, 3, 3, 5, 1);
                 break;
-            case 0xf9: /* LD SP HL */
-                LDSP(HL_WORD(), 4, 2, 1);
+            case 0xf9: /* LD SP HL ; LD SP IX ; LD SP IY */
+                INSTS(LDSP(HL_WORD(), 4, 2, 1),
+                      LDSP(IX_WORD(), 0, 6, 1),
+                      LDSP(IY_WORD(), 0, 6, 1));
                 break;
             case 0xfa: /* JP M */
                 JMP_COND(p12, LOCAL_SIGN(), 10, 10);
@@ -6504,10 +5283,10 @@ void cpmcart_mainloop(interrupt_cpu_status_t *cpu_int_status, alarm_context_t *c
                 EI(4, 1);
                 break;
             case 0xfc: /* CALL M */
-                CALL_COND(p12, LOCAL_SIGN(), 3, 3, 4, 10, 3);
+                CALL_COND(p12, LOCAL_SIGN(), 3, 3, 11, 10, 3);
                 break;
             case 0xfd: /* OPCODE FD */
-                opcode_fd((BYTE)p1, (BYTE)p2, (BYTE)p3, (WORD)p12, (WORD)p23);
+                INSTS(inst_mode = INST_IY; CLK_ADD(CLK, 4); INC_PC(1); goto fetchmore, NOP(4,1), NOP(4,1));
                 break;
             case 0xfe: /* CP # */
                 CP(p1, 4, 3, 2);
@@ -6518,9 +5297,28 @@ void cpmcart_mainloop(interrupt_cpu_status_t *cpu_int_status, alarm_context_t *c
         }
 
         cpu_int_status->num_dma_per_opcode = 0;
-    } while (z80_started);
+        inst_mode = INST_NONE;
+
+        if (maincpu_clk_limit && (CLK > maincpu_clk_limit)) {
+            log_error(LOG_DEFAULT, "cycle limit reached.");
+            archdep_vice_exit(1);
+        }
+
+    } while (Z80_LOOP_COND);
 
     export_registers();
+}
+
+
+/// z80core.c ends
+///
+///
+///
+
+
+static void cpmcart_mainloop(interrupt_cpu_status_t *cpu_int_status, alarm_context_t *cpu_alarm_context)
+{
+    z80_maincpu_loop(cpu_int_status, cpu_alarm_context);
 }
 
 void cpmcart_check_and_run_z80(void)
@@ -6568,7 +5366,7 @@ void cpmcart_check_and_run_z80(void)
    DWORD | opcode address | last opcode address
  */
 
-static char snap_module_name[] = "CPMCART";
+static const char snap_module_name[] = "CPMCART";
 #define SNAP_MAJOR 0
 #define SNAP_MINOR 0
 
@@ -6583,7 +5381,7 @@ int cpmcart_snapshot_write_module(snapshot_t *s)
     }
 
     if (0
-        || SMW_DW(m, maincpu_clk) < 0
+        || SMW_CLOCK(m, maincpu_clk) < 0
         || SMW_B(m, reg_a) < 0
         || SMW_B(m, reg_b) < 0
         || SMW_B(m, reg_c) < 0
@@ -6611,9 +5409,9 @@ int cpmcart_snapshot_write_module(snapshot_t *s)
         || SMW_B(m, reg_f2) < 0
         || SMW_B(m, reg_h2) < 0
         || SMW_B(m, reg_l2) < 0
-        || SMW_B(m, (BYTE)z80_started) < 0
-        || SMW_DW(m, (DWORD)z80_last_opcode_info) < 0
-        || SMW_DW(m, (DWORD)z80_last_opcode_addr) < 0) {
+        || SMW_B(m, (uint8_t)z80_started) < 0
+        || SMW_DW(m, (uint32_t)z80_last_opcode_info) < 0
+        || SMW_DW(m, (uint32_t)z80_last_opcode_addr) < 0) {
         snapshot_module_close(m);
         return -1;
     }
@@ -6623,7 +5421,7 @@ int cpmcart_snapshot_write_module(snapshot_t *s)
 
 int cpmcart_snapshot_read_module(snapshot_t *s)
 {
-    BYTE major, minor;
+    uint8_t major, minor;
     snapshot_module_t *m;
 
     m = snapshot_module_open(s, snap_module_name, &major, &minor);
@@ -6633,18 +5431,17 @@ int cpmcart_snapshot_read_module(snapshot_t *s)
     }
 
     /* Do not accept versions higher than current */
-    if (major > SNAP_MAJOR || minor > SNAP_MINOR) {
+    if (snapshot_version_is_bigger(major, minor, SNAP_MAJOR, SNAP_MINOR)) {
         snapshot_set_error(SNAPSHOT_MODULE_HIGHER_VERSION);
         goto fail;
-    } 
+    }
 
     /* FIXME: This is a mighty kludge to prevent VIC-II from stealing the
        wrong number of cycles.  */
     maincpu_rmw_flag = 0;
 
-    /* XXX: Assumes `CLOCK' is the same size as a `DWORD'.  */
     if (0
-        || SMR_DW(m, &maincpu_clk) < 0
+        || SMR_CLOCK(m, &maincpu_clk) < 0
         || SMR_B(m, &reg_a) < 0
         || SMR_B(m, &reg_b) < 0
         || SMR_B(m, &reg_c) < 0

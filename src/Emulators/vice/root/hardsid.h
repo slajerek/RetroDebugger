@@ -28,32 +28,36 @@
 #ifndef VICE_HARDSID_H
 #define VICE_HARDSID_H
 
+#ifdef HAVE_HARDSID
+
 #include "sid-snapshot.h"
 #include "vicetypes.h"
 
 #define HS_MAXSID 2
 
-extern int hardsid_open(void);
-extern int hardsid_close(void);
-extern void hardsid_reset(void);
-extern int hardsid_read(WORD addr, int chipno);
-extern void hardsid_store(WORD addr, BYTE val, int chipno);
-extern void hardsid_set_machine_parameter(long cycles_per_sec);
-extern int hardsid_available(void);
-extern void hardsid_set_device(unsigned int chipno, unsigned int device);
+int hardsid_open(void);
+int hardsid_close(void);
+void hardsid_reset(void);
+int hardsid_read(uint16_t addr, int chipno);
+void hardsid_store(uint16_t addr, uint8_t val, int chipno);
+void hardsid_set_machine_parameter(long cycles_per_sec);
+void hardsid_set_device(unsigned int chipno, unsigned int device);
 
-extern int hardsid_drv_open(void);
-extern int hardsid_drv_close(void);
-extern void hardsid_drv_reset(void);
-extern int hardsid_drv_read(WORD addr, int chipno);
-extern void hardsid_drv_store(WORD addr, BYTE val, int chipno);
-extern int hardsid_drv_available(void);
-extern void hardsid_drv_set_device(unsigned int chipno, unsigned int device);
+int hardsid_drv_open(void);
+int hardsid_drv_close(void);
+void hardsid_drv_reset(void);
+int hardsid_drv_read(uint16_t addr, int chipno);
+void hardsid_drv_store(uint16_t addr, uint8_t val, int chipno);
+int hardsid_drv_available(void);
+void hardsid_drv_set_device(unsigned int chipno, unsigned int device);
 
-extern void hardsid_state_read(int chipno, struct sid_hs_snapshot_state_s *sid_state);
-extern void hardsid_state_write(int chipno, struct sid_hs_snapshot_state_s *sid_state);
+void hardsid_state_read(int chipno, struct sid_hs_snapshot_state_s *sid_state);
+void hardsid_state_write(int chipno, struct sid_hs_snapshot_state_s *sid_state);
 
-extern void hardsid_drv_state_read(int chipno, struct sid_hs_snapshot_state_s *sid_state);
-extern void hardsid_drv_state_write(int chipno, struct sid_hs_snapshot_state_s *sid_state);
+void hardsid_drv_state_read(int chipno, struct sid_hs_snapshot_state_s *sid_state);
+void hardsid_drv_state_write(int chipno, struct sid_hs_snapshot_state_s *sid_state);
+#endif
+
+int hardsid_available(void);
 
 #endif

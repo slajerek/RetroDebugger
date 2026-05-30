@@ -43,43 +43,52 @@
 
 static int mon_assemble_instr(const char *opcode_name, asm_mode_addr_info_t operand)
 {
-    WORD operand_value = operand.param;
-    WORD operand_mode = operand.addr_mode;
-    BYTE opcode = 0;
+    uint16_t operand_value = operand.param;
+    uint16_t operand_mode = operand.addr_mode;
+    uint8_t opcode = 0;
     int len, branch_offset;
-    BYTE i, j;
+    uint8_t i, j;
     bool found = FALSE;
     MEMSPACE mem;
-    WORD loc;
-    BYTE const prefix[5] = { 0x00, 0xcb, 0xdd, 0xed, 0xfd };
+    uint16_t loc;
+    uint8_t const prefix[7]  = { 0x00, 0xcb, 0xdd, 0xed, 0xfd, 0xdd, 0xfd };
+    uint8_t const prefix2[7] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0xcb, 0xcb };
 
     mem = addr_memspace(asm_mode_addr);
     loc = addr_location(asm_mode_addr);
 
-    for (j = 0; j < 5; j++) {
+    for (j = 0; j < 7; j++) {
         i = 0;
         do {
             const asm_opcode_info_t *opinfo = NULL;
 
             switch (prefix[j]) {
                 case 0x00:
-                    opinfo = (monitor_cpu_for_memspace[mem]->asm_opcode_info_get)(i, 0, 0);
+                    opinfo = (monitor_cpu_for_memspace[mem]->asm_opcode_info_get)(i, 0, 0, 0);
                     break;
                 case 0xcb:
-                    opinfo = (monitor_cpu_for_memspace[mem]->asm_opcode_info_get)(0xcb, i, 0);
+                    opinfo = (monitor_cpu_for_memspace[mem]->asm_opcode_info_get)(0xcb, i, 0, 0);
                     break;
                 case 0xdd:
-                    opinfo = (monitor_cpu_for_memspace[mem]->asm_opcode_info_get)(0xdd, i, 0);
+                    opinfo = (monitor_cpu_for_memspace[mem]->asm_opcode_info_get)(0xdd, i, 0, 0);
                     break;
                 case 0xed:
-                    opinfo = (monitor_cpu_for_memspace[mem]->asm_opcode_info_get)(0xed, i, 0);
+                    if (prefix2[j]) {
+                        opinfo = (monitor_cpu_for_memspace[mem]->asm_opcode_info_get)(0xed, 0xcb, 0, i);
+                    } else {
+                        opinfo = (monitor_cpu_for_memspace[mem]->asm_opcode_info_get)(0xed, i, 0, 0);
+                    }
                     break;
                 case 0xfd:
-                    opinfo = (monitor_cpu_for_memspace[mem]->asm_opcode_info_get)(0xfd, i, 0);
+                    if (prefix2[j]) {
+                        opinfo = (monitor_cpu_for_memspace[mem]->asm_opcode_info_get)(0xfd, 0xcb, 0, i);
+                    } else {
+                        opinfo = (monitor_cpu_for_memspace[mem]->asm_opcode_info_get)(0xfd, i, 0, 0);
+                    }
                     break;
             }
 
-            if (!strcasecmp(opinfo->mnemonic, opcode_name)) {
+            if (!util_strcasecmp(opinfo->mnemonic, opcode_name)) {
                 if (opinfo->addr_mode == operand_mode) {
                     opcode = i;
                     found = TRUE;
@@ -149,28 +158,28 @@ static int mon_assemble_instr(const char *opcode_name, asm_mode_addr_info_t oper
     }
 
     len = (monitor_cpu_for_memspace[mem]->asm_addr_mode_get_size)
-              ((unsigned int)(operand_mode), prefix[j], 0, 0);
+              ((unsigned int)(operand_mode), prefix[j], 0, 0, 0);
 
     if (prefix[j] == 0x00) {
         mon_set_mem_val(mem, loc, opcode);
         if (len >= 2) {
-            mon_set_mem_val(mem, (WORD)(loc + 1),
-                            (BYTE)(operand_value & 0xff));
+            mon_set_mem_val(mem, (uint16_t)(loc + 1),
+                            (uint8_t)(operand_value & 0xff));
         }
         if (len >= 3) {
-            mon_set_mem_val(mem, (WORD)(loc + 2),
-                            (BYTE)((operand_value >> 8) & 0xff));
+            mon_set_mem_val(mem, (uint16_t)(loc + 2),
+                            (uint8_t)((operand_value >> 8) & 0xff));
         }
     } else {
         mon_set_mem_val(mem, loc, prefix[j]);
-        mon_set_mem_val(mem, (WORD)(loc + 1), opcode);
+        mon_set_mem_val(mem, (uint16_t)(loc + 1), opcode);
         if (len >= 3) {
-            mon_set_mem_val(mem, (WORD)(loc + 2),
-                            (BYTE)(operand_value & 0xff));
+            mon_set_mem_val(mem, (uint16_t)(loc + 2),
+                            (uint8_t)(operand_value & 0xff));
         }
         if (len >= 4) {
-            mon_set_mem_val(mem, (WORD)(loc + 3),
-                            (BYTE)((operand_value >> 8) & 0xff));
+            mon_set_mem_val(mem, (uint16_t)(loc + 3),
+                            (uint8_t)((operand_value >> 8) & 0xff));
         }
     }
 

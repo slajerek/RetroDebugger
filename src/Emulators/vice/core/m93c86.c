@@ -26,7 +26,7 @@
 
 
 /* this implements the M93C86 EEPROM in 16 bit mode as used by the GMod2 cartridge.
-   other types (M93C86-x M93C76-x M93C66-x M93C56-x M93C46-x) can probably be 
+   other types (M93C86-x M93C76-x M93C66-x M93C56-x M93C46-x) can probably be
    supported with some reworking too (if we ever need it) */
 
 /* #define M93C86DEBUG */
@@ -35,15 +35,18 @@
 
 #include <stdio.h>
 #include <string.h> /* for memset */
+#include <stdbool.h>
+#include <errno.h>
 
 #include "log.h"
 #include "m93c86.h"
+#include "resources.h"
 #include "snapshot.h"
 #include "vicetypes.h"
 #include "util.h"
 
 #ifdef M93C86DEBUG
-#define LOG(_x_) log_debug _x_
+#define LOG(_x_) log_printf  _x_
 #else
 #define LOG(_x_)
 #endif
@@ -54,7 +57,13 @@
 /* Image file */
 static FILE *m93c86_image_file = NULL;
 
-static BYTE m93c86_data[M93C86_SIZE];
+static uint8_t m93c86_data[M93C86_SIZE];
+
+/** \brief  Flag indicating if the file was opened read/write
+ *
+ * Used to determine if flushing the EEPROM data can be done.
+ */
+static bool eeprom_file_rw = false;
 
 static int eeprom_cs = 0;
 static int eeprom_clock = 0;
@@ -90,6 +99,7 @@ static int ready_busy_status = 1;
 #define STATUSREADY 1
 #define STATUSBUSY 0
 
+
 static void reset_input_shiftreg(void)
 {
     /* clear input shift register */
@@ -97,7 +107,7 @@ static void reset_input_shiftreg(void)
     input_count = 0;
 }
 
-BYTE m93c86_read_data(void)
+uint8_t m93c86_read_data(void)
 {
     if (eeprom_cs == 1) {
         switch (command) {
@@ -123,14 +133,14 @@ BYTE m93c86_read_data(void)
     }
 }
 
-void m93c86_write_data(BYTE value)
+void m93c86_write_data(uint8_t value)
 {
     if (eeprom_cs == 1) {
         eeprom_data_in = value;
     }
 }
 
-void m93c86_write_select(BYTE value)
+void m93c86_write_select(uint8_t value)
 {
     /* Each instruction is preceded by a rising edge on Chip Select Input with Serial Clock being held low. */
     if ((eeprom_cs == 0) && (value == 1) && (eeprom_clock == 0)) {
@@ -154,7 +164,7 @@ void m93c86_write_select(BYTE value)
     }
 }
 
-void m93c86_write_clock(BYTE value)
+void m93c86_write_clock(uint8_t value)
 {
     /* rising edge of clock will read one bit from data input */
     if ((eeprom_cs == 1) && (value == 1) && (eeprom_clock == 0)) {
@@ -257,6 +267,20 @@ void m93c86_write_clock(BYTE value)
                             command = 0;
                             LOG(("CMD: write enable"));
                             break;
+                        case CMDERASE:
+                            if (write_enable_status == 0) {
+                                log_error(LOG_DEFAULT, "EEPROM: write not permitted for CMD 'erase'");
+                                reset_input_shiftreg();
+                                command = 0;
+                            } else {
+                                addr = ((input_shiftreg >> 0) & 0x3ff);
+                                ready_busy_status = STATUSBUSY;
+                                reset_input_shiftreg();
+                                m93c86_data[(addr << 1)] = 0xff;
+                                m93c86_data[(addr << 1) + 1] = 0xff;
+                                LOG(("CMD: erase addr %04x", addr));
+                            }
+                            break;
                         case CMDERAL:
                             if (write_enable_status == 0) {
                                 log_error(LOG_DEFAULT, "EEPROM: write not permitted for CMD 'erase all'");
@@ -314,15 +338,22 @@ void m93c86_write_clock(BYTE value)
     eeprom_clock = value;
 }
 
+void m93c86_set_image_rw(int rw)
+{
+    eeprom_file_rw = (bool)rw;
+}
+
 int m93c86_open_image(char *name, int rw)
 {
     char *m93c86_image_filename = name;
+
+    eeprom_file_rw = (bool)rw;
 
     if (m93c86_image_filename != NULL) {
         /* FIXME */
     } else {
         /* FIXME */
-        log_debug("eeprom card image name not set");
+        log_debug(LOG_DEFAULT, "eeprom card image name not set");
         return 0;
     }
 
@@ -338,22 +369,78 @@ int m93c86_open_image(char *name, int rw)
         m93c86_image_file = fopen(m93c86_image_filename, "rb");
 
         if (m93c86_image_file == NULL) {
-            log_debug("could not open eeprom card image: %s", m93c86_image_filename);
+            log_debug(LOG_DEFAULT, "could not open eeprom card image: %s", m93c86_image_filename);
             return -1;
         } else {
             if (fread(m93c86_data, 1, M93C86_SIZE, m93c86_image_file) == 0) {
-                log_debug("could not read eeprom card image: %s", m93c86_image_filename);
+                log_debug(LOG_DEFAULT, "could not read eeprom card image: %s", m93c86_image_filename);
             }
             fseek(m93c86_image_file, 0, SEEK_SET);
-            log_debug("opened eeprom card image (ro): %s", m93c86_image_filename);
+            log_debug(LOG_DEFAULT, "opened eeprom card image (ro): %s", m93c86_image_filename);
         }
     } else {
         if (fread(m93c86_data, 1, M93C86_SIZE, m93c86_image_file) == 0) {
-            log_debug("could not read eeprom card image: %s", m93c86_image_filename);
+            log_debug(LOG_DEFAULT, "could not read eeprom card image: %s", m93c86_image_filename);
         }
         fseek(m93c86_image_file, 0, SEEK_SET);
-        log_debug("opened eeprom card image (rw): %s", m93c86_image_filename);
+        log_debug(LOG_DEFAULT, "opened eeprom card image (rw): %s", m93c86_image_filename);
     }
+    return 0;
+}
+
+/** \brief  Save copy of image to file
+ *
+ * \param[in]   name    file to write copy to
+ *
+ * \return  0 on success, -1 on failure
+ */
+int m93c86_save_image(const char *name)
+{
+    FILE *fp;
+
+    if (name == NULL || *name == '\0') {
+        log_debug(LOG_DEFAULT, "error: eeprom card image filename is NULL or empty");
+        return -1;
+    }
+
+    fp = fopen(name, "wb");
+    if (fp == NULL) {
+        log_debug(LOG_DEFAULT, "could not open file '%s' for writing: errno %d (%s)",
+                  name, errno, strerror(errno));
+        return -1;
+    }
+
+    if (fwrite(m93c86_data, 1u, M93C86_SIZE, fp) != M93C86_SIZE) {
+        log_debug(LOG_DEFAULT, "error while writing eeprom card image: errno %d (%s)",
+                  errno, strerror(errno));
+        fclose(fp);
+        return -1;
+    }
+    fclose(fp);
+    return 0;
+}
+
+/** \brief  Flush eeprom card image file
+ *
+ * \return  0 on success, -1 on failure
+ */
+int m93c86_flush_image(void)
+{
+    if (m93c86_image_file == NULL) {
+        log_debug(LOG_DEFAULT, "cannot flush eeprom card image: file not opened");
+        return -1;
+    }
+    if (!eeprom_file_rw) {
+        log_debug(LOG_DEFAULT, "cannot flush read-only eeprom card image");
+        return -1;
+    }
+    fseek(m93c86_image_file, 0, SEEK_SET);
+    if (fwrite(m93c86_data, 1, M93C86_SIZE, m93c86_image_file) == 0) {
+        log_debug(LOG_DEFAULT, "failed to flush eeprom card image: %d (%s)",
+                  errno, strerror(errno));
+        return -1;
+    }
+    fflush(m93c86_image_file);
     return 0;
 }
 
@@ -364,7 +451,7 @@ void m93c86_close_image(int rw)
         if (rw) {
             fseek(m93c86_image_file, 0, SEEK_SET);
             if (fwrite(m93c86_data, 1, M93C86_SIZE, m93c86_image_file) == 0) {
-                log_debug("could not write eeprom card image");
+                log_debug(LOG_DEFAULT, "could not write eeprom card image");
             }
         }
         fclose(m93c86_image_file);
@@ -376,14 +463,11 @@ void m93c86_close_image(int rw)
 /*    snapshot support functions                                             */
 
 #define CART_DUMP_VER_MAJOR   0
-#define CART_DUMP_VER_MINOR   0
+#define CART_DUMP_VER_MINOR   1
 #define SNAP_MODULE_NAME  "M93C86"
 
-/* FIXME: implement snapshot support */
 int m93c86_snapshot_write_module(snapshot_t *s)
 {
-    return -1;
-#if 0
     snapshot_module_t *m;
 
     m = snapshot_module_create(s, SNAP_MODULE_NAME,
@@ -392,39 +476,75 @@ int m93c86_snapshot_write_module(snapshot_t *s)
         return -1;
     }
 
-    if (0) {
+    if (0
+        || SMW_B(m, eeprom_cs) < 0
+        || SMW_B(m, eeprom_clock) < 0
+        || SMW_B(m, eeprom_data_in) < 0
+        || SMW_B(m, eeprom_data_out) < 0
+        || SMW_B(m, input_shiftreg) < 0
+        || SMW_B(m, input_count) < 0
+        || SMW_B(m, output_shiftreg) < 0
+        || SMW_B(m, output_count) < 0
+        || SMW_B(m, command) < 0
+        || SMW_B(m, addr) < 0
+        || SMW_B(m, data0) < 0
+        || SMW_B(m, data1) < 0
+        || SMW_B(m, write_enable_status) < 0
+        || SMW_B(m, ready_busy_status) < 0
+        || SMW_BA(m, m93c86_data, M93C86_SIZE) < 0) {
         snapshot_module_close(m);
         return -1;
     }
 
     snapshot_module_close(m);
     return 0;
-#endif
 }
 
 int m93c86_snapshot_read_module(snapshot_t *s)
 {
-    return -1;
-#if 0
-    BYTE vmajor, vminor;
+    uint8_t vmajor, vminor;
     snapshot_module_t *m;
+    int rw;
+
+    /* FIXME: currently m93c86 is used exclusively in gmod2, so this is not a
+     *        problem - however, the whole global context should go into a
+     *        struct at some point, and this rw flag too :) */
+    resources_get_int("GMod2EEPROMRW", &rw);
 
     m = snapshot_module_open(s, SNAP_MODULE_NAME, &vmajor, &vminor);
     if (m == NULL) {
         return -1;
     }
 
-    if ((vmajor != CART_DUMP_VER_MAJOR) || (vminor != CART_DUMP_VER_MINOR)) {
+    /* Do not accept versions higher than current */
+    if (snapshot_version_is_bigger(vmajor, vminor, CART_DUMP_VER_MAJOR, CART_DUMP_VER_MINOR)) {
         snapshot_module_close(m);
         return -1;
     }
 
-    if (0) {
+    m93c86_close_image(rw);
+
+    if (0
+        || SMR_B_INT(m, &eeprom_cs) < 0
+        || SMR_B_INT(m, &eeprom_clock) < 0
+        || SMR_B_INT(m, &eeprom_data_in) < 0
+        || SMR_B_INT(m, &eeprom_data_out) < 0
+        || SMR_B_INT(m, (int*)&input_shiftreg) < 0
+        || SMR_B_INT(m, (int*)&input_count) < 0
+        || SMR_B_INT(m, (int*)&output_shiftreg) < 0
+        || SMR_B_INT(m, (int*)&output_count) < 0
+        || SMR_B_INT(m, &command) < 0
+        || SMR_B_INT(m, &addr) < 0
+        || SMR_B_INT(m, &data0) < 0
+        || SMR_B_INT(m, &data1) < 0
+        || SMR_B_INT(m, &write_enable_status) < 0
+        || SMR_B_INT(m, &ready_busy_status) < 0
+        || SMR_BA(m, m93c86_data, M93C86_SIZE) < 0) {
         snapshot_module_close(m);
         return -1;
     }
 
     snapshot_module_close(m);
+
     return 0;
-#endif
 }

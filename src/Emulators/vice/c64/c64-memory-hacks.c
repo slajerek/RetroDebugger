@@ -38,17 +38,29 @@
 #include "plus60k.h"
 #include "resources.h"
 #include "snapshot.h"
-#include "translate.h"
 #include "vicetypes.h"
+#include "ui.h"
 
 static int memory_hack = 0;
 
+/** \brief  Set memory hack
+ *
+ * Pauses emulation when switching to another memory expansion hack to avoid
+ * having a running CPU access invalid memory. Unpauses emulation if the
+ * emulation wasn't already paused before switching memory expansion.
+ *
+ * \param[in]   value   memory hack ID
+ * \param[in]   param   extra data (unused)
+ *
+ * \return  0 on succes, -1 on failure
+ */
 static int set_memory_hack(int value, void *param)
 {
     if (value == memory_hack) {
         return 0;
     }
 
+    /* check if the new memory hack is a valid one */
     switch (value) {
         case MEMORY_HACK_NONE:
         case MEMORY_HACK_C64_256K:
@@ -59,6 +71,7 @@ static int set_memory_hack(int value, void *param)
             return -1;
     }
 
+    /* disable already active memory hack */
     switch (memory_hack) {
         case MEMORY_HACK_C64_256K:
             set_c64_256k_enabled(0, 0);
@@ -74,6 +87,7 @@ static int set_memory_hack(int value, void *param)
             break;
     }
 
+    /* enable new memory hack */
     switch (value) {
         case MEMORY_HACK_C64_256K:
             set_c64_256k_enabled(1, 0);
@@ -96,6 +110,26 @@ static int set_memory_hack(int value, void *param)
     return 0;
 }
 
+int memory_hacks_ram_inject(uint16_t addr, uint8_t value)
+{
+    switch (memory_hack) {
+        case MEMORY_HACK_C64_256K:
+            c64_256k_ram_inject(addr, value);
+            break;
+        case MEMORY_HACK_PLUS60K:
+            plus60k_ram_inject(addr, value);
+            break;
+        case MEMORY_HACK_PLUS256K:
+            plus256k_ram_inject(addr, value);
+            break;
+        case MEMORY_HACK_NONE:
+        default:
+            return 0;
+            break;
+    }
+    return 1;
+}
+
 static const resource_int_t resources_int[] = {
     { "MemoryHack", MEMORY_HACK_NONE, RES_EVENT_STRICT, (resource_value_t)0,
       &memory_hack, set_memory_hack, NULL },
@@ -111,11 +145,9 @@ int memory_hacks_resources_init(void)
 
 static const cmdline_option_t cmdline_options[] =
 {
-    { "-memoryexphack", SET_RESOURCE, 1,
+    { "-memoryexphack", SET_RESOURCE, CMDLINE_ATTRIB_NEED_ARGS,
       NULL, NULL, "MemoryHack", NULL,
-      USE_PARAM_ID, USE_DESCRIPTION_ID,
-      IDCLS_P_DEVICE, IDCLS_SET_C64_MEMORY_HACK,
-      NULL, NULL },
+      "<device>", "Set the 'memory expansion hack' device (0: None, 1: C64 256K, 2: +60K, 3: +256K)" },
     CMDLINE_LIST_END
 };
 
@@ -147,7 +179,7 @@ int memhacks_snapshot_write_modules(struct snapshot_s *s)
         return -1;
     }
 
-    if (SMW_B(m, (BYTE)memory_hack) < 0) {
+    if (SMW_B(m, (uint8_t)memory_hack) < 0) {
         snapshot_module_close(m);
         return -1;
     }
@@ -179,7 +211,7 @@ int memhacks_snapshot_write_modules(struct snapshot_s *s)
 int memhacks_snapshot_read_modules(struct snapshot_s *s)
 {
     snapshot_module_t *m;
-    BYTE vmajor, vminor;
+    uint8_t vmajor, vminor;
 
     m = snapshot_module_open(s, snap_module_name, &vmajor, &vminor);
 
@@ -188,7 +220,7 @@ int memhacks_snapshot_read_modules(struct snapshot_s *s)
     }
 
     /* do not accept higher versions than current */
-    if (vmajor > SNAP_MAJOR || vminor > SNAP_MINOR) {
+    if (snapshot_version_is_bigger(vmajor, vminor, SNAP_MAJOR, SNAP_MINOR)) {
         snapshot_set_error(SNAPSHOT_MODULE_HIGHER_VERSION);
         goto fail;
     }
@@ -236,7 +268,7 @@ int memhacks_snapshot_read_modules(struct snapshot_s *s)
     }
 
     return 0;
-    
+
 fail:
     if (m != NULL) {
         snapshot_module_close(m);

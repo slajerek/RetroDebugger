@@ -59,21 +59,28 @@
 #define SNAPSHOT_WRITE_CLOSE_EOF_ERROR           23
 #define SNAPSHOT_MODULE_HIGHER_VERSION           24
 #define SNAPSHOT_MODULE_INCOMPATIBLE             25
+#define SNAPSHOT_CANNOT_WRITE_SNAPSHOT           26
+#define SNAPSHOT_CANNOT_READ_SNAPSHOT            27
+#define SNAPSHOT_MODULE_NOT_IMPLEMENTED          28
+#define SNAPSHOT_ATA_IMAGE_FILENAME_MISMATCH     29
+#define SNAPSHOT_VICII_MODEL_MISMATCH            30
 
 typedef struct snapshot_module_s snapshot_module_t;
 typedef struct snapshot_s snapshot_t;
 
+/* RD: snapshot_s / snapshot_module_s are made public here (vanilla keeps them
+   opaque in snapshot.c) to support RD's in-memory snapshot API below. */
 struct snapshot_s {
 	/* File descriptor.  */
 	//    FILE *file;
-	
+
 	unsigned char *data;
 	long data_size;
 	long pos;
-	
+
 	/* Offset of the first module.  */
 	long first_module_offset;
-	
+
 	/* Flag: are we writing it?  */
 	int write_mode;
 };
@@ -81,103 +88,89 @@ struct snapshot_s {
 struct snapshot_module_s {
 	/* File descriptor.  */
 	//    FILE *file;
-	
+
 	snapshot_t *sn;
-	
+
 	/* Flag: are we writing it?  */
 	int write_mode;
-	
+
 	/* Size of the module.  */
 	DWORD size;
-	
+
 	/* Offset of the module in the file.  */
 	long offset;
-	
+
 	/* Offset of the size field in the file.  */
 	long size_offset;
 };
 
-extern void snapshot_display_error(void);
+void snapshot_display_error(void);
 
-extern int snapshot_module_write_byte(snapshot_module_t *m, BYTE data);
-extern int snapshot_module_write_word(snapshot_module_t *m, WORD data);
-extern int snapshot_module_write_dword(snapshot_module_t *m, DWORD data);
-extern int snapshot_module_write_double(snapshot_module_t *m, double db);
-extern int snapshot_module_write_padded_string(snapshot_module_t *m,
-                                               const char *s, BYTE pad_char,
-                                               int len);
-extern int snapshot_module_write_byte_array(snapshot_module_t *m, const BYTE *data,
-                                            unsigned int num);
-extern int snapshot_module_write_word_array(snapshot_module_t *m, const WORD *data,
-                                            unsigned int num);
-extern int snapshot_module_write_dword_array(snapshot_module_t *m, const DWORD *data,
-                                             unsigned int num);
-extern int snapshot_module_write_string(snapshot_module_t *m, const char *s);
+int snapshot_module_write_byte(snapshot_module_t *m, uint8_t data);
+int snapshot_module_write_word(snapshot_module_t *m, uint16_t data);
+int snapshot_module_write_dword(snapshot_module_t *m, uint32_t data);
+int snapshot_module_write_qword(snapshot_module_t *m, uint64_t data);
+int snapshot_module_write_double(snapshot_module_t *m, double db);
+int snapshot_module_write_padded_string(snapshot_module_t *m, const char *s, uint8_t pad_char, int len);
+int snapshot_module_write_byte_array(snapshot_module_t *m, const uint8_t *data, unsigned int num);
+int snapshot_module_write_word_array(snapshot_module_t *m, const uint16_t *data, unsigned int num);
+int snapshot_module_write_dword_array(snapshot_module_t *m, const uint32_t *data, unsigned int num);
+int snapshot_module_write_string(snapshot_module_t *m, const char *s);
 
-extern int snapshot_module_read_byte(snapshot_module_t *m, BYTE *b_return);
-extern int snapshot_module_read_word(snapshot_module_t *m, WORD *w_return);
-extern int snapshot_module_read_dword(snapshot_module_t *m, DWORD *dw_return);
-extern int snapshot_module_read_double(snapshot_module_t *m, double *db_return);
-extern int snapshot_module_read_byte_array(snapshot_module_t *m,
-                                           BYTE *b_return, unsigned int num);
-extern int snapshot_module_read_word_array(snapshot_module_t *m,
-                                           WORD *w_return, unsigned int num);
-extern int snapshot_module_read_dword_array(snapshot_module_t *m,
-                                            DWORD *dw_return,
-                                            unsigned int num);
-extern int snapshot_module_read_string(snapshot_module_t *m, char **s);
-extern int snapshot_module_read_byte_into_int(snapshot_module_t *m,
-                                              int *value_return);
-extern int snapshot_module_read_word_into_int(snapshot_module_t *m,
-                                              int *value_return);
-extern int snapshot_module_read_dword_into_ulong(snapshot_module_t *m,
-                                                 unsigned long *value_return);
-extern int snapshot_module_read_dword_into_int(snapshot_module_t *m,
-                                               int *value_return);
-extern int snapshot_module_read_dword_into_uint(snapshot_module_t *m,
-                                                unsigned int *value_return);
+int snapshot_module_read_byte(snapshot_module_t *m, uint8_t *b_return);
+int snapshot_module_read_word(snapshot_module_t *m, uint16_t *w_return);
+int snapshot_module_read_dword(snapshot_module_t *m, uint32_t *dw_return);
+int snapshot_module_read_qword(snapshot_module_t *m, uint64_t *qw_return);
+int snapshot_module_read_double(snapshot_module_t *m, double *db_return);
+int snapshot_module_read_byte_array(snapshot_module_t *m, uint8_t *b_return, unsigned int num);
+int snapshot_module_read_word_array(snapshot_module_t *m, uint16_t *w_return, unsigned int num);
+int snapshot_module_read_dword_array(snapshot_module_t *m, uint32_t *dw_return, unsigned int num);
+int snapshot_module_read_string(snapshot_module_t *m, char **s);
+int snapshot_module_read_byte_into_int(snapshot_module_t *m, int *value_return);
+int snapshot_module_read_byte_into_uint(snapshot_module_t *m, unsigned int *value_return);
+int snapshot_module_read_word_into_int(snapshot_module_t *m, int *value_return);
+int snapshot_module_read_word_into_uint(snapshot_module_t *m, unsigned int *value_return);
+int snapshot_module_read_dword_into_ulong(snapshot_module_t *m, unsigned long *value_return);
+int snapshot_module_read_dword_into_int(snapshot_module_t *m, int *value_return);
+int snapshot_module_read_dword_into_uint(snapshot_module_t *m, unsigned int *value_return);
+int snapshot_module_read_qword_into_int64(snapshot_module_t *m, int64_t *value_return);
 
-#define SMW_B       snapshot_module_write_byte
-#define SMW_W       snapshot_module_write_word
-#define SMW_DW      snapshot_module_write_dword
-#define SMW_DB      snapshot_module_write_double
-#define SMW_PSTR    snapshot_module_write_padded_string
-#define SMW_BA      snapshot_module_write_byte_array
-#define SMW_WA      snapshot_module_write_word_array
-#define SMW_DWA     snapshot_module_write_dword_array
-#define SMW_STR     snapshot_module_write_string
-#define SMR_B       snapshot_module_read_byte
-#define SMR_W       snapshot_module_read_word
-#define SMR_DW      snapshot_module_read_dword
-#define SMR_DB      snapshot_module_read_double
-#define SMR_BA      snapshot_module_read_byte_array
-#define SMR_WA      snapshot_module_read_word_array
-#define SMR_DWA     snapshot_module_read_dword_array
-#define SMR_STR     snapshot_module_read_string
-#define SMR_B_INT   snapshot_module_read_byte_into_int
-#define SMR_W_INT   snapshot_module_read_word_into_int
-#define SMR_DW_UL   snapshot_module_read_dword_into_ulong
-#define SMR_DW_INT  snapshot_module_read_dword_into_int
-#define SMR_DW_UINT snapshot_module_read_dword_into_uint
+#define SMW_B        snapshot_module_write_byte
+#define SMW_W        snapshot_module_write_word
+#define SMW_DW       snapshot_module_write_dword
+#define SMW_QW       snapshot_module_write_qword
+#define SMW_DB       snapshot_module_write_double
+#define SMW_PSTR     snapshot_module_write_padded_string
+#define SMW_BA       snapshot_module_write_byte_array
+#define SMW_WA       snapshot_module_write_word_array
+#define SMW_DWA      snapshot_module_write_dword_array
+#define SMW_STR      snapshot_module_write_string
+#define SMW_CLOCK    snapshot_module_write_qword
+#define SMR_B        snapshot_module_read_byte
+#define SMR_W        snapshot_module_read_word
+#define SMR_DW       snapshot_module_read_dword
+#define SMR_QW       snapshot_module_read_qword
+#define SMR_DB       snapshot_module_read_double
+#define SMR_BA       snapshot_module_read_byte_array
+#define SMR_WA       snapshot_module_read_word_array
+#define SMR_DWA      snapshot_module_read_dword_array
+#define SMR_STR      snapshot_module_read_string
+#define SMR_B_INT    snapshot_module_read_byte_into_int
+#define SMR_B_UINT   snapshot_module_read_byte_into_uint
+#define SMR_W_INT    snapshot_module_read_word_into_int
+#define SMR_W_UINT   snapshot_module_read_word_into_uint
+#define SMR_DW_UL    snapshot_module_read_dword_into_ulong
+#define SMR_DW_INT   snapshot_module_read_dword_into_int
+#define SMR_DW_UINT  snapshot_module_read_dword_into_uint
+#define SMR_CLOCK    snapshot_module_read_qword
 
-extern snapshot_module_t *snapshot_module_create(snapshot_t *s,
-                                                 const char *name,
-                                                 BYTE major_version,
-                                                 BYTE minor_version);
-extern snapshot_module_t *snapshot_module_open(snapshot_t *s,
-                                               const char *name,
-                                               BYTE *major_version_return,
-                                               BYTE *minor_version_return);
-extern int snapshot_module_close(snapshot_module_t *m);
+snapshot_module_t *snapshot_module_create(snapshot_t *s, const char *name, uint8_t major_version, uint8_t minor_version);
+snapshot_module_t *snapshot_module_open(snapshot_t *s, const char *name, uint8_t *major_version_return, uint8_t *minor_version_return);
+int snapshot_module_close(snapshot_module_t *m);
 
-extern snapshot_t *snapshot_create(const char *filename,
-                                   BYTE major_version, BYTE minor_version,
-                                   const char *snapshot_machine_name,
-								   int snapshot_size);
-extern snapshot_t *snapshot_open(const char *filename,
-                                 BYTE *major_version_return,
-                                 BYTE *minor_version_return,
-                                 const char *snapshot_machine_name);
+/* RD: snapshot_create takes an extra int snapshot_size for in-memory snapshots. */
+snapshot_t *snapshot_create(const char *filename, uint8_t major_version, uint8_t minor_version, const char *snapshot_machine_name, int snapshot_size);
+snapshot_t *snapshot_open(const char *filename, uint8_t *major_version_return, uint8_t *minor_version_return, const char *snapshot_machine_name);
 
 // NOTE: snapshot data is not freed by snapshot_close if current_filename is NULL
 //       i.e. when snapshot is stored to memory, then caller should free data by himself
@@ -192,12 +185,13 @@ extern snapshot_t *snapshot_open_from_memory(BYTE *major_version_return,
 											 BYTE *snapshot_data,
 											 int snapshot_size);
 
-extern int snapshot_close(snapshot_t *s);
+int snapshot_close(snapshot_t *s);
 
-extern void snapshot_set_error(int error);
+void snapshot_set_error(int error);
+int snapshot_get_error(void);
 
-extern int snapshot_version_at_least(BYTE major_version, BYTE minor_version, BYTE major_version_required, BYTE minor_version_required);
-
-#define SNAPVAL snapshot_version_at_least
+int snapshot_version_is_equal(uint8_t major_version, uint8_t minor_version, uint8_t major_version_required, uint8_t minor_version_required);
+int snapshot_version_is_bigger(uint8_t major_version, uint8_t minor_version, uint8_t major_version_required, uint8_t minor_version_required);
+int snapshot_version_is_smaller(uint8_t major_version, uint8_t minor_version, uint8_t major_version_required, uint8_t minor_version_required);
 
 #endif

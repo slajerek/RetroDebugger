@@ -154,7 +154,7 @@ static void voc_close(void)
     voc_fd = NULL;
 
     if (res < 0) {
-        log_debug("ERROR voc_close failed.");
+        log_debug(LOG_DEFAULT, "ERROR voc_close failed.");
     }
 }
 

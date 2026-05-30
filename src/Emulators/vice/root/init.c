@@ -42,6 +42,7 @@
 #include "maincpu.h"
 #include "monitor.h"
 #ifdef HAVE_NETWORK
+#include "monitor_binary.h"
 #include "monitor_network.h"
 #endif
 #include "palette.h"
@@ -57,13 +58,23 @@
 #include "sound.h"
 #include "vsync.h"
 
+#include "init.h"
+
 /* #define DBGINIT */
 
 #ifdef DBGINIT
-#define DBG(x)  printf x
+#define DBG(x)  log_printf x
 #else
 #define DBG(x)
 #endif
+
+static int init_done = 0;
+
+/* returns true once everything is initialized and the UI has started up */
+int init_main_is_done(void)
+{
+    return init_done;
+}
 
 void init_resource_fail(const char *module)
 {
@@ -73,7 +84,7 @@ void init_resource_fail(const char *module)
 
 int init_resources(void)
 {
-    DBG(("init_resources\n"));
+    DBG(("init_resources"));
     if (resources_init(machine_get_name())) {
         archdep_startup_log_error("Cannot initialize resource handling.\n");
         return -1;
@@ -90,8 +101,16 @@ int init_resources(void)
         init_resource_fail("romset");
         return -1;
     }
+    if (screenshot_resources_init() < 0) {
+        init_resource_fail("screenshot");
+        return -1;
+    }
     if (ui_resources_init() < 0) {
         init_resource_fail("UI");
+        return -1;
+    }
+    if (maincpu_resources_init() < 0) {
+        init_resource_fail("main cpu");
         return -1;
     }
     if (machine_common_resources_init() < 0) {
@@ -106,12 +125,10 @@ int init_resources(void)
         init_resource_fail("sound");
         return -1;
     }
-#ifdef COMMON_KBD
     if (keyboard_resources_init() < 0) {
         init_resource_fail("keyboard");
         return -1;
     }
-#endif
     if (machine_video_resources_init() < 0) {
         init_resource_fail("machine video");
         return -1;
@@ -133,7 +150,12 @@ int init_resources(void)
         init_resource_fail("MONITOR_NETWORK");
         return -1;
     }
+    if (monitor_binary_resources_init() < 0) {
+        init_resource_fail("MONITOR_BINARY");
+        return -1;
+    }
 #endif
+    DBG(("init_resources done"));
     return 0;
 }
 
@@ -145,6 +167,7 @@ void init_cmdline_options_fail(const char *module)
 
 int init_cmdline_options(void)
 {
+    DBG(("init_cmdline_options"));
     if (cmdline_init()) {
         archdep_startup_log_error("Cannot initialize command-line handling.\n");
         return -1;
@@ -187,12 +210,10 @@ int init_cmdline_options(void)
         init_cmdline_options_fail("sound");
         return -1;
     }
-#ifdef COMMON_KBD
     if (keyboard_cmdline_options_init() < 0) {
         init_cmdline_options_fail("keyboard");
         return -1;
     }
-#endif
     if (video_cmdline_options_init() < 0) {
         init_cmdline_options_fail("video");
         return -1;
@@ -213,17 +234,53 @@ int init_cmdline_options(void)
         init_cmdline_options_fail("MONITOR_NETWORK");
         return -1;
     }
+    if (monitor_binary_cmdline_options_init() < 0) {
+        init_cmdline_options_fail("MONITOR_BINARY");
+        return -1;
+    }
 #endif
+    DBG(("init_cmdline_options done"));
+    return 0;
+}
+
+/*
+    RANT AHEAD: The way VICE initializes its resources ("global variables") at
+    startup, and then by reading the config file, is a mess. There is no way to
+    make sure a certain order of events without putting a silly amount of work
+    into it and be extra careful every time a detail changes or is added. This,
+    more than once, produced really hard to solve "chicken and egg" problems.
+
+    Sometimes, solving these problems can be done in a simple, yet very ugly.
+    way: after all init was done, we "touch" certain resources again, ie we change
+    their value to another and back to the original, triggering the setup callbacks.
+
+    This is the place to collect this sort of hacks - do not put them elsewhere,
+    so we always know what parts of the code cause this kind of problem.
+ */
+static int main_init_hack(void)
+{
+    /* The FileSystemDeviceX resources do not exist in VSID: */
+    if (machine_class != VICE_MACHINE_VSID) {
+        int n;
+        int dev;
+
+        /* When initializing FileSystemDeviceX resources, vdrive is not properly
+           initialized. Switching forth and back seems to solve the following:
+           - real device does not work when saved into vicerc
+           - real device does not work in xvic
+        */
+        for (n = 0; n < NUM_DISK_UNITS; n++) {
+            resources_get_int_sprintf("FileSystemDevice%d", &dev, n + 8);
+            resources_set_int_sprintf("FileSystemDevice%d", dev == 1 ? 0 : 1, n + 8);
+            resources_set_int_sprintf("FileSystemDevice%d", dev, n + 8);
+        }
+    }
     return 0;
 }
 
 int init_main(void)
 {
-#ifdef __IBMC__
-       signals_init(0);
-#else
-       signals_init(debug.do_core_dumps);
-#endif
+    signals_init(debug.do_core_dumps);
 
     romset_init();
 
@@ -262,6 +319,10 @@ int init_main(void)
     }
 
     ui_init_finalize();
+
+    main_init_hack();
+
+    init_done = 1;
 
     return 0;
 }

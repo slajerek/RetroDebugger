@@ -33,11 +33,18 @@
 #define OLDCODE 0    /* set to 1 to use the old ca2/cb2 handling code */
 
 /* #define DEBUG_VIA2 */
+/* #define DEBUG_STEP */
 
 #ifdef DEBUG_VIA2
-#define DBG(_x_) log_debug _x_
+#define DBG(_x_) log_printf  _x_
 #else
 #define DBG(_x_)
+#endif
+
+#ifdef DEBUG_STEP
+#define DBGSTEP(_x_) log_printf  _x_
+#else
+#define DBGSTEP(_x_)
 #endif
 
 #include "vice.h"
@@ -50,6 +57,7 @@
 #include "interrupt.h"
 #include "lib.h"
 #include "log.h"
+#include "monitor.h"
 #include "rotation.h"
 #include "vicetypes.h"
 #include "via.h"
@@ -57,6 +65,7 @@
 #include "drive-sound.h"
 
 #include "ViceWrapper.h"
+#include "vice_debugger_hook.h"
 
 typedef struct drivevia2_context_s {
     unsigned int number;
@@ -71,22 +80,22 @@ static void set_ca2(via_context_t *via_context, int state)
     drive_t *drv;
     via2p = (drivevia2_context_t *)(via_context->prv);
     drv = via2p->drive;
-    curr = ((drv->byte_ready_active >> 1) & 1);
+    curr = ((drv->byte_ready_active >> 1) & 1); /* selects BRA_BYTE_READY */
     if (state != curr) {
         DBG(("VIA2: set_ca2 (%d to %d) (byte rdy)", curr, state));
         rotation_rotate_disk(drv);
         drv->byte_ready_active &= ~(1 << 1);
         drv->byte_ready_active |= state << 1;
         if (drv->byte_ready_edge) {
-           drive_context_t *drive_context = (drive_context_t *)(via_context->context);
-           drive_cpu_set_overflow(drive_context);
+           diskunit_context_t *dc = (diskunit_context_t *)(via_context->context);
+           drive_cpu_set_overflow(dc);
            drv->byte_ready_edge = 0;
         }
     }
 #endif
 }
 
-static void set_cb2(via_context_t *via_context, int state)
+static void set_cb2(via_context_t *via_context, int state, int offset)
 {
 #if !OLDCODE
     int curr;
@@ -107,44 +116,56 @@ static void set_cb2(via_context_t *via_context, int state)
 static void set_int(via_context_t *via_context, unsigned int int_num,
                     int value, CLOCK rclk)
 {
-    drive_context_t *drive_context;
+    diskunit_context_t *dc;
 
-    drive_context = (drive_context_t *)(via_context->context);
+    dc = (diskunit_context_t *)(via_context->context);
 
-    interrupt_set_irq(drive_context->cpu->int_status, int_num, value, rclk);
+    interrupt_set_irq(dc->cpu->int_status, int_num, value, rclk);
 }
 
 static void restore_int(via_context_t *via_context, unsigned int int_num, int value)
 {
-    drive_context_t *drive_context;
+    diskunit_context_t *dc;
 
-    drive_context = (drive_context_t *)(via_context->context);
+    dc = (diskunit_context_t *)(via_context->context);
 
-    interrupt_restore_irq(drive_context->cpu->int_status, int_num, value);
+    interrupt_restore_irq(dc->cpu->int_status, int_num, value);
 }
 
-void via2d_store(drive_context_t *ctxptr, WORD addr, BYTE data)
+void via2d_store(diskunit_context_t *ctxptr, uint16_t addr, uint8_t data)
 {
-	c64d_mark_drive1541_cell_write(addr, data);
-	
+	VICE_HOOK_DRIVE_CELL_WRITE(addr, data);
+
+    ctxptr->cpu->cpu_last_data = data;
     viacore_store(ctxptr->via2, addr, data);
 }
 
-BYTE via2d_read(drive_context_t *ctxptr, WORD addr)
+uint8_t via2d_read(diskunit_context_t *ctxptr, uint16_t addr)
 {
-	c64d_mark_drive1541_cell_read(addr);
-	
-    return viacore_read(ctxptr->via2, addr);
+	VICE_HOOK_DRIVE_CELL_READ(addr);
+
+    return ctxptr->cpu->cpu_last_data = viacore_read(ctxptr->via2, addr);
 }
 
-BYTE via2d_peek(drive_context_t *ctxptr, WORD addr)
+uint8_t via2d_peek(diskunit_context_t *ctxptr, uint16_t addr)
 {
     return viacore_peek(ctxptr->via2, addr);
 }
 
-int via2d_dump(drive_context_t *ctxptr, WORD addr)
+int via2d_dump(diskunit_context_t *ctxptr, uint16_t addr)
 {
+    const int speeds[4] = {250000, 266667, 285714, 307692};
+    drivevia2_context_t *via2p = (drivevia2_context_t *)(ctxptr->via2->prv);
+    drive_t *drv = via2p->drive;
+    int track_number = drv->current_half_track;
+    int zone = (ctxptr->via2->via[VIA_PRB] >> 5) & 3;
+
     viacore_dump(ctxptr->via2);
+    mon_out("\nHead is on track: %d.%d (%s at %dbps, speed zone %d)\n",
+            track_number / 2, (track_number & 1) * 5,
+            ((ctxptr->via2->via[VIA_PCR] & 0xe0) == 0xe0) ? "reading" : "writing",
+            speeds[zone], zone
+           );
     return 0;
 }
 
@@ -158,33 +179,37 @@ void via2d_update_pcr(int pcrval, drive_t *dptr)
     int bra = dptr->byte_ready_active;
     rotation_rotate_disk(dptr);
     dptr->read_write_mode = pcrval & 0x20;
-    dptr->byte_ready_active = (bra & ~0x02) | (pcrval & 0x02);
+    DBG(("via2d.c: via2d_update_pcr: drv->read_write_mode = %x", drv->read_write_mode))
+#define PCR_BYTE_READY    BRA_BYTE_READY    /* 0x02 */
+    dptr->byte_ready_active = (bra & ~BRA_BYTE_READY) | (pcrval & PCR_BYTE_READY);
 }
 
-static void store_pra(via_context_t *via_context, BYTE byte, BYTE oldpa_value,
-                      WORD addr)
+static void store_pra(via_context_t *via_context, uint8_t byte, uint8_t oldpa_value,
+                      uint16_t addr)
 {
     drivevia2_context_t *via2p;
 
     via2p = (drivevia2_context_t *)(via_context->prv);
     rotation_rotate_disk(via2p->drive);
 
+    /* See comments about Port A latching at read_pra() */
     via2p->drive->GCR_write_value = byte;
 
     via2p->drive->byte_ready_level = 0;
 }
 
-static void undump_pra(via_context_t *via_context, BYTE byte)
+static void undump_pra(via_context_t *via_context, uint8_t byte)
 {
 
 }
 
-static void store_prb(via_context_t *via_context, BYTE byte, BYTE poldpb,
-                      WORD addr)
+static void store_prb(via_context_t *via_context, uint8_t byte, uint8_t poldpb,
+                      uint16_t addr)
 {
     drivevia2_context_t *via2p = (drivevia2_context_t *)(via_context->prv);
     drive_t *drv = via2p->drive;
     int bra;
+    int track_number, new_stepper_position, old_stepper_position, step_count;
 
 
     DBG(("VIA2: store_prb (%02x to %02x) clock:%d", poldpb, byte, *(via_context->clk_ptr)));
@@ -206,43 +231,53 @@ static void store_prb(via_context_t *via_context, BYTE byte, BYTE poldpb,
        suggests a binary counter circuitry, but that is not the case, the similarity is just a side effect.
        Note, how switching the drive motor on/off may move the stepper motor as well.
     */
+
+    /* vice track numbering starts with 2... we need the real, physical track number */
+    track_number = drv->current_half_track - 2;
+
+    /* the new coil line activated */
+    new_stepper_position = byte & 3;
+
+    /*
+        track halftrack stepper
+        log.  log.phys. position
+        1     2   0     0
+        1.5   3   1     1
+        2     4   2     2
+        2.5   5   3     3
+        3     6   4     0
+        3.5   7   5     1
+        ... */
+
+    old_stepper_position = track_number & 3;
+
+    /* the steps travelled and the direction */
+    /* int step_count = (drv->stepper_new_position - old_stepper_position) & 3; */
+    step_count = (new_stepper_position - old_stepper_position) & 3;
+    if (step_count == 3) {
+        step_count = -1;
+    }
+
     /* Process stepper motor if the drive motor is on */
     if (byte & 0x4) {
-
-        /* vice track numbering starts with 2... we need the real, physical track number */
-        int track_number = drv->current_half_track - 2;
-
-        /* the new coil line activated */
-        int new_stepper_position = byte & 3;
-
-        /*
-          track halftrack stepper
-          log.  log.phys. position
-          1     2   0     0
-          1.5   3   1     1
-          2     4   2     2
-          2.5   5   3     3
-          3     6   4     0
-          3.5   7   5     1
-          ... */
-
-        int old_stepper_position = track_number & 3;
-
-        /* FIXME: emulating the mechanical delay with such naive approach does
-                  not work, as the actual step is delayed to the next write to pb.
-                  regardless how long that will take. for one example that does
-                  not work like this, see bug #508
-
-           FIXME: we should implement the intended behaviour using an alarm
-                  instead.
-         */
-
-        /* the steps travelled and the direction */
-        /* int step_count = (drv->stepper_new_position - old_stepper_position) & 3; */
-        int step_count = (new_stepper_position - old_stepper_position) & 3;
-        if (step_count == 3) {
-            step_count = -1;
+#ifdef DEBUG_STEP
+        if (new_stepper_position != old_stepper_position) {
+            DBGSTEP(("trk: %d.%d, old: %d new: %d steps: %d",
+                   (track_number+1) / 2, (track_number+1) & 1,
+                   old_stepper_position, new_stepper_position,
+                   step_count
+                  ));
         }
+#endif
+        /* FIXME: emulating the mechanical delay with such naive approach does
+                not work, as the actual step is delayed to the next write to pb.
+                regardless how long that will take. for one example that does
+                not work like this, see bug #508
+
+         FIXME: we should implement the intended behaviour using an alarm
+                instead.
+        */
+
         /*
             minimal simulation of mechanical delay.
 
@@ -250,7 +285,7 @@ static void store_prb(via_context_t *via_context, BYTE byte, BYTE poldpb,
             - startup time, the time it takes from changing the coils to when
               the head starts moving.
             - seek time, the time it takes the head to move from track to track
-            - settle time, the time it takes from stopping the head to being 
+            - settle time, the time it takes from stopping the head to being
               able to read reliably.
 
             the simplified emulation here only simulates startup time, and then
@@ -263,7 +298,7 @@ static void store_prb(via_context_t *via_context, BYTE byte, BYTE poldpb,
         /*
             Action Replay 6:                                     8333 = 8.3ms
             Cauldron/The Dreams:                                 7734 = 7.7ms
-            fastest usable stepping speed seems to be around     4096 = 4.1ms 
+            fastest usable stepping speed seems to be around     4096 = 4.1ms
             min delay so we dont get a step at reset              700 = 0.7ms
          */
         /* if ((*(via_context->clk_ptr) - drv->stepper_last_change_clk) >= 2000) */ {
@@ -277,8 +312,8 @@ static void store_prb(via_context_t *via_context, BYTE byte, BYTE poldpb,
                     allowing it always does more harm than good, so we should simply ignore
                     this condition for the time being. */
             if ((step_count == 1) || (step_count == -1)) {
-                DBG(("VIA2: store_prb drive_move_head(%d) (%02x to %02x) clk:%d delay:%d", 
-                     step_count, poldpb, byte, *(via_context->clk_ptr), 
+                DBG(("VIA2: store_prb drive_move_head(%d) (%02x to %02x) clk:%d delay:%d",
+                     step_count, poldpb, byte, *(via_context->clk_ptr),
                      (*(via_context->clk_ptr) - drv->stepper_last_change_clk)));
                 drive_move_head(step_count, drv);
             }
@@ -293,37 +328,52 @@ static void store_prb(via_context_t *via_context, BYTE byte, BYTE poldpb,
     if ((poldpb ^ byte) & 0x60) {   /* Zone bits */
         rotation_speed_zone_set((byte >> 5) & 0x3, via2p->number);
     }
-    if ((poldpb ^ byte) & 0x04) {   /* Motor on/off */
+#define PB_MOTOR_ON     BRA_MOTOR_ON
+    if ((poldpb ^ byte) & PB_MOTOR_ON) {   /* Motor on/off */
         drive_sound_update((byte & 4) ? DRIVE_SOUND_MOTOR_ON : DRIVE_SOUND_MOTOR_OFF, via2p->number);
         bra = drv->byte_ready_active;
-        drv->byte_ready_active = (bra & ~0x04) | (byte & 0x04);
-        if ((byte & 0x04) != 0) {
+        drv->byte_ready_active = (bra & ~BRA_MOTOR_ON) | (byte & BRA_MOTOR_ON);
+        if ((byte & BRA_MOTOR_ON) != 0) {
             rotation_begins(drv);
         } else {
             if (drv->byte_ready_edge) {
-               drive_context_t *drive_context = (drive_context_t *)(via_context->context);
-               drive_cpu_set_overflow(drive_context);
+               diskunit_context_t *dc = (diskunit_context_t *)(via_context->context);
+               drive_cpu_set_overflow(dc);
                drv->byte_ready_edge = 0;
             }
         }
+/* enable this for experimental fix related to extra stepping when the motor
+   is turned on. (bug #1083 "Primitive 7 Sins") */
+#if 1
+        if (new_stepper_position != old_stepper_position) {
+            if ((byte & 0x04) != 0) {
+#ifdef DEBUG_STEP
+                DBGSTEP(("motor: %d trk: %d.%d, old: %d new: %d steps: %d",
+                    byte & 0x04, (track_number+1) / 2, (track_number+1) & 1,
+                    old_stepper_position, new_stepper_position, step_count));
+#endif
+                drive_move_head(step_count, drv);
+            }
+        }
+#endif
     }
 
     drv->byte_ready_level = 0;
 }
 
-static void undump_prb(via_context_t *via_context, BYTE byte)
+static void undump_prb(via_context_t *via_context, uint8_t byte)
 {
     drivevia2_context_t *via2p;
 
     via2p = (drivevia2_context_t *)(via_context->prv);
 
-    via2p->drive->led_status = (byte & 8) ? 1 : 0;
-    rotation_speed_zone_set((byte >> 5) & 0x3, via2p->number);
+    via2p->drive->led_status = (byte & 0x08) ? 1 : 0;
+    rotation_speed_zone_set((byte >> 5) & 0x03, via2p->number);
     via2p->drive->byte_ready_active
-        = (via2p->drive->byte_ready_active & ~0x04) | (byte & 0x04);
+        = (via2p->drive->byte_ready_active & ~BRA_MOTOR_ON) | (byte & BRA_MOTOR_ON);
 }
 
-static BYTE store_pcr(via_context_t *via_context, BYTE byte, WORD addr)
+static uint8_t store_pcr(via_context_t *via_context, uint8_t byte, uint16_t addr)
 {
     drivevia2_context_t *via2p;
 
@@ -333,7 +383,7 @@ static BYTE store_pcr(via_context_t *via_context, BYTE byte, WORD addr)
 #if OLDCODE
     /* FIXME: this should use via_set_ca2() and via_set_cb2() */
     if (byte != via_context->via[VIA_PCR]) {
-        BYTE tmp = byte;
+        uint8_t tmp = byte;
         /* first set bit 1 and 5 to the real output values */
         if ((byte & 0x0c) != 0x0c) { /* CA2 not lo or hi output */
             tmp |= 0x02; /* byte ready */
@@ -352,7 +402,7 @@ static BYTE store_pcr(via_context_t *via_context, BYTE byte, WORD addr)
     return byte;
 }
 
-static void undump_pcr(via_context_t *via_context, BYTE byte)
+static void undump_pcr(via_context_t *via_context, uint8_t byte)
 {
     drivevia2_context_t *via2p;
 
@@ -361,19 +411,19 @@ static void undump_pcr(via_context_t *via_context, BYTE byte)
     via2d_update_pcr(byte, via2p->drive);
 }
 
-static void undump_acr(via_context_t *via_context, BYTE byte)
+static void undump_acr(via_context_t *via_context, uint8_t byte)
 {
 }
 
-static void store_acr(via_context_t *via_context, BYTE byte)
+static void store_acr(via_context_t *via_context, uint8_t byte)
 {
 }
 
-static void store_sr(via_context_t *via_context, BYTE byte)
+static void store_sr(via_context_t *via_context, uint8_t byte)
 {
 }
 
-static void store_t2l(via_context_t *via_context, BYTE byte)
+static void store_t2l(via_context_t *via_context, uint8_t byte)
 {
 }
 
@@ -400,9 +450,39 @@ BYTE c64d_peek_via2d_pra(via_context_t *via_context)
 	return byte;
 }
 
-static BYTE read_pra(via_context_t *via_context, WORD addr)
-{
-    BYTE byte;
+/*
+ * Read the byte from the disk's read head as it has gone through a serial
+ * to parallel shift register.
+ *
+ * The 1541 DOS code enables latching of the VIA's Port A, but this is
+ * currently not emulated.  Effectively, the drive-dependent code handles
+ * latching this value (GCR_read), which in hardware happens in the VIA (port
+ * A), and the handshake signal that it has been read (effectively, calling
+ * this function which clears byte_ready_level).
+ *
+ * The BYTE READY output from the PLA, that is connected to the SO (Set
+ * Overflow) pin on the CPU, also connects to the VIA's CA1 handshake / latch
+ * pin. This would activate the latch.  When the CPU reads from port A, CA2
+ * signals back to the drive hardware that it has been read (that line is
+ * labeled SOE, possibly SO Enable, enabling output to Set Overflow / CA1
+ * again). This corresponds to clearing byte_ready_level as below.
+ *
+ * "UC2 is a VIA also. [...] During a read operation serial data is received
+ * from the read amplifier circuits on D-IN input on pin 24 of the PLA. The PLA
+ * shift register converts serial data into parallel data that is latched at
+ * the parallel port (YB0-YB7). The microprocessor reads the parallel PLA
+ * output by reading Port A of UC2 when BYTE READY on pin 39 goes "low"."
+ * (1540-1541_Disk_Drive_Service_Manual_Preliminary_314002-01_(1985_Apr).pdf
+ * p.14)
+ *
+ * This wording suggests that the PLA latches so latching in the VIA again
+ * would not really be needed. However the schematic on the next page, for
+ * pre-PLA hardware, shows a 74LS164 (8-Bit Serial In/Parallel Out Shift Register)
+ * and it would not be latched. SOE indeed affects BYTE READY.
+ */
+static uint8_t read_pra(via_context_t *via_context, uint16_t addr) {
+    /* GCR data port */
+    uint8_t byte;
     drivevia2_context_t *via2p;
 
     via2p = (drivevia2_context_t *)(via_context->prv);
@@ -414,15 +494,18 @@ static BYTE read_pra(via_context_t *via_context, WORD addr)
 
     byte = ((via2p->drive->GCR_read & ~(via_context->via[VIA_DDRA]))
            | (via_context->via[VIA_PRA] & via_context->via[VIA_DDRA]));
-
+#if 0
+    printf("(%u)%02x", via2p->drive->GCR_head_offset/8, via2p->drive->GCR_read);
+    if (byte != via2p->drive->GCR_read) printf("[%02x]", byte);
+#endif
     via2p->drive->byte_ready_level = 0;
 
     return byte;
 }
 
-static BYTE read_prb(via_context_t *via_context)
+static uint8_t read_prb(via_context_t *via_context)
 {
-    BYTE byte;
+    uint8_t byte;
     drivevia2_context_t *via2p;
 
     via2p = (drivevia2_context_t *)(via_context->prv);
@@ -439,6 +522,10 @@ static BYTE read_prb(via_context_t *via_context)
 
     DBG(("read_prb %02x pb:%02x ddr:%02x",byte,via_context->via[VIA_PRB],via_context->via[VIA_DDRB]));
 
+    /*
+     * See comments about port A latching at read_pra();
+     * clearing byte_ready_level here may be wrong.
+     */
     via2p->drive->byte_ready_level = 0;
 
     return byte;
@@ -465,7 +552,7 @@ BYTE c64d_peek_via2d_prb(via_context_t *via_context)
 }
 
 
-BYTE c64d_via2d_peek(drive_context_t *ctxptr, WORD addr)
+BYTE c64d_via2d_peek(diskunit_context_t *ctxptr, WORD addr)
 {
 	WORD addr_via = addr & 0x0f;
 
@@ -484,8 +571,7 @@ BYTE c64d_via2d_peek(drive_context_t *ctxptr, WORD addr)
 		
 		if (via_context->via[VIA_ACR] & 0x80)
 		{
-			byte = (byte & 0x7f) | (((via_context->pb7 ^ via_context->pb7x)
-									 | via_context->pb7o) ? 0x80 : 0);
+			byte = (byte & 0x7f) | via_context->t1_pb7;	/* VICE 3.10: pb7/pb7x/pb7o -> t1_pb7 */
 		}
 		return byte;
 
@@ -496,13 +582,13 @@ BYTE c64d_via2d_peek(drive_context_t *ctxptr, WORD addr)
 
 
 
-void via2d_init(drive_context_t *ctxptr)
+void via2d_init(diskunit_context_t *ctxptr)
 {
     viacore_init(ctxptr->via2, ctxptr->cpu->alarm_context,
-                 ctxptr->cpu->int_status, ctxptr->cpu->clk_guard);
+                 ctxptr->cpu->int_status);
 }
 
-void via2d_setup_context(drive_context_t *ctxptr)
+void via2d_setup_context(diskunit_context_t *ctxptr)
 {
     drivevia2_context_t *via2p;
     via_context_t *via;
@@ -515,15 +601,15 @@ void via2d_setup_context(drive_context_t *ctxptr)
 
     via2p = (drivevia2_context_t *)(via->prv);
     via2p->number = ctxptr->mynumber;
-    via2p->drive = ctxptr->drive;
+    via2p->drive = ctxptr->drives[0];
 
     via->context = (void *)ctxptr;
 
     via->rmw_flag = &(ctxptr->cpu->rmw_flag);
     via->clk_ptr = ctxptr->clk_ptr;
 
-    via->myname = lib_msprintf("Drive%dVia2", via2p->number);
-    via->my_module_name = lib_msprintf("VIA2D%d", via2p->number);
+    via->myname = lib_msprintf("Drive%uVia2", via2p->number);
+    via->my_module_name = lib_msprintf("VIA2D%u", via2p->number);
 
     viacore_setup_context(via);
 

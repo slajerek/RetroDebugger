@@ -42,6 +42,7 @@
 #include "log.h"
 
 #include "ViceWrapper.h"
+#include "vice_debugger_hook.h"
 
 #define MAX_MSGBOX_LEN 28
 
@@ -88,7 +89,7 @@ static int handle_message_box(const char *title, const char *message, int messag
     int x;
     int cur_pos = 0;
 
-    text = lib_stralloc(message);
+    text = lib_strdup(message);
     pos = text;
 
     /* split the message up into a max of 28 char sized lines and remember the amount of lines */
@@ -97,7 +98,7 @@ static int handle_message_box(const char *title, const char *message, int messag
 
     /* print the top edge of the dialog. */
     sdl_ui_print_center("\260\300\300\300\300\300\300\300\300\300\300\300\300\300\300\300\300\300\300\300\300\300\300\300\300\300\300\300\300\256", 2);
-    template = lib_stralloc("\335                            \335");
+    template = lib_strdup("\335                            \335");
 
     /* make sure that the title length is not more than 28 chars. */
     len = strlen(title);
@@ -117,7 +118,7 @@ static int handle_message_box(const char *title, const char *message, int messag
     sdl_ui_print_center("\253\300\300\300\300\300\300\300\300\300\300\300\300\300\300\300\300\300\300\300\300\300\300\300\300\300\300\300\300\263", 4);
 
     for (j = 0; j < lines; j++) {
-        template = lib_stralloc("\335                            \335");
+        template = lib_strdup("\335                            \335");
 
         /* make sure that the message line length is not more than 28 chars. */
         len = strlen(pos);
@@ -254,7 +255,7 @@ int message_box(const char *title, char *message, int message_mode)
 {
 	LOGError("message_box: %s %s", title, message);
 	
-	c64d_show_message(message);
+	VICE_HOOK_LIFECYCLE_MESSAGE(message);
 	
 	return -1;
 //    sdl_ui_init_draw_params();

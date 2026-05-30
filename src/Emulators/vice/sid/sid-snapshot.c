@@ -35,6 +35,7 @@
 #include "catweaselmkiii.h"
 #include "fastsid.h"
 #include "hardsid.h"
+#include "usbsid.h"
 #include "log.h"
 #include "parsid.h"
 #include "resources.h"
@@ -43,7 +44,6 @@
 #include "sid.h"
 #include "sound.h"
 #include "snapshot.h"
-#include "ssi2001.h"
 #include "vicetypes.h"
 
 /* Take care of possible failures to set the sid engine and fall back to fastsid */
@@ -69,6 +69,7 @@ static int intended_sid_engine = -1;
    BYTE  | sids     |   1.2+  | amount of extra sids
    BYTE  | sound    |   1.2+  | sound active flag
    BYTE  | engine   |   1.2+  | sound engine
+   BYTE  | model    |   1.4+  | SID model
    ARRAY | sid data |   1.1+  | 32 BYTES of SID registers
  */
 
@@ -88,19 +89,67 @@ static int intended_sid_engine = -1;
    ARRAY | sid data |   1.2+  | 32 BYTES of SID registers
  */
 
+/* SID4 snapshot module format:
+
+   type  | name     | version | description
+   ----------------------------------------
+   WORD  | address  |   1.4+  | SID address
+   ARRAY | sid data |   1.4+  | 32 BYTES of SID registers
+ */
+
+/* SID5 snapshot module format:
+
+   type  | name     | version | description
+   ----------------------------------------
+   WORD  | address  |   1.5+  | SID address
+   ARRAY | sid data |   1.5+  | 32 BYTES of SID registers
+ */
+
+/* SID6 snapshot module format:
+
+   type  | name     | version | description
+   ----------------------------------------
+   WORD  | address  |   1.5+  | SID address
+   ARRAY | sid data |   1.5+  | 32 BYTES of SID registers
+ */
+
+/* SID7 snapshot module format:
+
+   type  | name     | version | description
+   ----------------------------------------
+   WORD  | address  |   1.5+  | SID address
+   ARRAY | sid data |   1.5+  | 32 BYTES of SID registers
+ */
+
+/* SID8 snapshot module format:
+
+   type  | name     | version | description
+   ----------------------------------------
+   WORD  | address  |   1.5+  | SID address
+   ARRAY | sid data |   1.5+  | 32 BYTES of SID registers
+ */
+
 static const char snap_module_name_simple1[] = "SID";
 static const char snap_module_name_simple2[] = "SID2";
 static const char snap_module_name_simple3[] = "SID3";
+static const char snap_module_name_simple4[] = "SID4";
+static const char snap_module_name_simple5[] = "SID5";
+static const char snap_module_name_simple6[] = "SID6";
+static const char snap_module_name_simple7[] = "SID7";
+static const char snap_module_name_simple8[] = "SID8";
 
 #define SNAP_MAJOR_SIMPLE 1
-#define SNAP_MINOR_SIMPLE 3
+#define SNAP_MINOR_SIMPLE 5
 
 static int sid_snapshot_write_module_simple(snapshot_t *s, int sidnr)
 {
-    int sound, sid_engine, sids;
+    int sound = 0;
+    int sid_engine = 0;
+    int sids = 0;
+    int model = 0;
     snapshot_module_t *m;
     const char *snap_module_name_simple = NULL;
-    int sid_address;
+    int sid_address = 0;
 
     switch (sidnr) {
         default:
@@ -113,6 +162,21 @@ static int sid_snapshot_write_module_simple(snapshot_t *s, int sidnr)
         case 2:
             snap_module_name_simple = snap_module_name_simple3;
             break;
+        case 3:
+            snap_module_name_simple = snap_module_name_simple4;
+            break;
+        case 4:
+            snap_module_name_simple = snap_module_name_simple5;
+            break;
+        case 5:
+            snap_module_name_simple = snap_module_name_simple6;
+            break;
+        case 6:
+            snap_module_name_simple = snap_module_name_simple7;
+            break;
+        case 7:
+            snap_module_name_simple = snap_module_name_simple8;
+            break;
     }
 
     m = snapshot_module_create(s, snap_module_name_simple, SNAP_MAJOR_SIMPLE, SNAP_MINOR_SIMPLE);
@@ -124,26 +188,18 @@ static int sid_snapshot_write_module_simple(snapshot_t *s, int sidnr)
     resources_get_int("Sound", &sound);
     resources_get_int("SidEngine", &sid_engine);
     resources_get_int("SidStereo", &sids);
+    resources_get_int("SidModel", &model);
 
     /* Added in 1.2, for the 1st SID module the amount of SIDs is saved 1st */
-    if (!sidnr) {
-        if (SMW_B(m, (BYTE)sids) < 0) {
+    if (sidnr == 0) {
+        if (SMW_B(m, (uint8_t)sids) < 0) {
             goto fail;
         }
     }
 
-    /* Added in 1.2, for the 2nd SID module the address is saved */
-    if (sidnr == 1) {
-        resources_get_int("SidStereoAddressStart", &sid_address);
-        if (SMW_W(m, (WORD)sid_address) < 0) {
-            goto fail;
-        }
-    }
-
-    /* Added in 1.2, for the 3rd SID module the address is saved */
-    if (sidnr == 2) {
-        resources_get_int("SidTripleAddressStart", &sid_address);
-        if (SMW_W(m, (WORD)sid_address) < 0) {
+    if (sidnr >= 1) {
+        resources_get_int_sprintf("Sid%dAddressStart", &sid_address, sidnr + 1);
+        if (SMW_W(m, (uint16_t)sid_address) < 0) {
             goto fail;
         }
     }
@@ -151,13 +207,15 @@ static int sid_snapshot_write_module_simple(snapshot_t *s, int sidnr)
     /* Changed in 1.2, all data is saved whether sound is on or off */
 
     /* Changed in 1.3, sound and sid_engine are only saved in the 1st SID module */
-    if (!sidnr) {
+    /* Changed in 1.4, model is saved after engine */
+    if (sidnr == 0) {
         if (0
-            || SMW_B(m, (BYTE)sound) < 0
-            || SMW_B(m, (BYTE)sid_engine) < 0) {
+            || SMW_B(m, (uint8_t)sound) < 0
+            || SMW_B(m, (uint8_t)sid_engine) < 0
+            || SMW_B(m, (uint8_t)model) < 0) {
             goto fail;
         }
-	}
+    }
 
     if (SMW_BA(m, sid_get_siddata(sidnr), 32) < 0) {
         goto fail;
@@ -170,14 +228,16 @@ fail:
     return -1;
 }
 
+#ifdef RETRODEBUGGER
 void c64d_lock_sound_mutex(char *whoLocked);
 void c64d_unlock_sound_mutex(char *whoLocked);
+#endif /* RETRODEBUGGER */
 
 static int sid_snapshot_read_module_simple(snapshot_t *s, int sidnr)
 {
-    BYTE major_version, minor_version;
+    uint8_t major_version, minor_version;
     snapshot_module_t *m;
-    BYTE tmp[34];
+    uint8_t tmp[35];
     const char *snap_module_name_simple = NULL;
     int sids = 0;
     int sid_address;
@@ -193,6 +253,21 @@ static int sid_snapshot_read_module_simple(snapshot_t *s, int sidnr)
         case 2:
             snap_module_name_simple = snap_module_name_simple3;
             break;
+        case 3:
+            snap_module_name_simple = snap_module_name_simple4;
+            break;
+        case 4:
+            snap_module_name_simple = snap_module_name_simple5;
+            break;
+        case 5:
+            snap_module_name_simple = snap_module_name_simple6;
+            break;
+        case 6:
+            snap_module_name_simple = snap_module_name_simple7;
+            break;
+        case 7:
+            snap_module_name_simple = snap_module_name_simple8;
+            break;
     }
 
     m = snapshot_module_open(s, snap_module_name_simple, &major_version, &minor_version);
@@ -202,14 +277,14 @@ static int sid_snapshot_read_module_simple(snapshot_t *s, int sidnr)
     }
 
     /* Do not accept versions higher than current */
-    if (major_version > SNAP_MAJOR_SIMPLE || minor_version > SNAP_MINOR_SIMPLE) {
+    if (snapshot_version_is_bigger(major_version, minor_version, SNAP_MAJOR_SIMPLE, SNAP_MINOR_SIMPLE)) {
         snapshot_set_error(SNAPSHOT_MODULE_HIGHER_VERSION);
         goto fail;
     }
 
-    /* Handle 1.3 snapshots differently */
-    if (SNAPVAL(major_version, minor_version, 1, 3)) {
-        if (!sidnr) {
+    /* Handle 1.3+ snapshots differently */
+    if (!snapshot_version_is_smaller(major_version, minor_version, 1, 3)) {
+        if (sidnr == 0) {
             if (SMR_B_INT(m, &sids) < 0) {
                 goto fail;
             }
@@ -226,31 +301,39 @@ static int sid_snapshot_read_module_simple(snapshot_t *s, int sidnr)
 
             intended_sid_engine = tmp[1];
             set_sid_engine_with_fallback(tmp[1]);
+
+            if (!snapshot_version_is_smaller(major_version, minor_version, 1, 4)) {
+                if (0
+                    || SMR_B(m, &tmp[0]) < 0) {
+                    goto fail;
+                }
+                resources_set_int("SidModel", (int)tmp[0]);
+            }
         } else {
             if (SMR_W_INT(m, &sid_address) < 0) {
                 goto fail;
             }
         }
-        if (sidnr == 1) {
-            resources_set_int("SidStereoAddressStart", sid_address);
-        }
-        if (sidnr == 2) {
-            resources_set_int("SidTripleAddressStart", sid_address);
+        if (sidnr >= 1) {
+            resources_set_int("Sid2AddressStart", sid_address);
+            resources_set_int_sprintf("Sid%dAddressStart", sid_address, sidnr + 1);
         }
         if (SMR_BA(m, tmp + 2, 32) < 0) {
             goto fail;
         }
         memcpy(sid_get_siddata(sidnr), &tmp[2], 32);
-		
-		c64d_lock_sound_mutex("vice::sid_snapshot_read_module_simple");
+#ifdef RETRODEBUGGER
+        c64d_lock_sound_mutex("vice::sid_snapshot_read_module_simple");
         sound_open();
-		c64d_unlock_sound_mutex("vice::sid_snapshot_read_module_simple");
-
-		return snapshot_module_close(m);
+        c64d_unlock_sound_mutex("vice::sid_snapshot_read_module_simple");
+#else
+        sound_open();
+#endif /* RETRODEBUGGER */
+        return snapshot_module_close(m);
     }
 
     /* Handle 1.2 snapshots differently */
-    if (SNAPVAL(major_version, minor_version, 1, 2)) {
+    if (snapshot_version_is_equal(major_version, minor_version, 1, 2)) {
         if (!sidnr) {
             if (SMR_B_INT(m, &sids) < 0) {
                 goto fail;
@@ -262,10 +345,10 @@ static int sid_snapshot_read_module_simple(snapshot_t *s, int sidnr)
             }
         }
         if (sidnr == 1) {
-            resources_set_int("SidStereoAddressStart", sid_address);
+            resources_set_int("Sid2AddressStart", sid_address);
         }
         if (sidnr == 2) {
-            resources_set_int("SidTripleAddressStart", sid_address);
+            resources_set_int("Sid3AddressStart", sid_address);
         }
         if (0
             || SMR_B(m, &tmp[0]) < 0
@@ -282,12 +365,14 @@ static int sid_snapshot_read_module_simple(snapshot_t *s, int sidnr)
         set_sid_engine_with_fallback(tmp[1]);
 
         memcpy(sid_get_siddata(sidnr), &tmp[2], 32);
-
-		c64d_lock_sound_mutex("vice::sid_snapshot_read_module_simple 2");
-		sound_open();
-		c64d_unlock_sound_mutex("vice::sid_snapshot_read_module_simple 2");
-
-		return snapshot_module_close(m);
+#ifdef RETRODEBUGGER
+        c64d_lock_sound_mutex("vice::sid_snapshot_read_module_simple 2");
+        sound_open();
+        c64d_unlock_sound_mutex("vice::sid_snapshot_read_module_simple 2");
+#else
+        sound_open();
+#endif /* RETRODEBUGGER */
+        return snapshot_module_close(m);
     }
 
     /* If more than 32 bytes are present then the resource "Sound" and
@@ -316,10 +401,13 @@ static int sid_snapshot_read_module_simple(snapshot_t *s, int sidnr)
             intended_sid_engine = res_engine;
             set_sid_engine_with_fallback(res_engine);
             memcpy(sid_get_siddata(0), &tmp[2], 32);
-						
-			c64d_lock_sound_mutex("vice::sid_snapshot_read_module_simple 3");
+#ifdef RETRODEBUGGER
+            c64d_lock_sound_mutex("vice::sid_snapshot_read_module_simple 3");
             sound_open();
-			c64d_unlock_sound_mutex("vice::sid_snapshot_read_module_simple 3");
+            c64d_unlock_sound_mutex("vice::sid_snapshot_read_module_simple 3");
+#else
+            sound_open();
+#endif /* RETRODEBUGGER */
         }
     }
 
@@ -382,6 +470,8 @@ fail:
    ARRAY  | voice filtRef   | 3 DOUBLES of filtRef data
  */
 
+#ifdef HAVE_FASTSID
+
 static int sid_snapshot_write_fastsid_module(snapshot_module_t *m, int sidnr)
 {
     sid_fastsid_snapshot_state_t sid_state;
@@ -393,7 +483,7 @@ static int sid_snapshot_write_fastsid_module(snapshot_module_t *m, int sidnr)
         || SMW_BA(m, sid_state.d, 32) < 0
         || SMW_B(m, sid_state.has3) < 0
         || SMW_B(m, sid_state.vol) < 0
-        || SMW_DWA(m, (DWORD *)sid_state.adrs, 16) < 0
+        || SMW_DWA(m, (uint32_t *)sid_state.adrs, 16) < 0
         || SMW_DWA(m, sid_state.sz, 16) < 0
         || SMW_DW(m, sid_state.speed1) < 0
         || SMW_B(m, sid_state.update) < 0
@@ -412,7 +502,7 @@ static int sid_snapshot_write_fastsid_module(snapshot_module_t *m, int sidnr)
         || SMW_DWA(m, sid_state.v_fs, 3) < 0
         || SMW_BA(m, sid_state.v_noise, 3) < 0
         || SMW_DWA(m, sid_state.v_adsr, 3) < 0
-        || SMW_DWA(m, (DWORD *)sid_state.v_adsrs, 3) < 0
+        || SMW_DWA(m, (uint32_t *)sid_state.v_adsrs, 3) < 0
         || SMW_DWA(m, sid_state.v_adsrz, 3) < 0
         || SMW_BA(m, sid_state.v_sync, 3) < 0
         || SMW_BA(m, sid_state.v_filter, 3) < 0
@@ -449,7 +539,7 @@ static int sid_snapshot_write_fastsid_module(snapshot_module_t *m, int sidnr)
 static int sid_snapshot_read_fastsid_module(snapshot_module_t *m, int sidnr)
 {
     int i;
-    DWORD dwtmp;
+    uint32_t dwtmp;
     double dbltmp;
 
     sid_fastsid_snapshot_state_t sid_state;
@@ -466,7 +556,7 @@ static int sid_snapshot_read_fastsid_module(snapshot_module_t *m, int sidnr)
         if (SMR_DW(m, &dwtmp) < 0) {
             return -1;
         }
-        sid_state.adrs[i] = (SDWORD)dwtmp;
+        sid_state.adrs[i] = (int32_t)dwtmp;
     }
 
     if (0
@@ -507,7 +597,7 @@ static int sid_snapshot_read_fastsid_module(snapshot_module_t *m, int sidnr)
         if (SMR_DW(m, &dwtmp) < 0) {
             return -1;
         }
-        sid_state.v_adsrs[i] = (SDWORD)dwtmp;
+        sid_state.v_adsrs[i] = (int32_t)dwtmp;
     }
 
     if (0
@@ -533,7 +623,7 @@ static int sid_snapshot_read_fastsid_module(snapshot_module_t *m, int sidnr)
         || SMR_W(m, &sid_state.v_wtr[1][1]) < 0
         || SMR_W(m, &sid_state.v_wtr[1][2]) < 0
         || SMR_BA(m, sid_state.v_filtIO, 3) < 0) {
-		return -1;
+            return -1;
     }
 
     for (i = 0; i < 3; ++i) {
@@ -554,6 +644,8 @@ static int sid_snapshot_read_fastsid_module(snapshot_module_t *m, int sidnr)
 
     return 0;
 }
+
+#endif /* HAVE_FASTSID */
 
 /* ---------------------------------------------------------------------*/
 
@@ -748,7 +840,7 @@ static int sid_snapshot_write_hs_module(snapshot_module_t *m, int sidnr)
     return 0;
 }
 
-static int sid_snapshot_read_hs_module(snapshot_module_t *m, int sidnr, BYTE vmajor, BYTE vminor)
+static int sid_snapshot_read_hs_module(snapshot_module_t *m, int sidnr, uint8_t vmajor, uint8_t vminor)
 {
     sid_hs_snapshot_state_t sid_state;
 
@@ -765,7 +857,7 @@ static int sid_snapshot_read_hs_module(snapshot_module_t *m, int sidnr, BYTE vma
         return -1;
     }
 
-    if (SNAPVAL(vmajor, vminor, 1, 3)) {
+    if (!snapshot_version_is_smaller(vmajor, vminor, 1, 3)) {
         if (0
             || SMR_DW(m, &sid_state.device_map[2]) < 0
             || SMR_DW(m, &sid_state.device_map[3]) < 0) {
@@ -793,6 +885,7 @@ static int sid_snapshot_read_hs_module(snapshot_module_t *m, int sidnr, BYTE vma
  */
 
 #ifdef HAVE_PARSID
+#if !defined(WINDOWS_COMPILE) || (defined(WINDOWS_COMPILE) && defined(HAVE_LIBIEEE1284))
 static int sid_snapshot_write_parsid_module(snapshot_module_t *m, int sidnr)
 {
     sid_parsid_snapshot_state_t sid_state;
@@ -822,57 +915,58 @@ static int sid_snapshot_read_parsid_module(snapshot_module_t *m, int sidnr)
     return 0;
 }
 #endif
+#endif
 
-/* ---------------------------------------------------------------------*/
-
-/* SIDEXTENDED (for ssi2001 engine) snapshot module format:
-
-   type  | name      | description
-   -------------------------------
-   ARRAY | registers | 32 BYTES of register data
- */
-
-#ifdef HAVE_SSI2001
-static int sid_snapshot_write_ssi2001_module(snapshot_module_t *m, int sidnr)
+#ifdef HAVE_USBSID
+static int sid_snapshot_write_us_module(snapshot_module_t *m, int sidnr)
 {
-    sid_ssi2001_snapshot_state_t sid_state;
+    sid_us_snapshot_state_t sid_state;
 
-    ssi2001_state_read(sidnr, &sid_state);
+    usbsid_state_read(sidnr, &sid_state);
 
     if (0
-        || SMW_BA(m, sid_state.regs, 32) < 0) {
+        || SMW_BA(m, sid_state.regs, (0x20 * 4)) < 0
+        || SMW_QW(m, sid_state.usid_main_clk) < 0
+        || SMW_QW(m, sid_state.usid_alarm_clk) < 0
+        || SMW_B(m, sid_state.lastaccess_chipno) < 0) {
         return -1;
     }
     return 0;
 }
 
-static int sid_snapshot_read_ssi2001_module(snapshot_module_t *m, int sidnr)
+static int sid_snapshot_read_us_module(snapshot_module_t *m, int sidnr)
 {
-    sid_ssi2001_snapshot_state_t sid_state;
+    sid_us_snapshot_state_t sid_state;
 
     if (0
-        || SMR_BA(m, sid_state.regs, 32) < 0) {
+        || SMW_BA(m, sid_state.regs, (0x20 * 4)) < 0
+        || SMW_QW(m, sid_state.usid_main_clk) < 0
+        || SMW_QW(m, sid_state.usid_alarm_clk) < 0
+        || SMW_B(m, sid_state.lastaccess_chipno) < 0) {
         return -1;
     }
 
-    ssi2001_state_write(sidnr, &sid_state);
+    usbsid_state_write(sidnr, &sid_state);
 
     return 0;
 }
 #endif
+
 
 /* ---------------------------------------------------------------------*/
 
 static const char snap_module_name_extended1[] = "SIDEXTENDED";
 static const char snap_module_name_extended2[] = "SIDEXTENDED2";
 static const char snap_module_name_extended3[] = "SIDEXTENDED3";
+static const char snap_module_name_extended4[] = "SIDEXTENDED4";
 #define SNAP_MAJOR_EXTENDED 1
-#define SNAP_MINOR_EXTENDED 3
+#define SNAP_MINOR_EXTENDED 4
 
 static int sid_snapshot_write_module_extended(snapshot_t *s, int sidnr)
 {
     snapshot_module_t *m;
-    int sound, sid_engine;
+    int sound;
+    int sid_engine = 0;
     const char *snap_module_name_extended = NULL;
 
     switch (sidnr) {
@@ -885,6 +979,9 @@ static int sid_snapshot_write_module_extended(snapshot_t *s, int sidnr)
             break;
         case 2:
             snap_module_name_extended = snap_module_name_extended3;
+            break;
+        case 3:
+            snap_module_name_extended = snap_module_name_extended4;
             break;
     }
 
@@ -920,26 +1017,29 @@ static int sid_snapshot_write_module_extended(snapshot_t *s, int sidnr)
             break;
 #endif
 #ifdef HAVE_PARSID
+#if !defined(WINDOWS_COMPILE) || (defined(WINDOWS_COMPILE) && defined(HAVE_LIBIEEE1284))
         case SID_ENGINE_PARSID:
             if (sid_snapshot_write_parsid_module(m, sidnr) < 0) {
                 goto fail;
             }
             break;
 #endif
-#ifdef HAVE_SSI2001
-        case SID_ENGINE_SSI2001:
-            if (sid_snapshot_write_ssi2001_module(m, sidnr) < 0) {
-                goto fail;
-            }
-            break;
 #endif
+#ifdef HAVE_FASTSID
         case SID_ENGINE_FASTSID:
             if (sid_snapshot_write_fastsid_module(m, sidnr) < 0) {
                 goto fail;
             }
             break;
+#endif
+#ifdef HAVE_USBSID
+        case SID_ENGINE_USBSID:
+            if (sid_snapshot_write_us_module(m, sidnr) < 0) {
+                goto fail;
+            }
+            break;
+#endif
     }
-
     return snapshot_module_close(m);
 
 fail:
@@ -949,12 +1049,12 @@ fail:
 
 static int sid_snapshot_read_module_extended(snapshot_t *s, int sidnr)
 {
-    BYTE major_version, minor_version;
+    uint8_t major_version, minor_version;
     snapshot_module_t *m;
     int sid_engine;
     const char *snap_module_name_extended = NULL;
     int i;
-    BYTE *siddata;
+    uint8_t *siddata;
 
     resources_get_int("SidEngine", &sid_engine);
 
@@ -969,6 +1069,9 @@ static int sid_snapshot_read_module_extended(snapshot_t *s, int sidnr)
         case 2:
             snap_module_name_extended = snap_module_name_extended3;
             break;
+        case 3:
+            snap_module_name_extended = snap_module_name_extended4;
+            break;
     }
 
     /* If the sid engine data that was save does not match the current engine
@@ -977,11 +1080,21 @@ static int sid_snapshot_read_module_extended(snapshot_t *s, int sidnr)
         siddata = sid_get_siddata(sidnr);
         for (i = 0; i < 32; ++i) {
             if (!sidnr) {
-                sid_store((WORD)i, siddata[i]);
+                sid_store((uint16_t)i, siddata[i]);
             } else if (sidnr == 1) {
-                sid2_store((WORD)i, siddata[i]);
-            } else {
-                sid3_store((WORD)i, siddata[i]);
+                sid2_store((uint16_t)i, siddata[i]);
+            } else if (sidnr == 2) {
+                sid3_store((uint16_t)i, siddata[i]);
+            } else if (sidnr == 3) {
+                sid4_store((uint16_t)i, siddata[i]);
+            } else if (sidnr == 4) {
+                sid5_store((uint16_t)i, siddata[i]);
+            } else if (sidnr == 5) {
+                sid6_store((uint16_t)i, siddata[i]);
+            } else if (sidnr == 6) {
+                sid7_store((uint16_t)i, siddata[i]);
+            } else if (sidnr == 7) {
+                sid8_store((uint16_t)i, siddata[i]);
             }
         }
         return 0;
@@ -993,14 +1106,15 @@ static int sid_snapshot_read_module_extended(snapshot_t *s, int sidnr)
         return -1;
     }
 
-    if (!snapshot_version_at_least(major_version, minor_version, 1, 3)) {
-        snapshot_set_error(SNAPSHOT_MODULE_INCOMPATIBLE);
+    /* reject snapshot modules newer than what we can handle (this VICE is too old) */
+    if (snapshot_version_is_bigger(major_version, minor_version, SNAP_MAJOR_EXTENDED, SNAP_MINOR_EXTENDED)) {
+        snapshot_set_error(SNAPSHOT_MODULE_HIGHER_VERSION);
         goto fail;
     }
 
-    /* Do not accept versions higher than current */
-    if (major_version > SNAP_MAJOR_EXTENDED || minor_version > SNAP_MINOR_EXTENDED) {
-        snapshot_set_error(SNAPSHOT_MODULE_HIGHER_VERSION);
+    /* reject snapshot modules older than what we can handle (the snapshot is too old) */
+    if (snapshot_version_is_smaller(major_version, minor_version, 1, 3)) {
+        snapshot_set_error(SNAPSHOT_MODULE_INCOMPATIBLE);
         goto fail;
     }
 
@@ -1027,24 +1141,28 @@ static int sid_snapshot_read_module_extended(snapshot_t *s, int sidnr)
             break;
 #endif
 #ifdef HAVE_PARSID
+#if !defined(WINDOWS_COMPILE) || (defined(WINDOWS_COMPILE) && defined(HAVE_LIBIEEE1284))
         case SID_ENGINE_PARSID:
             if (sid_snapshot_read_parsid_module(m, sidnr) < 0) {
                 goto fail;
             }
             break;
 #endif
-#ifdef HAVE_SSI2001
-        case SID_ENGINE_SSI2001:
-            if (sid_snapshot_read_ssi2001_module(m, sidnr) < 0) {
+#endif
+#ifdef HAVE_USBSID
+        case SID_ENGINE_USBSID:
+            if (sid_snapshot_read_us_module(m, sidnr) < 0) {
                 goto fail;
             }
             break;
 #endif
+#ifdef HAVE_FASTSID
         case SID_ENGINE_FASTSID:
             if (sid_snapshot_read_fastsid_module(m, sidnr) < 0) {
                 goto fail;
             }
             break;
+#endif
     }
 
     return snapshot_module_close(m);
@@ -1054,31 +1172,59 @@ fail:
     return -1;
 }
 
+#ifdef RETRODEBUGGER
 int c64d_get_sid_enable();
+#endif /* RETRODEBUGGER */
 
 int sid_snapshot_write_module(snapshot_t *s)
 {
+    int sound_enabled = 1;
     int sids = 0;
     int i;
 
-	// slajerek: when sid_enable is off then saving snapshot crashes
-	if (c64d_get_sid_enable())
-	{
-		resources_get_int("SidStereo", &sids);
+    resources_get_int("Sound", &sound_enabled);
 
-		++sids;
+    if (!sound_enabled) {
+        /* Make sure the sid engine hooks are set. They wont be if we launched without sound. */
+        if (!sid_sound_machine_set_engine_hooks()) {
+            return -1;
+        }
+    }
 
-		for (i = 0; i < sids; ++i) {
-			if (sid_snapshot_write_module_simple(s, i) < 0) {
-			   return -1;
-			}
+#ifdef RETRODEBUGGER
+    // slajerek: when sid_enable is off then saving snapshot crashes
+    if (c64d_get_sid_enable())
+    {
+        resources_get_int("SidStereo", &sids);
 
-			if (sid_snapshot_write_module_extended(s, i) < 0) {
-				return -1;
-			}
-		}
-	}
-	
+        ++sids;
+
+        for (i = 0; i < sids; ++i) {
+            if (sid_snapshot_write_module_simple(s, i) < 0) {
+               return -1;
+            }
+
+            if (sid_snapshot_write_module_extended(s, i) < 0) {
+                return -1;
+            }
+        }
+    }
+#else
+    resources_get_int("SidStereo", &sids);
+
+    ++sids;
+
+    for (i = 0; i < sids; ++i) {
+        if (sid_snapshot_write_module_simple(s, i) < 0) {
+           return -1;
+        }
+
+        if (sid_snapshot_write_module_extended(s, i) < 0) {
+            return -1;
+        }
+    }
+#endif /* RETRODEBUGGER */
+
     return 0;
 }
 

@@ -30,8 +30,13 @@
 #include "vicetypes.h"
 
 struct vdrive_s;
+struct bufinfo_s;
 
-extern int fsdevice_read(struct vdrive_s *vdrive, BYTE *data,
-                         unsigned int secondary);
+int fsdevice_read(struct vdrive_s *vdrive, uint8_t *data,
+                  unsigned int secondary);
+void fsdevice_relative_pad_record(struct bufinfo_s *bufinfo);
+int fsdevice_relative_switch_record(struct vdrive_s *vdrive,
+                                    struct bufinfo_s *bufinfo,
+                                    int record, int pos);
 
 #endif

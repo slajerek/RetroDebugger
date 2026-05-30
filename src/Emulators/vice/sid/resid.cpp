@@ -33,31 +33,9 @@
 #define _ARM_WINAPI_PARTITION_DESKTOP_SDK_AVAILABLE 1
 #endif
 
-#ifdef WATCOM_COMPILE
-#define _STDIO_H_INCLUDED
-#include <cstdio>
-using std::FILE;
-using std::sprintf;
-#endif
-
 extern "C" {
 
-#ifdef _MSC_VER
-#  if (_MSC_VER == 1500)
-#    define _IVEC_H_INCLUDED
-#    define _FVEC_H_INCLUDED
-#    define _DVEC_H_INCLUDED
-#  endif
-#endif
-
-/* QNX has problems with const and inline definitions
-   in its string.h file when using g++ */
-
-#ifndef __QNX__
 #include <string.h>
-#else
-extern char *strcpy(char *s1, char *s2);
-#endif
 
 #include "sid.h" /* sid_engine_t */
 #include "lib.h"
@@ -66,6 +44,8 @@ extern char *strcpy(char *s1, char *s2);
 #include "resources.h"
 #include "sid-snapshot.h"
 #include "vicetypes.h"
+
+extern log_t sound_log;
 
 } // extern "C"
 
@@ -92,22 +72,23 @@ typedef struct sound_s sound_t;
 
 /* manage temporary buffers. if the requested size is smaller or equal to the
  * size of the already allocated buffer, reuse it.  */
-static SWORD *buf = NULL;
+static short *buf = NULL;
+
 static int blen = 0;
 
-static SWORD *getbuf(int len)
+static short *getbuf(int len)
 {
     if ((buf == NULL) || (blen < len)) {
         if (buf) {
             lib_free(buf);
         }
         blen = len;
-        buf = (SWORD *)lib_calloc(len, 1);
+        buf = (short *)lib_calloc(len, 1);
     }
     return buf;
 }
 
-static sound_t *resid_open(BYTE *sidstate, int chipNo)
+static sound_t *resid_open(uint8_t *sidstate, int chipNo)
 {
     sound_t *psid;
     int i;
@@ -135,6 +116,7 @@ static int resid_init(sound_t *psid, int speed, int cycles_per_sec, int factor)
     char method_text[100];
     double passband, gain;
     int filters_enabled, model, sampling, passband_percentage, gain_percentage, filter_bias_mV;
+    int rawoutput;
 
 	LOGD("resid_init");
 
@@ -146,20 +128,44 @@ static int resid_init(sound_t *psid, int speed, int cycles_per_sec, int factor)
         return 0;
     }
 
+    if (resources_get_int("SidResidEnableRawOutput", &rawoutput) < 0) {
+        return 0;
+    }
+
+    /*
+     * Don't even think about changing this to fast during warp :)
+     * the resampled result is visible to the emulator.
+     */
     if (resources_get_int("SidResidSampling", &sampling) < 0) {
         return 0;
     }
 
-    if (resources_get_int("SidResidPassband", &passband_percentage) < 0) {
-        return 0;
-    }
+    if ((model == 1) || (model == 2)) {
+        /* 8580 */
+        if (resources_get_int("SidResid8580Passband", &passband_percentage) < 0) {
+            return 0;
+        }
 
-    if (resources_get_int("SidResidGain", &gain_percentage) < 0) {
-        return 0;
-    }
+        if (resources_get_int("SidResid8580Gain", &gain_percentage) < 0) {
+            return 0;
+        }
 
-    if (resources_get_int("SidResidFilterBias", &filter_bias_mV) < 0) {
-        return 0;
+        if (resources_get_int("SidResid8580FilterBias", &filter_bias_mV) < 0) {
+            return 0;
+        }
+    } else {
+        /* 6581 */
+        if (resources_get_int("SidResidPassband", &passband_percentage) < 0) {
+            return 0;
+        }
+
+        if (resources_get_int("SidResidGain", &gain_percentage) < 0) {
+            return 0;
+        }
+
+        if (resources_get_int("SidResidFilterBias", &filter_bias_mV) < 0) {
+            return 0;
+        }
     }
 
     passband = speed * passband_percentage / 200.0;
@@ -227,15 +233,18 @@ static int resid_init(sound_t *psid, int speed, int cycles_per_sec, int factor)
 
     if (!psid->sid->set_sampling_parameters(cycles_per_sec, method,
                                             speed, passband, gain)) {
-        log_warning(LOG_DEFAULT,
+        log_warning(sound_log,
                     "reSID: Out of spec, increase sampling rate or decrease maximum speed");
         return 0;
     }
 
-    log_message(LOG_DEFAULT, "reSID: %s, filter %s, sampling rate %dHz - %s",
+    psid->sid->enable_raw_debug_output(rawoutput);
+
+    log_message(sound_log, "reSID: %s, filter %s, sampling rate %dHz - %s%s",
                 model_text,
                 filters_enabled ? "on" : "off",
-                speed, method_text);
+                speed, method_text,
+                rawoutput ? ", raw debug output enabled": "");
 
     return 1;
 }
@@ -251,12 +260,12 @@ static void resid_close(sound_t *psid)
     }
 }
 
-static BYTE resid_read(sound_t *psid, WORD addr)
+static uint8_t resid_read(sound_t *psid, uint16_t addr)
 {
     return psid->sid->read(addr);
 }
 
-static void resid_store(sound_t *psid, WORD addr, BYTE byte)
+static void resid_store(sound_t *psid, uint16_t addr, uint8_t byte)
 {
     psid->sid->write(addr, byte);
 }
@@ -266,33 +275,101 @@ static void resid_reset(sound_t *psid, CLOCK cpu_clk)
     psid->sid->reset();
 }
 
-static int resid_calculate_samples(sound_t *psid, SWORD *pbuf, int nr,
-                                   int interleave, int *delta_t)
+#ifdef SOUND_SYSTEM_FLOAT
+/* FIXME */
+static int resid_calculate_samples(sound_t *psid, float *pbuf, int nr, CLOCK *delta_t)
 {
-    SWORD *tmp_buf;
+    short *tmp_buf;
     int retval;
+    int int_delta_t_original = (int)*delta_t;
+    int int_delta_t = (int)*delta_t;
+    int i;
+
+    /* Tried not to mess with resid during 64-bit conversion. clock(...) wants to modify *delta_t ... */
 
     if (psid->factor == 1000) {
-        return psid->sid->clock(*delta_t, pbuf, nr, interleave);
+        tmp_buf = getbuf(2 * nr);
+        retval = psid->sid->clock(int_delta_t, tmp_buf, nr, 0);
+        (*delta_t) += int_delta_t - int_delta_t_original;
+        for (i = 0; i < nr; i++) {
+            pbuf[i] = tmp_buf[i] / 32767.0;
+        }
+        return retval;
     }
+
     tmp_buf = getbuf(2 * nr * psid->factor / 1000);
-    retval = psid->sid->clock(*delta_t, tmp_buf, nr * psid->factor / 1000, interleave) * 1000 / psid->factor;
-    memcpy(pbuf, tmp_buf, 2 * nr);
+    retval = psid->sid->clock(int_delta_t, tmp_buf, nr * psid->factor / 1000, 0) * 1000 / psid->factor;
+    (*delta_t) += int_delta_t - int_delta_t_original;
+    for (i = 0; i < nr; i++) {
+        pbuf[i] = tmp_buf[i] / 32767.0;
+    }
+
     return retval;
 }
+#else
+static int resid_calculate_samples(sound_t *psid, short *pbuf, int nr, int interleave, CLOCK *delta_t)
+{
+    short *tmp_buf;
+    int retval;
+    int int_delta_t_original = (int)*delta_t;
+    int int_delta_t = (int)*delta_t;
 
-static void resid_set_voice_mask(sound_t *psid, BYTE voiceMask)
-{
-	psid->sid->set_voice_mask(voiceMask);
+    /* Tried not to mess with resid during 64-bit conversion. clock(...) wants to modify *delta_t ... */
+
+    if (psid->factor == 1000) {
+        retval = psid->sid->clock(int_delta_t, pbuf, nr, interleave);
+        (*delta_t) += int_delta_t - int_delta_t_original;
+        return retval;
+    }
+
+    tmp_buf = getbuf(2 * nr * psid->factor / 1000);
+    retval = psid->sid->clock(int_delta_t, tmp_buf, nr * psid->factor / 1000, interleave) * 1000 / psid->factor;
+    (*delta_t) += int_delta_t - int_delta_t_original;
+    memcpy(pbuf, tmp_buf, 2 * nr);
+
+    return retval;
 }
-	
-static void resid_prevent_clk_overflow(sound_t *psid, CLOCK sub)
-{
-}
+#endif
 
 static char *resid_dump_state(sound_t *psid)
 {
-    return lib_stralloc("");
+    reSID::SID::State state;
+    char strbuf[0x400];
+    /* when sound is disabled *psid is NULL */
+    if (psid && psid->sid) {
+        state = psid->sid->read_state();
+    } else {
+        return lib_strdup("no state available when sound is disabled.");
+    }
+    sprintf(strbuf,
+            "FREQ:   %04x %04x %04x\n"
+            "PULSE:  %04x %04x %04x\n"
+            "CTRL:     %02x   %02x   %02x\n"
+            "ADSR:   %04x %04x %04x\n"
+            "FILTER: %04x RES: %02x MODE/VOL: %02x\n"
+            "ADC: %02x %02x\n"
+            "OSC3: %02x ENV3: %02x\n",
+            ((state.sid_register[(0 * 7) + 1] << 8) | state.sid_register[(0 * 7) + 0]) & 0xffff,
+            ((state.sid_register[(1 * 7) + 1] << 8) | state.sid_register[(1 * 7) + 0]) & 0xffff,
+            ((state.sid_register[(2 * 7) + 1] << 8) | state.sid_register[(2 * 7) + 0]) & 0xffff,
+            ((state.sid_register[(0 * 7) + 3] << 8) | state.sid_register[(0 * 7) + 2]) & 0xffff,
+            ((state.sid_register[(1 * 7) + 3] << 8) | state.sid_register[(1 * 7) + 2]) & 0xffff,
+            ((state.sid_register[(2 * 7) + 3] << 8) | state.sid_register[(2 * 7) + 2]) & 0xffff,
+            (state.sid_register[(0 * 7) + 4]) & 0xff,
+            (state.sid_register[(1 * 7) + 4]) & 0xff,
+            (state.sid_register[(2 * 7) + 4]) & 0xff,
+            ((state.sid_register[(0 * 7) + 5] << 8) | state.sid_register[(0 * 7) + 6]) & 0xffff,
+            ((state.sid_register[(1 * 7) + 5] << 8) | state.sid_register[(1 * 7) + 6]) & 0xffff,
+            ((state.sid_register[(2 * 7) + 5] << 8) | state.sid_register[(2 * 7) + 6]) & 0xffff,
+            ((state.sid_register[22] << 8) | state.sid_register[21]) & 0xffff,
+            (state.sid_register[23]) & 0xff,
+            (state.sid_register[24]) & 0xff,
+            (state.sid_register[25]) & 0xff,
+            (state.sid_register[26]) & 0xff,
+            (state.sid_register[27]) & 0xff,
+            (state.sid_register[28]) & 0xff
+            );
+    return lib_strdup(strbuf);
 }
 
 static void resid_state_read(sound_t *psid, sid_snapshot_state_t *sid_state)
@@ -306,30 +383,30 @@ static void resid_state_read(sound_t *psid, sid_snapshot_state_t *sid_state)
     }
 
     for (i = 0; i < 0x20; i++) {
-        sid_state->sid_register[i] = (BYTE)state.sid_register[i];
+        sid_state->sid_register[i] = (uint8_t)state.sid_register[i];
     }
 
-    sid_state->bus_value = (BYTE)state.bus_value;
-    sid_state->bus_value_ttl = (DWORD)state.bus_value_ttl;
+    sid_state->bus_value = (uint8_t)state.bus_value;
+    sid_state->bus_value_ttl = (uint32_t)state.bus_value_ttl;
     for (i = 0; i < 3; i++) {
-        sid_state->accumulator[i] = (DWORD)state.accumulator[i];
-        sid_state->shift_register[i] = (DWORD)state.shift_register[i];
-        sid_state->rate_counter[i] = (WORD)state.rate_counter[i];
-        sid_state->rate_counter_period[i] = (WORD)state.rate_counter_period[i];
-        sid_state->exponential_counter[i] = (WORD)state.exponential_counter[i];
-        sid_state->exponential_counter_period[i] = (WORD)state.exponential_counter_period[i];
-        sid_state->envelope_counter[i] = (BYTE)state.envelope_counter[i];
-        sid_state->envelope_state[i] = (BYTE)state.envelope_state[i];
-        sid_state->hold_zero[i] = (BYTE)state.hold_zero[i];
-        sid_state->envelope_pipeline[i] = (BYTE)state.envelope_pipeline[i];
-        sid_state->shift_pipeline[i] = (BYTE)state.shift_pipeline[i];
-        sid_state->shift_register_reset[i] = (DWORD)state.shift_register_reset[i];
-        sid_state->floating_output_ttl[i] = (DWORD)state.floating_output_ttl[i];
-        sid_state->pulse_output[i] = (WORD)state.pulse_output[i];
+        sid_state->accumulator[i] = (uint32_t)state.accumulator[i];
+        sid_state->shift_register[i] = (uint32_t)state.shift_register[i];
+        sid_state->rate_counter[i] = (uint16_t)state.rate_counter[i];
+        sid_state->rate_counter_period[i] = (uint16_t)state.rate_counter_period[i];
+        sid_state->exponential_counter[i] = (uint16_t)state.exponential_counter[i];
+        sid_state->exponential_counter_period[i] = (uint16_t)state.exponential_counter_period[i];
+        sid_state->envelope_counter[i] = (uint8_t)state.envelope_counter[i];
+        sid_state->envelope_state[i] = (uint8_t)state.envelope_state[i];
+        sid_state->hold_zero[i] = (uint8_t)state.hold_zero[i];
+        sid_state->envelope_pipeline[i] = (uint8_t)state.envelope_pipeline[i];
+        sid_state->shift_pipeline[i] = (uint8_t)state.shift_pipeline[i];
+        sid_state->shift_register_reset[i] = (uint32_t)state.shift_register_reset[i];
+        sid_state->floating_output_ttl[i] = (uint32_t)state.floating_output_ttl[i];
+        sid_state->pulse_output[i] = (uint16_t)state.pulse_output[i];
     }
-    sid_state->write_pipeline = (BYTE)state.write_pipeline;
-    sid_state->write_address = (BYTE)state.write_address;
-    sid_state->voice_mask = (BYTE)state.voice_mask;
+    sid_state->write_pipeline = (uint8_t)state.write_pipeline;
+    sid_state->write_address = (uint8_t)state.write_address;
+    sid_state->voice_mask = (uint8_t)state.voice_mask;
 }
 
 static void resid_state_write(sound_t *psid, sid_snapshot_state_t *sid_state)
@@ -370,6 +447,12 @@ static void resid_state_write(sound_t *psid, sid_snapshot_state_t *sid_state)
     psid->sid->write_state((const reSID::SID::State)state);
 }
 
+/* RD (c64d): voice-mask hook for the debugger's per-channel muting. */
+static void resid_set_voice_mask(sound_t *psid, BYTE voiceMask)
+{
+	psid->sid->set_voice_mask(voiceMask);
+}
+
 sid_engine_t resid_hooks =
 {
     resid_open,
@@ -379,7 +462,6 @@ sid_engine_t resid_hooks =
     resid_store,
     resid_reset,
     resid_calculate_samples,
-    resid_prevent_clk_overflow,
     resid_dump_state,
     resid_state_read,
     resid_state_write,

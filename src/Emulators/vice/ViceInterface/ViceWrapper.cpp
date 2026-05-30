@@ -1394,7 +1394,7 @@ void c64d_debug_pause_check(int allowRestore)
 			{
 				if (c64d_is_performing_snapshot_restore())
 				{
-					vsync_do_vsync(vicii.raster.canvas, 0, 1);
+					vsync_do_vsync(vicii.raster.canvas);
 					return;
 				}
 			}
@@ -1405,7 +1405,7 @@ void c64d_debug_pause_check(int allowRestore)
 				debugInterfaceVice->sidDataToRestore = NULL;
 			}
 
-			vsync_do_vsync(vicii.raster.canvas, 0, 1);
+			vsync_do_vsync(vicii.raster.canvas);
 			//mt_SYS_Sleep(50);
 		}
 	}
@@ -1540,9 +1540,9 @@ void c64d_sid_channels_data(int sidNumber, int v1, int v2, int v3, short mix)
 int c64d_is_drive_dirty_for_snapshot()
 {
 //	LOGD("c64d_is_drive_dirty_for_snapshot:");
-	for (int dnr = 0; dnr < DRIVE_NUM; dnr++)
+	for (int dnr = 0; dnr < NUM_DISK_UNITS; dnr++)
 	{
-		drive_s *drive = drive_context[dnr]->drive;
+		drive_s *drive = diskunit_context[dnr]->drives[0];
 //		LOGD(".... dnr=%d drive=%x GCR=%d P64=%d", dnr, drive, drive->GCR_dirty_track_for_snapshot, drive->P64_dirty_for_snapshot);
 		if (drive->GCR_dirty_track_for_snapshot)
 		{
@@ -1559,9 +1559,9 @@ int c64d_is_drive_dirty_for_snapshot()
 
 void c64d_clear_drive_dirty_for_snapshot()
 {
-	for (int dnr = 0; dnr < DRIVE_NUM; dnr++)
+	for (int dnr = 0; dnr < NUM_DISK_UNITS; dnr++)
 	{
-		drive_s *drive = drive_context[dnr]->drive;
+		drive_s *drive = diskunit_context[dnr]->drives[0];
 		drive->GCR_dirty_track_for_snapshot = 0;
 		drive->P64_dirty_for_snapshot = 0;
 	}
@@ -1569,7 +1569,7 @@ void c64d_clear_drive_dirty_for_snapshot()
 
 int c64d_is_drive_dirty_and_needs_refresh(int driveNum)
 {
-	drive_s *drive = drive_context[driveNum]->drive;
+	drive_s *drive = diskunit_context[driveNum]->drives[0];
 	if (drive->GCR_dirty_track_needs_refresh)
 	{
 		return 1;
@@ -1583,14 +1583,14 @@ int c64d_is_drive_dirty_and_needs_refresh(int driveNum)
 
 void c64d_set_drive_dirty_needs_refresh_flag(int driveNum)
 {
-	drive_s *drive = drive_context[driveNum]->drive;
+	drive_s *drive = diskunit_context[driveNum]->drives[0];
 	drive->GCR_dirty_track_needs_refresh = 1;
 	drive->P64_dirty_needs_refresh = 1;
 }
 
 void c64d_clear_drive_dirty_needs_refresh_flag(int driveNum)
 {
-	drive_s *drive = drive_context[driveNum]->drive;
+	drive_s *drive = diskunit_context[driveNum]->drives[0];
 	drive->GCR_dirty_track_needs_refresh = 0;
 	drive->P64_dirty_needs_refresh = 0;
 }

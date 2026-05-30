@@ -29,7 +29,7 @@
 
 struct snapshot_s;
 
-extern int drive_snapshot_write_module(struct snapshot_s *s, int save_disks, int save_roms);
-extern int drive_snapshot_read_module(struct snapshot_s *s, int read_roms, int read_disks);
+int drive_snapshot_write_module(struct snapshot_s *s, int save_disks, int save_roms);
+int drive_snapshot_read_module(struct snapshot_s *s, int read_roms, int read_disks);
 
 #endif

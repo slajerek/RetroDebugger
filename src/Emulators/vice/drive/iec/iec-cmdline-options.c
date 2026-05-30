@@ -32,111 +32,84 @@
 #include "drive.h"
 #include "iec-cmdline-options.h"
 #include "lib.h"
-#include "translate.h"
 
-static const cmdline_option_t cmdline_options[] = {
-    { "-dos1540", SET_RESOURCE, 1,
+static const cmdline_option_t cmdline_options[] =
+{
+    { "-dos1540", SET_RESOURCE, CMDLINE_ATTRIB_NEED_ARGS,
       NULL, NULL, "DosName1540", NULL,
-      USE_PARAM_ID, USE_DESCRIPTION_ID,
-      IDCLS_P_NAME, IDCLS_SPECIFY_1540_DOS_ROM_NAME,
-      NULL, NULL },
-    { "-dos1541", SET_RESOURCE, 1,
+      "<Name>", "Specify name of 1540 DOS ROM image" },
+    { "-dos1541", SET_RESOURCE, CMDLINE_ATTRIB_NEED_ARGS,
       NULL, NULL, "DosName1541", NULL,
-      USE_PARAM_ID, USE_DESCRIPTION_ID,
-      IDCLS_P_NAME, IDCLS_SPECIFY_1541_DOS_ROM_NAME,
-      NULL, NULL },
-    { "-dos1541II", SET_RESOURCE, 1,
-      NULL, NULL, "DosName1541II", NULL,
-      USE_PARAM_ID, USE_DESCRIPTION_ID,
-      IDCLS_P_NAME, IDCLS_SPECIFY_1541_II_DOS_ROM_NAME,
-      NULL, NULL },
-    { "-dos1570", SET_RESOURCE, 1,
+      "<Name>", "Specify name of 1541 DOS ROM image" },
+    { "-dos1541II", SET_RESOURCE, CMDLINE_ATTRIB_NEED_ARGS,
+      NULL, NULL, "DosName1541ii", NULL,
+      "<Name>", "Specify name of 1541-II DOS ROM image" },
+    { "-dos1570", SET_RESOURCE, CMDLINE_ATTRIB_NEED_ARGS,
       NULL, NULL, "DosName1570", NULL,
-      USE_PARAM_ID, USE_DESCRIPTION_ID,
-      IDCLS_P_NAME, IDCLS_SPECIFY_1570_DOS_ROM_NAME,
-      NULL, NULL },
-    { "-dos1571", SET_RESOURCE, 1,
+      "<Name>", "Specify name of 1570 DOS ROM image" },
+    { "-dos1571", SET_RESOURCE, CMDLINE_ATTRIB_NEED_ARGS,
       NULL, NULL, "DosName1571", NULL,
-      USE_PARAM_ID, USE_DESCRIPTION_ID,
-      IDCLS_P_NAME, IDCLS_SPECIFY_1571_DOS_ROM_NAME,
-      NULL, NULL },
-    { "-dos1581", SET_RESOURCE, 1,
+      "<Name>", "Specify name of 1571 DOS ROM image" },
+    { "-dos1581", SET_RESOURCE, CMDLINE_ATTRIB_NEED_ARGS,
       NULL, NULL, "DosName1581", NULL,
-      USE_PARAM_ID, USE_DESCRIPTION_ID,
-      IDCLS_P_NAME, IDCLS_SPECIFY_1581_DOS_ROM_NAME,
-      NULL, NULL },
-    { "-dos2000", SET_RESOURCE, 1,
+      "<Name>", "Specify name of 1581 DOS ROM image" },
+    { "-dos2000", SET_RESOURCE, CMDLINE_ATTRIB_NEED_ARGS,
       NULL, NULL, "DosName2000", NULL,
-      USE_PARAM_ID, USE_DESCRIPTION_ID,
-      IDCLS_P_NAME, IDCLS_SPECIFY_2000_DOS_ROM_NAME,
-      NULL, NULL },
-    { "-dos4000", SET_RESOURCE, 1,
+      "<Name>", "Specify name of 2000 DOS ROM image" },
+    { "-dos4000", SET_RESOURCE, CMDLINE_ATTRIB_NEED_ARGS,
       NULL, NULL, "DosName4000", NULL,
-      USE_PARAM_ID, USE_DESCRIPTION_ID,
-      IDCLS_P_NAME, IDCLS_SPECIFY_4000_DOS_ROM_NAME,
-      NULL, NULL },
+      "<Name>", "Specify name of 4000 DOS ROM image" },
+    { "-dosCMDHD", SET_RESOURCE, CMDLINE_ATTRIB_NEED_ARGS,
+      NULL, NULL, "DosNameCMDHD", NULL,
+      "<Name>", "Specify name of CMD HD Boot ROM image" },
     CMDLINE_LIST_END
 };
 
-static cmdline_option_t cmd_drive[] = {
-    { NULL, SET_RESOURCE, 0,
+static cmdline_option_t cmd_drive[] =
+{
+    { NULL, SET_RESOURCE, CMDLINE_ATTRIB_NONE,
       NULL, NULL, NULL, (void *)1,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_ENABLE_DRIVE_RAM_2000,
-      NULL, NULL },
-    { NULL, SET_RESOURCE, 0,
+      NULL, "Enable 8KiB RAM expansion at $2000-$3FFF" },
+    { NULL, SET_RESOURCE, CMDLINE_ATTRIB_NONE,
       NULL, NULL, NULL, (void *)0,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_DISABLE_DRIVE_RAM_2000,
-      NULL, NULL },
-    { NULL, SET_RESOURCE, 0,
+      NULL, "Disable 8KiB RAM expansion at $2000-$3FFF" },
+    { NULL, SET_RESOURCE, CMDLINE_ATTRIB_NONE,
       NULL, NULL, NULL, (void *)1,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_ENABLE_DRIVE_RAM_4000,
-      NULL, NULL },
-    { NULL, SET_RESOURCE, 0,
+      NULL, "Enable 8KiB RAM expansion at $4000-$5FFF" },
+    { NULL, SET_RESOURCE, CMDLINE_ATTRIB_NONE,
       NULL, NULL, NULL, (void *)0,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_DISABLE_DRIVE_RAM_4000,
-      NULL, NULL },
-    { NULL, SET_RESOURCE, 0,
+      NULL, "Disable 8KiB RAM expansion at $4000-$5FFF" },
+    { NULL, SET_RESOURCE, CMDLINE_ATTRIB_NONE,
       NULL, NULL, NULL, (void *)1,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_ENABLE_DRIVE_RAM_6000,
-      NULL, NULL },
-    { NULL, SET_RESOURCE, 0,
+      NULL, "Enable 8KiB RAM expansion at $6000-$7FFF" },
+    { NULL, SET_RESOURCE, CMDLINE_ATTRIB_NONE,
       NULL, NULL, NULL, (void *)0,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_DISABLE_DRIVE_RAM_6000,
-      NULL, NULL },
-    { NULL, SET_RESOURCE, 0,
+      NULL, "Disable 8KiB RAM expansion at $6000-$7FFF" },
+    { NULL, SET_RESOURCE, CMDLINE_ATTRIB_NONE,
       NULL, NULL, NULL, (void *)1,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_ENABLE_DRIVE_RAM_8000,
-      NULL, NULL },
-    { NULL, SET_RESOURCE, 0,
+      NULL, "Enable 8KiB RAM expansion at $8000-$9FFF" },
+    { NULL, SET_RESOURCE, CMDLINE_ATTRIB_NONE,
       NULL, NULL, NULL, (void *)0,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_DISABLE_DRIVE_RAM_8000,
-      NULL, NULL },
-    { NULL, SET_RESOURCE, 0,
+      NULL, "Disable 8KiB RAM expansion at $8000-$9FFF" },
+    { NULL, SET_RESOURCE, CMDLINE_ATTRIB_NONE,
       NULL, NULL, NULL, (void *)1,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_ENABLE_DRIVE_RAM_A000,
-      NULL, NULL },
-    { NULL, SET_RESOURCE, 0,
+      NULL, "Enable 8KiB RAM expansion at $A000-$BFFF" },
+    { NULL, SET_RESOURCE, CMDLINE_ATTRIB_NONE,
       NULL, NULL, NULL, (void *)0,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_DISABLE_DRIVE_RAM_A000,
-      NULL, NULL },
+      NULL, "Disable 8KiB RAM expansion at $A000-$BFFF" },
+    { NULL, SET_RESOURCE, CMDLINE_ATTRIB_NEED_ARGS,
+      NULL, NULL, NULL, NULL,
+      "<Size>", "Fixed Disk Size" },
     CMDLINE_LIST_END
 };
 
 int iec_cmdline_options_init(void)
 {
-    unsigned int dnr, i;
+    int dnr;
 
-    for (dnr = 0; dnr < DRIVE_NUM; dnr++) {
+    for (dnr = 0; dnr < NUM_DISK_UNITS; dnr++) {
+        int i;
+
         cmd_drive[0].name = lib_msprintf("-drive%iram2000", dnr + 8);
         cmd_drive[0].resource_name
             = lib_msprintf("Drive%iRAM2000", dnr + 8);
@@ -167,12 +140,15 @@ int iec_cmdline_options_init(void)
         cmd_drive[9].name = lib_msprintf("+drive%irama000", dnr + 8);
         cmd_drive[9].resource_name
             = lib_msprintf("Drive%iRAMA000", dnr + 8);
+        cmd_drive[10].name = lib_msprintf("-drive%ifixedsize", dnr + 8);
+        cmd_drive[10].resource_name
+            = lib_msprintf("Drive%iFixedSize", dnr + 8);
 
         if (cmdline_register_options(cmd_drive) < 0) {
             return -1;
         }
 
-        for (i = 0; i < 10; i++) {
+        for (i = 0; i < 11; i++) {
             lib_free(cmd_drive[i].name);
             lib_free(cmd_drive[i].resource_name);
         }

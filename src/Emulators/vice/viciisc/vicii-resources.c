@@ -35,26 +35,41 @@
 #include "raster-resources.h"
 #include "resources.h"
 #include "vicii-chip-model.h"
+#include "vicii-cycle.h"
 #include "vicii-color.h"
 #include "vicii-resources.h"
 #include "vicii-timing.h"
 #include "vicii.h"
 #include "viciitypes.h"
 #include "video.h"
+#include "vsync.h"
 
 
 vicii_resources_t vicii_resources;
 static video_chip_cap_t video_chip_cap;
 
+static void on_vsync_set_border_mode(void *unused)
+{
+    /* this works because vicii-timing.c only handles borders in
+        viciisc. */
+    vicii_change_timing(0, vicii_resources.border_mode);
+}
 
 static int set_border_mode(int val, void *param)
 {
-    if (vicii_resources.border_mode != val) {
-        vicii_resources.border_mode = val;
-        /* this works because vicii-timing.c only handles borders in
-           viciisc. */
-        vicii_change_timing(0, vicii_resources.border_mode);
+    switch (val) {
+        case VICII_NORMAL_BORDERS:
+        case VICII_FULL_BORDERS:
+        case VICII_DEBUG_BORDERS:
+        case VICII_NO_BORDERS:
+            break;
+        default:
+            return -1;
     }
+
+    vicii_resources.border_mode = val;
+    vsync_on_vsync_do(on_vsync_set_border_mode, NULL);
+
     return 0;
 }
 
@@ -72,7 +87,11 @@ static int set_sprite_background_collisions_enabled(int val, void *param)
 
 int set_vsp_bug_enabled(int val, void *param)
 {
+    int old = vicii_resources.vsp_bug_enabled;
     vicii_resources.vsp_bug_enabled = val;
+    if (val != old) {
+        vicii_init_vsp_bug();
+    }
     return 0;
 }
 
@@ -81,7 +100,7 @@ struct vicii_model_info_s {
     int luma;
 };
 
-static struct vicii_model_info_s vicii_info[] = {
+static const struct vicii_model_info_s vicii_info[] = {
     /* VICII_MODEL_6569: PAL, 63 cycle, 9 luma, "old" */
     { MACHINE_SYNC_PAL, 1 },
 
@@ -164,16 +183,15 @@ int vicii_resources_init(void)
     video_chip_cap.dsize_limit_width = 0;
     video_chip_cap.dsize_limit_height = 0;
     video_chip_cap.dscan_allowed = ARCHDEP_VICII_DSCAN;
-    video_chip_cap.hwscale_allowed = ARCHDEP_VICII_HWSCALE;
-    video_chip_cap.scale2x_allowed = ARCHDEP_VICII_DSIZE;
-    video_chip_cap.external_palette_name = "vice";
-    video_chip_cap.double_buffering_allowed = ARCHDEP_VICII_DBUF;
+    video_chip_cap.external_palette_name = "pepto-pal";
+    video_chip_cap.video_has_palntsc = 1;
+
     video_chip_cap.single_mode.sizex = 1;
     video_chip_cap.single_mode.sizey = 1;
-    video_chip_cap.single_mode.rmode = VIDEO_RENDER_PAL_1X1;
+    video_chip_cap.single_mode.rmode = VIDEO_RENDER_PAL_NTSC_1X1;
     video_chip_cap.double_mode.sizex = 2;
     video_chip_cap.double_mode.sizey = 2;
-    video_chip_cap.double_mode.rmode = VIDEO_RENDER_PAL_2X2;
+    video_chip_cap.double_mode.rmode = VIDEO_RENDER_PAL_NTSC_2X2;
 
     fullscreen_capability(&(video_chip_cap.fullscreen));
 
@@ -181,7 +199,7 @@ int vicii_resources_init(void)
 
     if ((machine_class == VICE_MACHINE_C64SC) ||
         (machine_class == VICE_MACHINE_SCPU64)){
-        resources_int2[0].factory_value = VICII_MODEL_8565;
+        resources_int2[0].factory_value = vicii_resources.model = VICII_MODEL_8565;
     }
 
     if (raster_resources_chip_init("VICII", &vicii.raster, &video_chip_cap) < 0) {
@@ -192,4 +210,31 @@ int vicii_resources_init(void)
         return -1;
     }
     return resources_register_int(resources_int);
+}
+
+void vicii_comply_with_video_standard(int machine_sync)
+{
+    /* We're assuming that the model has a sensible value already
+     * here, but that's an assumption we make everywhere so it's
+     * probably fine */
+    if (vicii_info[vicii_resources.model].video != machine_sync) {
+        int newmodel;
+        switch (machine_sync) {
+        case MACHINE_SYNC_PAL:
+            newmodel = VICII_MODEL_6569;
+            break;
+        case MACHINE_SYNC_NTSC:
+            newmodel = VICII_MODEL_6567;
+            break;
+        case MACHINE_SYNC_NTSCOLD:
+            newmodel = VICII_MODEL_6567R56A;
+            break;
+        case MACHINE_SYNC_PALN:
+            newmodel = VICII_MODEL_6572;
+            break;
+        default:
+            return;
+        }
+        resources_set_int("VICIIModel", newmodel);
+    }
 }

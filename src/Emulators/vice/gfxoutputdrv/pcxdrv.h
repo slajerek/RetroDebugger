@@ -27,6 +27,6 @@
 #ifndef VICE_PCXDRV_H
 #define VICE_PCXDRV_H
 
-extern void gfxoutput_init_pcx(int help);
+void gfxoutput_init_pcx(int help);
 
 #endif

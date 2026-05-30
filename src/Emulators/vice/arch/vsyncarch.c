@@ -44,6 +44,7 @@
 #include "vice_sdl.h"
 #include "log.h"
 #include "ViceWrapper.h"
+#include "vice_debugger_hook.h"
 
 /* ------------------------------------------------------------------------- */
 
@@ -79,7 +80,7 @@ void vsyncarch_display_speed(double speed, double frame_rate, int warp_enabled)
 {
 	//LOGD("vsyncarch_display_speed, speed=%f frame_rate=%f warp_enabled=%d", speed, frame_rate, warp_enabled);
 	
-	c64d_display_speed((float)speed, (float)frame_rate);
+	VICE_HOOK_LIFECYCLE_SPEED((float)speed, (float)frame_rate);
 	
 //    ui_display_speed((float)speed, (float)frame_rate, warp_enabled);
 }

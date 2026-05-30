@@ -232,19 +232,41 @@ static void residfp_reset(sound_t *psid, CLOCK cpu_clk)
     psid->sid->reset();
 }
 
+#ifdef SOUND_SYSTEM_FLOAT
+static int residfp_calculate_samples(sound_t *psid, float *pbuf, int nr, CLOCK *delta_t)
+{
+    /* RD: residfp generates int16 samples; convert via a short temp buffer for the
+       float sound system. FLAG: verify residfp is actually built with
+       SOUND_SYSTEM_FLOAT and that this conversion matches expectations. */
+    int int_delta_t_original = (int)*delta_t;
+    int int_delta_t = (int)*delta_t;
+    int retval, i;
+    SWORD *tmp_buf = (SWORD *)lib_calloc(nr, sizeof(SWORD));
+    retval = psid->sid->clock(int_delta_t, tmp_buf, nr, 1);
+    (*delta_t) += int_delta_t - int_delta_t_original;
+    for (i = 0; i < nr; i++) {
+        pbuf[i] = tmp_buf[i] / 32767.0;
+    }
+    lib_free(tmp_buf);
+    return retval;
+}
+#else
 static int residfp_calculate_samples(sound_t *psid, SWORD *pbuf, int nr,
-                                   int interleave, int *delta_t)
+                                   int interleave, CLOCK *delta_t)
 {
-    return psid->sid->clock(*delta_t, pbuf, nr, interleave);
+    /* RD: cast the 64-bit CLOCK delta to int for residfp's 32-bit clock(), then
+       write back the consumed cycles (mirrors resid.cpp's 64-bit handling). */
+    int int_delta_t_original = (int)*delta_t;
+    int int_delta_t = (int)*delta_t;
+    int retval = psid->sid->clock(int_delta_t, pbuf, nr, interleave);
+    (*delta_t) += int_delta_t - int_delta_t_original;
+    return retval;
 }
-
-static void residfp_prevent_clk_overflow(sound_t *psid, CLOCK sub)
-{
-}
+#endif
 
 static char *residfp_dump_state(sound_t *psid)
 {
-    return lib_stralloc("");
+    return lib_strdup("");
 }
 
 static void residfp_state_read(sound_t *psid, sid_snapshot_state_t *sid_state)
@@ -317,7 +339,6 @@ sid_engine_t residfp_hooks =
     residfp_store,
     residfp_reset,
     residfp_calculate_samples,
-    residfp_prevent_clk_overflow,
     residfp_dump_state,
     residfp_state_read,
     residfp_state_write,

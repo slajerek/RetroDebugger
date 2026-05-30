@@ -41,6 +41,7 @@
 #include "log.h"
 
 #include "ViceWrapper.h"
+#include "vice_debugger_hook.h"
 
 /* ----------------------------------------------------------------- */
 /* static functions/variables */
@@ -157,7 +158,7 @@ void ui_display_paused(int flag)
 /* uiapi.h */
 
 /* Display a mesage without interrupting emulation */
-void ui_display_statustext(const char *text, int fade_out)
+void ui_display_statustext(const char *text, bool fade_out)
 {
 #ifdef SDL_DEBUG
     fprintf(stderr, "%s: \"%s\", %i\n", __func__, text, fade_out);
@@ -172,7 +173,7 @@ void ui_enable_drive_status(ui_drive_enable_t state, int *drive_led_color)
 
     for (drive_number = 0; drive_number < 4; ++drive_number) {
         if (drive_state & 1) {
-            ui_display_drive_led(drive_number, 0, 0);
+            ui_display_drive_led(drive_number, 0, 0, 0);
         } else {
             statusbar_text[STATUSBAR_DRIVE_POS + drive_number] = ' ';
         }
@@ -184,7 +185,7 @@ void ui_enable_drive_status(ui_drive_enable_t state, int *drive_led_color)
     }
 }
 
-void ui_display_drive_track(unsigned int drive_number, unsigned int drive_base, unsigned int half_track_number)
+void ui_display_drive_track(unsigned int drive_number, unsigned int drive_base, unsigned int half_track_number, unsigned int disk_side)
 {
     unsigned int track_number = half_track_number / 2;
 
@@ -218,9 +219,9 @@ void ui_display_drive_track(unsigned int drive_number, unsigned int drive_base, 
 }
 
 /* The pwm value will vary between 0 and 1000.  */
-void ui_display_drive_led(int drive_number, unsigned int pwm1, unsigned int led_pwm2)
+void ui_display_drive_led(unsigned int drive_number, unsigned int drive_base, unsigned int pwm1, unsigned int led_pwm2)
 {
-	c64d_display_drive_led(drive_number, pwm1, led_pwm2);
+	VICE_HOOK_INPUT_DRIVE_LED(drive_number, pwm1, led_pwm2);
 	
 	/*
     char c;
@@ -238,7 +239,7 @@ void ui_display_drive_led(int drive_number, unsigned int pwm1, unsigned int led_
     }*/
 }
 
-void ui_display_drive_current_image(unsigned int drive_number, const char *image)
+void ui_display_drive_current_image(unsigned int unit_number, unsigned int drive_number, const char *image)
 {
 #ifdef SDL_DEBUG
     fprintf(stderr, "%s\n", __func__);
@@ -247,28 +248,28 @@ void ui_display_drive_current_image(unsigned int drive_number, const char *image
 
 /* Tape related UI */
 
-void ui_set_tape_status(int tape_status)
+void ui_set_tape_status(int port, int tape_status)
 {
     tape_enabled = tape_status;
 
     display_tape();
 }
 
-void ui_display_tape_motor_status(int motor)
+void ui_display_tape_motor_status(int port, int motor)
 {
     tape_motor = motor;
 
     display_tape();
 }
 
-void ui_display_tape_control_status(int control)
+void ui_display_tape_control_status(int port, int control)
 {
     tape_control = control;
 
     display_tape();
 }
 
-void ui_display_tape_counter(int counter)
+void ui_display_tape_counter(int port, int counter)
 {
     if (tape_counter != counter) {
         display_tape();
@@ -277,7 +278,7 @@ void ui_display_tape_counter(int counter)
     tape_counter = counter;
 }
 
-void ui_display_tape_current_image(const char *image)
+void ui_display_tape_current_image(int port, const char *image)
 {
 #ifdef SDL_DEBUG
     fprintf(stderr, "%s: %s\n", __func__, image);
@@ -307,7 +308,7 @@ void ui_display_event_time(unsigned int current, unsigned int total)
 }
 
 /* Joystick UI */
-void ui_display_joyport(BYTE *joyport)
+void ui_display_joyport(uint16_t *joyport)
 {
 #ifdef SDL_DEBUG
     fprintf(stderr, "%s: %02x %02x %02x %02x %02x\n", __func__, joyport[0], joyport[1], joyport[2],  joyport[3], joyport[4]);

@@ -29,10 +29,10 @@
 
 #include "vicetypes.h"
 
-extern int serial_iec_open(unsigned int unit, unsigned int secondary, const char *name, unsigned int length);
-extern int serial_iec_close(unsigned int unit, unsigned int secondary);
-extern int serial_iec_read(unsigned int unit, unsigned int secondary, BYTE *data);
-extern int serial_iec_write(unsigned int unit, unsigned int secondary, BYTE data);
-extern int serial_iec_flush(unsigned int unit, unsigned int secondary);
+int serial_iec_open(unsigned int unit, unsigned int secondary, const char *name, unsigned int length);
+int serial_iec_close(unsigned int unit, unsigned int secondary);
+int serial_iec_read(unsigned int unit, unsigned int secondary, uint8_t *data);
+int serial_iec_write(unsigned int unit, unsigned int secondary, uint8_t data);
+int serial_iec_flush(unsigned int unit, unsigned int secondary);
 
 #endif

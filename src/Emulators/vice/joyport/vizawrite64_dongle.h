@@ -29,6 +29,6 @@
 
 #include "vicetypes.h"
 
-extern int joyport_vizawrite64_dongle_resources_init(void);
+int joyport_vizawrite64_dongle_resources_init(void);
 
 #endif

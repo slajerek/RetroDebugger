@@ -28,8 +28,8 @@ namespace reSID
 // ----------------------------------------------------------------------------
 // The audio output stage in a Commodore 64 consists of two STC networks,
 // a low-pass filter with 3-dB frequency 16kHz followed by a high-pass
-// filter with 3-dB frequency 1.6Hz (the latter provided an audio equipment
-// input impedance of 10kOhm).
+// filter with 3-dB frequency 16Hz (the latter provided an audio equipment
+// input impedance of 1kOhm).
 // The STC networks are connected with a BJT supposedly meant to act as
 // a unity gain buffer, which is not really how it works. A more elaborate
 // model would include the BJT, however DC circuit analysis yields BJT
@@ -37,6 +37,20 @@ namespace reSID
 // additional low-pass and high-pass 3dB-frequencies in the order of hundreds
 // of kHz. This calls for a sampling frequency of several MHz, which is far
 // too high for practical use.
+//
+//                                 9/12V
+// -----+
+// audio|       10k                  |
+//      +----+---R---+--------+-----(K)          +-----
+//  out |    |       |        |      |           |audio
+// -----+    R 1k    C 1000   |      |    10 uF  |
+//           |       |  pF    +-C----+-----C-----+ 1K
+//                             470   |           |
+//          GND     GND         pF   R 1K        | amp
+//                                   |           +-----
+//
+//                                  GND
+//
 // ----------------------------------------------------------------------------
 class ExternalFilter
 {
@@ -50,7 +64,7 @@ public:
   void reset();
 
   // Audio output (16 bits).
-  short output();
+  int output();
 
 protected:
   // Filter enabled.
@@ -62,7 +76,7 @@ protected:
 
   // Cutoff frequencies.
   int w0lp_1_s7;
-  int w0hp_1_s20;
+  int w0hp_1_s17;
 
 friend class SID;
 };
@@ -74,7 +88,7 @@ friend class SID;
 // time a sample is calculated.
 // ----------------------------------------------------------------------------
 
-//#if RESID_INLINING || defined(RESID_EXTFILT_CC)
+#if RESID_INLINING || defined(RESID_EXTFILT_CC)
 
 // ----------------------------------------------------------------------------
 // SID clocking - 1 cycle.
@@ -95,8 +109,8 @@ void ExternalFilter::clock(short Vi)
   // Vhp = Vhp + w0hp*(Vlp - Vhp)*delta_t;
   // Vo  = Vlp - Vhp;
 
-  int dVlp = w0lp_1_s7*((Vi << 11) - Vlp) >> 7;
-  int dVhp = w0hp_1_s20*(Vlp - Vhp) >> 20;
+  int dVlp = w0lp_1_s7*int((unsigned(Vi) << 11) - unsigned(Vlp)) >> 7;
+  int dVhp = w0hp_1_s17*(Vlp - Vhp) >> 17;
   Vlp += dVlp;
   Vhp += dVhp;
 }
@@ -130,7 +144,7 @@ void ExternalFilter::clock(cycle_count delta_t, short Vi)
     // Vo  = Vlp - Vhp;
 
     int dVlp = (w0lp_1_s7*delta_t_flt >> 3)*((Vi << 11) - Vlp) >> 4;
-    int dVhp = (w0hp_1_s20*delta_t_flt >> 3)*(Vlp - Vhp) >> 17;
+    int dVhp = (w0hp_1_s17*delta_t_flt >> 3)*(Vlp - Vhp) >> 14;
     Vlp += dVlp;
     Vhp += dVhp;
 
@@ -143,21 +157,12 @@ void ExternalFilter::clock(cycle_count delta_t, short Vi)
 // Audio output (16 bits).
 // ----------------------------------------------------------------------------
 RESID_INLINE
-short ExternalFilter::output()
+int ExternalFilter::output()
 {
-  // Saturated arithmetics to guard against 16 bit sample overflow.
-  const int half = 1 << 15;
-  int Vo = (Vlp - Vhp) >> 11;
-  if (Vo >= half) {
-    Vo = half - 1;
-  }
-  else if (Vo < -half) {
-    Vo = -half;
-  }
-  return Vo;
+  return (Vlp - Vhp) >> 11;
 }
 
-//#endif // RESID_INLINING || defined(RESID_EXTFILT_CC)
+#endif // RESID_INLINING || defined(RESID_EXTFILT_CC)
 
 } // namespace reSID
 

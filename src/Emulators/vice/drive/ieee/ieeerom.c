@@ -41,93 +41,129 @@
 /* Logging goes here.  */
 static log_t ieeerom_log;
 
-#ifdef USE_EMBEDDED
-#include "drivedos2031.h"
-#include "drivedos1001.h"
-#include "drivedos2040.h"
-#include "drivedos3040.h"
-#include "drivedos4040.h"
-#else
-static BYTE drive_rom2031[DRIVE_ROM2031_SIZE];
-static BYTE drive_rom1001[DRIVE_ROM1001_SIZE];
-static BYTE drive_rom2040[DRIVE_ROM2040_SIZE];
-static BYTE drive_rom3040[DRIVE_ROM3040_SIZE];
-static BYTE drive_rom4040[DRIVE_ROM4040_SIZE];
-#endif
-
-/* If nonzero, the ROM image has been loaded.  */
+/* If nonzero, the ROM image is available  */
 static unsigned int rom2031_loaded = 0;
 static unsigned int rom2040_loaded = 0;
 static unsigned int rom3040_loaded = 0;
 static unsigned int rom4040_loaded = 0;
 static unsigned int rom1001_loaded = 0;
+static unsigned int rom9000_loaded = 0;
 
 
+/* test ROM for existence, size */
 int ieeerom_load_2031(void)
 {
-    return driverom_load("DosName2031", drive_rom2031, &rom2031_loaded,
+    return driverom_test_load("DosName2031", &rom2031_loaded,
             DRIVE_ROM2031_SIZE, DRIVE_ROM2031_SIZE, "2031",
             DRIVE_TYPE_2031, NULL);
 }
 
 int ieeerom_load_2040(void)
 {
-    return driverom_load("DosName2040", drive_rom2040, &rom2040_loaded,
+    return driverom_test_load("DosName2040", &rom2040_loaded,
             DRIVE_ROM2040_SIZE, DRIVE_ROM2040_SIZE, "2040",
             DRIVE_TYPE_2040, NULL);
 }
 
 int ieeerom_load_3040(void)
 {
-    return driverom_load("DosName3040", drive_rom3040, &rom3040_loaded,
+    return driverom_test_load("DosName3040", &rom3040_loaded,
             DRIVE_ROM3040_SIZE, DRIVE_ROM3040_SIZE, "3040",
             DRIVE_TYPE_3040, NULL);
 }
 
 int ieeerom_load_4040(void)
 {
-    return driverom_load("DosName4040", drive_rom4040, &rom4040_loaded,
+    return driverom_test_load("DosName4040", &rom4040_loaded,
             DRIVE_ROM4040_SIZE, DRIVE_ROM4040_SIZE, "4040",
             DRIVE_TYPE_4040, NULL);
 }
 
 int ieeerom_load_1001(void)
 {
-    return driverom_load("DosName1001", drive_rom1001, &rom1001_loaded,
+    return driverom_test_load("DosName1001", &rom1001_loaded,
             DRIVE_ROM1001_SIZE, DRIVE_ROM1001_SIZE, "1001/8050/8250",
             DRIVE_TYPE_1001, NULL);
 }
 
-void ieeerom_setup_image(drive_t *drive)
+int ieeerom_load_9000(void)
 {
+    return driverom_test_load("DosName9000", &rom9000_loaded,
+            DRIVE_ROM9000_SIZE, DRIVE_ROM9000_SIZE, "D9090/9060",
+            DRIVE_TYPE_9000, NULL);
+}
+
+/* setup (=load) the ROM for a given disk unit */
+void ieeerom_setup_image(diskunit_context_t *unit)
+{
+    unsigned int loaded = 0;
     if (rom_loaded) {
-        switch (drive->type) {
-            case DRIVE_TYPE_2031:
-                memcpy(&(drive->rom[0x4000]), drive_rom2031,
-                       DRIVE_ROM2031_SIZE);
-                break;
-            case DRIVE_TYPE_2040:
-                memcpy(&(drive->rom[DRIVE_ROM_SIZE - DRIVE_ROM2040_SIZE]),
-                       drive_rom2040, DRIVE_ROM2040_SIZE);
-                break;
-            case DRIVE_TYPE_3040:
-                memcpy(&(drive->rom[DRIVE_ROM_SIZE - DRIVE_ROM3040_SIZE]),
-                       drive_rom3040, DRIVE_ROM3040_SIZE);
-                break;
-            case DRIVE_TYPE_4040:
-                memcpy(&(drive->rom[DRIVE_ROM_SIZE - DRIVE_ROM4040_SIZE]),
-                       drive_rom4040, DRIVE_ROM4040_SIZE);
-                break;
-            case DRIVE_TYPE_1001:
-            case DRIVE_TYPE_8050:
-            case DRIVE_TYPE_8250:
-                memcpy(&(drive->rom[0x4000]), drive_rom1001,
-                       DRIVE_ROM1001_SIZE);
-                break;
+        if (unit->rom_type != unit->type) {
+            /* set this here to avoid recursion */
+            unit->rom_type = unit->type;
+
+            switch (unit->type) {
+                case DRIVE_TYPE_2031:
+                    driverom_load("DosName2031", unit->rom, &rom2031_loaded,
+                        DRIVE_ROM2031_SIZE, DRIVE_ROM2031_SIZE, "2031",
+                        DRIVE_TYPE_2031, NULL);
+                    /* ROM was loaded to the lower part of the buffer */
+                    memcpy(&(unit->rom[0x4000]), unit->rom,
+                        DRIVE_ROM2031_SIZE);
+                    break;
+                case DRIVE_TYPE_2040:
+                    driverom_load("DosName2040", unit->rom, &rom2040_loaded,
+                        DRIVE_ROM2040_SIZE, DRIVE_ROM2040_SIZE, "2040",
+                        DRIVE_TYPE_2040, NULL);
+                    /* ROM was loaded to the lower part of the buffer */
+                    memcpy(&(unit->rom[DRIVE_ROM_SIZE - DRIVE_ROM2040_SIZE]),
+                        unit->rom, DRIVE_ROM2040_SIZE);
+                    break;
+                case DRIVE_TYPE_3040:
+                    driverom_load("DosName3040", unit->rom, &rom3040_loaded,
+                        DRIVE_ROM3040_SIZE, DRIVE_ROM3040_SIZE, "3040",
+                        DRIVE_TYPE_3040, NULL);
+                    /* ROM was loaded to the lower part of the buffer */
+                    memcpy(&(unit->rom[DRIVE_ROM_SIZE - DRIVE_ROM3040_SIZE]),
+                        unit->rom, DRIVE_ROM3040_SIZE);
+                    break;
+                case DRIVE_TYPE_4040:
+                    driverom_load("DosName4040", unit->rom, &rom4040_loaded,
+                        DRIVE_ROM4040_SIZE, DRIVE_ROM4040_SIZE, "4040",
+                        DRIVE_TYPE_4040, NULL);
+                    /* ROM was loaded to the lower part of the buffer */
+                    memcpy(&(unit->rom[DRIVE_ROM_SIZE - DRIVE_ROM4040_SIZE]),
+                        unit->rom, DRIVE_ROM4040_SIZE);
+                    break;
+                case DRIVE_TYPE_1001:
+                case DRIVE_TYPE_8050:
+                case DRIVE_TYPE_8250:
+                    driverom_load("DosName1001", unit->rom, &rom1001_loaded,
+                        DRIVE_ROM1001_SIZE, DRIVE_ROM1001_SIZE, "1001/8050/8250",
+                        DRIVE_TYPE_1001, NULL);
+                    /* ROM was loaded to the lower part of the buffer */
+                    memcpy(&(unit->rom[0x4000]), unit->rom,
+                        DRIVE_ROM1001_SIZE);
+                    break;
+                case DRIVE_TYPE_9000:
+                    driverom_load("DosName9000", unit->rom, &rom9000_loaded,
+                        DRIVE_ROM9000_SIZE, DRIVE_ROM9000_SIZE, "D9090/9060",
+                        DRIVE_TYPE_9000, NULL);
+                    /* ROM was loaded to the lower part of the buffer */
+                    memcpy(&(unit->rom[0x4000]), unit->rom,
+                        DRIVE_ROM9000_SIZE);
+                    break;
+            }
+
+            /* if loading failed, set rom type to 0 */
+            if (!loaded) {
+                unit->rom_type = 0;
+            }
         }
     }
 }
 
+/* check if the drive ROM is available for a given drive type, returns -1 on error */
 int ieeerom_check_loaded(unsigned int type)
 {
     switch (type) {
@@ -160,9 +196,15 @@ int ieeerom_check_loaded(unsigned int type)
                 return -1;
             }
             break;
+        case DRIVE_TYPE_9000:
+            if (rom9000_loaded < 1 && rom_loaded) {
+                return -1;
+            }
+            break;
         case DRIVE_TYPE_ANY:
             if ((!rom2031_loaded && !rom2040_loaded && !rom3040_loaded
-                 && !rom4040_loaded && !rom1001_loaded) && rom_loaded) {
+                 && !rom4040_loaded && !rom1001_loaded && !rom9000_loaded )
+                 && rom_loaded) {
                 return -1;
             }
             break;

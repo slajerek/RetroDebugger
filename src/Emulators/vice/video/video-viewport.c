@@ -28,10 +28,11 @@
 
 #include "vice.h"
 
+#include "videoarch.h"
+
 #include "lib.h"
 #include "machine.h"
 #include "video.h"
-#include "videoarch.h"
 #include "viewport.h"
 
 void video_viewport_get(video_canvas_t *canvas, viewport_t **viewport,
@@ -57,10 +58,6 @@ void video_viewport_resize(video_canvas_t *canvas, char resize_canvas)
     int displayed_height;
     int y_offset;
     int small_x_border, small_y_border;
-
-    if (canvas->initialized == 0) {
-        return;
-    }
 
     geometry = canvas->geometry;
     viewport = canvas->viewport;
@@ -163,19 +160,4 @@ void video_viewport_resize(video_canvas_t *canvas, char resize_canvas)
     }
 
     video_canvas_refresh_all(canvas);
-}
-
-void video_viewport_title_set(video_canvas_t *canvas, const char *title)
-{
-    viewport_t *viewport;
-
-    viewport = canvas->viewport;
-
-    lib_free(viewport->title);
-    viewport->title = lib_stralloc(title);
-}
-
-void video_viewport_title_free(viewport_t *viewport)
-{
-    lib_free(viewport->title);
 }

@@ -40,16 +40,18 @@ TAPE PORT | PCF8583 | I/O
 #include <string.h>
 
 #include "cmdline.h"
+#include "machine.h"
 #include "pcf8583.h"
 #include "resources.h"
 #include "snapshot.h"
 #include "tapeport.h"
-#include "translate.h"
 
-static int tapertc_enabled = 0;
+#include "cp-clockf83.h"
+
+static int tapertc_enabled[TAPEPORT_MAX_PORTS] = { 0 };
 
 /* rtc context */
-static rtc_pcf8583_t *tapertc_context = NULL;
+static rtc_pcf8583_t *tapertc_context[TAPEPORT_MAX_PORTS] = { NULL };
 
 /* rtc save */
 static int tapertc_save = 0;
@@ -57,64 +59,51 @@ static int tapertc_save = 0;
 /* ------------------------------------------------------------------------- */
 
 /* Some prototypes are needed */
-static void tapertc_store_sda(int flag);
-static void tapertc_store_scl(int write_bit);
-static int tapertc_write_snapshot(struct snapshot_s *s, int write_image);
-static int tapertc_read_snapshot(struct snapshot_s *s);
+static void tapertc_store_sda(int port, int flag);
+static void tapertc_store_scl(int port, int write_bit);
+static int tapertc_write_snapshot(int port, struct snapshot_s *s, int write_image);
+static int tapertc_read_snapshot(int port, struct snapshot_s *s);
+static int tapertc_enable(int port, int val);
 
 static tapeport_device_t tapertc_device = {
-    TAPEPORT_DEVICE_CP_CLOCK_F83,
-    "Tape RTC (PCF8583)",
-    IDGS_TAPE_RTC,
-    0,
-    "CPClockF83",
-    NULL,
-    tapertc_store_sda,
-    tapertc_store_scl,
-    NULL, /* no sense out */
-    NULL, /* no read out */
-    NULL, /* no passthrough */
-    NULL, /* no passthrough */
-    NULL, /* no passthrough */
-    NULL  /* no passthrough */
+    "Tape RTC (PCF8583)",       /* device name */
+    TAPEPORT_DEVICE_TYPE_RTC,   /* device is an 'RTC' type device */
+    VICE_MACHINE_ALL,           /* device works on all machines */
+    TAPEPORT_PORT_ALL_MASK,     /* device works on all ports */
+    tapertc_enable,             /* device enable function */
+    NULL,                       /* NO device specific hard reset function */
+    tapertc_resources_shutdown, /* device shutdown function */
+    tapertc_store_sda,          /* set motor line function */
+    tapertc_store_scl,          /* NO set write line function */
+    NULL,                       /* NO set sense line function */
+    NULL,                       /* NO set read line function */
+    tapertc_write_snapshot,     /* device snapshot write function */
+    tapertc_read_snapshot       /* device snapshot read function */
 };
-
-static tapeport_snapshot_t tapertc_snapshot = {
-    TAPEPORT_DEVICE_CP_CLOCK_F83,
-    tapertc_write_snapshot,
-    tapertc_read_snapshot,
-};
-
-static tapeport_device_list_t *tapertc_list_item = NULL;
 
 /* ------------------------------------------------------------------------- */
 
-static int set_tapertc_enabled(int value, void *param)
+static int tapertc_enable(int port, int value)
 {
     int val = value ? 1 : 0;
 
-    if (tapertc_enabled == val) {
+    if (tapertc_enabled[port] == val) {
         return 0;
     }
 
     if (val) {
-        tapertc_list_item = tapeport_device_register(&tapertc_device);
-        if (tapertc_list_item == NULL) {
-            return -1;
-        }
-        tapertc_context = pcf8583_init("TAPERTC", 2);
-        pcf8583_set_data_line(tapertc_context, 1);
-        pcf8583_set_clk_line(tapertc_context, 1);
+        tapertc_context[port] = pcf8583_init("TAPERTC", 2);
+        pcf8583_set_data_line(tapertc_context[port], 1);
+        pcf8583_set_clk_line(tapertc_context[port], 1);
     } else {
-        if (tapertc_context) {
-            pcf8583_destroy(tapertc_context, tapertc_save);
-            tapertc_context = NULL;
+        if (tapertc_context[port]) {
+            pcf8583_destroy(tapertc_context[port], tapertc_save);
+            tapertc_context[port] = NULL;
         }
-        tapeport_device_unregister(tapertc_list_item);
-        tapertc_list_item = NULL;
     }
 
-    tapertc_enabled = val;
+    tapertc_enabled[port] = val;
+
     return 0;
 }
 
@@ -126,42 +115,27 @@ static int set_tapertc_save(int val, void *param)
 }
 
 static const resource_int_t resources_int[] = {
-    { "CPClockF83", 0, RES_EVENT_STRICT, (resource_value_t)0,
-      &tapertc_enabled, set_tapertc_enabled, NULL },
     { "CPClockF83Save", 0, RES_EVENT_STRICT, (resource_value_t)0,
       &tapertc_save, set_tapertc_save, NULL },
     RESOURCE_INT_LIST_END
 };
 
-int tapertc_resources_init(void)
+int tapertc_resources_init(int amount)
 {
-    tapeport_snapshot_register(&tapertc_snapshot);
-
+    if (tapeport_device_register(TAPEPORT_DEVICE_CP_CLOCK_F83, &tapertc_device) < 0) {
+        return -1;
+    }
     return resources_register_int(resources_int);
 }
 
 static const cmdline_option_t cmdline_options[] =
 {
-    { "-cpclockf83", SET_RESOURCE, 0,
-      NULL, NULL, "CPClockF83", (resource_value_t)1,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_ENABLE_TAPERTC,
-      NULL, NULL },
-    { "+cpclockf83", SET_RESOURCE, 0,
-      NULL, NULL, "CPClockF83", (resource_value_t)0,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_DISABLE_TAPERTC,
-      NULL, NULL },
-    { "-cpclockf83save", SET_RESOURCE, 0,
+    { "-cpclockf83save", SET_RESOURCE, CMDLINE_ATTRIB_NONE,
       NULL, NULL, "CPClockF83Save", (resource_value_t)1,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_ENABLE_TAPERTC_SAVE,
-      NULL, NULL },
-    { "+cpclockf83save", SET_RESOURCE, 0,
+      NULL, "Enable saving of the CP Clock F83 (PCF8583 RTC) data when changed." },
+    { "+cpclockf83save", SET_RESOURCE, CMDLINE_ATTRIB_NONE,
       NULL, NULL, "CPClockF83Save", (resource_value_t)0,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_DISABLE_TAPERTC_SAVE,
-      NULL, NULL },
+      NULL, "Disable saving of the CP Clock F83 (PCF8583 RTC) data when changed." },
     CMDLINE_LIST_END
 };
 
@@ -172,46 +146,49 @@ int tapertc_cmdline_options_init(void)
 
 void tapertc_resources_shutdown(void)
 {
-    if (tapertc_context) {
-        pcf8583_destroy(tapertc_context, tapertc_save);
-        tapertc_context = NULL;
+    int i;
+
+    for (i = 0; i < TAPEPORT_MAX_PORTS; i++) {
+        if (tapertc_context[i]) {
+            pcf8583_destroy(tapertc_context[i], tapertc_save);
+            tapertc_context[i] = NULL;
+        }
     }
 }
 
 /* ---------------------------------------------------------------------*/
 
-static BYTE motor_state;
+static uint8_t motor_state[TAPEPORT_MAX_PORTS];
 
-static void check_sense(void)
+static void check_sense(int port)
 {
     int sense_from_rtc;
 
-    sense_from_rtc = pcf8583_read_data_line(tapertc_context);
+    sense_from_rtc = pcf8583_read_data_line(tapertc_context[port]);
 
     if (!sense_from_rtc) {
-        tapeport_set_tape_sense(0, tapertc_device.id);
-    }
-    else if (motor_state) {
-        tapeport_set_tape_sense(0, tapertc_device.id);
+        tapeport_set_tape_sense(0, port);
+    } else if (motor_state[port]) {
+        tapeport_set_tape_sense(0, port);
     } else {
-        tapeport_set_tape_sense(1, tapertc_device.id);
+        tapeport_set_tape_sense(1, port);
     }
 }
 
-static void tapertc_store_sda(int flag)
+static void tapertc_store_sda(int port, int flag)
 {
-    motor_state = flag;
+    motor_state[port] = flag;
 
-    pcf8583_set_data_line(tapertc_context, (BYTE)!motor_state);
-    check_sense();
+    pcf8583_set_data_line(tapertc_context[port], (uint8_t)!motor_state[port]);
+    check_sense(port);
 }
 
-static void tapertc_store_scl(int write_bit)
+static void tapertc_store_scl(int port, int write_bit)
 {
-    BYTE val = write_bit ? 1 : 0;
+    uint8_t val = write_bit ? 1 : 0;
 
-    pcf8583_set_clk_line(tapertc_context, val);
-    check_sense();
+    pcf8583_set_clk_line(tapertc_context[port], val);
+    check_sense(port);
 }
 
 /* ---------------------------------------------------------------------*/
@@ -223,36 +200,33 @@ static void tapertc_store_scl(int write_bit)
    BYTE  | motor | motor state
  */
 
-static char snap_module_name[] = "TP_CP_CLOCK_F83";
+static const char snap_module_name[] = "TP_CP_CLOCK_F83";
 #define SNAP_MAJOR   0
-#define SNAP_MINOR   0
+#define SNAP_MINOR   1
 
-static int tapertc_write_snapshot(struct snapshot_s *s, int write_image)
+static int tapertc_write_snapshot(int port, struct snapshot_s *s, int write_image)
 {
     snapshot_module_t *m;
 
     m = snapshot_module_create(s, snap_module_name, SNAP_MAJOR, SNAP_MINOR);
- 
+
     if (m == NULL) {
         return -1;
     }
 
-    if (SMW_B(m, motor_state) < 0) {
+    if (SMW_B(m, motor_state[port]) < 0) {
         snapshot_module_close(m);
         return -1;
     }
     snapshot_module_close(m);
 
-    return pcf8583_write_snapshot(tapertc_context, s);
+    return pcf8583_write_snapshot(tapertc_context[port], s);
 }
 
-static int tapertc_read_snapshot(struct snapshot_s *s)
+static int tapertc_read_snapshot(int port, struct snapshot_s *s)
 {
-    BYTE major_version, minor_version;
+    uint8_t major_version, minor_version;
     snapshot_module_t *m;
-
-    /* enable device */
-    set_tapertc_enabled(1, NULL);
 
     m = snapshot_module_open(s, snap_module_name, &major_version, &minor_version);
 
@@ -261,17 +235,17 @@ static int tapertc_read_snapshot(struct snapshot_s *s)
     }
 
     /* Do not accept versions higher than current */
-    if (major_version > SNAP_MAJOR || minor_version > SNAP_MINOR) {
+    if (snapshot_version_is_bigger(major_version, minor_version, SNAP_MAJOR, SNAP_MINOR)) {
         snapshot_set_error(SNAPSHOT_MODULE_HIGHER_VERSION);
         goto fail;
     }
 
-    if (SMR_B(m, &motor_state) < 0) {
+    if (SMR_B(m, &motor_state[port]) < 0) {
         goto fail;
     }
     snapshot_module_close(m);
 
-    return pcf8583_read_snapshot(tapertc_context, s);
+    return pcf8583_read_snapshot(tapertc_context[port], s);
 
 fail:
     snapshot_module_close(m);

@@ -41,7 +41,6 @@
 //#include "res.h"
 #include "machine.h"
 #include "resources.h"
-#include "translate.h"
 #include "vicetypes.h"
 #include "uiapi.h"
 //#include "uilib.h"

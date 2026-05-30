@@ -30,26 +30,28 @@
 #ifndef VICE_TFE_H
 #define VICE_TFE_H
 
-#ifdef HAVE_PCAP
+#ifdef HAVE_RAWNET
+
+#include <stdint.h>
 
 #include "vicetypes.h"
 
-extern int cs8900io_cart_enabled(void);
+int cs8900io_cart_enabled(void);
 
-extern void cs8900io_init(void);
-extern int cs8900io_resources_init(void);
-extern void cs8900io_resources_shutdown(void);
-extern int cs8900io_cmdline_options_init(void);
+void cs8900io_init(void);
+int cs8900io_resources_init(void);
+void cs8900io_resources_shutdown(void);
+int cs8900io_cmdline_options_init(void);
 
-extern void cs8900io_reset(void);
-extern void cs8900io_detach(void);
-extern int cs8900io_enable(char *owner);
-extern int cs8900io_disable(void);
+void cs8900io_reset(void);
+void cs8900io_detach(void);
+int cs8900io_enable(const char *owner);
+int cs8900io_disable(void);
 
-extern void cs8900io_store(WORD io_address, BYTE byte);
-extern BYTE cs8900io_read(WORD io_address);
-extern BYTE cs8900io_peek(WORD io_address);
-extern int cs8900io_dump(void);
+void cs8900io_store(uint16_t io_address, uint8_t byte);
+uint8_t cs8900io_read(uint16_t io_address);
+uint8_t cs8900io_peek(uint16_t io_address);
+int cs8900io_dump(void);
 
 #endif
 #endif

@@ -30,30 +30,34 @@
 
 #include "vicetypes.h"
 
-#define C64MODEL_C64_PAL 0
-#define C64MODEL_C64C_PAL 1
-#define C64MODEL_C64_OLD_PAL 2
+enum {
+    C64MODEL_C64_PAL = 0,
+    C64MODEL_C64C_PAL,
+    C64MODEL_C64_OLD_PAL,
 
-#define C64MODEL_C64_NTSC 3
-#define C64MODEL_C64C_NTSC 4
-#define C64MODEL_C64_OLD_NTSC 5
+    C64MODEL_C64_NTSC,
+    C64MODEL_C64C_NTSC,
+    C64MODEL_C64_OLD_NTSC,
 
-#define C64MODEL_C64_PAL_N 6
+    C64MODEL_C64_PAL_N,
 
 /* SX-64 */
-#define C64MODEL_C64SX_PAL 7
-#define C64MODEL_C64SX_NTSC 8
+    C64MODEL_C64SX_PAL,
+    C64MODEL_C64SX_NTSC,
 
-#define C64MODEL_C64_JAP 9
-#define C64MODEL_C64_GS 10
+    C64MODEL_C64_JAP,
+    C64MODEL_C64_GS,
 
 /* 4064, PET64, EDUCATOR64 */
-#define C64MODEL_PET64_PAL 11
-#define C64MODEL_PET64_NTSC 12
-/* max machine */
-#define C64MODEL_ULTIMAX 13
+    C64MODEL_PET64_PAL,
+    C64MODEL_PET64_NTSC,
 
-#define C64MODEL_NUM 14
+/* max machine */
+    C64MODEL_ULTIMAX,
+
+/* This entry needs to always be at the end */
+    C64MODEL_NUM
+};
 
 #define C64MODEL_UNKNOWN 99
 
@@ -66,8 +70,15 @@
 #define GLUE_DISCRETE  0
 #define GLUE_CUSTOM_IC 1
 
-#define BOARD_C64 0
-#define BOARD_MAX 1
+/* CAUTION: these are shared with x128 */
+#define BOARD_C64   0
+#define BOARD_MAX   1
+#define BOARD_SX64  2
+#define BOARD_LAST_C64  2
+/* put all C128 boards last */
+#define BOARD_C128  3
+#define BOARD_C128D 4
+#define BOARD_LAST  4
 
 #define IEC_HARD_RESET 0
 #define IEC_SOFT_RESET 1
@@ -84,24 +95,31 @@
 #define NO_KEYBOARD  0
 #define HAS_KEYBOARD 1
 
+#define NO_CIA2  0
+#define HAS_CIA2 1
+
+#define CIATICK_NET     0
+#define CIATICK_60HZ    1
+
 typedef struct {
     int vicii_model;
     int sid_model;
     int glue_logic; /* x64sc only */
     int cia1_model;
     int cia2_model;
-    int board; /* 0: normal, 1: ultimax */
+    int cia_tick;
+    int board; /* 0: normal, 1: ultimax, 2: sx64, 3: C128 */
     int iecreset; /* 1: reset goes to IEC bus (old) 0: only reset IEC on hard reset (new) */
     const char *kernal;
     const char *chargen;
     int kernalrev;
 } c64model_details_t;
 
-extern int c64model_get(void);
-extern void c64model_set(int model);
+int c64model_get(void);
+void c64model_set(int model);
 /* get details for model */
-extern void c64model_set_details(c64model_details_t *details, int model);
+void c64model_set_details(c64model_details_t *details, int model);
 /* get model from details */
-extern int c64model_get_model(c64model_details_t *details);
+int c64model_get_model(c64model_details_t *details);
 
 #endif

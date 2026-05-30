@@ -29,6 +29,6 @@
 
 #include "vicetypes.h"
 
-extern int joyport_paperclip64_resources_init(void);
+int joyport_paperclip64_resources_init(void);
 
 #endif

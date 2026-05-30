@@ -89,16 +89,14 @@ typedef struct alarm_context_s alarm_context_t;
 
 /* ------------------------------------------------------------------------ */
 
-extern alarm_context_t *alarm_context_new(const char *name);
-extern void alarm_context_init(alarm_context_t *context, const char *name);
-extern void alarm_context_destroy(alarm_context_t *context);
-extern void alarm_context_time_warp(alarm_context_t *context, CLOCK warp_amount,
-                                    int warp_direction);
-extern alarm_t *alarm_new(alarm_context_t *context, const char *name,
-                          alarm_callback_t callback, void *data);
-extern void alarm_destroy(alarm_t *alarm);
-extern void alarm_unset(alarm_t *alarm);
-extern void alarm_log_too_many_alarms(void);
+alarm_context_t *alarm_context_new(const char *name);
+void alarm_context_init(alarm_context_t *context, const char *name);
+void alarm_context_destroy(alarm_context_t *context);
+void alarm_context_time_warp(alarm_context_t *context, CLOCK warp_amount, int warp_direction);
+alarm_t *alarm_new(alarm_context_t *context, const char *name, alarm_callback_t callback, void *data);
+void alarm_destroy(alarm_t *alarm);
+void alarm_unset(alarm_t *alarm);
+void alarm_log_too_many_alarms(void);
 
 /* ------------------------------------------------------------------------- */
 
@@ -111,7 +109,7 @@ inline static CLOCK alarm_context_next_pending_clk(alarm_context_t *context)
 
 inline static void alarm_context_update_next_pending(alarm_context_t *context)
 {
-    CLOCK next_pending_alarm_clk = (CLOCK)~0L;
+    CLOCK next_pending_alarm_clk = CLOCK_MAX;
     int next_pending_alarm_idx;
     unsigned int i;
 
@@ -137,7 +135,7 @@ inline static void alarm_context_dispatch(alarm_context_t *context,
     int idx;
     alarm_t *alarm;
 
-    offset = (CLOCK)(cpu_clk - context->next_pending_alarm_clk);
+    offset = cpu_clk - context->next_pending_alarm_clk;
 
     idx = context->next_pending_alarm_idx;
     alarm = context->pending_alarms[idx].alarm;
@@ -151,7 +149,7 @@ inline static void alarm_set(alarm_t *alarm, CLOCK cpu_clk)
     int idx;
 
     context = alarm->context;
-	idx = alarm->pending_idx;
+    idx = alarm->pending_idx;
 
     if (idx < 0) {
         int new_idx;

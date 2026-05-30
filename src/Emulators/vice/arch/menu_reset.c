@@ -38,7 +38,7 @@ static UI_MENU_CALLBACK(maincpu_hard_reset_callback)
 {
     if (activated) {
         vsync_suspend_speed_eval();
-        machine_trigger_reset(MACHINE_RESET_MODE_HARD);
+        machine_trigger_reset(MACHINE_RESET_MODE_POWER_CYCLE);
         return sdl_menu_text_exit_ui;
     }
     return NULL;
@@ -48,7 +48,7 @@ static UI_MENU_CALLBACK(maincpu_soft_reset_callback)
 {
     if (activated) {
         vsync_suspend_speed_eval();
-        machine_trigger_reset(MACHINE_RESET_MODE_SOFT);
+        machine_trigger_reset(MACHINE_RESET_MODE_RESET_CPU);
         return sdl_menu_text_exit_ui;
     }
     return NULL;

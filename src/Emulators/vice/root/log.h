@@ -3,6 +3,7 @@
  *
  * Written by
  *  Ettore Perazzoli <ettore@comm2000.it>
+ *  groepaz <groepaz@gmx.net>
  *
  * This file is part of VICE, the Versatile Commodore Emulator.
  * See README for copyright notice.
@@ -29,44 +30,99 @@
 
 #include <stdio.h>
 
-
-#define LOG_LEVEL_NONE  0x00
-
-typedef signed int log_t;
-#define LOG_ERR     ((log_t)-1)
-#define LOG_DEFAULT ((log_t)-2)
-
-extern int log_resources_init(void);
-extern void log_resources_shutdown(void);
-extern int log_cmdline_options_init(void);
-extern int log_init(void);
-extern int log_init_with_fd(FILE *f);
-extern log_t log_open(const char *id);
-extern int log_close(log_t log);
-extern void log_close_all(void);
-extern void log_enable(int on);
-extern int log_set_silent(int n);
-extern int log_set_verbose(int n);
-extern int log_verbose_init(int argc, char **argv);
-
-#ifdef __GNUC__
-extern int log_message(log_t log, const char *format, ...)
-    __attribute__((format(printf, 2, 3)));
-extern int log_warning(log_t log, const char *format, ...)
-    __attribute__((format(printf, 2, 3)));
-extern int log_error(log_t log, const char *format, ...)
-    __attribute__((format(printf, 2, 3)));
-extern int log_debug(const char *format, ...)
-    __attribute__((format(printf, 1, 2)));
-extern int log_verbose(const char *format, ...)
-    __attribute__((format(printf, 1, 2)));
-#else
-extern int log_message(log_t log, const char *format, ...);
-extern int log_warning(log_t log, const char *format, ...);
-extern int log_error(log_t log, const char *format, ...);
-extern int log_debug(const char *format, ...);
-extern int log_verbose(const char *format, ...);
+/* RD: log.h is included by non-VICE plugin code (e.g. GoatTracker gsound.c) that
+   doesn't include vice.h, where these printf-attribute macros are defined. Provide
+   no-op fallbacks so log.h is self-contained; vice.h's real definitions win when
+   it is included first (the normal VICE build path). */
+#ifndef VICE_ATTR_PRINTF
+#define VICE_ATTR_PRINTF
 #endif
+#ifndef VICE_ATTR_PRINTF2
+#define VICE_ATTR_PRINTF2
+#endif
+#ifndef VICE_ATTR_PRINTF3
+#define VICE_ATTR_PRINTF3
+#endif
+#ifndef VICE_ATTR_PRINTF4
+#define VICE_ATTR_PRINTF4
+#endif
+
+/* values passed into the log helper (log_out->log_helper) */
+#define LOG_LEVEL_NONE      0x00
+#define LOG_LEVEL_FATAL     0x20
+#define LOG_LEVEL_ERROR     0x40
+#define LOG_LEVEL_WARNING   0x60
+#define LOG_LEVEL_INFO      0x80
+#define LOG_LEVEL_VERBOSE   0xa0
+#define LOG_LEVEL_DEBUG     0xc0
+#define LOG_LEVEL_ALL       0xff
+
+/* values used to set the log level (log_set_limit, log_set_limit_early) */
+
+/* errors only */
+#define LOG_LIMIT_SILENT    (LOG_LEVEL_WARNING - 1)
+/* all messages, except verbose+debug */
+#define LOG_LIMIT_STANDARD  (LOG_LEVEL_VERBOSE - 1)
+/* all messages, except debug */
+#define LOG_LIMIT_VERBOSE   (LOG_LEVEL_DEBUG - 1)
+/* all messages */
+#define LOG_LIMIT_DEBUG     (LOG_LEVEL_ALL)
+
+int log_set_limit_early(int n);
+int log_early_init(int argc, char **argv);
+
+int log_set_limit(int n);
+int log_get_limit(void);
+
+int log_resources_init(void);
+void log_resources_shutdown(void);
+int log_cmdline_options_init(void);
+
+/* init/open the log file */
+int log_init(void);
+int log_init_with_fd(FILE *f);
+
+/* for individual log streams */
+typedef signed int log_t;
+#define LOG_DEFAULT ((log_t)-1)
+
+log_t log_open(const char *id);
+int log_close(log_t log);
+void log_close_all(void);
+
+/* actual log functions */
+
+/* foreground colors */
+#define LOG_COL_BLACK    "\x1B[30;40m"
+#define LOG_COL_RED      "\x1B[31;40m"
+#define LOG_COL_GREEN    "\x1B[32;40m"
+#define LOG_COL_YELLOW   "\x1B[33;40m"
+#define LOG_COL_BLUE     "\x1B[34;40m"
+#define LOG_COL_MAGENTA  "\x1B[35;40m"
+#define LOG_COL_CYAN     "\x1B[36;40m"
+#define LOG_COL_WHITE    "\x1B[37;40m"
+#define LOG_COL_LBLACK   "\x1B[90;40m"
+#define LOG_COL_LRED     "\x1B[91;40m"
+#define LOG_COL_LGREEN   "\x1B[92;40m"
+#define LOG_COL_LYELLOW  "\x1B[93;40m"
+#define LOG_COL_LBLUE    "\x1B[94;40m"
+#define LOG_COL_LMAGENTA "\x1B[95;40m"
+#define LOG_COL_LCYAN    "\x1B[96;40m"
+#define LOG_COL_LWHITE   "\x1B[97;40m"
+
+#define LOG_COL_OFF      "\x1B[0m"
+
+int log_out(log_t log, unsigned int level, const char *format, ...) VICE_ATTR_PRINTF3;
+
+int log_debug(log_t log, const char *format, ...) VICE_ATTR_PRINTF2;
+int log_verbose(log_t log, const char *format, ...) VICE_ATTR_PRINTF2;
+int log_message(log_t log, const char *format, ...) VICE_ATTR_PRINTF2;
+int log_warning(log_t log, const char *format, ...) VICE_ATTR_PRINTF2;
+int log_error(log_t log, const char *format, ...) VICE_ATTR_PRINTF2;
+int log_fatal(log_t log, const char *format, ...) VICE_ATTR_PRINTF2;
+
+/* simple way to print to the default log, at debug level */
+int log_printf(const char *format, ...) VICE_ATTR_PRINTF;
 
 // MT-style logging to not let confuse me (Slajerek) ;)
 // these logs have different tags than Vice's

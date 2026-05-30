@@ -45,22 +45,23 @@ typedef struct drivetpi_context_s {
 } drivetpi_context_t;
 
 
-void tpid_store(drive_context_t *ctxptr, WORD addr, BYTE data)
+void tpid_store(diskunit_context_t *ctxptr, uint16_t addr, uint8_t data)
 {
+    ctxptr->cpu->cpu_last_data = data;
     tpicore_store(ctxptr->tpid, addr, data);
 }
 
-BYTE tpid_read(drive_context_t *ctxptr, WORD addr)
+uint8_t tpid_read(diskunit_context_t *ctxptr, uint16_t addr)
 {
-    return tpicore_read(ctxptr->tpid, addr);
+    return ctxptr->cpu->cpu_last_data = tpicore_read(ctxptr->tpid, addr);
 }
 
-BYTE tpid_peek(drive_context_t *ctxptr, WORD addr)
+uint8_t tpid_peek(diskunit_context_t *ctxptr, uint16_t addr)
 {
     return tpicore_peek(ctxptr->tpid, addr);
 }
 
-int tpid_dump(drive_context_t *ctxptr, WORD addr)
+int tpid_dump(diskunit_context_t *ctxptr, uint16_t addr)
 {
     tpicore_dump(ctxptr->tpid);
     return 0;
@@ -93,7 +94,7 @@ static void reset(tpi_context_t *tpi_context)
     plus4tcbm_update_pc(0xff, tpip->number);
 }
 
-static void store_pa(tpi_context_t *tpi_context, BYTE byte)
+static void store_pa(tpi_context_t *tpi_context, uint8_t byte)
 {
     drivetpi_context_t *tpip;
 
@@ -102,7 +103,7 @@ static void store_pa(tpi_context_t *tpi_context, BYTE byte)
     plus4tcbm_update_pa(byte, tpip->number);
 }
 
-static void store_pb(tpi_context_t *tpi_context, BYTE byte)
+static void store_pb(tpi_context_t *tpi_context, uint8_t byte)
 {
     drivetpi_context_t *tpip;
 
@@ -113,15 +114,15 @@ static void store_pb(tpi_context_t *tpi_context, BYTE byte)
     tpip->drive->GCR_write_value = byte;
 }
 
-static void undump_pa(tpi_context_t *tpi_context, BYTE byte)
+static void undump_pa(tpi_context_t *tpi_context, uint8_t byte)
 {
 }
 
-static void undump_pb(tpi_context_t *tpi_context, BYTE byte)
+static void undump_pb(tpi_context_t *tpi_context, uint8_t byte)
 {
 }
 
-static void store_pc(tpi_context_t *tpi_context, BYTE byte)
+static void store_pc(tpi_context_t *tpi_context, uint8_t byte)
 {
     drivetpi_context_t *tpip;
 
@@ -136,14 +137,14 @@ static void store_pc(tpi_context_t *tpi_context, BYTE byte)
     }
 }
 
-static void undump_pc(tpi_context_t *tpi_context, BYTE byte)
+static void undump_pc(tpi_context_t *tpi_context, uint8_t byte)
 {
 }
 
-static BYTE read_pa(tpi_context_t *tpi_context)
+static uint8_t read_pa(tpi_context_t *tpi_context)
 {
     /* TCBM data port */
-    BYTE byte;
+    uint8_t byte;
     drivetpi_context_t *tpip;
 
     tpip = (drivetpi_context_t *)(tpi_context->prv);
@@ -156,10 +157,10 @@ static BYTE read_pa(tpi_context_t *tpi_context)
     return byte;
 }
 
-static BYTE read_pb(tpi_context_t *tpi_context)
+static uint8_t read_pb(tpi_context_t *tpi_context)
 {
     /* GCR data port */
-    BYTE byte;
+    uint8_t byte;
     drivetpi_context_t *tpip;
 
     tpip = (drivetpi_context_t *)(tpi_context->prv);
@@ -174,10 +175,10 @@ static BYTE read_pb(tpi_context_t *tpi_context)
     return byte;
 }
 
-static BYTE read_pc(tpi_context_t *tpi_context)
+static uint8_t read_pc(tpi_context_t *tpi_context)
 {
     /* TCBM control / GCR data control */
-    BYTE byte;
+    uint8_t byte;
     drivetpi_context_t *tpip;
 
     tpip = (drivetpi_context_t *)(tpi_context->prv);
@@ -199,7 +200,7 @@ static BYTE read_pc(tpi_context_t *tpi_context)
     return byte;
 }
 
-void tpid_init(drive_context_t *ctxptr)
+void tpid_init(diskunit_context_t *ctxptr)
 {
     tpi_context_t *tpi_context;
 
@@ -208,7 +209,7 @@ void tpid_init(drive_context_t *ctxptr)
     tpi_context->log = log_open(tpi_context->myname);
 }
 
-void tpid_setup_context(drive_context_t *ctxptr)
+void tpid_setup_context(diskunit_context_t *ctxptr)
 {
     drivetpi_context_t *tpip;
     tpi_context_t *tpi;
@@ -225,14 +226,14 @@ void tpid_setup_context(drive_context_t *ctxptr)
     tpi->rmw_flag = &(ctxptr->cpu->rmw_flag);
     tpi->clk_ptr = ctxptr->clk_ptr;
 
-    tpi->myname = lib_msprintf("Drive%dTPI", ctxptr->mynumber);
+    tpi->myname = lib_msprintf("Drive%uTPI", ctxptr->mynumber);
 
     tpicore_setup_context(tpi);
 
     tpi->tpi_int_num = interrupt_cpu_status_int_new(ctxptr->cpu->int_status,
                                                     tpi->myname);
     tpi->irq_line = IK_IRQ;
-    tpip->drive = ctxptr->drive;
+    tpip->drive = ctxptr->drives[0];
 
     tpi->store_pa = store_pa;
     tpi->store_pb = store_pb;

@@ -2,6 +2,8 @@
 #include <winsock2.h>
 #endif
 
+#include <sys/stat.h>		/* stat(2) for the load-path guard */
+
 #include "DBG_Log.h"
 #include "CDebuggerServerWebSockets.h"
 #include "CViewC64.h"
@@ -105,6 +107,23 @@ void CDebuggerServerWebSockets::ThreadRun(void *passData)
 	AddEndpointFunction("load", [this](string token, json params, unsigned char* binaryData, int binaryDataSize) -> vector<char>*
 	{
 		string fileName = params.at("path").get<string>();
+
+		/* Guard: CMainMenuHelper::LoadPRG (and the other LoadXxx siblings) ends up
+		   touching UI/render state -- e.g. recentlyOpenedFiles->Add, ShowMessageError
+		   -> guiMain->ShowNotification, and ultimately a glBindTexture from the
+		   render backend -- which is unsafe on the WS thread. Stock RD (pre-3.10)
+		   crashed the WS bridge when handed a nonexistent path (caught by lldb-
+		   attach as EXC_BAD_ACCESS in glBindTexture on thread "WSDebugServer";
+		   captured as the SKIP'd test_load_nonexistent_file_does_not_crash). Reject
+		   the request here before any UI-touching path runs. */
+		struct stat st;
+		if (stat(fileName.c_str(), &st) != 0) {
+			json err;
+			err["error"] = "file not found";
+			err["path"] = fileName;
+			return PrepareResult(HTTP_NOT_FOUND, token, err, NULL, 0);
+		}
+
 		CSlrString *str = new CSlrString(StringToUtf16(string(fileName)));
 		viewC64->mainMenuHelper->LoadFile(str);
 		delete str;

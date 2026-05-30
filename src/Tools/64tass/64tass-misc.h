@@ -179,7 +179,7 @@ extern void tinit(void);
 extern void labelprint(void);
 extern int testarg(int,char **,struct file_s *, int skipCheck);
 extern struct arguments_s arguments;
-extern struct label_s *current_context, root_label;
+extern struct label_s *tass_current_context, root_label;
 extern unsigned int utf8in(const uint8_t *c, uint32_t *out);
 extern struct encoding_s *actual_encoding;
 

@@ -35,21 +35,21 @@
 
 /*
  *  The philosophy behind this approach is that only the drive module knows
- *  the exact layout of the drive_context_t structure. Therefore only include
+ *  the exact layout of the diskunit_context_t structure. Therefore only include
  *  drivetypes.h from source files within the drive module. All other modules
  *  only need to use pointers transparently, which only requires a forward
- *  declaration of struct drive_context_s (see below).
+ *  declaration of struct diskunit_context_s (see below).
  */
 
-struct drive_context_s;         /* forward declaration */
+struct diskunit_context_s;         /* forward declaration */
 struct monitor_interface_s;
 
 /* This defines the memory access for the drive CPU.  */
-typedef BYTE drive_read_func_t (struct drive_context_s *, WORD);
+typedef uint8_t drive_read_func_t (struct diskunit_context_s *, uint16_t);
 typedef drive_read_func_t *drive_read_func_ptr_t;
-typedef void drive_store_func_t (struct drive_context_s *, WORD, BYTE);
+typedef void drive_store_func_t (struct diskunit_context_s *, uint16_t, uint8_t);
 typedef drive_store_func_t *drive_store_func_ptr_t;
-typedef BYTE drive_peek_func_t (struct drive_context_s *, WORD);
+typedef uint8_t drive_peek_func_t (struct diskunit_context_s *, uint16_t);
 typedef drive_peek_func_t *drive_peek_func_ptr_t;
 
 /*
@@ -62,13 +62,14 @@ typedef struct drivecpu_context_s {
        memory is executed.  We can emulate the RMW bug of the 6502 this way.  */
     int rmw_flag; /* init to 0 */
 
+    /* Last data read/write by the cpu, this value lingers on the C(PU)-bus and
+    gets used when the CPU reads from unconnected space on the C(PU)-bus */
+    uint8_t cpu_last_data;
+
     /* Interrupt/alarm status.  */
     struct interrupt_cpu_status_s *int_status;
 
     struct alarm_context_s *alarm_context;
-
-    /* Clk guard.  */
-    struct clk_guard_s *clk_guard;
 
     struct monitor_interface_s *monitor_interface;
 
@@ -82,7 +83,7 @@ typedef struct drivecpu_context_s {
     CLOCK stop_clk;
 
     CLOCK cycle_accum;
-    BYTE *d_bank_base;
+    uint8_t *d_bank_base;
     unsigned int d_bank_start;
     unsigned int d_bank_limit;
 
@@ -92,11 +93,14 @@ typedef struct drivecpu_context_s {
     /* Address of the last executed opcode. This is used by watchpoints. */
     unsigned int last_opcode_addr;
 
+    /* jam flag */
+    int is_jammed;
+
     /* Public copy of the registers.  */
     mos6510_regs_t cpu_regs;
     R65C02_regs_t cpu_R65C02_regs;
 
-    BYTE *pageone;        /* init to NULL */
+    uint8_t *pageone;        /* init to NULL */
 
     int monspace;         /* init to e_disk[89]_space */
 
@@ -116,16 +120,18 @@ typedef struct drivecpud_context_s {
     /* Pointers to the currently used memory read and write tables. */
     drive_read_func_ptr_t *read_func_ptr;
     drive_store_func_ptr_t *store_func_ptr;
+    drive_read_func_ptr_t *read_func_ptr_dummy;
+    drive_store_func_ptr_t *store_func_ptr_dummy;
     drive_peek_func_ptr_t *peek_func_ptr;
-    BYTE **read_base_tab_ptr;
-    DWORD *read_limit_tab_ptr;
+    uint8_t **read_base_tab_ptr;
+    uint32_t *read_limit_tab_ptr;
 
     /* Memory read and write tables.  */
     drive_read_func_t *read_tab[1][0x101];
     drive_store_func_t *store_tab[1][0x101];
     drive_peek_func_t *peek_tab[1][0x101];
-    BYTE *read_base_tab[1][0x101];
-    DWORD read_limit_tab[1][0x101];
+    uint8_t *read_base_tab[1][0x101];
+    uint32_t read_limit_tab[1][0x101];
 
     int sync_factor;
 } drivecpud_context_t;
@@ -136,25 +142,17 @@ typedef struct drivecpud_context_s {
  */
 
 typedef struct drivefunc_context_s {
-    void (*parallel_set_bus)(BYTE);
-    void (*parallel_set_eoi)(BYTE); /* we may be able to eleminate these... */
-    void (*parallel_set_dav)(BYTE);
-    void (*parallel_set_ndac)(BYTE);
-    void (*parallel_set_nrfd)(BYTE);
+    void (*parallel_set_bus)(uint8_t);
+    void (*parallel_set_eoi)(uint8_t); /* we may be able to eleminate these... */
+    void (*parallel_set_dav)(uint8_t);
+    void (*parallel_set_ndac)(uint8_t);
+    void (*parallel_set_nrfd)(uint8_t);
 } drivefunc_context_t;
 
-extern drivefunc_context_t drive_funcs[DRIVE_NUM];
+extern const drivefunc_context_t drive_funcs[NUM_DISK_UNITS];
 
 /*
- * Helper macros for dual disk drives.
- */
-#define is_drive0(d)    (!is_drive1(d))
-#define is_drive1(d)    ((d) & 1)
-#define mk_drive0(d)    ((d) & ~1)
-#define mk_drive1(d)    ((d) | 1)
-
-/*
- * The context for an entire drive.
+ * The context for an entire disk unit (may have 1 or 2 drives).
  */
 
 struct cia_context_s;
@@ -163,11 +161,12 @@ struct tpi_context_s;
 struct via_context_s;
 struct pc8477_s;
 struct wd1770_s;
+struct cmdhd_context_s;
 
-typedef struct drive_context_s {
-    int mynumber;         /* init to [0123] */
-    CLOCK *clk_ptr;       /* shortcut to drive_clk[mynumber] */
-    struct drive_s *drive;
+typedef struct diskunit_context_s {
+    unsigned int mynumber;    /* 0 ... NUM_DISK_UNITS-1 */
+    CLOCK *clk_ptr;           /* shortcut to drive_clk[mynumber] */
+    struct drive_s *drives[NUM_DRIVES];
 
     struct drivecpu_context_s *cpu;
     struct drivecpud_context_s *cpud;
@@ -183,6 +182,75 @@ typedef struct drive_context_s {
     struct tpi_context_s *tpid;
     struct pc8477_s *pc8477;
     struct wd1770_s *wd1770;
-} drive_context_t;
+    struct cmdhd_context_s *cmdhd;
+
+    /* Here is some data which used to be stored in drives[0]. */
+
+    /* Is this drive enabled for True Drive Emulation?  */
+    unsigned int enable;
+
+    /* What drive type we have to emulate?  */
+    unsigned int type;
+
+    /* Clock frequency of this disk unit in 1MHz units.  */
+    int clock_frequency;
+
+    /* What idling method?  (See `DRIVE_IDLE_*')  */
+    int idling_method;
+
+    /* Flag: What parallel cable do we emulate?  */
+    int parallel_cable;
+
+    /* FIXME: since those are basically exclusive, we should refactor the
+     *        following into a single variable/resource.... */
+
+    /* Is the Professional DOS extension enabled?  */
+    int profdos;
+    /* Is the Supercard+ extension enabled? */
+    int supercard;
+    /* Is the StarDOS extension enabled? */
+    int stardos;
+    /* Is the DolphinDOS3 extension enabled? */
+    int dolphindos3;
+
+    /* RTC context */
+    rtc_ds1216e_t *ds1216;
+
+    /* FD2000/4000 RTC save? */
+    int rtc_save;
+
+    /* CMDHD allow for disk expansion or keep fixed, 0=expand, other = max size */
+    /* value is in 512 byte sectors */
+    unsigned int fixed_size;
+
+    /* Hack to hold the ASCII value of the fixed_size resource above in bytes */
+    /* string is a numeric value in bytes with an optional suffix: K, M, G */
+    /* may also be hex with 0x prefix, or octal with 0 prefix */
+    char *fixed_size_text;
+
+    /* Drive-specific logging goes here.  */
+    signed int log;
+
+    /* state of buttons on reset, if any */
+    int button;
+
+    /* Which RAM expansion is enabled?  */
+    int drive_ram2_enabled, drive_ram4_enabled, drive_ram6_enabled,
+        drive_ram8_enabled, drive_rama_enabled;
+
+    /* Current ROM image.  */
+    uint8_t rom[DRIVE_ROM_SIZE];
+
+    /* What ROM type do we have loaded?  */
+    unsigned int rom_type;
+
+    /* Current trap ROM image.  */
+    uint8_t trap_rom[DRIVE_ROM_SIZE];
+    int trap, trapcont;
+
+    /* Drive RAM */
+    uint8_t drive_ram[DRIVE_RAM_SIZE];
+
+} diskunit_context_t;
 
 #endif

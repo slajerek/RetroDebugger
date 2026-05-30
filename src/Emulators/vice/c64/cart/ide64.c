@@ -37,11 +37,6 @@
 #include <sys/types.h>
 #endif
 
-/* VAC++ has off_t in sys/stat.h */
-#ifdef __IBMC__
-#include <sys/stat.h>
-#endif
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -69,21 +64,15 @@
 #include "resources.h"
 #include "shortbus.h"
 #include "snapshot.h"
-#include "translate.h"
 #include "vicetypes.h"
 #include "util.h"
 #include "vicesocket.h"
 #include "vicii-phi1.h"
 
 #ifdef IDE64_DEBUG
-#define debug(x) log_debug(x)
+#define debug(x) log_printf (x)
 #else
 #define debug(x)
-#endif
-
-#ifndef HAVE_FSEEKO
-#define fseeko(a, b, c) fseek(a, b, c)
-#define ftello(a) ftell(a)
 #endif
 
 #define LATENCY_TIMER 4000
@@ -100,7 +89,7 @@ static int current_cfg;
 static rtc_ds1202_1302_t *ds1302_context = NULL;
 
 /*  */
-static BYTE kill_port;
+static uint8_t kill_port;
 
 static struct drive_s {
     ata_drive_t *drv;
@@ -115,7 +104,7 @@ static struct drive_s {
 static int idrive = 0;
 
 /* communication latch */
-static WORD out_d030, in_d030, idebus;
+static uint16_t out_d030, in_d030, idebus;
 
 #ifdef HAVE_NETWORK
 static struct alarm_s *usb_alarm;
@@ -123,8 +112,8 @@ static char *settings_usbserver_address = NULL;
 static vice_network_socket_t * usbserver_socket = NULL;
 static vice_network_socket_t * usbserver_asocket = NULL;
 static int settings_usbserver;
-static BYTE ft245_rx[256], ft245_tx[128];
-static int ft245_rxp, ft245_rxl, ft245_txp;
+static uint8_t ft245_rx[256], ft245_tx[128];
+static ssize_t ft245_rxp, ft245_rxl, ft245_txp;
 #else
 #define usbserver_activate(a) {}
 #endif
@@ -143,116 +132,129 @@ static char *clockport_device_names = NULL;
 /* ---------------------------------------------------------------------*/
 
 /* some prototypes are needed */
-static void ide64_idebus_store(WORD addr, BYTE value);
-static BYTE ide64_idebus_read(WORD addr);
-static BYTE ide64_idebus_peek(WORD addr);
+static void ide64_idebus_store(uint16_t addr, uint8_t value);
+static uint8_t ide64_idebus_read(uint16_t addr);
+static uint8_t ide64_idebus_peek(uint16_t addr);
 static int ide64_idebus_dump(void);
-static void ide64_io_store(WORD addr, BYTE value);
-static BYTE ide64_io_read(WORD addr);
-static BYTE ide64_io_peek(WORD addr);
+static void ide64_io_store(uint16_t addr, uint8_t value);
+static uint8_t ide64_io_read(uint16_t addr);
+static uint8_t ide64_io_peek(uint16_t addr);
 static int ide64_io_dump(void);
-static void ide64_ft245_store(WORD addr, BYTE value);
-static BYTE ide64_ft245_read(WORD addr);
-static BYTE ide64_ft245_peek(WORD addr);
-static void ide64_ds1302_store(WORD addr, BYTE value);
-static BYTE ide64_ds1302_read(WORD addr);
-static BYTE ide64_ds1302_peek(WORD addr);
-static void ide64_romio_store(WORD addr, BYTE value);
-static BYTE ide64_romio_read(WORD addr);
-static BYTE ide64_romio_peek(WORD addr);
-static BYTE ide64_clockport_read(WORD io_address);
-static BYTE ide64_clockport_peek(WORD io_address);
-static void ide64_clockport_store(WORD io_address, BYTE byte);
+static void ide64_ft245_store(uint16_t addr, uint8_t value);
+static uint8_t ide64_ft245_read(uint16_t addr);
+static uint8_t ide64_ft245_peek(uint16_t addr);
+static void ide64_ds1302_store(uint16_t addr, uint8_t value);
+static uint8_t ide64_ds1302_read(uint16_t addr);
+static uint8_t ide64_ds1302_peek(uint16_t addr);
+static void ide64_romio_store(uint16_t addr, uint8_t value);
+static uint8_t ide64_romio_read(uint16_t addr);
+static uint8_t ide64_romio_peek(uint16_t addr);
+static uint8_t ide64_clockport_read(uint16_t io_address);
+static uint8_t ide64_clockport_peek(uint16_t io_address);
+static void ide64_clockport_store(uint16_t io_address, uint8_t byte);
+static int ide64_clockport_dump(void);
 static int ide64_rtc_dump(void);
 
 static io_source_t ide64_idebus_device = {
-    CARTRIDGE_NAME_IDE64 " IDE",
-    IO_DETACH_CART,
-    NULL,
-    0xde20, 0xde2f, 0x0f,
-    0,
-    ide64_idebus_store,
-    ide64_idebus_read,
-    ide64_idebus_peek,
-    ide64_idebus_dump,
-    CARTRIDGE_IDE64,
-    0,
-    0
+    CARTRIDGE_NAME_IDE64 " IDE", /* name of the device */
+    IO_DETACH_CART,              /* use cartridge ID to detach the device when involved in a read-collision */
+    IO_DETACH_NO_RESOURCE,       /* does not use a resource for detach */
+    0xde20, 0xde2f, 0x0f,        /* range for the device, regs:$de20-$de2f */
+    0,                           /* read validity is determined by the device upon a read */
+    ide64_idebus_store,          /* store function */
+    NULL,                        /* NO poke function */
+    ide64_idebus_read,           /* read function */
+    ide64_idebus_peek,           /* peek function */
+    ide64_idebus_dump,           /* device state information dump function */
+    CARTRIDGE_IDE64,             /* cartridge ID */
+    IO_PRIO_NORMAL,              /* normal priority, device read needs to be checked for collisions */
+    0,                           /* insertion order, gets filled in by the registration function */
+    IO_MIRROR_NONE               /* NO mirroring */
 };
 
 static io_source_t ide64_io_device = {
-    CARTRIDGE_NAME_IDE64 " I/O",
-    IO_DETACH_CART,
-    NULL,
-    0xde30, 0xde37, 0x07,
-    0,
-    ide64_io_store,
-    ide64_io_read,
-    ide64_io_peek,
-    ide64_io_dump,
-    CARTRIDGE_IDE64,
-    0,
-    0
+    CARTRIDGE_NAME_IDE64 " I/O", /* name of the device */
+    IO_DETACH_CART,              /* use cartridge ID to detach the device when involved in a read-collision */
+    IO_DETACH_NO_RESOURCE,       /* does not use a resource for detach */
+    0xde30, 0xde37, 0x07,        /* range for the device, regs:$de30-$de37 */
+    0,                           /* read validity is determined by the device upon a read */
+    ide64_io_store,              /* store function */
+    NULL,                        /* NO poke function */
+    ide64_io_read,               /* read function */
+    ide64_io_peek,               /* peek function */
+    ide64_io_dump,               /* device state information dump function */
+    CARTRIDGE_IDE64,             /* cartridge ID */
+    IO_PRIO_NORMAL,              /* normal priority, device read needs to be checked for collisions */
+    0,                           /* insertion order, gets filled in by the registration function */
+    IO_MIRROR_NONE               /* NO mirroring */
 };
 
 static io_source_t ide64_ft245_device = {
-    CARTRIDGE_NAME_IDE64 " FT245",
-    IO_DETACH_CART,
-    NULL,
-    0xde5d, 0xde5e, 0x01,
-    0,
-    ide64_ft245_store,
-    ide64_ft245_read,
-    ide64_ft245_peek,
-    NULL, /* TODO: dump */
-    CARTRIDGE_IDE64,
-    0,
-    0
+    CARTRIDGE_NAME_IDE64 " FT245", /* name of the device */
+    IO_DETACH_CART,                /* use cartridge ID to detach the device when involved in a read-collision */
+    IO_DETACH_NO_RESOURCE,         /* does not use a resource for detach */
+    0xde5d, 0xde5e, 0x01,          /* range for the device, regs:$de5d-$de5e */
+    0,                             /* read validity is determined by the device upon a read */
+    ide64_ft245_store,             /* store function */
+    NULL,                          /* NO poke function */
+    ide64_ft245_read,              /* read function */
+    ide64_ft245_peek,              /* peek function */
+    NULL,                          /* TODO: device state information dump function */
+    CARTRIDGE_IDE64,               /* cartridge ID */
+    IO_PRIO_NORMAL,                /* normal priority, device read needs to be checked for collisions */
+    0,                             /* insertion order, gets filled in by the registration function */
+    IO_MIRROR_NONE                 /* NO mirroring */
 };
 
 static io_source_t ide64_ds1302_device = {
-    CARTRIDGE_NAME_IDE64 " DS1302",
-    IO_DETACH_CART,
-    NULL,
-    0xde5f, 0xde5f, 0x00,
-    0,
-    ide64_ds1302_store,
-    ide64_ds1302_read,
-    ide64_ds1302_peek,
-    ide64_rtc_dump,
-    CARTRIDGE_IDE64,
-    0,
-    0
+    CARTRIDGE_NAME_IDE64 " DS1302", /* name of the device */
+    IO_DETACH_CART,                 /* use cartridge ID to detach the device when involved in a read-collision */
+    IO_DETACH_NO_RESOURCE,          /* does not use a resource for detach */
+    0xde5f, 0xde5f, 0x00,           /* range for the device, reg:$de5f */
+    0,                              /* read validity is determined by the device upon a read */
+    ide64_ds1302_store,             /* store function */
+    NULL,                           /* NO poke function */
+    ide64_ds1302_read,              /* read function */
+    ide64_ds1302_peek,              /* peek function */
+    ide64_rtc_dump,                 /* device state information dump function */
+    CARTRIDGE_IDE64,                /* cartridge ID */
+    IO_PRIO_NORMAL,                 /* normal priority, device read needs to be checked for collisions */
+    0,                              /* insertion order, gets filled in by the registration function */
+    IO_MIRROR_NONE                  /* NO mirroring */
 };
 
 static io_source_t ide64_rom_device = {
-    CARTRIDGE_NAME_IDE64 " ROM",
-    IO_DETACH_CART,
-    NULL,
-    0xde60, 0xdeff, 0xff,
-    0,
-    ide64_romio_store,
-    ide64_romio_read,
-    ide64_romio_peek,
-    NULL, /* TODO: dump */
-    CARTRIDGE_IDE64,
-    0,
-    0
+    CARTRIDGE_NAME_IDE64 " ROM", /* name of the device */
+    IO_DETACH_CART,              /* use cartridge ID to detach the device when involved in a read-collision */
+    IO_DETACH_NO_RESOURCE,       /* does not use a resource for detach */
+    0xde60, 0xdeff, 0xff,        /* range for the device, regs:$de60-$deff */
+    0,                           /* read validity is determined by the device upon a read */
+    ide64_romio_store,           /* store function */
+    NULL,                        /* NO poke function */
+    ide64_romio_read,            /* read function */
+    ide64_romio_peek,            /* peek function */
+    NULL,                        /* TODO: device state information dump function */
+    CARTRIDGE_IDE64,             /* cartridge ID */
+    IO_PRIO_NORMAL,              /* normal priority, device read needs to be checked for collisions */
+    0,                           /* insertion order, gets filled in by the registration function */
+    IO_MIRROR_NONE               /* NO mirroring */
 };
 
 static io_source_t ide64_clockport_device = {
-    CARTRIDGE_NAME_IDE64 "Clockport",
-    IO_DETACH_RESOURCE,
-    "IDE64ClockPort",
-    0xde00, 0xde0f, 0x0f,
-    0,
-    ide64_clockport_store,
-    ide64_clockport_read,
-    ide64_clockport_peek,
-    NULL, /* TODO: dump */
-    CARTRIDGE_IDE64,
-    0,
-    0
+    CARTRIDGE_NAME_IDE64 "Clockport", /* name of the device */
+    IO_DETACH_RESOURCE,               /* use resource to detach the device when involved in a read-collision */
+    "IDE64ClockPort",                 /* resource to set to '0' */
+    0xde00, 0xde0f, 0x0f,             /* range for the device, regs:$de00-$de0f */
+    0,                                /* read validity is determined by the device upon a read */
+    ide64_clockport_store,            /* store function */
+    NULL,                             /* NO poke function */
+    ide64_clockport_read,             /* read function */
+    ide64_clockport_peek,             /* peek function */
+    ide64_clockport_dump,             /* device state information dump function */
+    CARTRIDGE_IDE64,                  /* cartridge ID */
+    IO_PRIO_NORMAL,                   /* normal priority, device read needs to be checked for collisions */
+    0,                                /* insertion order, gets filled in by the registration function */
+    IO_MIRROR_NONE                    /* NO mirroring */
 };
 
 static io_source_list_t *ide64_idebus_list_item = NULL;
@@ -285,7 +287,7 @@ static int clockport_activate(void)
         return 0;
     }
 
-    clockport_device = clockport_open_device(clockport_device_id, (char *)STRING_IDE64_CLOCKPORT);
+    clockport_device = clockport_open_device(clockport_device_id, STRING_IDE64_CLOCKPORT);
     if (!clockport_device) {
         return -1;
     }
@@ -392,7 +394,7 @@ static void detect_ide64_image(struct drive_s *drive)
 {
     FILE *file;
     unsigned char header[24];
-    int res;
+    size_t res;
     char *ext;
     ata_drive_geometry_t *geometry = &drive->detected;
 
@@ -421,13 +423,13 @@ static void detect_ide64_image(struct drive_s *drive)
     drive->type = ATA_DRIVE_CF;
     ext = util_get_extension(drive->filename);
     if (ext) {
-        if (!strcasecmp(ext, "cfa")) {
+        if (!util_strcasecmp(ext, "cfa")) {
             drive->type = ATA_DRIVE_CF;
-        } else if (!strcasecmp(ext, "hdd")) {
+        } else if (!util_strcasecmp(ext, "hdd")) {
             drive->type = ATA_DRIVE_HDD;
-        } else if (!strcasecmp(ext, "fdd")) {
+        } else if (!util_strcasecmp(ext, "fdd")) {
             drive->type = ATA_DRIVE_FDD;
-        } else if (!strcasecmp(ext, "iso")) {
+        } else if (!util_strcasecmp(ext, "iso")) {
             drive->type = ATA_DRIVE_CD;
         }
     }
@@ -462,8 +464,8 @@ static void detect_ide64_image(struct drive_s *drive)
             }
         } else {
             off_t size = 0;
-            if (fseeko(file, 0, SEEK_END) == 0) {
-                size = ftello(file);
+            if (archdep_fseeko(file, 0, SEEK_END) == 0) {
+                size = archdep_ftello(file);
                 if (size < 0) {
                     size = 0;
                 }
@@ -471,7 +473,7 @@ static void detect_ide64_image(struct drive_s *drive)
             geometry->cylinders = 0;
             geometry->heads = 0;
             geometry->sectors = 0;
-            geometry->size = size / ((drive->type == ATA_DRIVE_CD) ? 2048 : 512);
+            geometry->size = (int)(size / ((drive->type == ATA_DRIVE_CD) ? 2048 : 512));
         }
     }
 
@@ -496,7 +498,7 @@ static int set_cylinders(int cylinders, void *param)
 {
     struct drive_s *drive = &drives[vice_ptr_to_int(param)];
 
-    if (cylinders > 65535 || cylinders < 1) {
+    if (cylinders > IDE64_CYLINDERS_MAX || cylinders < IDE64_CYLINDERS_MIN) {
         return -1;
     }
 
@@ -511,7 +513,7 @@ static int set_heads(int heads, void *param)
 {
     struct drive_s *drive = &drives[vice_ptr_to_int(param)];
 
-    if (heads > 16 || heads < 1) {
+    if (heads > IDE64_HEADS_MAX || heads < IDE64_HEADS_MIN) {
         return -1;
     }
     drive->settings.heads = heads;
@@ -525,7 +527,7 @@ static int set_sectors(int sectors, void *param)
 {
     struct drive_s *drive = &drives[vice_ptr_to_int(param)];
 
-    if (sectors > 63 || sectors < 1) {
+    if (sectors > IDE64_SECTORS_MAX || sectors < IDE64_SECTORS_MIN) {
         return -1;
     }
     drive->settings.sectors = sectors;
@@ -585,7 +587,7 @@ static int set_version(int value, void *param)
             return -1;
         }
         usbserver_activate(settings_usbserver);
-        machine_trigger_reset(MACHINE_RESET_MODE_HARD);
+        machine_trigger_reset(MACHINE_RESET_MODE_POWER_CYCLE);
     }
     return 0;
 }
@@ -690,7 +692,7 @@ static int set_ide64_clockport_device(int val, void *param)
     }
 
     if (val != CLOCKPORT_DEVICE_NONE) {
-        clockport_device = clockport_open_device(val, (char *)STRING_IDE64_CLOCKPORT);
+        clockport_device = clockport_open_device(val, STRING_IDE64_CLOCKPORT);
         if (!clockport_device) {
             return -1;
         }
@@ -830,169 +832,108 @@ int ide64_resources_shutdown(void)
     return 0;
 }
 
-static const cmdline_option_t cmdline_options[] = {
-    { "-IDE64image1", SET_RESOURCE, 1,
+static const cmdline_option_t cmdline_options[] =
+{
+    { "-IDE64image1", SET_RESOURCE, CMDLINE_ATTRIB_NEED_ARGS,
       NULL, NULL, "IDE64Image1", NULL,
-      USE_PARAM_ID, USE_DESCRIPTION_ID,
-      IDCLS_P_NAME, IDCLS_SPECIFY_IDE64_NAME,
-      NULL, NULL },
-    { "-IDE64image2", SET_RESOURCE, 1,
+      "<Name>", "Specify name of IDE64 image file" },
+    { "-IDE64image2", SET_RESOURCE, CMDLINE_ATTRIB_NEED_ARGS,
       NULL, NULL, "IDE64Image2", NULL,
-      USE_PARAM_ID, USE_DESCRIPTION_ID,
-      IDCLS_P_NAME, IDCLS_SPECIFY_IDE64_NAME,
-      NULL, NULL },
-    { "-IDE64image3", SET_RESOURCE, 1,
+      "<Name>", "Specify name of IDE64 image file" },
+    { "-IDE64image3", SET_RESOURCE, CMDLINE_ATTRIB_NEED_ARGS,
       NULL, NULL, "IDE64Image3", NULL,
-      USE_PARAM_ID, USE_DESCRIPTION_ID,
-      IDCLS_P_NAME, IDCLS_SPECIFY_IDE64_NAME,
-      NULL, NULL },
-    { "-IDE64image4", SET_RESOURCE, 1,
+      "<Name>", "Specify name of IDE64 image file" },
+    { "-IDE64image4", SET_RESOURCE, CMDLINE_ATTRIB_NEED_ARGS,
       NULL, NULL, "IDE64Image4", NULL,
-      USE_PARAM_ID, USE_DESCRIPTION_ID,
-      IDCLS_P_NAME, IDCLS_SPECIFY_IDE64_NAME,
-      NULL, NULL },
-    { "-IDE64cyl1", SET_RESOURCE, 1,
+      "<Name>", "Specify name of IDE64 image file" },
+    { "-IDE64cyl1", SET_RESOURCE, CMDLINE_ATTRIB_NEED_ARGS,
       NULL, NULL, "IDE64Cylinders1", NULL,
-      USE_PARAM_ID, USE_DESCRIPTION_ID,
-      IDCLS_P_VALUE, IDCLS_SET_AMOUNT_CYLINDERS_IDE64,
-      NULL, NULL },
-    { "-IDE64cyl2", SET_RESOURCE, 1,
+      "<value>", "Set number of cylinders for the IDE64 emulation. (1..65535)" },
+    { "-IDE64cyl2", SET_RESOURCE, CMDLINE_ATTRIB_NEED_ARGS,
       NULL, NULL, "IDE64Cylinders2", NULL,
-      USE_PARAM_ID, USE_DESCRIPTION_ID,
-      IDCLS_P_VALUE, IDCLS_SET_AMOUNT_CYLINDERS_IDE64,
-      NULL, NULL },
-    { "-IDE64cyl3", SET_RESOURCE, 1,
+      "<value>", "Set number of cylinders for the IDE64 emulation. (1..65535)" },
+    { "-IDE64cyl3", SET_RESOURCE, CMDLINE_ATTRIB_NEED_ARGS,
       NULL, NULL, "IDE64Cylinders3", NULL,
-      USE_PARAM_ID, USE_DESCRIPTION_ID,
-      IDCLS_P_VALUE, IDCLS_SET_AMOUNT_CYLINDERS_IDE64,
-      NULL, NULL },
-    { "-IDE64cyl4", SET_RESOURCE, 1,
+      "<value>", "Set number of cylinders for the IDE64 emulation. (1..65535)" },
+    { "-IDE64cyl4", SET_RESOURCE, CMDLINE_ATTRIB_NEED_ARGS,
       NULL, NULL, "IDE64Cylinders4", NULL,
-      USE_PARAM_ID, USE_DESCRIPTION_ID,
-      IDCLS_P_VALUE, IDCLS_SET_AMOUNT_CYLINDERS_IDE64,
-      NULL, NULL },
-    { "-IDE64hds1", SET_RESOURCE, 1,
+      "<value>", "Set number of cylinders for the IDE64 emulation. (1..65535)" },
+    { "-IDE64hds1", SET_RESOURCE, CMDLINE_ATTRIB_NEED_ARGS,
       NULL, NULL, "IDE64Heads1", NULL,
-      USE_PARAM_ID, USE_DESCRIPTION_ID,
-      IDCLS_P_VALUE, IDCLS_SET_AMOUNT_HEADS_IDE64,
-      NULL, NULL },
-    { "-IDE64hds2", SET_RESOURCE, 1,
+      "<value>", "Set number of heads for the IDE64 emulation. (1..16)" },
+    { "-IDE64hds2", SET_RESOURCE, CMDLINE_ATTRIB_NEED_ARGS,
       NULL, NULL, "IDE64Heads2", NULL,
-      USE_PARAM_ID, USE_DESCRIPTION_ID,
-      IDCLS_P_VALUE, IDCLS_SET_AMOUNT_HEADS_IDE64,
-      NULL, NULL },
-    { "-IDE64hds3", SET_RESOURCE, 1,
+      "<value>", "Set number of heads for the IDE64 emulation. (1..16)" },
+    { "-IDE64hds3", SET_RESOURCE, CMDLINE_ATTRIB_NEED_ARGS,
       NULL, NULL, "IDE64Heads3", NULL,
-      USE_PARAM_ID, USE_DESCRIPTION_ID,
-      IDCLS_P_VALUE, IDCLS_SET_AMOUNT_HEADS_IDE64,
-      NULL, NULL },
-    { "-IDE64hds4", SET_RESOURCE, 1,
+      "<value>", "Set number of heads for the IDE64 emulation. (1..16)" },
+    { "-IDE64hds4", SET_RESOURCE, CMDLINE_ATTRIB_NEED_ARGS,
       NULL, NULL, "IDE64Heads4", NULL,
-      USE_PARAM_ID, USE_DESCRIPTION_ID,
-      IDCLS_P_VALUE, IDCLS_SET_AMOUNT_HEADS_IDE64,
-      NULL, NULL },
-    { "-IDE64sec1", SET_RESOURCE, 1,
+      "<value>", "Set number of heads for the IDE64 emulation. (1..16)" },
+    { "-IDE64sec1", SET_RESOURCE, CMDLINE_ATTRIB_NEED_ARGS,
       NULL, NULL, "IDE64Sectors1", NULL,
-      USE_PARAM_ID, USE_DESCRIPTION_ID,
-      IDCLS_P_VALUE, IDCLS_SET_AMOUNT_SECTORS_IDE64,
-      NULL, NULL },
-    { "-IDE64sec2", SET_RESOURCE, 1,
+      "<value>", "Set number of sectors for the IDE64 emulation. (1..63)" },
+    { "-IDE64sec2", SET_RESOURCE, CMDLINE_ATTRIB_NEED_ARGS,
       NULL, NULL, "IDE64Sectors2", NULL,
-      USE_PARAM_ID, USE_DESCRIPTION_ID,
-      IDCLS_P_VALUE, IDCLS_SET_AMOUNT_SECTORS_IDE64,
-      NULL, NULL },
-    { "-IDE64sec3", SET_RESOURCE, 1,
+      "<value>", "Set number of sectors for the IDE64 emulation. (1..63)" },
+    { "-IDE64sec3", SET_RESOURCE, CMDLINE_ATTRIB_NEED_ARGS,
       NULL, NULL, "IDE64Sectors3", NULL,
-      USE_PARAM_ID, USE_DESCRIPTION_ID,
-      IDCLS_P_VALUE, IDCLS_SET_AMOUNT_SECTORS_IDE64,
-      NULL, NULL },
-    { "-IDE64sec4", SET_RESOURCE, 1,
+      "<value>", "Set number of sectors for the IDE64 emulation. (1..63)" },
+    { "-IDE64sec4", SET_RESOURCE, CMDLINE_ATTRIB_NEED_ARGS,
       NULL, NULL, "IDE64Sectors4", NULL,
-      USE_PARAM_ID, USE_DESCRIPTION_ID,
-      IDCLS_P_VALUE, IDCLS_SET_AMOUNT_SECTORS_IDE64,
-      NULL, NULL },
-    { "-IDE64autosize1", SET_RESOURCE, 0,
+      "<value>", "Set number of sectors for the IDE64 emulation. (1..63)" },
+    { "-IDE64autosize1", SET_RESOURCE, CMDLINE_ATTRIB_NONE,
       NULL, NULL, "IDE64AutodetectSize1", (void *)1,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_AUTODETECT_IDE64_GEOMETRY,
-      NULL, NULL },
-    { "+IDE64autosize1", SET_RESOURCE, 0,
+      NULL, "Autodetect image size" },
+    { "+IDE64autosize1", SET_RESOURCE, CMDLINE_ATTRIB_NONE,
       NULL, NULL, "IDE64AutodetectSize1", (void *)0,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_NO_AUTODETECT_IDE64_GEOMETRY,
-      NULL, NULL },
-    { "-IDE64autosize2", SET_RESOURCE, 0,
+      NULL, "Do not autodetect geometry of formatted images" },
+    { "-IDE64autosize2", SET_RESOURCE, CMDLINE_ATTRIB_NONE,
       NULL, NULL, "IDE64AutodetectSize2", (void *)1,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_AUTODETECT_IDE64_GEOMETRY,
-      NULL, NULL },
-    { "+IDE64autosize2", SET_RESOURCE, 0,
+      NULL, "Autodetect image size" },
+    { "+IDE64autosize2", SET_RESOURCE, CMDLINE_ATTRIB_NONE,
       NULL, NULL, "IDE64AutodetectSize2", (void *)0,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_NO_AUTODETECT_IDE64_GEOMETRY,
-      NULL, NULL },
-    { "-IDE64autosize3", SET_RESOURCE, 0,
+      NULL, "Do not autodetect geometry of formatted images" },
+    { "-IDE64autosize3", SET_RESOURCE, CMDLINE_ATTRIB_NONE,
       NULL, NULL, "IDE64AutodetectSize3", (void *)1,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_AUTODETECT_IDE64_GEOMETRY,
-      NULL, NULL },
-    { "+IDE64autosize3", SET_RESOURCE, 0,
+      NULL, "Autodetect image size" },
+    { "+IDE64autosize3", SET_RESOURCE, CMDLINE_ATTRIB_NONE,
       NULL, NULL, "IDE64AutodetectSize3", (void *)0,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_NO_AUTODETECT_IDE64_GEOMETRY,
-      NULL, NULL },
-    { "-IDE64autosize4", SET_RESOURCE, 0,
+      NULL, "Do not autodetect geometry of formatted images" },
+    { "-IDE64autosize4", SET_RESOURCE, CMDLINE_ATTRIB_NONE,
       NULL, NULL, "IDE64AutodetectSize4", (void *)1,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_AUTODETECT_IDE64_GEOMETRY,
-      NULL, NULL },
-    { "+IDE64autosize4", SET_RESOURCE, 0,
+      NULL, "Autodetect image size" },
+    { "+IDE64autosize4", SET_RESOURCE, CMDLINE_ATTRIB_NONE,
       NULL, NULL, "IDE64AutodetectSize4", (void *)0,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_NO_AUTODETECT_IDE64_GEOMETRY,
-      NULL, NULL },
-    { "-IDE64version", SET_RESOURCE, 1,
+      NULL, "Do not autodetect geometry of formatted images" },
+    { "-IDE64version", SET_RESOURCE, CMDLINE_ATTRIB_NEED_ARGS,
       NULL, NULL, "IDE64Version", NULL,
-      USE_PARAM_ID, USE_DESCRIPTION_ID,
-      IDCLS_P_VALUE, IDCLS_IDE64_VERSION,
-      NULL, NULL },
+      "<value>", "IDE64 cartridge version" },
 #ifdef HAVE_NETWORK
-    { "-IDE64USB", SET_RESOURCE, 0,
+    { "-IDE64USB", SET_RESOURCE, CMDLINE_ATTRIB_NONE,
       NULL, NULL, "IDE64USBServer", (resource_value_t)1,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_ENABLE_IDE64_USB_SERVER,
-      NULL, NULL },
-    { "+IDE64USB", SET_RESOURCE, 0,
+      NULL, "Enable IDE64 USB server" },
+    { "+IDE64USB", SET_RESOURCE, CMDLINE_ATTRIB_NONE,
       NULL, NULL, "IDE64USBServer", (resource_value_t)0,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_DISABLE_IDE64_USB_SERVER,
-      NULL, NULL },
-    { "-IDE64USBAddress", SET_RESOURCE, 1,
+      NULL, "Disable IDE64 USB server" },
+    { "-IDE64USBAddress", SET_RESOURCE, CMDLINE_ATTRIB_NEED_ARGS,
       NULL, NULL, "IDE64USBServerAddress", NULL,
-      USE_PARAM_ID, USE_DESCRIPTION_ID,
-      IDCLS_P_NAME, IDCLS_IDE64_USB_SERVER_ADDRESS,
-      NULL, NULL },
+      "<Name>", "IDE64 USB server address" },
 #endif
-    { "-IDE64rtcsave", SET_RESOURCE, 0,
+    { "-IDE64rtcsave", SET_RESOURCE, CMDLINE_ATTRIB_NONE,
       NULL, NULL, "IDE64RTCSave", (void *)1,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_ENABLE_IDE64_RTC_SAVE,
-      NULL, NULL },
-    { "+IDE64rtcsave", SET_RESOURCE, 0,
+      NULL, "Enable saving of IDE64 RTC data when changed." },
+    { "+IDE64rtcsave", SET_RESOURCE, CMDLINE_ATTRIB_NONE,
       NULL, NULL, "IDE64RTCSave", (void *)0,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_DISABLE_IDE64_RTC_SAVE,
-      NULL, NULL },
+      NULL, "Disable saving of IDE64 RTC data when changed." },
     CMDLINE_LIST_END
 };
 
 static cmdline_option_t clockport_cmdline_options[] =
 {
-    { "-ide64clockportdevice", SET_RESOURCE, 1,
+    { "-ide64clockportdevice", SET_RESOURCE, CMDLINE_ATTRIB_NEED_ARGS,
       NULL, NULL, "IDE64ClockPort", NULL,
-      USE_PARAM_ID, USE_DESCRIPTION_COMBO,
-      IDCLS_P_DEVICE, IDCLS_CLOCKPORT_DEVICE,
-      NULL, NULL },
+      "<device>", NULL },
     CMDLINE_LIST_END
 };
 
@@ -1012,7 +953,7 @@ int ide64_cmdline_options_init(void)
 
     sprintf(number, "%d", clockport_supported_devices[0].id);
 
-    clockport_device_names = util_concat(". (", number, ": ", clockport_supported_devices[0].name, NULL);
+    clockport_device_names = util_concat("Clockport device. (", number, ": ", clockport_supported_devices[0].name, NULL);
 
     for (i = 1; clockport_supported_devices[i].name; ++i) {
         tmp = clockport_device_names;
@@ -1036,7 +977,7 @@ void ide64_reset(void)
     }
 }
 
-static BYTE ide64_idebus_read(WORD addr)
+static uint8_t ide64_idebus_read(uint16_t addr)
 {
     in_d030 = ata_register_read(drives[idrive ^ 1].drv, addr, idebus);
     in_d030 = ata_register_read(drives[idrive].drv, addr, in_d030);
@@ -1051,7 +992,7 @@ static BYTE ide64_idebus_read(WORD addr)
     return 0;
 }
 
-static BYTE ide64_idebus_peek(WORD addr)
+static uint8_t ide64_idebus_peek(uint16_t addr)
 {
     if (settings_version >= IDE64_VERSION_4_1) {
         return ata_register_peek(drives[idrive].drv, addr) | ata_register_peek(drives[idrive ^ 1].drv, addr);
@@ -1059,7 +1000,7 @@ static BYTE ide64_idebus_peek(WORD addr)
     return 0;
 }
 
-static void ide64_idebus_store(WORD addr, BYTE value)
+static void ide64_idebus_store(uint16_t addr, uint8_t value)
 {
     switch (addr) {
         case 8:
@@ -1077,7 +1018,7 @@ static void ide64_idebus_store(WORD addr, BYTE value)
     }
 }
 
-static BYTE ide64_io_read(WORD addr)
+static uint8_t ide64_io_read(uint16_t addr)
 {
     ide64_io_device.io_source_valid = 1;
 
@@ -1086,7 +1027,7 @@ static BYTE ide64_io_read(WORD addr)
             if (settings_version >= IDE64_VERSION_4_1) {
                 break;
             }
-            return (BYTE)in_d030;
+            return (uint8_t)in_d030;
         case 1:
             return in_d030 >> 8;
         case 2:
@@ -1103,14 +1044,14 @@ static BYTE ide64_io_read(WORD addr)
     return 0;
 }
 
-static BYTE ide64_io_peek(WORD addr)
+static uint8_t ide64_io_peek(uint16_t addr)
 {
     switch (addr) {
         case 0:
             if (settings_version >= IDE64_VERSION_4_1) {
                 break;
             }
-            return (BYTE)in_d030;
+            return (uint8_t)in_d030;
         case 1:
             return in_d030 >> 8;
         case 2:
@@ -1126,7 +1067,7 @@ static BYTE ide64_io_peek(WORD addr)
     return 0;
 }
 
-static void ide64_io_store(WORD addr, BYTE value)
+static void ide64_io_store(uint16_t addr, uint8_t value)
 {
     switch (addr) {
         case 0:
@@ -1143,7 +1084,7 @@ static void ide64_io_store(WORD addr, BYTE value)
         case 5:
             if (settings_version < IDE64_VERSION_4_1 && current_bank != ((addr ^ 2) & 3)) {
                 current_bank = (addr ^ 2) & 3;
-                cart_config_changed_slotmain(0, (BYTE)(current_cfg | (current_bank << CMODE_BANK_SHIFT)), CMODE_READ | CMODE_PHI2_RAM);
+                cart_config_changed_slotmain(0, (uint8_t)(current_cfg | (current_bank << CMODE_BANK_SHIFT)), CMODE_READ | CMODE_PHI2_RAM);
             }
             return;
     }
@@ -1158,8 +1099,7 @@ static void usb_receive(void)
             usbserver_asocket = vice_network_accept(usbserver_socket);
         }
         while (usbserver_asocket && vice_network_select_poll_one(usbserver_asocket) && reconnect--) {
-            int r;
-            r = vice_network_receive(usbserver_asocket, ft245_rx, sizeof(ft245_rx), 0);
+            ssize_t r = vice_network_receive(usbserver_asocket, ft245_rx, sizeof(ft245_rx), 0);
             if (r <= 0) {
                 vice_network_socket_close(usbserver_asocket);
                 if (vice_network_select_poll_one(usbserver_socket)) {
@@ -1188,7 +1128,7 @@ static void usb_send(void)
             usbserver_asocket = vice_network_accept(usbserver_socket);
         }
         while (usbserver_asocket && reconnect--) {
-            int r = vice_network_send(usbserver_asocket, ft245_tx, ft245_txp, 0);
+            ssize_t r = vice_network_send(usbserver_asocket, ft245_tx, ft245_txp, 0);
             if (r > 0 && vice_network_send(usbserver_asocket, ft245_tx, 0, 0) < 0) {
                 r = -1;
             }
@@ -1220,7 +1160,7 @@ static void usb_send(void)
 }
 #endif
 
-static BYTE ide64_ft245_read(WORD addr)
+static uint8_t ide64_ft245_read(uint16_t addr)
 {
     if (settings_version >= IDE64_VERSION_4_1) {
         switch (addr ^ 1) {
@@ -1254,7 +1194,7 @@ static BYTE ide64_ft245_read(WORD addr)
     return 0;
 }
 
-static BYTE ide64_ft245_peek(WORD addr)
+static uint8_t ide64_ft245_peek(uint16_t addr)
 {
     if (settings_version >= IDE64_VERSION_4_1) {
         switch (addr ^ 1) {
@@ -1285,7 +1225,7 @@ static BYTE ide64_ft245_peek(WORD addr)
     return 0;
 }
 
-static void ide64_ft245_store(WORD addr, BYTE value)
+static void ide64_ft245_store(uint16_t addr, uint8_t value)
 {
     if (settings_version >= IDE64_VERSION_4_1) {
         switch (addr ^ 1) {
@@ -1309,7 +1249,7 @@ static void ide64_ft245_store(WORD addr, BYTE value)
     return;
 }
 
-static BYTE ide64_ds1302_read(WORD addr)
+static uint8_t ide64_ds1302_read(uint16_t addr)
 {
     int i;
 
@@ -1327,12 +1267,12 @@ static BYTE ide64_ds1302_read(WORD addr)
     return i;
 }
 
-static BYTE ide64_ds1302_peek(WORD addr)
+static uint8_t ide64_ds1302_peek(uint16_t addr)
 {
     return 0;
 }
 
-static void ide64_ds1302_store(WORD addr, BYTE value)
+static void ide64_ds1302_store(uint16_t addr, uint8_t value)
 {
     if (kill_port & 1) {
         return;
@@ -1342,30 +1282,44 @@ static void ide64_ds1302_store(WORD addr, BYTE value)
     return;
 }
 
-static BYTE ide64_clockport_read(WORD address)
+static uint8_t ide64_clockport_read(uint16_t address)
 {
+    /* read from clockport device */
     if (clockport_device) {
+        ide64_clockport_device.io_source_valid = 1;
         return clockport_device->read(address, &ide64_clockport_device.io_source_valid, clockport_device->device_context);
     }
+    /* read open clock port */
+    ide64_clockport_device.io_source_valid = 0;
     return 0;
 }
 
-static BYTE ide64_clockport_peek(WORD address)
+static uint8_t ide64_clockport_peek(uint16_t address)
 {
+    /* read from clockport device */
     if (clockport_device) {
         return clockport_device->peek(address, clockport_device->device_context);
     }
     return 0;
 }
 
-static void ide64_clockport_store(WORD address, BYTE byte)
+static void ide64_clockport_store(uint16_t address, uint8_t byte)
 {
+    /* write to clockport device */
     if (clockport_device) {
         clockport_device->store(address, byte, clockport_device->device_context);
     }
 }
 
-static BYTE ide64_romio_read(WORD addr)
+static int ide64_clockport_dump(void)
+{
+    if (clockport_device) {
+        clockport_device->dump(clockport_device->device_context);
+    }
+    return 0;
+}
+
+static uint8_t ide64_romio_read(uint16_t addr)
 {
     if (kill_port & 1) {
         ide64_rom_device.io_source_valid = 0;
@@ -1376,7 +1330,7 @@ static BYTE ide64_romio_read(WORD addr)
     return roml_banks[addr | 0x1e00 | (current_bank << 14)];
 }
 
-static BYTE ide64_romio_peek(WORD addr)
+static uint8_t ide64_romio_peek(uint16_t addr)
 {
     if (kill_port & 1) {
         return 0;
@@ -1384,7 +1338,7 @@ static BYTE ide64_romio_peek(WORD addr)
     return roml_banks[addr | 0x1e00 | (current_bank << 14)];
 }
 
-static void ide64_romio_store(WORD addr, BYTE value)
+static void ide64_romio_store(uint16_t addr, uint8_t value)
 {
     if (kill_port & 1) {
         return;
@@ -1452,29 +1406,29 @@ static void ide64_romio_store(WORD addr, BYTE value)
         default:
             return;
     }
-    cart_config_changed_slotmain(0, (BYTE)(current_cfg | (current_bank << CMODE_BANK_SHIFT)), CMODE_READ | CMODE_PHI2_RAM);
+    cart_config_changed_slotmain(0, (uint8_t)(current_cfg | (current_bank << CMODE_BANK_SHIFT)), CMODE_READ | CMODE_PHI2_RAM);
 }
 
-BYTE ide64_rom_read(WORD addr)
+uint8_t ide64_rom_read(uint16_t addr)
 {
     return roml_banks[(addr & 0x3fff) | (roml_bank << 14)];
 }
 
-void ide64_rom_store(WORD addr, BYTE value)
+void ide64_rom_store(uint16_t addr, uint8_t value)
 {
 }
 
-BYTE ide64_ram_read(WORD addr)
+uint8_t ide64_ram_read(uint16_t addr)
 {
     return export_ram0[addr & 0x7fff];
 }
 
-void ide64_ram_store(WORD addr, BYTE value)
+void ide64_ram_store(uint16_t addr, uint8_t value)
 {
     export_ram0[addr & 0x7fff] = value;
 }
 
-void ide64_mmu_translate(unsigned int addr, BYTE **base, int *start, int *limit)
+void ide64_mmu_translate(unsigned int addr, uint8_t **base, int *start, int *limit)
 {
     switch (addr & 0xf000) {
         case 0xf000:
@@ -1524,7 +1478,7 @@ void ide64_config_init(void)
     struct drive_s *drive;
 
     debug("IDE64 init");
-    cart_config_changed_slotmain(0, 0, CMODE_READ | CMODE_PHI2_RAM);
+    cart_config_changed_slotmain(CMODE_8KGAME, CMODE_8KGAME, CMODE_READ | CMODE_PHI2_RAM);
     current_bank = 0;
     current_cfg = 0;
     kill_port = 0;
@@ -1532,7 +1486,7 @@ void ide64_config_init(void)
 
     for (i = 0; i < 4; i++) {
         drive = &drives[i];
-        ata_update_timing(drive->drv, machine_get_cycles_per_second());
+        ata_update_timing(drive->drv, (CLOCK)machine_get_cycles_per_second());
         if (drive->update_needed) {
             drive->update_needed = 0;
             detect_ide64_image(drive);
@@ -1542,7 +1496,7 @@ void ide64_config_init(void)
     }
 }
 
-void ide64_config_setup(BYTE *rawcart)
+void ide64_config_setup(uint8_t *rawcart)
 {
     debug("IDE64 setup");
     memcpy(roml_banks, rawcart, 0x80000);
@@ -1576,7 +1530,7 @@ void ide64_detach(void)
     debug("IDE64 detached");
 }
 
-static int ide64_common_attach(BYTE *rawcart, int detect)
+static int ide64_common_attach(uint8_t *rawcart, int detect)
 {
     int i;
 
@@ -1612,16 +1566,33 @@ static int ide64_common_attach(BYTE *rawcart, int detect)
     return ide64_register();
 }
 
-int ide64_bin_attach(const char *filename, BYTE *rawcart)
+int ide64_bin_attach(const char *filename, uint8_t *rawcart)
 {
-    if (util_file_load(filename, rawcart, 0x80000, UTIL_FILE_LOAD_SKIP_ADDRESS | UTIL_FILE_LOAD_FILL) < 0) {
+    off_t len;
+    FILE *fd;
+
+    fd = fopen(filename, MODE_READ);
+    if (fd == NULL) {
         return -1;
+    }
+    len = archdep_file_size(fd);
+    if (len < 0) {
+        fclose(fd);
+        return -1;
+    }
+    fclose(fd);
+
+    /* we accept 64k, 128k and full 512k images */
+    if (len == 0x10000 || len == 0x20000 || len == 0x80000) {
+        if (util_file_load(filename, rawcart, (size_t)len, UTIL_FILE_LOAD_SKIP_ADDRESS) < 0) {
+            return -1;
+        }
     }
 
     return ide64_common_attach(rawcart, 1);
 }
 
-int ide64_crt_attach(FILE *fd, BYTE *rawcart)
+int ide64_crt_attach(FILE *fd, uint8_t *rawcart)
 {
     crt_chip_header_t chip;
     int i;
@@ -1660,7 +1631,7 @@ static int ide64_idebus_dump(void)
 
 static int ide64_io_dump(void)
 {
-    const char *configs[4] = {
+    static const char * const configs[4] = {
         "8k", "16k", "stnd", "open"
     };
     mon_out("Version: %d, Mode: %s, ", settings_version >= IDE64_VERSION_4_1 ? 4 : 3, (kill_port & 1) ? "Disabled" : "Enabled");
@@ -1687,11 +1658,11 @@ static int ide64_rtc_dump(void)
    DWORD | config    | current config
    DWORD | kill port | kill port flag
    DWORD | idrive    | idrive
-   WORD  | in d030   | input state of $d030 register 
-   WORD  | out d030  | output state of $d030 register 
+   WORD  | in d030   | input state of $d030 register
+   WORD  | out d030  | output state of $d030 register
  */
 
-static char snap_module_name[] = "CARTIDE";
+static const char snap_module_name[] = "CARTIDE";
 #define SNAP_MAJOR   0
 #define SNAP_MINOR   0
 
@@ -1745,7 +1716,7 @@ int ide64_snapshot_write_module(snapshot_t *s)
 
 int ide64_snapshot_read_module(snapshot_t *s)
 {
-    BYTE vmajor, vminor;
+    uint8_t vmajor, vminor;
     snapshot_module_t *m;
     int i;
 
@@ -1767,7 +1738,7 @@ int ide64_snapshot_read_module(snapshot_t *s)
     }
 
     /* Do not accept versions higher than current */
-    if (vmajor > SNAP_MAJOR || vminor > SNAP_MINOR) {
+    if (snapshot_version_is_bigger(vmajor, vminor, SNAP_MAJOR, SNAP_MINOR)) {
         snapshot_set_error(SNAPSHOT_MODULE_HIGHER_VERSION);
         snapshot_module_close(m);
         return -1;

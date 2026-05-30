@@ -106,7 +106,7 @@ rtc_bq4830y_t *bq4830y_init(char *device)
     retval->old_offset = retval->offset;
     memcpy(retval->old_clock_regs, retval->clock_regs, BQ4830Y_REG_SIZE);
 
-    retval->device = lib_stralloc(device);
+    retval->device = lib_strdup(device);
 
     return retval;
 }

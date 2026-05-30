@@ -24,7 +24,11 @@
 
 #include "resid-config.h"
 #include "resid-voice.h"
+#if NEW_8580_FILTER
+#include "filter8580new.h"
+#else
 #include "resid-filter.h"
+#endif
 #include "resid-extfilt.h"
 #include "resid-pot.h"
 
@@ -34,25 +38,26 @@ namespace reSID
 class SID
 {
 public:
-  SID(void *c64d_waveform_callback);
+  SID(void *c64d_waveform_callback);   // RD (c64d): debugger waveform callback
   ~SID();
-	
+
   void set_chip_model(chip_model model);
+  void set_chip_number(int chipNo);    // RD (c64d)
   void set_voice_mask(reg4 mask);
-  void set_chip_number(int chipNo);
   void enable_filter(bool enable);
   void adjust_filter_bias(double dac_bias);
   void enable_external_filter(bool enable);
   bool set_sampling_parameters(double clock_freq, sampling_method method,
-			       double sample_freq, double pass_freq = -1,
-			       double filter_scale = 0.97);
+  double sample_freq, double pass_freq = -1,
+  double filter_scale = 0.97);
   void adjust_sampling_frequency(double sample_freq);
+  void enable_raw_debug_output(bool enable);
 
   void clock();
   void clock(cycle_count delta_t);
   int clock(cycle_count& delta_t, short* buf, int n, int interleave = 1);
   void reset();
-  
+
   // Read/write registers.
   reg8 read(reg8 offset);
   void write(reg8 offset, reg8 value);
@@ -87,7 +92,7 @@ public:
     bool hold_zero[3];
     cycle_count envelope_pipeline[3];
   };
-    
+
   State read_state();
   void write_state(const State& state);
 
@@ -95,21 +100,20 @@ public:
   void input(short sample);
 
   // 16-bit output (AUDIO OUT).
-  short output();
+  int output();
 
-	int chipNo;
-	
+  void debugoutput(void);
+
  protected:
   static double I0(double x);
   int clock_fast(cycle_count& delta_t, short* buf, int n, int interleave);
-  int clock_interpolate(cycle_count& delta_t, short* buf, int n,
-			int interleave);
+  int clock_interpolate(cycle_count& delta_t, short* buf, int n, int interleave);
   int clock_resample(cycle_count& delta_t, short* buf, int n, int interleave);
-  int clock_resample_fastmem(cycle_count& delta_t, short* buf, int n,
-			     int interleave);
+  int clock_resample_fastmem(cycle_count& delta_t, short* buf, int n, int interleave);
   void write();
 
   chip_model sid_model;
+  int chipNo;   // RD (c64d): SID chip index for the debugger channel display
   Voice voice[3];
   Filter filter;
   ExternalFilter extfilt;
@@ -119,11 +123,17 @@ public:
   reg8 bus_value;
   cycle_count bus_value_ttl;
 
+  // The data bus TTL for the selected chip model
+  cycle_count databus_ttl;
+
   // Pipeline for writes on the MOS8580.
   cycle_count write_pipeline;
   reg8 write_address;
 
   double clock_frequency;
+
+  // Used to amplify the output by scaleFactor/2 to get an adequate playback volume
+  int scaleFactor;
 
   enum {
     // Resampling constants.
@@ -154,12 +164,17 @@ public:
   short sample_prev, sample_now;
   int fir_N;
   int fir_RES;
+  double fir_beta;
+  double fir_f_cycles_per_sample;
+  double fir_filter_scale;
 
   // Ring buffer with overflow for contiguous storage of RINGSIZE samples.
   short* sample;
 
   // FIR_RES filter tables (FIR_N*FIR_RES).
   short* fir;
+
+  bool raw_debug_output; // FIXME: should be private?
 };
 
 
@@ -169,13 +184,13 @@ public:
 // time a sample is calculated.
 // ----------------------------------------------------------------------------
 
-//#if RESID_INLINING || defined(RESID_SID_CC)
+#if RESID_INLINING || defined(RESID_SID_CC)
 
 // ----------------------------------------------------------------------------
 // Read 16-bit sample from audio output.
 // ----------------------------------------------------------------------------
 RESID_INLINE
-short SID::output()
+int SID::output()
 {
   return extfilt.output();
 }
@@ -224,9 +239,13 @@ void SID::clock()
   if (unlikely(!--bus_value_ttl)) {
     bus_value = 0;
   }
+
+  if (unlikely(raw_debug_output)) {
+    debugoutput();
+  }
 }
 
-//#endif // RESID_INLINING || defined(RESID_SID_CC)
+#endif // RESID_INLINING || defined(RESID_SID_CC)
 
 } // namespace reSID
 

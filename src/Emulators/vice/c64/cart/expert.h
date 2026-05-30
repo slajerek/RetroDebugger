@@ -39,41 +39,44 @@
 
 #include "vicetypes.h"
 
-extern BYTE expert_roml_read(WORD addr);
-extern void expert_roml_store(WORD addr, BYTE value);
-extern void expert_raml_store(WORD addr, BYTE value);
-extern BYTE expert_romh_read(WORD addr);
-extern int expert_romh_phi1_read(WORD addr, BYTE *value);
-extern int expert_romh_phi2_read(WORD addr, BYTE *value);
-extern int expert_peek_mem(WORD addr, BYTE *value);
+uint8_t expert_roml_read(uint16_t addr);
+void expert_roml_store(uint16_t addr, uint8_t value);
+void expert_raml_store(uint16_t addr, uint8_t value);
+uint8_t expert_romh_read(uint16_t addr);
+int expert_romh_phi1_read(uint16_t addr, uint8_t *value);
+int expert_romh_phi2_read(uint16_t addr, uint8_t *value);
+int expert_peek_mem(uint16_t addr, uint8_t *value);
 
-extern void expert_reset(void);
-extern void expert_freeze(void);
+void expert_reset(void);
+void expert_freeze(void);
 
-extern void expert_config_init(void);
-extern void expert_config_setup(BYTE *rawcart);
-extern int expert_bin_attach(const char *filename, BYTE *rawcart);
-extern int expert_bin_save(const char *filename);
-extern int expert_crt_attach(FILE *fd, BYTE *rawcart, const char *filename);
-extern int expert_crt_save(const char *filename);
-extern int expert_flush_image(void);
+void expert_config_init(void);
+void expert_config_setup(uint8_t *rawcart);
+int expert_bin_attach(const char *filename, uint8_t *rawcart);
+int expert_bin_save(const char *filename);
+int expert_crt_attach(FILE *fd, uint8_t *rawcart, const char *filename);
+int expert_crt_save(const char *filename);
+int expert_flush_image(void);
 
-extern void expert_detach(void);
-extern int expert_enable(void);
+void expert_detach(void);
+int expert_enable(void);
+int expert_disable(void);
+void expert_powerup(void);
 
-extern int expert_freeze_allowed(void);
-extern int expert_cart_enabled(void);
-extern void expert_mmu_translate(unsigned int addr, BYTE **base, int *start, int *limit);
+int expert_freeze_allowed(void);
+int expert_cart_enabled(void);
+void expert_mmu_translate(unsigned int addr, uint8_t **base, int *start, int *limit);
 
 struct snapshot_s;
-extern int expert_snapshot_write_module(struct snapshot_s *s);
-extern int expert_snapshot_read_module(struct snapshot_s *s);
 
-extern int expert_resources_init(void);
-extern void expert_resources_shutdown(void);
-extern int expert_cmdline_options_init(void);
+int expert_snapshot_write_module(struct snapshot_s *s);
+int expert_snapshot_read_module(struct snapshot_s *s);
 
-extern const char *expert_get_file_name(void);
+int expert_resources_init(void);
+void expert_resources_shutdown(void);
+int expert_cmdline_options_init(void);
+
+const char *expert_get_file_name(void);
 
 #endif /* VICE_EXPERT_H */
 #endif /* CARTRIDGE_INCLUDE_PRIVATE_API */

@@ -76,12 +76,12 @@ typedef struct vicii_light_pen_s vicii_light_pen_t;
 
 struct vicii_sprite_s {
     /* Sprite data to display */
-    DWORD data;
+    uint32_t data;
     /* 6 bit counters */
-    BYTE mc;
-    BYTE mcbase;
+    uint8_t mc;
+    uint8_t mcbase;
     /* 8 bit pointer */
-    BYTE pointer;
+    uint8_t pointer;
     /* Expansion flop */
     int exp_flop;
     /* X coordinate */
@@ -99,7 +99,7 @@ struct vicii_s {
     raster_t raster;
 
     /* VIC-II registers.  */
-    BYTE regs[0x40];
+    uint8_t regs[0x40];
 
     /* Cycle # within the current line.  */
     unsigned int raster_cycle;
@@ -121,42 +121,44 @@ struct vicii_s {
 
     /* Flag for raster compare edge detect.  */
     int raster_irq_triggered;
-	
-	/* C64 debugger IRQ flag */
-	int c64d_irq_flag;
+
+#ifdef RETRODEBUGGER
+    /* C64 debugger IRQ flag */
+    int c64d_irq_flag;
+#endif /* RETRODEBUGGER */
 
     /* Pointer to the base of RAM seen by the VIC-II.  */
     /* address is base of 64k bank. vbank adds 0/16k/32k/48k to get actual
        video address */
-    BYTE *ram_base_phi1;                /* = VIC-II address during Phi1; */
-    BYTE *ram_base_phi2;                /* = VIC-II address during Phi2; */
+    uint8_t *ram_base_phi1;                /* = VIC-II address during Phi1; */
+    uint8_t *ram_base_phi2;                /* = VIC-II address during Phi2; */
 
     /* valid VIC-II address bits for Phi1 and Phi2. After masking
        the address, it is or'd with the offset value to set always-1 bits */
-    WORD vaddr_mask_phi1;            /* mask of valid address bits */
-    WORD vaddr_mask_phi2;            /* mask of valid address bits */
-    WORD vaddr_offset_phi1;          /* mask of address bits always set */
-    WORD vaddr_offset_phi2;          /* mask of address bits always set */
+    uint16_t vaddr_mask_phi1;            /* mask of valid address bits */
+    uint16_t vaddr_mask_phi2;            /* mask of valid address bits */
+    uint16_t vaddr_offset_phi1;          /* mask of address bits always set */
+    uint16_t vaddr_offset_phi2;          /* mask of address bits always set */
 
     /* Those two values determine where in the address space the chargen
        ROM is mapped. Use mask=0x7000, value=0x1000 for the C64. */
-    WORD vaddr_chargen_mask_phi1;    /* address bits to comp. for chargen */
-    WORD vaddr_chargen_mask_phi2;    /* address bits to comp. for chargen */
-    WORD vaddr_chargen_value_phi1;   /* compare value for chargen */
-    WORD vaddr_chargen_value_phi2;   /* compare value for chargen */
+    uint16_t vaddr_chargen_mask_phi1;    /* address bits to comp. for chargen */
+    uint16_t vaddr_chargen_mask_phi2;    /* address bits to comp. for chargen */
+    uint16_t vaddr_chargen_value_phi1;   /* compare value for chargen */
+    uint16_t vaddr_chargen_value_phi2;   /* compare value for chargen */
 
     /* Screen memory buffers (chars and color).  */
-    BYTE vbuf[VICII_SCREEN_TEXTCOLS];
-    BYTE cbuf[VICII_SCREEN_TEXTCOLS];
+    uint8_t vbuf[VICII_SCREEN_TEXTCOLS];
+    uint8_t cbuf[VICII_SCREEN_TEXTCOLS];
 
     /* Graphics buffer (bitmap/LinearB) */
-    BYTE gbuf;
+    uint8_t gbuf;
 
     /* Current rendering position into the draw buffer */
     int dbuf_offset;
 
     /* Draw buffer for a full line (one byte per pixel) */
-    BYTE dbuf[VICII_DRAW_BUFFER_SIZE];
+    uint8_t dbuf[VICII_DRAW_BUFFER_SIZE];
 
     /* parsed vicii register fields */
     unsigned int ysmooth;
@@ -165,11 +167,11 @@ struct vicii_s {
     int allow_bad_lines;
 
     /* Sprite-sprite and sprite-background collision registers.  */
-    BYTE sprite_sprite_collisions;
-    BYTE sprite_background_collisions;
+    uint8_t sprite_sprite_collisions;
+    uint8_t sprite_background_collisions;
 
     /* flag to signal collision clearing */
-    BYTE clear_collisions;
+    uint8_t clear_collisions;
 
     /* Flag: are we in idle state? */
     int idle_state;
@@ -200,7 +202,7 @@ struct vicii_s {
     signed int log;
 
     /* Delayed mode selection */
-    BYTE reg11_delay;
+    uint8_t reg11_delay;
 
     /* Fetch state */
     int prefetch_cycles;
@@ -209,7 +211,7 @@ struct vicii_s {
     unsigned int sprite_display_bits;
 
     /* Flag: is sprite DMA active? */
-    BYTE sprite_dma;
+    uint8_t sprite_dma;
 
     /* State of sprites. */
     vicii_sprite_t sprite[VICII_NUM_SPRITES];
@@ -232,14 +234,14 @@ struct vicii_s {
 
     /* last color register update (set by vicii-mem.c,
        cleared by vicii-draw-cycle.c */
-    BYTE last_color_reg;
-    BYTE last_color_value;
+    uint8_t last_color_reg;
+    uint8_t last_color_value;
 
     /* Last value read by VICII during phi1.  */
-    BYTE last_read_phi1;
+    uint8_t last_read_phi1;
 
     /* Last value on the internal VICII bus during phi2.  */
-    BYTE last_bus_phi2;
+    uint8_t last_bus_phi2;
 
     /* Vertical border flag */
     int vborder;
@@ -251,36 +253,45 @@ struct vicii_s {
     int main_border;
 
     /* Counter used for DRAM refresh accesses.  */
-    BYTE refresh_counter;
+    uint8_t refresh_counter;
 
     /* Video chip capabilities.  */
     struct video_chip_cap_s *video_chip_cap;
 
     unsigned int int_num;
-	
-	// which register was written in this cycle
-	int register_written;
-	// saved copy from previous cycle (for state capture after next_vicii_cycle clears it)
-	int prev_register_written;
 
-	// which register was read in this cycle
-	int register_read;
-	// saved copy from previous cycle
-	int prev_register_read;
+#ifdef RETRODEBUGGER
+    // which register was written in this cycle
+    int register_written;
+    // saved copy from previous cycle (for state capture after next_vicii_cycle clears it)
+    int prev_register_written;
+
+    // which register was read in this cycle
+    int register_read;
+    // saved copy from previous cycle
+    int prev_register_read;
+#endif /* RETRODEBUGGER */
 };
 typedef struct vicii_s vicii_t;
 
 extern vicii_t vicii;
 
 /* Private function calls, used by the other VIC-II modules.  */
-extern void vicii_raster_draw_handler(void);
+void vicii_raster_draw_handler(void);
 
 /* Debugging options.  */
 
+#ifdef RETRODEBUGGER
 #define VICII_VMODE_DEBUG
 #define VICII_RASTER_DEBUG
 //#define VICII_REGISTERS_DEBUG
 //#define VICII_CYCLE_DEBUG
+#else
+/* #define VICII_VMODE_DEBUG */
+/* #define VICII_RASTER_DEBUG */
+/* #define VICII_REGISTERS_DEBUG */
+/* #define VICII_CYCLE_DEBUG */
+#endif
 
 #ifdef VICII_VMODE_DEBUG
 #define VICII_DEBUG_VMODE(x) log_debug x

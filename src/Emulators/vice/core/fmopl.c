@@ -80,13 +80,11 @@ Revision History:
 
 #include "fmopl.h"
 #include "lib.h"
+#include "maincpu.h"
 #include "snapshot.h"
 
 #include "log.h"
 
-#ifndef M_PI
-#define M_PI 3.14159265358979323846
-#endif
 
 #define FINAL_SH (0)
 #define MAXOUT   (+32767)
@@ -109,7 +107,7 @@ Revision History:
 
 /* sinwave entries */
 #define SIN_BITS 10
-#define SIN_LEN  (1 << SIN_BITS)
+#define SIN_LEN  (1u << SIN_BITS)
 #define SIN_MASK (SIN_LEN - 1)
 
 #define TL_RES_LEN (256)        /* 8 bits addressing (real chip) */
@@ -329,13 +327,13 @@ static const double mul_tab[16] = {
  *   TL_RES_LEN - sinus resolution (X axis)
  */
 #define TL_TAB_LEN (12 * 2 * TL_RES_LEN)
-static signed int tl_tab[TL_TAB_LEN];
+static signed int *tl_tab = NULL;
 
 #define ENV_QUIET       (TL_TAB_LEN >> 4)
 
 /* sin waveform table in 'decibel' scale */
 /* four waveforms on OPL2 type chips */
-static unsigned int sin_tab[SIN_LEN * 16];
+static unsigned int *sin_tab = NULL;
 
 /* LFO Amplitude Modulation table (verified on real YM3812)
    27 output levels (triangle waveform); 1 level takes one of: 192, 256 or 448 samples
@@ -453,6 +451,42 @@ static signed int output[1];
 
 static UINT32 LFO_AM;
 static INT32 LFO_PM;
+
+/* ---------------------------------------------------------------------*/
+/*    timer support functions                                           */
+
+static int OPLTimerOver(FM_OPL *OPL, int c);
+
+static UINT32 fmopl_timer_80 = 0;
+static UINT32 fmopl_timer_320 = 0;
+
+void fmopl_set_machine_parameter(long clock_rate)
+{
+    fmopl_timer_80 = (UINT32)(clock_rate * 80 / 1000000);
+    fmopl_timer_320 = (UINT32)(clock_rate * 320 / 1000000);
+}
+
+static void fmopl_alarm_A(CLOCK offset, void *data)
+{
+    FM_OPL *OPL = (FM_OPL *)data;
+    CLOCK new_start = maincpu_clk - offset + ((256 - OPL->T[0]) * fmopl_timer_80);
+
+    alarm_unset(OPL->fmopl_alarm[0]);
+    alarm_set(OPL->fmopl_alarm[0], new_start);
+    OPLTimerOver(OPL, 0);
+}
+
+static void fmopl_alarm_B(CLOCK offset, void *data)
+{
+    FM_OPL *OPL = (FM_OPL *)data;
+    CLOCK new_start = maincpu_clk - offset + ((256 - OPL->T[1]) * fmopl_timer_320);
+
+    alarm_unset(OPL->fmopl_alarm[1]);
+    alarm_set(OPL->fmopl_alarm[1], new_start);
+    OPLTimerOver(OPL, 1);
+}
+
+/* ---------------------------------------------------------------------*/
 
 inline static int limit(int val, int max, int min)
 {
@@ -918,6 +952,15 @@ static int init_tables(void)
     signed int n;
     double o, m;
 
+    if (tl_tab == NULL) {
+        tl_tab = lib_malloc(TL_TAB_LEN * sizeof(signed int));
+    }
+
+    if (sin_tab == NULL) {
+        sin_tab = lib_malloc(SIN_LEN * 4 * sizeof(unsigned int));
+    }
+
+
     for (x = 0; x < TL_RES_LEN; x++) {
         m = (1 << 16) / pow(2, (x + 1) * (ENV_STEP / 4.0) / 8.0);
         m = floor(m);
@@ -1011,6 +1054,15 @@ static int init_tables(void)
 
 static void OPLCloseTable( void )
 {
+    if (tl_tab) {
+        lib_free(tl_tab);
+        tl_tab = NULL;
+    }
+
+    if (sin_tab) {
+        lib_free(sin_tab);
+        sin_tab = NULL;
+    }
 }
 
 static void OPL_initalize(FM_OPL *OPL)
@@ -1175,10 +1227,18 @@ static void OPLWriteReg(FM_OPL *OPL, int r, int v)
                     }
                     break;
                 case 0x02:      /* Timer 1 */
-                    OPL->T[0] = (256 - v) * 4;
+                    OPL->T[0] = v;
+                    if (OPL->fmopl_alarm_pending[0]) {
+                        alarm_unset(OPL->fmopl_alarm[0]);
+                        alarm_set(OPL->fmopl_alarm[0], maincpu_clk + ((256 - v) * fmopl_timer_80));
+                    }
                     break;
                 case 0x03:      /* Timer 2 */
-                    OPL->T[1] = (256 - v) * 16;
+                    OPL->T[1] = v;
+                    if (OPL->fmopl_alarm_pending[1]) {
+                        alarm_unset(OPL->fmopl_alarm[1]);
+                        alarm_set(OPL->fmopl_alarm[1], maincpu_clk + ((256 - v) * fmopl_timer_320));
+                    }
                     break;
                 case 0x04:      /* IRQ clear / mask and Timer enable */
                     if (v & 0x80) {     /* IRQ flag clear */
@@ -1199,6 +1259,38 @@ static void OPLWriteReg(FM_OPL *OPL, int r, int v)
                         /* timer 1 */
                         if (OPL->st[0] != st1) {
                             OPL->st[0] = st1;
+                        }
+
+                        /* Timer 1 changes */
+                        if ((v & 0x40) == 0) {
+                            if ((v & 1) == 0) {
+                                if (OPL->fmopl_alarm_pending[0]) {
+                                    alarm_unset(OPL->fmopl_alarm[0]);
+                                    OPL->fmopl_alarm_pending[0] = 0;
+                                }
+                            } else {
+                                if (OPL->fmopl_alarm_pending[0]) {
+                                    alarm_unset(OPL->fmopl_alarm[0]);
+                                }
+                                alarm_set(OPL->fmopl_alarm[0], maincpu_clk + ((256 - OPL->T[0]) * fmopl_timer_80));
+                                OPL->fmopl_alarm_pending[0] = 1;
+                            }
+                        }
+
+                        /* Timer 2 changes */
+                        if ((v & 0x20) == 0) {
+                            if ((v & 2) == 0) {
+                                if (OPL->fmopl_alarm_pending[1]) {
+                                    alarm_unset(OPL->fmopl_alarm[1]);
+                                    OPL->fmopl_alarm_pending[1] = 0;
+                                }
+                            } else {
+                                if (OPL->fmopl_alarm_pending[1]) {
+                                    alarm_unset(OPL->fmopl_alarm[1]);
+                                }
+                                alarm_set(OPL->fmopl_alarm[1], maincpu_clk + ((256 - OPL->T[1]) * fmopl_timer_320));
+                                OPL->fmopl_alarm_pending[1] = 1;
+                            }
                         }
                     }
                     break;
@@ -1439,6 +1531,14 @@ static void OPLResetChip(FM_OPL *OPL)
             CH->SLOT[s].connect1 = &output[0];
         }
     }
+
+    if (OPL->fmopl_alarm_pending[0]) {
+        alarm_unset(OPL->fmopl_alarm[0]);
+    }
+
+    if (OPL->fmopl_alarm_pending[1]) {
+        alarm_unset(OPL->fmopl_alarm[1]);
+    }
 }
 
 /* Create one of virtual YM3812/YM3526 */
@@ -1475,6 +1575,11 @@ static FM_OPL *OPLCreate(UINT32 clock, UINT32 rate, int type)
     OPL->clock = clock;
     OPL->rate = rate;
 
+    OPL->fmopl_alarm[0] = alarm_new(maincpu_alarm_context, "FMOPL Timer A", fmopl_alarm_A, (void *)OPL);
+    OPL->fmopl_alarm[1] = alarm_new(maincpu_alarm_context, "FMOPL Timer B", fmopl_alarm_B, (void *)OPL);
+    OPL->fmopl_alarm_pending[0] = 0;
+    OPL->fmopl_alarm_pending[1] = 0;
+
     /* init global tables */
     OPL_initalize(OPL);
 
@@ -1484,6 +1589,16 @@ static FM_OPL *OPLCreate(UINT32 clock, UINT32 rate, int type)
 /* Destroy one of virtual YM3812 */
 static void OPLDestroy(FM_OPL *OPL)
 {
+    if (OPL->fmopl_alarm_pending[0]) {
+        alarm_unset(OPL->fmopl_alarm[0]);
+    }
+    alarm_destroy(OPL->fmopl_alarm[0]);
+
+    if (OPL->fmopl_alarm_pending[1]) {
+        alarm_unset(OPL->fmopl_alarm[1]);
+    }
+    alarm_destroy(OPL->fmopl_alarm[1]);
+
     OPL_UnLockTable();
     lib_free(OPL);
 }

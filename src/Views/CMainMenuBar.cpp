@@ -671,6 +671,14 @@ void CMainMenuBar::RenderImGui()
 			for (std::vector<CDebugInterface *>::iterator it = viewC64->debugInterfaces.begin(); it != viewC64->debugInterfaces.end(); it++)
 			{
 				CDebugInterface *debugInterface = *it;
+				/* Skip interfaces whose emulation thread never actually started --
+				   Atari/NES debug_mode defaults to RUNNING (0x00) and CDebugInterfaceAtari/Nes::
+				   StepOneCycle is a LOGTODO no-op that doesn't transition state, so without
+				   this gate Step One Cycle leaves the menu label stuck at "Pause" even after
+				   the C64 has actually paused. The isRunning flag is only flipped true by
+				   RunEmulationThread once the emulator is live. */
+				if (!debugInterface->isRunning)
+					continue;
 				if (debugInterface->GetDebugMode() == DEBUGGER_MODE_RUNNING)
 				{
 					// if at least one emulator is not paused then change text to Pause

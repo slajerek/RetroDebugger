@@ -35,6 +35,10 @@
 #include "vicetypes.h"
 
 
+/* This define switches the sound system sample calculation
+   to use the new and experimental float based sound system */
+/* #define SOUND_SYSTEM_FLOAT */
+
 /* OSS: check if needed defines are present */
 #ifdef USE_OSS
 
@@ -60,37 +64,118 @@
 
 #endif
 
+/* Fragment sizes */
+enum {
+    SOUND_FRAGMENT_VERY_SMALL = 0,
+    SOUND_FRAGMENT_SMALL,
+    SOUND_FRAGMENT_MEDIUM,
+    SOUND_FRAGMENT_LARGE,
+    SOUND_FRAGMENT_VERY_LARGE
+};
+
+/* Sound output modes */
+enum {
+    SOUND_OUTPUT_SYSTEM = 0,
+    SOUND_OUTPUT_MONO,
+    SOUND_OUTPUT_STEREO
+};
+
+/* Sound device amounts */
+enum {
+    SOUND_1_DEVICE = 1,
+    SOUND_2_DEVICES,
+    SOUND_3_DEVICES,
+    SOUND_4_DEVICES,
+    SOUND_5_DEVICES,
+    SOUND_6_DEVICES,
+    SOUND_7_DEVICES,
+    SOUND_8_DEVICES
+};
+
+/* Sound channels */
+enum {
+    SOUND_CHANNEL_1 = 1,
+    SOUND_CHANNEL_2,
+    SOUND_CHANNELS_1_AND_2
+};
 
 /* Sound defaults.  */
-#ifdef ANDROID_COMPILE
-#define SOUND_SAMPLE_RATE 22050
+#if defined(MACOS_COMPILE)
+#define SOUND_SAMPLE_RATE 48000
+#define SOUND_SAMPLE_BUFFER_SIZE 20
+#define SOUND_FRAGMENT_SIZE SOUND_FRAGMENT_VERY_SMALL
 #else
-#define SOUND_SAMPLE_RATE 44100
+#define SOUND_SAMPLE_RATE 48000
+#define SOUND_SAMPLE_BUFFER_SIZE 30
+#define SOUND_FRAGMENT_SIZE SOUND_FRAGMENT_MEDIUM
 #endif
 
-#define SOUND_CHANNELS_MAX 2
-#define SOUND_BUFSIZE 32768
-#define SOUND_SIDS_MAX 3
+#define SOUND_OUTPUT_CHANNELS_MAX 2
 
-#ifdef __MSDOS__
-# define SOUND_SAMPLE_BUFFER_SIZE       100     /* ms */
-#endif
-#ifdef __OS2__
-# define SOUND_SAMPLE_BUFFER_SIZE       400
-#endif
-#ifndef SOUND_SAMPLE_BUFFER_SIZE
-# define SOUND_SAMPLE_BUFFER_SIZE       100
-#endif
+#define SOUND_CHIP_CHANNELS_MAX 8
+
+/** \brief  Maximum number of SIDs supported by the emulation.
+ */
+#define SOUND_SIDS_MAX 8
+
+/** \brief  Maximum number of SIDs supported by PSID files
+ *
+ * Maximum number of SIDs for .psid files and thus VSID.
+ */
+#define SOUND_SIDS_MAX_PSID 3
+
+#define SOUND_CHIPS_MAX 20
+
 
 /* largest value in the UIs. also used by VSID as default */
 #define SOUND_SAMPLE_MAX_BUFFER_SIZE    350
 
-#define SOUND_RECORD_DEVICE     0
-#define SOUND_PLAYBACK_DEVICE   1
+/* Sound device types */
+enum {
+    SOUND_RECORD_DEVICE = 0,
+    SOUND_PLAYBACK_DEVICE,
+    SOUND_MOVIE_RECORD_DEVICE
+};
 
-/* I need this to serialize close_sound and enablesound/sound_open in
-   the OS/2 Multithreaded environment                              */
+/* Sound playback device ID numbers */
+enum {
+    SOUND_DEVICE_PLAYBACK_PULSE = 0,
+    SOUND_DEVICE_PLAYBACK_ALSA,
+    SOUND_DEVICE_PLAYBACK_COREAUDIO,
+    SOUND_DEVICE_PLAYBACK_SUN_NETBSD,
+    SOUND_DEVICE_PLAYBACK_DX,
+    SOUND_DEVICE_PLAYBACK_WMM,
+    SOUND_DEVICE_PLAYBACK_BEOS,
+    SOUND_DEVICE_PLAYBACK_BSP,
+    SOUND_DEVICE_PLAYBACK_SDL,
+    SOUND_DEVICE_PLAYBACK_DUMMY,
+
+    /* This item always needs to be at the end */
+    SOUND_DEVICE_PLAYBACK_MAX
+};
+
+/* Sound record device ID numbers */
+enum {
+    SOUND_DEVICE_RECORD_FS = 0,
+    SOUND_DEVICE_RECORD_DUMP,
+    SOUND_DEVICE_RECORD_WAV,
+    SOUND_DEVICE_RECORD_VOC,
+    SOUND_DEVICE_RECORD_IFF,
+    SOUND_DEVICE_RECORD_AIFF,
+    SOUND_DEVICE_RECORD_MP3,
+    SOUND_DEVICE_RECORD_FLAC,
+    SOUND_DEVICE_RECORD_OGG,
+
+    /* This item always needs to be at the end */
+    SOUND_DEVICE_RECORD_MAX
+};
+
+/* Sound movie record device ID numbers */
+#define SOUND_DEVICE_MOVIE_RECORD_SOUNDMOVIE   0
+#define SOUND_DEVICE_MOVIE_RECORD_MAX          1
+
 extern int sound_state_changed;
+extern int sound_playdev_reopen;
 extern int sid_state_changed;
 
 /* device structure */
@@ -102,11 +187,11 @@ typedef struct sound_device_s {
        used */
     int (*init)(const char *param, int *speed, int *fragsize, int *fragnr, int *channels);
     /* send number of bytes to the soundcard. it is assumed to block if kernel buffer is full */
-    int (*write)(SWORD *pbuf, size_t nr);
+    int (*write)(int16_t *pbuf, size_t nr);
     /* dump-routine to be called for every write to SID */
-    int (*dump)(WORD addr, BYTE byte, CLOCK clks);
-    /* flush-routine to be called every frame */
-    int (*flush)(char *state);
+    int (*dump)(uint16_t addr, uint8_t byte, CLOCK clks);
+    /* DEPRECATED: flush-routine to be called every frame (not called anywhere) */
+    int (*deprecated_flush)(char *state);
     /* return number of samples currently available in the kernel buffer */
     int (*bufferspace)(void);
     /* close and cleanup device */
@@ -119,140 +204,171 @@ typedef struct sound_device_s {
     int need_attenuation;
     /* maximum amount of channels */
     int max_channels;
+    /* Can this device be relied on as the emulator timing source */
+    bool is_timing_source;
 } sound_device_t;
 
-static inline SWORD sound_audio_mix(int ch1, int ch2)
+typedef struct sound_register_devices_s {
+    const char *name;
+    const char *ui_display_name;
+    int (*init)(void);
+    int device_type;
+} sound_register_devices_t;
+
+typedef struct sound_desc_s {
+    const char *name;
+    const char *description;
+    int device_type;
+} sound_desc_t;
+
+#ifndef SOUND_SYSTEM_FLOAT
+static inline int16_t sound_audio_mix(int ch1, int ch2)
 {
     if (ch1 == 0) {
-        return (SWORD)ch2;
+        return (int16_t)ch2;
     }
 
     if (ch2 == 0) {
-        return (SWORD)ch1;
+        return (int16_t)ch1;
     }
 
     if ((ch1 > 0 && ch2 < 0) || (ch1 < 0 && ch2 > 0)) {
-        return (SWORD)(ch1 + ch2);
+        return (int16_t)(ch1 + ch2);
     }
 
     if (ch1 > 0) {
-        return (SWORD)((ch1 + ch2) - (ch1 * ch2 / 32768));
+        return (int16_t)((ch1 + ch2) - (ch1 * ch2 / 32768));
     }
 
-    return (SWORD)-((-(ch1) + -(ch2)) - (-(ch1) * -(ch2) / 32768));
+    return (int16_t)-((-(ch1) + -(ch2)) - (-(ch1) * -(ch2) / 32768));
 }
+#endif
 
-/* Sound adjustment types.  */
-#define SOUND_ADJUST_DEFAULT   -1
-#define SOUND_ADJUST_FLEXIBLE   0
-#define SOUND_ADJUST_ADJUSTING  1
-#define SOUND_ADJUST_EXACT      2
-
-/* Fragment sizes */
-#define SOUND_FRAGMENT_VERY_SMALL    0
-#define SOUND_FRAGMENT_SMALL         1
-#define SOUND_FRAGMENT_MEDIUM        2
-#define SOUND_FRAGMENT_LARGE         3
-#define SOUND_FRAGMENT_VERY_LARGE    4
-
-/* Sound output modes */
-#define SOUND_OUTPUT_SYSTEM   0
-#define SOUND_OUTPUT_MONO     1
-#define SOUND_OUTPUT_STEREO   2
+sound_desc_t *sound_get_valid_devices(int type, int sort);
 
 /* external functions for vice */
-extern void sound_init(unsigned int clock_rate, unsigned int ticks_per_frame);
-extern void sound_reset(void);
-#ifdef __MSDOS__
-extern int sound_flush(void);
-#else
-extern double sound_flush(int isPaused);
-#endif
-extern void sound_suspend(void);
-extern void sound_resume(void);
-extern int sound_open(void);
-extern void sound_close(void);
-extern void sound_set_relative_speed(int value);
-extern void sound_set_warp_mode(int value);
-extern void sound_set_machine_parameter(long clock_rate, long ticks_per_frame);
-extern void sound_snapshot_prepare(void);
-extern void sound_snapshot_finish(void);
+void sound_init(unsigned int clock_rate, unsigned int ticks_per_frame);
+void sound_reset(void);
+bool sound_flush(void);
+void sound_suspend(void);
+void sound_resume(void);
+int sound_open(void);
+void sound_close(void);
 
-extern int sound_resources_init(void);
-extern void sound_resources_shutdown(void);
-extern int sound_cmdline_options_init(void);
+/* RD c64 debugger: per-SID per-voice mute mask (used by CDebugInterfaceVice.cpp). */
+extern void sid_set_voice_mask(int sidNum, unsigned char voiceMask);
+
+void sound_set_relative_speed(int value);
+void sound_set_warp_mode(int value);
+void sound_set_machine_parameter(long clock_rate, long ticks_per_frame);
+void sound_snapshot_prepare(void);
+void sound_snapshot_finish(void);
+
+int sound_resources_init(void);
+void sound_resources_shutdown(void);
+int sound_cmdline_options_init(void);
 
 
 /* device initialization prototypes */
-extern int sound_init_aix_device(void);
-extern int sound_init_allegro_device(void);
-extern int sound_init_alsa_device(void);
-extern int sound_init_sb_device(void);
-extern int sound_init_dummy_device(void);
-extern int sound_init_dump_device(void);
-extern int sound_init_fs_device(void);
-extern int sound_init_wav_device(void);
-extern int sound_init_hpux_device(void);
-extern int sound_init_midas_device(void);
-extern int sound_init_sdl_device(void);
-extern int sound_init_sgi_device(void);
-extern int sound_init_sun_device(void);
-extern int sound_init_uss_device(void);
-extern int sound_init_dx_device(void);
-extern int sound_init_ce_device(void);
-extern int sound_init_vidc_device(void);
-extern int sound_init_mmos2_device(void);
-extern int sound_init_dart_device(void);
-extern int sound_init_dart2_device(void);
-extern int sound_init_beos_device(void);
-extern int sound_init_bsp_device(void);
-extern int sound_init_arts_device(void);
-extern int sound_init_wmm_device(void);
-extern int sound_init_movie_device(void);
-extern int sound_init_coreaudio_device(void);
-extern int sound_init_ahi_device(void);
-extern int sound_init_voc_device(void);
-extern int sound_init_iff_device(void);
-extern int sound_init_aiff_device(void);
-extern int sound_init_mp3_device(void);
-extern int sound_init_flac_device(void);
-extern int sound_init_vorbis_device(void);
-extern int sound_init_pulse_device(void);
+int sound_init_alsa_device(void);
+int sound_init_dummy_device(void);
+int sound_init_dump_device(void);
+int sound_init_fs_device(void);
+int sound_init_wav_device(void);
+int sound_init_sdl_device(void);
+int sound_init_sun_device(void);
+int sound_init_dx_device(void);
+int sound_init_beos_device(void);
+int sound_init_bsp_device(void);
+int sound_init_wmm_device(void);
+int sound_init_movie_device(void);
+int sound_init_coreaudio_device(void);
+int sound_init_voc_device(void);
+int sound_init_iff_device(void);
+int sound_init_aiff_device(void);
+int sound_init_mp3_device(void);
+int sound_init_flac_device(void);
+int sound_init_vorbis_device(void);
+int sound_init_pulse_device(void);
 
 /* internal function for sound device registration */
-extern int sound_register_device(sound_device_t *pdevice);
+int sound_register_device(const sound_device_t *pdevice);
 
 /* other internal functions used around sound -code */
-extern int sound_read(WORD addr, int chipno);
-extern void sound_store(WORD addr, BYTE val, int chipno);
-extern long sound_sample_position(void);
-extern int sound_dump(int chipno);
+int sound_read(uint16_t addr, int chipno);
+void sound_store(uint16_t addr, uint8_t val, int chipno);
+long sound_sample_position(void);
+int sound_dump(int chipno);
 
 /* functions and structs implemented by each machine */
 typedef struct sound_s sound_t;
-extern char *sound_machine_dump_state(sound_t *psid);
-extern void sound_machine_prevent_clk_overflow(sound_t *psid, CLOCK sub);
-extern void sound_machine_enable(int enable);
 
-extern unsigned int sound_device_num(void);
-extern const char *sound_device_name(unsigned int num);
+char *sound_machine_dump_state(sound_t *psid);
+void sound_machine_enable(int enable);
 
-extern sound_t *sound_get_psid(unsigned int channel);
+unsigned int sound_device_num(void);
+const char *sound_device_name(unsigned int num);
 
+sound_t *sound_get_psid(unsigned int channel);
+
+#ifdef SOUND_SYSTEM_FLOAT
+/* This structure is used by sound producing chips/devices to indicate the left/right mixing in stereo mode per chip channel */
+typedef struct sound_chip_mixing_spec_s {
+
+    /* left channel volume of a mono render stream for stereo output, can be used to put the sound left, right, or both, can also be used for panning */
+    int left_channel_volume;
+
+    /* right channel volume of a mono render stream for stereo output, can be used to put the sound left, right, or both, can also be used for panning */
+    int right_channel_volume;
+
+} sound_chip_mixing_spec_t;
+#endif
+
+/* This structure is used by sound producing chips/devices */
 typedef struct sound_chip_s {
+    /* sound chip open function */
     sound_t *(*open)(int chipno);
+
+    /* sound chip init function */
     int (*init)(sound_t *psid, int speed, int cycles_per_sec);
+
+    /* sound chip close function */
     void (*close)(sound_t *psid);
-    int (*calculate_samples)(sound_t **psid, SWORD *pbuf, int nr, int sound_output_channels, int sound_chip_channels, int *delta_t);
-    void (*store)(sound_t *psid, WORD addr, BYTE val);
-    BYTE (*read)(sound_t *psid, WORD addr);
+
+#ifdef SOUND_SYSTEM_FLOAT
+    /* sound chip calculate samples function */
+    int (*calculate_samples)(sound_t **psid, float *pbuf, int nr, int sound_chip_channels, CLOCK *delta_t);
+#else
+    /* sound chip calculate samples function */
+    int (*calculate_samples)(sound_t **psid, int16_t *pbuf, int nr, int sound_output_channels, int sound_chip_channels, CLOCK *delta_t);
+#endif
+
+    /* sound chip store function */
+    void (*store)(sound_t *psid, uint16_t addr, uint8_t val);
+
+    /* sound chip read function */
+    uint8_t (*read)(sound_t *psid, uint16_t addr);
+
+    /* sound chip reset function */
     void (*reset)(sound_t *psid, CLOCK cpu_clk);
+
+    /* sound chip 'is_cycle_based()' function */
     int (*cycle_based)(void);
+
+    /* sound chip 'get_amount_of_channels()' function */
     int (*channels)(void);
+
+#ifdef SOUND_SYSTEM_FLOAT
+    /* specs for mixing mono chip streams to a stereo stream, stereo channel placement */
+    sound_chip_mixing_spec_t *sound_chip_channel_mixing;
+#endif
+
+    /* sound chip enabled flag */
     int chip_enabled;
+
 } sound_chip_t;
 
-extern WORD sound_chip_register(sound_chip_t *chip);
+uint16_t sound_chip_register(sound_chip_t *chip);
 
 typedef struct sound_dac_s {
     float output;
@@ -260,15 +376,20 @@ typedef struct sound_dac_s {
     int value;
 } sound_dac_t;
 
-extern void sound_dac_init(sound_dac_t *dac, int speed);
-extern int sound_dac_calculate_samples(sound_dac_t *dac, SWORD *pbuf, int value, int nr, int soc, int cs);
+void sound_dac_init(sound_dac_t *dac, int speed);
+
+#ifdef SOUND_SYSTEM_FLOAT
+int sound_dac_calculate_samples(sound_dac_t *dac, float *pbuf, int value, int nr);
+#else
+int sound_dac_calculate_samples(sound_dac_t *dac, int16_t *pbuf, int value, int nr, int soc, int cs);
+#endif
 
 /* recording related functions, equivalent to screenshot_... */
-extern void sound_stop_recording(void);
-extern int sound_is_recording(void);
+void sound_stop_recording(void);
+int sound_is_recording(void);
 
-// c64 debugger
-extern void sid_set_voice_mask(int sidNum, unsigned char voiceMask);
-
+#define MASTER_VOLUME_MAX       100 /* 100% */
+#define MASTER_VOLUME_ONE       100 /* 100% */
+#define MASTER_VOLUME_DEFAULT   MASTER_VOLUME_MAX
 
 #endif

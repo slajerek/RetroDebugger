@@ -147,7 +147,7 @@ rtc_pcf8583_t *pcf8583_init(char *device, int read_bit_shift)
     retval->old_offset = retval->offset;
     memcpy(retval->old_clock_regs, retval->clock_regs, PCF8583_REG_SIZE);
 
-    retval->device = lib_stralloc(device);
+    retval->device = lib_strdup(device);
     retval->state = PCF8583_IDLE;
     retval->sclk_line = 1;
     retval->data_line = 1;

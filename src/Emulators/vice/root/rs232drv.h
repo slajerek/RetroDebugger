@@ -47,7 +47,9 @@ enum rs232handshake_out {
 
 enum rs232handshake_in {
     RS232_HSI_CTS = 0x01, /* we assume DCD = CTS */
-    RS232_HSI_DSR = 0x02
+    RS232_HSI_DSR = 0x02,
+    RS232_HSI_DCD = 0x04, /* VICE 3.10: separate DCD line (used by 3.10 aciacore) */
+    RS232_HSI_RI  = 0x08  /* VICE 3.10: ring indicator */
 };
 
 /* write the output handshake lines */

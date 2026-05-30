@@ -29,8 +29,8 @@
 
 #include "vicetypes.h"
 
-extern int tapertc_resources_init(void);
-extern int tapertc_cmdline_options_init(void);
-extern void tapertc_resources_shutdown(void);
+int tapertc_resources_init(int amount);
+int tapertc_cmdline_options_init(void);
+void tapertc_resources_shutdown(void);
 
 #endif

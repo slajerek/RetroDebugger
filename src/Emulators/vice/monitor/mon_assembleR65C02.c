@@ -42,14 +42,14 @@
 
 static int mon_assemble_instr(const char *opcode_name, asm_mode_addr_info_t operand)
 {
-    WORD operand_value = operand.param;
-    WORD operand_mode = operand.addr_mode;
-    BYTE operand_extra_value = operand.addr_submode;
-    BYTE i = 0, opcode = 0;
+    uint16_t operand_value = operand.param;
+    uint16_t operand_mode = operand.addr_mode;
+    uint8_t operand_extra_value = operand.addr_submode;
+    uint8_t i = 0, opcode = 0;
     int len, branch_offset;
     bool found = FALSE;
     MEMSPACE mem;
-    WORD loc;
+    uint16_t loc;
 
     mem = addr_memspace(asm_mode_addr);
     loc = addr_location(asm_mode_addr);
@@ -57,8 +57,8 @@ static int mon_assemble_instr(const char *opcode_name, asm_mode_addr_info_t oper
     do {
         const asm_opcode_info_t *opinfo;
 
-        opinfo = (monitor_cpu_for_memspace[mem]->asm_opcode_info_get)(i, 0, 0);
-        if (!strcasecmp(opinfo->mnemonic, opcode_name)) {
+        opinfo = (monitor_cpu_for_memspace[mem]->asm_opcode_info_get)(i, 0, 0, 0);
+        if (!util_strcasecmp(opinfo->mnemonic, opcode_name)) {
             /* Special case: ZERO PAGE RELATIVE mode needs special handling. */
             if (opinfo->addr_mode == ASM_ADDR_MODE_ZERO_PAGE_RELATIVE
                 && operand_mode == ASM_ADDR_MODE_DOUBLE) {
@@ -151,16 +151,16 @@ static int mon_assemble_instr(const char *opcode_name, asm_mode_addr_info_t oper
     }
 
     len = (monitor_cpu_for_memspace[mem]->asm_addr_mode_get_size)
-              ((unsigned int)(operand_mode), 0, 0, 0);
+              ((unsigned int)(operand_mode), 0, 0, 0, 0);
 
     /* EP 98.08.23 use correct memspace for assembling.  */
     mon_set_mem_val(mem, loc, opcode);
     if (len >= 2) {
-        mon_set_mem_val(mem, (WORD)(loc + 1), (BYTE)(operand_value & 0xff));
+        mon_set_mem_val(mem, (uint16_t)(loc + 1), (uint8_t)(operand_value & 0xff));
     }
     if (len >= 3) {
-        mon_set_mem_val(mem, (WORD)(loc + 2),
-                        (BYTE)((operand_value >> 8) & 0xff));
+        mon_set_mem_val(mem, (uint16_t)(loc + 2),
+                        (uint8_t)((operand_value >> 8) & 0xff));
     }
 
     if (len >= 0) {

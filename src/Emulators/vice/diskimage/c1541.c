@@ -2027,8 +2027,8 @@ static int copy_cmd(int nargs, char **args)
                     "the destination must be a drive if multiple sources are specified\n");
             return FD_BADDEV;
         }
-        dest_name_ascii = lib_stralloc(args[nargs - 1]);
-        dest_name_petscii = lib_stralloc(dest_name_ascii);
+        dest_name_ascii = lib_strdup(args[nargs - 1]);
+        dest_name_petscii = lib_strdup(dest_name_ascii);
         charset_petconvstring((BYTE *)dest_name_petscii, 0);
         dest_unit = drive_index + UNIT_MIN;
     } else {
@@ -2038,8 +2038,8 @@ static int copy_cmd(int nargs, char **args)
                         "the destination must be a drive if multiple sources are specified\n");
                 return FD_BADDEV;
             }
-            dest_name_ascii = lib_stralloc(p);
-            dest_name_petscii = lib_stralloc(dest_name_ascii);
+            dest_name_ascii = lib_strdup(p);
+            dest_name_petscii = lib_strdup(dest_name_ascii);
             charset_petconvstring((BYTE *)dest_name_petscii, 0);
         } else {
             dest_name_ascii = dest_name_petscii = NULL;
@@ -2063,13 +2063,13 @@ static int copy_cmd(int nargs, char **args)
 
         src_unit = extract_unit_from_file_name(args[i], &p);
         if (src_unit <= 0) {
-            src_name_ascii = lib_stralloc(args[i]);
+            src_name_ascii = lib_strdup(args[i]);
             src_unit = drive_index + UNIT_MIN;
         } else {
             if (check_drive_ready(src_unit - UNIT_MIN) < 0) {
                 return FD_NOTREADY;
             }
-            src_name_ascii = lib_stralloc(p);
+            src_name_ascii = lib_strdup(p);
         }
 
         if (!is_valid_cbm_file_name(src_name_ascii)) {
@@ -2080,7 +2080,7 @@ static int copy_cmd(int nargs, char **args)
             continue;
         }
 
-        src_name_petscii = lib_stralloc(src_name_ascii);
+        src_name_petscii = lib_strdup(src_name_ascii);
         charset_petconvstring((BYTE *)src_name_petscii, 0);
 
         if (vdrive_iec_open(drives[src_unit - UNIT_MIN], (BYTE *)src_name_petscii,
@@ -2922,9 +2922,9 @@ static int read_cmd(int nargs, char **args)
     }
 
     if (p == NULL) {
-        src_name_ascii = lib_stralloc(args[1]);
+        src_name_ascii = lib_strdup(args[1]);
     } else {
-        src_name_ascii = lib_stralloc(p);
+        src_name_ascii = lib_strdup(p);
     }
 
     if (!is_valid_cbm_file_name(src_name_ascii)) {
@@ -2934,7 +2934,7 @@ static int read_cmd(int nargs, char **args)
         return FD_BADNAME;
     }
 
-    src_name_petscii = lib_stralloc(src_name_ascii);
+    src_name_petscii = lib_strdup(src_name_ascii);
     charset_petconvstring((BYTE *)src_name_petscii, 0);
 
     if (vdrive_iec_open(drives[dnr], (BYTE *)src_name_petscii,
@@ -2960,7 +2960,7 @@ static int read_cmd(int nargs, char **args)
             char *open_petscii_name;
 
             dest_name_ascii = args[2];
-            open_petscii_name = lib_stralloc(dest_name_ascii);
+            open_petscii_name = lib_strdup(dest_name_ascii);
             charset_petconvstring((BYTE *)open_petscii_name, 0);
             finfo = fileio_open(open_petscii_name, NULL, format,
                                 FILEIO_COMMAND_WRITE, FILEIO_TYPE_PRG);
@@ -3095,7 +3095,7 @@ int internal_read_geos_file(int unit, FILE* outf, char* src_name_ascii)
 
     if (geosFileStruc == GEOS_FILE_STRUC_SEQ) {
 #ifdef DEBUG_DRIVE
-        log_debug("DEBUG: GEOS_FILE_STRUC_SEQ (%d:%d)", infoTrk, infoSec);
+        log_debug(LOG_DEFAULT, "DEBUG: GEOS_FILE_STRUC_SEQ (%d:%d)", infoTrk, infoSec);
 #endif
         /* sequential file contained in cvt file
          * since vlir block is the first data block simply put it to
@@ -3127,7 +3127,7 @@ int internal_read_geos_file(int unit, FILE* outf, char* src_name_ascii)
         }
     } else if (geosFileStruc == GEOS_FILE_STRUC_VLIR) {
 #ifdef DEBUG_DRIVE
-        log_debug("DEBUG: GEOS_FILE_STRUC_VLIR (%d:%d)", infoTrk, infoSec);
+        log_debug(LOG_DEFAULT, "DEBUG: GEOS_FILE_STRUC_VLIR (%d:%d)", infoTrk, infoSec);
 #endif
         /* The vlir block in cvt files is a conversion of the vlir
          * block on cbm disks.
@@ -3143,7 +3143,7 @@ int internal_read_geos_file(int unit, FILE* outf, char* src_name_ascii)
         }
 
 #ifdef DEBUG_DRIVE
-        log_debug("DEBUG: VLIR scan record chains");
+        log_debug(LOG_DEFAULT, "DEBUG: VLIR scan record chains");
 #endif
 
         /* Replace the TS-chain-origins with NoOfBlocks/BytesInLastSector */
@@ -3157,13 +3157,13 @@ int internal_read_geos_file(int unit, FILE* outf, char* src_name_ascii)
         while (aktTrk != 0 && vlirIdx <= 254) {
             if (aktTrk != 0) { /* Record exists and is not empty */
 #ifdef DEBUG_DRIVE
-                log_debug("DEBUG: VLIR IDX %d", vlirIdx);
+                log_debug(LOG_DEFAULT, "DEBUG: VLIR IDX %d", vlirIdx);
 #endif
                 NoOfChains++;
                 while (aktTrk != 0) {
                     /* Read the chain and collect No Of Blocks */
 #ifdef DEBUG_DRIVE
-                    log_debug("DEBUG: VLIR BLOCK (%d:%d)", aktTrk, aktSec);
+                    log_debug(LOG_DEFAULT, "DEBUG: VLIR BLOCK (%d:%d)", aktTrk, aktSec);
 #endif
 
                     if (vdrive_read_sector(drives[unit], block, aktTrk, aktSec) != 0) {
@@ -3211,7 +3211,7 @@ int internal_read_geos_file(int unit, FILE* outf, char* src_name_ascii)
         }
 
 #ifdef DEBUG_DRIVE
-        log_debug("DEBUG: VLIR output record chains");
+        log_debug(LOG_DEFAULT, "DEBUG: VLIR output record chains");
 #endif
         /* now output the record chains
            (leave the TS-Pointers since they are usesless now) */
@@ -3222,13 +3222,13 @@ int internal_read_geos_file(int unit, FILE* outf, char* src_name_ascii)
         while (aktTrk != 0 && vlirIdx <= 254) {
             if (aktTrk != 0) {
 #ifdef DEBUG_DRIVE
-                log_debug("DEBUG: VLIR IDX %d", vlirIdx);
+                log_debug(LOG_DEFAULT, "DEBUG: VLIR IDX %d", vlirIdx);
 #endif
                 NoOfChains--;
                 /* Record exists */
                 while (aktTrk != 0) {
 #ifdef DEBUG_DRIVE
-                    log_debug("DEBUG: VLIR BLOCK (%d:%d)", aktTrk, aktSec);
+                    log_debug(LOG_DEFAULT, "DEBUG: VLIR BLOCK (%d:%d)", aktTrk, aktSec);
 #endif
                     if (vdrive_read_sector(drives[unit], block, aktTrk, aktSec) != 0) {
                         fprintf(stderr,
@@ -3294,7 +3294,7 @@ static int read_geos_cmd(int nargs, char **args)
                 "missing filename\n");
         return FD_BADNAME;
     } else {
-        src_name_ascii = lib_stralloc(p);
+        src_name_ascii = lib_strdup(p);
     }
 
     if (!is_valid_cbm_file_name(src_name_ascii)) {
@@ -3304,7 +3304,7 @@ static int read_geos_cmd(int nargs, char **args)
         return FD_BADNAME;
     }
 
-    src_name_petscii = lib_stralloc(src_name_ascii);
+    src_name_petscii = lib_strdup(src_name_ascii);
     charset_petconvstring((BYTE *)src_name_petscii, 0);
 
     if (vdrive_iec_open(drives[dev], (BYTE *)src_name_petscii,
@@ -3478,7 +3478,7 @@ static int internal_write_geos_file(int unit, FILE* f)
 
     if (geosFileStruc == GEOS_FILE_STRUC_SEQ) {
 #ifdef DEBUG_DRIVE
-        log_debug("DEBUG: GEOS_FILE_STRUC_SEQ (%d:%d)", vlirTrk, vlirSec);
+        log_debug(LOG_DEFAULT, "DEBUG: GEOS_FILE_STRUC_SEQ (%d:%d)", vlirTrk, vlirSec);
 #endif
         /* normal seq file (rest like standard files) */
         lastTrk = vlirTrk;
@@ -3531,7 +3531,7 @@ static int internal_write_geos_file(int unit, FILE* f)
         }
     } else if (geosFileStruc == GEOS_FILE_STRUC_VLIR) {
 #ifdef DEBUG_DRIVE
-        log_debug("DEBUG: GEOS_FILE_STRUC_VLIR (%d:%d)", vlirTrk, vlirSec);
+        log_debug(LOG_DEFAULT, "DEBUG: GEOS_FILE_STRUC_VLIR (%d:%d)", vlirTrk, vlirSec);
 #endif
         /* in a cvt file containing a vlir file the vlir block contains
          * a pair (NoOfBlocksForChain, BytesInLastBlock + 2) for every vlir
@@ -3544,7 +3544,7 @@ static int internal_write_geos_file(int unit, FILE* f)
         while (vlirIdx <= 254) {
             if (vlirBlock[vlirIdx] != 0) {
 #ifdef DEBUG_DRIVE
-                log_debug("DEBUG: VLIR IDX %d (%d:%d)", vlirIdx, vlirTrk, vlirSec);
+                log_debug(LOG_DEFAULT, "DEBUG: VLIR IDX %d (%d:%d)", vlirIdx, vlirTrk, vlirSec);
 #endif
                 lastTrk = vlirTrk;
                 lastSec = vlirSec;
@@ -3588,7 +3588,7 @@ static int internal_write_geos_file(int unit, FILE* f)
 
                     /* write it to disk */
 #ifdef DEBUG_DRIVE
-                    log_debug("DEBUG: VLIR BLOCK (%d:%d)", aktTrk, aktSec);
+                    log_debug(LOG_DEFAULT, "DEBUG: VLIR BLOCK (%d:%d)", aktTrk, aktSec);
 #endif
 
                     if (vdrive_write_sector(drives[unit], block, aktTrk, aktSec) != 0) {
@@ -3660,11 +3660,11 @@ static int write_geos_cmd(int nargs, char **args)
 
     slashp = strrchr(args[1], '/');
     if (slashp == NULL) {
-        dest_name_ascii = lib_stralloc(args[1]);
+        dest_name_ascii = lib_strdup(args[1]);
     } else {
-        dest_name_ascii = lib_stralloc(slashp + 1);
+        dest_name_ascii = lib_strdup(slashp + 1);
     }
-    dest_name_petscii = lib_stralloc(dest_name_ascii);
+    dest_name_petscii = lib_strdup(dest_name_ascii);
     charset_petconvstring((BYTE *)dest_name_petscii, 0);
 
     if (vdrive_iec_open(drives[dev], (BYTE *)dest_name_petscii,
@@ -3706,7 +3706,7 @@ static int write_geos_cmd(int nargs, char **args)
            30);
 
 #ifdef DEBUG_DRIVE
-    log_debug("DEBUG: closing, write DIR slot (%d %d) and BAM.",
+    log_debug(LOG_DEFAULT, "DEBUG: closing, write DIR slot (%d %d) and BAM.",
             dir.track, dir.sector);
 #endif
     vdrive_write_sector(drives[dev], dir.buffer, dir.track, dir.sector);
@@ -3750,7 +3750,7 @@ static int rename_cmd(int nargs, char **args)
     } else {
         return FD_BADDEV;
     }
-    src_name = lib_stralloc(p);
+    src_name = lib_strdup(p);
 
 
     unit = extract_unit_from_file_name(args[2], &p);
@@ -3761,7 +3761,7 @@ static int rename_cmd(int nargs, char **args)
     } else {
         return FD_BADDEV;
     }
-    dest_name = lib_stralloc(p);
+    dest_name = lib_strdup(p);
 
     dev = dest_unit - UNIT_MIN;
 
@@ -4104,7 +4104,7 @@ static int unlynx_loop(FILE *f, FILE *f2, vdrive_t *vdrive, long dentries)
 
         printf("writing file '%s' to image\n", cname);
 
-        cmd_parse.parsecmd = lib_stralloc(cname);
+        cmd_parse.parsecmd = lib_strdup(cname);
         cmd_parse.secondary = 1;
         cmd_parse.parselength = (unsigned int)strlen(cname);
         cmd_parse.readmode = CBMDOS_FAM_WRITE;
@@ -4361,7 +4361,7 @@ static int write_cmd(int nargs, char **args)
             return FD_BADDEV;
         }
         if (p != NULL && *p != '\0') {
-            dest_name = lib_stralloc(p);
+            dest_name = lib_strdup(p);
         } else {
             dest_name = NULL;
         }
@@ -4396,7 +4396,7 @@ static int write_cmd(int nargs, char **args)
     }
 
     if (dest_name == NULL) {
-        dest_name = lib_stralloc((char *)(finfo->name));
+        dest_name = lib_strdup((char *)(finfo->name));
         dest_len = finfo->length;
     } else {
         dest_len = (unsigned int)strlen(dest_name);
@@ -4583,7 +4583,7 @@ static int raw_cmd(int nargs, char **args)
 
     /* Write to the command channel.  */
     if (nargs >= 2) {
-        char *command = lib_stralloc(args[1]);
+        char *command = lib_strdup(args[1]);
 
         charset_petconvstring((BYTE *)command, 0);
         vdrive_command_execute(vdrive, (BYTE *)command, (unsigned int)strlen(command));

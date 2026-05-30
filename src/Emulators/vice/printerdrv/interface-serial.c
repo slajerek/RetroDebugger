@@ -40,17 +40,25 @@
 #include "printer.h"
 #include "resources.h"
 #include "serial.h"
-#include "translate.h"
 #include "vicetypes.h"
+#include "vdrive.h"
 
-#ifdef HAVE_OPENCBM
+/* #define DEBUG_PRINTER */
+
+#ifdef DEBUG_PRINTER
+#define DBG(x) log_printf  x
+#else
+#define DBG(x)
+#endif
+
+#ifdef HAVE_REALDEVICE
 static int interface_opencbm_attach(unsigned int prnr);
 static int interface_opencbm_detach(unsigned int prnr);
 #endif
 static int interface_serial_attach(unsigned int prnr);
 static int interface_serial_detach(unsigned int prnr);
 
-static log_t interface_serial_log = LOG_ERR;
+static log_t interface_serial_log = LOG_DEFAULT;
 
 /* ------------------------------------------------------------------------- */
 
@@ -71,7 +79,7 @@ static int set_printer_enabled(int flag, void *param)
     switch (flag) {
         case PRINTER_DEVICE_NONE:
         case PRINTER_DEVICE_FS:
-#ifdef HAVE_OPENCBM
+#ifdef HAVE_REALDEVICE
         case PRINTER_DEVICE_REAL:
 #endif
             break;
@@ -80,12 +88,12 @@ static int set_printer_enabled(int flag, void *param)
     }
 
     prnr = vice_ptr_to_uint(param);
-
+    DBG(("set_printer_enabled device:%u flag:%d", prnr, flag));
     if (prnr >= NUM_PRINTER_DEVICE_NUMBERS) {
         return -1;
     }
 
-#ifdef HAVE_OPENCBM
+#ifdef HAVE_REALDEVICE
     /*
      * Special hack to allow the use of a toggle menu item
      * for device #7.
@@ -93,7 +101,7 @@ static int set_printer_enabled(int flag, void *param)
     if (prnr == 3 && flag != 0) {
         flag = PRINTER_DEVICE_REAL;
     }
-#endif /* HAVE_OPENCBM */
+#endif /* HAVE_REALDEVICE */
 
     if (prnr < NUM_PRINTERS) {
         if (printer_enabled[prnr] == PRINTER_DEVICE_FS
@@ -110,7 +118,7 @@ static int set_printer_enabled(int flag, void *param)
         }
     }
 
-#ifdef HAVE_OPENCBM
+#ifdef HAVE_REALDEVICE
 
     if (printer_enabled[prnr] == PRINTER_DEVICE_REAL
         && flag != PRINTER_DEVICE_REAL) {
@@ -126,7 +134,7 @@ static int set_printer_enabled(int flag, void *param)
         }
     }
 
-#endif /* HAVE_OPENCBM */
+#endif /* HAVE_REALDEVICE */
 
     printer_enabled[prnr] = flag;
 
@@ -150,27 +158,20 @@ int interface_serial_init_resources(void)
     return resources_register_int(resources_int);
 }
 
-static const cmdline_option_t cmdline_options[] = {
-    { "-device4", SET_RESOURCE, 1,
+static const cmdline_option_t cmdline_options[] =
+{
+    { "-devicebackend4", SET_RESOURCE, CMDLINE_ATTRIB_NEED_ARGS,
       NULL, NULL, "Printer4", NULL,
-      USE_PARAM_ID, USE_DESCRIPTION_ID,
-      IDCLS_P_TYPE, IDCLS_SET_DEVICE_TYPE_4,
-      NULL, NULL },
-    { "-device5", SET_RESOURCE, 1,
+      "<Type>", "Set device type for device #4 (0: None, 1: Filesystem, 2: Real)" },
+    { "-devicebackend5", SET_RESOURCE, CMDLINE_ATTRIB_NEED_ARGS,
       NULL, NULL, "Printer5", NULL,
-      USE_PARAM_ID, USE_DESCRIPTION_ID,
-      IDCLS_P_TYPE, IDCLS_SET_DEVICE_TYPE_5,
-      NULL, NULL },
-    { "-device6", SET_RESOURCE, 1,
+      "<Type>", "Set device type for device #5 (0: None, 1: Filesystem, 2: Real)" },
+    { "-devicebackend6", SET_RESOURCE, CMDLINE_ATTRIB_NEED_ARGS,
       NULL, NULL, "Printer6", NULL,
-      USE_PARAM_ID, USE_DESCRIPTION_ID,
-      IDCLS_P_TYPE, IDCLS_SET_DEVICE_TYPE_6,
-      NULL, NULL },
-    { "-device7", SET_RESOURCE, 1,
+      "<Type>", "Set device type for device #6 (0: None, 1: Filesystem, 2: Real)" },
+    { "-devicebackend7", SET_RESOURCE, CMDLINE_ATTRIB_NEED_ARGS,
       NULL, NULL, "Printer7", NULL,
-      USE_PARAM_ID, USE_DESCRIPTION_ID,
-      IDCLS_P_TYPE, IDCLS_SET_DEVICE_TYPE_7,
-      NULL, NULL },
+      "<Type>", "Set device type for device #7 (0: None, 2: Real)" },
     CMDLINE_LIST_END
 };
 
@@ -196,7 +197,7 @@ static unsigned int inuse_secadr[NUM_PRINTER_DEVICE_NUMBERS];
  * Opens can be implicit, but closes are not.
  */
 
-static int open_pr(unsigned int prnr, const BYTE *name, unsigned int length,
+static int open_pr(unsigned int prnr, const uint8_t *name, unsigned int length,
                    unsigned int secondary)
 {
     int mask = 1 << secondary;
@@ -209,7 +210,7 @@ static int open_pr(unsigned int prnr, const BYTE *name, unsigned int length,
     if (inuse_secadr[prnr] == 0) {
         if (driver_select_open(prnr, DRIVER_FIRST_OPEN) < 0) {
             log_error(interface_serial_log,
-                      "Couldn't initialize device #%i.",
+                    "Couldn't initialize device #%u.",
                     prnr + FIRST_PRINTER_DEVICE_NUMBER);
             return -1;
         }
@@ -217,14 +218,14 @@ static int open_pr(unsigned int prnr, const BYTE *name, unsigned int length,
 
     if (inuse_secadr[prnr] & mask) {
         log_error(interface_serial_log,
-                  "Open printer #%i,%i while already open - ignoring.",
+                "Open printer #%u,%u while already open - ignoring.",
                 prnr + FIRST_PRINTER_DEVICE_NUMBER, secondary);
         return 0;
     }
 
     if (driver_select_open(prnr, secondary) < 0) {
         log_error(interface_serial_log,
-                  "Couldn't open device #%i,%i.",
+                "Couldn't open device #%u,%u.",
                 prnr + FIRST_PRINTER_DEVICE_NUMBER, secondary);
         return -1;
     }
@@ -234,21 +235,23 @@ static int open_pr(unsigned int prnr, const BYTE *name, unsigned int length,
     return 0;
 }
 
-static int read_pr(unsigned int prnr, BYTE *byte, unsigned int secondary)
+static int read_pr(unsigned int prnr, uint8_t *byte, unsigned int secondary)
 {
     return 0x80;
 }
 
-static int write_pr(unsigned int prnr, BYTE byte, unsigned int secondary)
+static int write_pr(unsigned int prnr, uint8_t byte, unsigned int secondary)
 {
     int err;
     int mask = 1 << secondary;
+
+    DBG(("write_pr prnr:%u secondary:%u byte:%u", prnr, secondary, byte));
 
     if (!(inuse_secadr[prnr] & mask)) {
         /* oh, well, we just assume an implicit open - "OPEN 1,4"
            just does not leave any trace on the serial bus */
         log_message(interface_serial_log,
-                    "Auto-opening printer #%i,%i.",
+                    "Auto-opening printer #%u,%u.",
                     prnr + FIRST_PRINTER_DEVICE_NUMBER, secondary);
 
         err = open_pr(prnr, NULL, 0, secondary);
@@ -267,7 +270,7 @@ static int close_pr(unsigned int prnr, unsigned int secondary)
 
     if (!(inuse_secadr[prnr] & mask)) {
         log_error(interface_serial_log,
-                  "Close printer #%i,%i while closed - ignoring.",
+                  "Close printer #%u,%u while closed - ignoring.",
                   prnr + FIRST_PRINTER_DEVICE_NUMBER, secondary);
         return 0;
     }
@@ -291,7 +294,7 @@ static void flush_pr(unsigned int prnr, unsigned int secondary)
 
     if (!(inuse_secadr[prnr] & mask)) {
         log_error(interface_serial_log,
-                  "Flush printer #%i,%i while closed - ignoring.",
+                  "Flush printer #%u,%u while closed - ignoring.",
                   prnr + FIRST_PRINTER_DEVICE_NUMBER, secondary);
         return;
     }
@@ -301,20 +304,29 @@ static void flush_pr(unsigned int prnr, unsigned int secondary)
 
 /* ------------------------------------------------------------------------- */
 
-static int open_pr4(struct vdrive_s *var, const BYTE *name, unsigned int length,
+static int open_pr4(struct vdrive_s *var, const uint8_t *name, unsigned int length,
                     unsigned int secondary,
                     struct cbmdos_cmd_parse_s *cmd_parse_ext)
 {
+    DBG(("open_pr4 unit:%u", var->unit));
     return open_pr(0, name, length, secondary);
 }
 
-static int read_pr4(struct vdrive_s *var, BYTE *byte, unsigned int secondary)
+static int read_pr4(struct vdrive_s *var, uint8_t *byte, unsigned int secondary)
 {
+    DBG(("read_pr4 unit:%u", var->unit));
     return read_pr(0, byte, secondary);
 }
 
-static int write_pr4(struct vdrive_s *var, BYTE byte, unsigned int secondary)
+static int write_pr4(struct vdrive_s *var, uint8_t byte, unsigned int secondary)
 {
+#ifdef DEBUG_PRINTER
+    if (var) {
+        DBG(("write_pr4 unit:%u sec:%u byte:%u", var->unit, secondary, byte));
+    } else {
+        DBG(("write_pr4 unit:n/a sec:%u byte:%u", secondary, byte));
+    }
+#endif
     return write_pr(0, byte, secondary);
 }
 
@@ -328,19 +340,19 @@ static void flush_pr4(struct vdrive_s *var, unsigned int secondary)
     flush_pr(0, secondary);
 }
 
-static int open_pr5(struct vdrive_s *var, const BYTE *name, unsigned int length,
+static int open_pr5(struct vdrive_s *var, const uint8_t *name, unsigned int length,
                     unsigned int secondary,
                     struct cbmdos_cmd_parse_s *cmd_parse_ext)
 {
     return open_pr(1, name, length, secondary);
 }
 
-static int read_pr5(struct vdrive_s *var, BYTE *byte, unsigned int secondary)
+static int read_pr5(struct vdrive_s *var, uint8_t *byte, unsigned int secondary)
 {
     return read_pr(1, byte, secondary);
 }
 
-static int write_pr5(struct vdrive_s *var, BYTE byte, unsigned int secondary)
+static int write_pr5(struct vdrive_s *var, uint8_t byte, unsigned int secondary)
 {
     return write_pr(1, byte, secondary);
 }
@@ -355,19 +367,19 @@ static void flush_pr5(struct vdrive_s *var, unsigned int secondary)
     flush_pr(1, secondary);
 }
 
-static int open_pr6(struct vdrive_s *var, const BYTE *name, unsigned int length,
+static int open_pr6(struct vdrive_s *var, const uint8_t *name, unsigned int length,
                     unsigned int secondary,
                     struct cbmdos_cmd_parse_s *cmd_parse_ext)
 {
     return open_pr(2, name, length, secondary);
 }
 
-static int read_pr6(struct vdrive_s *var, BYTE *byte, unsigned int secondary)
+static int read_pr6(struct vdrive_s *var, uint8_t *byte, unsigned int secondary)
 {
     return read_pr(2, byte, secondary);
 }
 
-static int write_pr6(struct vdrive_s *var, BYTE byte, unsigned int secondary)
+static int write_pr6(struct vdrive_s *var, uint8_t byte, unsigned int secondary)
 {
     return write_pr(2, byte, secondary);
 }
@@ -408,20 +420,20 @@ int interface_serial_late_init(void)
                 return -1;
             }
         }
-#ifdef HAVE_OPENCBM
+#ifdef HAVE_REALDEVICE
         else if (printer_enabled[i] == PRINTER_DEVICE_REAL) {
             if (interface_opencbm_attach(i) < 0) {
                 return -1;
             }
         }
-#endif /* HAVE_OPENCBM */
+#endif /* HAVE_REALDEVICE */
     }
 
     return 0;
 }
 
 /* ------------------------------------------------------------------------- */
-#if defined(HAVE_OPENCBM)
+#if defined(HAVE_REALDEVICE)
 
 static int interface_opencbm_attach(unsigned int prnr)
 {
@@ -453,13 +465,15 @@ static int interface_opencbm_detach(unsigned int prnr)
     return interface_serial_detach(prnr);
 }
 
-#endif /* HAVE_OPENCBM */
+#endif /* HAVE_REALDEVICE */
 
 /* ------------------------------------------------------------------------- */
 
 static int interface_serial_attach(unsigned int prnr)
 {
     int err;
+
+    DBG(("interface_serial_attach device:%u", 4 + prnr));
 
     inuse_secadr[prnr] = 0;
 
@@ -485,7 +499,8 @@ static int interface_serial_attach(unsigned int prnr)
 
     if (err) {
         log_error(interface_serial_log,
-                  "Cannot attach serial printer #%i.", prnr + FIRST_PRINTER_DEVICE_NUMBER);
+                  "Cannot attach serial printer #%u.",
+                  prnr + FIRST_PRINTER_DEVICE_NUMBER);
         return -1;
     }
     serial_device_type_set(SERIAL_DEVICE_FS, FIRST_PRINTER_DEVICE_NUMBER + prnr);
@@ -495,6 +510,8 @@ static int interface_serial_attach(unsigned int prnr)
 
 static int interface_serial_detach(unsigned int prnr)
 {
+    DBG(("interface_serial_detach device:%u", 4 + prnr));
+
     if (prnr < NUM_PRINTERS && inuse_secadr[prnr]) {
         int i;
         for (i = 0; i < 8; i++) {

@@ -120,7 +120,7 @@ int archdep_init(int *argc, char **argv)
     _setmode(_fileno(stdin), O_BINARY);
     _setmode(_fileno(stdout), O_BINARY);
 
-    argv0 = lib_stralloc(argv[0]);
+    argv0 = lib_strdup(argv[0]);
 
     orig_workdir = getcwd(NULL, MAX_PATH);
 
@@ -307,7 +307,7 @@ const char *archdep_boot_path(void)
                                 util_fname_split(temp, &boot_path, NULL);
                                 break;
                             } else if (i == 0) {
-                                possible_trojan_path = lib_stralloc(temp);
+                                possible_trojan_path = lib_strdup(temp);
                             }
                         }
                     }
@@ -325,7 +325,7 @@ const char *archdep_boot_path(void)
             if (verify_exe(ment.szExePath)) {
                 util_fname_split(ment.szExePath, &boot_path, NULL);
             } else {
-                possible_trojan_path = lib_stralloc(ment.szExePath);
+                possible_trojan_path = lib_strdup(ment.szExePath);
                 while (func_Module32Next(snap, &ment)) {
                     OutputDebugString(ment.szExePath);
                     if (verify_exe(ment.szExePath)) {
@@ -342,7 +342,7 @@ const char *archdep_boot_path(void)
             if (GetModuleFileName(NULL, st_temp, MAX_PATH)) {
                 system_wcstombs(temp, st_temp, MAX_PATH);
                 if (!verify_exe(temp)) {
-                    possible_trojan_path = lib_stralloc(temp);
+                    possible_trojan_path = lib_strdup(temp);
                 }
                 util_fname_split(temp, &boot_path, NULL);
             } else {
@@ -355,7 +355,7 @@ const char *archdep_boot_path(void)
 
         /* This should not happen, but you never know...  */
         if (boot_path == NULL) {
-            boot_path = lib_stralloc(".\\");
+            boot_path = lib_strdup(".\\");
         }
     }
 
@@ -561,7 +561,7 @@ cleanup:
 int archdep_expand_path(char **return_path, const char *orig_name)
 {
     /*  Win32 version   */
-    *return_path = lib_stralloc(orig_name);
+    *return_path = lib_strdup(orig_name);
     return 0;
 }
 
@@ -608,7 +608,7 @@ char *archdep_tmpnam(void)
     } else if (getenv("tmp")) {
         return util_concat(getenv("tmp"), tmpnam(NULL), NULL);
     } else {
-        return lib_stralloc(tmpnam(NULL));
+        return lib_strdup(tmpnam(NULL));
     }
 }
 
@@ -622,7 +622,7 @@ FILE *archdep_mkstemp_fd(char **filename, const char *mode)
     } else if (getenv("tmp")) {
         tmp = util_concat(getenv("tmp"), tmpnam(NULL), NULL);
     } else {
-        tmp = lib_stralloc(tmpnam(NULL));
+        tmp = lib_strdup(tmpnam(NULL));
     }
 
     fd = fopen(tmp, mode);

@@ -215,6 +215,7 @@ static int jpegdrv_save_memmap(const char *filename, int x_size, int y_size, BYT
 
 static gfxoutputdrv_t jpeg_drv =
 {
+    GFXOUTPUTDRV_TYPE_SCREENSHOT_IMAGE,	/* VICE 3.10: new leading type field */
     "JPEG",
     "JPEG screenshot",
     "jpg",
@@ -233,7 +234,7 @@ static gfxoutputdrv_t jpeg_drv =
 #endif
 };
 
-void gfxoutput_init_jpeg(void)
+void gfxoutput_init_jpeg(int help)	/* VICE 3.10: + help arg (unused here, matches other drivers) */
 {
   gfxoutput_register(&jpeg_drv);
 }

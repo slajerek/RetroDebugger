@@ -38,20 +38,22 @@
 #include "montypes.h"
 #include "vicetypes.h"
 
-static const int addr_mode_size[] = {
-    1, /* ASM_ADDR_MODE_IMPLIED */
-    1, /* ASM_ADDR_MODE_ACCUMULATOR */
-    2, /* ASM_ADDR_MODE_IMMEDIATE */
-    2, /* ASM_ADDR_MODE_ZERO_PAGE */
-    2, /* ASM_ADDR_MODE_ZERO_PAGE_X */
-    2, /* ASM_ADDR_MODE_ZERO_PAGE_Y */
-    3, /* ASM_ADDR_MODE_ABSOLUTE */
-    3, /* ASM_ADDR_MODE_ABSOLUTE_X */
-    3, /* ASM_ADDR_MODE_ABSOLUTE_Y */
-    3, /* ASM_ADDR_MODE_ABS_INDIRECT */
-    2, /* ASM_ADDR_MODE_INDIRECT_X */
-    2, /* ASM_ADDR_MODE_INDIRECT_Y */
-    2  /* ASM_ADDR_MODE_RELATIVE */
+/* NOTE: 0 is invalid in this table */
+static const int addr_mode_size[ASM_ADDR_MODE_LAST] = {
+    /* 6502 */
+    [ASM_ADDR_MODE_IMPLIED] = 1,
+    [ASM_ADDR_MODE_ACCUMULATOR] = 1,
+    [ASM_ADDR_MODE_IMMEDIATE] = 2,
+    [ASM_ADDR_MODE_ZERO_PAGE] = 2,
+    [ASM_ADDR_MODE_ZERO_PAGE_X] = 2,
+    [ASM_ADDR_MODE_ZERO_PAGE_Y] = 2,
+    [ASM_ADDR_MODE_ABSOLUTE] = 3,
+    [ASM_ADDR_MODE_ABSOLUTE_X] = 3,
+    [ASM_ADDR_MODE_ABSOLUTE_Y] = 3,
+    [ASM_ADDR_MODE_ABS_INDIRECT] = 3,
+    [ASM_ADDR_MODE_INDIRECT_X] = 2,
+    [ASM_ADDR_MODE_INDIRECT_Y] = 2,
+    [ASM_ADDR_MODE_RELATIVE] = 2,
 };
 
 static const asm_opcode_info_t opcode_list[] = {
@@ -328,13 +330,15 @@ static const asm_opcode_info_t opcode_list[] = {
     /* ff */ { "ISB",   ASM_ADDR_MODE_ABSOLUTE_X }
 };
 
-static const asm_opcode_info_t *asm_opcode_info_get(unsigned int p0, unsigned int p1, unsigned int p2)
+static const asm_opcode_info_t *asm_opcode_info_get(unsigned int p0, unsigned int p1,
+                                                    unsigned int p2, unsigned int p3)
 {
     return opcode_list + p0;
 }
 
+/* must return a positive number (opcode length in bytes) */
 static unsigned int asm_addr_mode_get_size(unsigned int mode, unsigned int p0,
-                                           unsigned int p1, unsigned int p2)
+                                           unsigned int p1, unsigned int p2, unsigned int p3)
 {
     return addr_mode_size[mode];
 }

@@ -27,20 +27,37 @@
 #ifndef VICE_UIMON_H
 #define VICE_UIMON_H
 
+#include <stdbool.h>
+
 struct console_s;
+struct console_private_s;
 struct monitor_interface_s;
 
-extern struct console_s *uimon_window_open(void);
-extern void uimon_window_suspend(void);
-extern struct console_s *uimon_window_resume(void);
-extern void uimon_window_close(void);
+struct console_s *uimon_window_open(bool display_now);
+void uimon_window_suspend(void);
+struct console_s *uimon_window_resume(void);
+void uimon_window_close(void);
 
-extern int uimon_out(const char *buffer);
+int uimon_out(const char *buffer);
+int uimon_petscii_out(const char *buffer, int len);
+int uimon_petscii_upper_out(const char *buffer, int len);
+int uimon_scrcode_out(const char *buffer, int len);
+int uimon_scrcode_upper_out(const char *buffer, int len);
 
-extern char *uimon_in(const char *prompt);
+char *uimon_in(const char *prompt);
 
-extern void uimon_notify_change(void);
-extern void uimon_set_interface(struct monitor_interface_s **, int);
-extern char *uimon_get_in(char **, const char *);
+void uimon_notify_change(void);
+void uimon_set_interface(struct monitor_interface_s **, int);
+char *uimon_get_in(char **, const char *);
+
+int uimon_get_columns(struct console_private_s *t);
+void uimon_write_to_terminal(struct console_private_s *t, const char *data, long length);
+int uimon_get_string(struct console_private_s *t, char* string, int string_len);
+
+/* Gtk3-specific, so far */
+bool uimon_set_font(void);
+bool uimon_set_foreground_color(const char *color);
+bool uimon_set_background_color(const char *color);
+
 
 #endif

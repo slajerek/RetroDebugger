@@ -43,7 +43,6 @@
 static int ciat_logfl = 0; /* 0 means logging disabled */
 static int logtab = 0;
 static const char spaces[] = "                                                  ";
-/* extern int traceflg; */
 
 void ciat_login(const char *format, ...)
 {
@@ -166,7 +165,7 @@ void ciat_init_table(void)
  */
 void ciat_init(ciat_t *state, const char *name, CLOCK cclk, alarm_t *alarm)
 {
-    CIAT_LOGIN(("%s init: cclk=%d", name, cclk));
+    CIAT_LOGIN(("%s init: cclk=%lu", name, cclk));
 
     state->name = name;
     state->clk = cclk;
@@ -181,7 +180,7 @@ void ciat_init(ciat_t *state, const char *name, CLOCK cclk, alarm_t *alarm)
 /* timer reset */
 void ciat_reset(ciat_t *state, CLOCK cclk)
 {
-    CIAT_LOGIN(("%s reset: cclk=%d", state->name, cclk));
+    CIAT_LOGIN(("%s reset: cclk=%lu", state->name, cclk));
 
     /* FIXME? */
     state->clk = cclk;
@@ -216,12 +215,12 @@ void ciat_save_snapshot(ciat_t *cia_state, CLOCK cclk, snapshot_module_t *m,
     if (ver >= 0x100) {
         /* major 1, minor >= 1 */
         /* cnt & latch are saved from cia module already */
-        SMW_W(m, ((WORD)(cia_state->state)));
+        SMW_W(m, ((uint16_t)(cia_state->state)));
     }
 }
 
-void ciat_load_snapshot(ciat_t *state, CLOCK cclk, WORD cnt, WORD latch,
-                        BYTE cr, snapshot_module_t *m, int ver)
+void ciat_load_snapshot(ciat_t *state, CLOCK cclk, uint16_t cnt, uint16_t latch,
+                        uint8_t cr, snapshot_module_t *m, int ver)
 {
     /* cnt & latch are read from cia module already */
     state->clk = cclk;

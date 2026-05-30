@@ -30,17 +30,19 @@
 #include "vicetypes.h"
 
 #define FILEIO_COMMAND_READ        0
-#define FILEIO_COMMAND_WRITE       1
-#define FILEIO_COMMAND_APPEND      2
-#define FILEIO_COMMAND_APPEND_READ 3
-#define FILEIO_COMMAND_STAT        4  /* works with directories */
+#define FILEIO_COMMAND_READ_WRITE  1
+#define FILEIO_COMMAND_WRITE       2  /* Will not overwrite existing file */
+#define FILEIO_COMMAND_OVERWRITE   3  /* Overwrites existing file, if any */
+#define FILEIO_COMMAND_APPEND      4
+#define FILEIO_COMMAND_APPEND_READ 5
+#define FILEIO_COMMAND_STAT        6  /* works with directories */
 #define FILEIO_COMMAND_MASK        15
 #define FILEIO_COMMAND_FSNAME      16
 
 #define FILEIO_FORMAT_RAW (1 << 0)
 #define FILEIO_FORMAT_P00 (1 << 1)
 
-#define FILEIO_TYPE_DEL 0
+#define FILEIO_TYPE_DEL 0       /* should match CBMDOS_FT_xxx */
 #define FILEIO_TYPE_SEQ 1
 #define FILEIO_TYPE_PRG 2
 #define FILEIO_TYPE_USR 3
@@ -58,7 +60,7 @@
 struct rawfile_info_s;
 
 struct fileio_info_s {
-    BYTE *name;
+    uint8_t *name;
     unsigned int length;
     unsigned int type;
     unsigned int format;
@@ -66,17 +68,19 @@ struct fileio_info_s {
 };
 typedef struct fileio_info_s fileio_info_t;
 
-extern fileio_info_t *fileio_open(const char *file_name, const char *path,
-                                  unsigned int format, unsigned int command,
-                                  unsigned int type);
-extern void fileio_close(fileio_info_t *info);
-extern unsigned int fileio_read(fileio_info_t *info, BYTE *buf, unsigned int len);
-extern unsigned int fileio_write(fileio_info_t *info, BYTE *buf, unsigned int len);
-extern unsigned int fileio_ferror(fileio_info_t *info);
-extern unsigned int fileio_rename(const char *src_name, const char *dest_name,
-                                  const char *path, unsigned int format);
-extern unsigned int fileio_scratch(const char *file_name, const char *path,
-                                   unsigned int format);
-extern unsigned int fileio_get_bytes_left(fileio_info_t *info);
+fileio_info_t *fileio_open(const char *file_name, const char *path,
+                           unsigned int format, unsigned int command,
+                           unsigned int type, int *reclenp);
+void fileio_close(fileio_info_t *info);
+unsigned int fileio_read(fileio_info_t *info, uint8_t *buf, unsigned int len);
+unsigned int fileio_write(fileio_info_t *info, uint8_t *buf, unsigned int len);
+unsigned int fileio_ferror(fileio_info_t *info);
+unsigned int fileio_rename(const char *src_name, const char *dest_name,
+                           const char *path, unsigned int format);
+unsigned int fileio_scratch(const char *file_name, const char *path,
+                            unsigned int format);
+unsigned int fileio_get_bytes_left(fileio_info_t *info);
+unsigned int fileio_seek(fileio_info_t *info, off_t offset, int whence);
+unsigned int fileio_tell(fileio_info_t *info);
 
 #endif

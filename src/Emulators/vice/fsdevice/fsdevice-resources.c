@@ -40,6 +40,8 @@ int fsdevice_convert_p00_enabled[4];
 int fsdevice_save_p00_enabled[4];
 int fsdevice_hide_cbm_files_enabled[4];
 char *fsdevice_dir[4] = { NULL, NULL, NULL, NULL };
+int fsdevice_allow_long_names;
+int fsdevice_overwrite_existing_files;
 
 
 static int set_fsdevice_convert_p00(int val, void *param)
@@ -72,16 +74,28 @@ static int set_fsdevice_hide_cbm_files(int val, void *param)
     return 0;
 }
 
+static int set_fsdevice_allow_long_names(int val, void *param)
+{
+    fsdevice_allow_long_names = val ? 1 : 0;
+    return 0;
+}
+
+static int set_fsdevice_overwrite_existing_files(int val, void *param)
+{
+    fsdevice_overwrite_existing_files = val ? 1 : 0;
+    return 0;
+}
+
 /* ------------------------------------------------------------------------- */
 
 static const resource_string_t resources_string[] = {
-    { "FSDevice8Dir", FSDEVICE_DEFAULT_DIR, RES_EVENT_NO, NULL,
+    { "FSDevice8Dir", ARCHDEP_FSDEVICE_DEFAULT_DIR, RES_EVENT_NO, NULL,
       (void *)&fsdevice_dir[0], set_fsdevice_dir, (void *)8 },
-    { "FSDevice9Dir", FSDEVICE_DEFAULT_DIR, RES_EVENT_NO, NULL,
+    { "FSDevice9Dir", ARCHDEP_FSDEVICE_DEFAULT_DIR, RES_EVENT_NO, NULL,
       (void *)&fsdevice_dir[1], set_fsdevice_dir, (void *)9 },
-    { "FSDevice10Dir", FSDEVICE_DEFAULT_DIR, RES_EVENT_NO, NULL,
+    { "FSDevice10Dir", ARCHDEP_FSDEVICE_DEFAULT_DIR, RES_EVENT_NO, NULL,
       (void *)&fsdevice_dir[2], set_fsdevice_dir, (void *)10 },
-    { "FSDevice11Dir", FSDEVICE_DEFAULT_DIR, RES_EVENT_NO, NULL,
+    { "FSDevice11Dir", ARCHDEP_FSDEVICE_DEFAULT_DIR, RES_EVENT_NO, NULL,
       (void *)&fsdevice_dir[3], set_fsdevice_dir, (void *)11 },
     RESOURCE_STRING_LIST_END
 };
@@ -123,6 +137,12 @@ static const resource_int_t resources_int[] = {
     { "FSDevice11HideCBMFiles", 0, RES_EVENT_NO, NULL,
       &fsdevice_hide_cbm_files_enabled[3],
       set_fsdevice_hide_cbm_files, (void *)11 },
+    { "FSDeviceLongNames", 0, RES_EVENT_NO, NULL,
+      &fsdevice_allow_long_names,
+      set_fsdevice_allow_long_names, NULL },
+    { "FSDeviceOverwrite", 0, RES_EVENT_NO, NULL,
+      &fsdevice_overwrite_existing_files,
+      set_fsdevice_overwrite_existing_files, NULL },
     RESOURCE_INT_LIST_END
 };
 

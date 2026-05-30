@@ -192,7 +192,7 @@ int ioutil_rename(const char *oldpath, const char *newpath)
     return archdep_rename(oldpath, newpath);
 }
 
-int ioutil_stat(const char *file_name, unsigned int *len, unsigned int *isdir)
+int ioutil_stat(const char *file_name, size_t *len, unsigned int *isdir)
 {
     return archdep_stat(file_name, len, isdir);
 }
@@ -235,7 +235,8 @@ static int ioutil_count_dir_items(const char *path)
     DIR *dirp;
     struct dirent *dp;
 /* #ifndef _DIRENT_HAVE_D_TYPE */
-    unsigned int len, isdir;
+    size_t len;
+    unsigned int isdir;
     char *filename;
     int retval;
 /* #endif */
@@ -304,7 +305,8 @@ static void ioutil_filldir(const char *path, ioutil_name_table_t *dirs, ioutil_n
     int dir_count = 0;
     int file_count = 0;
 /* #ifndef _DIRENT_HAVE_D_TYPE */
-    unsigned int len, isdir;
+    size_t len;
+    unsigned int isdir;
     char *filename;
     int retval;
 /* #endif */
@@ -317,7 +319,7 @@ static void ioutil_filldir(const char *path, ioutil_name_table_t *dirs, ioutil_n
 #ifdef _DIRENT_HAVE_D_TYPE
         if (dp->d_type != DT_UNKNOWN) {
             if (dp->d_type == DT_DIR) {
-                dirs[dir_count].name = lib_stralloc(dp->d_name);
+                dirs[dir_count].name = lib_strdup(dp->d_name);
                 dir_count++;
 #ifdef DT_LNK
             } else if (dp->d_type == DT_LNK) {
@@ -325,10 +327,10 @@ static void ioutil_filldir(const char *path, ioutil_name_table_t *dirs, ioutil_n
                 retval = ioutil_stat(filename, &len, &isdir);
                 if (retval == 0) {
                     if (isdir) {
-                        dirs[dir_count].name = lib_stralloc(dp->d_name);
+                        dirs[dir_count].name = lib_strdup(dp->d_name);
                         dir_count++;
                     } else {
-                        files[file_count].name = lib_stralloc(dp->d_name);
+                        files[file_count].name = lib_strdup(dp->d_name);
                         file_count++;
                     }
                 }
@@ -338,7 +340,7 @@ static void ioutil_filldir(const char *path, ioutil_name_table_t *dirs, ioutil_n
                 }
 #endif /* DT_LNK */
             } else {
-                files[file_count].name = lib_stralloc(dp->d_name);
+                files[file_count].name = lib_strdup(dp->d_name);
                 file_count++;
             }
             dp = readdir(dirp);
@@ -348,10 +350,10 @@ static void ioutil_filldir(const char *path, ioutil_name_table_t *dirs, ioutil_n
             retval = ioutil_stat(filename, &len, &isdir);
             if (retval == 0) {
                 if (isdir) {
-                    dirs[dir_count].name = lib_stralloc(dp->d_name);
+                    dirs[dir_count].name = lib_strdup(dp->d_name);
                     dir_count++;
                 } else {
-                    files[file_count].name = lib_stralloc(dp->d_name);
+                    files[file_count].name = lib_strdup(dp->d_name);
                     file_count++;
                 }
             }

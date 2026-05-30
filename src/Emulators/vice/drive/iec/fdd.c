@@ -29,18 +29,33 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "diskimage.h"
 #include "lib.h"
+#include "log.h"
 #include "vicetypes.h"
 #include "fdd.h"
+#include "diskconstants.h"
 #include "diskimage.h"
 #include "drive.h"
 #include "snapshot.h"
 
+/* 3.5" mechs are usually specified for 80 physical tracks. However, using track
+   81 is usually no problem at all on any combination of mech and disk. Often
+   also track 82 works. On good quality drives even track 83 is ok.
+   Most importantly, track 81 is not uncommon "in the wild":
+   - the FD2000/4000 ROMS write to track 81 with zeros when formatting for 1581
+     disks (TODO: test and handle this without breaking the upper tracks)
+   - Wheels "MakeSysDisk" puts its copyright info on track 81
+
+   FIXME: images are always "extended" without asking
+
+*/
+#define FDD_MAX_TRACK   (80 + 3)
+#define FDD_NUM_TRACKS  (80 + 3)
+
 const int fdd_data_rates[4] = { 500, 300, 250, 1000 }; /* kbit/s */
 #define INDEXLEN (16)
 static void fdd_flush_raw(fd_drive_t *drv);
-static WORD *crc1021 = NULL;
+static uint16_t *crc1021 = NULL;
 
 struct fd_drive_s {
     char *myname;
@@ -60,7 +75,8 @@ struct fd_drive_s {
     int head_invert;
     int disk_rate;
     int image_sectors;
-    int index_count;
+    unsigned int index_count;
+    /*int write_beyond;*/ /* flag to see if we writing D?M data to a D81 image */
     drive_t *drive;
     struct disk_image_s *image;
     struct {
@@ -68,20 +84,21 @@ struct fd_drive_s {
         int size;
         int track_head;
         int dirty;
-        BYTE *data;
-        BYTE *sync;
+        uint8_t *data;
+        uint8_t *sync;
     } raw;
 };
 
 fd_drive_t *fdd_init(int num, drive_t *drive)
 {
     fd_drive_t *drv = lib_malloc(sizeof(fd_drive_t));
+    memset(drv, 0, sizeof(fd_drive_t));
     drv->myname = lib_msprintf("FDD%d", num);
     drv->image = NULL;
     drv->number = num & 3;
     drv->motor = 0;
     drv->track = 0;
-    drv->tracks = 80;
+    drv->tracks = FDD_NUM_TRACKS;
     drv->sectors = 10;
     drv->sector_size = 2;
     drv->head_invert = 1;
@@ -90,6 +107,10 @@ fd_drive_t *fdd_init(int num, drive_t *drive)
     drv->rate = 2;
     drv->image_sectors = 40;
     drv->drive = drive;
+    /* TODO: What about the other fields in raw? */
+    drv->raw.data = NULL;
+    drv->raw.sync = NULL;
+    /*drv->write_beyond = 0;*/
     return drv;
 }
 
@@ -98,7 +119,7 @@ static void fdd_init_crc1021(void)
     unsigned int i, j;
     unsigned int w;
 
-    crc1021 = lib_malloc(256 * sizeof(WORD));
+    crc1021 = lib_malloc(256 * sizeof(uint16_t));
     for (i = 0; i < 256; i++) {
         w = i << 8;
         for (j = 0; j < 8; j++) {
@@ -109,7 +130,7 @@ static void fdd_init_crc1021(void)
                 w <<= 1;
             }
         }
-        crc1021[i] = (WORD)w;
+        crc1021[i] = (uint16_t)w;
     }
 }
 
@@ -117,6 +138,12 @@ void fdd_shutdown(fd_drive_t *drv)
 {
     if (!drv) {
         return;
+    }
+    /* clean up memory from CRC tables */
+    if (crc1021) {
+        lib_free(crc1021);
+        /* prevent multiple instances of fdd_shutdown to unallocate this table */
+        crc1021 = NULL;
     }
     lib_free(drv->myname);
     lib_free(drv);
@@ -130,7 +157,7 @@ void fdd_image_attach(fd_drive_t *drv, struct disk_image_s *image)
     drv->image = image;
     switch (image->type) {
         case DISK_IMAGE_TYPE_D1M:
-            drv->tracks = 81;
+            drv->tracks = 80 + 3; /* FIXME */
             drv->sectors = 10;
             drv->sector_size = 2;
             drv->head_invert = 1;
@@ -141,7 +168,7 @@ void fdd_image_attach(fd_drive_t *drv, struct disk_image_s *image)
             drv->image_sectors = 256;
             break;
         case DISK_IMAGE_TYPE_D2M:
-            drv->tracks = 81;
+            drv->tracks = 80 + 3; /* FIXME */
             drv->sectors = 10;
             drv->sector_size = 3;
             drv->head_invert = 1;
@@ -152,7 +179,7 @@ void fdd_image_attach(fd_drive_t *drv, struct disk_image_s *image)
             drv->image_sectors = 256;
             break;
         case DISK_IMAGE_TYPE_D4M:
-            drv->tracks = 81;
+            drv->tracks = 80 + 3; /* FIXME */
             drv->sectors = 20;
             drv->sector_size = 3;
             drv->head_invert = 1;
@@ -164,7 +191,13 @@ void fdd_image_attach(fd_drive_t *drv, struct disk_image_s *image)
             break;
         case DISK_IMAGE_TYPE_D81:
         default:
-            drv->tracks = 80;
+#if 0
+            /* Normally, the value below would be 80, but the FD2K/4K ROMS
+               write to sector 81 with zeros when formatting for 1581 disks.
+               By setting it to 81, we later detect this and error out
+               appropriately so the format command will work. */
+#endif
+            drv->tracks = MAX_TRACKS_1581;
             drv->sectors = 10;
             drv->sector_size = 2;
             drv->head_invert = 1;
@@ -181,6 +214,7 @@ void fdd_image_attach(fd_drive_t *drv, struct disk_image_s *image)
     drv->raw.track_head = -1;
     drv->raw.dirty = 0;
     drv->raw.head = 0;
+    /*drv->write_beyond = 0;*/
 
     drv->disk_change = 1;
     drv->write_protect = (int)(image->read_only);
@@ -203,7 +237,7 @@ void fdd_image_detach(fd_drive_t *drv)
 #define fdd_raw_write(b)                                    \
     {                                                       \
         drv->raw.data[p] = b;                \
-        drv->raw.sync[p >> 3] &= (BYTE)(0xff7f >> (p & 7)); \
+        drv->raw.sync[p >> 3] &= (uint8_t)(0xff7f >> (p & 7)); \
         p++;                                                \
         if (p >= drv->raw.size) {                           \
             p = 0;                                          \
@@ -213,26 +247,26 @@ void fdd_image_detach(fd_drive_t *drv)
 #define fdd_raw_write_sync(b)                               \
     {                                                       \
         drv->raw.data[p] = b;                \
-        drv->raw.sync[p >> 3] |= (BYTE)(0x80 >> (p & 7));   \
+        drv->raw.sync[p >> 3] |= (uint8_t)(0x80 >> (p & 7));   \
         p++;                                                \
         if (p >= drv->raw.size) {                           \
             p = 0;                                          \
         }                                                   \
     }
 
-inline WORD fdd_crc(WORD crc, BYTE b)
+inline uint16_t fdd_crc(uint16_t crc, uint8_t b)
 {
     if (!crc1021) {
         fdd_init_crc1021();
     }
-    return (WORD)(crc1021[(crc >> 8) ^ b] ^ (crc << 8));
+    return (uint16_t)(crc1021[(crc >> 8) ^ b] ^ (crc << 8));
 }
 
 static void fdd_flush_raw(fd_drive_t *drv)
 {
     int i, j, s, p, step, d;
-    BYTE *data;
-    WORD w;
+    uint8_t *data;
+    uint16_t w;
     disk_addr_t dadr;
 
     if (!drv->raw.dirty) {
@@ -241,7 +275,7 @@ static void fdd_flush_raw(fd_drive_t *drv)
     drv->raw.dirty = 0;
 
     if (drv->raw.track_head / 2 < drv->tracks && drv->image) {
-#if FDD_DEBUG
+#ifdef FDD_DEBUG
         for (i = 0; i < drv->raw.size; i++) {
             if (!(i & 15)) {
                 printf("%04x: ", i);
@@ -345,7 +379,7 @@ static void fdd_flush_raw(fd_drive_t *drv)
                         }
                         break;
                     case 12:
-                        data[d++] = (BYTE)w;
+                        data[d++] = (uint8_t)w;
                         if (d >= (128 << drv->sector_size)) {
                             step++;
                         }
@@ -362,6 +396,24 @@ static void fdd_flush_raw(fd_drive_t *drv)
                         dadr.sector = dadr.sector % (unsigned int)(drv->image_sectors);
 
                         for (j = 0; j < (1 << drv->sector_size); j += 2) {
+#if 0
+                            /* FD2000 and FD4000 drives will expect to read back a formatted
+                               track 81 on a D81 image, but this is beyond the image spec.
+                               We will track if the data wasn't all zeros here, and error
+                               out in the read process (below) later. */
+                            if (dadr.track >= 81 && drv->image->type == DISK_IMAGE_TYPE_D81
+                                && !drv->write_beyond) {
+                                for (c = 0; c < 256 ; c++ ) {
+                                    if (data[j * 128 + c]) {
+                                        drv->write_beyond = 1;
+                                        break;
+                                    }
+                                }
+                            } else {
+                                disk_image_write_sector(drv->image, data + j * 128, &dadr);
+                                drv->write_beyond = 0;
+                            }
+#endif
                             disk_image_write_sector(drv->image, data + j * 128, &dadr);
                             dadr.sector = (dadr.sector + 1) % (unsigned int)(drv->image_sectors);
                             if (!dadr.sector) {
@@ -383,8 +435,8 @@ static void fdd_flush_raw(fd_drive_t *drv)
 static void fdd_update_raw(fd_drive_t *drv)
 {
     int i, j, s, p, res;
-    BYTE buffer[256];
-    WORD crc;
+    uint8_t buffer[256];
+    uint16_t crc;
     disk_addr_t dadr;
 
     if (drv->track * 2 + drv->head == drv->raw.track_head) {
@@ -427,21 +479,41 @@ static void fdd_update_raw(fd_drive_t *drv)
                 fdd_raw_write_sync(0xa1);
             }
             fdd_raw_write(0xfe); /* ID mark */
-            fdd_raw_write((BYTE)(drv->track));
-            crc = fdd_crc(0xb230, (BYTE)drv->track);
-            fdd_raw_write((BYTE)(drv->head ^ drv->head_invert));
-            crc = fdd_crc(crc, (BYTE)(drv->head ^ drv->head_invert));
-            fdd_raw_write((BYTE)(s + 1));
-            crc = fdd_crc(crc, (BYTE)(s + 1));
-            fdd_raw_write((BYTE)(drv->sector_size));
-            crc = fdd_crc(crc, (BYTE)drv->sector_size);
-            fdd_raw_write((BYTE)(crc >> 8));
-            fdd_raw_write((BYTE)crc);
+            fdd_raw_write((uint8_t)(drv->track));
+            crc = fdd_crc(0xb230, (uint8_t)drv->track);
+            fdd_raw_write((uint8_t)(drv->head ^ drv->head_invert));
+            crc = fdd_crc(crc, (uint8_t)(drv->head ^ drv->head_invert));
+            fdd_raw_write((uint8_t)(s + 1));
+            crc = fdd_crc(crc, (uint8_t)(s + 1));
+            fdd_raw_write((uint8_t)(drv->sector_size));
+            crc = fdd_crc(crc, (uint8_t)drv->sector_size);
+            fdd_raw_write((uint8_t)(crc >> 8));
+            fdd_raw_write((uint8_t)crc);
             for (i = 0; i < drv->gap2; i++) {
                 fdd_raw_write(0x4e);
             }
             crc = 0xe295;
             for (j = 0; j < (1 << drv->sector_size); j += 2) {
+#if 0
+                /* FD2000 and FD4000 drives will expect to read back a formatted
+                   track 81 on a D81 image, but this is beyond the image spec.
+                   If any data other than zero was written, error out on the
+                   track read. We do this by not creating the MFM structure for
+                   the whole track. */
+                if (dadr.track >= 81 && drv->image->type == DISK_IMAGE_TYPE_D81) {
+                    if (drv->write_beyond) {
+                        /* remove all MFM data from the track */
+                        memset(drv->raw.data, 0x4e, (size_t)(drv->raw.size));
+                        memset(drv->raw.sync, 0, (size_t)((drv->raw.size + 7) >> 3));
+                        drv->write_beyond = 0;
+                        return;
+                    }
+                    memset(buffer, 0, 256);
+                    res = 0;
+                } else {
+                    res = disk_image_read_sector(drv->image, buffer, &dadr);
+                }
+#endif
                 res = disk_image_read_sector(drv->image, buffer, &dadr);
                 if (res < 0) {
                     return;
@@ -464,13 +536,13 @@ static void fdd_update_raw(fd_drive_t *drv)
                     dadr.track++;
                 }
             }
-            fdd_raw_write((BYTE)(crc >> 8));
-            fdd_raw_write((BYTE)(crc & 0xff));
+            fdd_raw_write((uint8_t)(crc >> 8));
+            fdd_raw_write((uint8_t)(crc & 0xff));
             for (i = 0; i < drv->gap3; i++) {
                 fdd_raw_write(0x4e); /* GAP 3 */
             }
         }
-#if FDD_DEBUG
+#ifdef FDD_DEBUG
         for (i = 0; i < drv->raw.size; i++) {
             if (!(i & 15)) {
                 printf("%04x: ", i);
@@ -484,14 +556,23 @@ static void fdd_update_raw(fd_drive_t *drv)
     }
 }
 
-int fdd_rotate(fd_drive_t *drv, int bytes)
+uint64_t fdd_rotate(fd_drive_t *drv, uint64_t bytes_in)
 {
+    uint64_t bytes;
+
     if (!drv || !drv->motor || !drv->image) {
-        return bytes;
+        return bytes_in;
+    }
+
+    for (bytes = bytes_in; bytes > INT32_MAX; bytes -= INT32_MAX)
+    {
+        drv->index_count += (drv->raw.head + INT32_MAX) / drv->raw.size;
+        drv->raw.head = (drv->raw.head + INT32_MAX) % drv->raw.size;
     }
     drv->index_count += (drv->raw.head + bytes) / drv->raw.size;
     drv->raw.head = (drv->raw.head + bytes) % drv->raw.size;
-    return bytes;
+
+    return bytes_in;
 }
 
 int fdd_index(fd_drive_t *drv)
@@ -510,7 +591,7 @@ void fdd_index_count_reset(fd_drive_t *drv)
     drv->index_count = 0;
 }
 
-int fdd_index_count(fd_drive_t *drv)
+unsigned int fdd_index_count(fd_drive_t *drv)
 {
     if (!drv) {
         return 0;
@@ -542,9 +623,9 @@ int fdd_disk_change(fd_drive_t *drv)
     return drv->disk_change;
 }
 
-WORD fdd_read(fd_drive_t *drv)
+uint16_t fdd_read(fd_drive_t *drv)
 {
-    WORD data;
+    uint16_t data;
     int p;
 
     if (!drv || !drv->motor) {
@@ -554,7 +635,7 @@ WORD fdd_read(fd_drive_t *drv)
     if (drv->disk_rate == drv->rate) {
         fdd_update_raw(drv);
 
-        data = (WORD)drv->raw.data[p];
+        data = (uint16_t)drv->raw.data[p];
         if (drv->raw.sync[p >> 3] & (0x80 >> (p & 7))) {
             data |= 0x100;
         }
@@ -570,7 +651,7 @@ WORD fdd_read(fd_drive_t *drv)
     return data;
 }
 
-int fdd_write(fd_drive_t *drv, WORD data)
+int fdd_write(fd_drive_t *drv, uint16_t data)
 {
     int p;
 
@@ -581,11 +662,11 @@ int fdd_write(fd_drive_t *drv, WORD data)
 
     p = drv->raw.head;
     if (drv->disk_rate == drv->rate) {
-        drv->raw.data[p] = (BYTE)data;
+        drv->raw.data[p] = (uint8_t)data;
         if (data & 0x100) {
-            drv->raw.sync[p >> 3] |= (BYTE)(0x80 >> (p & 7));
+            drv->raw.sync[p >> 3] |= (uint8_t)(0x80 >> (p & 7));
         } else {
-            drv->raw.sync[p >> 3] &= (BYTE)(0xff7f >> (p & 7));
+            drv->raw.sync[p >> 3] &= (uint8_t)(0xff7f >> (p & 7));
         }
         drv->raw.dirty = 1;
     }
@@ -611,6 +692,7 @@ void fdd_seek_pulse(fd_drive_t *drv, int dir)
     if (!drv) {
         return;
     }
+
     if (drv->motor) {
         drv->track += dir ? 1 : -1;
     }
@@ -620,10 +702,28 @@ void fdd_seek_pulse(fd_drive_t *drv, int dir)
     if (drv->track < 0) {
         drv->track = 0;
     }
-    if (drv->track > 82) {
-        drv->track = 82;
+    if (drv->track > FDD_MAX_TRACK) {
+        drv->track = FDD_MAX_TRACK;
     }
     drv->drive->current_half_track = (drv->track + 1) * 2;
+#if 0
+    printf("track:%d (half:%d) img tracks: %u (max half:%u)\n",
+           drv->track, drv->drive->current_half_track,
+           drv->image->tracks, drv->image->max_half_tracks);
+#endif
+    if (drv->image) {
+        /* don't do check on the "image" tracks here since this value for the
+           CMDFDs is logical not physical */
+    if (drv->image->type != DISK_IMAGE_TYPE_D1M &&
+        drv->image->type != DISK_IMAGE_TYPE_D2M &&
+        drv->image->type != DISK_IMAGE_TYPE_D4M) {
+            if (drv->drive->current_half_track > (drv->image->tracks * 2)) {
+                log_warning(LOG_DEFAULT, "disk image will get extended (%d tracks)",
+                            drv->drive->current_half_track / 2);
+                /* FIXME: actually extend the image here */
+            }
+        }
+    }
 }
 
 void fdd_select_head(fd_drive_t *drv, int head)
@@ -664,26 +764,26 @@ int fdd_snapshot_write_module(fd_drive_t *drv, struct snapshot_s *s)
     }
 
     if (0
-        || SMW_B(m, (BYTE)drv->number) < 0
-        || SMW_B(m, (BYTE)drv->disk_change) < 0
-        || SMW_B(m, (BYTE)drv->write_protect) < 0
-        || SMW_B(m, (BYTE)drv->track) < 0
-        || SMW_B(m, (BYTE)drv->tracks) < 0
-        || SMW_B(m, (BYTE)drv->head) < 0
-        || SMW_B(m, (BYTE)drv->sectors) < 0
-        || SMW_B(m, (BYTE)drv->motor) < 0
-        || SMW_B(m, (BYTE)drv->rate) < 0
-        || SMW_B(m, (BYTE)drv->sector_size) < 0
-        || SMW_B(m, (BYTE)drv->iso) < 0
-        || SMW_B(m, (BYTE)drv->gap2) < 0
-        || SMW_B(m, (BYTE)drv->gap3) < 0
-        || SMW_B(m, (BYTE)drv->head_invert) < 0
-        || SMW_B(m, (BYTE)drv->disk_rate) < 0
-        || SMW_DW(m, (DWORD)drv->image_sectors) < 0
-        || SMW_DW(m, (DWORD)drv->index_count) < 0
-        || SMW_DW(m, (BYTE)drv->raw.head) < 0
-        || SMW_B(m, (BYTE)drv->raw.track_head) < 0
-        || SMW_B(m, (BYTE)drv->raw.dirty) < 0
+        || SMW_B(m, (uint8_t)drv->number) < 0
+        || SMW_B(m, (uint8_t)drv->disk_change) < 0
+        || SMW_B(m, (uint8_t)drv->write_protect) < 0
+        || SMW_B(m, (uint8_t)drv->track) < 0
+        || SMW_B(m, (uint8_t)drv->tracks) < 0
+        || SMW_B(m, (uint8_t)drv->head) < 0
+        || SMW_B(m, (uint8_t)drv->sectors) < 0
+        || SMW_B(m, (uint8_t)drv->motor) < 0
+        || SMW_B(m, (uint8_t)drv->rate) < 0
+        || SMW_B(m, (uint8_t)drv->sector_size) < 0
+        || SMW_B(m, (uint8_t)drv->iso) < 0
+        || SMW_B(m, (uint8_t)drv->gap2) < 0
+        || SMW_B(m, (uint8_t)drv->gap3) < 0
+        || SMW_B(m, (uint8_t)drv->head_invert) < 0
+        || SMW_B(m, (uint8_t)drv->disk_rate) < 0
+        || SMW_DW(m, (uint32_t)drv->image_sectors) < 0
+        || SMW_DW(m, (uint32_t)drv->index_count) < 0
+        || SMW_DW(m, (uint8_t)drv->raw.head) < 0
+        || SMW_B(m, (uint8_t)drv->raw.track_head) < 0
+        || SMW_B(m, (uint8_t)drv->raw.dirty) < 0
         || SMW_BA(m, drv->raw.data, (unsigned int)drv->raw.size) < 0
         || SMW_BA(m, drv->raw.sync, (unsigned int)((drv->raw.size + 7) >> 3)) < 0) {
         snapshot_module_close(m);
@@ -697,7 +797,7 @@ int fdd_snapshot_write_module(fd_drive_t *drv, struct snapshot_s *s)
 
 int fdd_snapshot_read_module(fd_drive_t *drv, struct snapshot_s *s)
 {
-    BYTE vmajor, vminor;
+    uint8_t vmajor, vminor;
     snapshot_module_t *m;
 
     m = snapshot_module_open(s, drv->myname, &vmajor, &vminor);
@@ -706,7 +806,7 @@ int fdd_snapshot_read_module(fd_drive_t *drv, struct snapshot_s *s)
     }
 
     /* Do not accept versions higher than current */
-    if (vmajor > FDD_SNAP_MAJOR || vminor > FDD_SNAP_MINOR) {
+    if (snapshot_version_is_bigger(vmajor, vminor, FDD_SNAP_MAJOR, FDD_SNAP_MINOR)) {
         snapshot_set_error(SNAPSHOT_MODULE_HIGHER_VERSION);
         snapshot_module_close(m);
         return -1;
@@ -729,7 +829,7 @@ int fdd_snapshot_read_module(fd_drive_t *drv, struct snapshot_s *s)
         || SMR_B_INT(m, &drv->head_invert) < 0
         || SMR_B_INT(m, &drv->disk_rate) < 0
         || SMR_DW_INT(m, &drv->image_sectors) < 0
-        || SMR_DW_INT(m, &drv->index_count) < 0
+        || SMR_DW_UINT(m, &drv->index_count) < 0
         || SMR_DW_INT(m, &drv->raw.head) < 0
         || SMR_B_INT(m, &drv->raw.track_head) < 0
         || SMR_B_INT(m, &drv->raw.dirty) < 0) {
@@ -740,14 +840,14 @@ int fdd_snapshot_read_module(fd_drive_t *drv, struct snapshot_s *s)
     if (drv->track < 0) {
         drv->track = 0;
     }
-    if (drv->track > 82) {
-        drv->track = 82;
+    if (drv->track > FDD_MAX_TRACK) {
+        drv->track = FDD_MAX_TRACK;
     }
     if (drv->tracks < 0) {
         drv->tracks = 0;
     }
-    if (drv->tracks > 82) {
-        drv->tracks = 82;
+    if (drv->tracks > FDD_NUM_TRACKS) {
+        drv->tracks = FDD_NUM_TRACKS;
     }
     drv->head &= 1;
     drv->motor &= 1;

@@ -70,7 +70,6 @@
 #include "log.h"
 #include "mididrv.h"
 #include "resources.h"
-#include "translate.h"
 #include "vicetypes.h"
 #include "util.h"
 
@@ -85,7 +84,7 @@ static int fd_out = -1;
 #define MIDI_DRIVER_ALSA 1
 static int midi_driver_num = MIDI_DRIVER_OSS;
 
-static log_t mididrv_log = LOG_ERR;
+static log_t mididrv_log = LOG_DEFAULT;
 
 /* ------------------------------------------------------------------------- */
 /* OSS driver */
@@ -546,7 +545,7 @@ static midi_driver_t midi_drivers[] = {
 
 void mididrv_init(void)
 {
-    if (mididrv_log == LOG_ERR) {
+    if (mididrv_log == LOG_DEFAULT) {
         mididrv_log = log_open("MIDIdrv");
     }
 
@@ -671,22 +670,13 @@ void mididrv_resources_shutdown(void)
 }
 
 static const cmdline_option_t cmdline_options[] = {
-    { "-midiin", SET_RESOURCE, -1,
-      NULL, NULL, "MIDIInDev", NULL,
-      USE_PARAM_STRING, USE_DESCRIPTION_STRING,
-      IDCLS_UNUSED, IDCLS_UNUSED,
-      N_("<Name>"), N_("Specify MIDI-In device") },
-    { "-midiout", SET_RESOURCE, -1,
-      NULL, NULL, "MIDIOutDev", NULL,
-      USE_PARAM_STRING, USE_DESCRIPTION_STRING,
-      IDCLS_UNUSED, IDCLS_UNUSED,
-      N_("<Name>"), N_("Specify MIDI-Out device") },
+    { "-midiin", SET_RESOURCE, CMDLINE_ATTRIB_NEED_ARGS,
+      NULL, NULL, "MIDIInDev", NULL, N_("<Name>"), N_("Specify MIDI-In device")},
+    { "-midiout", SET_RESOURCE, CMDLINE_ATTRIB_NEED_ARGS,
+      NULL, NULL, "MIDIOutDev", NULL, N_("<Name>"), N_("Specify MIDI-Out device")},
 #ifdef USE_ALSA
-    { "-mididrv", SET_RESOURCE, -1,
-      NULL, NULL, "MIDIDriver", NULL,
-      USE_PARAM_STRING, USE_DESCRIPTION_STRING,
-      IDCLS_UNUSED, IDCLS_UNUSED,
-      N_("<Driver>"), N_("Specify MIDI driver (0 = OSS, 1 = ALSA)") },
+    { "-mididrv", SET_RESOURCE, CMDLINE_ATTRIB_NEED_ARGS,
+      NULL, NULL, "MIDIDriver", NULL, N_("<Driver>"), N_("Specify MIDI driver (0 = OSS, 1 = ALSA)")},
 #endif
     CMDLINE_LIST_END
 };

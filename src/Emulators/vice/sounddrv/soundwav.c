@@ -121,7 +121,7 @@ static void wav_close(void)
     fclose(wav_fd);
     wav_fd = NULL;
     if (res != 0) {
-        log_debug("ERROR wav_close failed.");
+        log_debug(LOG_DEFAULT, "ERROR wav_close failed.");
     }
 }
 

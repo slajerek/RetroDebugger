@@ -32,64 +32,90 @@
 
 #include "joyport.h"
 #include "keyboard.h"
-#include "translate.h"
+
+#include "vizawrite64_dongle.h"
+
+/* Control port <--> Vizawrite64 dongle connections:
+
+   cport | I/O
+   ------------
+     5   | O
+     9   | O
+
+   Works on:
+   - native joystick port(s) (x64/x64sc/xscpu64/x128)
+ */
 
 /* ------------------------------------------------------------------------- */
 
-static int joyport_vizawrite64_dongle_enabled = 0;
+static int joyport_vizawrite64_dongle_enabled[JOYPORT_MAX_PORTS] = {0};
 
-static int counter = 0;
+static uint8_t counter[JOYPORT_MAX_PORTS] = {0};
 
-static BYTE values[6] = {
+static const uint8_t values[6] = {
     0x55, 0x55, 0xaa, 0xaa, 0xff, 0xff
 };
 
-static int joyport_vizawrite64_dongle_enable(int port, int value)
+static int joyport_vizawrite64_dongle_set_enabled(int port, int enabled)
 {
-    int val = value ? 1 : 0;
+    int new_state = enabled ? 1 : 0;
 
-    joyport_vizawrite64_dongle_enabled = val;
+    joyport_vizawrite64_dongle_enabled[port] = new_state;
 
     return 0;
 }
 
-static BYTE vizawrite64_dongle_read_potx(void)
+static uint8_t vizawrite64_dongle_read_potx(int port)
 {
-    BYTE retval = values[counter++];
+    uint8_t retval = values[counter[port]++];
 
-    if (counter == 6) {
-        counter = 0;
+    if (counter[port] == 6) {
+        counter[port] = 0;
     }
 
     return retval;
 }
 
-static BYTE vizawrite64_dongle_read_poty(void)
+static uint8_t vizawrite64_dongle_read_poty(int port)
 {
-    BYTE retval = values[counter++];
+    uint8_t retval = values[counter[port]++];
 
-    if (counter == 6) {
-        counter = 0;
+    if (counter[port] == 6) {
+        counter[port] = 0;
     }
 
     return retval;
+}
+
+static void vizawrite64_powerup(int port)
+{
+    counter[port] = 0;
 }
 
 /* ------------------------------------------------------------------------- */
 
+static int vizawrite64_write_snapshot(struct snapshot_s *s, int p);
+static int vizawrite64_read_snapshot(struct snapshot_s *s, int p);
+
 static joyport_t joyport_vizawrite64_dongle_device = {
-    "VizaWrite 64 dongle",
-    IDGS_VIZAWRITE64_DONGLE,
-    JOYPORT_RES_ID_VIZAWRITE64,
-    JOYPORT_IS_NOT_LIGHTPEN,
-    JOYPORT_POT_REQUIRED,
-    joyport_vizawrite64_dongle_enable,
-    NULL,               /* no dig read */
-    NULL,               /* no dig write */
-    vizawrite64_dongle_read_potx,
-    vizawrite64_dongle_read_poty,
-    NULL,               /* no write snapshot */
-    NULL                /* no read snapshot */
+    "Dongle (VizaWrite 64)",               /* name of the device */
+    JOYPORT_RES_ID_NONE,                   /* device can be used in multiple ports at the same time */
+    JOYPORT_IS_NOT_LIGHTPEN,               /* device is NOT a lightpen */
+    JOYPORT_POT_REQUIRED,                  /* device uses the potentiometer lines */
+    JOYPORT_5VDC_REQUIRED,                 /* device NEEDS +5VDC to work */
+    JOYSTICK_ADAPTER_ID_NONE,              /* device is NOT a joystick adapter */
+    JOYPORT_DEVICE_C64_DONGLE,             /* device is a C64 Dongle */
+    0,                                     /* NO output bits */
+    joyport_vizawrite64_dongle_set_enabled, /* device enable/disable function */
+    NULL,                                  /* NO digital line read function */
+    NULL,                                  /* NO digital line store function */
+    vizawrite64_dongle_read_potx,          /* pot-x read function */
+    vizawrite64_dongle_read_poty,          /* pot-y read function */
+    vizawrite64_powerup,                   /* powerup function */
+    vizawrite64_write_snapshot,            /* device write snapshot function */
+    vizawrite64_read_snapshot,             /* device read snapshot function */
+    NULL,                                  /* NO device hook function */
+    0                                      /* NO device hook function mask */
 };
 
 /* ------------------------------------------------------------------------- */
@@ -97,4 +123,64 @@ static joyport_t joyport_vizawrite64_dongle_device = {
 int joyport_vizawrite64_dongle_resources_init(void)
 {
     return joyport_device_register(JOYPORT_ID_VIZAWRITE64_DONGLE, &joyport_vizawrite64_dongle_device);
+}
+
+/* ------------------------------------------------------------------------- */
+
+/* VIZAWRITE64 snapshot module format:
+
+   type  |   name  | description
+   ----------------------------------
+   BYTE  | COUNTER | counter value
+ */
+
+static const char snap_module_name[] = "VIZAWRITE64";
+#define SNAP_MAJOR   0
+#define SNAP_MINOR   1
+
+static int vizawrite64_write_snapshot(struct snapshot_s *s, int port)
+{
+    snapshot_module_t *m;
+
+    m = snapshot_module_create(s, snap_module_name, SNAP_MAJOR, SNAP_MINOR);
+
+    if (m == NULL) {
+        return -1;
+    }
+
+    if (0
+        || SMW_B(m, counter[port]) < 0) {
+            snapshot_module_close(m);
+            return -1;
+    }
+    return snapshot_module_close(m);
+}
+
+static int vizawrite64_read_snapshot(struct snapshot_s *s, int port)
+{
+    uint8_t major_version, minor_version;
+    snapshot_module_t *m;
+
+    m = snapshot_module_open(s, snap_module_name, &major_version, &minor_version);
+
+    if (m == NULL) {
+        return -1;
+    }
+
+    /* Do not accept versions higher than current */
+    if (snapshot_version_is_bigger(major_version, minor_version, SNAP_MAJOR, SNAP_MINOR)) {
+        snapshot_set_error(SNAPSHOT_MODULE_HIGHER_VERSION);
+        goto fail;
+    }
+
+    if (0
+        || SMR_B(m, &counter[port]) < 0) {
+        goto fail;
+    }
+
+    return snapshot_module_close(m);
+
+fail:
+    snapshot_module_close(m);
+    return -1;
 }

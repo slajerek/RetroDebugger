@@ -28,26 +28,36 @@
 #ifndef VICE_SID_RESOURCES_H
 #define VICE_SID_RESOURCES_H
 
-#define SID_RESID_SAMPLING_FAST                 0
-#define SID_RESID_SAMPLING_INTERPOLATION        1
-#define SID_RESID_SAMPLING_RESAMPLING           2
-#define SID_RESID_SAMPLING_FAST_RESAMPLING      3
+int sid_resources_init(void);
+int sid_common_resources_init(void);
 
-extern int sid_resources_init(void);
-extern int sid_common_resources_init(void);
+int sid_set_sid2_address(int val, void *param);
+int sid_set_sid3_address(int val, void *param);
+int sid_set_sid4_address(int val, void *param);
+int sid_set_sid5_address(int val, void *param);
+int sid_set_sid6_address(int val, void *param);
+int sid_set_sid7_address(int val, void *param);
+int sid_set_sid8_address(int val, void *param);
 
 extern int set_sid_engine(int set_engine, void *param);
 extern int set_sid_model(int val, void *param);
 
-extern int sid_set_sid_stereo_address(int val, void *param);
-extern int sid_set_sid_triple_address(int val, void *param);
-
 extern int sid_stereo;
 extern int checking_sid_stereo;
-extern unsigned int sid_stereo_address_start;
-extern unsigned int sid_stereo_address_end;
-extern unsigned int sid_triple_address_start;
-extern unsigned int sid_triple_address_end;
+extern unsigned int sid2_address_start;
+extern unsigned int sid2_address_end;
+extern unsigned int sid3_address_start;
+extern unsigned int sid3_address_end;
+extern unsigned int sid4_address_start;
+extern unsigned int sid4_address_end;
+extern unsigned int sid5_address_start;
+extern unsigned int sid5_address_end;
+extern unsigned int sid6_address_start;
+extern unsigned int sid6_address_end;
+extern unsigned int sid7_address_start;
+extern unsigned int sid7_address_end;
+extern unsigned int sid8_address_start;
+extern unsigned int sid8_address_end;
 
 extern void c64d_sid_set_engine_model_direct(int engine, int model);
 extern void c64d_sid_set_sampling_method(int samplingMethod);

@@ -52,29 +52,42 @@
 #define SLOT_GEOS_HOUR        28
 #define SLOT_GEOS_MINUTE      29
 
+#define SLOT_SIZE             32
+
+#define PSLOT_TYPE            2
+#define PSLOT_NAME            5
+
 struct vdrive_s;
+struct cbmdos_cmd_parse_plus_s;
 struct bufferinfo_s;
 
 typedef struct vdrive_dir_context_s {
-    BYTE buffer[256];      /* Current directory sector. */
+    uint8_t buffer[256];      /* Current directory sector. */
     int find_length;       /* -1 allowed.  */
-    BYTE find_nslot[CBMDOS_SLOT_NAME_LENGTH];
+    uint8_t find_nslot[CBMDOS_SLOT_NAME_LENGTH];
     unsigned int find_type;
     unsigned int slot;
     unsigned int track;
     unsigned int sector;
+    unsigned int time_low;
+    unsigned int time_high;
     struct vdrive_s *vdrive;
 } vdrive_dir_context_t;
 
-extern void vdrive_dir_init(void);
-extern int vdrive_dir_first_directory(struct vdrive_s *vdrive, const char *name, int length, int filetype, struct bufferinfo_s *p);
-extern int vdrive_dir_next_directory(struct vdrive_s *vdrive, struct bufferinfo_s *b);
-extern void vdrive_dir_find_first_slot(struct vdrive_s *vdrive, const char *name, int length, unsigned int type, vdrive_dir_context_t *dir);
-extern BYTE *vdrive_dir_find_next_slot(vdrive_dir_context_t *dir);
-extern void vdrive_dir_no_a0_pads(BYTE *ptr, int l);
-extern int vdrive_dir_filetype(const char *name, int length);
-extern void vdrive_dir_remove_slot(vdrive_dir_context_t *dir);
-extern void vdrive_dir_create_slot(struct bufferinfo_s *p, char *realname, int reallength, int filetype);
-extern void vdrive_dir_free_chain(struct vdrive_s *vdrive, int t, int s);
+void vdrive_dir_init(void);
+int vdrive_dir_first_directory(struct vdrive_s *vdrive, struct cbmdos_cmd_parse_plus_s *cmd_parse, struct bufferinfo_s *p);
+int vdrive_dir_next_directory(struct vdrive_s *vdrive, struct bufferinfo_s *b);
+void vdrive_dir_find_first_slot(struct vdrive_s *vdrive, const uint8_t *name, int length, unsigned int type, vdrive_dir_context_t *dir);
+uint8_t *vdrive_dir_find_next_slot(vdrive_dir_context_t *dir);
+void vdrive_dir_no_a0_pads(uint8_t *ptr, int l);
+int vdrive_dir_filetype(const uint8_t *name, int length);
+void vdrive_dir_remove_slot(vdrive_dir_context_t *dir);
+void vdrive_dir_create_slot(struct bufferinfo_s *p, uint8_t *realname, int reallength, int filetype);
+void vdrive_dir_free_chain(struct vdrive_s *vdrive, int t, int s);
+void vdrive_dir_updatetime(struct vdrive_s *vdrive, uint8_t *slot);
+uint8_t *vdrive_dir_part_find_next_slot(vdrive_dir_context_t *dir);
+int vdrive_dir_part_next_directory(struct vdrive_s *vdrive, struct bufferinfo_s *b);
+int vdrive_dir_part_first_directory(struct vdrive_s *vdrive, const uint8_t *name, int length, struct bufferinfo_s *p);
+void vdrive_dir_part_find_first_slot(struct vdrive_s *vdrive, const uint8_t *name, int length, unsigned int type, vdrive_dir_context_t *dir);
 
 #endif

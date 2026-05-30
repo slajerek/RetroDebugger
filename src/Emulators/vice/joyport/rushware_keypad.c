@@ -32,9 +32,10 @@
 
 #include "joyport.h"
 #include "keyboard.h"
-#include "translate.h"
 
-/* Control port <--> coplin keypad connections:
+#include "rushware_keypad.h"
+
+/* Control port <--> rushware keypad connections:
 
    cport | keypad  | I/O
    --------------------------
@@ -43,6 +44,25 @@
      3   | KEY2    |  I
      4   | KEY3    |  I
      6   | KEYDOWN |  I
+     8   | GND     |  Ground
+
+   Works on:
+   - native joystick port(s) (x64/x64sc/xscpu64/x64dtv/xvic/xplus4)
+   - inception joystick adapter ports (x64/x64sc/xscpu64/xvic)
+   - multijoy joystick adapter ports (x64/x64sc/xscpu64)
+   - spaceballs joystick adapter ports (x64/x64sc/xscpu64)
+   - cga userport joystick adapter ports (x64/x64sc/xscpu64)
+   - hit userport joystick adapter ports (x64/x64sc/xscpu64)
+   - hummer userport joystick adapter port (x64/x64sc/xscpu64)
+   - kingsoft userport joystick adapter ports (x64/x64sc/xscpu64)
+   - oem userport joystick adapter port (x64/x64sc/xscpu64)
+   - pet userport joystick adapter port (x64/x64sc/xscpu64)
+   - starbyte userport joystick adapter ports (x64/x64sc/xscpu64)
+   - synergy userport joystick adapter ports (x64/x64sc/xscpu64)
+   - stupid pet tricks userport joystick adapter port (x64/x64sc/xscpu64)
+   - wheel of joysticks userport joystick adapter ports (x64/x64sc/xscpu64)
+   - sidcart joystick adapter port (xplus4)
+
 
 The keypad has the following layout:
 
@@ -90,7 +110,7 @@ ENTER            0     0    0    0    0
 #define KEYPAD_KEY_7    ROW_COL(0,0)
 #define KEYPAD_KEY_8    ROW_COL(0,1)
 #define KEYPAD_KEY_9    ROW_COL(0,2)
-#define KEYPAD_KEY_MULT ROW_COL(0,4)
+#define KEYPAD_KEY_MULT ROW_COL(0,3)
 #define KEYPAD_KEY_4    ROW_COL(1,0)
 #define KEYPAD_KEY_5    ROW_COL(1,1)
 #define KEYPAD_KEY_6    ROW_COL(1,2)
@@ -104,52 +124,52 @@ ENTER            0     0    0    0    0
 #define KEYPAD_KEY_ENT  ROW_COL(3,2)
 #define KEYPAD_KEY_PLUS ROW_COL(3,3)
 
+#define KEYPAD_KEYS_NUM  16
+
 static int rushware_keypad_enabled = 0;
 
-static int keys[16];
+static int keys[KEYPAD_KEYS_NUM];
 
 /* ------------------------------------------------------------------------- */
 
-#ifdef COMMON_KBD
 static void handle_keys(int row, int col, int pressed)
 {
+    /* sanity check for row and col, row should be 0-3, and col should be 1-4 */
     if (row < 0 || row > 3 || col < 1 || col > 4) {
         return;
     }
 
+    /* change the state of the key that the row/col is wired to */
     keys[(row * 4) + col - 1] = pressed;
 }
-#endif
 
 /* ------------------------------------------------------------------------- */
 
-static int joyport_rushware_keypad_enable(int port, int value)
+static int joyport_rushware_keypad_set_enabled(int port, int enabled)
 {
-    int val = value ? 1 : 0;
+    int new_state = enabled ? 1 : 0;
 
-    if (val == rushware_keypad_enabled) {
+    if (new_state == rushware_keypad_enabled) {
         return 0;
     }
 
-    if (val) {
-        memset(keys, 0, 16);
-#ifdef COMMON_KBD
+    if (new_state) {
+        /* enabled, clear keys and register the keypad */
+        memset(keys, 0, KEYPAD_KEYS_NUM * sizeof(unsigned int));
         keyboard_register_joy_keypad(handle_keys);
-#endif
     } else {
-#ifdef COMMON_KBD
+        /* disabled, unregister the keypad */
         keyboard_register_joy_keypad(NULL);
-#endif
     }
 
-    rushware_keypad_enabled = val;
+    rushware_keypad_enabled = new_state;
 
     return 0;
 }
 
-static BYTE rushware_keypad_read(int port)
+static uint8_t rushware_keypad_read(int port)
 {
-    BYTE retval = 0xff;
+    uint8_t retval = 0xff;
 
     if (keys[KEYPAD_KEY_ENT]) {
         retval = 0xe0;
@@ -200,7 +220,7 @@ static BYTE rushware_keypad_read(int port)
         retval = 0xef;
     }
 
-    joyport_display_joyport(JOYPORT_ID_RUSHWARE_KEYPAD, (BYTE)~retval);
+    joyport_display_joyport(port, JOYPORT_ID_RUSHWARE_KEYPAD, (uint16_t)~retval);
 
     return retval;
 }
@@ -208,18 +228,24 @@ static BYTE rushware_keypad_read(int port)
 /* ------------------------------------------------------------------------- */
 
 static joyport_t joyport_rushware_keypad_device = {
-    "RushWare Keypad",
-    IDGS_RUSHWARE_KEYPAD,
-    JOYPORT_RES_ID_KEYPAD,
-    JOYPORT_IS_NOT_LIGHTPEN,
-    JOYPORT_POT_OPTIONAL,
-    joyport_rushware_keypad_enable,
-    rushware_keypad_read,
-    NULL,               /* no digital store */
-    NULL,               /* no pot-x read */
-    NULL,               /* no pot-y read */
-    NULL,               /* no write snapshot */
-    NULL                /* no read snapshot */
+    "Keypad (RushWare)",                 /* name of the device */
+    JOYPORT_RES_ID_KEYPAD,               /* device is a keypad, only 1 keypad can be active at the same time */
+    JOYPORT_IS_NOT_LIGHTPEN,             /* device is NOT a lightpen */
+    JOYPORT_POT_OPTIONAL,                /* device does NOT use the potentiometer lines */
+    JOYPORT_5VDC_NOT_NEEDED,             /* device does NOT need +5VDC to work */
+    JOYSTICK_ADAPTER_ID_NONE,            /* device is NOT a joystick adapter */
+    JOYPORT_DEVICE_KEYPAD,               /* device is a Keypad */
+    0,                                   /* NO output bits */
+    joyport_rushware_keypad_set_enabled, /* device enable/disable function */
+    rushware_keypad_read,                /* digital line read function */
+    NULL,                                /* NO digital line store function */
+    NULL,                                /* NO pot-x read function */
+    NULL,                                /* NO pot-x read function */
+    NULL,                                /* NO powerup function */
+    NULL,                                /* NO device write snapshot function */
+    NULL,                                /* NO device read snapshot function */
+    NULL,                                /* NO device hook function */
+    0                                    /* NO device hook function mask */
 };
 
 /* ------------------------------------------------------------------------- */

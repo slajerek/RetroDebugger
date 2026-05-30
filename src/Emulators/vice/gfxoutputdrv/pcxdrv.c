@@ -44,16 +44,16 @@
 typedef struct gfxoutputdrv_data_s {
     FILE *fd;
     char *ext_filename;
-    BYTE *data;
-    BYTE *pcx_data;
+    uint8_t *data;
+    uint8_t *pcx_data;
     unsigned int line;
 } gfxoutputdrv_data_t;
 
-STATIC_PROTOTYPE gfxoutputdrv_t pcx_drv;
+static gfxoutputdrv_t pcx_drv;
 
 static int pcxdrv_write_file_header(screenshot_t *screenshot)
 {
-    BYTE header[128];
+    uint8_t header[128];
 
     memset(header, 0, sizeof(header));
 
@@ -62,14 +62,14 @@ static int pcxdrv_write_file_header(screenshot_t *screenshot)
     header[2] = 1;
     header[3] = 8;
 
-    util_word_to_le_buf(&header[8], (WORD)(screenshot->width - 1));
-    util_word_to_le_buf(&header[10], (WORD)(screenshot->height - 1));
+    util_word_to_le_buf(&header[8], (uint16_t)(screenshot->width - 1));
+    util_word_to_le_buf(&header[10], (uint16_t)(screenshot->height - 1));
 
-    util_word_to_le_buf(&header[12], (WORD)(screenshot->dpi_x));
-    util_word_to_le_buf(&header[14], (WORD)(screenshot->dpi_x));
+    util_word_to_le_buf(&header[12], (uint16_t)(screenshot->dpi_x));
+    util_word_to_le_buf(&header[14], (uint16_t)(screenshot->dpi_x));
 
     header[65] = 1;
-    util_word_to_le_buf(&header[66], (WORD)(screenshot->width));
+    util_word_to_le_buf(&header[66], (uint16_t)(screenshot->width));
 
     if (fwrite(header, sizeof(header), 1, screenshot->gfxoutputdrv_data->fd) < 1) {
         return -1;
@@ -114,7 +114,7 @@ static int pcxdrv_open(screenshot_t *screenshot, const char *filename)
 static int pcxdrv_write(screenshot_t *screenshot)
 {
     gfxoutputdrv_data_t *sdata;
-    BYTE color, amount;
+    uint8_t color, amount;
     unsigned int i, j = 0;
 
     sdata = screenshot->gfxoutputdrv_data;
@@ -187,8 +187,8 @@ static int pcxdrv_close(screenshot_t *screenshot)
     gfxoutputdrv_data_t *sdata;
     unsigned int i;
     int res = -1;
-    BYTE pcx_color_prefix[2] = "\x0c";
-    BYTE pcx_colors[256 * 3];
+    unsigned char pcx_color_prefix[2] = "\x0c";
+    uint8_t pcx_colors[256 * 3];
 
     sdata = screenshot->gfxoutputdrv_data;
 
@@ -235,12 +235,12 @@ static int pcxdrv_save(screenshot_t *screenshot, const char *filename)
 #ifdef FEATURE_CPUMEMHISTORY
 static FILE *pcxdrv_memmap_fd;
 static char *pcxdrv_memmap_ext_filename;
-static BYTE *pcxdrv_memmap_pcx_data;
+static uint8_t *pcxdrv_memmap_pcx_data;
 
-static int pcxdrv_close_memmap(BYTE *palette)
+static int pcxdrv_close_memmap(uint8_t *palette)
 {
     int res = 0;
-    BYTE pcx_color_prefix[2] = "\x0c";
+    uint8_t pcx_color_prefix[2] = "\x0c";
 
     if (fwrite(pcx_color_prefix, 1, 1, pcxdrv_memmap_fd) != 1) {
         res = -1;
@@ -255,9 +255,9 @@ static int pcxdrv_close_memmap(BYTE *palette)
     return res;
 }
 
-static int pcxdrv_write_memmap(int line, int x_size, BYTE *gfx)
+static int pcxdrv_write_memmap(int line, int x_size, uint8_t *gfx)
 {
-    BYTE color, amount;
+    uint8_t color, amount;
     int i, j = 0;
 
     color = gfx[(line * x_size)];
@@ -324,7 +324,7 @@ static int pcxdrv_write_memmap(int line, int x_size, BYTE *gfx)
 
 static int pcxdrv_write_file_header_memmap(int x_size, int y_size)
 {
-    BYTE header[128];
+    uint8_t header[128];
 
     memset(header, 0, sizeof(header));
 
@@ -333,14 +333,14 @@ static int pcxdrv_write_file_header_memmap(int x_size, int y_size)
     header[2] = 1;
     header[3] = 8;
 
-    util_word_to_le_buf(&header[8], (WORD)(x_size - 1));
-    util_word_to_le_buf(&header[10], (WORD)(y_size - 1));
+    util_word_to_le_buf(&header[8], (uint16_t)(x_size - 1));
+    util_word_to_le_buf(&header[10], (uint16_t)(y_size - 1));
 
-    util_word_to_le_buf(&header[12], (WORD)(0));
-    util_word_to_le_buf(&header[14], (WORD)(0));
+    util_word_to_le_buf(&header[12], (uint16_t)(0));
+    util_word_to_le_buf(&header[14], (uint16_t)(0));
 
     header[65] = 1;
-    util_word_to_le_buf(&header[66], (WORD)(x_size));
+    util_word_to_le_buf(&header[66], (uint16_t)(x_size));
 
     if (fwrite(header, sizeof(header), 1, pcxdrv_memmap_fd) < 1) {
         return -1;
@@ -369,7 +369,7 @@ static int pcxdrv_open_memmap(const char *filename, int x_size, int y_size)
     return 0;
 }
 
-static int pcxdrv_save_memmap(const char *filename, int x_size, int y_size, BYTE *gfx, BYTE *palette)
+static int pcxdrv_save_memmap(const char *filename, int x_size, int y_size, uint8_t *gfx, uint8_t *palette)
 {
     int line;
 
@@ -391,6 +391,7 @@ static int pcxdrv_save_memmap(const char *filename, int x_size, int y_size, BYTE
 
 static gfxoutputdrv_t pcx_drv =
 {
+    GFXOUTPUTDRV_TYPE_SCREENSHOT_IMAGE,
     "PCX",
     "PCX screenshot",
     "pcx",

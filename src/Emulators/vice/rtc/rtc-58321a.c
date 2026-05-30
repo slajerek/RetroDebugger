@@ -103,7 +103,7 @@ rtc_58321a_t *rtc58321a_init(char *device)
     retval->old_offset = retval->offset;
 
     retval->hour24 = 1;
-    retval->device = lib_stralloc(device);
+    retval->device = lib_strdup(device);
 
     return retval;
 }

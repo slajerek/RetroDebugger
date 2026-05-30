@@ -32,70 +32,98 @@
 #include "vicetypes.h"
 
 
-typedef BYTE read_func_t(WORD addr);
+typedef uint8_t read_func_t(uint16_t addr);
 typedef read_func_t *read_func_ptr_t;
-typedef void store_func_t(WORD addr, BYTE value);
+typedef void store_func_t(uint16_t addr, uint8_t value);
 typedef store_func_t *store_func_ptr_t;
 
 extern read_func_ptr_t *_mem_read_tab_ptr;
 extern store_func_ptr_t *_mem_write_tab_ptr;
+extern read_func_ptr_t *_mem_read_tab_ptr_dummy;
+extern store_func_ptr_t *_mem_write_tab_ptr_dummy;
 
-extern BYTE *mem_ram;
-extern BYTE *mem_page_zero;
-extern BYTE *mem_page_one;
-extern BYTE *mem_color_ram_cpu;
-extern BYTE *mem_color_ram_vicii;
+extern uint8_t *mem_ram;
+extern uint8_t *mem_page_zero;
+extern uint8_t *mem_page_one;
+extern uint8_t *mem_color_ram_cpu;
+extern uint8_t *mem_color_ram_vicii;
 
-extern BYTE *mem_chargen_rom_ptr;
+extern uint8_t *mem_chargen_rom_ptr;
 
-extern void mem_initialize_memory(void);
-extern void mem_powerup(void);
-extern int mem_load(void);
-extern void mem_get_basic_text(WORD *start, WORD *end);
-extern void mem_set_basic_text(WORD start, WORD end);
-extern void mem_toggle_watchpoints(int flag, void *context);
-extern int mem_rom_trap_allowed(WORD addr);
-extern void mem_mmu_translate(unsigned int addr, BYTE **base, int *start, int *limit);
-extern void mem_color_ram_to_snapshot(BYTE *color_ram);
-extern void mem_color_ram_from_snapshot(BYTE *color_ram);
+void mem_initialize_memory(void);
+void mem_powerup(void);
+int mem_load(void);
+void mem_get_basic_text(uint16_t *start, uint16_t *end);
+void mem_set_basic_text(uint16_t start, uint16_t end);
+void mem_toggle_watchpoints(int flag, void *context);
+int mem_rom_trap_allowed(uint16_t addr);
+void mem_mmu_translate(unsigned int addr, uint8_t **base, int *start, int *limit);
+void mem_color_ram_to_snapshot(uint8_t *color_ram);
+void mem_color_ram_from_snapshot(uint8_t *color_ram);
+
+uint8_t mem_read_screen(uint16_t addr);
 
 /*
  * DWORD addr allows injection on machines with more than 64Kb of RAM.
  * Injection should be made to follow (mostly) how load would write to
  * RAM on that machine.
  */
-extern void mem_inject(DWORD addr, BYTE value);
+void mem_inject(uint32_t addr, uint8_t value);
 
-extern read_func_t rom_read, rom_trap_read, zero_read;
-extern store_func_t rom_store, rom_trap_store, zero_store;
+/* in banked memory architectures this will always write to the bank that
+   contains the keyboard buffer and "number of keys in buffer" */
+void mem_inject_key(uint16_t addr, uint8_t value);
+
+extern read_func_t rom_read, rom_trap_read, zero_read, zero_read_dma;
+extern store_func_t rom_store, rom_trap_store, zero_store, zero_store_dma;
 
 extern read_func_t mem_read;
 extern store_func_t mem_store;
 
+extern read_func_t mem_dma_read;
+extern store_func_t mem_dma_store;
+
 /* ------------------------------------------------------------------------- */
 
 /* Memory access functions for the monitor.  */
-extern const char **mem_bank_list(void);
-extern int mem_bank_from_name(const char *name);
-extern BYTE mem_bank_read(int bank, WORD addr, void *context);
-extern BYTE mem_bank_peek(int bank, WORD addr, void *context);
-extern void mem_bank_write(int bank, WORD addr, BYTE byte, void *context);
-extern void mem_get_screen_parameter(WORD *base, BYTE *rows, BYTE *columns, int *bank);
+const char **mem_bank_list(void);
+const int *mem_bank_list_nos(void);
+
+int mem_bank_from_name(const char *name);
+int mem_bank_index_from_bank(int bank);
+int mem_bank_flags_from_bank(int bank);
+
+#define MEM_BANK_ISARRAY        0x01    /* part of a bank group, eg "ram00, ram01 ..." */
+#define MEM_BANK_ISARRAYFIRST   0x02    /* first in a bank group, eg "ram00" */
+#define MEM_BANK_ISARRAYLAST    0x04    /* last in a bank group, eg "ramff" */
+
+uint8_t mem_bank_read(int bank, uint16_t addr, void *context);
+uint8_t mem_bank_peek(int bank, uint16_t addr, void *context);
+void mem_bank_write(int bank, uint16_t addr, uint8_t byte, void *context);
+void mem_bank_poke(int bank, uint16_t addr, uint8_t byte, void *context);
+
+uint8_t mem_peek_with_config(int config, uint16_t addr, void *context);
+int mem_get_current_bank_config(void);
+
+void mem_get_screen_parameter(uint16_t *base, uint8_t *rows, uint8_t *columns, int *bank);
+void mem_get_cursor_parameter(uint16_t *screen_addr, uint8_t *cursor_column, uint8_t *line_length, int *blinking);
 
 typedef struct mem_ioreg_list_s {
     const char *name;
-    WORD start;
-    WORD end;
+    uint16_t start;
+    uint16_t end;
     unsigned int next;
-    int (*dump)(void *context, WORD address);
+    int (*dump)(void *context, uint16_t address);
     void *context;
+    int mirror_mode;
 } mem_ioreg_list_t;
 
-extern mem_ioreg_list_t *mem_ioreg_list_get(void *context);
+mem_ioreg_list_t *mem_ioreg_list_get(void *context);
 
 /* Snapshots.  */
 struct snapshot_s;
-extern int mem_write_snapshot_module(struct snapshot_s *s, int save_roms);
-extern int mem_read_snapshot_module(struct snapshot_s *s);
+
+int mem_write_snapshot_module(struct snapshot_s *s, int save_roms);
+int mem_read_snapshot_module(struct snapshot_s *s);
 
 #endif

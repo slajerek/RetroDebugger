@@ -122,6 +122,9 @@ extern int keyarr[KBD_ROWS];
 extern int rev_keyarr[KBD_COLS];
 extern int keyboard_shiftlock;
 
+/* VICE 3.10 accessor required by 3.10-migrated callers (e.g. c64/c64cia1.c). */
+extern int keyboard_get_shiftlock(void);
+
 #ifdef COMMON_KBD
 extern int keyboard_resources_init(void);
 extern int keyboard_cmdline_options_init(void);

@@ -63,7 +63,6 @@
 #include "resources.h"
 #include "sysfile.h"
 #ifdef HAS_TRANSLATION
-#include "translate.h"
 #endif
 #include "vicetypes.h"
 #include "uiapi.h"
@@ -84,8 +83,8 @@
 #ifdef __OS2__
 const
 #endif
-int console_mode = 0;
-int video_disabled_mode = 0;
+bool console_mode = false;		/* VICE 3.10: bool (matches machine.h) */
+bool video_disabled_mode = false;
 static int init_done = 0;
 
 
@@ -139,7 +138,7 @@ int vice_main_program(int argc, const char **argv, int c64model)
 #endif
         if ((!strcmp(argv[i], "-config")) || (!strcmp(argv[i], "--config"))) {
             if ((i + 1) < argc) {
-                vice_config_file = lib_stralloc(argv[++i]);
+                vice_config_file = lib_strdup(argv[++i]);
             }
         } else if ((!strcmp(argv[i], "-help")) ||
                    (!strcmp(argv[i], "--help")) ||

@@ -43,9 +43,10 @@
 #include "export.h"
 #include "interrupt.h"
 #include "lib.h"
+#include "monitor.h"
+#include "ram.h"
 #include "resources.h"
 #include "snapshot.h"
-#include "translate.h"
 #include "vicetypes.h"
 #include "util.h"
 #include "crt.h"
@@ -190,7 +191,6 @@ NMI entry from expert 2.70:
 
 #ifdef DBGEXPERT
 #define DBG(x) printf x
-char *expert_mode[3]={"off", "prg", "on"};
 #else
 #define DBG(x)
 #endif
@@ -205,6 +205,8 @@ char *expert_mode[3]={"off", "prg", "on"};
 #define EXPERT_OFF ((0 << 0) | (1 << 1)) /* ram */
 #define EXPERT_ON  ((1 << 0) | (1 << 1)) /* ultimax */
 
+const char * const expert_mode[3]={"off", "prg", "on"};
+
 static int cartmode = EXPERT_MODE_DEFAULT;
 static int expert_enabled = 0;
 static int expert_register_enabled = 0;
@@ -212,7 +214,7 @@ static int expert_ram_writeable = 0;
 static int expert_ramh_enabled = 0; /* equals EXROM ? */
 
 /* 8 KB RAM */
-static BYTE *expert_ram = NULL;
+static uint8_t *expert_ram = NULL;
 
 static char *expert_filename = NULL;
 static int expert_filetype = 0;
@@ -226,23 +228,26 @@ static int expert_load_image(void);
 
 /* ---------------------------------------------------------------------*/
 
-BYTE expert_io1_read(WORD addr);
-BYTE expert_io1_peek(WORD addr);
-void expert_io1_store(WORD addr, BYTE value);
+static uint8_t expert_io1_read(uint16_t addr);
+static uint8_t expert_io1_peek(uint16_t addr);
+static void expert_io1_store(uint16_t addr, uint8_t value);
+static int expert_dump(void);
 
 static io_source_t expert_io1_device = {
-    CARTRIDGE_NAME_EXPERT,
-    IO_DETACH_CART,
-    NULL,
-    0xde00, 0xde01, 0xff,
-    0, /* read is never valid */
-    expert_io1_store,
-    expert_io1_read,
-    expert_io1_peek,
-    NULL, /* TODO: dump */
-    CARTRIDGE_EXPERT,
-    0,
-    0
+    CARTRIDGE_NAME_EXPERT, /* name of the device */
+    IO_DETACH_CART,        /* use cartridge ID to detach the device when involved in a read-collision */
+    IO_DETACH_NO_RESOURCE, /* does not use a resource for detach */
+    0xde00, 0xde01, 0xff,  /* range for the device, regs:$de00-$de01 */
+    0,                     /* read is never valid */
+    expert_io1_store,      /* store function */
+    NULL,                  /* NO poke function */
+    expert_io1_read,       /* read function */
+    expert_io1_peek,       /* peek function */
+    expert_dump,           /* device state information dump function */
+    CARTRIDGE_EXPERT,      /* cartridge ID */
+    IO_PRIO_NORMAL,        /* normal priority, device read needs to be checked for collisions */
+    0,                     /* insertion order, gets filled in by the registration function */
+    IO_MIRROR_NONE         /* NO mirroring */
 };
 
 static const export_resource_t export_res = {
@@ -299,11 +304,39 @@ static int expert_mode_changed(int mode, void *param)
     return 0;
 }
 
+/* FIXME: this still needs to be tweaked to match the hardware */
+static RAMINITPARAM ramparam = {
+    .start_value = 255,
+    .value_invert = 2,
+    .value_offset = 1,
+
+    .pattern_invert = 0x100,
+    .pattern_invert_value = 255,
+
+    .random_start = 0,
+    .random_repeat = 0,
+    .random_chance = 0,
+};
+
+void expert_powerup(void)
+{
+    DBG(("expert_powerup\n"));
+    if ((expert_filename != NULL) && (*expert_filename != 0)) {
+        /* do not init ram if a file is used for ram content (like battery backup) */
+        return;
+    }
+    if (expert_ram) {
+        DBG(("expert_powerup ram clear\n"));
+        ram_init_with_pattern(expert_ram, EXPERT_RAM_SIZE, &ramparam);
+    }
+}
+
 static int expert_activate(void)
 {
     if (expert_ram == NULL) {
         expert_ram = lib_malloc(EXPERT_RAM_SIZE);
     }
+    ram_init_with_pattern(expert_ram, EXPERT_RAM_SIZE, &ramparam);
 
     if (!util_check_null_string(expert_filename)) {
         log_message(LOG_DEFAULT, "Reading Expert Cartridge image %s.", expert_filename);
@@ -413,7 +446,7 @@ static int set_expert_filename(const char *name, void *param)
 
 /* ---------------------------------------------------------------------*/
 
-void expert_io1_store(WORD addr, BYTE value)
+static void expert_io1_store(uint16_t addr, uint8_t value)
 {
     DBG(("EXPERT: io1 wr %04x (%d)\n", addr, value));
     if ((cartmode == EXPERT_MODE_ON) && (expert_register_enabled == 1)) {
@@ -424,7 +457,7 @@ void expert_io1_store(WORD addr, BYTE value)
     }
 }
 
-BYTE expert_io1_read(WORD addr)
+static uint8_t expert_io1_read(uint16_t addr)
 {
     expert_io1_device.io_source_valid = 0;
     DBG(("EXPERT: io1 rd %04x (%d)\n", addr, expert_ramh_enabled));
@@ -437,14 +470,23 @@ BYTE expert_io1_read(WORD addr)
     return 0;
 }
 
-BYTE expert_io1_peek(WORD addr)
+static uint8_t expert_io1_peek(uint16_t addr)
 {
+    return 0;
+}
+
+static int expert_dump(void)
+{
+    mon_out("Cartridge mode: %s, Register is %s\n",
+            expert_mode[cartmode], expert_register_enabled ? "enabled" : "disabled");
+    mon_out("RAM: %s, %s\n", expert_ramh_enabled ? "mapped in" : "not mapped in",
+            expert_ram_writeable ? "writeable" : "readonly");
     return 0;
 }
 
 /* ---------------------------------------------------------------------*/
 
-BYTE expert_roml_read(WORD addr)
+uint8_t expert_roml_read(uint16_t addr)
 {
 /*    DBG(("EXPERT: set expert_roml_read: %x\n", addr)); */
     if (cartmode == EXPERT_MODE_PRG) {
@@ -456,7 +498,7 @@ BYTE expert_roml_read(WORD addr)
     }
 }
 
-void expert_roml_store(WORD addr, BYTE value)
+void expert_roml_store(uint16_t addr, uint8_t value)
 {
 /*    DBG(("EXPERT: set expert_roml_store: %x\n", addr)); */
     if (expert_ram_writeable) {
@@ -473,7 +515,7 @@ void expert_roml_store(WORD addr, BYTE value)
     }
 }
 
-BYTE expert_romh_read(WORD addr)
+uint8_t expert_romh_read(uint16_t addr)
 {
 /*    DBG(("EXPERT: set expert_romh_read: %x mode %d %02x %02x\n", addr, cartmode, expert_ram[0x1ffe], expert_ram[0x1fff])); */
     if ((cartmode == EXPERT_MODE_ON) && expert_ramh_enabled) {
@@ -483,7 +525,7 @@ BYTE expert_romh_read(WORD addr)
     }
 }
 
-int expert_romh_phi1_read(WORD addr, BYTE *value)
+int expert_romh_phi1_read(uint16_t addr, uint8_t *value)
 {
     if ((cartmode == EXPERT_MODE_ON) && expert_ramh_enabled) {
         *value = expert_ram[addr & 0x1fff];
@@ -492,12 +534,12 @@ int expert_romh_phi1_read(WORD addr, BYTE *value)
     return CART_READ_C64MEM;
 }
 
-int expert_romh_phi2_read(WORD addr, BYTE *value)
+int expert_romh_phi2_read(uint16_t addr, uint8_t *value)
 {
     return expert_romh_phi1_read(addr, value);
 }
 
-int expert_peek_mem(WORD addr, BYTE *value)
+int expert_peek_mem(uint16_t addr, uint8_t *value)
 {
     if (cartmode == EXPERT_MODE_PRG) {
         if ((addr >= 0x8000) && (addr <= 0x9fff)) {
@@ -541,7 +583,7 @@ void expert_freeze(void)
     }
 }
 
-void expert_ack_nmi(void)
+static void expert_ack_nmi(void)
 {
     if (cartmode == EXPERT_MODE_ON) {
         DBG(("EXPERT:ack nmi\n"));
@@ -576,7 +618,7 @@ void expert_reset(void)
 
 /* ---------------------------------------------------------------------*/
 
-void expert_mmu_translate(unsigned int addr, BYTE **base, int *start, int *limit)
+void expert_mmu_translate(unsigned int addr, uint8_t **base, int *start, int *limit)
 {
     switch (addr & 0xf000) {
         case 0xf000:
@@ -615,7 +657,7 @@ void expert_config_init(void)
     }
 }
 
-void expert_config_setup(BYTE *rawcart)
+void expert_config_setup(uint8_t *rawcart)
 {
     memcpy(expert_ram, rawcart, EXPERT_RAM_SIZE);
     /* DBG(("ram %02x %02x\n", expert_ram[0x1ffe], expert_ram[0x1fff])); */
@@ -646,7 +688,7 @@ static int expert_common_attach(void)
     return -1;
 }
 
-static int expert_bin_load(const char *filename, BYTE *rawcart)
+static int expert_bin_load(const char *filename, uint8_t *rawcart)
 {
     if (util_file_load(filename, rawcart, EXPERT_RAM_SIZE, UTIL_FILE_LOAD_SKIP_ADDRESS) < 0) {
         return -1;
@@ -655,11 +697,12 @@ static int expert_bin_load(const char *filename, BYTE *rawcart)
     return 0;
 }
 
-int expert_bin_attach(const char *filename, BYTE *rawcart)
+int expert_bin_attach(const char *filename, uint8_t *rawcart)
 {
     if (expert_bin_load(filename, rawcart) < 0) {
         return -1;
     }
+    /* set the resource */
     if (set_expert_filename(filename, NULL) < 0) {
         return -1;
     }
@@ -694,7 +737,7 @@ int expert_bin_save(const char *filename)
     return 0;
 }
 
-static int expert_crt_load(FILE *fd, BYTE *rawcart)
+static int expert_crt_load(FILE *fd, uint8_t *rawcart)
 {
     crt_chip_header_t chip;
 
@@ -713,11 +756,12 @@ static int expert_crt_load(FILE *fd, BYTE *rawcart)
     return 0;
 }
 
-int expert_crt_attach(FILE *fd, BYTE *rawcart, const char *filename)
+int expert_crt_attach(FILE *fd, uint8_t *rawcart, const char *filename)
 {
     if (expert_crt_load(fd, rawcart) < 0) {
         return -1;
     }
+    /* set the resource */
     if (set_expert_filename(filename, NULL) < 0) {
         return -1;
     }
@@ -765,10 +809,12 @@ static int expert_load_image(void)
     FILE *fd;
 
     if (crt_getid(expert_filename) == CARTRIDGE_EXPERT) {
+        DBG(("EXPERT: detected .crt format\n"));
         fd = fopen(expert_filename, MODE_READ);
         res = expert_crt_load(fd, expert_ram);
         fclose(fd);
     } else {
+        DBG(("EXPERT: detected .bin format\n"));
         res = expert_bin_load(expert_filename, expert_ram);
     }
     return res;
@@ -798,6 +844,18 @@ int expert_enable(void)
     return 0;
 }
 
+
+int expert_disable(void)
+{
+    DBG(("EXPERT: disable\n"));
+    if (resources_set_int("ExpertCartridgeEnabled", 0) < 0) {
+        return -1;
+    }
+    return 0;
+}
+
+
+
 /* ---------------------------------------------------------------------*/
 
 /* CARTEXPERT snapshot module format:
@@ -811,7 +869,7 @@ int expert_enable(void)
    ARRAY | RAM             | 8192 BYTES of RAM data
  */
 
-static char snap_module_name[] = "CARTEXPERT";
+static const char snap_module_name[] = "CARTEXPERT";
 #define SNAP_MAJOR   0
 #define SNAP_MINOR   0
 
@@ -826,10 +884,10 @@ int expert_snapshot_write_module(snapshot_t *s)
     }
 
     if (0
-        || (SMW_B(m, (BYTE)cartmode) < 0)
-        || (SMW_B(m, (BYTE)expert_register_enabled) < 0)
-        || (SMW_B(m, (BYTE)expert_ram_writeable) < 0)
-        || (SMW_B(m, (BYTE)expert_ramh_enabled) < 0)
+        || (SMW_B(m, (uint8_t)cartmode) < 0)
+        || (SMW_B(m, (uint8_t)expert_register_enabled) < 0)
+        || (SMW_B(m, (uint8_t)expert_ram_writeable) < 0)
+        || (SMW_B(m, (uint8_t)expert_ramh_enabled) < 0)
         || (SMW_BA(m, expert_ram, EXPERT_RAM_SIZE) < 0)) {
         snapshot_module_close(m);
         return -1;
@@ -840,7 +898,7 @@ int expert_snapshot_write_module(snapshot_t *s)
 
 int expert_snapshot_read_module(snapshot_t *s)
 {
-    BYTE vmajor, vminor;
+    uint8_t vmajor, vminor;
     snapshot_module_t *m;
 
     m = snapshot_module_open(s, snap_module_name, &vmajor, &vminor);
@@ -850,7 +908,7 @@ int expert_snapshot_read_module(snapshot_t *s)
     }
 
     /* Do not accept versions higher than current */
-    if (vmajor > SNAP_MAJOR || vminor > SNAP_MINOR) {
+    if (snapshot_version_is_bigger(vmajor, vminor, SNAP_MAJOR, SNAP_MINOR)) {
         snapshot_set_error(SNAPSHOT_MODULE_HIGHER_VERSION);
         snapshot_module_close(m);
         return -1;
@@ -895,36 +953,24 @@ int expert_snapshot_read_module(snapshot_t *s)
 
 static const cmdline_option_t cmdline_options[] =
 {
-    { "-expert", SET_RESOURCE, 0,
+    { "-expert", SET_RESOURCE, CMDLINE_ATTRIB_NONE,
       NULL, NULL, "ExpertCartridgeEnabled", (resource_value_t)1,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_ENABLE_EXPERT_CART,
-      NULL, NULL },
-    { "+expert", SET_RESOURCE, 0,
+      NULL, "Enable the Expert Cartridge" },
+    { "+expert", SET_RESOURCE, CMDLINE_ATTRIB_NONE,
       NULL, NULL, "ExpertCartridgeEnabled", (resource_value_t)0,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_DISABLE_EXPERT_CART,
-      NULL, NULL },
-    { "-expertimagename", SET_RESOURCE, 1,
+      NULL, "Disable the Expert Cartridge" },
+    { "-expertimagename", SET_RESOURCE, CMDLINE_ATTRIB_NEED_ARGS,
       NULL, NULL, "Expertfilename", NULL,
-      USE_PARAM_ID, USE_DESCRIPTION_ID,
-      IDCLS_P_NAME, IDCLS_SET_EXPERT_FILENAME,
-      NULL, NULL },
-    { "-expertimagerw", SET_RESOURCE, 0,
+      "<Name>", "Set Expert Cartridge image name" },
+    { "-expertimagerw", SET_RESOURCE, CMDLINE_ATTRIB_NONE,
       NULL, NULL, "ExpertImageWrite", (resource_value_t)1,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_ALLOW_WRITING_TO_EXPERT_IMAGE,
-      NULL, NULL },
-    { "+expertimagerw", SET_RESOURCE, 0,
+      NULL, "Allow writing to Expert Cartridge image" },
+    { "+expertimagerw", SET_RESOURCE, CMDLINE_ATTRIB_NONE,
       NULL, NULL, "ExpertImageWrite", (resource_value_t)0,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_DO_NOT_WRITE_TO_EXPERT_IMAGE,
-      NULL, NULL },
-    { "-expertmode", SET_RESOURCE, 1,
+      NULL, "Do not write to Expert Cartridge image" },
+    { "-expertmode", SET_RESOURCE, CMDLINE_ATTRIB_NEED_ARGS,
       NULL, NULL, "ExpertCartridgeMode", NULL,
-      USE_PARAM_ID, USE_DESCRIPTION_ID,
-      IDCLS_P_MODE, IDCLS_SET_EXPERT_MODE,
-      NULL, NULL },
+      "<Mode>", "Set Expert Cartridge mode (0: Off, 1: Prg, 2: On)" },
     CMDLINE_LIST_END
 };
 

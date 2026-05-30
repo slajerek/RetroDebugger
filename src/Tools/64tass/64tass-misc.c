@@ -35,7 +35,7 @@ static struct avltree macro_tree;
 static struct avltree jump_tree;
 static struct avltree file_tree;
 struct label_s root_label;
-struct label_s *current_context = &root_label;
+struct label_s *tass_current_context = &root_label;
 
 const uint8_t whatis[256]={
     WHAT_EOL,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
@@ -142,7 +142,7 @@ static void star_free(const struct avltree_node *aa)
 // ---------------------------------------------------------------------------
 struct label_s *find_label(const char* name) {
     const struct avltree_node *b;
-    struct label_s *context = current_context;
+    struct label_s *context = tass_current_context;
     struct label_s tmp;
     tmp.name=name;
     
@@ -171,12 +171,12 @@ struct label_s *new_label(const char* name, enum label_e type) {
     if (!lastlb)
 	if (!(lastlb=malloc(sizeof(struct label_s)))) err_msg(ERROR_OUT_OF_MEMORY,NULL);
     lastlb->name=name;
-    b=avltree_insert(&lastlb->node, &current_context->members);
+    b=avltree_insert(&lastlb->node, &tass_current_context->members);
     if (!b) { //new label
 	if (!(lastlb->name=malloc(strlen(name)+1))) err_msg(ERROR_OUT_OF_MEMORY,NULL);
         strcpy((char *)lastlb->name,name);
         lastlb->type = type;
-        lastlb->parent=current_context;
+        lastlb->parent=tass_current_context;
         lastlb->ref=lastlb->size=lastlb->esize=0;
         avltree_init(&lastlb->members, label_compare, label_free);
 	labelexists=0;

@@ -32,10 +32,9 @@
 
 typedef struct palette_entry_s {
     char *name;
-    BYTE red;
-    BYTE green;
-    BYTE blue;
-    BYTE dither;
+    uint8_t red;
+    uint8_t green;
+    uint8_t blue;
 } palette_entry_t;
 
 typedef struct palette_s {
@@ -43,11 +42,13 @@ typedef struct palette_s {
     palette_entry_t *entries;
 } palette_t;
 
-extern void palette_init(void);
-extern palette_t *palette_create(unsigned int num_entries, const char *entry_names[]);
-extern void palette_free(palette_t *p);
-extern int palette_load(const char *file_name, palette_t *palette_return);
-extern int palette_save(const char *file_name, const palette_t *palette);
+void palette_init(void);
+void palette_shutdown(void);
+
+palette_t *palette_create(unsigned int num_entries, const char *entry_names[]);
+void palette_free(palette_t *p);
+int palette_load(const char *file_name, const char *subpath, palette_t *palette_return);
+int palette_save(const char *file_name, const palette_t *palette);
 
 /* palette info for GUIs */
 typedef struct {
@@ -57,6 +58,6 @@ typedef struct {
 } palette_info_t;
 
 /* returns pointer to palette_info_t entries. may return an empty list. */
-extern palette_info_t *palette_get_info_list(void);
+const palette_info_t *palette_get_info_list(void);
 
 #endif

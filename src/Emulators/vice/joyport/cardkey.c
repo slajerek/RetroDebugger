@@ -32,7 +32,8 @@
 
 #include "joyport.h"
 #include "keyboard.h"
-#include "translate.h"
+
+#include "cardkey.h"
 
 /* Control port <--> Cardkey connections:
 
@@ -42,7 +43,15 @@
      2   | KEY1   |  I
      3   | KEY2   |  I
      4   | KEY3   |  I
-     5   | PRESS  |  I
+     6   | PRESS  |  I
+     8   | GND    |  Ground
+
+Works on:
+- native port(s) (x64/x64sc/scpu64/xvic)
+- sidcart joystick port (xplus4)
+
+The keypad keys ground certain lines when pressed.
+
 
 The keypad has the following layout:
 
@@ -63,33 +72,33 @@ The keypad grounds a line when a key is pressed.
 
 The following logic is used:
 
-KEY3 = 0 || 1 || 2 || 3 || 4 || 5 || 6 || 7
-KEY2 = 0 || 1 || 2 || 3 || 8 || 9 || Plus || Minus
-KEY1 = 0 || 1 || 8 || 9 || 4 || 5 || Div || Mult
-KEY0 = 0 || 8 || 4 || Div || 2 || Plus || 6 || Dot
+KEY3 = 8 || 9 || + || - || / || * || dot || ret
+KEY2 = 4 || 5 || 6 || 7 || / || * || dot || ret
+KEY1 = 2 || 3 || 6 || 7 || + || - || dot || ret
+KEY0 = 1 || 3 || 5 || 7 || 9 || - || *   || ret
 
 which results in:
 
 KEY PRESSED   KEY3 KEY2 KEY1 KEY0
 -----------   ---- ---- ---- ----
-0               1    1    1    1
-1               1    1    1    0
-2               1    1    0    1
-3               1    1    0    0
-4               1    0    1    1
-5               1    0    1    0
-6               1    0    0    1
-7               1    0    0    0
-8               0    1    1    1
-9               0    1    1    0
-+               0    1    0    1
--               0    1    0    0
-/               0    0    1    1
-*               0    0    1    0
-.               0    0    0    1
-Enter           0    0    0    0
+0               0    0    0    0
+1               0    0    0    1
+2               0    0    1    0
+3               0    0    1    1
+4               0    1    0    0
+5               0    1    0    1
+6               0    1    1    0
+7               0    1    1    1
+8               1    0    0    0
+9               1    0    0    1
++               1    0    1    0
+-               1    0    1    1
+/               1    1    0    0
+*               1    1    0    1
+.               1    1    1    0
+Enter           1    1    1    1
 
-The PRESS (POT AY) line is used to indicate a key press.
+The PRESS (Fire) line is used to indicate a key press.
  */
 
 #define ROW_COL(x, y) ((x * 4) + y)
@@ -114,136 +123,133 @@ The PRESS (POT AY) line is used to indicate a key press.
 #define KEYPAD_KEY_ENTER ROW_COL(3,2)
 #define KEYPAD_KEY_PLUS  ROW_COL(3,3)
 
+#define KEYPAD_NUM_KEYS  16
+
 static int cardkey_enabled = 0;
 
-static unsigned int keys[16];
+static unsigned int keys[KEYPAD_NUM_KEYS];
 
 /* ------------------------------------------------------------------------- */
 
-#ifdef COMMON_KBD
 static void handle_keys(int row, int col, int pressed)
 {
+    /* sanity check of the rows and cols, rows should be 0-3 and cols should be 1-4 */
     if (row < 0 || row > 3 || col < 1 || col > 4) {
         return;
     }
 
+    /* change the state of the key that the row/col is wired to */
     keys[(row * 4) + col - 1] = (unsigned int)pressed;
 }
-#endif
 
 /* ------------------------------------------------------------------------- */
 
-static int joyport_cardkey_enable(int port, int value)
+static int joyport_cardkey_set_enabled(int port, int enabled)
 {
-    int val = value ? 1 : 0;
+    int new_state = enabled ? 1 : 0;
 
-    if (val == cardkey_enabled) {
+    if (new_state == cardkey_enabled) {
         return 0;
     }
 
-    if (val) {
-        memset(keys, 0, 16);
-#ifdef COMMON_KBD
+    if (new_state) {
+        /* enabled, clear keys and register the keypad */
+        memset(keys, 0, KEYPAD_NUM_KEYS * sizeof(unsigned int));
         keyboard_register_joy_keypad(handle_keys);
-#endif
     } else {
-#ifdef COMMON_KBD
+        /* disabled, unregister the keypad */
         keyboard_register_joy_keypad(NULL);
-#endif
     }
 
-    cardkey_enabled = val;
+    /* set the current state */
+    cardkey_enabled = new_state;
 
     return 0;
 }
 
-static BYTE cardkey_read_dig(int port)
+static uint8_t cardkey_read_dig(int port)
 {
     unsigned int retval = 0;
     unsigned int tmp;
 
-    /* KEY3 */
-    tmp = keys[KEYPAD_KEY_0] |
-          keys[KEYPAD_KEY_1] |
-          keys[KEYPAD_KEY_2] |
-          keys[KEYPAD_KEY_3] |
-          keys[KEYPAD_KEY_4] |
-          keys[KEYPAD_KEY_5] |
-          keys[KEYPAD_KEY_6] |
-          keys[KEYPAD_KEY_7];
-    tmp <<= 3;
-    retval |= tmp;
-
-    /* KEY2 */
-    tmp = keys[KEYPAD_KEY_0] |
-          keys[KEYPAD_KEY_1] |
-          keys[KEYPAD_KEY_2] |
-          keys[KEYPAD_KEY_3] |
-          keys[KEYPAD_KEY_8] |
+    /* KEY3   8 9 + - / * dot ret */
+    tmp = keys[KEYPAD_KEY_8] |
           keys[KEYPAD_KEY_9] |
           keys[KEYPAD_KEY_PLUS] |
-          keys[KEYPAD_KEY_MINUS];
-    tmp <<= 2;
+          keys[KEYPAD_KEY_MINUS] |
+          keys[KEYPAD_KEY_DIV] |
+          keys[KEYPAD_KEY_MULT] |
+          keys[KEYPAD_KEY_DOT] |
+          keys[KEYPAD_KEY_ENTER];
+    tmp <<= JOYPORT_RIGHT_BIT;   /* output key 3 on the joyport 'right' pin */
     retval |= tmp;
 
-    /* KEY1 */
-    tmp = keys[KEYPAD_KEY_0] |
-          keys[KEYPAD_KEY_1] |
-          keys[KEYPAD_KEY_8] |
-          keys[KEYPAD_KEY_9] |
-          keys[KEYPAD_KEY_4] |
+    /* KEY2   4 5 6 7 / * dot ret */
+    tmp = keys[KEYPAD_KEY_4] |
           keys[KEYPAD_KEY_5] |
-          keys[KEYPAD_KEY_DIV] |
-          keys[KEYPAD_KEY_MULT];
-    tmp <<= 1;
-    retval |= tmp;
-
-    /* KEY0 */
-    tmp = keys[KEYPAD_KEY_0] |
-          keys[KEYPAD_KEY_8] |
-          keys[KEYPAD_KEY_4] |
-          keys[KEYPAD_KEY_DIV] |
-          keys[KEYPAD_KEY_2] |
-          keys[KEYPAD_KEY_PLUS] |
           keys[KEYPAD_KEY_6] |
-          keys[KEYPAD_KEY_DOT];
+          keys[KEYPAD_KEY_7] |
+          keys[KEYPAD_KEY_DIV] |
+          keys[KEYPAD_KEY_MULT] |
+          keys[KEYPAD_KEY_DOT] |
+          keys[KEYPAD_KEY_ENTER];
+    tmp <<= JOYPORT_LEFT_BIT;   /* output key 2 on the joyport 'left' pin */
     retval |= tmp;
 
-    retval |= 0xf0;
+    /* KEY1   2 3 6 7 + - dot ret */
+    tmp = keys[KEYPAD_KEY_2] |
+          keys[KEYPAD_KEY_3] |
+          keys[KEYPAD_KEY_6] |
+          keys[KEYPAD_KEY_7] |
+          keys[KEYPAD_KEY_PLUS] |
+          keys[KEYPAD_KEY_MINUS] |
+          keys[KEYPAD_KEY_DOT] |
+          keys[KEYPAD_KEY_ENTER];
+    tmp <<= JOYPORT_DOWN_BIT;   /* output key 1 on the joyport 'down' pin */
+    retval |= tmp;
 
-    joyport_display_joyport(JOYPORT_ID_CARDCO_KEYPAD, (BYTE)~retval);
+    /* KEY0  1 3 5 7 9 - * ret */
+    tmp = keys[KEYPAD_KEY_1] |
+          keys[KEYPAD_KEY_3] |
+          keys[KEYPAD_KEY_5] |
+          keys[KEYPAD_KEY_7] |
+          keys[KEYPAD_KEY_9] |
+          keys[KEYPAD_KEY_MINUS] |
+          keys[KEYPAD_KEY_MULT] |
+          keys[KEYPAD_KEY_ENTER];
+    retval |= tmp;   /* output key 0 on the joyport 'up' pin */
 
-    return (BYTE)retval;
-}
-
-static BYTE cardkey_read_pot(void)
-{
-    int i;
-
-    for (i = 0; i < 16; ++i) {
-        if (keys[i]) {
-            return 0xff;
-        }
+    /* output key pressed on 'fire' pin. */
+    if (retval != 0 || keys[KEYPAD_KEY_0]) {
+        retval |= JOYPORT_FIRE;
     }
 
-    return 0;
+    joyport_display_joyport(port, JOYPORT_ID_CARDCO_KEYPAD, (uint16_t)retval);
+
+    return (uint8_t)~retval;
 }
 
 /* ------------------------------------------------------------------------- */
 
 static joyport_t joyport_cardkey_device = {
-    "Cardco Cardkey 1 keypad",
-    IDGS_CARDKEY,
-    JOYPORT_RES_ID_KEYPAD,
-    JOYPORT_IS_NOT_LIGHTPEN,
-    JOYPORT_POT_REQUIRED,
-    joyport_cardkey_enable,
-    cardkey_read_dig,
-    NULL,				/* no digital store */
-    NULL,				/* no pot-x read */
-    cardkey_read_pot,
-    NULL,				/* no write snapshot */
-    NULL				/* no read snapshot */
+    "Keypad (Cardco Cardkey 1)", /* name of the device */
+    JOYPORT_RES_ID_KEYPAD,       /* device is a keypad, only 1 keypad can be active at the same time */
+    JOYPORT_IS_NOT_LIGHTPEN,     /* device is NOT a lightpen */
+    JOYPORT_POT_OPTIONAL,        /* device does NOT use the potentiometer lines */
+    JOYPORT_5VDC_NOT_NEEDED,     /* device does NOT need +5VDC to work */
+    JOYSTICK_ADAPTER_ID_NONE,    /* device is NOT a joystick adapter */
+    JOYPORT_DEVICE_KEYPAD,       /* device is a Keypad */
+    0,                           /* No output bits */
+    joyport_cardkey_set_enabled, /* device enable/disable function */
+    cardkey_read_dig,            /* digital line read function */
+    NULL,                        /* NO digital line store function */
+    NULL,                        /* NO pot-x read function */
+    NULL,                        /* NO pot-y read function */
+    NULL,                        /* NO powerup function */
+    NULL,                        /* NO device write snapshot function */
+    NULL,                        /* NO device read snapshot function */
+    NULL,                        /* NO device hook function */
+    0                            /* NO device hook function mask */
 };
 
 /* ------------------------------------------------------------------------- */

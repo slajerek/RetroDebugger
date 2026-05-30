@@ -67,7 +67,7 @@ static const char snap_rom_module_name[] = "C64ROM";
 #define SNAP_ROM_MAJOR 0
 #define SNAP_ROM_MINOR 0
 
-/* static log_t c64_snapshot_log = LOG_ERR; */
+/* static log_t c64_snapshot_log = LOG_DEFAULT; */
 
 static int c64_snapshot_write_rom_module(snapshot_t *s)
 {
@@ -89,16 +89,41 @@ static int c64_snapshot_write_rom_module(snapshot_t *s)
         return -1;
     }
 
-    ui_update_menus();
-
     return snapshot_module_close(m);
+}
+
+#define NUM_TRAP_DEVICES 9  /* FIXME: is there a better constant ? */
+static int trapfl[NUM_TRAP_DEVICES];
+static int trapdevices[NUM_TRAP_DEVICES + 1] = { 1, 4, 5, 6, 7, 8, 9, 10, 11, -1 };
+
+static void get_trapflags(void)
+{
+    int i;
+    for(i = 0; trapdevices[i] != -1; i++) {
+        resources_get_int_sprintf("TrapDevice%d", &trapfl[i], trapdevices[i]);
+    }
+}
+
+static void clear_trapflags(void)
+{
+    int i;
+    for(i = 0; trapdevices[i] != -1; i++) {
+        resources_set_int_sprintf("TrapDevice%d", 0, trapdevices[i]);
+    }
+}
+
+static void restore_trapflags(void)
+{
+    int i;
+    for(i = 0; trapdevices[i] != -1; i++) {
+        resources_set_int_sprintf("TrapDevice%d", trapfl[i], trapdevices[i]);
+    }
 }
 
 static int c64_snapshot_read_rom_module(snapshot_t *s)
 {
-    BYTE major_version, minor_version;
+    uint8_t major_version, minor_version;
     snapshot_module_t *m;
-    int trapfl;
 
     /* Main memory module.  */
 
@@ -111,16 +136,16 @@ static int c64_snapshot_read_rom_module(snapshot_t *s)
     }
 
     /* get old value */
-    resources_get_int("VirtualDevices", &trapfl);
+    get_trapflags();
 
     /* Do not accept versions higher than current */
-    if (major_version > SNAP_ROM_MAJOR || minor_version > SNAP_ROM_MINOR) {
+    if (snapshot_version_is_bigger(major_version, minor_version, SNAP_ROM_MAJOR, SNAP_ROM_MINOR)) {
         snapshot_set_error(SNAPSHOT_MODULE_HIGHER_VERSION);
         goto fail;
     }
 
     /* disable traps before loading the ROM */
-    resources_set_int("VirtualDevices", 0);
+    clear_trapflags();
 
     if (0
         || SMR_BA(m, c64memrom_kernal64_rom, C64_KERNAL_ROM_SIZE) < 0
@@ -130,23 +155,23 @@ static int c64_snapshot_read_rom_module(snapshot_t *s)
     }
 
     if (snapshot_module_close(m) < 0) {
-        resources_set_int("VirtualDevices", trapfl);
+        restore_trapflags();
         return -1;
     }
 
     memcpy(c64memrom_kernal64_trap_rom, c64memrom_kernal64_rom, C64_KERNAL_ROM_SIZE);
-    c64rom_get_kernal_checksum();
-    c64rom_get_basic_checksum();
+    c64rom_print_kernal_info();
+    c64rom_print_basic_info();
 
     /* enable traps again when necessary */
-    resources_set_int("VirtualDevices", trapfl);
+    restore_trapflags();
 
     return 0;
 
 fail:
     snapshot_module_close(m);
     /* restore old value */
-    resources_set_int("VirtualDevices", trapfl);
+    restore_trapflags();
     return -1;
 }
 
@@ -197,8 +222,8 @@ int c64_snapshot_write_module(snapshot_t *s, int save_roms, int save_reu_data, i
         || SMW_B(m, pport.data_out) < 0
         || SMW_B(m, pport.data_read) < 0
         || SMW_B(m, pport.dir_read) < 0
-        || SMW_DW(m, (DWORD)pport.data_set_clk_bit6) < 0
-        || SMW_DW(m, (DWORD)pport.data_set_clk_bit7) < 0
+        || SMW_DW(m, (uint32_t)pport.data_set_clk_bit6) < 0
+        || SMW_DW(m, (uint32_t)pport.data_set_clk_bit7) < 0
         || SMW_B(m, pport.data_set_bit6) < 0
         || SMW_B(m, pport.data_set_bit7) < 0
         || SMW_B(m, pport.data_falloff_bit6) < 0
@@ -220,7 +245,7 @@ int c64_snapshot_write_module(snapshot_t *s, int save_roms, int save_reu_data, i
 
 int c64_snapshot_read_module(snapshot_t *s, int read_reu_data, int read_cart_roms)
 {
-    BYTE major_version, minor_version;
+    uint8_t major_version, minor_version;
     snapshot_module_t *m;
     int tmp_bit6, tmp_bit7;
 
@@ -233,7 +258,7 @@ int c64_snapshot_read_module(snapshot_t *s, int read_reu_data, int read_cart_rom
     }
 
     /* Do not accept versions higher than current */
-    if (major_version > SNAP_MAJOR || minor_version > SNAP_MINOR) {
+    if (snapshot_version_is_bigger(major_version, minor_version, SNAP_MAJOR, SNAP_MINOR)) {
         snapshot_set_error(SNAPSHOT_MODULE_HIGHER_VERSION);
         goto fail;
     }
@@ -251,7 +276,7 @@ int c64_snapshot_read_module(snapshot_t *s, int read_reu_data, int read_cart_rom
     }
 
     /* new since 0.1 */
-    if (SNAPVAL(major_version, minor_version, 0, 1)) {
+    if (!snapshot_version_is_smaller(major_version, minor_version, 0, 1)) {
         if (0
             || SMR_DW_INT(m, &tmp_bit6) < 0
             || SMR_DW_INT(m, &tmp_bit7) < 0
@@ -285,8 +310,6 @@ int c64_snapshot_read_module(snapshot_t *s, int read_reu_data, int read_cart_rom
     if (cartridge_snapshot_read_modules(s, read_reu_data, read_cart_roms) < 0) {
         return -1;
     }
-
-    ui_update_menus();
 
     return 0;
 

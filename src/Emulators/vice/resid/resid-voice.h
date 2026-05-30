@@ -59,7 +59,7 @@ friend class SID;
 // time a sample is calculated.
 // ----------------------------------------------------------------------------
 
-//#if RESID_INLINING || defined(RESID_VOICE_CC)
+#if RESID_INLINING || defined(RESID_VOICE_CC)
 
 // ----------------------------------------------------------------------------
 // Amplitude modulated waveform output (20 bits).
@@ -102,7 +102,7 @@ int Voice::output()
   return (wave.output() - wave_zero)*envelope.output();
 }
 
-//#endif // RESID_INLINING || defined(RESID_VOICE_CC)
+#endif // RESID_INLINING || defined(RESID_VOICE_CC)
 
 } // namespace reSID
 

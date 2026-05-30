@@ -39,7 +39,7 @@
 #ifdef USE_PORTAUDIO
 #include <portaudio.h>
 
-static log_t portaudio_log = LOG_ERR;
+static log_t portaudio_log = LOG_DEFAULT;
 
 static int stream_started = 0;
 static PaStream *stream = NULL;
@@ -52,8 +52,8 @@ static unsigned int same_sample = 0;
 
 static int current_channels = 0;
 
-static WORD *stream_buffer = NULL;
-static BYTE old_sample = 0x80;
+static uint16_t *stream_buffer = NULL;
+static uint8_t old_sample = 0x80;
 
 static void portaudio_start_stream(void)
 {
@@ -66,8 +66,8 @@ static void portaudio_start_stream(void)
         inputParameters.sampleFormat = paInt16;
         inputParameters.suggestedLatency = Pa_GetDeviceInfo( inputParameters.device )->defaultHighInputLatency ;
         inputParameters.hostApiSpecificStreamInfo = NULL;
-        sound_cycles_per_frame = machine_get_cycles_per_frame();
-        sound_frames_per_sec = machine_get_cycles_per_second() / sound_cycles_per_frame;
+        sound_cycles_per_frame = (unsigned int)machine_get_cycles_per_frame();
+        sound_frames_per_sec = (unsigned int)(machine_get_cycles_per_second() / sound_cycles_per_frame);
         sound_samples_per_frame = 44100 / sound_frames_per_sec;
         err = Pa_OpenStream(&stream, &inputParameters, NULL, 44100, sound_samples_per_frame, paClipOff, NULL, NULL);
         if (err == paNoError) {
@@ -76,7 +76,7 @@ static void portaudio_start_stream(void)
                 stream_started = 1;
                 stream_buffer = lib_malloc(sound_samples_per_frame * 2 * current_channels);
                 memset(stream_buffer, 0, sound_samples_per_frame * 2 * current_channels);
-                old_frame = (maincpu_clk / sound_cycles_per_frame) + 1;
+                old_frame = (unsigned int)((maincpu_clk / sound_cycles_per_frame) + 1);
             } else {
                 log_error(portaudio_log, "Could not start stream");
             }
@@ -125,7 +125,7 @@ static void portaudio_stop_sampling(void)
     Pa_Terminate();
 }
 
-static BYTE portaudio_get_sample(int channel)
+static uint8_t portaudio_get_sample(int channel)
 {
     unsigned int current_frame;
     unsigned int current_cycle;
@@ -135,7 +135,7 @@ static BYTE portaudio_get_sample(int channel)
     if (!stream_buffer) {
         return 0x80;
     }
-    current_frame = maincpu_clk / sound_cycles_per_frame;
+    current_frame = (unsigned int)(maincpu_clk / sound_cycles_per_frame);
     current_cycle = maincpu_clk % sound_cycles_per_frame;
 
     if (current_frame > old_frame) {
@@ -162,14 +162,14 @@ static BYTE portaudio_get_sample(int channel)
 
     switch (channel) {
         case SAMPLER_CHANNEL_1:
-            old_sample = (BYTE)((stream_buffer[frame_sample * 2] >> 8) + 0x80);
+            old_sample = (uint8_t)((stream_buffer[frame_sample * 2] >> 8) + 0x80);
             break;
         case SAMPLER_CHANNEL_2:
-            old_sample = (BYTE)((stream_buffer[(frame_sample * 2) + 1] >> 8) + 0x80);
+            old_sample = (uint8_t)((stream_buffer[(frame_sample * 2) + 1] >> 8) + 0x80);
             break;
         case SAMPLER_CHANNEL_DEFAULT:
         default:
-            old_sample = (BYTE)((stream_buffer[frame_sample] >> 8) + 0x80);
+            old_sample = (uint8_t)((stream_buffer[frame_sample] >> 8) + 0x80);
             break;
     }
 

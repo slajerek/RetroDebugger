@@ -32,7 +32,8 @@
 
 #include "joyport.h"
 #include "keyboard.h"
-#include "translate.h"
+
+#include "cx85.h"
 
 /* Control port <--> CX85 keypad connections:
 
@@ -44,6 +45,11 @@
      4   | KEY3   |  I
      5   | PRESS  |  I
      6   | KEY4   |  I
+
+Works on:
+- native joystick port(s) (x64/x64sc/xscpu64/xvic)
+- sidcart joystick adapter port (xplus4)
+
 
 The keypad has the following layout:
 
@@ -119,13 +125,14 @@ The PRESS (POT AY) line is used to indicate a key press.
 #define KEYPAD_KEY_0      16
 #define KEYPAD_KEY_DOT    18
 
+#define KEYPAD_KEYS_NUM   20
+
 static int cx85_enabled = 0;
 
-static unsigned int keys[20];
+static unsigned int keys[KEYPAD_KEYS_NUM];
 
 /* ------------------------------------------------------------------------- */
 
-#ifdef COMMON_KBD
 static void handle_keys(int row, int col, int pressed)
 {
     /* ignore non-existing keys */
@@ -133,43 +140,42 @@ static void handle_keys(int row, int col, int pressed)
         return;
     }
 
+    /* change the state of the key that the row/col is wired to */
     keys[(row * 5) + col] = (unsigned int)pressed;
 }
-#endif
 
 /* ------------------------------------------------------------------------- */
 
-static int joyport_cx85_enable(int port, int value)
+static int joyport_cx85_set_enabled(int port, int enabled)
 {
-    int val = value ? 1 : 0;
+    int new_state = enabled ? 1 : 0;
 
-    if (val == cx85_enabled) {
+    if (new_state == cx85_enabled) {
         return 0;
     }
 
-    if (val) {
-        memset(keys, 0, 20);
-#ifdef COMMON_KBD
+    if (new_state) {
+        /* enabled, clear keys and register the keypad */
+        memset(keys, 0, KEYPAD_KEYS_NUM * sizeof(unsigned int));
         keyboard_register_joy_keypad(handle_keys);
-#endif
     } else {
-#ifdef COMMON_KBD
+        /* disabled, unregister the keypad */
         keyboard_register_joy_keypad(NULL);
-#endif
     }
 
-    cx85_enabled = val;
+    /* set the current state */
+    cx85_enabled = new_state;
 
     return 0;
 }
 
-static BYTE cx85_read_dig(int port)
+static uint8_t cx85_read_dig(int port)
 {
     unsigned int retval = 0;
     unsigned int tmp;
 
     /* KEY4 */
-    tmp = !keys[KEYPAD_KEY_ESCAPE] << 4;
+    tmp = !keys[KEYPAD_KEY_ESCAPE] << JOYPORT_FIRE_BIT;  /* output key 4 on joyport 'fire' pin */
     retval |= tmp;
 
     /* KEY3 */
@@ -182,7 +188,7 @@ static BYTE cx85_read_dig(int port)
           keys[KEYPAD_KEY_1]     |
           keys[KEYPAD_KEY_YES]   |
           keys[KEYPAD_KEY_ESCAPE];
-    tmp <<= 3;
+    tmp <<= JOYPORT_RIGHT_BIT;   /* output key 3 on joyport 'right' pin */
     retval |= tmp;
 
     /* KEY2 */
@@ -195,7 +201,7 @@ static BYTE cx85_read_dig(int port)
           keys[KEYPAD_KEY_DOT]   |
           keys[KEYPAD_KEY_0]     |
           keys[KEYPAD_KEY_ESCAPE];
-    tmp <<= 2;
+    tmp <<= JOYPORT_LEFT_BIT;   /* output key 2 on joyport 'left' pin */
     retval |= tmp;
 
     /* KEY1 */
@@ -207,7 +213,7 @@ static BYTE cx85_read_dig(int port)
           keys[KEYPAD_KEY_3]     |
           keys[KEYPAD_KEY_9]     |
           keys[KEYPAD_KEY_6];
-    tmp <<= 1;
+    tmp <<= JOYPORT_DOWN_BIT;   /* output key 1 on joyport 'down' pin */
     retval |= tmp;
 
     /* KEY0 */
@@ -219,19 +225,20 @@ static BYTE cx85_read_dig(int port)
           keys[KEYPAD_KEY_3]     |
           keys[KEYPAD_KEY_9]     |
           keys[KEYPAD_KEY_6];
-    retval |= tmp;
+    retval |= tmp;   /* output key 0 on joyport 'up' pin */
 
     retval |= 0xe0;
 
-    joyport_display_joyport(JOYPORT_ID_CX85_KEYPAD, (BYTE)~retval);
+    joyport_display_joyport(port, JOYPORT_ID_CX85_KEYPAD, (uint16_t)~retval);
 
-    return (BYTE)retval;
+    return (uint8_t)retval;
 }
 
-static BYTE cx85_read_pot(void)
+static uint8_t cx85_read_pot(int port)
 {
     int i;
 
+    /* return 0xff if any of the keys are pressed */
     for (i = 0; i < 20; ++i) {
         if (keys[i]) {
             return 0xff;
@@ -244,18 +251,24 @@ static BYTE cx85_read_pot(void)
 /* ------------------------------------------------------------------------- */
 
 static joyport_t joyport_cx85_device = {
-    "Atari CX85 keypad",
-    IDGS_CX85,
-    JOYPORT_RES_ID_KEYPAD,
-    JOYPORT_IS_NOT_LIGHTPEN,
-    JOYPORT_POT_REQUIRED,
-    joyport_cx85_enable,
-    cx85_read_dig,
-    NULL,               /* no digital store */
-    NULL,               /* no pot-x read */
-    cx85_read_pot,
-    NULL,               /* no write snapshot */
-    NULL                /* no read snapshot */
+    "Keypad (Atari CX85)",    /* name of the device */
+    JOYPORT_RES_ID_KEYPAD,    /* device is a keypad, only 1 keypad can be active at the same time */
+    JOYPORT_IS_NOT_LIGHTPEN,  /* device is NOT a lightpen */
+    JOYPORT_POT_REQUIRED,     /* device uses the potentiometer lines */
+    JOYPORT_5VDC_NOT_NEEDED,  /* device does NOT need +5VDC to work */
+    JOYSTICK_ADAPTER_ID_NONE, /* device is NOT a joystick adapter */
+    JOYPORT_DEVICE_KEYPAD,    /* device is a Keypad */
+    0,                        /* NO output bits */
+    joyport_cx85_set_enabled, /* device enable/disable function */
+    cx85_read_dig,            /* digital line read function */
+    NULL,                     /* NO digital line store function */
+    NULL,                     /* NO pot-x read function */
+    cx85_read_pot,            /* pot-y read function */
+    NULL,                     /* NO powerup function */
+    NULL,                     /* NO device write snapshot function */
+    NULL,                     /* NO device read snapshot function */
+    NULL,                     /* NO device hook function */
+    0                         /* NO device hook function mask */
 };
 
 /* ------------------------------------------------------------------------- */

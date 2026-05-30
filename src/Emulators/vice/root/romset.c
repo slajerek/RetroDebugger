@@ -38,14 +38,12 @@
 
 #include "archdep.h"
 #include "cmdline.h"
-#include "ioutil.h"
 #include "lib.h"
 #include "log.h"
 #include "machine.h"
 #include "resources.h"
 #include "romset.h"
 #include "sysfile.h"
-#include "translate.h"
 #include "vicetypes.h"
 #include "util.h"
 
@@ -76,37 +74,33 @@ static int option_romsetarchiveselect(const char *value, void *extra_param)
     return romset_archive_item_select(value);
 }
 
-static const cmdline_option_t cmdline_options[] = {
-    { "-romsetfile", CALL_FUNCTION, 1,
+static const cmdline_option_t cmdline_options[] =
+{
+    { "-romsetfile", CALL_FUNCTION, CMDLINE_ATTRIB_NEED_ARGS,
       option_romsetfile, NULL, NULL, NULL,
-      USE_PARAM_ID, USE_DESCRIPTION_ID,
-      IDCLS_PB_FILE, IDCLS_LOAD_ROMSET_FILE,
-      NULL, NULL },
-    { "-romsetarchive", CALL_FUNCTION, 1,
+      "<File>", "load the given romset file" },
+    { "-romsetarchive", CALL_FUNCTION, CMDLINE_ATTRIB_NEED_ARGS,
       option_romsetarchive, NULL, NULL, NULL,
-      USE_PARAM_ID, USE_DESCRIPTION_ID,
-      IDCLS_PB_FILE, IDCLS_LOAD_ROMSET_ARCHIVE,
-      NULL, NULL },
-    { "-romsetarchiveselect", CALL_FUNCTION, 1,
+      "<File>", "load the given romset archive" },
+    { "-romsetarchiveselect", CALL_FUNCTION, CMDLINE_ATTRIB_NEED_ARGS,
       option_romsetarchiveselect, NULL, NULL, NULL,
-      USE_PARAM_ID, USE_DESCRIPTION_ID,
-      IDCLS_P_ITEM_NUMBER, IDCLS_SELECT_ITEM_FROM_ROMSET_ARCHIVE,
-      NULL, NULL },
+      "<Item number>", "select the given item from the current romset archive" },
     CMDLINE_LIST_END
 };
 
-int romset_cmdline_options_init()
+int romset_cmdline_options_init(void)
 {
     return cmdline_register_options(cmdline_options);
 }
 
-const char *prepend_dir_to_path(const char *dir)
+static char *prepend_dir_to_path(const char *dir)
 {
-    const char *saved_path;
+    const char *res_path;   /* path from the resource */
+    char *saved_path;
     char *new_path;
 
-    resources_get_string("Directory", &saved_path);
-    saved_path = lib_stralloc(saved_path);
+    resources_get_string("Directory", &res_path);
+    saved_path = lib_strdup(res_path);
 
     if (dir && *dir) {
         new_path = util_concat(dir,
@@ -114,7 +108,7 @@ const char *prepend_dir_to_path(const char *dir)
                                saved_path,
                                NULL);
     } else {
-        char *current_dir = ioutil_current_dir();
+        char *current_dir = archdep_current_dir();
         new_path = util_concat(current_dir,
                                ARCHDEP_FINDPATH_SEPARATOR_STRING,
                                saved_path,
@@ -126,9 +120,12 @@ const char *prepend_dir_to_path(const char *dir)
     lib_free(new_path);
 
     return saved_path;
-} 
+}
 
-void restore_path(const char *saved_path)
+
+/* XXX: Warning: frees its argument
+ */
+static void restore_path(char *saved_path)
 {
     resources_set_string("Directory", saved_path);
     lib_free(saved_path);
@@ -140,14 +137,14 @@ int romset_file_load(const char *filename)
     int retval, line_num;
     int err = 0;
     char *complete_path, *dir;
-    const char *saved_path;
+    char *saved_path;
 
     if (filename == NULL) {
         log_error(romset_log, "ROM set filename is NULL!");
         return -1;
     }
 
-    fp = sysfile_open(filename, &complete_path, MODE_READ_TEXT);
+    fp = sysfile_open(filename, machine_name, &complete_path, MODE_READ_TEXT);
 
     if (fp == NULL) {
         log_warning(romset_log, "Could not open file '%s' for reading (%s)!",
@@ -171,25 +168,29 @@ int romset_file_load(const char *filename)
                 log_error(romset_log,
                         "%s: Invalid resource specification at line %d.",
                         filename, line_num);
-                err = 1;
+                err = -1;
                 break;
             case RESERR_UNKNOWN_RESOURCE:
                 log_warning(romset_log,
                             "%s: Unknown resource specification at line %d.",
                             filename, line_num);
+                err = -1;
                 break;
         }
         line_num++;
     } while (retval != 0);
 
-    /* Restore search path */
+    /* Restore search path
+     *
+     * Deallocates its argument, seems iffy
+     */
     restore_path(saved_path);
     fclose(fp);
 
     return err;
 }
 
-int romset_file_save(const char *filename, const char **resource_list)
+int romset_file_save(const char *filename, const char * const *resource_list)
 {
     FILE *fp;
     char *newname;
@@ -221,12 +222,12 @@ int romset_file_save(const char *filename, const char **resource_list)
     return 0;
 }
 
-char *romset_file_list(const char **resource_list)
+char *romset_file_list(const char * const *resource_list)
 {
     char *list;
     const char *s;
 
-    list = lib_stralloc("");
+    list = lib_strdup("");
     s = *resource_list++;
 
     while (s != NULL) {
@@ -406,7 +407,7 @@ char *romset_archive_list(void)
     char *list, *line;
     int i;
 
-    list = lib_stralloc("");
+    list = lib_strdup("");
 
     for (i = 0; i < num_romsets; i++) {
         item = romsets + i;
@@ -478,7 +479,7 @@ int romset_archive_item_select(const char *romset_name)
     for (i = 0, item = romsets; i < num_romsets; i++, item++) {
         if (strcmp(romset_name, item->name) == 0) {
             /* Prepend dir to search path */
-            const char *saved_path = prepend_dir_to_path(romset_dir);
+            char *saved_path = prepend_dir_to_path(romset_dir);
 
             while (item->next != NULL) {
                 /* FIXME: Apparently there are no boundary checks! */
@@ -531,11 +532,11 @@ int romset_archive_item_select(const char *romset_name)
 
 
 int romset_archive_item_create(const char *romset_name,
-                               const char **resource_list)
+                               const char * const *resource_list)
 {
     int entry;
     string_link_t *anchor, *item, *last;
-    const char **res;
+    const char * const *res;
 
     for (entry = 0, item = romsets; entry < num_romsets; entry++, item++) {
         if (strcmp(romset_name, item->name) == 0) {

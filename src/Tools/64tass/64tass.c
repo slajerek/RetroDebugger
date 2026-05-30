@@ -917,7 +917,7 @@ static void compile(void)
                                     || tmp2->waitforp != waitforp
                                     || tmp2->file != cfile
                                     || tmp2->p != cfile->p
-                                    || tmp2->parent != current_context) {
+                                    || tmp2->parent != tass_current_context) {
                                 err_msg2(ERROR_DOUBLE_DEFINE,labelname,epoint);
                             }
                         } else {
@@ -925,7 +925,7 @@ static void compile(void)
                             tmp2->waitforp = waitforp;
                             tmp2->file = cfile;
                             tmp2->p = cfile->p;
-                            tmp2->parent = current_context;
+                            tmp2->parent = tass_current_context;
                         }
                         goto finish;
                     }
@@ -950,7 +950,7 @@ static void compile(void)
                 case CMD_STRUCT:
                 case CMD_UNION:
                     {
-                        struct label_s *old_context=current_context;
+                        struct label_s *old_context=tass_current_context;
                         struct section_s new;
                         new_waitfor((prm==CMD_STRUCT)?'s':'u');waitfor[waitforp].skip=0;
                         if (!structrecursion) {
@@ -999,7 +999,7 @@ static void compile(void)
                                 }
                             }
                         }
-                        current_context=newlabel;
+                        tass_current_context=newlabel;
                         newlabel->ref=0;
                         if (listing && flist && arguments.source) {
                             if (lastl!=LIST_DATA) {putc('\n',flist);lastl=LIST_DATA;}
@@ -1017,7 +1017,7 @@ static void compile(void)
                             waitforp--;
                             new_waitfor((prm==CMD_STRUCT)?'S':'U');waitfor[waitforp].skip=1;
                             compile();
-                            current_context = old_context;
+                            tass_current_context = old_context;
                             unionmode = old_unionmode;
                             unionstart = old_unionstart; unionend = old_unionend;
                             l_unionstart = old_l_unionstart; l_unionend = old_l_unionend;
@@ -1060,7 +1060,7 @@ static void compile(void)
                     }
                 }
             }
-            newlabel=find_label2(labelname, &current_context->members);
+            newlabel=find_label2(labelname, &tass_current_context->members);
             if (newlabel) labelexists=1;
             else {
                 if (!islabel && (tmp2=find_macro(labelname)) && (tmp2->type==CMD_MACRO || tmp2->type==CMD_SEGMENT)) {lpoint--;labelname2[0]=0;goto as_macro;}
@@ -1104,7 +1104,7 @@ static void compile(void)
                     new_waitfor('r');waitfor[waitforp].label=newlabel;waitfor[waitforp].addr = current_section->address;
                     if (!newlabel->ref && pass != 1) waitfor[waitforp].skip=0;
                     else {
-                        current_context=newlabel;
+                        tass_current_context=newlabel;
                         if (listing && flist && arguments.source) {
                             if (lastl!=LIST_CODE) {putc('\n',flist);lastl=LIST_CODE;}
                             fprintf(flist,(all_mem==0xffff)?".%04" PRIaddress "\t\t\t\t\t%s\n":".%06" PRIaddress "\t\t\t\t\t%s\n",current_section->address,labelname2);
@@ -1115,7 +1115,7 @@ static void compile(void)
                     goto finish;
                 case CMD_BLOCK: // .block
                     new_waitfor('B');
-                    current_context=newlabel;waitfor[waitforp].label=newlabel;waitfor[waitforp].addr = current_section->address;
+                    tass_current_context=newlabel;waitfor[waitforp].label=newlabel;waitfor[waitforp].addr = current_section->address;
                     if (newlabel->ref && listing && flist && arguments.source) {
                         if (lastl!=LIST_CODE) {putc('\n',flist);lastl=LIST_CODE;}
                         fprintf(flist,(all_mem==0xffff)?".%04" PRIaddress "\t\t\t\t\t%s\n":".%06" PRIaddress "\t\t\t\t\t%s\n",current_section->address,labelname2);
@@ -1126,14 +1126,14 @@ static void compile(void)
                 case CMD_DSTRUCT: // .dstruct
                 case CMD_DUNION:
                     {
-                        struct label_s *oldcontext = current_context;
+                        struct label_s *oldcontext = tass_current_context;
                         int old_unionmode = unionmode;
                         address_t old_unionstart = unionstart, old_unionend = unionend;
                         address_t old_l_unionstart = l_unionstart, old_l_unionend = l_unionend;
                         unionmode = (prm==CMD_DUNION);
                         unionstart = unionend = current_section->address;
                         l_unionstart = l_unionend = current_section->l_address;
-                        current_context=newlabel;
+                        tass_current_context=newlabel;
                         if (listing && flist && arguments.source) {
                             if (lastl!=LIST_DATA) {putc('\n',flist);lastl=LIST_DATA;}
                             fprintf(flist,(all_mem==0xffff)?".%04" PRIaddress "\t\t\t\t\t":".%06" PRIaddress "\t\t\t\t\t",current_section->address);
@@ -1146,7 +1146,7 @@ static void compile(void)
                         structrecursion++;
                         macro_recurse((prm==CMD_DSTRUCT)?'S':'U',tmp2);
                         structrecursion--;
-                        current_context=oldcontext;
+                        tass_current_context=oldcontext;
                         unionmode = old_unionmode;
                         unionstart = old_unionstart; unionend = old_unionend;
                         l_unionstart = old_l_unionstart; l_unionend = old_l_unionend;
@@ -1323,8 +1323,8 @@ static void compile(void)
                 if (prm==CMD_PEND) { //.pend
                     if (waitfor[waitforp].what!='r') {err_msg(ERROR______EXPECTED,".PROC"); break;}
                     if (waitfor[waitforp].skip & 1) {
-                        if (current_context->parent) {
-                            current_context = current_context->parent;
+                        if (tass_current_context->parent) {
+                            tass_current_context = tass_current_context->parent;
                         } else err_msg(ERROR______EXPECTED,".proc");
 			lastl=LIST_NONE;
 			if (waitfor[waitforp].label) set_size(waitfor[waitforp].label, current_section->address - waitfor[waitforp].addr);
@@ -1644,8 +1644,8 @@ static void compile(void)
                 if (prm==CMD_BLOCK) { // .block
 		    new_waitfor('B');
                     sprintf(labelname, ".%" PRIxPTR ".%" PRIxline, (uintptr_t)star_tree, vline_64tass);
-                    current_context=new_label(labelname, L_LABEL);
-                    current_context->value.type = T_NONE;
+                    tass_current_context=new_label(labelname, L_LABEL);
+                    tass_current_context->value.type = T_NONE;
                     break;
                 }
                 if (prm==CMD_BEND) { //.bend
@@ -1653,7 +1653,7 @@ static void compile(void)
                         waitforp--;
                     } else if (waitfor[waitforp].what=='B') {
 			if (waitfor[waitforp].label) set_size(waitfor[waitforp].label, current_section->address - waitfor[waitforp].addr);
-			if (current_context->parent) current_context = current_context->parent;
+			if (tass_current_context->parent) tass_current_context = tass_current_context->parent;
 			else err_msg(ERROR______EXPECTED,".block");
 			waitforp--;
                     } else err_msg(ERROR______EXPECTED,".BLOCK"); break;
@@ -2136,7 +2136,7 @@ static void compile(void)
                     int noerr = 1;
                     get_ident(labelname);
                     tmp2 = find_jump(labelname);
-                    if (tmp2 && tmp2->file == cfile && tmp2->parent == current_context) {
+                    if (tmp2 && tmp2->file == cfile && tmp2->parent == tass_current_context) {
                         uint8_t oldwaitforp = waitforp;
                         while (tmp2->waitforp < waitforp) {
                             line_t os = sline;
@@ -2341,16 +2341,16 @@ static void compile(void)
                     fprintf(flist,(all_mem==0xffff)?".%04" PRIaddress "\t\t\t\t\t%s\n":".%06" PRIaddress "\t\t\t\t\t%s\n",current_section->address,labelname2);
                 }
                 if (tmp2->type==CMD_MACRO) {
-                    old_context = current_context;
-                    if (newlabel) current_context=newlabel;
+                    old_context = tass_current_context;
+                    if (newlabel) tass_current_context=newlabel;
                     else {
                         sprintf(labelname, "#%" PRIxPTR "#%" PRIxline, (uintptr_t)star_tree, vline_64tass);
-                        current_context=new_label(labelname, L_LABEL);
-                        current_context->value.type = T_NONE;
+                        tass_current_context=new_label(labelname, L_LABEL);
+                        tass_current_context->value.type = T_NONE;
                     }
                 } else old_context = NULL;
                 macro_recurse('M',tmp2);
-                if (tmp2->type==CMD_MACRO) current_context = old_context;
+                if (tmp2->type==CMD_MACRO) tass_current_context = old_context;
                 break;
             }
         case WHAT_EXPRESSION:
@@ -2877,7 +2877,7 @@ int main_64tass(int argc,char *argv[]) {
             star=databank=dpage=longaccu=longindex=0;wrapwarn=0;actual_encoding=new_encoding("none");wrapwarn2=0;
             structrecursion=0;allowslowbranch=1;
             waitfor[waitforp=0].what=0;waitfor[0].skip=1;sline=vline_64tass=0;outputeor=0;forwr=backr=0;
-            current_context=&root_label;
+            tass_current_context=&root_label;
             current_section=&root_section;
             current_section->provides=~(uval_t)0;current_section->requires=current_section->conflicts=0;
             current_section->start=current_section->l_start=current_section->address=current_section->l_address=0;
@@ -2937,7 +2937,7 @@ int main_64tass(int argc,char *argv[]) {
             star=databank=dpage=longaccu=longindex=0;wrapwarn=0;actual_encoding=new_encoding("none");wrapwarn2=0;
             structrecursion=0;allowslowbranch=1;
             waitfor[waitforp=0].what=0;waitfor[0].skip=1;sline=vline_64tass=0;outputeor=0;forwr=backr=0;
-            current_context=&root_label;
+            tass_current_context=&root_label;
             current_section=&root_section;
             current_section->provides=~(uval_t)0;current_section->requires=current_section->conflicts=0;
             current_section->start=current_section->l_start=current_section->address=current_section->l_address=0;
@@ -3111,7 +3111,7 @@ unsigned char *assemble_64tass(void *userData, char *assembleText, int assembleT
 			star=databank=dpage=longaccu=longindex=0;wrapwarn=0;actual_encoding=new_encoding("none");wrapwarn2=0;
 			structrecursion=0;allowslowbranch=1;
 			waitfor[waitforp=0].what=0;waitfor[0].skip=1;sline=vline_64tass=0;outputeor=0;forwr=backr=0;
-			current_context=&root_label;
+			tass_current_context=&root_label;
 			current_section=&root_section;
 			current_section->provides=~(uval_t)0;current_section->requires=current_section->conflicts=0;
 			current_section->start=current_section->l_start=current_section->address=current_section->l_address=0;
@@ -3173,7 +3173,7 @@ unsigned char *assemble_64tass(void *userData, char *assembleText, int assembleT
 //			star=databank=dpage=longaccu=longindex=0;wrapwarn=0;actual_encoding=new_encoding("none");wrapwarn2=0;
 //			structrecursion=0;allowslowbranch=1;
 //			waitfor[waitforp=0].what=0;waitfor[0].skip=1;sline=vline_64tass=0;outputeor=0;forwr=backr=0;
-//			current_context=&root_label;
+//			tass_current_context=&root_label;
 //			current_section=&root_section;
 //			current_section->provides=~(uval_t)0;current_section->requires=current_section->conflicts=0;
 //			current_section->start=current_section->l_start=current_section->address=current_section->l_address=0;

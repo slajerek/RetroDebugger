@@ -36,7 +36,6 @@
 #include "export.h"
 #include "lib.h"
 #include "monitor.h"
-#include "translate.h"
 #include "uiapi.h"
 
 /* #define DEBUGEXPORT */
@@ -58,10 +57,13 @@ export_list_t *export_query_list(export_list_t *item)
     }
 }
 
+/* assigned to monitor interface in src/c64/cart/c64cart.c */
 void export_dump(void)
 {
     export_list_t *current = NULL;
     io_source_t *io;
+    int cartid;
+    int is128 = (machine_class == VICE_MACHINE_C128);
 
     current = export_query_list(current);
 
@@ -69,14 +71,34 @@ void export_dump(void)
         mon_out("No expansion port devices.\n");
     } else {
                /*- -----    -     - --------- --------- ------------------------ */
+        if (is128) {
+                   /*12345*/
+            mon_out("     ");
+        }
         mon_out("  CRTID GAME EXROM IO1-usage IO2-usage Name\n");
         while (current != NULL) {
+            int c128cart = CARTRIDGE_C128_ISID(current->device->cartid);
             if (cart_is_slotmain(current->device->cartid)) {
                 mon_out("* ");
             } else {
                 mon_out("  ");
             }
-            mon_out("%5d ", current->device->cartid);
+            if (is128) {
+                if (c128cart) {
+                           /*12345*/
+                    mon_out("C128:");
+                } else {
+                    mon_out(" C64:");
+                }
+            }
+            cartid = ((int)current->device->cartid);
+            if (cartid < 0) {
+                mon_out("0/%d  ", cartid);
+            } else if (is128 && c128cart) {
+                mon_out("%5d ", CARTRIDGE_C128_CRTID(cartid));
+            } else {
+                mon_out("%5d ", cartid);
+            }
             mon_out("%4s ", current->device->game ? "*" : "-");
             mon_out("%5s ", current->device->exrom ? "*" : "-");
             io = current->device->io1;
@@ -93,7 +115,7 @@ void export_dump(void)
             }
             /* show (inactive) in front of the name when no PLA lines nor
                I/O resources are used, this should not happen in normal
-               operation and usually indicates a bug */
+               operation and usually indicates a bug UNLESS this is a C128 :) */
             if ((!current->device->game) &&
                 (!current->device->exrom) &&
                 (!current->device->io1) &&
@@ -103,8 +125,10 @@ void export_dump(void)
             mon_out("%s\n", current->device->name);
             current = current->next;
         }
-        mon_out("Current GAME status: (%d) (%s)\n", !export.game, (export.game) ? "active" : "inactive");
-        mon_out("Current EXROM status: (%d) (%s)\n", !export.exrom, (export.exrom) ? "active" : "inactive");
+        mon_out("Current mode: %s, GAME status: (%d) (%s), EXROM status: (%d) (%s)\n",
+                cart_config_string(((export.exrom ^ 1) << 1) | export.game),
+                !export.game, (export.game) ? "active" : "inactive",
+                !export.exrom, (export.exrom) ? "active" : "inactive");
     }
 }
 

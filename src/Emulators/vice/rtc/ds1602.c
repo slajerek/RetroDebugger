@@ -86,7 +86,7 @@ rtc_ds1602_t *ds1602_init(char *device, time_t offset0)
     retval->old_offset = retval->offset;
     retval->offset0 = offset0;
 
-    retval->device = lib_stralloc(device);
+    retval->device = lib_strdup(device);
     retval->state = DS1602_IDLE;
     retval->rst_line = 1;
     retval->clk_line = 1;

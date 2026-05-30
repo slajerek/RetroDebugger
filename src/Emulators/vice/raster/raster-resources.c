@@ -37,12 +37,7 @@
 #include "util.h"
 #include "video.h"
 
-
-#ifdef __MSDOS__
 #define DEFAULT_VideoCache_VALUE 0
-#else
-#define DEFAULT_VideoCache_VALUE 99
-#endif
 
 struct raster_resource_chip_s {
     raster_t *raster;
@@ -57,6 +52,7 @@ static int set_video_cache_enabled(int val, void *param)
     raster_resource_chip = (raster_resource_chip_t *)param;
 
     if (val == 99) {
+#if 0
         /* HACK: some machines do not have a working video cache, so
                  disable it by default */
         if ((machine_class == VICE_MACHINE_C64DTV) ||
@@ -67,7 +63,14 @@ static int set_video_cache_enabled(int val, void *param)
         } else {
             val = 1;
         }
+#endif
+        /* we will remove the video cache alltogether in the future, so disable
+           it by default, for all machines */
+        val = 0;
     }
+
+    /* no more video cache support */
+    val = 0;
 
     if (val >= 0) {
         raster_resource_chip->video_cache_enabled = val;
@@ -79,7 +82,7 @@ static int set_video_cache_enabled(int val, void *param)
     return 0;
 }
 
-static const char *rname_chip[] = { "VideoCache", NULL };
+static const char * const rname_chip[] = { "VideoCache", NULL };
 
 static resource_int_t resources_chip[] =
 {

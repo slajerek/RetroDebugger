@@ -1,6 +1,7 @@
 // TODO: it is high time to convert settings into JSON as the parser is finally available and tested
 #include "EmulatorsConfig.h"
 #include "C64SettingsStorage.h"
+#include "sid.h"		// VICE 3.10: SID_RESID_SAMPLING_* enum moved here from sid-resources.h
 #include "SYS_Platform.h"
 #include "CViewDataMap.h"
 #include "CSlrFileFromOS.h"

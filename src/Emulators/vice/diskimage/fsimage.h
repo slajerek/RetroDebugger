@@ -38,26 +38,27 @@ typedef struct fsimage_s {
     FILE *fd;
     char *name;
     struct {
-        BYTE *map;
+        uint8_t *map;
         int dirty;
         int len;
     } error_info;
 } fsimage_t;
 
 
-extern void fsimage_init(void);
+void fsimage_init(void);
 
-extern void fsimage_name_set(struct disk_image_s *image, const char *name);
-extern const char *fsimage_name_get(const struct disk_image_s *image);
-extern void *fsimage_fd_get(const disk_image_t *image);
-extern void fsimage_media_create(struct disk_image_s *image);
-extern void fsimage_media_destroy(struct disk_image_s *image);
+void fsimage_name_set(struct disk_image_s *image, const char *name);
+const char *fsimage_name_get(const struct disk_image_s *image);
+void *fsimage_fd_get(const disk_image_t *image);
+void fsimage_media_create(struct disk_image_s *image);
+void fsimage_media_destroy(struct disk_image_s *image);
 
-extern int fsimage_open(struct disk_image_s *image);
-extern int fsimage_close(struct disk_image_s *image);
-extern int fsimage_read_sector(const struct disk_image_s *image, BYTE *buf,
-                               const struct disk_addr_s *dadr);
-extern int fsimage_write_sector(struct disk_image_s *image, const BYTE *buf,
-                                const struct disk_addr_s *dadr);
+int fsimage_open(struct disk_image_s *image);
+int fsimage_close(struct disk_image_s *image);
+int fsimage_read_sector(const struct disk_image_s *image, uint8_t *buf,
+                        const struct disk_addr_s *dadr);
+int fsimage_write_sector(struct disk_image_s *image, const uint8_t *buf,
+                         const struct disk_addr_s *dadr);
+off_t fsimage_size(const disk_image_t *image);
 
 #endif

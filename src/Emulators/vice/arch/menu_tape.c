@@ -67,7 +67,7 @@ static UI_MENU_CALLBACK(detach_tape_callback)
 static UI_MENU_CALLBACK(custom_datasette_control_callback)
 {
     if (activated) {
-        datasette_control(vice_ptr_to_int(param));
+        datasette_control(0, vice_ptr_to_int(param));	/* VICE 3.10: + tape port (C64 datasette = port 0) */
     }
     return NULL;
 }

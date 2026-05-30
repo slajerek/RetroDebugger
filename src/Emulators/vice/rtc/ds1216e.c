@@ -105,7 +105,7 @@ rtc_ds1216e_t *ds1216e_init(char *device)
     retval->old_offset = retval->offset;
     memcpy(retval->old_clock_regs, retval->clock_regs, DS1216E_REG_SIZE);
 
-    retval->device = lib_stralloc(device);
+    retval->device = lib_strdup(device);
 
     return retval;
 }

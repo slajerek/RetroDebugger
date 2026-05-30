@@ -46,10 +46,11 @@ vice_network_socket_t * vice_network_accept(vice_network_socket_t * sockfd);
 
 int vice_network_socket_close(vice_network_socket_t * sockfd);
 
-int vice_network_send(vice_network_socket_t * sockfd, const void * buffer, size_t buffer_length, int flags);
-int vice_network_receive(vice_network_socket_t * sockfd, void * buffer, size_t buffer_length, int flags);
+ssize_t vice_network_send(vice_network_socket_t * sockfd, const void * buffer, size_t buffer_length, int flags);
+ssize_t vice_network_receive(vice_network_socket_t * sockfd, void * buffer, size_t buffer_length, int flags);
 
 int vice_network_select_poll_one(vice_network_socket_t * readsockfd);
+int vice_network_select_multiple(vice_network_socket_t ** readsockfd);
 
 int vice_network_get_errorcode(void);
 

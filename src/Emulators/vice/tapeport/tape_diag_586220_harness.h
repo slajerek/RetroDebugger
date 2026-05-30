@@ -29,7 +29,6 @@
 
 #include "vicetypes.h"
 
-extern int tape_diag_586220_harness_resources_init(void);
-extern int tape_diag_586220_harness_cmdline_options_init(void);
+int tape_diag_586220_harness_resources_init(int amount);
 
 #endif

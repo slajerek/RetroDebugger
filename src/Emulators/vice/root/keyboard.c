@@ -57,7 +57,6 @@
 #include "resources.h"
 #include "snapshot.h"
 #include "sysfile.h"
-#include "translate.h"
 #include "vicetypes.h"
 #include "util.h"
 #include "vice-event.h"
@@ -212,6 +211,14 @@ void keyboard_clear_keymatrix(void)
     memset(latch_rev_keyarr, 0, sizeof(latch_rev_keyarr));
 }
 
+/* VICE 3.10 accessor required by 3.10-migrated callers (e.g. c64/c64cia1.c).
+   RD keeps its synchronous keyboard model; keyboard_shiftlock already tracks the
+   shift-lock state, so this simply exposes it (matches vanilla 3.10 semantics). */
+int keyboard_get_shiftlock(void)
+{
+    return keyboard_shiftlock;
+}
+
 void keyboard_register_machine(keyboard_machine_func_t func)
 {
     keyboard_machine_func = func;
@@ -299,6 +306,7 @@ static int shiftl = KEY_NONE;
 
 /*-----------------------------------------------------------------------*/
 
+#ifdef RETRODEBUGGER
 void c64d_keyboard_init()
 {
 	
@@ -312,7 +320,7 @@ void c64d_keyboard_init()
 	 3     V   U   H   B   8   G   Y   7
 	 4     N   O   K   M   0   J   I   9
 	 5     ,   @   :   .   -   L   P   +
-	 6     /   ^   =  SHR HOM  ;   *   £
+	 6     /   ^   =  SHR HOM  ;   *   ï¿½
 	 7    R/S  Q   C= SPC  2  CTL  <-  1
 	 */
 	kbd_lshiftrow = 1;
@@ -320,6 +328,7 @@ void c64d_keyboard_init()
 	kbd_rshiftrow = 6;
 	kbd_rshiftcol = 4;
 }
+#endif /* RETRODEBUGGER */
 
 
 static int left_shift_down, right_shift_down, virtual_shift_down;
@@ -477,7 +486,7 @@ int keyboard_key_pressed(signed long key)
     }
 
 #ifdef COMMON_JOYKEYS
-    for (i = 0; i < JOYSTICK_NUM; ++i) {
+    for (i = 0; i < JOYPORT_MAX_PORTS; ++i) {
         if (joystick_port_map[i] == JOYDEV_NUMPAD
             || joystick_port_map[i] == JOYDEV_KEYSET1
             || joystick_port_map[i] == JOYDEV_KEYSET2) {
@@ -522,10 +531,14 @@ int keyboard_key_pressed(signed long key)
             alarm_set(keyboard_alarm, maincpu_clk + KEYBOARD_RAND());
         }
     }
-	
+#ifdef RETRODEBUGGER
 	return latch;
+#else
+    return 0;
+#endif
 }
 
+#ifdef RETRODEBUGGER
 void c64d_keyboard_key_down_latch()
 {
 	{
@@ -540,6 +553,7 @@ void c64d_keyboard_key_down_latch()
 		}
 	}
 }
+#endif /* RETRODEBUGGER */
 
 int keyboard_key_released_matrix(int row, int column, int shift)
 {
@@ -622,7 +636,7 @@ int keyboard_key_released(signed long key)
     }
 
 #ifdef COMMON_JOYKEYS
-    for (i = 0; i < JOYSTICK_NUM; ++i) {
+    for (i = 0; i < JOYPORT_MAX_PORTS; ++i) {
         if (joystick_port_map[i] == JOYDEV_NUMPAD
             || joystick_port_map[i] == JOYDEV_KEYSET1
             || joystick_port_map[i] == JOYDEV_KEYSET2) {
@@ -668,10 +682,14 @@ int keyboard_key_released(signed long key)
             alarm_set(keyboard_alarm, maincpu_clk + KEYBOARD_RAND());
         }
     }
-	
+#ifdef RETRODEBUGGER
 	return latch;
+#else
+    return 0;
+#endif
 }
 
+#ifdef RETRODEBUGGER
 void c64d_keyboard_key_up_latch()
 {
 		if (network_connected()) {
@@ -693,7 +711,7 @@ void c64d_keyboard_force_key_up_latch(signed long key)
 			if ((keyconvmap[i].shift & ALT_MAP) && !key_alternative) {
 				continue;
 			}
-			
+
 				keyboard_set_latch_keyarr(keyconvmap[i].row,
 										  keyconvmap[i].column, 0);
 				if (!(keyconvmap[i].shift & ALLOW_OTHER)
@@ -702,7 +720,7 @@ void c64d_keyboard_force_key_up_latch(signed long key)
 			}
 		}
 	}
-	
+
 	if (network_connected()) {
 		CLOCK keyboard_delay = KEYBOARD_RAND();
 		network_event_record(EVENT_KEYBOARD_DELAY, (void *)&keyboard_delay, sizeof(keyboard_delay));
@@ -711,6 +729,7 @@ void c64d_keyboard_force_key_up_latch(signed long key)
 		alarm_set(keyboard_alarm, maincpu_clk + KEYBOARD_RAND());
 	}
 }
+#endif /* RETRODEBUGGER */
 
 static void keyboard_key_clear_internal(void)
 {
@@ -1042,7 +1061,7 @@ static int keyboard_parse_keymap(const char *filename, int child)
     DBG((">keyboard_parse_keymap(%s)\n", filename));
 
     /* open in binary mode so the newline system doesn't matter */
-    fp = sysfile_open(filename, &complete_path, "rb");
+    fp = sysfile_open(filename, NULL, &complete_path, "rb");
 
     if (fp == NULL) {
         log_message(keyboard_log, "Error loading keymap `%s'->`%s'.", filename, complete_path ? complete_path : "<empty/null>");
@@ -1095,14 +1114,16 @@ static int keyboard_parse_keymap(const char *filename, int child)
     return 0;
 }
 
+#ifdef RETRODEBUGGER
 void c64d_keyboard_keymap_clear()
 {
 	if (keyconvmap != NULL) {
 		keyboard_keyconvmap_free();
 	}
-	
+
 	keyboard_keyconvmap_alloc();
 }
+#endif /* RETRODEBUGGER */
 
 static int keyboard_keymap_load(const char *filename)
 {
@@ -1592,7 +1613,7 @@ static int try_set_keymap_file(int atidx, int idx, int mapping, int type)
 
     util_string_set(&machine_keymap_file_list[atidx], name);
     DBG(("try_set_keymap_file calls sysfile_locate(%s)\n", name));
-    if (sysfile_locate(name, &complete_path) != 0) {
+    if (sysfile_locate(name, NULL, &complete_path) != 0) {
         DBG(("<try_set_keymap_file ERROR locating keymap `%s'.\n", name ? name : "(null)"));
         lib_free(name);
         lib_free(complete_path);
@@ -1728,7 +1749,7 @@ int keyboard_resources_init(void)
 
     if (npos && nsym) {
         mapping = kbd_arch_get_host_mapping();
-        log_verbose("Setting up default keyboard mapping for host type %d (%s)",
+        log_verbose(LOG_DEFAULT, "Setting up default keyboard mapping for host type %d (%s)",
                     mapping, keyboard_get_mapping_name(mapping));
         if (resources_set_int("KeymapIndex", KBD_INDEX_SYM) < 0) {
             /* return -1; */
@@ -1744,13 +1765,13 @@ int keyboard_resources_init(void)
         util_string_set(&resources_string_d1, name);
         util_string_set(&resources_string_d3, name);
 
-        log_verbose("Default positional map is: %s", name);
+        log_verbose(LOG_DEFAULT, "Default positional map is: %s", name);
         keyboard_set_default_keymap_file(KBD_INDEX_SYM);
         if (resources_get_string("KeymapSymFile", &name) < 0) {
             DBG(("<<keyboard_resources_init(error)\n"));
             return -1;
         }
-        log_verbose("Default symbolic map is: %s", name);
+        log_verbose(LOG_DEFAULT, "Default symbolic map is: %s", name);
         util_string_set(&resources_string_d0, name);
         util_string_set(&resources_string_d2, name);
 
@@ -1805,32 +1826,17 @@ void keyboard_resources_shutdown(void)
 static cmdline_option_t const cmdline_options[] =
 {
     { "-keymap", SET_RESOURCE, 1,
-      NULL, NULL, "KeymapIndex", NULL,
-      USE_PARAM_ID, USE_DESCRIPTION_ID,
-      IDCLS_P_NUMBER, IDCLS_SPECIFY_KEYMAP_FILE_INDEX,
-      NULL, NULL },
+      NULL, NULL, "KeymapIndex", NULL, N_("<number>"), N_("Specify index of keymap file (0=symbolic, 1=positional, 2=symbolic (user), 3=positional (user))")},
 /* FIXME: build description dynamically */
     { "-keyboardmapping", SET_RESOURCE, 1,
-      NULL, NULL, "KeyboardMapping", NULL,
-      USE_PARAM_ID, USE_DESCRIPTION_ID,
-      IDCLS_P_NUMBER, IDCLS_SPECIFY_KEYBOARD_MAPPING,
-      NULL, NULL },
+      NULL, NULL, "KeyboardMapping", NULL, N_("<number>"), N_("Specify host keyboard layout")},
 /* FIXME: build description dynamically */
     { "-keyboardtype", SET_RESOURCE, 1,
-      NULL, NULL, "KeyboardType", NULL,
-      USE_PARAM_ID, USE_DESCRIPTION_ID,
-      IDCLS_P_NUMBER, IDCLS_SPECIFY_KEYBOARD_TYPE,
-      NULL, NULL },
+      NULL, NULL, "KeyboardType", NULL, N_("<number>"), N_("Specify emulated keyboard type")},
     { "-symkeymap", SET_RESOURCE, 1,
-      NULL, NULL, "KeymapUserSymFile", NULL,
-      USE_PARAM_ID, USE_DESCRIPTION_ID,
-      IDCLS_P_NAME, IDCLS_SPECIFY_SYM_KEYMAP_FILE_NAME,
-      NULL, NULL },
+      NULL, NULL, "KeymapUserSymFile", NULL, N_("<Name>"), N_("Specify name of symbolic keymap file")},
     { "-poskeymap", SET_RESOURCE, 1,
-      NULL, NULL, "KeymapUserPosFile", NULL,
-      USE_PARAM_ID, USE_DESCRIPTION_ID,
-      IDCLS_P_NAME, IDCLS_SPECIFY_POS_KEYMAP_FILE_NAME,
-      NULL, NULL },
+      NULL, NULL, "KeymapUserPosFile", NULL, N_("<Name>"), N_("Specify name of positional keymap file")},
     CMDLINE_LIST_END
 };
 
@@ -1862,8 +1868,9 @@ void keyboard_init(void)
         keyboard_set_keymap_index(machine_keymap_index, NULL);
     }
 #endif
-	
+#ifdef RETRODEBUGGER
 	c64d_keyboard_init();
+#endif
 }
 
 void keyboard_shutdown(void)

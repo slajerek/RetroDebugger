@@ -58,7 +58,7 @@ void fsimage_name_set(disk_image_t *image, const char *name)
 
     fsimage = image->media.fsimage;
 
-    fsimage->name = lib_stralloc(name);
+    fsimage->name = lib_strdup(name);
 }
 
 
@@ -72,9 +72,9 @@ const char *fsimage_name_get(const disk_image_t *image)
 {
     fsimage_t *fsimage;
 
-    fsimage = image->media.fsimage;
+    fsimage = image ? image->media.fsimage : NULL;
 
-    return fsimage->name;
+    return fsimage ? fsimage->name : NULL;
 }
 
 
@@ -125,10 +125,25 @@ void fsimage_media_destroy(disk_image_t *image)
 int fsimage_open(disk_image_t *image)
 {
     fsimage_t *fsimage;
+    size_t length;
+    unsigned int isdir;
 
     fsimage = image->media.fsimage;
     fsimage->error_info.map = NULL;
 
+    /* stat file to find out if it exists or if it is a directory */
+    if (archdep_stat(fsimage->name, &length, &isdir) < 0) {
+        log_error(fsimage_log, "Cannot open file `%s'.", fsimage->name);
+        return -1;
+    }
+
+    /* it exists, is it a directory? */
+    if (isdir) {
+        log_error(fsimage_log, "Cannot open directory `%s' as an image.", fsimage->name);
+        return -1;
+    }
+
+    /* proceed with normal opening */
     if (image->read_only) {
         fsimage->fd = zfile_fopen(fsimage->name, MODE_READ);
     } else {
@@ -166,9 +181,10 @@ int fsimage_close(disk_image_t *image)
         return -1;
     }
 
-/*   if (image->type == DISK_IMAGE_TYPE_P64) {
+    /* flush the image when closed; added by Roberto Muscedere on 20210125 */
+    if (image->type == DISK_IMAGE_TYPE_P64) {
         fsimage_write_p64_image(image);
-    }*/
+    }
 
     if (fsimage->error_info.map) {
         lib_free(fsimage->error_info.map);
@@ -182,13 +198,13 @@ int fsimage_close(disk_image_t *image)
 
 /*-----------------------------------------------------------------------*/
 
-int fsimage_read_sector(const disk_image_t *image, BYTE *buf, const disk_addr_t *dadr)
+int fsimage_read_sector(const disk_image_t *image, uint8_t *buf, const disk_addr_t *dadr)
 {
     fsimage_t *fsimage;
 
     fsimage = image->media.fsimage;
 
-    if (fsimage->fd == NULL) {
+    if (fsimage == NULL || fsimage->fd == NULL) {
         log_error(fsimage_log, "Attempt to read without disk image.");
         return CBMDOS_IPE_NOT_READY;
     }
@@ -200,10 +216,14 @@ int fsimage_read_sector(const disk_image_t *image, BYTE *buf, const disk_addr_t 
         case DISK_IMAGE_TYPE_D81:
         case DISK_IMAGE_TYPE_D80:
         case DISK_IMAGE_TYPE_D82:
+#ifdef HAVE_X64_IMAGE
         case DISK_IMAGE_TYPE_X64:
+#endif
         case DISK_IMAGE_TYPE_D1M:
         case DISK_IMAGE_TYPE_D2M:
         case DISK_IMAGE_TYPE_D4M:
+        case DISK_IMAGE_TYPE_DHD:
+        case DISK_IMAGE_TYPE_D90:
             return fsimage_dxx_read_sector(image, buf, dadr);
         case DISK_IMAGE_TYPE_G64:
         case DISK_IMAGE_TYPE_G71:
@@ -212,13 +232,13 @@ int fsimage_read_sector(const disk_image_t *image, BYTE *buf, const disk_addr_t 
             return fsimage_p64_read_sector(image, buf, dadr);
         default:
             log_error(fsimage_log,
-                      "Unknown disk image type %i.  Cannot read sector.",
+                      "Unknown disk image type %u.  Cannot read sector.",
                       image->type);
             return CBMDOS_IPE_NOT_READY;
     }
 }
 
-int fsimage_write_sector(disk_image_t *image, const BYTE *buf,
+int fsimage_write_sector(disk_image_t *image, const uint8_t *buf,
                          const disk_addr_t *dadr)
 {
     fsimage_t *fsimage;
@@ -237,10 +257,14 @@ int fsimage_write_sector(disk_image_t *image, const BYTE *buf,
         case DISK_IMAGE_TYPE_D81:
         case DISK_IMAGE_TYPE_D80:
         case DISK_IMAGE_TYPE_D82:
+#ifdef HAVE_X64_IMAGE
         case DISK_IMAGE_TYPE_X64:
+#endif
         case DISK_IMAGE_TYPE_D1M:
         case DISK_IMAGE_TYPE_D2M:
         case DISK_IMAGE_TYPE_D4M:
+        case DISK_IMAGE_TYPE_DHD:
+        case DISK_IMAGE_TYPE_D90:
             if (fsimage_dxx_write_sector(image, buf, dadr) < 0) {
                 return -1;
             }
@@ -272,4 +296,14 @@ void fsimage_init(void)
     fsimage_gcr_init();
     fsimage_p64_init();
     fsimage_probe_init();
+}
+
+/*-----------------------------------------------------------------------*/
+
+off_t fsimage_size(const disk_image_t *image)
+{
+    fsimage_t *fsimage;
+
+    fsimage = image->media.fsimage;
+    return archdep_file_size(fsimage->fd);
 }

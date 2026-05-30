@@ -27,8 +27,14 @@
 #ifndef VICE_MAIN_H
 #define VICE_MAIN_H
 
-extern int vice_main_program(int argc, const char **argv, int c64model);
-extern int vice_main_loop_run();
-extern void main_exit(void);
+#include <stdbool.h>
+
+int vice_main_program(int argc, const char **argv, int c64model);
+int vice_main_loop_run();
+void main_exit(void);
+
+#ifdef USE_VICE_THREAD
+void vice_thread_shutdown(void);
+#endif
 
 #endif

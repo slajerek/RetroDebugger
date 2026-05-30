@@ -149,7 +149,7 @@ fail:
     iff_fd = NULL;
 
     if (res < 0) {
-        log_debug("ERROR iff_close failed.");
+        log_debug(LOG_DEFAULT, "ERROR iff_close failed.");
     }
 }
 

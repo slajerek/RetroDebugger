@@ -155,28 +155,36 @@ typedef struct _t6721_state {
 
     int cycles_done; /* number of cycles the chip has run since last update_output */
 
-    BYTE (*read_data)(struct _t6721_state*, unsigned int *bit); /* input: DI */
+    uint8_t (*read_data)(struct _t6721_state*, unsigned int *bit); /* input: DI */
     void (*set_apd)(struct _t6721_state*);
     void (*set_eos)(struct _t6721_state*);
     void (*set_dtrd)(struct _t6721_state*);
 } t6721_state;
 
-extern void t6721_reset(t6721_state *t6721);
-extern void t6721_sound_machine_init(t6721_state *t6721, int samples_per_sec, int cycles_per_sec);
-extern void t6721_sound_machine_init_vbr(t6721_state *t6721, int speed, int cycles_per_sec, int factor);
-/* read/write from/to  d0..d3 */
-extern BYTE t6721_read(t6721_state *t6721); /* read from d0..d3 (status) */
-extern void t6721_store(t6721_state *t6721, BYTE data); /* store to d0..d3 (command) */
-/* run chip for N cpu/system cycles */
-extern void t6721_update_tick(t6721_state *t6721);
-extern void t6721_update_ticks(t6721_state *t6721, int ticks);
-/* update output sound buffer, run chip (remaining ticks) */
-extern void t6721_update_output(t6721_state *t6721, SWORD *buf, int num);
+void t6721_reset(t6721_state *t6721);
+void t6721_sound_machine_init(t6721_state *t6721, int samples_per_sec, int cycles_per_sec);
+void t6721_sound_machine_init_vbr(t6721_state *t6721, int speed, int cycles_per_sec, int factor);
 
-extern int t6721_dump(t6721_state *t6721);
+/* read/write from/to  d0..d3 */
+uint8_t t6721_read(t6721_state *t6721); /* read from d0..d3 (status) */
+void t6721_store(t6721_state *t6721, uint8_t data); /* store to d0..d3 (command) */
+
+/* run chip for N cpu/system cycles */
+void t6721_update_tick(t6721_state *t6721);
+void t6721_update_ticks(t6721_state *t6721, int ticks);
+
+/* update output sound buffer, run chip (remaining ticks) */
+#ifdef SOUND_SYSTEM_FLOAT
+void t6721_update_output(t6721_state *t6721, float *buf, int num);
+#else
+void t6721_update_output(t6721_state *t6721, int16_t *buf, int num);
+#endif
+
+int t6721_dump(t6721_state *t6721);
 
 struct snapshot_s;
-extern int t6721_snapshot_read_module(struct snapshot_s *s, t6721_state *t6721);
-extern int t6721_snapshot_write_module(struct snapshot_s *s, t6721_state *t6721);
+
+int t6721_snapshot_read_module(struct snapshot_s *s, t6721_state *t6721);
+int t6721_snapshot_write_module(struct snapshot_s *s, t6721_state *t6721);
 
 #endif

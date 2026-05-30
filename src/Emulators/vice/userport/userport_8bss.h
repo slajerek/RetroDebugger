@@ -29,7 +29,6 @@
 
 #include "vicetypes.h"
 
-extern int userport_8bss_resources_init(void);
-extern int userport_8bss_cmdline_options_init(void);
+int userport_8bss_resources_init(void);
 
 #endif

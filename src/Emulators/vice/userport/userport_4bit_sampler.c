@@ -45,7 +45,7 @@ C64/C128 | CBM2 | ADC | NOTES
 #include "resources.h"
 #include "sampler.h"
 #include "snapshot.h"
-#include "translate.h"
+#include "joyport.h"
 #include "userport.h"
 #include "userport_4bit_sampler.h"
 
@@ -56,130 +56,76 @@ int userport_4bit_sampler_read = 1;
 /* ------------------------------------------------------------------------- */
 
 /* Some prototypes are needed */
-static void userport_4bit_sampler_read_pbx(void);
-static void userport_4bit_sampler_store_pa2(BYTE value);
-static int userport_4bit_sampler_write_snapshot_module(snapshot_t *s);
-static int userport_4bit_sampler_read_snapshot_module(snapshot_t *s);
+static uint8_t userport_4bit_sampler_read_pbx(uint8_t orig);
+static void userport_4bit_sampler_store_pa2(uint8_t value);
+static int userport_4bit_sampler_set_enabled(int enabled);
 
 static userport_device_t sampler_device = {
-    USERPORT_DEVICE_4BIT_SAMPLER,
-    "Userport 4bit sampler",
-    IDGS_USERPORT_4BIT_SAMPLER,
-    userport_4bit_sampler_read_pbx,
-    NULL, /* NO pbx store */
-    NULL, /* NO pa2 read */
-    userport_4bit_sampler_store_pa2,
-    NULL, /* NO pa3 read */
-    NULL, /* NO pa3 write */
-    0, /* NO pc pin needed */
-    NULL, /* NO sp1 write */
-    NULL, /* NO sp1 read */
-    NULL, /* NO sp1 write */
-    NULL, /* NO sp2 read */
-    "Userport4bitSampler",
-    0xff,
-    0xf0, /* valid mask doesn't change */
-    0,
-    0
+    "Userport 4bit sampler",           /* device name */
+    JOYSTICK_ADAPTER_ID_NONE,          /* NOT a joystick adapter */
+    USERPORT_DEVICE_TYPE_SAMPLER,      /* device is a sampler */
+    userport_4bit_sampler_set_enabled, /* enable/disable function */
+    userport_4bit_sampler_read_pbx,    /* read pb0-pb7 function */
+    NULL,                              /* NO store pb0-pb7 function */
+    NULL,                              /* NO read pa2 pin function */
+    userport_4bit_sampler_store_pa2,   /* store pa2 pin function */
+    NULL,                              /* NO read pa3 pin function */
+    NULL,                              /* NO store pa3 pin function */
+    0,                                 /* pc pin is NOT needed */
+    NULL,                              /* NO store sp1 pin function */
+    NULL,                              /* NO read sp1 pin function */
+    NULL,                              /* NO store sp2 pin function */
+    NULL,                              /* NO read sp2 pin function */
+    NULL,                              /* NO reset function */
+    NULL,                              /* NO powerup function */
+    NULL,                              /* NO snapshot write function */
+    NULL                               /* NO snapshot read function */
 };
-
-static userport_snapshot_t sampler_snapshot = {
-    USERPORT_DEVICE_4BIT_SAMPLER,
-    userport_4bit_sampler_write_snapshot_module,
-    userport_4bit_sampler_read_snapshot_module
-};
-
-static userport_device_list_t *userport_4bit_sampler_list_item = NULL;
 
 /* ------------------------------------------------------------------------- */
 
-static int set_userport_4bit_sampler_enabled(int value, void *param)
+static int userport_4bit_sampler_set_enabled(int enabled)
 {
-    int val = value ? 1 : 0;
+    int new_state = enabled ? 1 : 0;
 
-    if (userport_4bit_sampler_enabled == val) {
+    if (userport_4bit_sampler_enabled == new_state) {
         return 0;
     }
 
-    if (val) {
+    if (new_state) {
+        /* enabled, start sampler module in mono mode */
         sampler_start(SAMPLER_OPEN_MONO, "4bit userport sampler");
-        userport_4bit_sampler_list_item = userport_device_register(&sampler_device);
-        if (userport_4bit_sampler_list_item == NULL) {
-            sampler_stop();
-            return -1;
-        }
     } else {
-        userport_device_unregister(userport_4bit_sampler_list_item);
-        userport_4bit_sampler_list_item = NULL;
+        /* disabled, stop sampler module */
         sampler_stop();
     }
 
-    userport_4bit_sampler_enabled = val;
+    /* set the current state */
+    userport_4bit_sampler_enabled = new_state;
+
     return 0;
 }
-
-static const resource_int_t resources_int[] = {
-    { "Userport4bitSampler", 0, RES_EVENT_STRICT, (resource_value_t)0,
-      &userport_4bit_sampler_enabled, set_userport_4bit_sampler_enabled, NULL },
-    RESOURCE_INT_LIST_END
-};
 
 int userport_4bit_sampler_resources_init(void)
 {
-    userport_snapshot_register(&sampler_snapshot);
-
-    return resources_register_int(resources_int);
-}
-
-static const cmdline_option_t cmdline_options[] =
-{
-    { "-userport4bitsampler", SET_RESOURCE, 0,
-      NULL, NULL, "Userport4bitSampler", (resource_value_t)1,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_ENABLE_USERPORT_4BIT_SAMPLER,
-      NULL, NULL },
-    { "+userport4bitsampler", SET_RESOURCE, 0,
-      NULL, NULL, "Userport4bitSampler", (resource_value_t)0,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_DISABLE_USERPORT_4BIT_SAMPLER,
-      NULL, NULL },
-    CMDLINE_LIST_END
-};
-
-int userport_4bit_sampler_cmdline_options_init(void)
-{
-    return cmdline_register_options(cmdline_options);
+    return userport_device_register(USERPORT_DEVICE_4BIT_SAMPLER, &sampler_device);
 }
 
 /* ---------------------------------------------------------------------*/
 
-static void userport_4bit_sampler_store_pa2(BYTE value)
+static void userport_4bit_sampler_store_pa2(uint8_t new_state)
 {
-    userport_4bit_sampler_read = value & 1;
+    /* set the current state of the read line */
+    userport_4bit_sampler_read = new_state & 1;
 }
 
-static void userport_4bit_sampler_read_pbx(void)
+static uint8_t userport_4bit_sampler_read_pbx(uint8_t orig)
 {
-    BYTE retval = 0xf0;
+    uint8_t retval = orig;
 
     if (!userport_4bit_sampler_read) {
+        /* get 8bit sample and keep only the 4 highest bits */
         retval = sampler_get_sample(SAMPLER_CHANNEL_DEFAULT) & 0xf0;
     }
-    sampler_device.retval = retval;
-}
-
-/* ---------------------------------------------------------------------*/
-
-static int userport_4bit_sampler_write_snapshot_module(snapshot_t *s)
-{
-    /* No data to save */
-    return 0;
-}
-
-static int userport_4bit_sampler_read_snapshot_module(snapshot_t *s)
-{
-    /* No data to load, this is used to enable the device when loading a snapshot */
-    set_userport_4bit_sampler_enabled(1, NULL);
-
-    return 0;
+    return retval;
 }

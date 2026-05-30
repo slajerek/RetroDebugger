@@ -29,30 +29,45 @@
 #define VICE_LIGHTPEN_H
 
 #include "vicetypes.h"
+#include "joyport.h"
 
-extern int lightpen_resources_init(void);
-extern void lightpen_init(void);
+void lightpen_init(void);
+
+int lightpen_u_joyport_register(void);
+int lightpen_l_joyport_register(void);
+int lightpen_datel_joyport_register(void);
+int lightgun_y_joyport_register(void);
+int lightgun_l_joyport_register(void);
+int lightpen_inkwell_joyport_register(void);
+int lightgun_gunstick_joyport_register(void);
 
 extern int lightpen_enabled;
-#define LIGHTPEN_TYPE_PEN_U       0
-#define LIGHTPEN_TYPE_PEN_L       1
-#define LIGHTPEN_TYPE_PEN_DATEL   2
-#define LIGHTPEN_TYPE_GUN_Y       3
-#define LIGHTPEN_TYPE_GUN_L       4
-#define LIGHTPEN_TYPE_INKWELL     5
-#define LIGHTPEN_TYPE_NUM         6
+
+enum {
+    LIGHTPEN_TYPE_PEN_U = 0,
+    LIGHTPEN_TYPE_PEN_L,
+    LIGHTPEN_TYPE_PEN_DATEL,
+    LIGHTPEN_TYPE_GUN_Y,
+    LIGHTPEN_TYPE_GUN_L,
+    LIGHTPEN_TYPE_INKWELL,
+#ifdef JOYPORT_EXPERIMENTAL_DEVICES
+    LIGHTPEN_TYPE_GUNSTICK,
+#endif
+    LIGHTPEN_TYPE_NUM
+};
 
 typedef CLOCK lightpen_timing_callback_t(int x, int y);
 typedef lightpen_timing_callback_t *lightpen_timing_callback_ptr_t;
-extern int lightpen_register_timing_callback(lightpen_timing_callback_ptr_t timing_callback, int window);
+int lightpen_register_timing_callback(lightpen_timing_callback_ptr_t timing_callback, int window);
 
 typedef void lightpen_trigger_callback_t(CLOCK mclk);
 typedef lightpen_trigger_callback_t *lightpen_trigger_callback_ptr_t;
-extern int lightpen_register_trigger_callback(lightpen_trigger_callback_ptr_t trigger_callback);
+int lightpen_register_trigger_callback(lightpen_trigger_callback_ptr_t trigger_callback);
 
-extern void lightpen_update(int window, int x, int y, int buttons);
+void lightpen_update(int window, int x, int y, int buttons);
+
 /* Host mouse button bitmasks. (the value 4 for the right mouse button comes from SDL) */
-#define LP_HOST_BUTTON_1    1
-#define LP_HOST_BUTTON_2    4
+#define LP_HOST_BUTTON_LEFT    1
+#define LP_HOST_BUTTON_RIGHT   4
 
 #endif

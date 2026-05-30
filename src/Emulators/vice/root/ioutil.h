@@ -28,6 +28,8 @@
 #ifndef VICE_IOUTIL_H
 #define VICE_IOUTIL_H
 
+#include <stddef.h>		/* size_t */
+
 #define IOUTIL_ACCESS_R_OK 4
 #define IOUTIL_ACCESS_W_OK 2
 #define IOUTIL_ACCESS_X_OK 1
@@ -52,7 +54,7 @@ extern unsigned int ioutil_maxpathlen(void);
 extern int ioutil_mkdir(const char *pathname, int mode);
 extern int ioutil_remove(const char *name);
 extern int ioutil_rename(const char *oldpath, const char *newpath);
-extern int ioutil_stat(const char *file_name, unsigned int *len, unsigned int *isdir);
+extern int ioutil_stat(const char *file_name, size_t *len, unsigned int *isdir);
 
 extern char *ioutil_current_dir(void);
 

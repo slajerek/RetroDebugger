@@ -86,7 +86,7 @@ static int has_fs(void)
 
 static int is_fs(int type)
 {
-    return ((type == 0 || type == ATTACH_DEVICE_FS || type == ATTACH_DEVICE_REAL || type == ATTACH_DEVICE_RAW) && has_fs());
+    return ((type == 0 || type == ATTACH_DEVICE_FS || type == ATTACH_DEVICE_REAL) && has_fs());	/* VICE 3.10: ATTACH_DEVICE_RAW removed */
 }
 
 static int get_drive_type(int drive)
@@ -290,7 +290,7 @@ static UI_MENU_CALLBACK(attach_disk_callback)
     if (activated) {
         name = sdl_ui_file_selection_dialog("Select disk image", FILEREQ_MODE_CHOOSE_FILE);
         if (name != NULL) {
-            if (file_system_attach_disk(vice_ptr_to_int(param), name) < 0) {
+            if (file_system_attach_disk(vice_ptr_to_int(param), 0, name) < 0) {
                 ui_error("Cannot attach disk image.");
             }
             lib_free(name);
@@ -306,12 +306,12 @@ static UI_MENU_CALLBACK(detach_disk_callback)
     if (activated) {
         parameter = vice_ptr_to_int(param);
         if (parameter == 0) {
-            file_system_detach_disk(8);
-            file_system_detach_disk(9);
-            file_system_detach_disk(10);
-            file_system_detach_disk(11);
+            file_system_detach_disk(8, 0);
+            file_system_detach_disk(9, 0);
+            file_system_detach_disk(10, 0);
+            file_system_detach_disk(11, 0);
         } else {
-            file_system_detach_disk(parameter);
+            file_system_detach_disk(parameter, 0);
         }
     }
     return NULL;
@@ -718,10 +718,12 @@ static const ui_menu_entry_t create_disk_image_type_menu[] = {
       MENU_ENTRY_RESOURCE_RADIO,
       set_disk_type_callback,
       (ui_callback_data_t)DISK_IMAGE_TYPE_P64 },
+#ifdef HAVE_X64_IMAGE	/* VICE 3.10 deprecated X64; gate behind the (off-by-default) feature macro */
     { "X64",
       MENU_ENTRY_RESOURCE_RADIO,
       set_disk_type_callback,
       (ui_callback_data_t)DISK_IMAGE_TYPE_X64 },
+#endif
     SDL_MENU_LIST_END
 };
 

@@ -41,7 +41,7 @@ extern int mousedrv_get_y(void);
 extern unsigned long mousedrv_get_timestamp(void);
 
 extern void mouse_button(int bnumber, int state);
-extern void mouse_move(int x, int y);
+/* RD: mouse_move(float,float) is declared in joyport/mouse.h (VICE 3.10), not here. */
 
 extern void mousedrv_button_left(int pressed);
 extern void mousedrv_button_right(int pressed);

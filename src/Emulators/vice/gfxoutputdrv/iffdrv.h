@@ -27,6 +27,6 @@
 #ifndef VICE_IFFDRV_H
 #define VICE_IFFDRV_H
 
-extern void gfxoutput_init_iff(int help);
+void gfxoutput_init_iff(int help);
 
 #endif

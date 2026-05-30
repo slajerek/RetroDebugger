@@ -32,7 +32,9 @@
 
 #include "joyport.h"
 #include "keyboard.h"
-#include "translate.h"
+
+#include "script64_dongle.h"
+
 
 /* Control port <--> Script 64 dongle connections:
 
@@ -40,6 +42,9 @@
    -------------------------------
      7   | 100 Kohm
      9   | 27 Kohm
+
+   Works on:
+   - native joystick port(s) (x64/x64sc/xscpu64/x128)
  */
 
 #define POTX_RETURN   0xC0
@@ -47,23 +52,23 @@
 
 /* ------------------------------------------------------------------------- */
 
-static int joyport_script64_dongle_enabled = 0;
+static int joyport_script64_dongle_enabled[JOYPORT_MAX_PORTS] = {0};
 
-static int joyport_script64_dongle_enable(int port, int value)
+static int joyport_script64_dongle_set_enabled(int port, int enabled)
 {
-    int val = value ? 1 : 0;
+    int new_state = enabled ? 1 : 0;
 
-    joyport_script64_dongle_enabled = val;
+    joyport_script64_dongle_enabled[port] = new_state;
 
     return 0;
 }
 
-static BYTE script64_dongle_read_potx(void)
+static uint8_t script64_dongle_read_potx(int port)
 {
     return POTX_RETURN;
 }
 
-static BYTE script64_dongle_read_poty(void)
+static uint8_t script64_dongle_read_poty(int port)
 {
     return POTY_RETURN;
 }
@@ -71,18 +76,24 @@ static BYTE script64_dongle_read_poty(void)
 /* ------------------------------------------------------------------------- */
 
 static joyport_t joyport_script64_dongle_device = {
-    "Script 64 dongle",
-    IDGS_SCRIPT64_DONGLE,
-    JOYPORT_RES_ID_SCRIPT64,
-    JOYPORT_IS_NOT_LIGHTPEN,
-    JOYPORT_POT_REQUIRED,
-    joyport_script64_dongle_enable,
-    NULL,               /* no dig read */
-    NULL,               /* no dig write */
-    script64_dongle_read_potx,
-    script64_dongle_read_poty,
-    NULL,               /* no write snapshot */
-    NULL                /* no read snapshot */
+    "Dongle (Script 64)",                /* name of the device */
+    JOYPORT_RES_ID_NONE,                 /* device can be used in multiple ports at the same time */
+    JOYPORT_IS_NOT_LIGHTPEN,             /* device is NOT a lightpen */
+    JOYPORT_POT_REQUIRED,                /* device uses the potentiometer lines */
+    JOYPORT_5VDC_REQUIRED,               /* device NEEDS +5VDC to work */
+    JOYSTICK_ADAPTER_ID_NONE,            /* device is NOT a joystick adapter */
+    JOYPORT_DEVICE_C64_DONGLE,           /* device is a C64 Dongle */
+    0,                                   /* NO output bits */
+    joyport_script64_dongle_set_enabled, /* device enable/disable function */
+    NULL,                                /* NO digital line read function */
+    NULL,                                /* NO digital line store function */
+    script64_dongle_read_potx,           /* pot-x read function */
+    script64_dongle_read_poty,           /* pot-y read function */
+    NULL,                                /* NO powerup function */
+    NULL,                                /* NO device write snapshot function */
+    NULL,                                /* NO device read snapshot function */
+    NULL,                                /* NO device hook function */
+    0                                    /* NO device hook function mask */
 };
 
 /* ------------------------------------------------------------------------- */

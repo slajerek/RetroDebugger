@@ -47,11 +47,10 @@
 #include "log.h"
 #include "mididrv.h"
 #include "resources.h"
-#include "translate.h"
 #include "vicetypes.h"
 #include "util.h"
 
-static log_t mididrv_log = LOG_ERR;
+static log_t mididrv_log = LOG_DEFAULT;
 
 /* ----- FIFO Buffer ----- */
 #define OUT_BUF_LEN 3
@@ -116,21 +115,12 @@ void mididrv_resources_shutdown(void)
 }
 
 static const cmdline_option_t cmdline_options[] = {
-    { "-midiname", SET_RESOURCE, -1,
-      NULL, NULL, "MIDIName", NULL,
-      USE_PARAM_STRING, USE_DESCRIPTION_STRING,
-      IDCLS_UNUSED, IDCLS_UNUSED,
-      N_("<Name>"), N_("Name of MIDI Client") },
-    { "-midiinname", SET_RESOURCE, -1,
-      NULL, NULL, "MIDIInName", NULL,
-      USE_PARAM_STRING, USE_DESCRIPTION_STRING,
-      IDCLS_UNUSED, IDCLS_UNUSED,
-      N_("<Name>"), N_("Name of MIDI-In Port") },
-    { "-midioutname", SET_RESOURCE, -1,
-      NULL, NULL, "MIDIOutName", NULL,
-      USE_PARAM_STRING, USE_DESCRIPTION_STRING,
-      IDCLS_UNUSED, IDCLS_UNUSED,
-      N_("<Name>"), N_("Name of MIDI-Out Port") },
+    { "-midiname", SET_RESOURCE, CMDLINE_ATTRIB_NEED_ARGS,
+      NULL, NULL, "MIDIName", NULL, N_("<Name>"), N_("Name of MIDI Client")},
+    { "-midiinname", SET_RESOURCE, CMDLINE_ATTRIB_NEED_ARGS,
+      NULL, NULL, "MIDIInName", NULL, N_("<Name>"), N_("Name of MIDI-In Port")},
+    { "-midioutname", SET_RESOURCE, CMDLINE_ATTRIB_NEED_ARGS,
+      NULL, NULL, "MIDIOutName", NULL, N_("<Name>"), N_("Name of MIDI-Out Port")},
     CMDLINE_LIST_END
 };
 
@@ -304,7 +294,7 @@ static void dump_destinations(void)
 
 void mididrv_init(void)
 {
-    if (mididrv_log == LOG_ERR) {
+    if (mididrv_log == LOG_DEFAULT) {
         mididrv_log = log_open("MIDIdrv");
     }
 }

@@ -26,6 +26,8 @@
 
 #include "vice.h"
 
+#include <limits.h>
+#include <math.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -34,73 +36,189 @@
 #include "machine.h"
 #include "ram.h"
 #include "resources.h"
-#include "translate.h"
 #include "vicetypes.h"
 
-static int start_value = 0;
-static int value_invert = 64;
-static int pattern_invert = 0;
+/* #define DEBUG_RAMINIT */
 
+#ifdef DEBUG_RAMINIT
+#define DBG(x) printf x
+#else
+#define DBG(x)
+#endif
+
+static RAMINITPARAM mainramparam = {
+    .start_value = 255,         /* RAMInitStartValue - first value of the base pattern (byte value) */
+    .value_invert = 128,        /* RAMInitValueInvert - number of bytes until start value is inverted */
+    .value_offset = 0,          /* RAMInitValueOffset - offset of first pattern in bytes */
+
+    .pattern_invert = 0,        /* RAMInitPatternInvert - invert base pattern after this many bytes */
+    .pattern_invert_value = 0,  /* RAMInitPatternInvertValue - invert base pattern with this byte */
+
+    .random_start = 0,          /* RAMInitStartRandom - length of random pattern in bytes */
+    .random_repeat = 0,         /* RAMInitRepeatRandom - repeat random pattern after this many bytes */
+
+    .random_chance = 0,         /* RAMInitRandomChance - global random chance */
+};
+
+/* first value of the base pattern (byte value) */
 static int set_start_value(int val, void *param)
 {
-    start_value = val;
-    if (start_value < 0) {
-        start_value = 0;
+    mainramparam.start_value = val;
+    if (mainramparam.start_value < 0) {
+        mainramparam.start_value = 0;
     }
-    if (start_value > 0xff) {
-        start_value = 0xff;
+    if (mainramparam.start_value > 0xff) {
+        mainramparam.start_value = 0xff;
     }
     return 0;
 }
 
+/* number of bytes until start value is inverted */
 static int set_value_invert(int val, void *param)
 {
-    value_invert = val;
+    mainramparam.value_invert = val;
     return 0;
 }
 
+/* offset of first pattern in bytes  */
+static int set_value_offset(int val, void *param)
+{
+    mainramparam.value_offset = val;
+    return 0;
+}
+
+/* invert base pattern after this many bytes */
 static int set_pattern_invert(int val, void *param)
 {
-    pattern_invert = val;
+    mainramparam.pattern_invert = val;
     return 0;
 }
 
+/* invert base pattern with this byte */
+static int set_pattern_invert_value(int val, void *param)
+{
+    mainramparam.pattern_invert_value = val;
+    if (mainramparam.pattern_invert_value < 0) {
+        mainramparam.pattern_invert_value = 0;
+    }
+    if (mainramparam.pattern_invert_value > 0xff) {
+        mainramparam.pattern_invert_value = 0xff;
+    }
+    return 0;
+}
 
+/* offset where the random pattern starts */
+static int set_random_start(int val, void *param)
+{
+    mainramparam.random_start = val;
+    return 0;
+}
+
+/* repeat random pattern every "val" bytes */
+static int set_random_repeat(int val, void *param)
+{
+    mainramparam.random_repeat = val;
+    return 0;
+}
+
+/* global random chance */
+static int set_random_chance(int val, void *param)
+{
+    if (val > RAM_INIT_RANDOM_CHANCE_MAX) {
+        val = RAM_INIT_RANDOM_CHANCE_MAX;
+    } else if (val < 0) {
+        val = 0;
+    }
+    mainramparam.random_chance = val;
+    return 0;
+}
+
+/* FIXME: the defaults have been choosen so the result matches a real reported
+          pattern in x64sc, AND from those one was picked so all raminitvalue
+          tests pass.
+
+          however, the respective defaults should probably be different per
+          emulator/machine.
+*/
 /* RAM-related resources. */
-static const resource_int_t resources_int[] = {
+static resource_int_t resources_int[] = {
+    { "RAMInitValueOffset", 2, RES_EVENT_SAME, NULL,
+      &mainramparam.value_offset, set_value_offset, NULL },
     { "RAMInitStartValue", 0, RES_EVENT_SAME, NULL,
-      &start_value, set_start_value, NULL },
-    { "RAMInitValueInvert", 64, RES_EVENT_SAME, NULL,
-      &value_invert, set_value_invert, NULL },
-    { "RAMInitPatternInvert", 0, RES_EVENT_SAME, NULL,
-      &pattern_invert, set_pattern_invert, NULL },
+      &mainramparam.start_value, set_start_value, NULL },
+    { "RAMInitValueInvert", 4, RES_EVENT_SAME, NULL,
+      &mainramparam.value_invert, set_value_invert, NULL },
+    { "RAMInitPatternInvert", 16384, RES_EVENT_SAME, NULL,
+      &mainramparam.pattern_invert, set_pattern_invert, NULL },
+    { "RAMInitPatternInvertValue", 255, RES_EVENT_SAME, NULL,
+      &mainramparam.pattern_invert_value, set_pattern_invert_value, NULL },
+    /* RAMInitStartRandom - length of random pattern in bytes */ /* FIXME: bad name */
+    { "RAMInitStartRandom", 0, RES_EVENT_SAME, NULL,
+      &mainramparam.random_start, set_random_start, NULL },
+    { "RAMInitRepeatRandom", 0, RES_EVENT_SAME, NULL,
+      &mainramparam.random_repeat, set_random_repeat, NULL },
+    { "RAMInitRandomChance", RAM_INIT_RANDOM_CHANCE_DEFAULT, RES_EVENT_SAME, NULL,
+      &mainramparam.random_chance, set_random_chance, NULL },
     RESOURCE_INT_LIST_END
 };
 
 int ram_resources_init(void)
 {
     if (machine_class != VICE_MACHINE_VSID) {
+        /* FIXME: tweak and test defaults for the various machines */
+        if (machine_class == VICE_MACHINE_C64) {
+            /* see testprogs/c64/raminitpattern */
+            resources_int[0].factory_value = 2;     /* RAMInitValueOffset */
+            resources_int[1].factory_value = 0;     /* RAMInitStartValue */
+            resources_int[2].factory_value = 4;     /* RAMInitValueInvert */
+            resources_int[3].factory_value = 16384; /* RAMInitPatternInvert */
+            resources_int[4].factory_value = 255;   /* RAMInitPatternInvertValue */
+            resources_int[5].factory_value = 0;     /* RAMInitStartRandom */
+            resources_int[6].factory_value = 0;     /* RAMInitRepeatRandom */
+            resources_int[7].factory_value = RAM_INIT_RANDOM_CHANCE_DEFAULT;     /* RAMInitRandomChance */
+        } else if (machine_class == VICE_MACHINE_VIC20) {
+            /* see testprogs/vic20/raminitpattern */
+            resources_int[0].factory_value = 0;     /* RAMInitValueOffset */
+            resources_int[1].factory_value = 255;   /* RAMInitStartValue */
+            resources_int[2].factory_value = 1;     /* RAMInitValueInvert */
+            resources_int[3].factory_value = 0;     /* RAMInitPatternInvert */
+            resources_int[4].factory_value = 0;     /* RAMInitPatternInvertValue */
+            resources_int[5].factory_value = 0;     /* RAMInitStartRandom */
+            resources_int[6].factory_value = 0;     /* RAMInitRepeatRandom */
+            resources_int[7].factory_value = RAM_INIT_RANDOM_CHANCE_DEFAULT;     /* RAMInitRandomChance */
+        }
         return resources_register_int(resources_int);
     }
     return 0;
 }
 
-static const cmdline_option_t cmdline_options[] = {
-    { "-raminitstartvalue", SET_RESOURCE, 1,
+static const cmdline_option_t cmdline_options[] =
+{
+    { "-raminitvalueoffset", SET_RESOURCE, CMDLINE_ATTRIB_NEED_ARGS,
+      NULL, NULL, "RAMInitValueOffset", NULL,
+      "<offset>", "The first pattern is shifted by this many bytes" },
+    { "-raminitstartvalue", SET_RESOURCE, CMDLINE_ATTRIB_NEED_ARGS,
       NULL, NULL, "RAMInitStartValue", NULL,
-      USE_PARAM_ID, USE_DESCRIPTION_ID,
-      IDCLS_P_VALUE, IDCLS_SET_FIRST_RAM_ADDRESS_VALUE,
-      NULL, NULL },
-    { "-raminitvalueinvert", SET_RESOURCE, 1,
+      "<value>", "Set the value for the very first RAM address after powerup" },
+    { "-raminitvalueinvert", SET_RESOURCE, CMDLINE_ATTRIB_NEED_ARGS,
       NULL, NULL, "RAMInitValueInvert", NULL,
-      USE_PARAM_ID, USE_DESCRIPTION_ID,
-      IDCLS_P_NUM_OF_BYTES, IDCLS_LENGTH_BLOCK_SAME_VALUE,
-      NULL, NULL },
-    { "-raminitpatterninvert", SET_RESOURCE, 1,
+      "<num of bytes>", "Length of memory block initialized with the same value" },
+    { "-raminitpatterninvert", SET_RESOURCE, CMDLINE_ATTRIB_NEED_ARGS,
       NULL, NULL, "RAMInitPatternInvert", NULL,
-      USE_PARAM_ID, USE_DESCRIPTION_ID,
-      IDCLS_P_NUM_OF_BYTES, IDCLS_LENGTH_BLOCK_SAME_PATTERN,
-      NULL, NULL },
+      "<num of bytes>", "Length of memory block initialized with the same pattern" },
+    { "-raminitpatterninvertvalue", SET_RESOURCE, CMDLINE_ATTRIB_NEED_ARGS,
+      NULL, NULL, "RAMInitPatternInvertValue", NULL,
+      "<value>", "Value to invert with in second pattern" },
+    /* FIXME: bad name */
+    { "-raminitstartrandom", SET_RESOURCE, CMDLINE_ATTRIB_NEED_ARGS,
+      NULL, NULL, "RAMInitStartRandom", NULL,
+      "<num of bytes>", "Number of random bytes in random pattern" },
+    { "-raminitrepeatrandom", SET_RESOURCE, CMDLINE_ATTRIB_NEED_ARGS,
+      NULL, NULL, "RAMInitRepeatRandom", NULL,
+      "<num of bytes>", "Repeat random pattern after this many bytes" },
+    { "-raminitrandomchance", SET_RESOURCE, CMDLINE_ATTRIB_NEED_ARGS,
+      NULL, NULL, "RAMInitRandomChance", NULL,
+      "<value>", "Random chance for any bit to flip (0-0xfff)" },
     CMDLINE_LIST_END
 };
 
@@ -112,33 +230,116 @@ int ram_cmdline_options_init(void)
     return 0;
 }
 
+/* Methods for randomly selecting bits to flip. */
+typedef enum {
+  RANDOM_METHOD_NONE,   /* flip no (or all) bits */
+  RANDOM_METHOD_GEOM,   /* generate bit intervals between flips */
+  RANDOM_METHOD_UNIFORM /* generate discrete uniform per bit */
+} random_method_t;
 
-void ram_init(BYTE *memram, unsigned int ramsize)
+/* Generate a random variate from the geometric distribution with success
+ * probability p, where the function parameter is the value log(1 - p).  If each
+ * bit has a probability p of being flipped, this distribution corresponds to
+ * the number of non-flipped bits between each subsequent flipped bit. */
+static unsigned int random_method_geom_next(double log_1mp)
 {
-    unsigned int i, j, k, l;
-    BYTE v = start_value;
+    /* For a uniform random variable U \in [0, 1], then X = log(U) / log(1 - p))
+     * is exponentially distributed with rate -log(1 - p), and floor(X) is
+     * geometrically distributed with success probability p. */
+    double u = lib_double_rand_unit();
+    /* u may be 0 but not 1; use 1 - u to avoid taking the log of 0. */
+    double g = floor(log1p(-u) / log_1mp);
+    /* Avoid overflow when converting to an unsigned int. */
+    return (g > (double)UINT_MAX) ? UINT_MAX : g;
+}
 
-    j = value_invert - 1;
-    k = pattern_invert - 1;
-    for (i = 0; i < ramsize; i++)
-    {
-        l = (j < k) ? j : k;
-        if (l >= ramsize) {
-            l = ramsize - 1;
-        }
-        memset(memram + i, v, l - i + 1);
-        i = l;
+/* this can be used to init arbitrary memory */
+void ram_init_with_pattern(uint8_t *memram, unsigned int ramsize, RAMINITPARAM *ramparam)
+{
+    unsigned int offset, j, k;
+    uint8_t value;
 
-        if (i == j) {
-            j += value_invert;
-            v ^= 0xff;
-        }
+    random_method_t random_method = RANDOM_METHOD_NONE;
+    unsigned int random_mask_initial = 0;
+    double log_1mp = -INFINITY;
+    unsigned int random_next = UINT_MAX;
 
-        if (i == k) {
-            k += pattern_invert;
-            v ^= 0xff;
-        }
+    DBG(("ram_init_with_pattern ramsize:%08x\n", ramsize));
+
+    if (ramparam->random_chance <= 0) {
+        /* flipping no bits */
+        random_method = RANDOM_METHOD_NONE;
+        random_mask_initial = 0x00;
+    } else if (ramparam->random_chance >= RAM_INIT_RANDOM_CHANCE_MAX) {
+        /* flipping all bits; same as no bits, but with the opposite mask */
+        random_method = RANDOM_METHOD_NONE;
+        random_mask_initial = 0xff;
+    } else if (ramparam->random_chance == (RAM_INIT_RANDOM_CHANCE_MAX / 2)) {
+        /* flipping bits or not with equal probability; worst-case for the
+         * geometric spacing method, so handle separately */
+        random_method = RANDOM_METHOD_UNIFORM;
+    } else if (ramparam->random_chance < (RAM_INIT_RANDOM_CHANCE_MAX / 2)) {
+        /* some other probability less than 0.5; generate the number of bits
+         * un-flipped between each flipped bit. */
+        random_method = RANDOM_METHOD_GEOM;
+        random_mask_initial = 0x00;
+        log_1mp = log1p((double)-ramparam->random_chance / RAM_INIT_RANDOM_CHANCE_MAX);
+        random_next = random_method_geom_next(log_1mp);
+    } else {
+        /* some other probability greater than 0.5; generate the number of bits
+         * flipped between each un-flipped bit. */
+        random_method = RANDOM_METHOD_GEOM;
+        random_mask_initial = 0xff;
+        log_1mp = log((double)ramparam->random_chance / RAM_INIT_RANDOM_CHANCE_MAX);
+        random_next = random_method_geom_next(log_1mp);
     }
+
+    for (offset = 0; offset < ramsize; offset++) {
+
+        j = k = 0;
+        if (ramparam->value_invert) {
+            j = (((offset + ramparam->value_offset) / ramparam->value_invert) & 1) ? 0xff : 0x00;
+        }
+
+        if (ramparam->pattern_invert) {
+            k = ((offset / ramparam->pattern_invert) & 1) ? ramparam->pattern_invert_value : 0x00;
+        }
+
+        value = ramparam->start_value ^ j ^ k;
+
+        k = 0;
+        if (ramparam->random_start && ramparam->random_repeat) {
+            k = ((offset % ramparam->random_repeat) < ramparam->random_start) ? lib_unsigned_rand(0, 0xff) : 0;
+        }
+
+        j = 0;
+        switch (random_method) {
+            case RANDOM_METHOD_NONE:
+                j = random_mask_initial;
+                break;
+            case RANDOM_METHOD_UNIFORM:
+                j = lib_unsigned_rand(0x00, 0xff);
+                break;
+            case RANDOM_METHOD_GEOM:
+                j = random_mask_initial;
+                while (random_next < 8) {
+                    j ^= (1 << random_next);
+                    random_next += 1 + random_method_geom_next(log_1mp);
+                }
+                random_next -= 8;
+                break;
+        }
+
+        value ^= k ^ j;
+
+        memram[offset] = value;
+    }
+}
+
+/* used to initialize the main memory of the machine */
+void ram_init(uint8_t *memram, unsigned int ramsize)
+{
+    ram_init_with_pattern(memram, ramsize, &mainramparam);
 }
 
 /* create a preview of the RAM init pattern - this should be as fast as
@@ -148,7 +349,7 @@ void ram_init_print_pattern(char *s, int len, char *eol)
     unsigned char *mem;
     char *p = s, *pp;
     int i, a;
-    const char hextab[16] = "0123456789abcdef";
+    const char hextab[16 + 1] = "0123456789abcdef";
 
     mem = lib_malloc(len);
     ram_init(mem, len);

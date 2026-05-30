@@ -21,7 +21,7 @@
 #define RESID_SIDDEFS_H
 
 // Compilation configuration.
-#define RESID_INLINING
+#define RESID_INLINING 1
 #define RESID_INLINE inline
 
 #if !defined(WIN32)

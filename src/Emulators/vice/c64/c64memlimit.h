@@ -29,11 +29,9 @@
 #define VICE_C64MEMLIMIT_H
 #include "vicetypes.h"
 
-#define NUM_CONFIGS 32
-
-extern void mem_limit_init(DWORD mem_read_limit_tab[NUM_CONFIGS][0x101]);
-extern void mem_limit_plus60k_init(DWORD mem_read_limit_tab[NUM_CONFIGS][0x101]);
-extern void mem_limit_256k_init(DWORD mem_read_limit_tab[NUM_CONFIGS][0x101]);
-extern void mem_limit_max_init(DWORD mem_read_limit_tab[NUM_CONFIGS][0x101]);
+extern void mem_limit_init(void);
+extern void mem_limit_plus60k_init(void);
+extern void mem_limit_256k_init(void);
+extern void mem_limit_max_init(void);
 
 #endif

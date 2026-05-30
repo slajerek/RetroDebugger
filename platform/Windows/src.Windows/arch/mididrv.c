@@ -45,7 +45,6 @@
 #include "mididrv.h"
 
 #include "resources.h"
-#include "translate.h"
 #include "vicetypes.h"
 
 #ifndef DWORD_PTR
@@ -54,7 +53,7 @@
 
 /* ------------------------------------------------------------------------- */
 
-static log_t mididrv_log = LOG_ERR;
+static log_t mididrv_log = LOG_DEFAULT;
 
 static HMIDIIN handle_in = 0;
 static HMIDIOUT handle_out = 0;
@@ -108,22 +107,12 @@ void mididrv_resources_shutdown(void)
 {
 }
 
-#define DEFAULT_PARAM USE_PARAM_STRING
-#define DEFAULT_DESCR USE_DESCRIPTION_STRING
-#define IDS_P_NUMBER          IDCLS_UNUSED
-#define IDS_SPECIFY_MIDI_IN   IDCLS_UNUSED
-#define IDS_SPECIFY_MIDI_OUT  IDCLS_UNUSED
-
 static const cmdline_option_t cmdline_options[] = {
-    { "-midiin", SET_RESOURCE, 1,
+    { "-midiin", SET_RESOURCE, CMDLINE_ATTRIB_NEED_ARGS,
       NULL, NULL, "MIDIInDev", NULL,
-      DEFAULT_PARAM, DEFAULT_DESCR,
-      IDS_P_NUMBER, IDS_SPECIFY_MIDI_IN,
       "<number>", "Specify MIDI-In device" },
-    { "-midiout", SET_RESOURCE, 1,
+    { "-midiout", SET_RESOURCE, CMDLINE_ATTRIB_NEED_ARGS,
       NULL, NULL, "MIDIOutDev", NULL,
-      DEFAULT_PARAM, DEFAULT_DESCR,
-      IDS_P_NUMBER, IDS_SPECIFY_MIDI_OUT,
       "<number>", "Specify MIDI-Out device" },
     CMDLINE_LIST_END
 };
@@ -215,7 +204,7 @@ static int message_len(BYTE msg)
 
 void mididrv_init(void)
 {
-    if (mididrv_log == LOG_ERR) {
+    if (mididrv_log == LOG_DEFAULT) {
         mididrv_log = log_open("MIDIdrv");
     }
 }

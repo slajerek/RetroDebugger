@@ -79,12 +79,12 @@ struct interrupt_cpu_status_s {
        left at the start of this particular DMA (needed by *_set_irq() to
        calculate irq_clk).  */
     unsigned int num_dma_per_opcode;
-    unsigned int num_cycles_left[INTRRUPT_MAX_DMA_PER_OPCODE];
+    CLOCK num_cycles_left[INTRRUPT_MAX_DMA_PER_OPCODE];
     CLOCK dma_start_clk[INTRRUPT_MAX_DMA_PER_OPCODE];
 
     /* counters for delay between interrupt request and handler */
-    unsigned int irq_delay_cycles;
-    unsigned int nmi_delay_cycles;
+    CLOCK irq_delay_cycles;
+    CLOCK nmi_delay_cycles;
 
     /* If 1, do a RESET.  */
     int reset;
@@ -92,17 +92,26 @@ struct interrupt_cpu_status_s {
     /* If 1, call the trapping function.  */
     int trap;
 
-    /* Debugging function.  */
-    void (*trap_func)(WORD, void *data);
+    /* Various subsystems use this to call a function next cycle  */
+    void (**trap_func)(uint16_t, void *data);
 
-    /* Data to pass to the debugging function when called.  */
-    void *trap_data;
+    /* Data to pass to the trap_func when called. */
+    void **trap_data;
+
+    /* Size of the trap funcs/datas array. */
+    int traps_size;
+
+    /* Index of the next trap func to execute. */
+    int traps_next;
+
+    /* How many pending trap funcs to call. */
+    int traps_count;
 
     /* Pointer to the last executed opcode information.  */
     unsigned int *last_opcode_info_ptr;
 
     /* Number of cycles we have stolen to the processor last time.  */
-    int num_last_stolen_cycles;
+    CLOCK num_last_stolen_cycles;
 
     /* Clock tick at which these cycles have been stolen.  */
     CLOCK last_stolen_cycles_clk;
@@ -121,54 +130,60 @@ typedef struct interrupt_cpu_status_s interrupt_cpu_status_t;
 
 /* ------------------------------------------------------------------------- */
 
-extern void interrupt_log_wrong_nirq(void);
-extern void interrupt_log_wrong_nnmi(void);
+void interrupt_log_wrong_nirq(void);
+void interrupt_log_wrong_nnmi(void);
 
-extern void interrupt_trigger_dma(interrupt_cpu_status_t *cs, CLOCK cpu_clk);
-extern void interrupt_ack_dma(interrupt_cpu_status_t *cs);
-extern void interrupt_fixup_int_clk(interrupt_cpu_status_t *cs, CLOCK cpu_clk,
-                                    CLOCK *int_clk);
+void interrupt_trigger_dma(interrupt_cpu_status_t *cs, CLOCK cpu_clk);
+void interrupt_ack_dma(interrupt_cpu_status_t *cs);
+void interrupt_fixup_int_clk(interrupt_cpu_status_t *cs, CLOCK cpu_clk, CLOCK *int_clk);
 
 /* Set the IRQ line state.  */
 inline static void interrupt_set_irq(interrupt_cpu_status_t *cs,
                                      unsigned int int_num,
                                      int value, CLOCK cpu_clk)
 {
-    if (cs == NULL || int_num >= cs->num_ints) {
+    if ((cs == NULL) || (int_num >= cs->num_ints)) {
         return;
     }
 
     if (value) {                /* Trigger the IRQ.  */
         if (!(cs->pending_int[int_num] & IK_IRQ)) {
-            cs->nirq++;
-            cs->global_pending_int = (cs->global_pending_int | (unsigned int)(IK_IRQ | IK_IRQPEND));
-            cs->pending_int[int_num] = (cs->pending_int[int_num] | (unsigned int)IK_IRQ);
+            cs->pending_int[int_num] |= (unsigned int)IK_IRQ;
 
-            cs->irq_pending_clk = CLOCK_MAX;
+            /*
+             * Only when the first IRQ source becomes active, the CPU sees the
+             * IRQ input line go active; on additional ones, no change is visible.
+             */
+            if (cs->nirq == 0) {
+                cs->global_pending_int |= (unsigned int)(IK_IRQ | IK_IRQPEND);
 
-            /* This makes sure that IRQ delay is correctly emulated when
-               cycles are stolen from the CPU.  */
+                cs->irq_pending_clk = CLOCK_MAX;
+
+                /* This makes sure that IRQ delay is correctly emulated when
+                   cycles are stolen from the CPU.  */
 #ifdef VICE_DEBUG
-            if (debug.maincpu_traceflg) {
-                log_debug("ICLK=%lu  last_stolen_cycle=%lu",
-                        (unsigned long)cpu_clk,
-                        (unsigned long)(cs->last_stolen_cycles_clk));
-            }
+                if (debug.maincpu_traceflg) {
+                    log_debug(LOG_DEFAULT, "ICLK=%lu  last_stolen_cycle=%lu",
+                            (unsigned long)cpu_clk,
+                            (unsigned long)(cs->last_stolen_cycles_clk));
+                }
 #endif
-            cs->irq_delay_cycles = 0;
+                cs->irq_delay_cycles = 0;
 
-            if (cs->last_stolen_cycles_clk <= cpu_clk) {
-                cs->irq_clk = cpu_clk;
-            } else {
-                interrupt_fixup_int_clk(cs, cpu_clk, &(cs->irq_clk));
+                if (cs->last_stolen_cycles_clk <= cpu_clk) {
+                    cs->irq_clk = cpu_clk;
+                } else {
+                    interrupt_fixup_int_clk(cs, cpu_clk, &(cs->irq_clk));
+                }
             }
+            cs->nirq++;
         }
     } else {                    /* Remove the IRQ condition.  */
         if (cs->pending_int[int_num] & IK_IRQ) {
             if (cs->nirq > 0) {
                 cs->pending_int[int_num] =
                     (cs->pending_int[int_num] & (unsigned int)~IK_IRQ);
-                if (--cs->nirq == 0) {
+                if ((--cs->nirq) == 0) {
                     cs->global_pending_int =
                         (cs->global_pending_int & (unsigned int)~IK_IRQ);
                     cs->irq_pending_clk = cpu_clk + 3;
@@ -196,7 +211,7 @@ inline static void interrupt_set_nmi(interrupt_cpu_status_t *cs,
 
 #ifdef VICE_DEBUG
                 if (debug.maincpu_traceflg) {
-                    log_debug("ICLK=%lu  last_stolen_cycle=%lu",
+                    log_debug(LOG_DEFAULT, "ICLK=%lu  last_stolen_cycle=%lu",
                             (unsigned long)cpu_clk,
                             (unsigned long)(cs->last_stolen_cycles_clk));
                 }
@@ -234,6 +249,11 @@ inline static void interrupt_set_nmi(interrupt_cpu_status_t *cs,
     }
 }
 
+/* FIXME: update the acia code and get rid of this
+    src/plus4/plus4acia.c:72
+    src/c64/cart/c64acia1.c:85
+ */
+#if 1
 /* Change the interrupt line state: this can be used to change both NMI
    and IRQ lines.  It is slower than `interrupt_set_nmi()' and
    `interrupt_set_irq()', but is left for backward compatibility (it works
@@ -244,6 +264,7 @@ inline static void interrupt_set_int(interrupt_cpu_status_t *cs, int int_num,
     interrupt_set_nmi(cs, (unsigned int)int_num, (int)(value & IK_NMI), cpu_clk);
     interrupt_set_irq(cs, (unsigned int)int_num, (int)(value & IK_IRQ), cpu_clk);
 }
+#endif
 
 /* ------------------------------------------------------------------------- */
 
@@ -259,6 +280,7 @@ inline static void interrupt_ack_nmi(interrupt_cpu_status_t *cs)
     }
 }
 
+/* clear IK_IRQPEND bit and set irq_pending_clk to CLOCK_MAX */
 inline static void interrupt_ack_irq(interrupt_cpu_status_t *cs)
 {
     cs->global_pending_int =
@@ -271,69 +293,65 @@ inline static void interrupt_ack_irq(interrupt_cpu_status_t *cs)
 
 struct snapshot_module_s;
 
-extern interrupt_cpu_status_t *interrupt_cpu_status_new(void);
-extern void interrupt_cpu_status_destroy(interrupt_cpu_status_t *cs);
-extern void interrupt_cpu_status_init(interrupt_cpu_status_t *cs,
-                                      unsigned int *last_opcode_info_ptr);
-extern void interrupt_cpu_status_reset(interrupt_cpu_status_t *cs);
+interrupt_cpu_status_t *interrupt_cpu_status_new(void);
+void interrupt_cpu_status_destroy(interrupt_cpu_status_t *cs);
+void interrupt_cpu_status_init(interrupt_cpu_status_t *cs, unsigned int *last_opcode_info_ptr);
+void interrupt_cpu_status_reset(interrupt_cpu_status_t *cs);
 
-extern void interrupt_trigger_reset(interrupt_cpu_status_t *cs, CLOCK cpu_clk);
-extern unsigned int interrupt_cpu_status_int_new(interrupt_cpu_status_t *cs,
-                                                 const char *name);
-extern void interrupt_ack_reset(interrupt_cpu_status_t *cs);
-extern void interrupt_set_reset_trap_func(interrupt_cpu_status_t *cs, void (*reset_trap_func)(void));
-extern void interrupt_maincpu_trigger_trap(void (*trap_func)(WORD, void *data), void *data);
-extern void interrupt_do_trap(interrupt_cpu_status_t *cs, WORD address);
+void interrupt_trigger_reset(interrupt_cpu_status_t *cs, CLOCK cpu_clk);
+unsigned int interrupt_cpu_status_int_new(interrupt_cpu_status_t *cs, const char *name);
+void interrupt_ack_reset(interrupt_cpu_status_t *cs);
+void interrupt_set_reset_trap_func(interrupt_cpu_status_t *cs, void (*reset_trap_func)(void));
+void interrupt_maincpu_trigger_trap(void (*trap_func)(uint16_t, void *data), void *data);
+void interrupt_do_trap(interrupt_cpu_status_t *cs, uint16_t address);
 
-extern void interrupt_monitor_trap_on(interrupt_cpu_status_t *cs);
-extern void interrupt_monitor_trap_off(interrupt_cpu_status_t *cs);
+void interrupt_monitor_trap_on(interrupt_cpu_status_t *cs);
+void interrupt_monitor_trap_off(interrupt_cpu_status_t *cs);
 
-extern void interrupt_cpu_status_time_warp(interrupt_cpu_status_t *cs,
-                                           CLOCK warp_amount,
-                                           int warp_direction);
+void interrupt_cpu_status_time_warp(interrupt_cpu_status_t *cs, CLOCK warp_amount, int warp_direction);
 
-extern int interrupt_read_snapshot(interrupt_cpu_status_t *cs,
-                                   struct snapshot_module_s *m);
-extern int interrupt_read_new_snapshot(interrupt_cpu_status_t *cs,
-                                       struct snapshot_module_s *m);
-extern int interrupt_read_sc_snapshot(interrupt_cpu_status_t *cs,
-                                      struct snapshot_module_s *m);
-extern int interrupt_write_snapshot(interrupt_cpu_status_t *cs,
-                                    struct snapshot_module_s *m);
-extern int interrupt_write_new_snapshot(interrupt_cpu_status_t *cs,
-                                        struct snapshot_module_s *m);
-extern int interrupt_write_sc_snapshot(interrupt_cpu_status_t *cs,
-                                       struct snapshot_module_s *m);
+int interrupt_read_snapshot(interrupt_cpu_status_t *cs, struct snapshot_module_s *m);
+int interrupt_read_new_snapshot(interrupt_cpu_status_t *cs, struct snapshot_module_s *m);
+int interrupt_read_sc_snapshot(interrupt_cpu_status_t *cs, struct snapshot_module_s *m);
+int interrupt_write_snapshot(interrupt_cpu_status_t *cs, struct snapshot_module_s *m);
+int interrupt_write_new_snapshot(interrupt_cpu_status_t *cs, struct snapshot_module_s *m);
+int interrupt_write_sc_snapshot(interrupt_cpu_status_t *cs, struct snapshot_module_s *m);
 
-extern void interrupt_restore_irq(interrupt_cpu_status_t *cs, int int_num,
-                                  int value);
-extern void interrupt_restore_nmi(interrupt_cpu_status_t *cs, int int_num,
-                                  int value);
-extern int interrupt_get_irq(interrupt_cpu_status_t *cs, int int_num);
-extern int interrupt_get_nmi(interrupt_cpu_status_t *cs, int int_num);
-extern void interrupt_set_nmi_trap_func(interrupt_cpu_status_t *cs,
-                                        void (*nmi_trap_func)(void));
+void interrupt_restore_irq(interrupt_cpu_status_t *cs, int int_num, int value);
+void interrupt_restore_nmi(interrupt_cpu_status_t *cs, int int_num, int value);
+int interrupt_get_irq(interrupt_cpu_status_t *cs, int int_num);
+int interrupt_get_nmi(interrupt_cpu_status_t *cs, int int_num);
+void interrupt_set_nmi_trap_func(interrupt_cpu_status_t *cs, void (*nmi_trap_func)(void));
 
 /* ------------------------------------------------------------------------- */
 
 extern interrupt_cpu_status_t *maincpu_int_status;
 extern CLOCK maincpu_clk;
+#ifdef RETRODEBUGGER
 extern CLOCK c64d_maincpu_clk;
+#endif
 
 /* For convenience...  */
 
 #define maincpu_set_irq(int_num, value) \
     interrupt_set_irq(maincpu_int_status, (int_num), (value), maincpu_clk)
+
 #define maincpu_set_irq_clk(int_num, value, clk) \
     interrupt_set_irq(maincpu_int_status, (int_num), (value), (clk))
+
 #define maincpu_set_nmi(int_num, value) \
     interrupt_set_nmi(maincpu_int_status, (int_num), (value), maincpu_clk)
+
 #define maincpu_set_nmi_clk(int_num, value, clk) \
     interrupt_set_nmi(maincpu_int_status, (int_num), (value), (clk))
+
 #define maincpu_set_int(int_num, value) \
     interrupt_set_int(maincpu_int_status, (int_num), (value), maincpu_clk)
+#if 0
 #define maincpu_set_int_clk(int_num, value, clk) \
     interrupt_set_int(maincpu_int_status, (int_num), (value), (clk))
+#endif
+
 #define maincpu_trigger_reset() \
     interrupt_trigger_reset(maincpu_int_status, maincpu_clk)
 

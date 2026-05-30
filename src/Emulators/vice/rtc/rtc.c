@@ -951,3 +951,11 @@ time_t rtc_get_loaded_offset(void)
 {
     return loaded_offset;
 }
+
+/* RD: VICE 3.10 added day_offset support to rtc_save_context (7-arg). RD's
+   rtc.c is otherwise 3.1; the rtc-72421 cart calls rtc_get_loaded_day_offset
+   on load -- stub to 0 so it links (no day_offset persistence). */
+int rtc_get_loaded_day_offset(void)
+{
+    return 0;
+}

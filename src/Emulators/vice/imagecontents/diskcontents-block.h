@@ -30,6 +30,6 @@
 struct image_contents_s;
 struct vdrive_s;
 
-extern struct image_contents_s *diskcontents_block_read(struct vdrive_s *vdrive);
+struct image_contents_s *diskcontents_block_read(struct vdrive_s *vdrive, int part);
 
 #endif

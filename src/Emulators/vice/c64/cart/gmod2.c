@@ -46,7 +46,6 @@
 #include "monitor.h"
 #include "resources.h"
 #include "m93c86.h"
-#include "translate.h"
 #include "snapshot.h"
 #include "vicetypes.h"
 #include "util.h"
@@ -107,25 +106,28 @@ static const char STRING_GMOD2[] = CARTRIDGE_NAME_GMOD2;
 /* ---------------------------------------------------------------------*/
 
 /* some prototypes are needed */
-static BYTE gmod2_io1_read(WORD addr);
-static BYTE gmod2_io1_peek(WORD addr);
-static void gmod2_io1_store(WORD addr, BYTE value);
+static uint8_t gmod2_io1_read(uint16_t addr);
+static uint8_t gmod2_io1_peek(uint16_t addr);
+static void gmod2_io1_store(uint16_t addr, uint8_t value);
 static int gmod2_dump(void);
 
 static io_source_t gmod2_io1_device = {
-    CARTRIDGE_NAME_GMOD2,
-    IO_DETACH_CART,
-    NULL,
-    0xde00, 0xdeff, 0xff,
-    0,
-    gmod2_io1_store,
-    gmod2_io1_read,
-    gmod2_io1_peek,
-    gmod2_dump,
-    CARTRIDGE_GMOD2,
-    1,
-    0
+    CARTRIDGE_NAME_GMOD2,  /* name of the device */
+    IO_DETACH_CART,        /* use cartridge ID to detach the device when involved in a read-collision */
+    IO_DETACH_NO_RESOURCE, /* does not use a resource for detach */
+    0xde00, 0xdeff, 0xff,  /* range for the device, address is ignored, reg:$de00, mirrors:$de01-$deff */
+    0,                     /* read validity is determined by the device upon a read */
+    gmod2_io1_store,       /* store function */
+    NULL,                  /* NO poke function */
+    gmod2_io1_read,        /* read function */
+    gmod2_io1_peek,        /* peek function */
+    gmod2_dump,            /* device state information dump function */
+    CARTRIDGE_GMOD2,       /* cartridge ID */
+    IO_PRIO_NORMAL,        /* normal priority, device read needs to be checked for collisions */
+    0,                     /* insertion order, gets filled in by the registration function */
+    IO_MIRROR_NONE         /* NO mirroring */
 };
+
 static io_source_list_t *gmod2_io1_list_item = NULL;
 
 static const export_resource_t export_res = {
@@ -134,25 +136,24 @@ static const export_resource_t export_res = {
 
 /* ---------------------------------------------------------------------*/
 
-BYTE gmod2_io1_read(WORD addr)
+uint8_t gmod2_io1_read(uint16_t addr)
 {
     gmod2_io1_device.io_source_valid = 0;
-
     /* DBG(("io1 r %04x (cs:%d)\n", addr, eeprom_cs)); */
 
-    gmod2_io1_device.io_source_valid = 1;
     if (eeprom_cs) {
+        gmod2_io1_device.io_source_valid = 1;
         return (m93c86_read_data() << 7) | (vicii_read_phi1() & 0x7f);
     }
-    return (vicii_read_phi1() & 0xff);
+    return 0;
 }
 
-BYTE gmod2_io1_peek(WORD addr)
+uint8_t gmod2_io1_peek(uint16_t addr)
 {
     return (m93c86_read_data() << 7);
 }
 
-void gmod2_io1_store(WORD addr, BYTE value)
+void gmod2_io1_store(uint16_t addr, uint8_t value)
 {
     int mode = CMODE_WRITE;
 
@@ -170,22 +171,25 @@ void gmod2_io1_store(WORD addr, BYTE value)
     eeprom_cs = (value >> 6) & 1;
     eeprom_data = (value >> 4) & 1;
     eeprom_clock = (value >> 5) & 1;
-    m93c86_write_select((BYTE)eeprom_cs);
+    m93c86_write_select((uint8_t)eeprom_cs);
     if (eeprom_cs) {
-        m93c86_write_data((BYTE)(eeprom_data));
-        m93c86_write_clock((BYTE)(eeprom_clock));
+        m93c86_write_data((uint8_t)(eeprom_data));
+        m93c86_write_clock((uint8_t)(eeprom_clock));
     }
-    cart_config_changed_slotmain(CMODE_8KGAME, (BYTE)(gmod2_cmode | (gmod2_bank << CMODE_BANK_SHIFT)), mode);
+    cart_config_changed_slotmain(CMODE_8KGAME, (uint8_t)(gmod2_cmode | (gmod2_bank << CMODE_BANK_SHIFT)), mode);
 }
 
 /* ---------------------------------------------------------------------*/
 
-BYTE gmod2_roml_read(WORD addr)
+uint8_t gmod2_roml_read(uint16_t addr)
 {
-    return flash040core_read(flashrom_state, (addr & 0x1fff) + (roml_bank << 13));
+    if (gmod2_cmode == CMODE_8KGAME) {
+        return flash040core_read(flashrom_state, (addr & 0x1fff) + (roml_bank << 13));
+    }
+    return ram_read(addr);
 }
 
-void gmod2_romh_store(WORD addr, BYTE value)
+void gmod2_romh_store(uint16_t addr, uint8_t value)
 {
     flash040core_store(flashrom_state, (addr & 0x1fff) + (roml_bank << 13), value);
     if (flashrom_state->flash_state != FLASH040_STATE_READ) {
@@ -193,7 +197,7 @@ void gmod2_romh_store(WORD addr, BYTE value)
     }
 }
 
-int gmod2_peek_mem(export_t *export, WORD addr, BYTE *value)
+int gmod2_peek_mem(export_t *ex, uint16_t addr, uint8_t *value)
 {
     if (addr >= 0x8000 && addr <= 0x9fff) {
         *value = gmod2_roml_read(addr);
@@ -202,19 +206,10 @@ int gmod2_peek_mem(export_t *export, WORD addr, BYTE *value)
     return CART_READ_THROUGH;
 }
 
-void gmod2_mmu_translate(unsigned int addr, BYTE **base, int *start, int *limit)
+void gmod2_mmu_translate(unsigned int addr, uint8_t **base, int *start, int *limit)
 {
-#if 0
-    if (flashrom_state && flashrom_state->flash_data) {
+    if (flashrom_state && flashrom_state->flash_data && gmod2_cmode == CMODE_8KGAME) {
         switch (addr & 0xe000) {
-            case 0xe000:
-                if (flashrom_state->flash_state == FLASH040_STATE_READ) {
-                    *base = flashrom_state->flash_data + (roml_bank << 13) - 0xe000;
-                    *start = 0xe000;
-                    *limit = 0xfffd;
-                    return;
-                }
-                break;
             case 0x8000:
                 if (flashrom_state->flash_state == FLASH040_STATE_READ) {
                     *base = flashrom_state->flash_data + (roml_bank << 13) - 0x8000;
@@ -227,7 +222,6 @@ void gmod2_mmu_translate(unsigned int addr, BYTE **base, int *start, int *limit)
                 break;
         }
     }
-#endif
     *base = NULL;
     *start = 0;
     *limit = 0;
@@ -238,7 +232,7 @@ void gmod2_mmu_translate(unsigned int addr, BYTE **base, int *start, int *limit)
 static int gmod2_dump(void)
 {
     /* FIXME: incomplete */
-    mon_out("GAME/EXROM status: %s%s\n", 
+    mon_out("GAME/EXROM status: %s%s\n",
             cart_config_string(gmod2_cmode),
             (gmod2_cmode == CMODE_ULTIMAX) ? " (Flash mode)" : "");
     mon_out("ROM bank: %d\n", gmod2_bank);
@@ -252,18 +246,18 @@ static int gmod2_dump(void)
 void gmod2_config_init(void)
 {
     gmod2_cmode = CMODE_8KGAME;
-    cart_config_changed_slotmain((BYTE)gmod2_cmode, (BYTE)gmod2_cmode, CMODE_READ);
+    cart_config_changed_slotmain((uint8_t)gmod2_cmode, (uint8_t)gmod2_cmode, CMODE_READ);
     eeprom_cs = 0;
-    m93c86_write_select((BYTE)eeprom_cs);
+    m93c86_write_select((uint8_t)eeprom_cs);
     flash040core_reset(flashrom_state);
 }
 
 void gmod2_reset(void)
 {
     gmod2_cmode = CMODE_8KGAME;
-    cart_config_changed_slotmain((BYTE)gmod2_cmode, (BYTE)gmod2_cmode, CMODE_READ);
+    cart_config_changed_slotmain((uint8_t)gmod2_cmode, (uint8_t)gmod2_cmode, CMODE_READ);
     eeprom_cs = 0;
-    m93c86_write_select((BYTE)eeprom_cs);
+    m93c86_write_select((uint8_t)eeprom_cs);
 
     /* on the real hardware pressing reset would NOT reset the flash statemachine,
        only a powercycle would help. we do it here anyway :)
@@ -271,10 +265,10 @@ void gmod2_reset(void)
     flash040core_reset(flashrom_state);
 }
 
-void gmod2_config_setup(BYTE *rawcart)
+void gmod2_config_setup(uint8_t *rawcart)
 {
     gmod2_cmode = CMODE_8KGAME;
-    cart_config_changed_slotmain((BYTE)gmod2_cmode, (BYTE)gmod2_cmode, CMODE_READ);
+    cart_config_changed_slotmain((uint8_t)gmod2_cmode, (uint8_t)gmod2_cmode, CMODE_READ);
 
     flashrom_state = lib_malloc(sizeof(flash040_context_t));
     flash040core_init(flashrom_state, maincpu_alarm_context, FLASH040_TYPE_NORMAL, roml_banks);
@@ -307,6 +301,7 @@ static int set_gmod2_eeprom_filename(const char *name, void *param)
 static int set_gmod2_eeprom_rw(int val, void* param)
 {
     gmod2_eeprom_rw = val ? 1 : 0;
+    m93c86_set_image_rw(gmod2_eeprom_rw);
     return 0;
 }
 
@@ -348,31 +343,21 @@ void gmod2_resources_shutdown(void)
 
 static const cmdline_option_t cmdline_options[] =
 {
-    { "-gmod2eepromimage", SET_RESOURCE, 1,
+    { "-gmod2eepromimage", SET_RESOURCE, CMDLINE_ATTRIB_NEED_ARGS,
       NULL, NULL, "GMod2EEPROMImage", NULL,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_P_FILE, IDCLS_SELECT_GMOD2_EEPROM_IMAGE,
-      NULL, NULL },
-    { "-gmod2eepromrw", SET_RESOURCE, 0,
+      "<filename>", "Specify GMod2 EEPROM image filename" },
+    { "-gmod2eepromrw", SET_RESOURCE, CMDLINE_ATTRIB_NONE,
       NULL, NULL, "GMod2EEPROMRW", (resource_value_t)1,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_GMOD2_EEPROM_WRITE_ENABLE,
-      NULL, NULL },
-    { "+gmod2eepromrw", SET_RESOURCE, 0,
+      NULL, "Enable writes to GMod2 EEPROM image" },
+    { "+gmod2eepromrw", SET_RESOURCE, CMDLINE_ATTRIB_NONE,
       NULL, NULL, "GMod2EEPROMRW", (resource_value_t)0,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_GMOD2_EEPROM_WRITE_DISABLE,
-      NULL, NULL },
-    { "-gmod2flashwrite", SET_RESOURCE, 0,
+      NULL, "Disable writes to GMod2 EEPROM image" },
+    { "-gmod2flashwrite", SET_RESOURCE, CMDLINE_ATTRIB_NONE,
       NULL, NULL, "GMod2FlashWrite", (resource_value_t)1,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_ENABLE_SAVE_GMOD2_ROM_AT_EXIT,
-      NULL, NULL },
-    { "+gmod2flashwrite", SET_RESOURCE, 0,
+      NULL, "Enable saving of the GMod2 ROM at exit" },
+    { "+gmod2flashwrite", SET_RESOURCE, CMDLINE_ATTRIB_NONE,
       NULL, NULL, "GMod2FlashWrite", (resource_value_t)0,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_DISABLE_SAVE_GMOD2_ROM_AT_EXIT,
-      NULL, NULL },
+      NULL, "Disable saving of the GMod2 ROM at exit" },
     CMDLINE_LIST_END
 };
 
@@ -395,7 +380,7 @@ static int gmod2_common_attach(void)
     return 0;
 }
 
-int gmod2_bin_attach(const char *filename, BYTE *rawcart)
+int gmod2_bin_attach(const char *filename, uint8_t *rawcart)
 {
     gmod2_filetype = 0;
     gmod2_filename = NULL;
@@ -405,11 +390,11 @@ int gmod2_bin_attach(const char *filename, BYTE *rawcart)
     }
 
     gmod2_filetype = CARTRIDGE_FILETYPE_BIN;
-    gmod2_filename = lib_stralloc(filename);
+    gmod2_filename = lib_strdup(filename);
     return gmod2_common_attach();
 }
 
-int gmod2_crt_attach(FILE *fd, BYTE *rawcart, const char *filename)
+int gmod2_crt_attach(FILE *fd, uint8_t *rawcart, const char *filename)
 {
     crt_chip_header_t chip;
     int i;
@@ -434,7 +419,7 @@ int gmod2_crt_attach(FILE *fd, BYTE *rawcart, const char *filename)
     }
 
     gmod2_filetype = CARTRIDGE_FILETYPE_CRT;
-    gmod2_filename = lib_stralloc(filename);
+    gmod2_filename = lib_strdup(filename);
 
     return gmod2_common_attach();
 }
@@ -467,7 +452,7 @@ int gmod2_crt_save(const char *filename)
 {
     FILE *fd;
     crt_chip_header_t chip;
-    BYTE *data;
+    uint8_t *data;
     int i;
 
     fd = crt_create(filename, CARTRIDGE_GMOD2, 1, 0, STRING_GMOD2);
@@ -480,7 +465,7 @@ int gmod2_crt_save(const char *filename)
     chip.size = 0x2000;
     chip.start = 0x8000;
 
-    data = &roml_banks[0x10000];
+    data = roml_banks;
 
     for (i = 0; i < 64; i++) {
         chip.bank = i; /* bank */
@@ -506,6 +491,39 @@ int gmod2_flush_image(void)
     return -1;
 }
 
+int gmod2_can_save_eeprom(void)
+{
+    return 1;
+}
+
+int gmod2_can_flush_eeprom(void)
+{
+    if ((gmod2_eeprom_filename != NULL) && (*gmod2_eeprom_filename != 0)) {
+        return 1;
+    }
+    return 0;
+}
+
+/** \brief  Save a copy of the GMod2 EEPROM image to a file
+ *
+ * \param[in]   filename    filename for EEPROM image copy
+ *
+ * \return  0 on success, -1 on failre
+ */
+int gmod2_eeprom_save(const char *filename)
+{
+    return m93c86_save_image(filename);
+}
+
+/** \brief  FLush current contents of the GMod2 EEPROM to file
+ *
+ * \return  0 on success, -1 on failure
+ */
+int gmod2_flush_eeprom(void)
+{
+    return m93c86_flush_image();
+}
+
 void gmod2_detach(void)
 {
     if (gmod2_flash_write && flashrom_state->flash_dirty) {
@@ -525,12 +543,13 @@ void gmod2_detach(void)
     gmod2_enabled = 0;
 }
 
+
 /* ---------------------------------------------------------------------*/
 
-static char snap_module_name[] = "CARTGMOD2";
-static char flash_snap_module_name[] = "FLASH040GMOD2";
+static const char snap_module_name[] = "CARTGMOD2";
+static const char flash_snap_module_name[] = "FLASH040GMOD2";
 #define SNAP_MAJOR   0
-#define SNAP_MINOR   1
+#define SNAP_MINOR   2
 
 int gmod2_snapshot_write_module(snapshot_t *s)
 {
@@ -543,20 +562,25 @@ int gmod2_snapshot_write_module(snapshot_t *s)
     }
 
     if (0
-        || SMW_B(m, (BYTE)gmod2_cmode) < 0
-        || SMW_B(m, (BYTE)gmod2_bank) < 0) {
+        || SMW_B(m, (uint8_t)gmod2_cmode) < 0
+        || SMW_B(m, (uint8_t)gmod2_bank) < 0
+        || SMW_BA(m, flashrom_state->flash_data, GMOD2_FLASH_SIZE) < 0) {
         snapshot_module_close(m);
         return -1;
     }
 
     snapshot_module_close(m);
 
+    if (m93c86_snapshot_write_module(s) < 0) {
+        return -1;
+    }
+
     return flash040core_snapshot_write_module(s, flashrom_state, flash_snap_module_name);
 }
 
 int gmod2_snapshot_read_module(snapshot_t *s)
 {
-    BYTE vmajor, vminor;
+    uint8_t vmajor, vminor;
     snapshot_module_t *m;
 
     m = snapshot_module_open(s, snap_module_name, &vmajor, &vminor);
@@ -565,19 +589,30 @@ int gmod2_snapshot_read_module(snapshot_t *s)
         return -1;
     }
 
-    /* Do not accept versions higher than current */
-    if (vmajor > SNAP_MAJOR || vminor > SNAP_MINOR) {
+    /* reject snapshot modules newer than what we can handle (this VICE is too old) */
+    if (snapshot_version_is_bigger(vmajor, vminor, SNAP_MAJOR, SNAP_MINOR)) {
         snapshot_set_error(SNAPSHOT_MODULE_HIGHER_VERSION);
+        goto fail;
+    }
+
+    /* reject snapshot modules older than what we can handle (the snapshot is too old) */
+    if (snapshot_version_is_smaller(vmajor, vminor, SNAP_MAJOR, SNAP_MINOR)) {
+        snapshot_set_error(SNAPSHOT_MODULE_INCOMPATIBLE);
         goto fail;
     }
 
     if (0
         || SMR_B_INT(m, &gmod2_cmode) < 0
-        || SMR_B_INT(m, &gmod2_bank) < 0) {
+        || SMR_B_INT(m, &gmod2_bank) < 0
+        || SMR_BA(m, roml_banks, GMOD2_FLASH_SIZE) < 0) {
         goto fail;
     }
 
     snapshot_module_close(m);
+
+    if (m93c86_snapshot_read_module(s) < 0) {
+        return -1;
+    }
 
     flashrom_state = lib_malloc(sizeof(flash040_context_t));
     flash040core_init(flashrom_state, maincpu_alarm_context, FLASH040_TYPE_NORMAL, roml_banks);

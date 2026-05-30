@@ -31,20 +31,21 @@
 
 #include "vicetypes.h"
 
-extern void pagefox_config_init(void);
-extern void pagefox_config_setup(BYTE *rawcart);
-extern int pagefox_bin_attach(const char *filename, BYTE *rawcart);
-extern int pagefox_crt_attach(FILE *fd, BYTE *rawcart);
-extern void pagefox_detach(void);
+void pagefox_config_init(void);
+void pagefox_config_setup(uint8_t *rawcart);
+int pagefox_bin_attach(const char *filename, uint8_t *rawcart);
+int pagefox_crt_attach(FILE *fd, uint8_t *rawcart);
+void pagefox_detach(void);
+void pagefox_powerup(void);
 
-extern BYTE pagefox_roml_read(WORD addr);
-extern void pagefox_roml_store(WORD addr, BYTE value);
-extern BYTE pagefox_romh_read(WORD addr);
-extern void pagefox_romh_store(WORD addr, BYTE value);
+uint8_t pagefox_roml_read(uint16_t addr);
+void pagefox_roml_store(uint16_t addr, uint8_t value);
+uint8_t pagefox_romh_read(uint16_t addr);
+void pagefox_romh_store(uint16_t addr, uint8_t value);
 
 struct snapshot_s;
 
-extern int pagefox_snapshot_write_module(struct snapshot_s *s);
-extern int pagefox_snapshot_read_module(struct snapshot_s *s);
+int pagefox_snapshot_write_module(struct snapshot_s *s);
+int pagefox_snapshot_read_module(struct snapshot_s *s);
 
 #endif

@@ -39,7 +39,6 @@
 #include "log.h"
 #include "rawimage.h"
 #include "resources.h"
-#include "translate.h"
 #include "vicetypes.h"
 #include "util.h"
 
@@ -55,7 +54,7 @@ void rawimage_name_set(disk_image_t *image, const char *name)
 
     rawimage = image->media.rawimage;
 
-    rawimage->name = lib_stralloc(name);
+    rawimage->name = lib_strdup(name);
 }
 
 const char *rawimage_name_get(const disk_image_t *image)
@@ -172,10 +171,7 @@ void rawimage_resources_shutdown(void)
 static const cmdline_option_t cmdline_options[] =
 {
     { "-rawdrive", SET_RESOURCE, 1,
-      NULL, NULL, "RawDriveDriver", NULL,
-      USE_PARAM_ID, USE_DESCRIPTION_ID,
-      IDCLS_P_NAME, IDCLS_SET_RAW_DRIVE_DEVICE,
-      NULL, NULL },
+      NULL, NULL, "RawDriveDriver", NULL, N_("<Name>"), N_("Set raw drive device name")},
     CMDLINE_LIST_END
 };
 

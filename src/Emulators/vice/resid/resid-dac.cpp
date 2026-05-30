@@ -19,13 +19,13 @@
 
 #define RESID_DAC_CC
 
+#ifdef _M_ARM
+#undef _ARM_WINAPI_PARTITION_DESKTOP_SDK_AVAILABLE
+#define _ARM_WINAPI_PARTITION_DESKTOP_SDK_AVAILABLE 1
+#endif
+
 #include "resid-dac.h"
 #include <math.h>
-
-#ifdef __IBMC__
-#include <float.h>
-#define INFINITY _INF
-#endif
 
 #ifndef INFINITY
 union MSVC_EVIL_FLOAT_HACK
@@ -39,6 +39,12 @@ static union MSVC_EVIL_FLOAT_HACK INFINITY_HACK = {{0x00, 0x00, 0x80, 0x7F}};
 
 namespace reSID
 {
+
+// "Even in standard transistors a small amount of current leaks
+//  even when they are technically switched off."
+// https://en.wikipedia.org/wiki/Subthreshold_conduction
+static const double MOSFET_LEAKAGE_6581 = 0.0075;
+static const double MOSFET_LEAKAGE_8580 = 0.0035;
 
 // ----------------------------------------------------------------------------
 // Calculation of lookup tables for SID DACs.
@@ -72,6 +78,8 @@ void build_dac_table(unsigned short* dac, int bits, double _2R_div_R, bool term)
   // FIXME: No variable length arrays in ISO C++, hardcoding to max 12 bits.
   // double vbit[bits];
   double vbit[12];
+
+  const double leakage = term ? MOSFET_LEAKAGE_8580 : MOSFET_LEAKAGE_6581;
 
   // Calculate voltage contribution by each individual bit in the R-2R ladder.
   for (int set_bit = 0; set_bit < bits; set_bit++) {
@@ -119,7 +127,7 @@ void build_dac_table(unsigned short* dac, int bits, double _2R_div_R, bool term)
     int x = i;
     double Vo = 0;
     for (int j = 0; j < bits; j++) {
-      Vo += (x & 0x1)*vbit[j];
+      Vo += ((x & 0x1) ? 1. : leakage)*vbit[j];
       x >>= 1;
     }
 

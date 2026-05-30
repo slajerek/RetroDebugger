@@ -29,7 +29,6 @@
 
 #include "vicetypes.h"
 
-extern int userport_4bit_sampler_resources_init(void);
-extern int userport_4bit_sampler_cmdline_options_init(void);
+int userport_4bit_sampler_resources_init(void);
 
 #endif

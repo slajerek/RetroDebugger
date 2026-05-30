@@ -40,10 +40,13 @@
 #include "export.h"
 #include "lib.h"
 #include "monitor.h"
+#include "ram.h"
 #include "snapshot.h"
 #include "vicetypes.h"
 #include "util.h"
 #include "crt.h"
+
+#include "pagefox.h"
 
 /*
     Pagefox Cartridge
@@ -86,14 +89,14 @@
 
 #define PAGEFOX_RAMSIZE (32 * 1024)
 
-static BYTE *pagefox_ram = NULL;
+static uint8_t *pagefox_ram = NULL;
 static int pagefox_enabled = 0;
 
 static int currbank = 0;
 static int chipselect = 0;
 static int bankselect = 0;
 
-static void pagefox_io1_store(WORD addr, BYTE value)
+static void pagefox_io1_store(uint16_t addr, uint8_t value)
 {
     bankselect = ((value >> 1) & 1);
     chipselect = (value >> 2) & 3;
@@ -112,7 +115,7 @@ static void pagefox_io1_store(WORD addr, BYTE value)
     cart_romlbank_set_slotmain(currbank & 3);
 }
 
-static BYTE pagefox_io1_peek(WORD addr)
+static uint8_t pagefox_io1_peek(uint16_t addr)
 {
     return (bankselect << 1) | (chipselect << 2) | ((pagefox_enabled ^ 1) << 4);
 }
@@ -129,18 +132,20 @@ static int pagefox_dump(void)
 /* ---------------------------------------------------------------------*/
 
 static io_source_t pagefox_device = {
-    CARTRIDGE_NAME_PAGEFOX,
-    IO_DETACH_CART,
-    NULL,
-    0xde80, 0xdeff, 0xff,
-    0,
-    pagefox_io1_store,
-    NULL,
-    pagefox_io1_peek,
-    pagefox_dump,
-    CARTRIDGE_PAGEFOX,
-    0,
-    0
+    CARTRIDGE_NAME_PAGEFOX, /* name of the device */
+    IO_DETACH_CART,         /* use cartridge ID to detach the device when involved in a read-collision */
+    IO_DETACH_NO_RESOURCE,  /* does not use a resource for detach */
+    0xde80, 0xdeff, 0xff,   /* range for the device, address is ignored, reg:$de80, mirrors:$de81-$deff */
+    0,                      /* read is never valid, reg is write only */
+    pagefox_io1_store,      /* store function */
+    NULL,                   /* NO poke function */
+    NULL,                   /* NO read function */
+    pagefox_io1_peek,       /* peek function */
+    pagefox_dump,           /* device state information dump function */
+    CARTRIDGE_PAGEFOX,      /* cartridge ID */
+    IO_PRIO_NORMAL,         /* normal priority, device read needs to be checked for collisions */
+    0,                      /* insertion order, gets filled in by the registration function */
+    IO_MIRROR_NONE          /* NO mirroring */
 };
 
 static io_source_list_t *pagefox_list_item = NULL;
@@ -152,7 +157,7 @@ static const export_resource_t export_res = {
 /* ---------------------------------------------------------------------*/
 
 /* ROML read - mapped to 8000 in 8k,16k,ultimax */
-BYTE pagefox_roml_read(WORD addr)
+uint8_t pagefox_roml_read(uint16_t addr)
 {
     if (chipselect == 2) {
         return pagefox_ram[0x0000 + (addr & 0x1fff) + (bankselect << 14)];
@@ -161,7 +166,7 @@ BYTE pagefox_roml_read(WORD addr)
 }
 
 /* ROML store - mapped to 8000 in ultimax mode */
-void pagefox_roml_store(WORD addr, BYTE value)
+void pagefox_roml_store(uint16_t addr, uint8_t value)
 {
     /* printf("pagefox_roml_store chipselect: %d bankselect: %d %04x,%02x\n", chipselect, bankselect, addr, value); */
     if (chipselect == 2) {
@@ -170,7 +175,7 @@ void pagefox_roml_store(WORD addr, BYTE value)
 }
 
 /* ROMH read - mapped to A000 in 16k, to E000 in ultimax */
-BYTE pagefox_romh_read(WORD addr)
+uint8_t pagefox_romh_read(uint16_t addr)
 {
     if (chipselect == 2) {
         return pagefox_ram[0x2000 + (addr & 0x1fff) + (bankselect << 14)];
@@ -178,7 +183,7 @@ BYTE pagefox_romh_read(WORD addr)
     return romh_banks[(addr & 0x1fff) + (romh_bank << 13)];
 }
 
-void pagefox_romh_store(WORD addr, BYTE value)
+void pagefox_romh_store(uint16_t addr, uint8_t value)
 {
     /* printf("pagefox_romh_store chipselect: %d bankselect: %d %04x,%02x\n", chipselect, bankselect, addr, value); */
     if (chipselect == 2) {
@@ -188,12 +193,33 @@ void pagefox_romh_store(WORD addr, BYTE value)
 
 /* ---------------------------------------------------------------------*/
 
+/* FIXME: this still needs to be tweaked to match the hardware */
+static RAMINITPARAM ramparam = {
+    .start_value = 255,
+    .value_invert = 2,
+    .value_offset = 1,
+
+    .pattern_invert = 0x100,
+    .pattern_invert_value = 255,
+
+    .random_start = 0,
+    .random_repeat = 0,
+    .random_chance = 0,
+};
+
+void pagefox_powerup(void)
+{
+    if (pagefox_ram) {
+        ram_init_with_pattern(pagefox_ram, PAGEFOX_RAMSIZE, &ramparam);
+    }
+}
+
 void pagefox_config_init(void)
 {
     pagefox_io1_store(0xde80, 0x00);
 }
 
-void pagefox_config_setup(BYTE *rawcart)
+void pagefox_config_setup(uint8_t *rawcart)
 {
     memcpy(&roml_banks[0x0000], &rawcart[0x0000], 0x2000);
     memcpy(&romh_banks[0x0000], &rawcart[0x2000], 0x2000);
@@ -216,16 +242,18 @@ static int pagefox_common_attach(void)
     return 0;
 }
 
-int pagefox_bin_attach(const char *filename, BYTE *rawcart)
+int pagefox_bin_attach(const char *filename, uint8_t *rawcart)
 {
     if (util_file_load(filename, rawcart, 0x10000, UTIL_FILE_LOAD_SKIP_ADDRESS) < 0) {
         return -1;
     }
-    pagefox_ram = lib_malloc(PAGEFOX_RAMSIZE);
+    if (pagefox_ram == NULL) {
+        pagefox_ram = lib_malloc(PAGEFOX_RAMSIZE);
+    }
     return pagefox_common_attach();
 }
 
-int pagefox_crt_attach(FILE *fd, BYTE *rawcart)
+int pagefox_crt_attach(FILE *fd, uint8_t *rawcart)
 {
     crt_chip_header_t chip;
 
@@ -242,7 +270,9 @@ int pagefox_crt_attach(FILE *fd, BYTE *rawcart)
             return -1;
         }
     }
-    pagefox_ram = lib_malloc(PAGEFOX_RAMSIZE);
+    if (pagefox_ram == NULL) {
+        pagefox_ram = lib_malloc(PAGEFOX_RAMSIZE);
+    }
     return pagefox_common_attach();
 }
 
@@ -252,6 +282,7 @@ void pagefox_detach(void)
     io_source_unregister(pagefox_list_item);
     pagefox_list_item = NULL;
     lib_free(pagefox_ram);
+    pagefox_ram = NULL;
 }
 
 /* ---------------------------------------------------------------------*/
@@ -267,7 +298,7 @@ void pagefox_detach(void)
    ARRAY | ROMH    |   0.0+  | 32768 BYTES of ROMH data
  */
 
-static char snap_module_name[] = "CARTPAGEFOX";
+static const char snap_module_name[] = "CARTPAGEFOX";
 #define SNAP_MAJOR   0
 #define SNAP_MINOR   1
 
@@ -282,8 +313,8 @@ int pagefox_snapshot_write_module(snapshot_t *s)
     }
 
     if (0
-        || SMW_B(m, (BYTE)pagefox_enabled) < 0
-        || SMW_B(m, (BYTE)currbank) < 0
+        || SMW_B(m, (uint8_t)pagefox_enabled) < 0
+        || SMW_B(m, (uint8_t)currbank) < 0
         || SMW_BA(m, pagefox_ram, PAGEFOX_RAMSIZE) < 0
         || SMW_BA(m, roml_banks, 0x8000) < 0
         || SMW_BA(m, romh_banks, 0x8000) < 0) {
@@ -296,7 +327,7 @@ int pagefox_snapshot_write_module(snapshot_t *s)
 
 int pagefox_snapshot_read_module(snapshot_t *s)
 {
-    BYTE vmajor, vminor;
+    uint8_t vmajor, vminor;
     snapshot_module_t *m;
 
     m = snapshot_module_open(s, snap_module_name, &vmajor, &vminor);
@@ -306,13 +337,13 @@ int pagefox_snapshot_read_module(snapshot_t *s)
     }
 
     /* Do not accept versions higher than current */
-    if (vmajor > SNAP_MAJOR || vminor > SNAP_MINOR) {
+    if (snapshot_version_is_bigger(vmajor, vminor, SNAP_MAJOR, SNAP_MINOR)) {
         snapshot_set_error(SNAPSHOT_MODULE_HIGHER_VERSION);
         goto fail;
     }
 
     /* new in 0.1 */
-    if (SNAPVAL(vmajor, vminor, 0, 1)) {
+    if (!snapshot_version_is_smaller(vmajor, vminor, 0, 1)) {
         if (SMR_B_INT(m, &pagefox_enabled) < 0) {
             goto fail;
         }
@@ -328,6 +359,7 @@ int pagefox_snapshot_read_module(snapshot_t *s)
         || SMR_BA(m, roml_banks, 0x8000) < 0
         || SMR_BA(m, romh_banks, 0x8000) < 0) {
         lib_free(pagefox_ram);
+        pagefox_ram = NULL;
         goto fail;
     }
 

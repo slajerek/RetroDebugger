@@ -48,7 +48,7 @@ static int traps_installed = 0;
 static const trap_t *serial_traps;
 
 /* Logging goes here.  */
-static log_t serial_log = LOG_ERR;
+static log_t serial_log = LOG_DEFAULT;
 
 /* ------------------------------------------------------------------------- */
 

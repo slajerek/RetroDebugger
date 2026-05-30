@@ -38,11 +38,16 @@
 #include "vicetypes.h"
 #include "log.h"
 
+
 int machine_drive_resources_init(void)
 {
     int drive_8_type = (machine_class == VICE_MACHINE_VSID) ? DRIVE_TYPE_NONE : DRIVE_TYPE_1541II;
 
-    return drive_resources_type_init(drive_8_type) | iec_drive_resources_init() | iec_c64exp_resources_init() | ieee_drive_resources_init();
+    /* init drive type resource last, so the ROMs are loaded when it initializes */
+    return iec_drive_resources_init() |
+           iec_c64exp_resources_init() |
+           ieee_drive_resources_init() |
+           drive_resources_type_init(drive_8_type);
 }
 
 void machine_drive_resources_shutdown(void)
@@ -57,7 +62,7 @@ int machine_drive_cmdline_options_init(void)
     return iec_drive_cmdline_options_init() | iec_c64exp_cmdline_options_init() | ieee_drive_cmdline_options_init();
 }
 
-void machine_drive_init(struct drive_context_s *drv)
+void machine_drive_init(struct diskunit_context_s *drv)
 {
     iec_drive_init(drv);
     iecieee_drive_init(drv);
@@ -65,14 +70,14 @@ void machine_drive_init(struct drive_context_s *drv)
     ieee_drive_init(drv);
 }
 
-void machine_drive_shutdown(struct drive_context_s *drv)
+void machine_drive_shutdown(struct diskunit_context_s *drv)
 {
     iec_drive_shutdown(drv);
     iecieee_drive_shutdown(drv);
     ieee_drive_shutdown(drv);
 }
 
-void machine_drive_reset(struct drive_context_s *drv)
+void machine_drive_reset(struct diskunit_context_s *drv)
 {
     iec_drive_reset(drv);
     iecieee_drive_reset(drv);
@@ -80,14 +85,14 @@ void machine_drive_reset(struct drive_context_s *drv)
     ieee_drive_reset(drv);
 }
 
-void machine_drive_mem_init(struct drive_context_s *drv, unsigned int type)
+void machine_drive_mem_init(struct diskunit_context_s *drv, unsigned int type)
 {
     iec_drive_mem_init(drv, type);
     iec_c64exp_mem_init(drv, type);
     ieee_drive_mem_init(drv, type);
 }
 
-void machine_drive_setup_context(struct drive_context_s *drv)
+void machine_drive_setup_context(struct diskunit_context_s *drv)
 {
     iec_drive_setup_context(drv);
     iecieee_drive_setup_context(drv);
@@ -99,18 +104,21 @@ void machine_drive_idling_method(unsigned int dnr)
     iec_drive_idling_method(dnr);
 }
 
+/* test ROMs for existence, size */
 void machine_drive_rom_load(void)
 {
     iec_drive_rom_load();
     ieee_drive_rom_load();
 }
 
+/* setup (=load) the ROM for a given disk unit */
 void machine_drive_rom_setup_image(unsigned int dnr)
 {
     iec_drive_rom_setup_image(dnr);
     ieee_drive_rom_setup_image(dnr);
 }
 
+/* check if the drive ROM is available for a given drive type, returns -1 on error */
 int machine_drive_rom_check_loaded(unsigned int type)
 {
     if (iec_drive_rom_check_loaded(type) == 0) {
@@ -123,13 +131,14 @@ int machine_drive_rom_check_loaded(unsigned int type)
     return -1;
 }
 
+/* perform checksum check on ROM for given disk unit nr */
 void machine_drive_rom_do_checksum(unsigned int dnr)
 {
     iec_drive_rom_do_checksum(dnr);
     ieee_drive_rom_do_checksum(dnr);
 }
 
-int machine_drive_snapshot_read(struct drive_context_s *ctxptr, struct snapshot_s *s)
+int machine_drive_snapshot_read(struct diskunit_context_s *ctxptr, struct snapshot_s *s)
 {
     if (iec_drive_snapshot_read(ctxptr, s) < 0) {
         return -1;
@@ -144,7 +153,7 @@ int machine_drive_snapshot_read(struct drive_context_s *ctxptr, struct snapshot_
     return 0;
 }
 
-int machine_drive_snapshot_write(struct drive_context_s *ctxptr, struct snapshot_s *s)
+int machine_drive_snapshot_write(struct diskunit_context_s *ctxptr, struct snapshot_s *s)
 {
     if (iec_drive_snapshot_write(ctxptr, s) < 0) {
         return -1;
@@ -159,17 +168,17 @@ int machine_drive_snapshot_write(struct drive_context_s *ctxptr, struct snapshot
     return 0;
 }
 
-int machine_drive_image_attach(struct disk_image_s *image, unsigned int unit)
+int machine_drive_image_attach(struct disk_image_s *image, unsigned int unit, unsigned int drive)
 {
-    return iec_drive_image_attach(image, unit) & ieee_drive_image_attach(image, unit);
+    return iec_drive_image_attach(image, unit, drive) & ieee_drive_image_attach(image, unit, drive);
 }
 
-int machine_drive_image_detach(struct disk_image_s *image, unsigned int unit)
+int machine_drive_image_detach(struct disk_image_s *image, unsigned int unit, unsigned int drive)
 {
-    return iec_drive_image_detach(image, unit) & ieee_drive_image_detach(image, unit);
+    return iec_drive_image_detach(image, unit, drive) & ieee_drive_image_detach(image, unit, drive);
 }
 
-void machine_drive_port_default(struct drive_context_s *drv)
+void machine_drive_port_default(struct diskunit_context_s *drv)
 {
     iec_drive_port_default(drv);
 }

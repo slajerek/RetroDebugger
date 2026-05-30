@@ -64,18 +64,21 @@
 #define CBMDOS_IPE_BAD_TYPE                64
 #define CBMDOS_IPE_NO_BLOCK                65
 #define CBMDOS_IPE_ILLEGAL_TRACK_OR_SECTOR 66
+#define CBMDOS_IPE_ILLEGAL_SYSTEM_T_OR_S   67  /* 1581 */
 
 #define CBMDOS_IPE_NO_CHANNEL              70
+#define CBMDOS_IPE_DIRECTORY_ERROR         71
 #define CBMDOS_IPE_DISK_FULL               72
 #define CBMDOS_IPE_DOS_VERSION             73
 #define CBMDOS_IPE_NOT_READY               74
+#define CBMDOS_IPE_FORMAT_ERROR            75
 #define CBMDOS_IPE_BAD_PARTN               77  /* 1581 */
 
 #define CBMDOS_IPE_NOT_EMPTY               80  /* dir to remove not empty */
 #define CBMDOS_IPE_PERMISSION              81  /* permission denied */
 
 /* CBM DOS File Types */
-#define CBMDOS_FT_DEL         0
+#define CBMDOS_FT_DEL         0       /* should match FILEIO_TYPE_xxx */
 #define CBMDOS_FT_SEQ         1
 #define CBMDOS_FT_PRG         2
 #define CBMDOS_FT_USR         3
@@ -116,7 +119,7 @@ enum fdc_err_e {
 typedef enum fdc_err_e fdc_err_t;
 
 struct cbmdos_cmd_parse_s {
-    const BYTE *cmd; /* input: full dos-command string */
+    const uint8_t *cmd; /* input: full dos-command string */
     unsigned int cmdlength; /* input */
     char *parsecmd; /* output: parsed command */
     unsigned int secondary; /* input */
@@ -125,17 +128,44 @@ struct cbmdos_cmd_parse_s {
     unsigned int filetype; /* output */
     unsigned int recordlength; /* output */
     int drive; /* output: drive number */
+    unsigned int atsign; /* @0:filename, detected in fsdevice_open() */
 };
 typedef struct cbmdos_cmd_parse_s cbmdos_cmd_parse_t;
 
+struct cbmdos_cmd_parse_plus_s {
+    const uint8_t *full; /* input: full dos-command string */
+    unsigned int fulllength; /* input: length of string */
+    unsigned int secondary; /* input */
+    int mode; /* input: decode type, 0=file, 1=command */
 
-extern const char *cbmdos_errortext(unsigned int code);
-extern const char *cbmdos_filetype_get(unsigned int filetype);
+    int drive; /* output: drive number */
+    uint8_t *command; /* output: parsed command */
+    unsigned int commandlength; /* command length */
+    uint8_t *abbrv; /* output: parsed abbreviated command */
+    unsigned int abbrvlength; /* abbreviated command length */
+    uint8_t *path; /* output: parsed path */
+    unsigned int pathlength; /* path length */
+    uint8_t *file; /* output: parsed file */
+    unsigned int filelength; /* file length */
+    uint8_t *more; /* output: command to further process */
+    unsigned int morelength; /* length of command to further process */
 
-extern unsigned int cbmdos_parse_wildcard_check(const char *name, unsigned int len);
-extern unsigned int cbmdos_parse_wildcard_compare(const BYTE *name1, const BYTE *name2);
-extern BYTE *cbmdos_dir_slot_create(const char *name, unsigned int len);
+    /* for file mode */
+    unsigned int readmode; /* output */
+    unsigned int filetype; /* output */
+    unsigned int recordlength; /* output */
+    unsigned int colon; /* output, 0=no colon found, !0=colon found */
+};
+typedef struct cbmdos_cmd_parse_plus_s cbmdos_cmd_parse_plus_t;
 
-extern unsigned int cbmdos_command_parse(cbmdos_cmd_parse_t *cmd_parse);
+const char *cbmdos_errortext(unsigned int code);
+const char *cbmdos_filetype_get(unsigned int filetype);
+
+unsigned int cbmdos_parse_wildcard_check(const char *name, unsigned int len);
+unsigned int cbmdos_parse_wildcard_compare(const uint8_t *name1, const uint8_t *name2);
+uint8_t *cbmdos_dir_slot_create(const char *name, unsigned int len);
+
+unsigned int cbmdos_command_parse(cbmdos_cmd_parse_t *cmd_parse);
+unsigned int cbmdos_command_parse_plus(cbmdos_cmd_parse_plus_t *cmd_parse);
 
 #endif

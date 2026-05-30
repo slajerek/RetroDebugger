@@ -33,11 +33,10 @@
 #include "lib.h"
 #include "machine.h"
 #include "raster-cmdline-options.h"
-#include "translate.h"
 #include "util.h"
 #include "video.h"
 
-static const char *cname_chip[] = {
+static const char * const cname_chip[] = {
     "-", "vcache", "VideoCache",
     "+", "vcache", "VideoCache",
     NULL
@@ -45,16 +44,12 @@ static const char *cname_chip[] = {
 
 static cmdline_option_t cmdline_options_chip[] =
 {
-    { NULL, SET_RESOURCE, 0,
+    { NULL, SET_RESOURCE, CMDLINE_ATTRIB_NONE,
       NULL, NULL, NULL, (void *)1,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_ENABLE_VIDEO_CACHE,
-      NULL, NULL },
-    { NULL, SET_RESOURCE, 0,
+      NULL, "Enable the video cache" },
+    { NULL, SET_RESOURCE, CMDLINE_ATTRIB_NONE,
       NULL, NULL, NULL, (void *)0,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_DISABLE_VIDEO_CACHE,
-      NULL, NULL },
+      NULL, "Disable the video cache" },
     CMDLINE_LIST_END
 };
 

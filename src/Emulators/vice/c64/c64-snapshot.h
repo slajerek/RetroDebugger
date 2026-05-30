@@ -27,8 +27,8 @@
 #ifndef VICE_C64_SNAPSHOT_H
 #define VICE_C64_SNAPSHOT_H
 
-extern int c64_snapshot_write(const char *name, int save_roms, int save_disks, int event_mode, int save_reu_data, int save_cart_roms, int save_screen);
-extern int c64_snapshot_read(const char *name, int event_mode, int read_roms, int read_disks, int read_reu_data, int read_cart_roms);
+int c64_snapshot_write(const char *name, int save_roms, int save_disks, int event_mode, int save_reu_data, int save_cart_roms, int save_screen);
+int c64_snapshot_read(const char *name, int event_mode, int read_roms, int read_disks, int read_reu_data, int read_cart_roms);
 
 extern int c64_snapshot_read_from_memory(int save_chips, int read_roms, int read_disks, int event_mode, int read_reu_data, int read_cart_roms,
 										 unsigned char *snapshot_data, int snapshot_size);

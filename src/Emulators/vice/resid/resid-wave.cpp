@@ -25,6 +25,26 @@
 namespace reSID
 {
 
+// Number of cycles after which the shift register is reset
+// when the test bit is set.
+const cycle_count SHIFT_REGISTER_RESET_START_6581 =   35000; // 0x8000
+const cycle_count SHIFT_REGISTER_RESET_BIT_6581   =    1000;
+const cycle_count SHIFT_REGISTER_RESET_START_8580 = 2519864; // 0x950000
+const cycle_count SHIFT_REGISTER_RESET_BIT_8580   =  315000;
+
+// Number of cycles after which the waveform output fades to 0 when setting
+// the waveform register to 0.
+//
+// We have two SOAS/C samplings showing that floating DAC
+// keeps its state for at least 0x14000 cycles.
+//
+// This can't be found via sampling OSC3, it seems that
+// the actual analog output must be sampled and timed.
+const cycle_count FLOATING_OUTPUT_TTL_START_6581 =  182000;  // ~200ms
+const cycle_count FLOATING_OUTPUT_TTL_BIT_6581   =    1500;
+const cycle_count FLOATING_OUTPUT_TTL_START_8580 = 4400000; // ~5s
+const cycle_count FLOATING_OUTPUT_TTL_BIT_8580   =   50000;
+
 // Waveform lookup tables.
 unsigned short WaveformGenerator::model_wave[2][8][1 << 12] = {
   {
@@ -72,9 +92,8 @@ WaveformGenerator::WaveformGenerator()
 
       // Noise mask, triangle, sawtooth, pulse mask.
       // The triangle calculation is made branch-free, just for the hell of it.
-      model_wave[0][0][i] = model_wave[1][0][i] = 0xffe;
-      model_wave[0][1][i] = model_wave[1][1][i] =
-	((accumulator ^ -!!msb) >> 11) & 0xfff;
+      model_wave[0][0][i] = model_wave[1][0][i] = 0xfff;
+      model_wave[0][1][i] = model_wave[1][1][i] = ((accumulator ^ -!!msb) >> 11) & 0xffe;
       model_wave[0][2][i] = model_wave[1][2][i] = accumulator >> 12;
       model_wave[0][4][i] = model_wave[1][4][i] = 0xfff;
 
@@ -93,6 +112,12 @@ WaveformGenerator::WaveformGenerator()
   sync_source = this;
 
   sid_model = MOS6581;
+
+  // Accumulator's even bits are high on powerup
+  accumulator = 0x555555;
+
+  tri_saw_pipeline = 0x555;
+
   reset();
 }
 
@@ -144,6 +169,35 @@ void WaveformGenerator::writePW_HI(reg8 pw_hi)
   pulse_output = (accumulator >> 12) >= pw ? 0xfff : 0x000;
 }
 
+bool do_pre_writeback(reg8 waveform_prev, reg8 waveform, bool is6581)
+{
+    // no writeback without combined waveforms
+    if (likely(waveform_prev <= 0x8)) {
+        return false;
+    }
+#if 0
+    // This need more investigation
+    if (waveform == 8) {
+        return false;
+    }
+#endif
+    if (waveform_prev == 0xc) {
+        if (is6581) {
+            return false;
+        } else if ((waveform != 0x9) && (waveform != 0xe)) {
+            return false;
+        }
+    }
+    // What's happening here?
+    if (is6581 &&
+            ((((waveform_prev & 0x3) == 0x1) && ((waveform & 0x3) == 0x2))
+            || (((waveform_prev & 0x3) == 0x2) && ((waveform & 0x3) == 0x1)))) {
+        return false;
+    }
+    // ok do the writeback
+    return true;
+}
+
 void WaveformGenerator::writeCONTROL_REG(reg8 control)
 {
   reg8 waveform_prev = waveform;
@@ -180,7 +234,7 @@ void WaveformGenerator::writeCONTROL_REG(reg8 control)
     shift_pipeline = 0;
 
     // Set reset time for shift register.
-    shift_register_reset = 0x8000;
+    shift_register_reset = (sid_model == MOS6581) ? SHIFT_REGISTER_RESET_START_6581 : SHIFT_REGISTER_RESET_START_8580;
 
     // The test bit sets pulse high.
     pulse_output = 0xfff;
@@ -188,6 +242,13 @@ void WaveformGenerator::writeCONTROL_REG(reg8 control)
   else if (test_prev && !test) {
     // When the test bit is falling, the second phase of the shift is
     // completed by enabling SRAM write.
+
+    // During first phase of the shift the bits are interconnected
+    // and the output of each bit is latched into the following.
+    // The output may overwrite the latched value.
+    if (do_pre_writeback(waveform_prev, waveform, sid_model == MOS6581)) {
+        write_shift_register();
+    }
 
     // bit0 = (bit22 | test) ^ bit17 = 1 ^ bit17 = ~bit17
     reg24 bit0 = (~shift_register >> 17) & 0x1;
@@ -204,15 +265,34 @@ void WaveformGenerator::writeCONTROL_REG(reg8 control)
   else if (waveform_prev) {
     // Change to floating DAC input.
     // Reset fading time for floating DAC input.
-    floating_output_ttl = 0x4000;
+    floating_output_ttl = (sid_model == MOS6581) ? FLOATING_OUTPUT_TTL_START_6581 : FLOATING_OUTPUT_TTL_START_8580;
   }
 
   // The gate bit is handled by the EnvelopeGenerator.
 }
 
+void WaveformGenerator::wave_bitfade()
+{
+  waveform_output &= waveform_output >> 1;
+  osc3 = waveform_output;
+  if (waveform_output != 0)
+    floating_output_ttl = (sid_model == MOS6581) ? FLOATING_OUTPUT_TTL_BIT_6581 : FLOATING_OUTPUT_TTL_BIT_8580;
+}
+
+void WaveformGenerator::shiftreg_bitfade()
+{
+  shift_register |= 1;
+  shift_register |= shift_register << 1;
+
+  // New noise waveform output.
+  set_noise_output();
+  if (shift_register != 0x7fffff)
+    shift_register_reset = (sid_model == MOS6581) ? SHIFT_REGISTER_RESET_BIT_6581 : SHIFT_REGISTER_RESET_BIT_8580;
+}
+
 reg8 WaveformGenerator::readOSC()
 {
-  return waveform_output >> 4;
+  return osc3 >> 4;
 }
 
 // ----------------------------------------------------------------------------
@@ -220,7 +300,7 @@ reg8 WaveformGenerator::readOSC()
 // ----------------------------------------------------------------------------
 void WaveformGenerator::reset()
 {
-  accumulator = 0;
+  // accumulator is not changed on reset
   freq = 0;
   pw = 0;
 
@@ -238,10 +318,16 @@ void WaveformGenerator::reset()
   no_pulse = 0xfff;
   pulse_output = 0xfff;
 
-  reset_shift_register();
+  // reset shift register
+  // when reset is released the shift register is clocked once
+  shift_register = 0x7ffffe;
+  shift_register_reset = 0;
+  set_noise_output();
+
   shift_pipeline = 0;
 
   waveform_output = 0;
+  osc3 = 0;
   floating_output_ttl = 0;
 }
 

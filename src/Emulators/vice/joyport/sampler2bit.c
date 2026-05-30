@@ -32,7 +32,8 @@
 
 #include "joyport.h"
 #include "sampler.h"
-#include "translate.h"
+
+#include "sampler2bit.h"
 
 /* Control port <--> 2bit sampler connections:
 
@@ -40,55 +41,71 @@
    --------------------------
      1   | D0           |  I
      2   | D1           |  I
+     7   | +5VDC        |  Power
+     8   | GND          |  Ground
 
+   Works on:
+   - native joystick port(s) (x64/x64sc/xscpu64/x128/xvic/xcbm5x0/xplus4)
+   - inception joystick adapter ports (x64/x64sc/xscpu64/x128/xvic/xcbm5x0)
+   - sidcart joystick adapter port (xplus4)
  */
 
 static int sampler_enabled = 0;
 
-static int joyport_sampler_enable(int port, int value)
+static int joyport_sampler_set_enabled(int port, int enabled)
 {
-    int val = value ? 1 : 0;
+    int new_state = enabled ? 1 : 0;
 
-    if (val == sampler_enabled) {
+    if (new_state == sampler_enabled) {
         return 0;
     }
 
-    if (val) {
+    if (new_state) {
+        /* enabled, start the sampler module in mono mode */
         sampler_start(SAMPLER_OPEN_MONO, "2bit control port sampler");
     } else {
+        /* disabled, stop the sampler module */
         sampler_stop();
     }
 
-    sampler_enabled = val;
+    /* set current state */
+    sampler_enabled = new_state;
 
     return 0;
 }
 
-static BYTE joyport_sampler_read(int port)
+static uint8_t joyport_sampler_read(int port)
 {
-    BYTE retval = 0;
+    uint8_t retval = 0;
 
     if (sampler_enabled) {
+        /* get 8bit sample and only keep the 2 highest bits */
         retval = sampler_get_sample(SAMPLER_CHANNEL_DEFAULT) >> 6;
-        joyport_display_joyport(JOYPORT_ID_SAMPLER_2BIT, retval);
-        return (BYTE)(~retval);
+        joyport_display_joyport(port, JOYPORT_ID_SAMPLER_2BIT, (uint16_t)retval);
+        return (uint8_t)(~retval);
     }
     return 0xff;
 }
 
 static joyport_t joyport_sampler_device = {
-    "Sampler (2bit)",
-    IDGS_SAMPLER_2BIT,
-    JOYPORT_RES_ID_SAMPLER,
-    JOYPORT_IS_NOT_LIGHTPEN,
-    JOYPORT_POT_OPTIONAL,
-    joyport_sampler_enable,
-    joyport_sampler_read,
-    NULL,               /* no store digital */
-    NULL,               /* no pot-x read */
-    NULL,               /* no pot-y read */
-    NULL,               /* no data for a snapshot */
-    NULL                /* no data for a snapshot */
+    "Sampler (2bit)",            /* name of the device */
+    JOYPORT_RES_ID_SAMPLER,      /* device is a sampler, only 1 sampler can be active at the same time */
+    JOYPORT_IS_NOT_LIGHTPEN,     /* device is NOT a lightpen */
+    JOYPORT_POT_OPTIONAL,        /* device does NOT use the potentiometer lines */
+    JOYPORT_5VDC_REQUIRED,       /* device NEEDS +5VDC to work */
+    JOYSTICK_ADAPTER_ID_NONE,    /* device is NOT a joystick adapter */
+    JOYPORT_DEVICE_SAMPLER,      /* device is a Sampler */
+    0,                           /* NO output bits */
+    joyport_sampler_set_enabled, /* device enable/disable function */
+    joyport_sampler_read,        /* digital line read function */
+    NULL,                        /* NO digital line store function */
+    NULL,                        /* NO pot-x read function */
+    NULL,                        /* NO pot-x read function */
+    NULL,                        /* NO powerup function */
+    NULL,                        /* NO device write snapshot function */
+    NULL,                        /* NO device read snapshot function */
+    NULL,                        /* NO device hook function */
+    0                            /* NO device hook function mask */
 };
 
 /* currently only used to register the joyport device */

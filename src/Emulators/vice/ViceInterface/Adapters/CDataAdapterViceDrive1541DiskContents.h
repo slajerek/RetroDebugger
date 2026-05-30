@@ -7,8 +7,8 @@
 class CDebugInterfaceVice;
 
 extern "C" {
-struct drive_context_s;
-typedef struct drive_context_s drive_context_t;
+struct diskunit_context_s;
+typedef struct diskunit_context_s diskunit_context_t;
 
 struct disk_image_s;
 typedef struct disk_image_s disk_image_t;
@@ -43,8 +43,8 @@ struct Drive1541ContentsTrack
 	u32 dataOffset;
 };
 
-struct drive_context_s;
-typedef struct drive_context_s drive_context_t;
+struct diskunit_context_s;
+typedef struct diskunit_context_s diskunit_context_t;
 
 struct gcr_s;
 typedef struct gcr_s gcr_t;

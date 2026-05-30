@@ -35,31 +35,42 @@
 
 #include "vicetypes.h"
 
-extern int dqbb_cart_enabled(void);
+#define DQBB_MODE_C64   1
+#define DQBB_MODE_C128  0
 
-extern int dqbb_resources_init(void);
-extern void dqbb_resources_shutdown(void);
-extern int dqbb_cmdline_options_init(void);
-extern void dqbb_reset(void);
-extern void dqbb_detach(void);
-extern void dqbb_init_config(void);
-extern int dqbb_enable(void);
-extern void dqbb_config_setup(BYTE *rawcart);
+int dqbb_cart_enabled(void);
 
-extern BYTE dqbb_roml_read(WORD addr);
-extern void dqbb_roml_store(WORD addr, BYTE byte);
-extern BYTE dqbb_romh_read(WORD addr);
-extern void dqbb_romh_store(WORD addr, BYTE byte);
-extern int dqbb_peek_mem(WORD addr, BYTE *value);
-extern void dqbb_mmu_translate(unsigned int addr, BYTE **base, int *start, int *limit);
+int dqbb_resources_init(void);
+void dqbb_resources_shutdown(void);
+int dqbb_cmdline_options_init(void);
 
-extern const char *dqbb_get_file_name(void);
-extern int dqbb_bin_attach(const char *filename, BYTE *rawcart);
-extern int dqbb_bin_save(const char *filename);
-extern int dqbb_flush_image(void);
+void dqbb_reset(void);
+void dqbb_detach(void);
+void dqbb_init_config(void);
+int dqbb_enable(void);
+int dqbb_disable(void);
+void dqbb_config_setup(uint8_t *rawcart);
+
+uint8_t dqbb_roml_read(uint16_t addr);
+void dqbb_roml_store(uint16_t addr, uint8_t byte);
+uint8_t dqbb_romh_read(uint16_t addr);
+void dqbb_romh_store(uint16_t addr, uint8_t byte);
+int dqbb_peek_mem(uint16_t addr, uint8_t *value);
+void dqbb_mmu_translate(unsigned int addr, uint8_t **base, int *start, int *limit);
+
+int dqbb_c128_read(uint16_t addr, uint8_t *value);
+int dqbb_c128_store(uint16_t addr, uint8_t value);
+
+const char *dqbb_get_file_name(void);
+int dqbb_bin_attach(const char *filename, uint8_t *rawcart);
+int dqbb_bin_save(const char *filename);
+int dqbb_flush_image(void);
+void dqbb_powerup(void);
+void dqbb_shutdown(void);
 
 struct snapshot_s;
-extern int dqbb_snapshot_read_module(struct snapshot_s *s);
-extern int dqbb_snapshot_write_module(struct snapshot_s *s);
+
+int dqbb_snapshot_read_module(struct snapshot_s *s);
+int dqbb_snapshot_write_module(struct snapshot_s *s);
 
 #endif

@@ -27,6 +27,6 @@
 #ifndef VICE_GODOTDRV_H
 #define VICE_GODOTDRV_H
 
-extern void gfxoutput_init_godot(int help);
+void gfxoutput_init_godot(int help);
 
 #endif

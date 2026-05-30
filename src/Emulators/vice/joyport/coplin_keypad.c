@@ -32,7 +32,8 @@
 
 #include "joyport.h"
 #include "keyboard.h"
-#include "translate.h"
+
+#include "coplin_keypad.h"
 
 /* Control port <--> coplin keypad connections:
 
@@ -43,6 +44,23 @@
      3   | KEY2   |  I
      4   | KEY3   |  I
      6   | KEY4   |  I
+
+Works on:
+- native port(s) (x64/x64sc/xscpu64/x64dtv/xvic/xplus4)
+- inception joystick adapter ports (x64/x64sc/xscpu64/xvic)
+- multijoy joystick adapter ports (x64/x64sc/xscpu64)
+- spaceballs joystick adapter ports (x64/x64sc/xscpu64)
+- cga userport joystick adapter ports (x64/x64sc/xscpu64)
+- hit userport joystick adapter ports (x64/x64sc/xscpu64)
+- hummer userport joystick adapter port (x64/x64sc/xscpu64)
+- kingsoft userport joystick adapter ports (x64/x64sc/xscpu64)
+- oem userport joystick adapter port (x64/x64sc/xscpu64)
+- pet userport joystick adapter port (x64/x64sc/xscpu64)
+- starbyte userport joystick adapter ports (x64/x64sc/xscpu64)
+- synergy userport joystick adapter ports (x64/x64sc/xscpu64)
+- stupid pet tricks userport joystick adapter port (x64/x64sc/xscpu64)
+- wheel of joysticks userport joystick adapter ports (x64/x64sc/xscpu64)
+- sidcart joystick adapter port (xplus4)
 
 The keypad has the following layout:
 
@@ -104,99 +122,106 @@ RETURN        011111111111     0    1    1    1    1
 #define KEYPAD_KEY_P ROW_COL(3,1)
 #define KEYPAD_KEY_R ROW_COL(3,2)
 
+#define KEYPAD_KEYS_NUM  12
+
 static int coplin_keypad_enabled = 0;
 
-static unsigned int keys[12];
+static unsigned int keys[KEYPAD_KEYS_NUM];
 
 /* ------------------------------------------------------------------------- */
 
-#ifdef COMMON_KBD
 static void handle_keys(int row, int col, int pressed)
 {
+    /* sanity check for row and col, row should be 0-3, and col should be 1-3 */
     if (row < 0 || row > 3 || col < 1 || col > 3) {
         return;
     }
 
+    /* change the state of the key that the row/col is wired to */
     keys[(row * 3) + col - 1] = (unsigned int)pressed;
 }
-#endif
 
 /* ------------------------------------------------------------------------- */
 
-static int joyport_coplin_keypad_enable(int port, int value)
+static int joyport_coplin_keypad_set_enabled(int port, int enabled)
 {
-    int val = value ? 1 : 0;
+    int new_state = enabled ? 1 : 0;
 
-    if (val == coplin_keypad_enabled) {
+    if (new_state == coplin_keypad_enabled) {
         return 0;
     }
 
-    if (val) {
-        memset(keys, 0, 12);
-#ifdef COMMON_KBD
+    if (new_state) {
+        /* enabled, clear keys and register the keypad */
+        memset(keys, 0, KEYPAD_KEYS_NUM * sizeof(unsigned int));
         keyboard_register_joy_keypad(handle_keys);
-#endif
     } else {
-#ifdef COMMON_KBD
+        /* disabled, unregister the keypad */
         keyboard_register_joy_keypad(NULL);
-#endif
     }
 
-    coplin_keypad_enabled = val;
+    /* set the current state */
+    coplin_keypad_enabled = new_state;
 
     return 0;
 }
 
-static BYTE coplin_keypad_read(int port)
+static uint8_t coplin_keypad_read(int port)
 {
     unsigned int retval = 0;
     unsigned int tmp;
 
     /* KEY4 */
-    tmp = !keys[KEYPAD_KEY_R] << 4;
+    tmp = !keys[KEYPAD_KEY_R] << JOYPORT_FIRE_BIT;   /* output key 4 on the joyport 'fire' pin */
     retval |= tmp;
 
     /* KEY3 */
     tmp = (unsigned int)(!keys[KEYPAD_KEY_6] & !keys[KEYPAD_KEY_9] & !keys[KEYPAD_KEY_3] & !keys[KEYPAD_KEY_0] & !keys[KEYPAD_KEY_P] & !keys[KEYPAD_KEY_5]);
-    tmp <<= 3;
+    tmp <<= JOYPORT_RIGHT_BIT;   /* output key 3 on the joyport 'right' pin */
     retval |= tmp;
 
     /* KEY2 */
     tmp = (unsigned int)(!keys[KEYPAD_KEY_4] & !keys[KEYPAD_KEY_7] & !keys[KEYPAD_KEY_P] & !keys[KEYPAD_KEY_5] & !keys[KEYPAD_KEY_0] & !keys[KEYPAD_KEY_1]);
-    tmp <<= 2;
+    tmp <<= JOYPORT_LEFT_BIT;   /* output key 2 on the joyport 'left' pin */
     retval |= tmp;
 
     /* KEY1 */
     tmp = (unsigned int)(!keys[KEYPAD_KEY_0] & !keys[KEYPAD_KEY_3] & !keys[KEYPAD_KEY_1] & !keys[KEYPAD_KEY_2]);
-    tmp <<= 1;
+    tmp <<= JOYPORT_DOWN_BIT;   /* output key 1 on the joyport 'down' pin */
     retval |= tmp;
 
     /* KEY0 */
     tmp = (unsigned int)(!keys[KEYPAD_KEY_P] & !keys[KEYPAD_KEY_9] & !keys[KEYPAD_KEY_7] & !keys[KEYPAD_KEY_8]);
-    retval |= tmp;
+    retval |= tmp;   /* output key 0 on the joyport 'up' pin */
 
     retval |= 0xe0;
 
-    joyport_display_joyport(JOYPORT_ID_COPLIN_KEYPAD, (BYTE)~retval);
+    joyport_display_joyport(port, JOYPORT_ID_COPLIN_KEYPAD, (uint16_t)~retval);
 
-    return (BYTE)retval;
+    return (uint8_t)retval;
 }
 
 /* ------------------------------------------------------------------------- */
 
 static joyport_t joyport_coplin_keypad_device = {
-    "Coplin Keypad",
-    IDGS_COPLIN_KEYPAD,
-    JOYPORT_RES_ID_KEYPAD,
-    JOYPORT_IS_NOT_LIGHTPEN,
-    JOYPORT_POT_OPTIONAL,
-    joyport_coplin_keypad_enable,
-    coplin_keypad_read,
-    NULL,               /* no digital store */
-    NULL,               /* no pot-x read */
-    NULL,               /* no pot-y read */
-    NULL,               /* no write snapshot */
-    NULL                /* no read snapshot */
+    "Keypad (Coplin)",                 /* name of the device */
+    JOYPORT_RES_ID_KEYPAD,             /* device is a keypad, only 1 keypad can be active at the same time */
+    JOYPORT_IS_NOT_LIGHTPEN,           /* device is NOT a lightpen */
+    JOYPORT_POT_OPTIONAL,              /* device does NOT use the potentiometer lines */
+    JOYPORT_5VDC_NOT_NEEDED,           /* device does NOT need +5VDC to work */
+    JOYSTICK_ADAPTER_ID_NONE,          /* device is NOT a joystick adapter */
+    JOYPORT_DEVICE_KEYPAD,             /* device is a Keypad */
+    0,                                 /* No output bits */
+    joyport_coplin_keypad_set_enabled, /* device enable/disable function */
+    coplin_keypad_read,                /* digital line read function */
+    NULL,                              /* NO digital line store function */
+    NULL,                              /* NO pot-x read function */
+    NULL,                              /* NO pot-y read function */
+    NULL,                              /* NO powerup function */
+    NULL,                              /* NO device write snapshot function */
+    NULL,                              /* NO device read snapshot function */
+    NULL,                              /* NO device hook function */
+    0                                  /* NO device hook function mask */
 };
 
 /* ------------------------------------------------------------------------- */

@@ -25,6 +25,8 @@
  *
  */
 
+#define DEBUGDRIVE
+
 #include "vice.h"
 
 #include <stdio.h>
@@ -35,77 +37,63 @@
 #include "lib.h"
 #include "machine.h"
 #include "machine-drive.h"
-#include "translate.h"
 
-static const cmdline_option_t cmdline_options[] = {
-    { "-truedrive", SET_RESOURCE, 0,
-      NULL, NULL, "DriveTrueEmulation", (void *)1,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_ENABLE_TRUE_DRIVE,
-      NULL, NULL },
-    { "+truedrive", SET_RESOURCE, 0,
-      NULL, NULL, "DriveTrueEmulation", (void *)0,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_DISABLE_TRUE_DRIVE,
-      NULL, NULL },
-    { "-drivesound", SET_RESOURCE, 0,
+#ifdef DEBUGDRIVE
+#define DBG(x)  printf x
+#else
+#define DBG(x)
+#endif
+
+static const cmdline_option_t cmdline_options[] =
+{
+    { "-drivesound", SET_RESOURCE, CMDLINE_ATTRIB_NONE,
       NULL, NULL, "DriveSoundEmulation", (void *)1,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_ENABLE_DRIVE_SOUND,
-      NULL, NULL },
-    { "+drivesound", SET_RESOURCE, 0,
+      NULL, "Enable sound emulation of disk drives" },
+    { "+drivesound", SET_RESOURCE, CMDLINE_ATTRIB_NONE,
       NULL, NULL, "DriveSoundEmulation", (void *)0,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_DISABLE_DRIVE_SOUND,
-      NULL, NULL },
-    { "-drivesoundvolume", SET_RESOURCE, 1,
+      NULL, "Disable sound emulation of disk drives" },
+    { "-drivesoundvolume", SET_RESOURCE, CMDLINE_ATTRIB_NEED_ARGS,
       NULL, NULL, "DriveSoundEmulationVolume", NULL,
-      USE_PARAM_ID, USE_DESCRIPTION_ID,
-      IDCLS_P_VOLUME, IDCLS_SET_DRIVE_SOUND_VOLUME,
-      NULL, NULL },
+      "<Volume>", "Set volume for disk drive sound emulation (0-4000)" },
     CMDLINE_LIST_END
 };
 
-static cmdline_option_t cmd_drive[] = {
-    { NULL, SET_RESOURCE, 1,
+static cmdline_option_t cmd_drive[] =
+{
+    { NULL, SET_RESOURCE, CMDLINE_ATTRIB_NEED_ARGS,
       NULL, NULL, NULL, NULL,
-      USE_PARAM_ID, USE_DESCRIPTION_COMBO,
-      IDCLS_P_TYPE, IDCLS_SET_DRIVE_TYPE,
-      NULL, NULL },
-    { NULL, SET_RESOURCE, 1,
+      "<Type>", NULL },
+    { NULL, SET_RESOURCE, CMDLINE_ATTRIB_NEED_ARGS,
       NULL, NULL, NULL, NULL,
-      USE_PARAM_ID, USE_DESCRIPTION_ID,
-      IDCLS_P_METHOD, IDCLS_SET_DRIVE_EXTENSION_POLICY,
-      NULL, NULL },
-    { NULL, SET_RESOURCE, 1,
+      "<method>", "Set drive 40 track extension policy (0: never, 1: ask, 2: on access)" },
+    { NULL, SET_RESOURCE, CMDLINE_ATTRIB_NEED_ARGS,
       NULL, NULL, NULL, NULL,
-      USE_PARAM_ID, USE_DESCRIPTION_ID,
-      IDCLS_P_METHOD, IDCLS_SET_IDLE_METHOD,
-      NULL, NULL },
-    { NULL, SET_RESOURCE, 1,
+      "<method>", "Set drive idling method (0: no traps, 1: skip cycles, 2: trap idle)" },
+    { NULL, SET_RESOURCE, CMDLINE_ATTRIB_NEED_ARGS,
       NULL, NULL, NULL, NULL,
-      USE_PARAM_ID, USE_DESCRIPTION_ID,
-      IDCLS_P_RPM, IDCLS_SET_DRIVE_RPM,
-      NULL, NULL },
-    { NULL, SET_RESOURCE, 1,
+      "<RPM>", "Set drive rpm (30000 = 300rpm)" },
+    { NULL, SET_RESOURCE, CMDLINE_ATTRIB_NEED_ARGS,
       NULL, NULL, NULL, NULL,
-      USE_PARAM_ID, USE_DESCRIPTION_ID,
-      IDCLS_P_WOBBLE, IDCLS_SET_DRIVE_WOBBLE,
-      NULL, NULL },
+      "<Frequency>", "Set drive wobble frequency" },
+    { NULL, SET_RESOURCE, CMDLINE_ATTRIB_NEED_ARGS,
+      NULL, NULL, NULL, NULL,
+      "<Amplitude>", "Set drive wobble amplitude" },
+    { NULL, SET_RESOURCE, CMDLINE_ATTRIB_NONE,
+      NULL, NULL, NULL, (void *)1,
+      NULL, "Enable hardware-level emulation of disk drive" },
+    { NULL, SET_RESOURCE, CMDLINE_ATTRIB_NONE,
+      NULL, NULL, NULL, (void *)0,
+      NULL, "Disable hardware-level emulation of disk drive" },
     CMDLINE_LIST_END
 };
 
 static cmdline_option_t cmd_drive_rtc[] = {
-    { NULL, SET_RESOURCE, 0,
+    { NULL, SET_RESOURCE, CMDLINE_ATTRIB_NONE,
       NULL, NULL, NULL, (void *)1,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_ENABLE_DRIVE_RTC_SAVE,
-      NULL, NULL },
-    { NULL, SET_RESOURCE, 0,
+      NULL, "Enable saving of FD2000/4000 RTC data when changed." },
+    { NULL, SET_RESOURCE, CMDLINE_ATTRIB_NONE,
       NULL, NULL, NULL, (void *)0,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_DISABLE_DRIVE_RTC_SAVE,
-      NULL, NULL },
+      NULL, "Disable saving of FD2000/4000 RTC data when changed." },
     CMDLINE_LIST_END
 };
 
@@ -120,15 +108,15 @@ typedef struct machine_drives_s {
 #define DRIVES_C64DTV 3
 #define DRIVES_C64    4
 
-static char *drives[] = {
-    ", 2031: CBM 2031, 2040: CBM 2040, 3040: CBM 3040, 4040: CBM 4040, 1001: CBM 1001, 8050: CBM 8050, 8250: CBM 8250",
-    ", 1540: CBM 1540, 1541: CBM 1541, 1542: CBM 1541-II, 1551: CBM 1551, 1570: CBM 1570, 1571: CBM 1571, 1581: CBM 1581, 2000: CMD FD-2000, 4000: CMD FD-4000)",
-    ", 1540: CBM 1540, 1541: CBM 1541, 1542: CBM 1541-II, 1570: CBM 1570, 1571: CBM 1571, 1573: CBM 1571CR, 1581: CBM 1581, 2000: CMD FD-2000, 4000: CMD FD-4000, 2031: CBM 2031, 2040: CBM 2040, 3040: CBM 3040, 4040: CBM 4040, 1001: CBM 1001, 8050: CBM 8050, 8250: CBM 8250)",
-    ", 1540: CBM 1540, 1541: CBM 1541, 1542: CBM 1541-II, 1570: CBM 1570, 1571: CBM 1571, 1581: CBM 1581, 2000: CMD FD-2000, 4000: CMD FD-4000)",
-    ", 1540: CBM 1540, 1541: CBM 1541, 1542: CBM 1541-II, 1570: CBM 1570, 1571: CBM 1571, 1581: CBM 1581, 2000: CMD FD-2000, 4000: CMD FD-4000, 2031: CBM 2031, 2040: CBM 2040, 3040: CBM 3040, 4040: CBM 4040, 1001: CBM 1001, 8050: CBM 8050, 8250: CBM 8250)"
+static const char * const drives[] = {
+    "Set drive type (0: no drive, 2031: CBM 2031, 2040: CBM 2040, 3040: CBM 3040, 4040: CBM 4040, 1001: CBM 1001, 8050: CBM 8050, 8250: CBM 8250, 9000: CBM D9090/60)",
+    "Set drive type (0: no drive, 1540: CBM 1540, 1541: CBM 1541, 1542: CBM 1541-II, 1551: CBM 1551, 1570: CBM 1570, 1571: CBM 1571, 1581: CBM 1581, 2000: CMD FD-2000, 4000: CMD FD-4000, 4844: CMD HD)",
+    "Set drive type (0: no drive, 1540: CBM 1540, 1541: CBM 1541, 1542: CBM 1541-II, 1570: CBM 1570, 1571: CBM 1571, 1573: CBM 1571CR, 1581: CBM 1581, 2000: CMD FD-2000, 4000: CMD FD-4000, 4844: CMD HD, 2031: CBM 2031, 2040: CBM 2040, 3040: CBM 3040, 4040: CBM 4040, 1001: CBM 1001, 8050: CBM 8050, 8250: CBM 8250, 9000: CBM D9090/60)",
+    "Set drive type (0: no drive, 1540: CBM 1540, 1541: CBM 1541, 1542: CBM 1541-II, 1570: CBM 1570, 1571: CBM 1571, 1581: CBM 1581, 2000: CMD FD-2000, 4000: CMD FD-4000, 4844: CMD HD)",
+    "Set drive type (0: no drive, 1540: CBM 1540, 1541: CBM 1541, 1542: CBM 1541-II, 1570: CBM 1570, 1571: CBM 1571, 1581: CBM 1581, 2000: CMD FD-2000, 4000: CMD FD-4000, 4844: CMD HD, 2031: CBM 2031, 2040: CBM 2040, 3040: CBM 3040, 4040: CBM 4040, 1001: CBM 1001, 8050: CBM 8050, 8250: CBM 8250, 9000: CBM D9090/D9060)"
 };
 
-static machine_drives_t machine_drives[] = {
+static const machine_drives_t machine_drives[] = {
     { VICE_MACHINE_C64,    DRIVES_C64    },
     { VICE_MACHINE_C128,   DRIVES_C128   },
     { VICE_MACHINE_VIC20,  DRIVES_C64    },
@@ -145,12 +133,11 @@ static machine_drives_t machine_drives[] = {
 
 int drive_cmdline_options_init(void)
 {
-    unsigned int dnr, i, j;
-    char *found_string = NULL;
+    int dnr, i, j;
+    const char *found_string = NULL;
     int has_iec;
 
     switch (machine_class) {
-        case VICE_MACHINE_NONE:
         case VICE_MACHINE_PET:
         case VICE_MACHINE_CBM5x0:
         case VICE_MACHINE_CBM6x0:
@@ -161,7 +148,7 @@ int drive_cmdline_options_init(void)
             has_iec = 1;
     }
 
-    for (dnr = 0; dnr < DRIVE_NUM; dnr++) {
+    for (dnr = 0; dnr < NUM_DISK_UNITS; dnr++) {
         cmd_drive[0].name = lib_msprintf("-drive%itype", dnr + 8);
         cmd_drive[0].resource_name = lib_msprintf("Drive%iType", dnr + 8);
         for (j = 0; machine_drives[j].machine != 0; j++) {
@@ -172,7 +159,7 @@ int drive_cmdline_options_init(void)
         if (found_string) {
             cmd_drive[0].description = found_string;
         } else {
-            cmd_drive[0].description = ")";
+            cmd_drive[0].description = "Set drive type (0: no drive)";
         }
         cmd_drive[1].name = lib_msprintf("-drive%iextend", dnr + 8);
         cmd_drive[1].resource_name
@@ -183,9 +170,18 @@ int drive_cmdline_options_init(void)
         cmd_drive[3].name = lib_msprintf("-drive%irpm", dnr + 8);
         cmd_drive[3].resource_name
             = lib_msprintf("Drive%iRPM", dnr + 8);
-        cmd_drive[4].name = lib_msprintf("-drive%iwobble", dnr + 8);
+        cmd_drive[4].name = lib_msprintf("-drive%iwobblefrequency", dnr + 8);
         cmd_drive[4].resource_name
-            = lib_msprintf("Drive%iWobble", dnr + 8);
+            = lib_msprintf("Drive%iWobbleFrequency", dnr + 8);
+        cmd_drive[5].name = lib_msprintf("-drive%iwobbleamplitude", dnr + 8);
+        cmd_drive[5].resource_name
+            = lib_msprintf("Drive%iWobbleAmplitude", dnr + 8);
+        cmd_drive[6].name = lib_msprintf("-drive%itruedrive", dnr + 8);
+        cmd_drive[6].resource_name
+            = lib_msprintf("Drive%iTrueEmulation", dnr + 8);
+        cmd_drive[7].name = lib_msprintf("+drive%itruedrive", dnr + 8);
+        cmd_drive[7].resource_name
+            = lib_msprintf("Drive%iTrueEmulation", dnr + 8);
 
         if (has_iec) {
             cmd_drive_rtc[0].name = lib_msprintf("-drive%irtcsave", dnr + 8);
@@ -202,7 +198,7 @@ int drive_cmdline_options_init(void)
             return -1;
         }
 
-        for (i = 0; i < 5; i++) {
+        for (i = 0; i < 8; i++) {
             lib_free(cmd_drive[i].name);
             lib_free(cmd_drive[i].resource_name);
         }

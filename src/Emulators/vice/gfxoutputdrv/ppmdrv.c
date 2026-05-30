@@ -44,11 +44,11 @@
 typedef struct gfxoutputdrv_data_s {
     FILE *fd;
     char *ext_filename;
-    BYTE *data;
+    uint8_t *data;
     unsigned int line;
 } gfxoutputdrv_data_t;
 
-STATIC_PROTOTYPE gfxoutputdrv_t ppm_drv;
+static gfxoutputdrv_t ppm_drv;
 
 static int ppmdrv_write_file_header(screenshot_t *screenshot)
 {
@@ -57,7 +57,7 @@ static int ppmdrv_write_file_header(screenshot_t *screenshot)
     if (fprintf(fd, "P6\012# VICE generated PPM screenshot\012") < 0) {
         return -1;
     }
-    if (fprintf(fd, "%d %d\012255\012", screenshot->width, screenshot->height) < 0) {
+    if (fprintf(fd, "%u %u\012255\012", screenshot->width, screenshot->height) < 0) {
         return -1;
     }
 
@@ -150,10 +150,10 @@ static int ppmdrv_close_memmap(void)
     return 0;
 }
 
-static int ppmdrv_write_memmap(int line, int x_size, BYTE *gfx, BYTE *palette)
+static int ppmdrv_write_memmap(int line, int x_size, uint8_t *gfx, uint8_t *palette)
 {
     int i;
-    BYTE pixval;
+    uint8_t pixval;
 
     for (i = 0; i < x_size; i++) {
         pixval = gfx[(line * x_size) + i];
@@ -195,7 +195,7 @@ static int ppmdrv_open_memmap(const char *filename, int x_size, int y_size)
     return 0;
 }
 
-static int ppmdrv_save_memmap(const char *filename, int x_size, int y_size, BYTE *gfx, BYTE *palette)
+static int ppmdrv_save_memmap(const char *filename, int x_size, int y_size, uint8_t *gfx, uint8_t *palette)
 {
     int line;
 
@@ -217,6 +217,7 @@ static int ppmdrv_save_memmap(const char *filename, int x_size, int y_size, BYTE
 
 static gfxoutputdrv_t ppm_drv =
 {
+    GFXOUTPUTDRV_TYPE_SCREENSHOT_IMAGE,
     "PPM",
     "PPM screenshot",
     "ppm",

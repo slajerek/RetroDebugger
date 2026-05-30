@@ -28,6 +28,7 @@
 #include "vice.h"
 
 #include "c64pla.h"
+#include "c64model.h"
 #include "datasette.h"
 #include "mem.h"
 #include "tapeport.h"
@@ -36,15 +37,18 @@
 pport_t pport;
 
 /* Tape motor status.  */
-static BYTE old_port_data_out = 0xff;
+static uint8_t old_port_data_out = 0xff;
 
 /* Tape write line status.  */
-static BYTE old_port_write_bit = 0xff;
+static uint8_t old_port_write_bit = 0xff;
 
 /* Tape sense line out status. */
-static BYTE old_port_sense_out = 0xff;
+static uint8_t old_port_sense_out = 0xff;
 
-void c64pla_config_changed(int tape_sense, int write_in, int motor_in, int caps_sense, BYTE pullup)
+/* import from c64-resources.c - don't use the resource for performance reasons */
+extern int board_type;
+
+void c64pla_config_changed(int tape_sense, int write_in, int motor_in, int caps_sense, uint8_t pullup)
 {
     pport.data_out = (pport.data_out & ~pport.dir) | (pport.data & pport.dir);
 
@@ -72,31 +76,48 @@ void c64pla_config_changed(int tape_sense, int write_in, int motor_in, int caps_
 
     if (((pport.dir & pport.data) & 0x20) != old_port_data_out) {
         old_port_data_out = (pport.dir & pport.data) & 0x20;
-        tapeport_set_motor(!old_port_data_out);
+        if (board_type != BOARD_SX64) {
+            tapeport_set_motor(TAPEPORT_PORT_1, !old_port_data_out);
+        }
     }
 
     if (((~pport.dir | pport.data) & 0x8) != old_port_write_bit) {
         old_port_write_bit = (~pport.dir | pport.data) & 0x8;
-        tapeport_toggle_write_bit((~pport.dir | pport.data) & 0x8);
+        if (board_type != BOARD_SX64) {
+            tapeport_toggle_write_bit(TAPEPORT_PORT_1, (~pport.dir | pport.data) & 0x8);
+        }
     }
 
     if (((pport.dir & pport.data) & 0x10) != old_port_sense_out) {
         old_port_sense_out = (pport.dir & pport.data) & 0x10;
-        tapeport_set_sense_out(!old_port_sense_out);
+        if (board_type != BOARD_SX64) {
+            tapeport_set_sense_out(TAPEPORT_PORT_1, !old_port_sense_out);
+        }
     }
 
     pport.dir_read = pport.dir;
 }
 
+/*
+ * both DDR and DATA are 0 after poweron/reset, this means all pins are input,
+ * and the pullups at charen/hiram/loram/sense will pull up the respective lines
+ * so the kernal will be banked in and i/o is active.
+ */
 void c64pla_pport_reset(void)
 {
-    pport.data = 0x3f;
-    pport.data_out = 0x3f;
-    pport.data_read = 0x3f;
+    pport.data = 0;
+    pport.data_out = 0;
+    pport.data_read = 0;
     pport.dir = 0;
     pport.dir_read = 0;
+    pport.data_set_bit3 = 0;
+    pport.data_set_bit4 = 0;
+    pport.data_set_bit5 = 0;
     pport.data_set_bit6 = 0;
     pport.data_set_bit7 = 0;
+    pport.data_falloff_bit3 = 0;
+    pport.data_falloff_bit4 = 0;
+    pport.data_falloff_bit5 = 0;
     pport.data_falloff_bit6 = 0;
     pport.data_falloff_bit7 = 0;
 }

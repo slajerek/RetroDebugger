@@ -382,7 +382,7 @@
 #define HAVE_NETINET_IN_H 1
 
 /* Enable netplay support */
-// change me? #define HAVE_NETWORK /**/
+#define HAVE_NETWORK /**/
 
 /* Support for OpenCBM (former CBM4Linux). */
 /* #undef HAVE_OPENCBM */
@@ -427,7 +427,9 @@
 /* #undef HAVE_QUICKTIME */
 
 /* Support for block device disk image access. */
-#define HAVE_RAWDRIVE /**/
+/* VICE 3.10 removed the raw block-device drive (ATTACH_DEVICE_RAW dropped from
+   attach.h); disable to retire the leftover rawimage.c + menu remnants. */
+/* #undef HAVE_RAWDRIVE */
 
 /* Are we using the readline library replacement? */
 /* #undef HAVE_READLINE */

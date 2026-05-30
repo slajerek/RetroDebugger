@@ -107,12 +107,8 @@ int mousedrv_get_y(void)
     return mouse_y;
 }
 
-void mouse_move(int x, int y)
-{
-    mouse_x += x;
-    mouse_y -= y;
-    mouse_timestamp = vsyncarch_gettime();
-}
+/* RD: the real mouse_move(float,float) lives in joyport/mouse.c (VICE 3.10);
+   the arch driver only exposes position via mousedrv_get_x/y + c64d_mouse_set_position. */
 
 void c64d_mouse_set_position(int x, int y)
 {

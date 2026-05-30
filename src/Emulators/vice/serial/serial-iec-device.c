@@ -25,21 +25,28 @@
  *
  */
 
+/* #define IEC_DEVICE_DEBUG 0 */
+/* #define IEC_DEVICE_DEBUG 8 */
+
 #include "vice.h"
 
 #include <stdio.h>
 #include <string.h>
 
 #include "cmdline.h"
+#include "iec-ieee488-shared.h"
 #include "iecbus.h"
 #include "resources.h"
 #include "serial-iec-device.h"
 #include "serial.h"
 #include "log.h"
+#include "machine.h"
 #include "maincpu.h"
-#include "clkguard.h"
 #include "serial-iec-bus.h"
-#include "translate.h"
+
+#if IEC_DEVICE_DEBUG > 0
+#include <ctype.h>
+#endif
 
 void serial_iec_device_enable(unsigned int devnr);
 void serial_iec_device_disable(unsigned int devnr);
@@ -48,8 +55,7 @@ static void serial_iec_device_exec_main(unsigned int devnr, CLOCK clk_value);
 /* ------------------------------------------------------------------------- */
 
 
-static int iec_device_enabled[IECBUS_NUM];
-
+/* Called from indirect_callback() in iec-ieee488-shared.c */
 static int set_iec_device_enable(int enable, void *param)
 {
     unsigned int unit;
@@ -60,7 +66,6 @@ static int set_iec_device_enable(int enable, void *param)
         return -1;
     }
 
-    iec_device_enabled[unit] = enable;
     if (enable) {
         serial_iec_device_enable(unit);
     } else {
@@ -72,118 +77,24 @@ static int set_iec_device_enable(int enable, void *param)
     return 0;
 }
 
-static const resource_int_t resources_int[] = {
-    { "IECDevice4", 0, RES_EVENT_SAME, NULL,
-      &iec_device_enabled[4], set_iec_device_enable, (void *)4 },
-    { "IECDevice5", 0, RES_EVENT_SAME, NULL,
-      &iec_device_enabled[5], set_iec_device_enable, (void *)5 },
-    { "IECDevice6", 0, RES_EVENT_SAME, NULL,
-      &iec_device_enabled[6], set_iec_device_enable, (void *)6 },
-    { "IECDevice7", 0, RES_EVENT_SAME, NULL,
-      &iec_device_enabled[7], set_iec_device_enable, (void *)7 },
-    { "IECDevice8", 0, RES_EVENT_SAME, NULL,
-      &iec_device_enabled[8], set_iec_device_enable, (void *)8 },
-    { "IECDevice9", 0, RES_EVENT_SAME, NULL,
-      &iec_device_enabled[9], set_iec_device_enable, (void *)9 },
-    { "IECDevice10", 0, RES_EVENT_SAME, NULL,
-      &iec_device_enabled[10], set_iec_device_enable, (void *)10 },
-    { "IECDevice11", 0, RES_EVENT_SAME, NULL,
-      &iec_device_enabled[11], set_iec_device_enable, (void *)11 },
-    RESOURCE_INT_LIST_END
-};
-
 int serial_iec_device_resources_init(void)
 {
-    return resources_register_int(resources_int);
+    if (machine_class == VICE_MACHINE_VIC20) {
+        /* FIXME: xvic does not use the generic iec code in src/iecbus/iecbus.c,
+                  which makes iecdevice not work */
+        return 0;
+    }
+    return iec_ieee_device_resources_init(set_iec_device_enable);
 }
-
-static const cmdline_option_t cmdline_options[] = {
-    { "-iecdevice4", SET_RESOURCE, 0,
-      NULL, NULL, "IECDevice4", (resource_value_t)1,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_ENABLE_IEC_4,
-      NULL, NULL },
-    { "+iecdevice4", SET_RESOURCE, 0,
-      NULL, NULL, "IECDevice4", (resource_value_t)0,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_DISABLE_IEC_4,
-      NULL, NULL },
-    { "-iecdevice5", SET_RESOURCE, 0,
-      NULL, NULL, "IECDevice5", (resource_value_t)1,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_ENABLE_IEC_5,
-      NULL, NULL },
-    { "+iecdevice5", SET_RESOURCE, 0,
-      NULL, NULL, "IECDevice5", (resource_value_t)0,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_DISABLE_IEC_5,
-      NULL, NULL },
-    { "-iecdevice6", SET_RESOURCE, 0,
-      NULL, NULL, "IECDevice6", (resource_value_t)1,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_ENABLE_IEC_5,
-      NULL, NULL },
-    { "+iecdevice6", SET_RESOURCE, 0,
-      NULL, NULL, "IECDevice6", (resource_value_t)0,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_DISABLE_IEC_6,
-      NULL, NULL },
-    { "-iecdevice7", SET_RESOURCE, 0,
-      NULL, NULL, "IECDevice7", (resource_value_t)1,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_ENABLE_IEC_7,
-      NULL, NULL },
-    { "+iecdevice7", SET_RESOURCE, 0,
-      NULL, NULL, "IECDevice7", (resource_value_t)0,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_DISABLE_IEC_7,
-      NULL, NULL },
-    { "-iecdevice8", SET_RESOURCE, 0,
-      NULL, NULL, "IECDevice8", (resource_value_t)1,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_ENABLE_IEC_8,
-      NULL, NULL },
-    { "+iecdevice8", SET_RESOURCE, 0,
-      NULL, NULL, "IECDevice8", (resource_value_t)0,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_DISABLE_IEC_8,
-      NULL, NULL },
-    { "-iecdevice9", SET_RESOURCE, 0,
-      NULL, NULL, "IECDevice9", (resource_value_t)1,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_ENABLE_IEC_9,
-      NULL, NULL },
-    { "+iecdevice9", SET_RESOURCE, 0,
-      NULL, NULL, "IECDevice9", (resource_value_t)0,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_DISABLE_IEC_9,
-      NULL, NULL },
-    { "-iecdevice10", SET_RESOURCE, 0,
-      NULL, NULL, "IECDevice10", (resource_value_t)1,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_ENABLE_IEC_10,
-      NULL, NULL },
-    { "+iecdevice10", SET_RESOURCE, 0,
-      NULL, NULL, "IECDevice10", (resource_value_t)0,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_DISABLE_IEC_10,
-      NULL, NULL },
-    { "-iecdevice11", SET_RESOURCE, 0,
-      NULL, NULL, "IECDevice11", (resource_value_t)1,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_ENABLE_IEC_11,
-      NULL, NULL },
-    { "+iecdevice11", SET_RESOURCE, 0,
-      NULL, NULL, "IECDevice11", (resource_value_t)0,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_DISABLE_IEC_11,
-      NULL, NULL },
-    CMDLINE_LIST_END
-};
 
 int serial_iec_device_cmdline_options_init(void)
 {
-    return cmdline_register_options(cmdline_options);
+    if (machine_class == VICE_MACHINE_VIC20) {
+        /* FIXME: xvic does not use the generic iec code in src/iecbus/iecbus.c,
+                  which makes iecdevice not work */
+        return 0;
+    }
+    return iec_ieee_device_cmdline_options_init();
 }
 
 /*------------------------------------------------------------------------*/
@@ -192,40 +103,21 @@ int serial_iec_device_cmdline_options_init(void)
 
 /*------------------------------------------------------------------------*/
 
-#define IEC_DEVICE_DEBUG 0
-
 /* Logging goes here.  */
 #if IEC_DEVICE_DEBUG > 0
-static log_t serial_iec_device_log = LOG_ERR;
+static log_t serial_iec_device_log = LOG_DEFAULT;
 #endif
 
 struct serial_iec_device_state_s {
-    BYTE enabled;
-    BYTE byte, state, flags, primary, secondary, secondary_prev;
-    BYTE st[16];
+    uint8_t enabled;
+    uint8_t byte, state, flags, primary, secondary, secondary_prev;
+    uint8_t st[16];
     CLOCK timeout;
 };
 typedef struct serial_iec_device_state_s serial_iec_device_state_t;
 
 static int serial_iec_device_inited = 0;
 static serial_iec_device_state_t serial_iec_device_state[IECBUS_NUM];
-
-
-static void serial_iec_device_clk_overflow_callback(CLOCK sub, void *data)
-{
-    unsigned int i;
-
-#if IEC_DEVICE_DEBUG > 0
-    log_message(serial_iec_device_log,
-                "serial_iec_device_clk_overflow_callback(%u)", sub);
-#endif
-
-    for (i = 0; i < IECBUS_NUM; i++) {
-        if (serial_iec_device_state[i].timeout > (CLOCK)0) {
-            serial_iec_device_state[i].timeout -= sub;
-        }
-    }
-}
 
 
 void serial_iec_device_init(void)
@@ -236,17 +128,15 @@ void serial_iec_device_init(void)
     log_message(serial_iec_device_log, "serial_iec_device_init()");
 #endif
 
-    clk_guard_add_callback(maincpu_clk_guard, serial_iec_device_clk_overflow_callback, NULL);
-
     for (i = 0; i < IECBUS_NUM; i++) {
         serial_iec_device_state[i].enabled = 0;
-        iecbus_device_write(i, (BYTE)(IECBUS_DEVICE_WRITE_CLK | IECBUS_DEVICE_WRITE_DATA));
+        iecbus_device_write(i, (uint8_t)(IECBUS_DEVICE_WRITE_CLK | IECBUS_DEVICE_WRITE_DATA));
     }
 
     serial_iec_device_inited = 1;
 
     for (i = 0; i < IECBUS_NUM; i++) {
-        if (iec_device_enabled[i]) {
+        if (iec_ieee_device_enabled[i]) {
             serial_iec_device_enable(i);
         }
     }
@@ -263,7 +153,7 @@ void serial_iec_device_reset(void)
 
     for (i = 0; i < IECBUS_NUM; i++) {
         if (serial_iec_device_state[i].enabled) {
-            iecbus_device_write(i, (BYTE)(IECBUS_DEVICE_WRITE_CLK | IECBUS_DEVICE_WRITE_DATA));
+            iecbus_device_write(i, (uint8_t)(IECBUS_DEVICE_WRITE_CLK | IECBUS_DEVICE_WRITE_DATA));
             serial_iec_device_state[i].flags = 0;
             serial_iec_device_state[i].timeout = 0;
             memset(&serial_iec_device_state[i].st, 0, 15);
@@ -302,7 +192,7 @@ void serial_iec_device_disable(unsigned int devnr)
         log_message(serial_iec_device_log,
                     "serial_iec_device_disable(%i)", devnr);
 #endif
-        iecbus_device_write(devnr, (BYTE)(IECBUS_DEVICE_WRITE_CLK | IECBUS_DEVICE_WRITE_DATA));
+        iecbus_device_write(devnr, (uint8_t)(IECBUS_DEVICE_WRITE_CLK | IECBUS_DEVICE_WRITE_DATA));
         serial_iec_device_state[devnr].enabled = 0;
         serial_iec_device_state[devnr].timeout = 0;
     }
@@ -322,14 +212,14 @@ void serial_iec_device_exec(CLOCK clk_value)
 
 /* ------------------------------------------------------------------------- */
 
-static BYTE serial_iec_device_st;
+static uint8_t serial_iec_device_st;
 
-inline static void set_st(BYTE b)
+inline static void set_st(uint8_t b)
 {
     serial_iec_device_st = b;
 }
 
-inline static BYTE get_st(void)
+inline static uint8_t get_st(void)
 {
     return serial_iec_device_st;
 }
@@ -371,7 +261,7 @@ enum {
 
 static void serial_iec_device_exec_main(unsigned int devnr, CLOCK clk_value)
 {
-    BYTE bus;
+    uint8_t bus;
     serial_iec_device_state_t *iec = &(serial_iec_device_state[devnr]);
 
     /* read bus */
@@ -393,11 +283,11 @@ static void serial_iec_device_exec_main(unsigned int devnr, CLOCK clk_value)
         iec->primary = 0;
         iec->secondary_prev = iec->secondary;
         iec->secondary = 0;
-        iec->timeout = clk_value + US2CYCLES(100);
+        iec->timeout = clk_value + (CLOCK)US2CYCLES(100);
 
         /* set DATA=0 ("I am here").  If nobody on the bus does this within 1ms,
            busmaster will assume that "Device not present" */
-        iecbus_device_write(devnr, (BYTE)(IECBUS_DEVICE_WRITE_CLK));
+        iecbus_device_write(devnr, (uint8_t)(IECBUS_DEVICE_WRITE_CLK));
     } else if ((iec->flags & P_ATN) && (bus & IECBUS_DEVICE_READ_ATN)) {
         /* rising flank on ATN (bus master finished addressing all devices) */
         iec->flags &= ~P_ATN;
@@ -448,7 +338,7 @@ static void serial_iec_device_exec_main(unsigned int devnr, CLOCK clk_value)
                 }
 
                 /* set DATA=0 ("I am here") */
-                iecbus_device_write(devnr, (BYTE)IECBUS_DEVICE_WRITE_CLK);
+                iecbus_device_write(devnr, (uint8_t)IECBUS_DEVICE_WRITE_CLK);
             } else if (iec->primary == 0x40 + devnr) {
                 /* we were told to talk */
                 iec->flags &= ~P_LISTENING;
@@ -486,7 +376,7 @@ static void serial_iec_device_exec_main(unsigned int devnr, CLOCK clk_value)
         if (!(iec->flags & (P_LISTENING | P_TALKING))) {
             /* we're neither listening nor talking => make sure we're not
                holding DATA  or CLOCK line to 0 */
-            iecbus_device_write(devnr, (BYTE)(IECBUS_DEVICE_WRITE_CLK | IECBUS_DEVICE_WRITE_DATA));
+            iecbus_device_write(devnr, (uint8_t)(IECBUS_DEVICE_WRITE_CLK | IECBUS_DEVICE_WRITE_DATA));
         }
     }
 
@@ -513,9 +403,9 @@ static void serial_iec_device_exec_main(unsigned int devnr, CLOCK clk_value)
                 /* wait for rising flank on CLK ("ready-to-send") */
                 if (bus & IECBUS_DEVICE_READ_CLK) {
                     /* react by setting DATA=1 ("ready-for-data") */
-                    iecbus_device_write(devnr, (BYTE)(IECBUS_DEVICE_WRITE_CLK
+                    iecbus_device_write(devnr, (uint8_t)(IECBUS_DEVICE_WRITE_CLK
                                                       | IECBUS_DEVICE_WRITE_DATA));
-                    iec->timeout = clk_value + US2CYCLES(200);
+                    iec->timeout = clk_value + (CLOCK)US2CYCLES(200);
                     iec->state = P_READY;
                 }
                 break;
@@ -533,15 +423,15 @@ static void serial_iec_device_exec_main(unsigned int devnr, CLOCK clk_value)
                                 "device %i got EOI on channel %i",
                                 devnr, iec->secondary & 0x0f);
 #endif
-                    iecbus_device_write(devnr, (BYTE)IECBUS_DEVICE_WRITE_CLK);
+                    iecbus_device_write(devnr, (uint8_t)IECBUS_DEVICE_WRITE_CLK);
                     iec->state = P_EOI;
-                    iec->timeout = clk_value + US2CYCLES(60);
+                    iec->timeout = clk_value + (CLOCK)US2CYCLES(60);
                 }
                 break;
             case P_EOI:
                 if (clk_value >= iec->timeout) {
                     /* Set DATA back to 1 and wait for sender to set CLK=0 */
-                    iecbus_device_write(devnr, (BYTE)(IECBUS_DEVICE_WRITE_CLK
+                    iecbus_device_write(devnr, (uint8_t)(IECBUS_DEVICE_WRITE_CLK
                                                       | IECBUS_DEVICE_WRITE_DATA));
                     iec->state = P_EOIw;
                 }
@@ -563,7 +453,7 @@ static void serial_iec_device_exec_main(unsigned int devnr, CLOCK clk_value)
                 if (bus & IECBUS_DEVICE_READ_CLK) {
                     /* sender set CLK=1, signaling that the DATA line
                     represents a valid bit */
-                    BYTE bit = 1 << ((BYTE)(iec->state - P_BIT0) / 2);
+                    uint8_t bit = 1 << ((uint8_t)(iec->state - P_BIT0) / 2);
                     iec->byte = (iec->byte & ~bit)
                                 | ((bus & IECBUS_DEVICE_READ_DATA) ? bit : 0);
 
@@ -592,7 +482,7 @@ static void serial_iec_device_exec_main(unsigned int devnr, CLOCK clk_value)
                     log_message(serial_iec_device_log,
                                 "device %i received : 0x%02x (%c)",
                                 devnr, iec->byte,
-                                isprint(iec->byte) ? iec->byte : '.');
+                                isprint((unsigned char)iec->byte) ? iec->byte : '.');
 #endif
                     if (iec->flags & P_ATN) {
                         /* We are currently receiving under ATN.  Store first
@@ -615,7 +505,7 @@ static void serial_iec_device_exec_main(unsigned int devnr, CLOCK clk_value)
                         } else {
                             /* Acknowledge frame by setting DATA=0 */
                             iecbus_device_write(devnr,
-                                                (BYTE)IECBUS_DEVICE_WRITE_CLK);
+                                                (uint8_t)IECBUS_DEVICE_WRITE_CLK);
 
                             /* repeat from P_PRE2 (we know that CLK=0 so
                                no need to go to P_PRE1) */
@@ -628,7 +518,7 @@ static void serial_iec_device_exec_main(unsigned int devnr, CLOCK clk_value)
                         log_message(serial_iec_device_log,
                                     "device %i received 0x%02x (%c) on channel %i",
                                     devnr, iec->byte,
-                                    isprint(iec->byte) ? iec->byte : '.',
+                                    isprint((unsigned char)iec->byte) ? iec->byte : '.',
                                     iec->secondary & 0x0f);
 #endif
                         set_st(iec->st[iec->secondary & 0x0f]);
@@ -643,7 +533,7 @@ static void serial_iec_device_exec_main(unsigned int devnr, CLOCK clk_value)
                         } else {
                             /* Acknowledge frame by setting DATA=0 */
                             iecbus_device_write(devnr,
-                                                (BYTE)IECBUS_DEVICE_WRITE_CLK);
+                                                (uint8_t)IECBUS_DEVICE_WRITE_CLK);
 
                             /* repeat from P_PRE2 (we know that CLK=0 so no
                                need to go to P_PRE1) */
@@ -664,19 +554,24 @@ static void serial_iec_device_exec_main(unsigned int devnr, CLOCK clk_value)
                     /* busmaster set CLK=1 (and before that should have set
                        DATA=0) we are getting ready for role reversal.
                        Set CLK=0, DATA=1 */
-                    iecbus_device_write(devnr, (BYTE)IECBUS_DEVICE_WRITE_DATA);
+                    iecbus_device_write(devnr, (uint8_t)IECBUS_DEVICE_WRITE_DATA);
                     iec->state = P_PRE1;
-                    iec->timeout = clk_value + US2CYCLES(80);
+                    iec->timeout = clk_value + (CLOCK)US2CYCLES(80);
                 }
                 break;
             case P_PRE1:
                 if (clk_value >= iec->timeout) {
                     /* signal "ready-to-send" (CLK=1) */
-                    iecbus_device_write(devnr, (BYTE)(IECBUS_DEVICE_WRITE_CLK
+                    iecbus_device_write(devnr, (uint8_t)(IECBUS_DEVICE_WRITE_CLK
                                                       | IECBUS_DEVICE_WRITE_DATA));
                     iec->state = P_READY;
-                    break;
                 }
+                /*
+                 * This break used to be inside the if(), but since code further
+                 * up has the break like this in a P_PRE1 case, I think this
+                 * is the proper place. -- Compyx
+                 */
+                break;
             case P_READY:
                 if (bus & IECBUS_DEVICE_READ_DATA) {
                     /* receiver signaled "ready-for-data" (DATA=1) */
@@ -740,11 +635,11 @@ static void serial_iec_device_exec_main(unsigned int devnr, CLOCK clk_value)
                        valid" for the previous bit.
                        Pull CLK=0 and put next bit out on DATA. */
                     int bit = 1 << ((iec->state - P_BIT0) / 2);
-                    iecbus_device_write(devnr, (BYTE)((iec->byte & bit)
+                    iecbus_device_write(devnr, (uint8_t)((iec->byte & bit)
                                                       ? IECBUS_DEVICE_WRITE_DATA : 0));
 
                     /* go to associated P_BIT(n)w state */
-                    iec->timeout = clk_value + US2CYCLES(60);
+                    iec->timeout = clk_value + (CLOCK)US2CYCLES(60);
                     iec->state++;
                 }
                 break;
@@ -763,16 +658,16 @@ static void serial_iec_device_exec_main(unsigned int devnr, CLOCK clk_value)
                        valid" to the receiver) */
                     if (bus & IECBUS_DEVICE_READ_DATA) {
                         iecbus_device_write(devnr,
-                                            (BYTE)(IECBUS_DEVICE_WRITE_CLK
+                                            (uint8_t)(IECBUS_DEVICE_WRITE_CLK
                                                    | IECBUS_DEVICE_WRITE_DATA));
                     } else {
                         iecbus_device_write(devnr,
-                                            (BYTE)(IECBUS_DEVICE_WRITE_CLK));
+                                            (uint8_t)(IECBUS_DEVICE_WRITE_CLK));
                     }
 
                     /* go to associated P_BIT(n+1) state to send the next bit.
                        If this was the final bit then next state is P_DONE0 */
-                    iec->timeout = clk_value + US2CYCLES(60);
+                    iec->timeout = clk_value + (CLOCK)US2CYCLES(60);
                     iec->state++;
                 }
                 break;
@@ -782,8 +677,8 @@ static void serial_iec_device_exec_main(unsigned int devnr, CLOCK clk_value)
                        valid" for the final bit.
                        Pull CLK=0 and set DATA=1.
                        This prepares for the receiver acknowledgement. */
-                    iecbus_device_write(devnr, (BYTE)IECBUS_DEVICE_WRITE_DATA);
-                    iec->timeout = clk_value + US2CYCLES(1000);
+                    iecbus_device_write(devnr, (uint8_t)IECBUS_DEVICE_WRITE_DATA);
+                    iec->timeout = clk_value + (CLOCK)US2CYCLES(1000);
                     iec->state = P_DONE1;
                 }
                 break;
@@ -794,7 +689,7 @@ static void serial_iec_device_exec_main(unsigned int devnr, CLOCK clk_value)
                     log_message(serial_iec_device_log,
                                 "device %i sent 0x%02x (%c) on channel %i",
                                 devnr, iec->byte,
-                                isprint(iec->byte) ? iec->byte : '.',
+                                isprint((unsigned char)iec->byte) ? iec->byte : '.',
                                 iec->secondary & 0x0f);
 #endif
                     if (iec->st[iec->secondary & 0x0f] == 0x40) {
@@ -805,7 +700,7 @@ static void serial_iec_device_exec_main(unsigned int devnr, CLOCK clk_value)
 
                         /* Release the CLOCK line to 1 */
                         iecbus_device_write(devnr,
-                                            (BYTE)(IECBUS_DEVICE_WRITE_CLK
+                                            (uint8_t)(IECBUS_DEVICE_WRITE_CLK
                                                    | IECBUS_DEVICE_WRITE_DATA));
                     } else {
                         /* There is at least one more byte to send
@@ -821,9 +716,9 @@ static void serial_iec_device_exec_main(unsigned int devnr, CLOCK clk_value)
                                 "device %i got NACK on channel %i",
                                 devnr, iec->secondary & 0x0f);
 #endif
-                    iecbus_device_write(devnr, (BYTE)(IECBUS_DEVICE_WRITE_CLK
+                    iecbus_device_write(devnr, (uint8_t)(IECBUS_DEVICE_WRITE_CLK
                                                       | IECBUS_DEVICE_WRITE_DATA));
-                    iec->timeout = clk_value + US2CYCLES(100);
+                    iec->timeout = clk_value + (CLOCK)US2CYCLES(100);
                     iec->state = P_FRAMEERR0;
                 }
                 break;
@@ -832,7 +727,7 @@ static void serial_iec_device_exec_main(unsigned int devnr, CLOCK clk_value)
                     /* finished 1-0-1 sequence of CLOCK signal to acknowledge
                        the frame-error.  Now wait for sender to set DATA=0 so
                        we can continue. */
-                    iecbus_device_write(devnr, (BYTE)IECBUS_DEVICE_WRITE_DATA);
+                    iecbus_device_write(devnr, (uint8_t)IECBUS_DEVICE_WRITE_DATA);
                     iec->state = P_FRAMEERR1;
                 }
                 break;

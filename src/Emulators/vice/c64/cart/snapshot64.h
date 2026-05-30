@@ -29,21 +29,21 @@
 
 #include "vicetypes.h"
 
-extern BYTE snapshot64_roml_read(WORD addr);
-extern BYTE snapshot64_romh_read(WORD addr);
+uint8_t snapshot64_roml_read(uint16_t addr);
+uint8_t snapshot64_romh_read(uint16_t addr);
 
-extern void snapshot64_freeze(void);
+void snapshot64_freeze(void);
 
-extern void snapshot64_config_init(void);
-extern void snapshot64_config_setup(BYTE *rawcart);
-extern int snapshot64_bin_attach(const char *filename, BYTE *rawcart);
-extern int snapshot64_crt_attach(FILE *f, BYTE *rawcart);
+void snapshot64_config_init(void);
+void snapshot64_config_setup(uint8_t *rawcart);
+int snapshot64_bin_attach(const char *filename, uint8_t *rawcart);
+int snapshot64_crt_attach(FILE *f, uint8_t *rawcart);
 
-extern void snapshot64_detach(void);
+void snapshot64_detach(void);
 
 struct snapshot_s;
 
-extern int snapshot64_snapshot_write_module(struct snapshot_s *s);
-extern int snapshot64_snapshot_read_module(struct snapshot_s *s);
+int snapshot64_snapshot_write_module(struct snapshot_s *s);
+int snapshot64_snapshot_read_module(struct snapshot_s *s);
 
 #endif

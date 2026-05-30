@@ -33,15 +33,15 @@
 
 #include "vicetypes.h"
 
-struct drive_context_s;
+struct diskunit_context_s;
 struct via_context_s;
 
-extern void via4000_setup_context(struct drive_context_s *ctxptr);
-extern void via4000_init(struct drive_context_s *ctxptr);
+void via4000_setup_context(struct diskunit_context_s *ctxptr);
+void via4000_init(struct diskunit_context_s *ctxptr);
 
-extern void via4000_store(struct drive_context_s *ctxptr, WORD addr, BYTE byte);
-extern BYTE via4000_read(struct drive_context_s *ctxptr, WORD addr);
-extern BYTE via4000_peek(struct drive_context_s *ctxptr, WORD addr);
-extern int via4000_dump(drive_context_t *ctxptr, WORD addr);
+void via4000_store(struct diskunit_context_s *ctxptr, uint16_t addr, uint8_t byte);
+uint8_t via4000_read(struct diskunit_context_s *ctxptr, uint16_t addr);
+uint8_t via4000_peek(struct diskunit_context_s *ctxptr, uint16_t addr);
+int via4000_dump(diskunit_context_t *ctxptr, uint16_t addr);
 
 #endif

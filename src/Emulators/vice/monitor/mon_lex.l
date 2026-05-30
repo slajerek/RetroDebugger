@@ -229,7 +229,7 @@ HDIGIT  [0-9a-f]
         yydebug         { BEGIN(INITIAL);       return CMD_YYDEBUG; }
 }
  /* this is not a real command, but could be a label name for a label assignment */
-<CMD>[_a-zA-Z][_a-zA-Z0-9]* { BEGIN(LABEL_ASGN); yylval.str = lib_stralloc(yytext); return CMD_LABEL_ASGN; }
+<CMD>[_a-zA-Z][_a-zA-Z0-9]* { BEGIN(LABEL_ASGN); yylval.str = lib_strdup(yytext); return CMD_LABEL_ASGN; }
 
 ;		{ new_cmd = 1; return CMD_SEP; }
 
@@ -258,7 +258,7 @@ if		{ BEGIN (COND_MODE); return IF; }
                                 (yyleng > 2) && (yytext[yyleng - 3] == '\\') &&
                                 (yytext[yyleng - 2] == '"')) {
                          /* special case, \"" at end of string */
-                         yylval.str = lib_stralloc(yytext);
+                         yylval.str = lib_strdup(yytext);
                          yylval.str[yyleng -1] = 0;
                          unescape(yylval.str);
                          quote = 0;
@@ -274,7 +274,7 @@ if		{ BEGIN (COND_MODE); return IF; }
 <STR>[^\"\n]*   { if (yytext[yyleng - 1] == '\\') {
                      yymore(); /* skip escaped quote */
                   } else {
-                     yylval.str = lib_stralloc(yytext);
+                     yylval.str = lib_strdup(yytext);
                      unescape(yylval.str);
                      return STRING;
                   }
@@ -326,7 +326,7 @@ if		{ BEGIN (COND_MODE); return IF; }
 <BNAME,INITIAL,COND_MODE>10:             { return MEM_DISK10; }
 <BNAME,INITIAL,COND_MODE>11:             { return MEM_DISK11; }
 
-<CTYPE>[_a-zA-Z0-9]*      { yylval.str = lib_stralloc(yytext); return CPUTYPE; }
+<CTYPE>[_a-zA-Z0-9]*      { yylval.str = lib_strdup(yytext); return CPUTYPE; }
 
 <*>[ \t]*
 <*>\n          { dont_match_reg_a = 0;
@@ -338,12 +338,12 @@ if		{ BEGIN (COND_MODE); return IF; }
                }
 
 <FNAME>\".+\" { yytext[yyleng-1] = '\0';
-                yylval.str = lib_stralloc(yytext+1);
+                yylval.str = lib_strdup(yytext+1);
                 BEGIN (INITIAL); return FILENAME; }
 
-<BNAME>[_a-zA-Z0-9]*      { yylval.str = lib_stralloc(yytext); return BANKNAME; }
+<BNAME>[_a-zA-Z0-9]*      { yylval.str = lib_strdup(yytext); return BANKNAME; }
 
-<ROL>[^ \t\n][^\n]*          { yylval.str = lib_stralloc(yytext); return R_O_L; }
+<ROL>[^ \t\n][^\n]*          { yylval.str = lib_strdup(yytext); return R_O_L; }
 
  /* see monitor.c and montypes.h for the commented list */
 <REG_ASGN>{
@@ -487,21 +487,21 @@ if		{ BEGIN (COND_MODE); return IF; }
 }
 
 <ASM_MODE>[a-zA-Z][a-zA-Z]\ [a-zA-Z]\,[a-zA-Z] {
-    yylval.str = lib_stralloc(yytext); return OPCODE; }
+    yylval.str = lib_strdup(yytext); return OPCODE; }
 <ASM_MODE>[a-zA-Z][a-zA-Z]\ [a-zA-Z]\,\([a-zA-Z][a-zA-Z]\) {
-    yylval.str = lib_stralloc(yytext); return OPCODE; }
+    yylval.str = lib_strdup(yytext); return OPCODE; }
 <ASM_MODE>[a-zA-Z][a-zA-Z]\ \([a-zA-Z][a-zA-Z]\)\,[a-zA-Z] {
-    yylval.str = lib_stralloc(yytext); return OPCODE; }
+    yylval.str = lib_strdup(yytext); return OPCODE; }
 <ASM_MODE>[a-zA-Z][a-zA-Z]\ \([a-zA-Z][a-zA-Z]\)\, {
-    yylval.str = lib_stralloc(yytext); return OPCODE; }
+    yylval.str = lib_strdup(yytext); return OPCODE; }
 <ASM_MODE>[a-zA-Z][a-zA-Z]\ [a-zA-Z]\, {
-    yylval.str = lib_stralloc(yytext); return OPCODE; }
+    yylval.str = lib_strdup(yytext); return OPCODE; }
 <ASM_MODE>[a-zA-Z][a-zA-Z][a-zA-Z]\ [0-7]\, {
-    yylval.str = lib_stralloc(yytext); return OPCODE; }
+    yylval.str = lib_strdup(yytext); return OPCODE; }
 <ASM_MODE>[a-zA-Z][a-zA-Z][a-zA-Z][a-zA-Z]\ [a-zA-Z]\, {
-    yylval.str = lib_stralloc(yytext); return OPCODE; }
+    yylval.str = lib_strdup(yytext); return OPCODE; }
 <ASM_MODE>[a-zA-Z][a-zA-Z]\ [a-zA-Z][a-zA-Z]\, {
-    yylval.str = lib_stralloc(yytext); return OPCODE; }
+    yylval.str = lib_strdup(yytext); return OPCODE; }
 <ASM_MODE>af|AF         { return REG_AF; }
 <ASM_MODE>bc|BC         { return REG_BC; }
 <ASM_MODE>de|DE         { return REG_DE; }
@@ -512,8 +512,8 @@ if		{ BEGIN (COND_MODE); return IF; }
 <ASM_MODE>iy|IY         { return REG_IY; }
 <ASM_MODE>iyh|IYH       { return REG_IYH; }
 <ASM_MODE>iyl|IYL       { return REG_IYL; }
-<ASM_MODE>[a-zA-Z]{2,4}                           { yylval.str = lib_stralloc(yytext); return OPCODE; }
-<ASM_MODE,INITIAL>\.[_@\?:a-zA-Z][_@\?:.a-zA-Z0-9]*        { yylval.str = lib_stralloc(yytext); return LABEL; }
+<ASM_MODE>[a-zA-Z]{2,4}                           { yylval.str = lib_strdup(yytext); return OPCODE; }
+<ASM_MODE,INITIAL>\.[_@\?:a-zA-Z][_@\?:.a-zA-Z0-9]*        { yylval.str = lib_strdup(yytext); return LABEL; }
 
 <ASM_MODE>(a|A)/[ \t]*[:\n]           { if (!dont_match_reg_a) return REG_A;
                                         yylval.i = 0x0a; return H_NUMBER; }
@@ -539,13 +539,13 @@ if		{ BEGIN (COND_MODE); return IF; }
 <ASM_MODE>-             { return MINUS; }
 
 <ASM_MODE,INITIAL,COND_MODE,REG_ASGN,LABEL_ASGN>{
-    {HDIGIT}{8}             { yylval.str = lib_stralloc(yytext); return H_RANGE_GUESS; }
-    1[01]*                  { yylval.str = lib_stralloc(yytext); return B_NUMBER_GUESS; }
+    {HDIGIT}{8}             { yylval.str = lib_strdup(yytext); return H_RANGE_GUESS; }
+    1[01]*                  { yylval.str = lib_strdup(yytext); return B_NUMBER_GUESS; }
     %[01]+                  { yylval.i = strtol(yytext+1, NULL, 2); return B_NUMBER; }
     &[0-7]+                 { yylval.i = strtol(yytext+1, NULL, 8); return O_NUMBER; }
-    [0-7]*                  { yylval.str = lib_stralloc(yytext); return O_NUMBER_GUESS; }
+    [0-7]*                  { yylval.str = lib_strdup(yytext); return O_NUMBER_GUESS; }
     \+[0-9]+                { yylval.i = strtol(yytext+1, NULL, 10); return D_NUMBER; }
-    [0-9]+                  { yylval.str = lib_stralloc(yytext); return D_NUMBER_GUESS; }
+    [0-9]+                  { yylval.str = lib_strdup(yytext); return D_NUMBER_GUESS; }
     xx                      { yylval.i = 0x00; return MASK; }
     \${HDIGIT}+             { yylval.i = strtol(yytext+1, NULL, 16); return H_NUMBER; }
     {HDIGIT}+               { yylval.i = strtol(yytext, NULL, 16); return H_NUMBER; }

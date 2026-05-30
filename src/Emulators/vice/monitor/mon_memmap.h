@@ -30,13 +30,35 @@
 #include "montypes.h"
 #include "vicetypes.h"
 
-extern void mon_memmap_init(void);
-extern void mon_memmap_shutdown(void);
+struct cpuhistory_s {
+   CLOCK cycle;
+   uint16_t addr;
+   uint16_t reg_st;
+   uint8_t op;
+   uint8_t p1;
+   uint8_t p2;
+   uint8_t reg_a;
+   uint8_t reg_x;
+   uint8_t reg_y;
+   uint8_t reg_sp;
+   MEMSPACE origin;
+};
+typedef struct cpuhistory_s cpuhistory_t;
 
-extern void mon_cpuhistory(int count);
+void mon_memmap_init(void);
+void mon_memmap_shutdown(void);
 
-extern void mon_memmap_zap(void);
-extern void mon_memmap_show(int mask, MON_ADDR start_addr, MON_ADDR end_addr);
-extern void mon_memmap_save(const char* filename, int format);
+int monitor_cpuhistory_allocate(int lines);
+void mon_cpuhistory(int count, MEMSPACE filter1, MEMSPACE filter2, MEMSPACE filter3,
+                    MEMSPACE filter4, MEMSPACE filter5);
+cpuhistory_t *mon_cpuhistory_seek(int count, MEMSPACE filter1, MEMSPACE filter2,
+                                  MEMSPACE filter3, MEMSPACE filter4, MEMSPACE filter5);
+cpuhistory_t *mon_cpuhistory_next(cpuhistory_t *current, MEMSPACE filter1, MEMSPACE filter2,
+                         MEMSPACE filter3, MEMSPACE filter4, MEMSPACE filter5);
+
+void mon_memmap_zap(void);
+void mon_memmap_show(int mask, MON_ADDR start_addr, MON_ADDR end_addr);
+void mon_memmap_save(const char* filename, int format);
+
 
 #endif

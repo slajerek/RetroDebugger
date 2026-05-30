@@ -44,10 +44,12 @@
 /* Number of tracks we emulate. 84 for 1541, 168 for 1571 */
 #define MAX_GCR_TRACKS 168
 
-#define SECTOR_GCR_SIZE_WITH_HEADER 340
+/* number of GCR bytes used for header and sector, not counting the SYNC bytes
+   nor the gaps */
+#define SECTOR_GCR_SIZE_WITH_HEADER 335
 
 typedef struct disk_track_s {
-    BYTE *data;
+    uint8_t *data;
     int size;
 } disk_track_t;
 
@@ -57,14 +59,15 @@ typedef struct gcr_s {
 } gcr_t;
 
 typedef struct gcr_header_s {
-    BYTE sector, track, id2, id1;
+    uint8_t sector, track, id2, id1;
 } gcr_header_t;
 
-extern void gcr_convert_sector_to_GCR(const BYTE *buffer, BYTE *ptr, const gcr_header_t *header,
-                                      int gap, int sync, enum fdc_err_e error_code);
-extern enum fdc_err_e gcr_read_sector(const disk_track_t *raw, BYTE *data, BYTE sector);
-extern enum fdc_err_e gcr_write_sector(disk_track_t *raw, const BYTE *data, BYTE sector);
+void gcr_convert_sector_to_GCR(const uint8_t *buffer, uint8_t *ptr, const gcr_header_t *header,
+                               int gap, int sync, enum fdc_err_e error_code);
+enum fdc_err_e gcr_read_sector(const disk_track_t *raw, uint8_t *data, uint8_t sector);
+enum fdc_err_e gcr_write_sector(disk_track_t *raw, const uint8_t *data, uint8_t sector);
 
-extern gcr_t *gcr_create_image(void);
-extern void gcr_destroy_image(gcr_t *gcr);
+gcr_t *gcr_create_image(void);
+void gcr_destroy_image(gcr_t *gcr);
+
 #endif

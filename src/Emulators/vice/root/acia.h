@@ -57,8 +57,8 @@ enum {
     ACIA_SR_BITS_OVERRUN_ERROR     = 0x04, /* cleared automatically by read of ACIA_DR or next error-free reception */
     ACIA_SR_BITS_RECEIVE_DR_FULL   = 0x08, /* cleared automatically by read of ACIA_DR */
     ACIA_SR_BITS_TRANSMIT_DR_EMPTY = 0x10, /* cleared automatically by write of ACIA_DR */
-    ACIA_SR_BITS_DSR               = 0x20, /* reflects current DSR state */
-    ACIA_SR_BITS_DCD               = 0x40, /* reflects current DCD state */
+    ACIA_SR_BITS_DCD               = 0x20, /* reflects current DCD state */
+    ACIA_SR_BITS_DSR               = 0x40, /* reflects current DSR state */
     ACIA_SR_BITS_IRQ               = 0x80, /* cleared by read of status register */
 
     ACIA_SR_DEFAULT_AFTER_HW_RESET = ACIA_SR_BITS_TRANSMIT_DR_EMPTY
@@ -84,6 +84,8 @@ enum {
     ACIA_CMD_BITS_IRQ_DISABLED            = 0x02,
     ACIA_CMD_BITS_DTR_ENABLE_RECV_AND_IRQ = 0x01,
 
+    /* This bit is set only in the MOS 6551, not the Rockwell 6551 or the 65c51 versions */
+    /* ACIA_CMD_DEFAULT_AFTER_HW_RESET       = ACIA_CMD_BITS_IRQ_DISABLED */
     ACIA_CMD_DEFAULT_AFTER_HW_RESET       = 0
 };
 
@@ -123,9 +125,17 @@ enum {
 #define ACIA_MODE_SWIFTLINK 1  /* Swiftlink ACIA emulation, baud rates are doubled */
 #define ACIA_MODE_TURBO232  2  /* Turbo232 ACIA emulation, baud rates are doubled,
                                  and enhanced baud rate register */
-
 #define ACIA_MODE_LOWEST ACIA_MODE_NORMAL
 
-int acia_dump(void *acia_context);
+#define ACIA_DEVICE_1   0
+#define ACIA_DEVICE_2   1
+#define ACIA_DEVICE_3   2
+#define ACIA_DEVICE_4   3
+
+#define ACIA_INT_NONE   0
+#define ACIA_INT_NMI    1
+#define ACIA_INT_IRQ    2
+
+int acia_dump(void);
 
 #endif

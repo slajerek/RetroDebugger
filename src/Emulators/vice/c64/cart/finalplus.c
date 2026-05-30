@@ -77,23 +77,25 @@ static int fcplus_roml;
 static int fcplus_romh;
 
 /* some prototypes are needed */
-static BYTE final_plus_io2_read(WORD addr);
-static void final_plus_io2_store(WORD addr, BYTE value);
+static uint8_t final_plus_io2_read(uint16_t addr);
+static void final_plus_io2_store(uint16_t addr, uint8_t value);
 static int final_plus_dump(void);
 
 static io_source_t final_plus_io2_device = {
-    CARTRIDGE_NAME_FINAL_PLUS,
-    IO_DETACH_CART,
-    NULL,
-    0xdf00, 0xdfff, 0xff,
-    1, /* read is always valid */
-    final_plus_io2_store,
-    final_plus_io2_read,
-    final_plus_io2_read,
-    final_plus_dump,
-    CARTRIDGE_FINAL_PLUS,
-    0,
-    0
+    CARTRIDGE_NAME_FINAL_PLUS, /* name of the device */
+    IO_DETACH_CART,            /* use cartridge ID to detach the device when involved in a read-collision */
+    IO_DETACH_NO_RESOURCE,     /* does not use a resource for detach */
+    0xdf00, 0xdfff, 0xff,      /* range for the device, address is ignored, reg:$df00, mirrors:$df01-$dfff */
+    1,                         /* read is always valid */
+    final_plus_io2_store,      /* store function */
+    NULL,                      /* NO poke function */
+    final_plus_io2_read,       /* read function */
+    final_plus_io2_read,       /* peek function */
+    final_plus_dump,           /* device state information dump function */
+    CARTRIDGE_FINAL_PLUS,      /* cartridge ID */
+    IO_PRIO_NORMAL,            /* normal priority, device read needs to be checked for collisions */
+    0,                         /* insertion order, gets filled in by the registration function */
+    IO_MIRROR_NONE             /* NO mirroring */
 };
 
 static io_source_list_t *final_plus_io2_list_item = NULL;
@@ -104,13 +106,13 @@ static const export_resource_t export_res_plus = {
 
 /* ---------------------------------------------------------------------*/
 
-BYTE final_plus_io2_read(WORD addr)
+uint8_t final_plus_io2_read(uint16_t addr)
 {
     DBG(("io2 r %04x\n", addr));
-    return ((fcplus_bit << 7) || (fcplus_roml << 6) || (fcplus_romh << 5) || (fcplus_enabled << 4));
+    return ((fcplus_bit << 7) | (fcplus_roml << 6) | (fcplus_romh << 5) | (fcplus_enabled << 4));
 }
 
-void final_plus_io2_store(WORD addr, BYTE value)
+void final_plus_io2_store(uint16_t addr, uint8_t value)
 {
     if (fcplus_enabled == 1) {
         fcplus_bit = (value >> 7) & 1;
@@ -152,7 +154,7 @@ static int final_plus_dump(void)
 
 /* ---------------------------------------------------------------------*/
 
-BYTE final_plus_roml_read(WORD addr)
+uint8_t final_plus_roml_read(uint16_t addr)
 {
     if (fcplus_roml == 1) {
         return roml_banks[(addr & 0x1fff)];
@@ -161,7 +163,7 @@ BYTE final_plus_roml_read(WORD addr)
     }
 }
 
-BYTE final_plus_romh_read(WORD addr)
+uint8_t final_plus_romh_read(uint16_t addr)
 {
     if ((fcplus_enabled == 1) && (fcplus_romh == 1)) {
         return romh_banks[(addr & 0x1fff)];
@@ -170,7 +172,7 @@ BYTE final_plus_romh_read(WORD addr)
     }
 }
 
-BYTE final_plus_a000_bfff_read(WORD addr)
+uint8_t final_plus_a000_bfff_read(uint16_t addr)
 {
     if ((fcplus_enabled == 1) && (fcplus_roml == 1)) {
         return roml_banks[0x2000 + (addr & 0x1fff)];
@@ -179,17 +181,17 @@ BYTE final_plus_a000_bfff_read(WORD addr)
     }
 }
 
-int final_plus_romh_phi1_read(WORD addr, BYTE *value)
+int final_plus_romh_phi1_read(uint16_t addr, uint8_t *value)
 {
     return CART_READ_C64MEM;
 }
 
-int final_plus_romh_phi2_read(WORD addr, BYTE *value)
+int final_plus_romh_phi2_read(uint16_t addr, uint8_t *value)
 {
     return final_plus_romh_phi1_read(addr, value);
 }
 
-int final_plus_peek_mem(export_t *export, WORD addr, BYTE *value)
+int final_plus_peek_mem(export_t *ex, uint16_t addr, uint8_t *value)
 {
     if (fcplus_roml == 1) {
         if (addr >= 0x8000 && addr <= 0x9fff) {
@@ -215,7 +217,7 @@ int final_plus_peek_mem(export_t *export, WORD addr, BYTE *value)
 void final_plus_freeze(void)
 {
     DBG(("fc+ freeze\n"));
-    cart_config_changed_slotmain(0, 3, CMODE_READ | CMODE_RELEASE_FREEZE | CMODE_PHI2_RAM);
+    cart_config_changed_slotmain(CMODE_8KGAME, CMODE_ULTIMAX, CMODE_READ | CMODE_RELEASE_FREEZE | CMODE_PHI2_RAM);
     fcplus_enabled = 1;
     fcplus_roml = 1;
     fcplus_romh = 1;
@@ -224,7 +226,7 @@ void final_plus_freeze(void)
 void final_plus_config_init(void)
 {
     DBG(("fc+ config init\n"));
-    cart_config_changed_slotmain(0, 3, CMODE_READ | CMODE_PHI2_RAM);
+    cart_config_changed_slotmain(CMODE_8KGAME, CMODE_ULTIMAX, CMODE_READ | CMODE_PHI2_RAM);
     fcplus_enabled = 1;
     fcplus_roml = 1;
     fcplus_romh = 1;
@@ -234,12 +236,12 @@ EPROM $2000-$4000 is visible at $e000-$ffff, if enabled
 EPROM $4000-$5fff is visible at $8000-$9fff, if enabled
 EPROM $6000-$7fff is visible at $a000-$bfff, if enabled
 */
-void final_plus_config_setup(BYTE *rawcart)
+void final_plus_config_setup(uint8_t *rawcart)
 {
     DBG(("fc+ config setup\n"));
     memcpy(roml_banks, &rawcart[0x4000], 0x4000);
     memcpy(romh_banks, &rawcart[0x2000], 0x2000);
-    cart_config_changed_slotmain(0, 3, CMODE_READ | CMODE_PHI2_RAM);
+    cart_config_changed_slotmain(CMODE_8KGAME, CMODE_ULTIMAX, CMODE_READ | CMODE_PHI2_RAM);
 }
 
 /* ---------------------------------------------------------------------*/
@@ -255,7 +257,7 @@ static int final_plus_common_attach(void)
     return 0;
 }
 
-int final_plus_bin_attach(const char *filename, BYTE *rawcart)
+int final_plus_bin_attach(const char *filename, uint8_t *rawcart)
 {
     DBG(("fc+ bin attach\n"));
 
@@ -270,7 +272,7 @@ int final_plus_bin_attach(const char *filename, BYTE *rawcart)
     return final_plus_common_attach();
 }
 
-int final_plus_crt_attach(FILE *fd, BYTE *rawcart)
+int final_plus_crt_attach(FILE *fd, uint8_t *rawcart)
 {
     crt_chip_header_t chip;
 
@@ -311,7 +313,7 @@ void final_plus_detach(void)
    ARRAY | ROMH      | 8192 BYTES of ROMH data
  */
 
-static char snap_module_name[] = "CARTFCP";
+static const char snap_module_name[] = "CARTFCP";
 #define SNAP_MAJOR   0
 #define SNAP_MINOR   0
 
@@ -326,10 +328,10 @@ int final_plus_snapshot_write_module(snapshot_t *s)
     }
 
     if (0
-        || (SMW_B(m, (BYTE)fcplus_enabled) < 0)
-        || (SMW_B(m, (BYTE)fcplus_bit) < 0)
-        || (SMW_B(m, (BYTE)fcplus_roml) < 0)
-        || (SMW_B(m, (BYTE)fcplus_romh) < 0)
+        || (SMW_B(m, (uint8_t)fcplus_enabled) < 0)
+        || (SMW_B(m, (uint8_t)fcplus_bit) < 0)
+        || (SMW_B(m, (uint8_t)fcplus_roml) < 0)
+        || (SMW_B(m, (uint8_t)fcplus_romh) < 0)
         || (SMW_BA(m, roml_banks, 0x4000) < 0)
         || (SMW_BA(m, romh_banks, 0x2000) < 0)) {
         snapshot_module_close(m);
@@ -341,7 +343,7 @@ int final_plus_snapshot_write_module(snapshot_t *s)
 
 int final_plus_snapshot_read_module(snapshot_t *s)
 {
-    BYTE vmajor, vminor;
+    uint8_t vmajor, vminor;
     snapshot_module_t *m;
 
     m = snapshot_module_open(s, snap_module_name, &vmajor, &vminor);
@@ -351,7 +353,7 @@ int final_plus_snapshot_read_module(snapshot_t *s)
     }
 
     /* Do not accept versions higher than current */
-    if (vmajor > SNAP_MAJOR || vminor > SNAP_MINOR) {
+    if (snapshot_version_is_bigger(vmajor, vminor, SNAP_MAJOR, SNAP_MINOR)) {
         snapshot_set_error(SNAPSHOT_MODULE_HIGHER_VERSION);
         goto fail;
     }

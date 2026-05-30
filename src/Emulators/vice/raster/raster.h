@@ -78,11 +78,11 @@ struct raster_s {
     struct raster_resource_chip_s *raster_resource_chip;
 
     /* Pointer to the draw buffer.  */
-    BYTE *draw_buffer_ptr;
+    uint8_t *draw_buffer_ptr;
 
     /* This is a temporary draw buffer line used for sprite collision
        checking without drawing to the real frame buffer.  */
-    BYTE *fake_draw_buffer_line;
+    uint8_t *fake_draw_buffer_line;
 
     /* Smooth scroll values for the graphics (not the whole screen).  */
     int xsmooth, ysmooth, sprite_xsmooth;
@@ -92,10 +92,6 @@ struct raster_s {
 
     /* Number of pixels at a xsmooth shift to the right.  */
     int xsmooth_shift_right, sprite_xsmooth_shift_right;
-
-    /* If nonzero, we should skip the next frame. (used for automatic refresh
-       rate setting) */
-    int skip_frame;
 
     /* Next line to be calculated.  */
     unsigned int current_line;
@@ -170,12 +166,12 @@ struct raster_s {
        collision checking and background sprite drawing.  When cache is
        turned on, a cached mask for each line is used instead (see
        `raster_cache_t.gfx_msk').  */
-    BYTE gfx_msk[RASTER_GFX_MSK_SIZE];
+    uint8_t gfx_msk[RASTER_GFX_MSK_SIZE];
 
     /* This is a temporary graphics mask used for sprite collision checking
        without drawing to the real frame buffer, and is set up to be always
        filled with zeroes.  */
-    BYTE zero_gfx_msk[RASTER_GFX_MSK_SIZE];
+    uint8_t zero_gfx_msk[RASTER_GFX_MSK_SIZE];
 
     int (*line_changes)(struct raster_s *, unsigned int *, unsigned int *);
     void (*draw_sprites_when_cache_enabled)(struct raster_s *,
@@ -189,41 +185,38 @@ typedef struct raster_s raster_t;
 
 struct screenshot_s;
 
-extern int raster_init(raster_t *raster, unsigned int num_modes);
-extern void raster_shutdown(raster_t *raster);
-extern raster_t *raster_new(unsigned int num_modes, unsigned int num_sprites);
-extern void raster_reset(raster_t *raster);
-extern int raster_realize(raster_t *raster);
-extern void raster_canvas_init(raster_t *raster);
-extern void raster_set_geometry(raster_t *raster,
-                                unsigned int canvas_width,
-                                unsigned int canvas_height,
-                                unsigned int screen_width,
-                                unsigned int screen_height,
-                                unsigned int gfx_width,
-                                unsigned int gfx_height,
-                                unsigned int text_width,
-                                unsigned int text_height,
-                                unsigned int gfx_position_x,
-                                unsigned int gfx_position_y,
-                                int gfx_area_moves,
-                                unsigned int first_displayed_line,
-                                unsigned int last_displayed_line,
-                                unsigned int extra_offscreen_border_left,
-                                unsigned int extra_offscreen_border_right);
-extern void raster_new_cache(raster_t *raster, unsigned int screen_height);
-extern void raster_draw_buffer_ptr_update(raster_t *raster);
-extern void raster_force_repaint(raster_t *raster);
-extern void raster_set_title(raster_t *raster, const char *name);
-extern void raster_skip_frame(raster_t *raster, int skip);
-extern void raster_enable_cache(raster_t *raster, int enable);
-extern void raster_mode_change(void);
-extern void raster_set_canvas_refresh(raster_t *raster, int enable);
-extern void raster_screenshot(raster_t *raster,
-                              struct screenshot_s *screenshot);
-extern void raster_async_refresh(raster_t *raster,
-                                 struct canvas_refresh_s *ref);
-extern void raster_line_changes_init(raster_t *raster);
-extern void raster_line_changes_sprite_init(raster_t *raster);
+int raster_init(raster_t *raster, unsigned int num_modes);
+void raster_shutdown(raster_t *raster);
+raster_t *raster_new(unsigned int num_modes, unsigned int num_sprites);
+void raster_reset(raster_t *raster);
+int raster_realize(raster_t *raster);
+void raster_canvas_init(raster_t *raster);
+void raster_set_geometry(raster_t *raster,
+                         unsigned int canvas_width,
+                         unsigned int canvas_height,
+                         unsigned int screen_width,
+                         unsigned int screen_height,
+                         unsigned int gfx_width,
+                         unsigned int gfx_height,
+                         unsigned int text_width,
+                         unsigned int text_height,
+                         unsigned int gfx_position_x,
+                         unsigned int gfx_position_y,
+                         int gfx_area_moves,
+                         unsigned int first_displayed_line,
+                         unsigned int last_displayed_line,
+                         unsigned int extra_offscreen_border_left,
+                         unsigned int extra_offscreen_border_right);
+void raster_new_cache(raster_t *raster, unsigned int screen_height);
+void raster_draw_buffer_ptr_update(raster_t *raster);
+void raster_force_repaint(raster_t *raster);
+void raster_enable_cache(raster_t *raster, int enable);
+void raster_mode_change(void);
+void raster_set_canvas_refresh(raster_t *raster, int enable);
+void raster_screenshot(raster_t *raster, struct screenshot_s *screenshot);
+void raster_async_refresh(raster_t *raster, struct canvas_refresh_s *ref);
+void raster_line_changes_init(raster_t *raster);
+void raster_line_changes_sprite_init(raster_t *raster);
+void raster_calculate_padding_size(unsigned int fb_width, unsigned int fb_height, unsigned int *padded_size, unsigned int *unpadded_offset);
 
 #endif

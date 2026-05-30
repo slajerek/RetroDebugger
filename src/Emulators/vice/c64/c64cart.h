@@ -29,8 +29,8 @@
 
 #include "vicetypes.h"
 
-/* Cartridge ROM limit = 1MB (EasyFlash) */
-#define C64CART_ROM_LIMIT (1024 * 1024)
+/* Cartridge ROM limit = 2MB (Magic Desk 2 - 16K config) */
+#define C64CART_ROM_LIMIT (2 * 1024 * 1024)
 /* Cartridge RAM limit = 32kB (IDE64, ...) */
 #define C64CART_RAM_LIMIT (32 * 1024)
 /* maximum size of a full "all inclusive" cartridge image (16MB for REU) */
@@ -59,21 +59,70 @@
     !ROML       11    8K decoded RAM/ROM block @ $8000 (active low) buffered ls ttl output
     !ROMH        B    8K decoded RAM/ROM block @ $E000 buffered
 
+    bidirectional:
+
     D7-D0    14-21    Data bus bit 7-0 - unbuffered, 1 ls ttl load max
     A15-A0    F- Y    Address bus bit 0-15 - unbuffered, 1 ls ttl load max
 */
 
+/* WARNING: due to the way VICE is being built/linked, this struct has to be
+            the same in C64/DTV/C128 and CBM2 (ie c64cart.h and cbm2cart.h) */
 typedef struct {
-    BYTE exrom; /* exrom signal, 0 - active */
-    BYTE game;  /* game signal, 0 - active */
-    BYTE ultimax_phi1; /* flag for vic-ii, ultimax mode in phi1 phase */
-    BYTE ultimax_phi2; /* flag for vic-ii, ultimax mode in phi2 phase */
+    uint8_t exrom;          /* exrom signal, 0 - active */
+    uint8_t game;           /* game signal, 0 - active */
+    uint8_t ultimax_phi1;   /* flag for vic-ii, ultimax mode in phi1 phase */
+    uint8_t ultimax_phi2;   /* flag for vic-ii, ultimax mode in phi2 phase */
 } export_t;
 
+/* this is referenced by the VICII emulation */
 extern export_t export;
 
+/* expose public API symbols for those headers that provide them */
 #define CARTRIDGE_INCLUDE_PUBLIC_API
-#include "expert.h"
+#include "dqbb.h"          /* needed for x128 */
+#include "expert.h"        /* provide defines for ExpertCartridgeMode resource */
+#include "retroreplay.h"   /* provide defines for RRrevision resource */
+#include "mmc64.h"         /* provide defines for MMC64_sd_type and MMC64_revision resources */
+#include "mmcreplay.h"     /* needed for x128, provide defines for MMCRSDType resource */
+#ifdef HAVE_RAWNET
+#include "ethernetcart.h"  /* provide defines for ETHERNETCARTMode resource */
+#endif
 #undef CARTRIDGE_INCLUDE_PUBLIC_API
+
+/* the following is used to hook up the c128 mode in x128 */
+#include <stdio.h>
+#include "cartridge.h"
+
+#include "snapshot.h"
+
+struct c128cartridge_interface_s {
+    int (*attach_crt)(int type, FILE *fd, const char *filename, uint8_t *rawcart);
+    int (*bin_attach)(int type, const char *filename, uint8_t *rawcart);
+    int (*bin_save)(int type, const char *filename);
+    int (*save_secondary_image)(int type, const char *filename);
+    int (*crt_save)(int type, const char *filename);
+    int (*flush_image)(int type);
+    int (*flush_secondary_image)(int type);
+    void (*config_init)(int type);
+    void (*config_setup)(int type, uint8_t *rawcart);
+    void (*detach_image)(int type);
+    void (*reset)(void);
+    int (*freeze_allowed)(void);
+    void (*freeze)(void);
+    void (*powerup)(void);
+    cartridge_info_t* (*get_info_list)(void);
+    int (*can_flush_image)(int type);
+    int (*can_flush_secondary_image)(int type);
+    int (*can_save_image)(int type);
+    int (*can_save_secondary_image)(int type);
+    int (*snapshot_read)(int type, snapshot_t *s);
+    int (*snapshot_write)(int type, snapshot_t *s);
+};
+typedef struct c128cartridge_interface_s c128cartridge_interface_t;
+
+extern c128cartridge_interface_t *c128cartridge; /* lives in c64cart.c */
+
+/* only x128 actually implements this function */
+void c128cartridge_setup_interface(void);
 
 #endif

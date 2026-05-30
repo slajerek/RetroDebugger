@@ -63,8 +63,9 @@ public:
 protected:
   void clock_shift_register();
   void write_shift_register();
-  void reset_shift_register();
   void set_noise_output();
+  void wave_bitfade();
+  void shiftreg_bitfade();
 
   const WaveformGenerator* sync_source;
   WaveformGenerator* sync_dest;
@@ -98,6 +99,10 @@ protected:
   // The control register right-shifted 4 bits; used for waveform table lookup.
   reg8 waveform;
 
+  // 8580 tri/saw pipeline
+  reg12 tri_saw_pipeline;
+  reg12 osc3;
+
   // The remaining control register bits.
   reg8 test;
   reg8 ring_mod;
@@ -128,7 +133,7 @@ friend class SID;
 // time a sample is calculated.
 // ----------------------------------------------------------------------------
 
-//#if RESID_INLINING || defined(RESID_WAVE_CC)
+#if RESID_INLINING || defined(RESID_WAVE_CC)
 
 // ----------------------------------------------------------------------------
 // SID clocking - 1 cycle.
@@ -139,7 +144,7 @@ void WaveformGenerator::clock()
   if (unlikely(test)) {
     // Count down time to fully reset shift register.
     if (unlikely(shift_register_reset) && unlikely(!--shift_register_reset)) {
-      reset_shift_register();
+      shiftreg_bitfade();
     }
 
     // The test bit sets pulse high.
@@ -177,7 +182,11 @@ void WaveformGenerator::clock(cycle_count delta_t)
     if (shift_register_reset) {
       shift_register_reset -= delta_t;
       if (unlikely(shift_register_reset <= 0)) {
-        reset_shift_register();
+        shift_register = 0x7fffff;
+        shift_register_reset = 0;
+
+        // New noise waveform output.
+        set_noise_output();
       }
     }
 
@@ -270,7 +279,7 @@ void WaveformGenerator::synchronize()
 // The MSB is used to create the falling edge of the triangle by inverting
 // the lower 11 bits. The MSB is thrown away and the lower 11 bits are
 // left-shifted (half the resolution, full amplitude).
-// Ring modulation substitutes the MSB with MSB EOR sync_source MSB.
+// Ring modulation substitutes the MSB with MSB EOR NOT sync_source MSB.
 //
 
 // Sawtooth:
@@ -342,15 +351,6 @@ RESID_INLINE void WaveformGenerator::write_shift_register()
   no_noise_or_noise_output = no_noise | noise_output;
 }
 
-RESID_INLINE void WaveformGenerator::reset_shift_register()
-{
-  shift_register = 0x7fffff;
-  shift_register_reset = 0;
-
-  // New noise waveform output.
-  set_noise_output();
-}
-
 RESID_INLINE void WaveformGenerator::set_noise_output()
 {
   noise_output =
@@ -374,7 +374,7 @@ RESID_INLINE void WaveformGenerator::set_noise_output()
 // in the output.
 //
 // Example:
-// 
+//
 //             1 1
 // Bit #       1 0 9 8 7 6 5 4 3 2 1 0
 //             -----------------------
@@ -427,11 +427,11 @@ RESID_INLINE void WaveformGenerator::set_noise_output()
 //
 // Sawtooth+Triangle:
 // The accumulator is used to look up an OSC3 sample.
-// 
+//
 // Pulse+Triangle:
 // The accumulator is used to look up an OSC3 sample. When ring modulation is
-// selected, the accumulator MSB is substituted with MSB EOR sync_source MSB.
-// 
+// selected, the accumulator MSB is substituted with MSB EOR NOT sync_source MSB.
+//
 // Pulse+Sawtooth:
 // The accumulator is used to look up an OSC3 sample.
 // The sample is output if the pulse output is on.
@@ -439,11 +439,21 @@ RESID_INLINE void WaveformGenerator::set_noise_output()
 // Pulse+Sawtooth+Triangle:
 // The accumulator is used to look up an OSC3 sample.
 // The sample is output if the pulse output is on.
-// 
+//
 // Combined waveforms including noise:
 // All waveform combinations including noise output zero after a few cycles,
 // since the waveform bits are and'ed into the shift register via the shift
 // register outputs.
+
+static reg12 noise_pulse6581(reg12 noise)
+{
+    return (noise < 0xf00) ? 0x000 : noise & (noise<<1) & (noise<<2);
+}
+
+static reg12 noise_pulse8580(reg12 noise)
+{
+    return (noise < 0xfc0) ? noise & (noise << 1) : 0xfc0;
+}
 
 RESID_INLINE
 void WaveformGenerator::set_waveform_output()
@@ -452,10 +462,36 @@ void WaveformGenerator::set_waveform_output()
   if (likely(waveform)) {
     // The bit masks no_pulse and no_noise are used to achieve branch-free
     // calculation of the output value.
-    int ix = (accumulator ^ (sync_source->accumulator & ring_msb_mask)) >> 12;
-    waveform_output =
-      wave[ix] & (no_pulse | pulse_output) & no_noise_or_noise_output;
-    if (unlikely(waveform > 0x8)) {
+    int ix = (accumulator ^ (~sync_source->accumulator & ring_msb_mask)) >> 12;
+
+    waveform_output = wave[ix] & (no_pulse | pulse_output) & no_noise_or_noise_output;
+
+    if (unlikely((waveform & 0xc) == 0xc))
+    {
+        waveform_output = (sid_model == MOS6581) ?
+            noise_pulse6581(waveform_output) : noise_pulse8580(waveform_output);
+    }
+
+    // Triangle/Sawtooth output is delayed half cycle on 8580.
+    // This will appear as a one cycle delay on OSC3 as it is
+    // latched in the first phase of the clock.
+    if ((waveform & 3) && (sid_model == MOS8580))
+    {
+        osc3 = tri_saw_pipeline & (no_pulse | pulse_output) & no_noise_or_noise_output;
+        tri_saw_pipeline = wave[ix];
+    }
+    else
+    {
+        osc3 = waveform_output;
+    }
+
+    if ((waveform & 0x2) && unlikely(waveform & 0xd) && (sid_model == MOS6581)) {
+        // In the 6581 the top bit of the accumulator may be driven low by combined waveforms
+        // when the sawtooth is selected
+        accumulator &= (waveform_output << 12) | 0x7fffff;
+    }
+
+    if (unlikely(waveform > 0x8) && likely(!test) && likely(shift_pipeline != 1)) {
       // Combined waveforms write to the shift register.
       write_shift_register();
     }
@@ -463,7 +499,7 @@ void WaveformGenerator::set_waveform_output()
   else {
     // Age floating DAC input.
     if (likely(floating_output_ttl) && unlikely(!--floating_output_ttl)) {
-      waveform_output = 0;
+      wave_bitfade();
     }
   }
 
@@ -489,10 +525,17 @@ void WaveformGenerator::set_waveform_output(cycle_count delta_t)
   if (likely(waveform)) {
     // The bit masks no_pulse and no_noise are used to achieve branch-free
     // calculation of the output value.
-    int ix = (accumulator ^ (sync_source->accumulator & ring_msb_mask)) >> 12;
+    int ix = (accumulator ^ (~sync_source->accumulator & ring_msb_mask)) >> 12;
     waveform_output =
       wave[ix] & (no_pulse | pulse_output) & no_noise_or_noise_output;
-    if (unlikely(waveform > 0x8)) {
+    // Triangle/Sawtooth output delay for the 8580 is not modeled
+    osc3 = waveform_output;
+
+    if ((waveform & 0x2) && unlikely(waveform & 0xd) && (sid_model == MOS6581)) {
+        accumulator &= (waveform_output << 12) | 0x7fffff;
+    }
+
+    if (unlikely(waveform > 0x8) && likely(!test)) {
       // Combined waveforms write to the shift register.
       // NB! Since cycles are skipped in delta_t clocking, writes will be
       // missed. Single cycle clocking must be used for 100% correct operation.
@@ -505,7 +548,7 @@ void WaveformGenerator::set_waveform_output(cycle_count delta_t)
       floating_output_ttl -= delta_t;
       if (unlikely(floating_output_ttl <= 0)) {
         floating_output_ttl = 0;
-        waveform_output = 0;
+        osc3 = waveform_output = 0;
       }
     }
   }
@@ -519,7 +562,7 @@ void WaveformGenerator::set_waveform_output(cycle_count delta_t)
 // The digital waveform output is converted to an analog signal by a 12-bit
 // DAC. Re-vectorized die photographs reveal that the DAC is an R-2R ladder
 // built up as follows:
-// 
+//
 //        12V     11  10   9   8   7   6   5   4   3   2   1   0    GND
 // Strange  |      |   |   |   |   |   |   |   |   |   |   |   |     |  Missing
 // part    2R     2R  2R  2R  2R  2R  2R  2R  2R  2R  2R  2R  2R    2R  term.
@@ -549,7 +592,7 @@ short WaveformGenerator::output()
   return model_dac[sid_model][waveform_output];
 }
 
-//#endif // RESID_INLINING || defined(RESID_WAVE_CC)
+#endif // RESID_INLINING || defined(RESID_WAVE_CC)
 
 } // namespace reSID
 

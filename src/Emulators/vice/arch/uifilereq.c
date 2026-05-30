@@ -142,7 +142,7 @@ static void sdl_ui_print_translate_seperator(const char *text, int x, int y)
     char *new_text = NULL;
 
     len = strlen(text);
-    new_text = lib_stralloc(text);
+    new_text = lib_strdup(text);
 
     for (i = 0; i < len; i++) {
         if (new_text[i] == '\\') {
@@ -170,7 +170,7 @@ static void sdl_ui_display_path(const char *current_dir)
     len = strlen(current_dir);
 
     if (len > menu_draw->max_text_x) {
-        text = lib_stralloc(current_dir);
+        text = lib_strdup(current_dir);
 
         temp = strchr(current_dir + 1, FSDEV_DIR_SEP_CHR);
         before = (int)(temp - current_dir + 1);
@@ -346,7 +346,7 @@ char* sdl_ui_file_selection_dialog(const char* title, ui_menu_filereq_mode_t mod
     current_dir = lib_malloc(maxpathlen);
 
     ioutil_getcwd(current_dir, maxpathlen);
-    backup_dir = lib_stralloc(current_dir);
+    backup_dir = lib_strdup(current_dir);
 
     directory = ioutil_opendir(current_dir);
     if (directory == NULL) {
@@ -436,7 +436,7 @@ char* sdl_ui_file_selection_dialog(const char* title, ui_menu_filereq_mode_t mod
                                 }
                             }
                         } else {
-                            retval = lib_stralloc(current_dir);
+                            retval = lib_strdup(current_dir);
                         }
                         active = 0;
                         break;
@@ -495,7 +495,7 @@ char* sdl_ui_file_selection_dialog(const char* title, ui_menu_filereq_mode_t mod
                             char *selected_file = directory->files[offset + cur - dirs - SDL_FILEREQ_META_NUM].name;
                             if (mode == FILEREQ_MODE_CHOOSE_FILE) {
                                 lib_free(last_selected_file);
-                                last_selected_file = lib_stralloc(selected_file);
+                                last_selected_file = lib_strdup(selected_file);
                             }
                             retval = util_concat(current_dir, FSDEV_DIR_SEP_STR, selected_file, NULL);
                             active = 0;
@@ -609,13 +609,13 @@ char* sdl_ui_slot_selection_dialog(const char* title, ui_menu_slot_mode_t mode)
     slots = lib_malloc(sizeof(ui_menu_slots));
     slots->entries = lib_malloc(sizeof(ui_menu_slot_entry) * total);
     
-    progname = archdep_program_name();
+    progname = (char *)archdep_program_name();	/* 3.10 returns const char *; this SDL-UI path is dead in RD (MTEngineSDL is the active UI), preserve the legacy mutation/free behavior with a cast. */
     temp_name = strchr(progname, FSDEV_EXT_SEP_CHR);
     if (temp_name) {
         *temp_name = 0;
     }
     for (i = 0; i < total; ++i) {
-        unsigned int len;
+        size_t len;
         unsigned int isdir;
 
         slots->entries[i].slot_name = lib_msprintf("snapshot_%s_%02d.vsf", progname, i + 1);

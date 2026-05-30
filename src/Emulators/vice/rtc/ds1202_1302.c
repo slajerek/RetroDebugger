@@ -176,7 +176,7 @@ rtc_ds1202_1302_t *ds1202_1302_init(char *device, int rtc_type)
     memcpy(retval->old_clock_regs, retval->clock_regs, DS1202_1302_REG_SIZE);
 
     retval->rtc_type = rtc_type;
-    retval->device = lib_stralloc(device);
+    retval->device = lib_strdup(device);
 
     return retval;
 }

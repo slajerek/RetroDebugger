@@ -24,10 +24,13 @@
  *
  */
 
+/* #define DEBUGDRIVE */
+
 #include "vice.h"
 
 #include <stdio.h>
 
+#include "attach.h"
 #include "drive-check.h"
 #include "drive-resources.h"
 #include "drive.h"
@@ -44,48 +47,62 @@
 #include "machine-bus.h"
 #include "machine-drive.h"
 #include "resources.h"
-#include "vdrive-bam.h"
+#include "vicetypes.h"
+#include "vdrive.h"
 
-
-/* Is true drive emulation switched on?  */
-static int drive_true_emulation;
+#ifdef DEBUGDRIVE
+#define DBG(x) log_printf  x
+#else
+#define DBG(x)
+#endif
 
 /* Is drive sound emulation switched on?  */
 int drive_sound_emulation;
+
 /* volume of the drive sound */
 int drive_sound_emulation_volume;
 
 static int set_drive_true_emulation(int val, void *param)
 {
     unsigned int dnr;
-    drive_t *drive;
+    unsigned int thistde = val ? 1 : 0;
+    unsigned int thisdnr = vice_ptr_to_int(param);
 
-    drive_true_emulation = val ? 1 : 0;
+    DBG(("set_drive_true_emulation unit %u enabled: %u", thisdnr + 8, thistde));
 
-    machine_bus_status_truedrive_set((unsigned int)drive_true_emulation);
+    /* always enable TDE on both units of a drive */
+    diskunit_context[thisdnr]->drives[0]->true_emulation = thistde;
+    diskunit_context[thisdnr]->drives[1]->true_emulation = thistde;
 
-    if (val) {
-        for (dnr = 0; dnr < DRIVE_NUM; dnr++) {
-            drive = drive_context[dnr]->drive;
-            if (drive->type != DRIVE_TYPE_NONE) {
-                drive->enable = 1;
-                if (drive->type == DRIVE_TYPE_2000 || drive->type == DRIVE_TYPE_4000) {
-                    drivecpu65c02_reset_clk(drive_context[dnr]);
+    for (dnr = 0; dnr < NUM_DISK_UNITS; dnr++) {
+        machine_bus_status_truedrive_set(dnr + 8, diskunit_context[dnr]->drives[0]->true_emulation);
+    }
+    for (dnr = 0; dnr < NUM_DISK_UNITS; dnr++) {
+        if (diskunit_context[dnr]->drives[0]->true_emulation) {
+            diskunit_context_t *unit = diskunit_context[dnr];
+
+            vdrive_flush(dnr + 8);
+            if (unit->type != DRIVE_TYPE_NONE) {
+                unit->enable = 1;
+                /* reset drive CPU */
+                if (unit->type == DRIVE_TYPE_2000 ||
+                    unit->type == DRIVE_TYPE_4000 ||
+                    unit->type == DRIVE_TYPE_CMDHD) {
+                    drivecpu65c02_reset_clk(unit);
                 } else {
-                    drivecpu_reset_clk(drive_context[dnr]);
+                    drivecpu_reset_clk(unit);
                 }
             }
-        }
-        for (dnr = 0; dnr < DRIVE_NUM; dnr++) {
-            drive_enable(drive_context[dnr]);
-        }
-    } else {
-        for (dnr = 0; dnr < DRIVE_NUM; dnr++) {
-            drive = drive_context[dnr]->drive;
-            drive_disable(drive_context[dnr]);
+            drive_enable(diskunit_context[dnr]);
+        } else {
+            drive_disable(diskunit_context[dnr]);
+            vdrive_refresh(dnr + 8);
+#if 0
             if (drive->image != NULL) {
-                vdrive_bam_reread_bam(dnr + 8);
+                /* TODO: drive 1? */
+                vdrive_bam_reread_bam(dnr + 8, 0);
             }
+#endif
         }
     }
     return 0;
@@ -100,7 +117,7 @@ static int set_drive_sound_emulation(int val, void *param)
 
 static int set_drive_sound_emulation_volume(int val, void *param)
 {
-    if ((val < 0) || (val > 4000)) {
+    if ((val < 0) || (val > DRIVE_SOUND_VOLUME_MAX)) {
         return -1;
     }
     drive_sound_emulation_volume = val;
@@ -113,7 +130,9 @@ static int set_drive_extend_image_policy(int val, void *param)
         case DRIVE_EXTEND_NEVER:
         case DRIVE_EXTEND_ASK:
         case DRIVE_EXTEND_ACCESS:
-            drive_context[vice_ptr_to_int(param)]->drive->extend_image_policy = val;
+            /* TODO: add resource for drive 1 */
+            diskunit_context[vice_ptr_to_int(param)]->drives[0]->extend_image_policy = val;
+            diskunit_context[vice_ptr_to_int(param)]->drives[1]->extend_image_policy = val;
             return 0;
         default:
             return -1;
@@ -122,16 +141,26 @@ static int set_drive_extend_image_policy(int val, void *param)
 
 static int drive_resources_type(int val, void *param)
 {
-    unsigned int type, dnr;
+    unsigned int type, current;
+    int dnr;
     int busses;
-    drive_t *drive, *drive0;
+    diskunit_context_t *unit;
+    drive_t *drive;
     char *rtc_device = NULL;
 
     dnr = vice_ptr_to_uint(param);
-    drive = drive_context[dnr]->drive;
+    unit = diskunit_context[dnr];
+    drive = unit->drives[0];
 
     type = (unsigned int)val;
     busses = iec_available_busses();
+
+    /* first of all, detach any disk images, so we don't end up with images
+       attached to drives that do not support them */
+    if (file_system_get_vdrive(dnr + 8) != NULL) {
+        file_system_detach_disk(dnr + 8, 0);
+        file_system_detach_disk(dnr + 8, 1);
+    }
 
     /* if bus for drive type is not allowed, set to default value for bus */
     if (!drive_check_bus(type, busses)) {
@@ -140,45 +169,11 @@ static int drive_resources_type(int val, void *param)
         } else
         if (busses & IEC_BUS_IEEE) {
             type = DRIVE_TYPE_2031;
+        } else
+        if (busses & IEC_BUS_TCBM) {
+            type = DRIVE_TYPE_1551;
         } else {
             type = DRIVE_TYPE_NONE;
-        }
-    }
-
-    if (is_drive0(dnr)) {
-        if (drive_check_dual(type)) {
-            int drive1 = mk_drive1(dnr);
-
-            /* dual disk drives disable second emulated unit */
-            log_warning(drive->log,
-                        "Dual disk drive %d disables emulated drive %d", dnr, drive1);
-
-            drive_resources_type(DRIVE_TYPE_NONE, int_to_void_ptr(drive1));
-        }
-    } else {
-        drive0 = drive_context[mk_drive0(dnr)]->drive;
-        if (drive0->enable && drive_check_dual(drive0->type)) {
-            /* dual disk drives disable second emulated unit */
-            log_warning(drive->log,
-                        "Dual disk drive %d disables emulated drive %d", mk_drive0(dnr), dnr);
-
-            type = DRIVE_TYPE_NONE;
-        }
-    }
-
-    if (type == DRIVE_TYPE_2000 || type == DRIVE_TYPE_4000) {
-        if (drive->type != DRIVE_TYPE_2000 && drive->type != DRIVE_TYPE_4000) {
-            rtc_device = lib_msprintf("FD%d", dnr + 8);
-            drive->ds1216 = ds1216e_init(rtc_device);
-            drive->ds1216->hours12 = 1;
-            lib_free(rtc_device);
-        }
-    } else {
-        if (drive->type == DRIVE_TYPE_2000 || drive->type == DRIVE_TYPE_4000) {
-            if (drive->ds1216) {
-                ds1216e_destroy(drive->ds1216, drive->rtc_save);
-                drive->ds1216 = NULL;
-            }
         }
     }
 
@@ -193,6 +188,7 @@ static int drive_resources_type(int val, void *param)
         case DRIVE_TYPE_1581:
         case DRIVE_TYPE_2000:
         case DRIVE_TYPE_4000:
+        case DRIVE_TYPE_CMDHD:
         case DRIVE_TYPE_2031:
         case DRIVE_TYPE_1001:
         case DRIVE_TYPE_2040:
@@ -200,31 +196,53 @@ static int drive_resources_type(int val, void *param)
         case DRIVE_TYPE_4040:
         case DRIVE_TYPE_8050:
         case DRIVE_TYPE_8250:
-            if (drive->type != type) {
+        case DRIVE_TYPE_9000:
+            current = unit->type;
+            /* make sure the switch is successful before moving on */
+            if (drive_set_disk_drive_type(type, diskunit_context[dnr]) < 0) {
+                return -1;
+            }
+            /* allocate or unallocate rtc module for FD2K/4K */
+            if (type == DRIVE_TYPE_2000 || type == DRIVE_TYPE_4000) {
+                if (current != DRIVE_TYPE_2000 && current != DRIVE_TYPE_4000) {
+                    rtc_device = lib_msprintf("FD%d", dnr + 8);
+                    unit->ds1216 = ds1216e_init(rtc_device);
+                    unit->ds1216->hours12 = 1;
+                    lib_free(rtc_device);
+                }
+            } else {
+                if (current == DRIVE_TYPE_2000 || current == DRIVE_TYPE_4000) {
+                    if (unit->ds1216) {
+                        ds1216e_destroy(unit->ds1216, unit->rtc_save);
+                        unit->ds1216 = NULL;
+                    }
+                }
+            }
+            if (current != type) {
+                /* the drives that support half tracks are all single drives */
                 drive->current_half_track = 2 * 18;
                 if ((type == DRIVE_TYPE_1001)
                     || (type == DRIVE_TYPE_8050)
                     || (type == DRIVE_TYPE_8250)) {
                     drive->current_half_track = 2 * 38;
+                } else if (type == DRIVE_TYPE_9000) {
+                    drive->current_half_track = 2 * 76;
                 }
             }
-            drive->type = type;
-            if (drive_true_emulation) {
-                drive->enable = 1;
-                drive_enable(drive_context[dnr]);
+            if (drive->true_emulation) {
+                unit->enable = 1;
+                drive_enable(diskunit_context[dnr]);
                 /* 1551 drive does not use the IEC bus */
                 machine_bus_status_drivetype_set(dnr + 8, drive_check_bus(type,
                                                                           IEC_BUS_IEC));
-            } else {
-                drive_enable_update_ui(drive_context[dnr]);
             }
-            drive_set_disk_drive_type(type, drive_context[dnr]);
-            driverom_initialize_traps(drive);
+            drive_enable_update_ui(diskunit_context[dnr]);
+            driverom_initialize_traps(diskunit_context[dnr]);
             machine_drive_idling_method(dnr);
             return 0;
         case DRIVE_TYPE_NONE:
-            drive->type = type;
-            drive_disable(drive_context[dnr]);
+            unit->type = type;
+            drive_disable(diskunit_context[dnr]);
             machine_bus_status_drivetype_set(dnr + 8, 0);
             return 0;
         default:
@@ -240,11 +258,12 @@ static resource_int_t res_drive_type[] = {
 
 int drive_resources_type_init(unsigned int default_type)
 {
-    unsigned int dnr, type;
-    drive_t *drive;
+    unsigned int type;
+    int dnr;
 
-    for (dnr = 0; dnr < DRIVE_NUM; dnr++) {
-        drive = drive_context[dnr]->drive;
+    for (dnr = 0; dnr < NUM_DISK_UNITS; dnr++) {
+        diskunit_context_t *unit = diskunit_context[dnr];
+
         if (dnr == 0) {
             type = default_type;
         } else {
@@ -253,8 +272,8 @@ int drive_resources_type_init(unsigned int default_type)
 
         res_drive_type[0].name = lib_msprintf("Drive%iType", dnr + 8);
         res_drive_type[0].factory_value = (int)type;
-        res_drive_type[0].value_ptr = (int *)&(drive->type);
-        res_drive_type[0].param = uint_to_void_ptr(dnr);
+        res_drive_type[0].value_ptr = (int *)&(unit->type);
+        res_drive_type[0].param = vice_int_to_ptr(dnr);
 
         if (resources_register_int(res_drive_type) < 0) {
             return -1;
@@ -268,11 +287,8 @@ int drive_resources_type_init(unsigned int default_type)
 
 static int set_drive_idling_method(int val, void *param)
 {
-    unsigned int dnr;
-    drive_t *drive;
-
-    dnr = vice_ptr_to_uint(param);
-    drive = drive_context[dnr]->drive;
+    unsigned int dnr = vice_ptr_to_uint(param);
+    diskunit_context_t *unit = diskunit_context[dnr];
 
     /* FIXME: Maybe we should call `drive_cpu_execute()' here?  */
     switch (val) {
@@ -284,56 +300,86 @@ static int set_drive_idling_method(int val, void *param)
             return -1;
     }
 
-    drive->idling_method = val;
+    unit->idling_method = val;
 
     if (!rom_loaded) {
         return 0;
     }
 
-    driverom_initialize_traps(drive);
+    driverom_initialize_traps(unit);
+
     return 0;
 }
 
 static int set_drive_rpm(int val, void *param)
 {
     unsigned int dnr;
-    drive_t *drive;
+    drive_t *drive, *drive1;
+
+    if ((val < 0) || (val > DRIVE_RPM_MAX)) {
+        return -1;
+    }
 
     dnr = vice_ptr_to_uint(param);
-    drive = drive_context[dnr]->drive;
+    drive = diskunit_context[dnr]->drives[0];
+    drive1 = diskunit_context[dnr]->drives[1];
 
     drive->rpm = val;
+    drive1->rpm = val;
+
     return 0;
 }
 
-static int set_drive_rpm_wobble(int val, void *param)
+static int set_drive_wobble_frequency(int val, void *param)
 {
     unsigned int dnr;
-    drive_t *drive;
+    drive_t *drive, *drive1;
+
+    if ((val < 0) || (val > DRIVE_WOBBLE_FREQ_MAX)) {
+        return -1;
+    }
 
     dnr = vice_ptr_to_uint(param);
-    drive = drive_context[dnr]->drive;
+    drive = diskunit_context[dnr]->drives[0];
+    drive1 = diskunit_context[dnr]->drives[1];
 
-    drive->rpm_wobble = val;
+    drive->wobble_frequency = val;
+    drive1->wobble_frequency = val;
+    return 0;
+}
+
+static int set_drive_wobble_amplitude(int val, void *param)
+{
+    unsigned int dnr;
+    drive_t *drive, *drive1;
+
+    if ((val < 0) || (val > DRIVE_WOBBLE_AMPLITUDE_MAX)) {
+        return -1;
+    }
+
+    dnr = vice_ptr_to_uint(param);
+    drive = diskunit_context[dnr]->drives[0];
+    drive1 = diskunit_context[dnr]->drives[1];
+
+    drive->wobble_amplitude = val;
+    drive1->wobble_amplitude = val;
     return 0;
 }
 
 static int set_drive_rtc_save(int val, void *param)
 {
     unsigned int dnr;
-    drive_t *drive;
+    diskunit_context_t *unit;
 
     dnr = vice_ptr_to_uint(param);
-    drive = drive_context[dnr]->drive;
+    unit = diskunit_context[dnr];
 
-    drive->rtc_save = val ? 1 : 0;
+    unit->rtc_save = val ? 1 : 0;
 
     return 0;
 }
 
 static const resource_int_t resources_int[] = {
-    { "DriveTrueEmulation", 1, RES_EVENT_STRICT, (resource_value_t)1,
-      &drive_true_emulation, set_drive_true_emulation, NULL },
     { "DriveSoundEmulation", 0, RES_EVENT_NO, (resource_value_t)0,
       &drive_sound_emulation, set_drive_sound_emulation, NULL },
     { "DriveSoundEmulationVolume", 1000, RES_EVENT_NO, (resource_value_t)1000,
@@ -342,14 +388,18 @@ static const resource_int_t resources_int[] = {
 };
 
 static resource_int_t res_drive[] = {
-    { NULL, DRIVE_EXTEND_NEVER, RES_EVENT_SAME, NULL,
+    { NULL, DRIVE_EXTEND_ASK, RES_EVENT_SAME, NULL,
       NULL, set_drive_extend_image_policy, NULL },
     { NULL, DRIVE_IDLE_NO_IDLE, RES_EVENT_SAME, NULL,
       NULL, set_drive_idling_method, NULL },
-    { NULL, 30000, RES_EVENT_SAME, NULL,
+    { NULL, DRIVE_RPM_DEFAULT, RES_EVENT_SAME, NULL,
       NULL, set_drive_rpm, NULL },
-    { NULL, 50, RES_EVENT_SAME, NULL,
-      NULL, set_drive_rpm_wobble, NULL },
+    { NULL, DRIVE_WOBBLE_FREQ_DEFAULT, RES_EVENT_SAME, NULL,
+      NULL, set_drive_wobble_frequency, NULL },
+    { NULL, DRIVE_WOBBLE_AMPLITUDE_DEFAULT, RES_EVENT_SAME, NULL,
+      NULL, set_drive_wobble_amplitude, NULL },
+    { NULL, 1, RES_EVENT_STRICT, NULL,
+      NULL, set_drive_true_emulation, NULL },
     RESOURCE_INT_LIST_END
 };
 
@@ -361,13 +411,11 @@ static resource_int_t res_drive_rtc[] = {
 
 int drive_resources_init(void)
 {
-    unsigned int dnr;
-    drive_t *drive;
+    int dnr;
     int has_iec;
     int i;
 
     switch (machine_class) {
-        case VICE_MACHINE_NONE:
         case VICE_MACHINE_PET:
         case VICE_MACHINE_CBM5x0:
         case VICE_MACHINE_CBM6x0:
@@ -378,26 +426,34 @@ int drive_resources_init(void)
             has_iec = 1;
     }
 
-    for (dnr = 0; dnr < DRIVE_NUM; dnr++) {
-        drive = drive_context[dnr]->drive;
+    for (dnr = 0; dnr < NUM_DISK_UNITS; dnr++) {
+        diskunit_context_t *unit = diskunit_context[dnr];
+        drive_t *drive0 = unit->drives[0];
 
+        /* TODO: add resources for drive 1 */
         res_drive[0].name = lib_msprintf("Drive%iExtendImagePolicy", dnr + 8);
-        res_drive[0].value_ptr = (int *)&(drive->extend_image_policy);
-        res_drive[0].param = uint_to_void_ptr(dnr);
+        res_drive[0].value_ptr = (int *)&(drive0->extend_image_policy);
+        res_drive[0].param = vice_uint_to_ptr(dnr);
         res_drive[1].name = lib_msprintf("Drive%iIdleMethod", dnr + 8);
-        res_drive[1].value_ptr = &(drive->idling_method);
-        res_drive[1].param = uint_to_void_ptr(dnr);
+        res_drive[1].value_ptr = &(unit->idling_method);
+        res_drive[1].param = vice_uint_to_ptr(dnr);
         res_drive[2].name = lib_msprintf("Drive%iRPM", dnr + 8);
-        res_drive[2].value_ptr = &(drive->rpm);
-        res_drive[2].param = uint_to_void_ptr(dnr);
-        res_drive[3].name = lib_msprintf("Drive%iWobble", dnr + 8);
-        res_drive[3].value_ptr = &(drive->rpm_wobble);
-        res_drive[3].param = uint_to_void_ptr(dnr);
+        res_drive[2].value_ptr = &(drive0->rpm);
+        res_drive[2].param = vice_uint_to_ptr(dnr);
+        res_drive[3].name = lib_msprintf("Drive%iWobbleFrequency", dnr + 8);
+        res_drive[3].value_ptr = &(drive0->wobble_frequency);
+        res_drive[3].param = vice_uint_to_ptr(dnr);
+        res_drive[4].name = lib_msprintf("Drive%iWobbleAmplitude", dnr + 8);
+        res_drive[4].value_ptr = &(drive0->wobble_amplitude);
+        res_drive[4].param = vice_uint_to_ptr(dnr);
+        res_drive[5].name = lib_msprintf("Drive%iTrueEmulation", dnr + 8);
+        res_drive[5].value_ptr = &(drive0->true_emulation);
+        res_drive[5].param = vice_uint_to_ptr(dnr);
 
         if (has_iec) {
             res_drive_rtc[0].name = lib_msprintf("Drive%iRTCSave", dnr + 8);
-            res_drive_rtc[0].value_ptr = &(drive->rtc_save);
-            res_drive_rtc[0].param = uint_to_void_ptr(dnr);
+            res_drive_rtc[0].value_ptr = &(unit->rtc_save);
+            res_drive_rtc[0].param = vice_uint_to_ptr(dnr);
             if (resources_register_int(res_drive_rtc) < 0) {
                 return -1;
             }
@@ -407,7 +463,7 @@ int drive_resources_init(void)
             return -1;
         }
 
-        for (i = 0; i < 4; i++) {
+        for (i = 0; i <= 5; i++) {
             lib_free(res_drive[i].name);
         }
         if (has_iec) {
@@ -429,16 +485,3 @@ void drive_resources_shutdown(void)
 {
     machine_drive_resources_shutdown();
 }
-
-/* FIXME: (re)move this! */
-#ifdef ANDROID_COMPILE
-void loader_set_drive_true_emulation(int val)
-{
-    set_drive_true_emulation(val, 0);
-}
-
-int loader_get_drive_true_emulation()
-{
-    return drive_true_emulation;
-}
-#endif

@@ -37,7 +37,6 @@
 #include "lib.h"
 #include "log.h"
 #include "resources.h"
-#include "translate.h"
 #include "vicetypes.h"
 #include "uiapi.h"
 #include "util.h"
@@ -64,6 +63,20 @@ static int debug_autoplay_frames;
 static int set_maincpu_traceflg(int val, void *param)
 {
     debug.maincpu_traceflg = val ? 1 : 0;
+
+    return 0;
+}
+
+static int set_iec_traceflg(int val, void *param)
+{
+    debug.iec = val ? 1 : 0;
+
+    return 0;
+}
+
+static int set_ieee_traceflg(int val, void *param)
+{
+    debug.ieee = val ? 1 : 0;
 
     return 0;
 }
@@ -110,6 +123,10 @@ static const resource_int_t resources_int[] = {
 #ifdef VICE_DEBUG
     { "MainCPU_TRACE", 0, RES_EVENT_NO, NULL,
       &debug.maincpu_traceflg, set_maincpu_traceflg, NULL },
+    { "IEC_TRACE", 0, RES_EVENT_NO, NULL,
+      &debug.iec, set_iec_traceflg, NULL },
+    { "IEEE_TRACE", 0, RES_EVENT_NO, NULL,
+      &debug.ieee, set_ieee_traceflg, NULL },
     { "Drive0CPU_TRACE", 0, RES_EVENT_NO, NULL,
       &debug.drivecpu_traceflg[0], set_drive_traceflg, (void *)0 },
     { "Drive1CPU_TRACE", 0, RES_EVENT_NO, NULL,
@@ -131,68 +148,57 @@ int debug_resources_init(void)
     return resources_register_int(resources_int);
 }
 
-static const cmdline_option_t cmdline_options[] = {
+static const cmdline_option_t cmdline_options[] =
+{
 #ifdef VICE_DEBUG
-    { "-trace_maincpu", SET_RESOURCE, 0,
+    { "-trace_maincpu", SET_RESOURCE, CMDLINE_ATTRIB_NONE,
       NULL, NULL, "MainCPU_TRACE", (resource_value_t)1,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_TRACE_MAIN_CPU,
-      NULL, NULL },
-    { "+trace_maincpu", SET_RESOURCE, 0,
+      NULL, "Trace the main CPU" },
+    { "+trace_maincpu", SET_RESOURCE, CMDLINE_ATTRIB_NONE,
       NULL, NULL, "MainCPU_TRACE", (resource_value_t)0,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_DONT_TRACE_MAIN_CPU,
-      NULL, NULL },
-    { "-trace_drive0", SET_RESOURCE, 0,
+      NULL, "Do not trace the main CPU" },
+    { "-trace_iec", SET_RESOURCE, CMDLINE_ATTRIB_NONE,
+      NULL, NULL, "IEC_TRACE", (resource_value_t)1,
+      NULL, "Trace IEC bus activity" },
+    { "+trace_iec", SET_RESOURCE, CMDLINE_ATTRIB_NONE,
+      NULL, NULL, "IEC_TRACE", (resource_value_t)0,
+      NULL, "Do not trace IEC bus activity" },
+    { "-trace_ieee", SET_RESOURCE, CMDLINE_ATTRIB_NONE,
+      NULL, NULL, "IEEE_TRACE", (resource_value_t)1,
+      NULL, "Trace IEEE-488 bus activity" },
+    { "+trace_ieee", SET_RESOURCE, CMDLINE_ATTRIB_NONE,
+      NULL, NULL, "IEEE_TRACE", (resource_value_t)0,
+      NULL, "Do not trace IEEE-488 bus activity" },
+    { "-trace_drive0", SET_RESOURCE, CMDLINE_ATTRIB_NONE,
       NULL, NULL, "Drive0CPU_TRACE", (resource_value_t)1,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_TRACE_DRIVE0_CPU,
-      NULL, NULL },
-    { "+trace_drive0", SET_RESOURCE, 0,
+      NULL, "Trace the drive0 CPU" },
+    { "+trace_drive0", SET_RESOURCE, CMDLINE_ATTRIB_NONE,
       NULL, NULL, "Drive0CPU_TRACE", (resource_value_t)0,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_DONT_TRACE_DRIVE0_CPU,
-      NULL, NULL },
-    { "-trace_drive1", SET_RESOURCE, 0,
+      NULL, "Do not trace the drive0 CPU" },
+    { "-trace_drive1", SET_RESOURCE, CMDLINE_ATTRIB_NONE,
       NULL, NULL, "Drive1CPU_TRACE", (resource_value_t)1,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_TRACE_DRIVE1_CPU,
-      NULL, NULL },
-    { "+trace_drive1", SET_RESOURCE, 0,
+      NULL, "Trace the drive1 CPU" },
+    { "+trace_drive1", SET_RESOURCE, CMDLINE_ATTRIB_NONE,
       NULL, NULL, "Drive1CPU_TRACE", (resource_value_t)0,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_DONT_TRACE_DRIVE1_CPU,
-      NULL, NULL },
-    { "-trace_drive2", SET_RESOURCE, 0,
+      NULL, "Do not trace the drive1 CPU" },
+    { "-trace_drive2", SET_RESOURCE, CMDLINE_ATTRIB_NONE,
       NULL, NULL, "Drive2CPU_TRACE", (resource_value_t)1,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_TRACE_DRIVE2_CPU,
-      NULL, NULL },
-    { "+trace_drive2", SET_RESOURCE, 0,
+      NULL, "Trace the drive2 CPU" },
+    { "+trace_drive2", SET_RESOURCE, CMDLINE_ATTRIB_NONE,
       NULL, NULL, "Drive2CPU_TRACE", (resource_value_t)0,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_DONT_TRACE_DRIVE2_CPU,
-      NULL, NULL },
-    { "-trace_drive3", SET_RESOURCE, 0,
+      NULL, "Do not trace the drive2 CPU" },
+    { "-trace_drive3", SET_RESOURCE, CMDLINE_ATTRIB_NONE,
       NULL, NULL, "Drive3CPU_TRACE", (resource_value_t)1,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_TRACE_DRIVE3_CPU,
-      NULL, NULL },
-    { "+trace_drive3", SET_RESOURCE, 0,
+      NULL, "Trace the drive3 CPU" },
+    { "+trace_drive3", SET_RESOURCE, CMDLINE_ATTRIB_NONE,
       NULL, NULL, "Drive3CPU_TRACE", (resource_value_t)0,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_DONT_TRACE_DRIVE3_CPU,
-      NULL, NULL },
-    { "-trace_mode", SET_RESOURCE, 1,
+      NULL, "Do not trace the drive3 CPU" },
+    { "-trace_mode", SET_RESOURCE, CMDLINE_ATTRIB_NEED_ARGS,
       NULL, NULL, "TraceMode", NULL,
-      USE_PARAM_ID, USE_DESCRIPTION_ID,
-      IDCLS_P_VALUE, IDCLS_TRACE_MODE,
-      NULL, NULL },
-    { "-autoplaybackframes", SET_RESOURCE, 1,
+      "<value>", "Trace mode (0=normal 1=small 2=history)" },
+    { "-autoplaybackframes", SET_RESOURCE, CMDLINE_ATTRIB_NEED_ARGS,
       NULL, NULL, "AutoPlaybackFrames", NULL,
-      USE_PARAM_ID, USE_DESCRIPTION_ID,
-      IDCLS_P_FRAMES, IDCLS_SET_AUTO_PLAYBACK_FRAMES,
-      NULL, NULL },
+      "<frames>", "Set the amount of automatic playback frames" },
 #endif
     CMDLINE_LIST_END
 };
@@ -215,8 +221,8 @@ void debug_set_machine_parameter(unsigned int cycles, unsigned int lines)
 #define RLINE(clk)  ((unsigned int)((clk) / cycles_per_line % screen_lines))
 #define RCYCLE(clk) ((unsigned int)((clk) % cycles_per_line))
 
-void debug_maincpu(DWORD reg_pc, CLOCK mclk, const char *dis, BYTE reg_a,
-                   BYTE reg_x, BYTE reg_y, BYTE reg_sp)
+void debug_maincpu(uint32_t reg_pc, CLOCK mclk, const char *dis, uint8_t reg_a,
+                   uint8_t reg_x, uint8_t reg_y, uint8_t reg_sp)
 {
     switch (debug.trace_mode) {
         case DEBUG_SMALL:
@@ -240,7 +246,7 @@ void debug_maincpu(DWORD reg_pc, CLOCK mclk, const char *dis, BYTE reg_a,
                     }
                 }
 
-                log_debug("%04X %ld %02X%02X%02X %s", (unsigned int)reg_pc,
+                log_debug(LOG_DEFAULT, "%04X %ld %02X%02X%02X %s", (unsigned int)reg_pc,
                           (long)mclk, reg_a, reg_x, reg_y, small_dis);
                 break;
             }
@@ -251,24 +257,24 @@ void debug_maincpu(DWORD reg_pc, CLOCK mclk, const char *dis, BYTE reg_a,
 
                 sprintf(st, ".%04X %02X %02X %8lX %-20s "
                         "%02X%02X%02X%02X", (unsigned int)reg_pc,
-                        RLINE(mclk), RCYCLE(mclk), (long)mclk, dis,
+                        RLINE(mclk), RCYCLE(mclk), (unsigned long)mclk, dis,
                         reg_a, reg_x, reg_y, reg_sp);
                 debug_history_step(st);
                 break;
             }
         case DEBUG_NORMAL:
-            log_debug(".%04X %03i %03i %10ld  %-22s "
+            log_debug(LOG_DEFAULT, ".%04X %03u %03u %10ld  %-22s "
                       "%02x%02x%02x%02x", (unsigned int)reg_pc,
                       RLINE(mclk), RCYCLE(mclk), (long)mclk, dis,
                       reg_a, reg_x, reg_y, reg_sp);
             break;
         default:
-            log_debug("Unknown debug format.");
+            log_debug(LOG_DEFAULT, "Unknown debug format.");
     }
 }
 
-void debug_main65816cpu(DWORD reg_pc, CLOCK mclk, const char *dis, WORD reg_c,
-                   WORD reg_x, WORD reg_y, WORD reg_sp, BYTE reg_pbr)
+void debug_main65816cpu(uint32_t reg_pc, CLOCK mclk, const char *dis, uint16_t reg_c,
+                   uint16_t reg_x, uint16_t reg_y, uint16_t reg_sp, uint8_t reg_pbr)
 {
     switch (debug.trace_mode) {
         case DEBUG_SMALL:
@@ -289,10 +295,10 @@ void debug_main65816cpu(DWORD reg_pc, CLOCK mclk, const char *dis, WORD reg_c,
                     small_dis[4] = dis[6];
                     small_dis[5] = dis[7];
                     small_dis[6] = '\0';
-                }  
+                }
             }
 
-            log_debug("%02X%04X %ld %04X %04X %04X %s", reg_pbr, (unsigned int)reg_pc,
+            log_debug(LOG_DEFAULT, "%02X%04X %ld %04X %04X %04X %s", reg_pbr, (unsigned int)reg_pc,
                     (long)mclk, reg_c, reg_x, reg_y, small_dis);
             break;
       }
@@ -303,25 +309,25 @@ void debug_main65816cpu(DWORD reg_pc, CLOCK mclk, const char *dis, WORD reg_c,
 
             sprintf(st, ".%02X%04X %02X %02X %8lX %-23s "
                     "%04X %04X %04X %02X", reg_pbr, (unsigned int)reg_pc,
-                    RLINE(mclk), RCYCLE(mclk), (long)mclk, dis,
+                    RLINE(mclk), RCYCLE(mclk), (unsigned long)mclk, dis,
                     reg_c, reg_x, reg_y, reg_sp);
             debug_history_step(st);
             break;
       }
       case DEBUG_NORMAL:
-            log_debug(".%02X%04X %03i %03i %10ld  %-25s "
+            log_debug(LOG_DEFAULT, ".%02X%04X %03u %03u %10ld  %-25s "
                     "%04x %04x %04x %04x", reg_pbr, (unsigned int)reg_pc,
-                    RLINE(mclk), RCYCLE(mclk), (long)mclk, dis,
+                    RLINE(mclk), RCYCLE(mclk),(long)mclk, dis,
                     reg_c, reg_x, reg_y, reg_sp);
             break;
       default:
-            log_debug("Unknown debug format.");
+            log_debug(LOG_DEFAULT, "Unknown debug format.");
 
     }
 }
 
-void debug_drive(DWORD reg_pc, CLOCK mclk, const char *dis,
-                 BYTE reg_a, BYTE reg_x, BYTE reg_y, BYTE reg_sp,
+void debug_drive(uint32_t reg_pc, CLOCK mclk, const char *dis,
+                 uint8_t reg_a, uint8_t reg_x, uint8_t reg_y, uint8_t reg_sp,
                  unsigned int driveno)
 {
     char st[DEBUG_MAXLINELEN];
@@ -332,7 +338,7 @@ void debug_drive(DWORD reg_pc, CLOCK mclk, const char *dis,
     if (debug.trace_mode == DEBUG_HISTORY || debug.trace_mode == DEBUG_AUTOPLAY) {
         debug_history_step(st);
     } else {
-        log_debug("%s", st);
+        log_debug(LOG_DEFAULT, "%s", st);
     }
 }
 
@@ -341,7 +347,7 @@ void debug_text(const char *text)
     if (debug.trace_mode == DEBUG_HISTORY || debug.trace_mode == DEBUG_AUTOPLAY) {
         debug_history_step(text);
     } else {
-        log_debug("%s", text);
+        log_debug(LOG_DEFAULT, "%s", text);
     }
 }
 
@@ -351,7 +357,7 @@ static void debug_int(interrupt_cpu_status_t *cs, const char *name,
     unsigned int i;
     char *textout, *texttmp;
 
-    textout = lib_stralloc(name);
+    textout = lib_strdup(name);
 
     for (i = 0; i < cs->num_ints; i++) {
         if (cs->pending_int[i] & type) {
@@ -361,14 +367,14 @@ static void debug_int(interrupt_cpu_status_t *cs, const char *name,
         }
     }
 
-    texttmp = lib_msprintf("%s %ld", textout, iclk);
+    texttmp = lib_msprintf("%s %llu", textout, (unsigned long long)iclk);
     lib_free(textout);
     textout = texttmp;
 
     if (debug.trace_mode == DEBUG_HISTORY || debug.trace_mode == DEBUG_AUTOPLAY) {
         debug_history_step(textout);
     } else {
-        log_debug("%s", textout);
+        log_debug(LOG_DEFAULT, "%s", textout);
     }
 
     lib_free(textout);
@@ -384,9 +390,9 @@ void debug_nmi(interrupt_cpu_status_t *cs, CLOCK iclk)
     debug_int(cs, "*** NMI", IK_NMI, iclk);
 }
 
-void debug_dma(const char *txt, CLOCK dclk, int num)
+void debug_dma(const char *txt, CLOCK dclk, CLOCK num)
 {
-    log_debug("*** DMA %s %10ld  %02i", txt, (long)dclk, num);
+    log_debug(LOG_DEFAULT, "*** DMA %s %"PRIu64"  %02"PRIu64, txt, dclk, num);
 }
 
 /*------------------------------------------------------------------------*/
@@ -424,7 +430,7 @@ static void debug_create_new_file(void)
     resources_get_string("EventSnapshotDir", &directory);
 
     st = lib_msprintf("debug%06d", debug_file_current);
-    filename = util_concat(directory, st, FSDEV_EXT_SEP_STR, "log", NULL);
+    filename = util_concat(directory, st, ".log", NULL);
     lib_free(st);
 
     debug_file = fopen(filename, MODE_WRITE_TEXT);
@@ -444,12 +450,12 @@ static void debug_open_new_file(void)
     resources_get_string("EventSnapshotDir", &directory);
 
     st = lib_msprintf("debug%06d", debug_file_current);
-    filename = util_concat(directory, st, FSDEV_EXT_SEP_STR, "log", NULL);
+    filename = util_concat(directory, st, ".log", NULL);
     lib_free(st);
 
     debug_file = fopen(filename, MODE_READ_TEXT);
     if (debug_file != NULL) {
-        debug_buffer_size = fread(debug_buffer, sizeof(char), DEBUG_HISTORY_MAXFILESIZE, debug_file);
+        debug_buffer_size = (int)fread(debug_buffer, sizeof(char), DEBUG_HISTORY_MAXFILESIZE, debug_file);
         debug_buffer_ptr = 0;
         debug_file_current++;
     } else {
@@ -473,7 +479,8 @@ inline static void debug_history_step(const char *st)
     }
 
     if (event_playback_active()) {
-        char tempstr[DEBUG_MAXLINELEN];
+        /* +1 for the terminating nul char */
+        char tempstr[DEBUG_MAXLINELEN + 1];
         int line_len = sprintf(tempstr, "%s\n", st);
 
         if (debug_buffer_ptr >= debug_buffer_size) {
@@ -484,8 +491,7 @@ inline static void debug_history_step(const char *st)
 
         if (strncmp(st, debug_buffer + debug_buffer_ptr, strlen(st)) != 0) {
             event_playback_stop();
-            ui_error(translate_text(IDGS_PLAYBACK_ERROR_DIFFERENT)
-                     , st, debug_file_line, debug_file_current - 1);
+            ui_error("Playback error: %s different from line %d of file debug%06d", st, debug_file_line, debug_file_current - 1);
         }
 
         debug_buffer_ptr += line_len;

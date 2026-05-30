@@ -995,7 +995,7 @@ char* sdl_ui_readline(const char* previous, int pos_x, int pos_y)
 //    pc_vkbd_state = archdep_require_vkbd();
 //
 //    if (previous) {
-//        new_string = lib_stralloc(previous);
+//        new_string = lib_strdup(previous);
 //        size = strlen(new_string) + 1;
 //        if (size < max) {
 //            new_string = lib_realloc(new_string, max);

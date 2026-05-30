@@ -20,8 +20,10 @@
 #include "residfp-sid.h"
 
 extern "C" {
+	#include "vice.h"
 	#include "log.h"
 	#include "ViceWrapper.h"
+	#include "vice_debugger_hook.h"
 }
 
 #include <math.h>
@@ -247,14 +249,14 @@ void SIDFP::set_chip_model(chip_model model)
 	if (model == MOS6581FP)
 	{
 		// 6581
-		c64d_wave_attenuation = 2.0f;
-		c64d_wave_shift = 20000;
+		VICE_HOOK_SID_SET_WAVE_ATTENUATION(2.0f);
+		VICE_HOOK_SID_SET_WAVE_SHIFT(20000);
 	}
 	else
 	{
 		// 8580s
-		c64d_wave_attenuation = 1.5f;
-		c64d_wave_shift = 0;
+		VICE_HOOK_SID_SET_WAVE_ATTENUATION(1.5f);
+		VICE_HOOK_SID_SET_WAVE_SHIFT(0);
 	}
 }
 
@@ -305,10 +307,10 @@ float SIDFP::output()
 
 	// correct for display only
 	
-		if (c64d_is_receive_channels_data[chipNo])
+		if (VICE_HOOK_SID_IS_RECEIVING_CHANNELS(chipNo))
 		{
 			float div = ((2047.f * 255.f / range) * c64d_wave_attenuation);
-			c64d_sid_channels_data(chipNo,
+			VICE_HOOK_SID_CHANNELS_DATA(chipNo,
 								    ((voice[0].c64d_output / div) - c64d_wave_shift),
 								    ((voice[1].c64d_output / div) - c64d_wave_shift),
 								    ((voice[2].c64d_output / div) - c64d_wave_shift),

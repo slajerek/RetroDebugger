@@ -32,6 +32,7 @@
 #include "vicetypes.h"
 #include "vicii-irq.h"
 #include "viciitypes.h"
+#include "vice_debugger_hook.h"
 
 void vicii_irq_set_line(void)
 {
@@ -72,7 +73,7 @@ void vicii_irq_sbcoll_set(void)
     vicii.irq_status |= 0x2;
     vicii_irq_set_line();
     if (vicii.irq_status & 0x80)
-        vicii.c64d_irq_flag = 1;
+        VICE_HOOK_VIC_IRQ_FLAG_SET();
 }
 
 void vicii_irq_sbcoll_clear(void)
@@ -86,7 +87,7 @@ void vicii_irq_sscoll_set(void)
     vicii.irq_status |= 0x4;
     vicii_irq_set_line();
     if (vicii.irq_status & 0x80)
-        vicii.c64d_irq_flag = 1;
+        VICE_HOOK_VIC_IRQ_FLAG_SET();
 }
 
 void vicii_irq_sscoll_clear(void)
@@ -100,7 +101,7 @@ void vicii_irq_lightpen_set(void)
     vicii.irq_status |= 0x8;
     vicii_irq_set_line();
     if (vicii.irq_status & 0x80)
-        vicii.c64d_irq_flag = 1;
+        VICE_HOOK_VIC_IRQ_FLAG_SET();
 }
 
 void vicii_irq_lightpen_clear(void)
@@ -113,7 +114,7 @@ void vicii_irq_set_raster_line(unsigned int line)
 {
 }
 
-void vicii_irq_check_state(BYTE value, unsigned int high)
+void vicii_irq_check_state(uint8_t value, unsigned int high)
 {
 }
 
@@ -124,7 +125,7 @@ void vicii_irq_raster_trigger(void)
     if (!(vicii.irq_status & 0x1)) {
         vicii_irq_raster_set(maincpu_clk);
         if (vicii.irq_status & 0x80)
-            vicii.c64d_irq_flag = 1;
+            VICE_HOOK_VIC_IRQ_FLAG_SET();
     }
 }
 

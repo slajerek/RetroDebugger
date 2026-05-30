@@ -1055,7 +1055,7 @@ static UI_MENU_CALLBACK(radio_MachineVideoStandard_vic20_callback)
     if (activated) {
         int value = vice_ptr_to_int(param);
         resources_set_int("MachineVideoStandard", value);
-        machine_trigger_reset(MACHINE_RESET_MODE_HARD);
+        machine_trigger_reset(MACHINE_RESET_MODE_POWER_CYCLE);
         return sdl_menu_text_exit_ui;
     }
     return sdl_ui_menu_radio_helper(activated, param, "MachineVideoStandard");

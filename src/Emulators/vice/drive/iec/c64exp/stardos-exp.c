@@ -50,17 +50,29 @@
 /*
     StarDOS
 
+    the original EPROM has A10 and A11 swapped around.
+
+    the EPROM contains 16k:
+
     - 8k additional ROM at $A000-$Bfff
+    - 8k patched upper DOS ROM ($E000-$FFFF)
 
     to test use:
 
-    x64sc -cartstar StarDosCartRomV1-4-decoded.bin -stardos stardos1541romv1-4-a000-decoded.bin -dos1541 stardos1541romv1-4-e000-decoded.bin -drive8stardos
+    x64sc -default -drive8type 1541 \
+        -cartstar StarDosCartRomV1-4-decoded.bin \
+        -dos1541 stardosdriverom.bin \
+        -stardos stardos1541romv1-4-a000-decoded.bin \
+        -drive8stardos
+
+    stardosdriverom.bin should combine the lower half of the original DOS plus
+    the upper half of the stardos ROM
 
  */
 
 #define STARDOS_ROM_SIZE 0x2000
 
-static BYTE stardos_rom[STARDOS_ROM_SIZE];
+static uint8_t stardos_rom[STARDOS_ROM_SIZE];
 
 int stardos_exp_load(const char *name)
 {
@@ -77,18 +89,19 @@ int stardos_exp_load(const char *name)
     return 0;
 }
 
-static BYTE stardos_exp_read(drive_context_t *drv, WORD addr)
+static uint8_t stardos_exp_read(diskunit_context_t *drv, uint16_t addr)
 {
     DBG(("stardos_exp_read <%04x> <%02x>\n", addr, stardos_rom[addr & 0x1fff]));
-    return stardos_rom[addr & 0x1fff];
+    return drv->cpu->cpu_last_data = stardos_rom[addr & 0x1fff];
 }
 
-void stardos_exp_mem_init(struct drive_context_s *drv, unsigned int type)
+/* CAUTION: gets called no matter if stardos is enabled or not */
+void stardos_exp_mem_init(struct diskunit_context_s *drv, unsigned int type)
 {
     drivecpud_context_t *cpud = drv->cpud;
 
-    DBG(("stardos_exp_mem_init <type:%d> <sc:%d>\n", type, drv->drive->stardos));
-    if (!drv->drive->stardos) {
+    DBG(("stardos_exp_mem_init <type:%d> <sc:%d>\n", type, drv->stardos));
+    if (!drv->stardos) {
         return;
     }
 
@@ -108,10 +121,12 @@ void stardos_exp_mem_init(struct drive_context_s *drv, unsigned int type)
     }
 }
 
-void stardos_exp_init(drive_context_t *drv)
+/* CAUTION: gets called no matter if stardos is enabled or not */
+void stardos_exp_init(diskunit_context_t *drv)
 {
 }
 
-void stardos_exp_reset(drive_context_t *drv)
+/* CAUTION: gets called no matter if stardos is enabled or not */
+void stardos_exp_reset(diskunit_context_t *drv)
 {
 }

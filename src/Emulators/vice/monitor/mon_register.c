@@ -57,6 +57,11 @@ int mon_register_valid(int mem, int reg_id)
         }
     }
 
+    /* these are not actually registers, we need them for the conditionals */
+    if ((reg_id == e_Rasterline) || (reg_id == e_Cycle)) {
+        return 1;
+    }
+
     mon_reg_list = regs = mon_register_list_get(mem);
 
     do {

@@ -144,7 +144,7 @@ fail:
     aiff_fd = NULL;
 
     if (res < 0) {
-        log_debug("ERROR aiff_close failed.");
+        log_debug(LOG_DEFAULT, "ERROR aiff_close failed.");
     }
 }
 

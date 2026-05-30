@@ -30,7 +30,6 @@
 
 #include "vicetypes.h"
 
-extern int interface_userport_init_resources(void);
-extern int interface_userport_init_cmdline_options(void);
+int interface_userport_init_resources(void);
 
 #endif

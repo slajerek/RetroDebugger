@@ -94,3 +94,17 @@ unsigned long crc32_file(const char *filename)
 
     return crc;
 }
+
+/* VICE 3.10 additions (simple little-endian helpers). */
+void crc32_to_le(uint8_t *dest, uint32_t crc)
+{
+    dest[0] = crc & 0xff;
+    dest[1] = (crc >> 8) & 0xff;
+    dest[2] = (crc >> 16) & 0xff;
+    dest[3] = (crc >> 24) & 0xff;
+}
+
+uint32_t crc32_from_le(const uint8_t *src)
+{
+    return src[0] + (src[1] << 8) + (src[2] << 16) + (src[3] << 24);
+}

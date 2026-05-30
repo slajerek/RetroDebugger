@@ -32,11 +32,14 @@
 
 struct console_s;
 
-extern char *mon_disassemble_with_label(MEMSPACE memspace, WORD loc, int hex, unsigned *opc_size_p, unsigned *label_p);
-extern char *mon_dump_with_label(MEMSPACE memspace, WORD loc, int hex, unsigned *label_p);
-extern void mon_set_command(struct console_s *console_log, char *command, void (*)(void));
+char *mon_disassemble_with_label(MEMSPACE memspace, uint16_t loc, int hex, unsigned *opc_size_p, unsigned *label_p);
+char *mon_dump_with_label(MEMSPACE memspace, uint16_t loc, int hex, unsigned *label_p);
+void mon_set_command(struct console_s *console_log, char *command, void (*)(void));
 
-extern int mon_log_file_open(const char *name);
-extern void mon_log_file_close(void);
+void mon_event_opened(void);
+void mon_event_closed(void);
+
+int mon_log_file_open(const char *name);
+void mon_log_file_close(void);
 
 #endif

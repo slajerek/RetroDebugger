@@ -47,13 +47,13 @@
 typedef struct gfxoutputdrv_data_s {
     FILE *fd;
     char *ext_filename;
-    BYTE *data;
-    BYTE *bmp_data;
+    uint8_t *data;
+    uint8_t *bmp_data;
     int line;
     unsigned int bpp;
 } gfxoutputdrv_data_t;
 
-STATIC_PROTOTYPE gfxoutputdrv_t bmp_drv;
+static gfxoutputdrv_t bmp_drv;
 
 static int bmpdrv_bytes_per_row(screenshot_t *screenshot)
 {
@@ -61,7 +61,7 @@ static int bmpdrv_bytes_per_row(screenshot_t *screenshot)
     return (bits_per_row / 32 + (bits_per_row % 32 != 0)) * 4;
 }
 
-static DWORD bmpdrv_bmp_size(screenshot_t *screenshot)
+static uint32_t bmpdrv_bmp_size(screenshot_t *screenshot)
 {
     return BMP_HDR_OFFSET + bmpdrv_bytes_per_row(screenshot) * screenshot->height;
 }
@@ -69,7 +69,7 @@ static DWORD bmpdrv_bmp_size(screenshot_t *screenshot)
 static int bmpdrv_write_file_header(screenshot_t *screenshot)
 {
     gfxoutputdrv_data_t *sdata;
-    BYTE header[14];
+    uint8_t header[14];
 
     sdata = screenshot->gfxoutputdrv_data;
 
@@ -96,8 +96,8 @@ static int bmpdrv_write_file_header(screenshot_t *screenshot)
 
 static int bmpdrv_write_bitmap_info(screenshot_t *screenshot)
 {
-    BYTE binfo[40];
-    BYTE *bcolor;
+    uint8_t binfo[40];
+    uint8_t *bcolor;
     unsigned int i;
 
     memset(binfo, 0, sizeof(binfo));
@@ -232,7 +232,7 @@ static int bmpdrv_write(screenshot_t *screenshot)
 
                 for (i = 0; i < (int)screenshot->width / 8; i++)
                 {
-                    BYTE b = 0;
+                    uint8_t b = 0;
                     for (j = 0; j < 8; j++) {
                         b |= sdata->data[i * 8 + j] ? (1 << (7 - j)) : 0;
                     }
@@ -308,7 +308,7 @@ static int bmpdrv_save(screenshot_t *screenshot, const char *filename)
 #ifdef FEATURE_CPUMEMHISTORY
 static FILE *bmpdrv_memmap_fd;
 static char *bmpdrv_memmap_ext_filename;
-static BYTE *bmpdrv_memmap_bmp_data;
+static uint8_t *bmpdrv_memmap_bmp_data;
 
 static int bmpdrv_memmap_bytes_per_row(int x_size)
 {
@@ -331,15 +331,15 @@ static int bmpdrv_close_memmap(int x_size, int y_size)
     return res;
 }
 
-static DWORD bmpdrv_memmap_bmp_size(int x_size, int y_size)
+static uint32_t bmpdrv_memmap_bmp_size(int x_size, int y_size)
 {
     return 14 + 40 + 4 * 256 + bmpdrv_memmap_bytes_per_row(x_size) * y_size;
 }
 
-static int bmpdrv_memmap_write_bitmap_info(int x_size, int y_size, BYTE *palette)
+static int bmpdrv_memmap_write_bitmap_info(int x_size, int y_size, uint8_t *palette)
 {
-    BYTE binfo[40];
-    BYTE *bcolor;
+    uint8_t binfo[40];
+    uint8_t *bcolor;
     unsigned int i;
 
     memset(binfo, 0, sizeof(binfo));
@@ -388,7 +388,7 @@ static int bmpdrv_memmap_write_bitmap_info(int x_size, int y_size, BYTE *palette
 
 static int bmpdrv_memmap_write_file_header(int x_size, int y_size)
 {
-    BYTE header[14];
+    uint8_t header[14];
 
     memset(header, 0, sizeof(header));
 
@@ -406,7 +406,7 @@ static int bmpdrv_memmap_write_file_header(int x_size, int y_size)
     return 0;
 }
 
-static int bmpdrv_open_memmap(const char *filename, int x_size, int y_size, BYTE *palette)
+static int bmpdrv_open_memmap(const char *filename, int x_size, int y_size, uint8_t *palette)
 {
     bmpdrv_memmap_ext_filename = util_add_extension_const(filename, bmp_drv.default_extension);
 
@@ -434,13 +434,13 @@ static int bmpdrv_open_memmap(const char *filename, int x_size, int y_size, BYTE
     return 0;
 }
 
-static void bmpdrv_write_memmap(int line, int x_size, int y_size, BYTE *gfx)
+static void bmpdrv_write_memmap(int line, int x_size, int y_size, uint8_t *gfx)
 {
     int bmp_width = bmpdrv_memmap_bytes_per_row(x_size);
     memcpy(bmpdrv_memmap_bmp_data + (y_size - 1 - line) * bmp_width, gfx + (line * x_size), x_size);
 }
 
-static int bmpdrv_memmap_save(const char *filename, int x_size, int y_size, BYTE *gfx, BYTE *palette)
+static int bmpdrv_memmap_save(const char *filename, int x_size, int y_size, uint8_t *gfx, uint8_t *palette)
 {
     int line;
 
@@ -462,6 +462,7 @@ static int bmpdrv_memmap_save(const char *filename, int x_size, int y_size, BYTE
 
 static gfxoutputdrv_t bmp_drv =
 {
+    GFXOUTPUTDRV_TYPE_SCREENSHOT_IMAGE,
     "BMP",
     "BMP screenshot",
     "bmp",

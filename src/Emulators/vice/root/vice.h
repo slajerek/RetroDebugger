@@ -196,4 +196,34 @@ static int noop;
 //
 #include <stdint.h>
 
+/* VICE 3.10 reconciliation: attribute defines used by 3.10 headers (resources.h etc.).
+   From vanilla 3.10 src/vice.h. */
+#ifdef __clang__
+#define VICE_ATTR_NORETURN  __attribute__((analyzer_noreturn))
+#elif defined(__GNUC__)
+#define VICE_ATTR_NORETURN  __attribute__((noreturn))
+#else
+#define VICE_ATTR_NORETURN
+#endif
+
+#ifdef __clang__
+#define VICE_ATTR_PRINTF    __attribute__((__format__(__printf__, 1, 2)))
+#define VICE_ATTR_PRINTF2   __attribute__((__format__(__printf__, 2, 3)))
+#define VICE_ATTR_PRINTF3   __attribute__((__format__(__printf__, 3, 4)))
+#define VICE_ATTR_PRINTF4   __attribute__((__format__(__printf__, 4, 5)))
+#define VICE_ATTR_RESPRINTF __attribute__((__format__(__printf__, 1, 3)))
+#elif defined(__GNUC__)
+#define VICE_ATTR_PRINTF    __attribute__((format(printf, 1, 2)))
+#define VICE_ATTR_PRINTF2   __attribute__((format(printf, 2, 3)))
+#define VICE_ATTR_PRINTF3   __attribute__((format(printf, 3, 4)))
+#define VICE_ATTR_PRINTF4   __attribute__((format(printf, 4, 5)))
+#define VICE_ATTR_RESPRINTF __attribute__((format(printf, 1, 3)))
+#else
+#define VICE_ATTR_PRINTF
+#define VICE_ATTR_PRINTF2
+#define VICE_ATTR_PRINTF3
+#define VICE_ATTR_PRINTF4
+#define VICE_ATTR_RESPRINTF
+#endif
+
 #endif

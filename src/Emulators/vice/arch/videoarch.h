@@ -35,6 +35,8 @@
 
 #include "viewport.h"
 #include "video.h"
+#include "archdep.h"			/* VICE 3.10: ARCHDEP_SHOW_STATUSBAR_FACTORY etc. */
+#include "archdep_tick.h"		/* VICE 3.10: tick_t (warp_next_render_tick) */
 
 #define MAX_CANVAS_NUM 2
 
@@ -43,6 +45,10 @@ typedef void (*video_refresh_func_t)(struct video_canvas_s *, int, int, int, int
 struct video_canvas_s {
     unsigned int initialized;
     unsigned int created;
+
+    /* VICE 3.10: warp-mode render pacing (vsync.c) + CRT/color-encoding type (video-canvas.c) */
+    tick_t warp_next_render_tick;
+    int crt_type;
 
     /* Index of the canvas, needed for x128 and xcbm2 */
     int index;

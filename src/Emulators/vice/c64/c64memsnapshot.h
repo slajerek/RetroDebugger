@@ -29,6 +29,7 @@
 
 struct snapshot_s;
 
-extern int c64_snapshot_write_module(struct snapshot_s *s, int save_roms, int save_reu_data, int save_cart_roms);
-extern int c64_snapshot_read_module(struct snapshot_s *s, int read_reu_data, int read_cart_roms);
+int c64_snapshot_write_module(struct snapshot_s *s, int save_roms, int save_reu_data, int save_cart_roms);
+int c64_snapshot_read_module(struct snapshot_s *s, int read_reu_data, int read_cart_roms);
+
 #endif

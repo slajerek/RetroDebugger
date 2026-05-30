@@ -84,8 +84,8 @@ void CViewDrive1541StateVIA::Render()
 }
 
 extern "C" {
-	BYTE c64d_via1d1541_peek(drive_context_t *ctxptr, WORD addr);
-	BYTE c64d_via2d_peek(drive_context_t *ctxptr, WORD addr);
+	BYTE c64d_via1d1541_peek(diskunit_context_t *ctxptr, WORD addr);
+	BYTE c64d_via2d_peek(diskunit_context_t *ctxptr, WORD addr);
 };
 
 #define VIA_PRB         0  /* Port B */
@@ -113,7 +113,7 @@ void CViewDrive1541StateVIA::RenderStateDrive1541(float posX, float posY, float 
 												 bool renderVia1, bool renderVia2, bool renderDriveLed,
 												 bool isVertical)
 {
-	drive_context_t *drivectx = drive_context[driveId];
+	diskunit_context_t *drivectx = diskunit_context[driveId];
 
 	float stateSizeX = VIA_STATE_DEFAULT_SIZE_X*fontSize/7.0f;
 	
@@ -365,7 +365,7 @@ bool CViewDrive1541StateVIA::DoTap(float x, float y)
 	
 	if (showRegistersOnly)
 	{
-		drive_context_t *drivectx = drive_context[driveId];
+		diskunit_context_t *drivectx = diskunit_context[driveId];
 
 		float fs2 = fontSize;
 		

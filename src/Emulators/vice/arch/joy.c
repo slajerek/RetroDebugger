@@ -48,7 +48,6 @@
 #include "machine.h"
 #include "resources.h"
 #include "sysfile.h"
-#include "translate.h"
 #include "util.h"
 #include "uihotkey.h"
 #include "uimenu.h"
@@ -58,7 +57,7 @@
 #define DEFAULT_JOYSTICK_FUZZ      1000
 
 #ifdef HAVE_SDL_NUMJOYSTICKS
-static log_t sdljoy_log = LOG_ERR;
+static log_t sdljoy_log = LOG_DEFAULT;
 
 /* Autorepeat in menu & vkbd */
 static ui_menu_action_t autorepeat;
@@ -225,44 +224,30 @@ static const resource_int_t resources_int[] = {
 
 static const cmdline_option_t cmdline_options[] = {
 #ifdef HAVE_SDL_NUMJOYSTICKS
-    { "-joymap", SET_RESOURCE, 1, NULL, NULL, "JoyMapFile", NULL,
-      USE_PARAM_STRING, USE_DESCRIPTION_STRING, IDCLS_UNUSED, IDCLS_UNUSED,
-      N_("<name>"), "Specify name of joystick map file" },
-    { "-joythreshold", SET_RESOURCE, 1, NULL, NULL, "JoyThreshold", NULL,
-      USE_PARAM_STRING, USE_DESCRIPTION_STRING, IDCLS_UNUSED, IDCLS_UNUSED,
-      "<0-32767>", "Set joystick threshold" },
-    { "-joyfuzz", SET_RESOURCE, 1, NULL, NULL, "JoyFuzz", NULL,
-      USE_PARAM_STRING, USE_DESCRIPTION_STRING, IDCLS_UNUSED, IDCLS_UNUSED,
-      "<0-32767>", "Set joystick fuzz" },
+    { "-joymap", SET_RESOURCE, 1, NULL, NULL, "JoyMapFile", NULL, N_("<name>"), "Specify name of joystick map file"},
+    { "-joythreshold", SET_RESOURCE, 1, NULL, NULL, "JoyThreshold", NULL, "<0-32767>", "Set joystick threshold"},
+    { "-joyfuzz", SET_RESOURCE, 1, NULL, NULL, "JoyFuzz", NULL, "<0-32767>", "Set joystick fuzz"},
 #endif
     CMDLINE_LIST_END
 };
 
 static const cmdline_option_t joydev1cmdline_options[] = {
-    { "-joydev1", SET_RESOURCE, 1, NULL, NULL, "JoyDevice1", NULL,
-      USE_PARAM_STRING, USE_DESCRIPTION_STRING, IDCLS_UNUSED, IDCLS_UNUSED,
-      "<0-4>", "Set device for joystick port 1" },
+    { "-joydev1", SET_RESOURCE, 1, NULL, NULL, "JoyDevice1", NULL, "<0-4>", "Set device for joystick port 1"},
     CMDLINE_LIST_END
 };
 
 static const cmdline_option_t joydev2cmdline_options[] = {
-    { "-joydev2", SET_RESOURCE, 1, NULL, NULL, "JoyDevice2", NULL,
-      USE_PARAM_STRING, USE_DESCRIPTION_STRING, IDCLS_UNUSED, IDCLS_UNUSED,
-      "<0-4>", "Set device for joystick port 2" },
+    { "-joydev2", SET_RESOURCE, 1, NULL, NULL, "JoyDevice2", NULL, "<0-4>", "Set device for joystick port 2"},
     CMDLINE_LIST_END
 };
 
 static const cmdline_option_t joydev3cmdline_options[] = {
-    { "-extrajoydev1", SET_RESOURCE, 1, NULL, NULL, "JoyDevice3", NULL,
-      USE_PARAM_STRING, USE_DESCRIPTION_STRING, IDCLS_UNUSED, IDCLS_UNUSED,
-      "<0-4>", "Set device for extra joystick port 1" },
+    { "-extrajoydev1", SET_RESOURCE, 1, NULL, NULL, "JoyDevice3", NULL, "<0-4>", "Set device for extra joystick port 1"},
     CMDLINE_LIST_END
 };
 
 static const cmdline_option_t joydev4cmdline_options[] = {
-    { "-extrajoydev2", SET_RESOURCE, 1, NULL, NULL, "JoyDevice4", NULL,
-      USE_PARAM_STRING, USE_DESCRIPTION_STRING, IDCLS_UNUSED, IDCLS_UNUSED,
-      "<0-4>", "Set device for extra joystick port 2" },
+    { "-extrajoydev2", SET_RESOURCE, 1, NULL, NULL, "JoyDevice4", NULL, "<0-4>", "Set device for extra joystick port 2"},
     CMDLINE_LIST_END
 };
 
@@ -388,7 +373,7 @@ int joy_arch_init(void)
 //    for (i = 0; i < num_joysticks; ++i) {
 //        joy = sdljoystick[i].joyptr = SDL_JoystickOpen(i);
 //        if (joy) {
-//            sdljoystick[i].name = lib_stralloc(SDL_JoystickName(i));
+//            sdljoystick[i].name = lib_strdup(SDL_JoystickName(i));
 //            axis = sdljoystick[i].input_max[AXIS] = SDL_JoystickNumAxes(joy);
 //            button = sdljoystick[i].input_max[BUTTON] = SDL_JoystickNumButtons(joy);
 //            hat = sdljoystick[i].input_max[HAT] = SDL_JoystickNumHats(joy);

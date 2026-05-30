@@ -29,27 +29,27 @@
 
 #include "vicetypes.h"
 
-#define RTS_OUT         0x02
-#define DTR_OUT         0x04
+#define TXD_OUT         0x04    /* PA2 */
+#define RXD_IN          0x01    /* PB0 (also connected to !FLAG2) */
 
-#define DCD_IN          0x10
-#define CTS_IN          0x40
-#define DSR_IN          0x80
+#define RTS_OUT         0x02    /* PB1 */
+#define DTR_OUT         0x04    /* PB2 */
+#define OH_OUT          0x20    /* PB5 ON_HOOK output to some Commodore modems and clones */
+                                /* Used to 'pick'/'hang' the phone and pulse dial             */
 
-extern int rsuser_enabled;
+#define RI_IN           0x08    /* PB3 */
+#define DCD_IN          0x10    /* PB4 */
+#define CTS_IN          0x40    /* PB6 */
+#define DSR_IN          0x80    /* PB7 */
 
-extern void rsuser_init(long cycles_per_sec, void (*start_bit_trigger)(void),
-                        void (*byte_rx_func)(BYTE));
-extern int rsuser_resources_init(void);
-extern int rsuser_cmdline_options_init(void);
+#define RS_USER_DEVICE_1   0
+#define RS_USER_DEVICE_2   1
+#define RS_USER_DEVICE_3   2
+#define RS_USER_DEVICE_4   3
 
-extern void rsuser_tx_byte(BYTE b);
-extern void rsuser_write_ctrl(BYTE b);
-extern BYTE rsuser_read_ctrl(BYTE b);
-
-extern void rsuser_reset(void);
-
-extern BYTE rsuser_get_rx_bit(void);
-extern void rsuser_set_tx_bit(int b);
+void rsuser_init(long cycles_per_sec, void (*start_bit_trigger)(void), void (*byte_rx_func)(uint8_t));
+void rsuser_change_timing(long cycles_per_sec);
+int rsuser_resources_init(void);
+int rsuser_cmdline_options_init(void);
 
 #endif

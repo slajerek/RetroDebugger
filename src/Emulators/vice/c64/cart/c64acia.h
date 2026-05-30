@@ -30,20 +30,34 @@
 
 #include "vicetypes.h"
 
-extern int aciacart_cart_enabled(void);
-extern void aciacart_init(void);
-extern BYTE aciacart_read(WORD a);
-extern void aciacart_reset(void);
+int aciacart_cart_enabled(void);
+void aciacart_init(void);
+uint8_t aciacart_read(uint16_t a);
+void aciacart_reset(void);
 
-extern int aciacart_cmdline_options_init(void);
-extern int aciacart_resources_init(void);
-extern void aciacart_resources_shutdown(void);
+int aciacart_cmdline_options_init(void);
+int aciacart_resources_init(void);
+void aciacart_resources_shutdown(void);
 
-extern void aciacart_detach(void);
-extern int aciacart_enable(void);
+void aciacart_detach(void);
+int aciacart_enable(void);
+int aciacart_disable(void);
 
 struct snapshot_s;
-extern int aciacart_snapshot_write_module(struct snapshot_s *p);
-extern int aciacart_snapshot_read_module(struct snapshot_s *p);
+
+int aciacart_snapshot_write_module(struct snapshot_s *p);
+int aciacart_snapshot_read_module(struct snapshot_s *p);
+
+void acia1_init(void);
+uint8_t acia1_read(uint16_t a);
+uint8_t acia1_peek(uint16_t a);
+void acia1_store(uint16_t a, uint8_t b);
+void acia1_reset(void);
+
+int acia1_cmdline_options_init(void);
+int acia1_resources_init(void);
+
+int acia1_snapshot_read_module(struct snapshot_s *);
+int acia1_snapshot_write_module(struct snapshot_s *);
 
 #endif

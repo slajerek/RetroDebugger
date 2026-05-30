@@ -34,6 +34,13 @@
 
 #include "vice_sdl.h"
 
+/* VICE 3.10 reconciliation: 3.10 uses uint*_t and bool pervasively, and includes
+   <stdint.h>/<stdbool.h> unconditionally in its types.h. Provide them here so every
+   file that includes vicetypes.h (the renamed types.h) sees them. The BYTE/WORD/DWORD
+   shims below remain for slajerek's ungated c64d_ code. */
+#include <stdint.h>
+#include <stdbool.h>
+
 #ifndef BYTE
 //#ifdef WIN32_COMPILE
 typedef unsigned char BYTE;
@@ -63,14 +70,33 @@ typedef signed int SDWORD;
 //#endif
 #endif
 
-#ifdef LINUX
-#include "stdint.h"
-#include "inttypes.h"
+#include <inttypes.h>	/* VICE 3.10: PRIx64/PRIu64 for printing 64-bit CLOCK -- needed on all platforms, not just LINUX (was #ifdef LINUX in slajerek's 3.1) */
+
+/* VICE 3.10: MSVC <2019 lacks PRIu64/PRIx64, which 3.10 uses to print CLOCK. Provide fallbacks (no-op where <inttypes.h> already defines them). */
+#ifndef PRIu64
+#  ifdef _WIN32
+#    define PRIu64 "llu"
+#  else
+#    define PRIu64 "lu"
+#  endif
+#endif
+#ifndef PRIx64
+#  ifdef _WIN32
+#    define PRIx64 "llx"
+#  else
+#    define PRIx64 "lx"
+#  endif
 #endif
 
-typedef DWORD CLOCK;
+typedef uint64_t CLOCK;   /* VICE 3.10: CLOCK is 64-bit (was DWORD/32-bit); 3.10's
+                             clock-overflow handling that replaced clkguard assumes this. */
 /* Maximum value of a CLOCK.  */
 #define CLOCK_MAX (~((CLOCK)0))
+
+/* VICE 3.10: int<->ptr helper (RD already has int_to_void_ptr; 3.10 code uses
+   vice_int_to_ptr). intptr_t cast works for both 32/64-bit. */
+#define vice_int_to_ptr(x) ((void *)(intptr_t)(x))
+#define vice_uint_to_ptr(x) ((void *)(uintptr_t)(x))	/* VICE 3.10 */
 
 #ifdef _WIN64
 #define vice_ptr_to_int(x) ((int)(long long)(x))

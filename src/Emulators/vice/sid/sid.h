@@ -1,13 +1,11 @@
-
-/*! \file sid/sid.h */
+/** \file   sid.h
+ * \brief   MOS6581 (SID) emulation, hooks to actual implementation - header
+ *
+ * \author  Dag Lem <resid@nimrod.no>
+ * \author  Marco van den Heuvel <blackystardust68@yahoo.com>
+ */
 
 /*
- * sid.h - MOS6581 (SID) emulation, hooks to actual implementation.
- *
- * Written by
- *  Dag Lem <resid@nimrod.no>
- *  Marco van den Heuvel <blackystardust68@yahoo.com>
- *
  * This file is part of VICE, the Versatile Commodore Emulator.
  * See README for copyright notice.
  *
@@ -31,30 +29,68 @@
 #ifndef VICE_SID_ENGINE_H
 #define VICE_SID_ENGINE_H
 
+#include <stdbool.h>
+
 #include "vicetypes.h"
 #include "sound.h"
 
-#if (defined(WIN32) || defined(MACOSX_COCOA) || defined(WATCOM_COMPILE) || defined(__BEOS__)) && !defined(USE_SDLUI)
 #define SID_SETTINGS_DIALOG
-#endif
 
 struct sound_s;
 struct sid_snapshot_state_s;
 
-#define SID_ENGINE_FASTSID        0
-#define SID_ENGINE_RESID          1
-#define SID_ENGINE_CATWEASELMKIII 2
-#define SID_ENGINE_HARDSID        3
-#define SID_ENGINE_PARSID         4
-#define SID_ENGINE_SSI2001        5
+enum {
+    SID_ENGINE_FASTSID = 0,
+    SID_ENGINE_RESID,
+    SID_ENGINE_CATWEASELMKIII,
+    SID_ENGINE_HARDSID,
+    SID_ENGINE_PARSID,
+    SID_ENGINE_USBSID = 7
+};
+
+/* c64 debugger: ReSID-fp engine. NOTE: shares engine value 7 with SID_ENGINE_USBSID
+   (which RetroDebugger does not build). The two must never appear as case labels in the
+   same switch; both call sites are #ifdef HAVE_RESID_FP / HAVE_USBSID guarded. */
 #define SID_ENGINE_RESID_FP       7
+
 #define SID_ENGINE_DEFAULT       99
 
-#define SID_MODEL_6581           0
-#define SID_MODEL_8580           1
-#define SID_MODEL_8580D          2
-#define SID_MODEL_6581R4         3
-#define SID_MODEL_DTVSID         4
+/* Maximum number of supported SIDs for each engine
+ */
+
+/** \brief  Maximum number of supported SIDs for the FastSID engine */
+#define SID_ENGINE_FASTSID_NUM_SIDS         4
+
+/** \brief  Maximum number of supported SIDs for the ReSID engine */
+#define SID_ENGINE_RESID_NUM_SIDS           4
+
+/** \brief  Maximum number of supported SIDs for the Catweasel Mk3 engine */
+#define SID_ENGINE_CATWEASELMKIII_NUM_SIDS  2
+
+/** \brief  Maximum number of supported SIDs for the HardSID engine */
+#define SID_ENGINE_HARDSID_NUM_SIDS         2
+
+/** \brief  Maximum number of supported SIDs for the ParSID engine */
+#define SID_ENGINE_PARSID_NUM_SIDS          1
+
+/** \brief  Maximum number of supported SIDs for the USBSID engine */
+#define SID_ENGINE_USBSID_NUM_SIDS          4
+
+enum {
+    SID_RESID_SAMPLING_FAST = 0,
+    SID_RESID_SAMPLING_INTERPOLATION,
+    SID_RESID_SAMPLING_RESAMPLING,
+    SID_RESID_SAMPLING_FAST_RESAMPLING
+};
+
+enum {
+    SID_MODEL_6581 = 0,
+    SID_MODEL_8580,
+    SID_MODEL_8580D,
+    SID_MODEL_DTVSID
+};
+
+/* c64 debugger: ReSID-fp specific models */
 #define SID_MODEL_6581R3_4885    8
 #define SID_MODEL_6581R3_0486S   9
 #define SID_MODEL_6581R3_3984   10
@@ -65,6 +101,7 @@ struct sid_snapshot_state_s;
 #define SID_MODEL_8580R5_3691D  17
 #define SID_MODEL_8580R5_1489   18
 #define SID_MODEL_8580R5_1489D  19
+
 #define SID_MODEL_DEFAULT       99
 
 /* these definitions are the only valid combinations of
@@ -79,7 +116,9 @@ struct sid_snapshot_state_s;
 #define SID_CATWEASELMKIII        (SID_ENGINE_CATWEASELMKIII << 8)
 #define SID_HARDSID               (SID_ENGINE_HARDSID << 8)
 #define SID_PARSID                (SID_ENGINE_PARSID << 8)
-#define SID_SSI2001               (SID_ENGINE_SSI2001 << 8)
+#define SID_USBSID                (SID_ENGINE_USBSID << 8)
+
+/* c64 debugger: ReSID-fp model combinations */
 #define SID_RESIDFP_6581R3_4885   ((SID_ENGINE_RESID_FP << 8) | SID_MODEL_6581R3_4885)
 #define SID_RESIDFP_6581R3_0486S  ((SID_ENGINE_RESID_FP << 8) | SID_MODEL_6581R3_0486S)
 #define SID_RESIDFP_6581R3_3984   ((SID_ENGINE_RESID_FP << 8) | SID_MODEL_6581R3_3984)
@@ -91,44 +130,127 @@ struct sid_snapshot_state_s;
 #define SID_RESIDFP_8580R5_1489   ((SID_ENGINE_RESID_FP << 8) | SID_MODEL_8580R5_1489)
 #define SID_RESIDFP_8580R5_1489D  ((SID_ENGINE_RESID_FP << 8) | SID_MODEL_8580R5_1489D)
 
-extern void machine_sid2_enable(int val);
+#define SIDTYPE_SID       0
+#define SIDTYPE_SIDDTV    1
+#define SIDTYPE_SIDCART   2
 
-extern BYTE sid_read(WORD address);
-extern BYTE sid_peek(WORD address);
-extern BYTE sid2_read(WORD address);
-extern BYTE sid3_read(WORD address);
-extern void sid_store(WORD address, BYTE byte);
-extern void sid2_store(WORD address, BYTE byte);
-extern void sid3_store(WORD address, BYTE byte);
-extern int sid_dump(void);
-extern int sid2_dump(void);
-extern int sid3_dump(void);
-extern void sid_reset(void);
+#define SID_MACHINE_MAX_SID_C64     8
+#define SID_MACHINE_MAX_SID_C64DTV  1
+#define SID_MACHINE_MAX_SID_C128    8
 
-extern void sid_set_machine_parameter(long clock_rate);
-extern BYTE *sid_get_siddata(unsigned int channel);
-extern int sid_engine_set(int engine);
-extern void sid_state_read(unsigned int channel,
-                           struct sid_snapshot_state_s *sid_state);
-extern void sid_state_write(unsigned int channel,
-                            struct sid_snapshot_state_s *sid_state);
+/** \brief  The VIC20 has an optional SID cartridge */
+#define SID_MACHINE_MAX_SID_VIC20   1
+
+/** \brief  The Plus4 has an optional SIDCard expansion */
+#define SID_MACHINE_MAX_SID_PLUS4   1
+
+#define SID_MACHINE_MAX_SID_CBM5x0  1
+#define SID_MACHINE_MAX_SID_CBM6x0  0
+
+/** \brief  The PET has an optional SID Card expansion */
+#define SID_MACHINE_MAX_SID_PET     1
+
+/** \brief  VSID supports up to three SIDS
+ *
+ * This can be the same as C64 in emulation, but PSID currently only manages 3
+ * SIDs.
+ */
+#define SID_MACHINE_MAX_SID_VSID    3
+
+
+#define RESID_6581_PASSBAND_MIN             0
+#define RESID_6581_PASSBAND_MAX             90
+#define RESID_6581_PASSBAND_ONE             1
+#define RESID_6581_PASSBAND_DEFAULT         90
+
+#define RESID_6581_FILTER_GAIN_MIN          90
+#define RESID_6581_FILTER_GAIN_MAX          100
+#define RESID_6581_FILTER_GAIN_ONE          1
+#define RESID_6581_FILTER_GAIN_DEFAULT      97
+
+#define RESID_6581_FILTER_BIAS_MIN          -5000
+#define RESID_6581_FILTER_BIAS_MAX          5000
+#define RESID_6581_FILTER_BIAS_ONE          1000
+#define RESID_6581_FILTER_BIAS_DEFAULT      500
+
+#define RESID_8580_PASSBAND_MIN             0
+#define RESID_8580_PASSBAND_MAX             90
+#define RESID_8580_PASSBAND_ONE             1
+#define RESID_8580_PASSBAND_DEFAULT         90
+
+#define RESID_8580_FILTER_GAIN_MIN          90
+#define RESID_8580_FILTER_GAIN_MAX          100
+#define RESID_8580_FILTER_GAIN_ONE          1
+#define RESID_8580_FILTER_GAIN_DEFAULT      97
+
+#define RESID_8580_FILTER_BIAS_MIN          -5000
+#define RESID_8580_FILTER_BIAS_MAX          5000
+#define RESID_8580_FILTER_BIAS_ONE          1000
+#define RESID_8580_FILTER_BIAS_DEFAULT      0
+
+
+void machine_sid2_enable(int val);
+
+uint8_t sid_read(uint16_t address);
+uint8_t sid2_read(uint16_t address);
+uint8_t sid3_read(uint16_t address);
+uint8_t sid4_read(uint16_t address);
+uint8_t sid5_read(uint16_t address);
+uint8_t sid6_read(uint16_t address);
+uint8_t sid7_read(uint16_t address);
+uint8_t sid8_read(uint16_t address);
+
+uint8_t sid_peek(uint16_t address);
+uint8_t sid2_peek(uint16_t address);
+uint8_t sid3_peek(uint16_t address);
+uint8_t sid4_peek(uint16_t address);
+uint8_t sid5_peek(uint16_t address);
+uint8_t sid6_peek(uint16_t address);
+uint8_t sid7_peek(uint16_t address);
+uint8_t sid8_peek(uint16_t address);
+
+void sid_store(uint16_t address, uint8_t byte);
+void sid2_store(uint16_t address, uint8_t byte);
+void sid3_store(uint16_t address, uint8_t byte);
+void sid4_store(uint16_t address, uint8_t byte);
+void sid5_store(uint16_t address, uint8_t byte);
+void sid6_store(uint16_t address, uint8_t byte);
+void sid7_store(uint16_t address, uint8_t byte);
+void sid8_store(uint16_t address, uint8_t byte);
+
+int sid_dump(void);
+int sid2_dump(void);
+int sid3_dump(void);
+int sid4_dump(void);
+int sid5_dump(void);
+int sid6_dump(void);
+int sid7_dump(void);
+int sid8_dump(void);
+
+void sid_reset(void);
+
+void sid_set_machine_parameter(long clock_rate);
+uint8_t *sid_get_siddata(unsigned int channel);
+int sid_engine_set(int engine);
+void sid_state_read(unsigned int channel, struct sid_snapshot_state_s *sid_state);
+void sid_state_write(unsigned int channel, struct sid_snapshot_state_s *sid_state);
 
 struct sid_engine_s {
-    struct sound_s *(*open)(BYTE *sidstate, int chipNo);
+    struct sound_s *(*open)(uint8_t *sidstate, int chipNo);
     int (*init)(struct sound_s *psid, int speed, int cycles_per_sec, int factor);
     void (*close)(struct sound_s *psid);
-    BYTE (*read)(struct sound_s *psid, WORD addr);
-    void (*store)(struct sound_s *psid, WORD addr, BYTE val);
+    uint8_t (*read)(struct sound_s *psid, uint16_t addr);
+    void (*store)(struct sound_s *psid, uint16_t addr, uint8_t val);
     void (*reset)(struct sound_s *psid, CLOCK cpu_clk);
-    int (*calculate_samples)(struct sound_s *psid, SWORD *pbuf, int nr,
-                             int interleave, int *delta_t);
-    void (*prevent_clk_overflow)(struct sound_s *psid, CLOCK sub);
+#ifdef SOUND_SYSTEM_FLOAT
+    int (*calculate_samples)(struct sound_s *psid, float *pbuf, int nr, CLOCK *delta_t);
+#else
+    int (*calculate_samples)(struct sound_s *psid, short *pbuf, int nr, int interleave, CLOCK *delta_t);
+#endif
     char *(*dump_state)(struct sound_s *psid);
-    void (*state_read)(struct sound_s *psid,
-                       struct sid_snapshot_state_s *sid_state);
-    void (*state_write)(struct sound_s *psid,
-                        struct sid_snapshot_state_s *sid_state);
-	
+    void (*state_read)(struct sound_s *psid, struct sid_snapshot_state_s *sid_state);
+    void (*state_write)(struct sound_s *psid, struct sid_snapshot_state_s *sid_state);
+
 	// c64 debugger
 	void (*set_voice_mask)(struct sound_s *psid, BYTE voiceMask);
 };
@@ -140,24 +262,34 @@ struct sid_engine_model_s {
 };
 typedef struct sid_engine_model_s sid_engine_model_t;
 
-extern sound_t *sid_sound_machine_open(int chipno);
-extern int sid_sound_machine_init_vbr(sound_t *psid, int speed, int cycles_per_sec, int factor);
-extern int sid_sound_machine_init(sound_t *psid, int speed, int cycles_per_sec);
-extern void sid_sound_machine_close(sound_t *psid);
-extern BYTE sid_sound_machine_read(sound_t *psid, WORD addr);
-extern void sid_sound_machine_store(sound_t *psid, WORD addr, BYTE byte);
-extern void sid_sound_machine_reset(sound_t *psid, CLOCK cpu_clk);
-extern int sid_sound_machine_calculate_samples(sound_t **psid, SWORD *pbuf, int nr, int sound_output_channels, int sound_chip_channels, int *delta_t);
-extern void sid_sound_machine_prevent_clk_overflow(sound_t *psid, CLOCK sub);
-extern char *sid_sound_machine_dump_state(sound_t *psid);
-extern int sid_sound_machine_cycle_based(void);
-extern int sid_sound_machine_channels(void);
-extern void sid_sound_machine_enable(int enable);
-extern sid_engine_model_t **sid_get_engine_model_list(void);
-extern int sid_set_engine_model(int engine, int model);
-extern void sid_sound_chip_init(void);
+bool sid_sound_machine_set_engine_hooks(void);
+sound_t *sid_sound_machine_open(int chipno);
+int sid_sound_machine_init_vbr(sound_t *psid, int speed, int cycles_per_sec, int factor);
+int sid_sound_machine_init(sound_t *psid, int speed, int cycles_per_sec);
+void sid_sound_machine_close(sound_t *psid);
+uint8_t sid_sound_machine_read(sound_t *psid, uint16_t addr);
+void sid_sound_machine_store(sound_t *psid, uint16_t addr, uint8_t byte);
+void sid_sound_machine_reset(sound_t *psid, CLOCK cpu_clk);
+char *sid_sound_machine_dump_state(sound_t *psid);
+int sid_sound_machine_cycle_based(void);
+int sid_sound_machine_channels(void);
+void sid_sound_machine_enable(int enable);
+sid_engine_model_t **sid_get_engine_model_list(void);
+int sid_set_engine_model(int engine, int model);
+void sid_sound_chip_init(void);
 
-extern void sid_set_enable(int value);
+#ifdef SOUND_SYSTEM_FLOAT
+int sid_sound_machine_calculate_samples(sound_t **psid, float *pbuf, int nr, int sound_chip_channels, CLOCK *delta_t);
+#else
+int sid_sound_machine_calculate_samples(sound_t **psid, int16_t *pbuf, int nr, int sound_output_channels, int sound_chip_channels, CLOCK *delta_t);
+#endif
+
+void sid_set_enable(int value);
+
+int sid_engine_get_max_sids(int engine);
+int sid_machine_get_max_sids(void);
+int sid_machine_engine_get_max_sids(int engine);
+int sid_machine_can_have_multiple_sids(void);
 
 // c64 debugger
 extern void sid_sound_machine_set_voice_mask(sound_t *psid, BYTE voiceMask);

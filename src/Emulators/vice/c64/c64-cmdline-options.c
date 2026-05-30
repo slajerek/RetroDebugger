@@ -39,12 +39,10 @@
 #include "cmdline.h"
 #include "log.h"
 #include "machine.h"
-#include "patchrom.h"
 #include "resources.h"
-#include "translate.h"
 #include "vicii.h"
 
-int set_cia_model(const char *value, void *extra_param)
+static int set_cia_model(const char *value, void *extra_param)
 {
     int model;
 
@@ -158,21 +156,24 @@ struct kernal_s {
     int rev;
 };
 
+/* NOTE: this table is duplicated in psid.c */
 static struct kernal_s kernal_match[] = {
-    { "1", C64_KERNAL_REV1 },
-    { "2", C64_KERNAL_REV2 },
-    { "3", C64_KERNAL_REV3 },
-    { "67", C64_KERNAL_SX64 },
-    { "sx", C64_KERNAL_SX64 },
-    { "100", C64_KERNAL_4064 },
+    { "0",    C64_KERNAL_JAP },
+    { "jap",  C64_KERNAL_JAP },
+    { "1",    C64_KERNAL_REV1 },
+    { "2",    C64_KERNAL_REV2 },
+    { "3",    C64_KERNAL_REV3 },
+    { "67",   C64_KERNAL_SX64 },
+    { "sx",   C64_KERNAL_SX64 },
+    { "39",   C64_KERNAL_GS64 },
+    { "gs",   C64_KERNAL_GS64 },
+    { "100",  C64_KERNAL_4064 },
     { "4064", C64_KERNAL_4064 },
     { NULL, C64_KERNAL_UNKNOWN }
 };
 
 static int set_kernal_revision(const char *param, void *extra_param)
 {
-    WORD sum;                   /* ROM checksum */
-    int id;                     /* ROM identification number */
     int rev = C64_KERNAL_UNKNOWN;
     int i = 0;
 
@@ -187,107 +188,81 @@ static int set_kernal_revision(const char *param, void *extra_param)
         i++;
     } while ((rev == C64_KERNAL_UNKNOWN) && (kernal_match[i].name != NULL));
 
-    if(!c64rom_isloaded()) {
-        kernal_revision = rev;
-        return 0;
+    log_verbose(LOG_DEFAULT, "set_kernal_revision (\"-kernalrev\") val:'%s' rev: %d", param, rev);
+
+    if (rev == C64_KERNAL_UNKNOWN) {
+        log_error(LOG_DEFAULT, "invalid kernal revision (%d)", rev);
+        return -1;
     }
 
-    if (c64rom_get_kernal_chksum_id(&sum, &id) < 0) {
-        id = C64_KERNAL_UNKNOWN;
-        kernal_revision = id;
-    } else {
-        if (patch_rom_idx(rev) >= 0) {
-            kernal_revision = rev;
-        } else {
-            kernal_revision = id;
-        }
+    if (resources_set_int("KernalRev", rev) < 0) {
+        log_error(LOG_DEFAULT, "failed to set kernal revision (%d)", rev);
     }
+
     return 0;
 }
 
-static const cmdline_option_t cmdline_options[] = {
-    { "-pal", CALL_FUNCTION, 0,
-      set_video_standard, (void *)MACHINE_SYNC_PAL, NULL, NULL,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_USE_PAL_SYNC_FACTOR,
-      NULL, NULL },
-    { "-ntsc", CALL_FUNCTION, 0,
-      set_video_standard, (void *)MACHINE_SYNC_NTSC, NULL, NULL,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_USE_NTSC_SYNC_FACTOR,
-      NULL, NULL },
-    { "-ntscold", CALL_FUNCTION, 0,
-      set_video_standard, (void *)MACHINE_SYNC_NTSCOLD, NULL, NULL,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_USE_OLD_NTSC_SYNC_FACTOR,
-      NULL, NULL },
-    { "-paln", CALL_FUNCTION, 0,
-      set_video_standard, (void *)MACHINE_SYNC_PALN, NULL, NULL,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_USE_PALN_SYNC_FACTOR,
-      NULL, NULL },
-    { "-kernal", SET_RESOURCE, 1,
+static const cmdline_option_t cmdline_options[] =
+{
+    /* NOTE: although we use CALL_FUNCTION, we put the resource that will be
+             modified into the array - this helps reconstructing the cmdline */
+    { "-pal", CALL_FUNCTION, CMDLINE_ATTRIB_NONE,
+      set_video_standard, (void *)MACHINE_SYNC_PAL, "MachineVideoStandard", (void *)MACHINE_SYNC_PAL,
+      NULL, "Use PAL sync factor" },
+    { "-ntsc", CALL_FUNCTION, CMDLINE_ATTRIB_NONE,
+      set_video_standard, (void *)MACHINE_SYNC_NTSC, "MachineVideoStandard", (void *)MACHINE_SYNC_NTSC,
+      NULL, "Use NTSC sync factor" },
+    { "-ntscold", CALL_FUNCTION, CMDLINE_ATTRIB_NONE,
+      set_video_standard, (void *)MACHINE_SYNC_NTSCOLD, "MachineVideoStandard", (void *)MACHINE_SYNC_NTSCOLD,
+      NULL, "Use old NTSC sync factor" },
+    { "-paln", CALL_FUNCTION, CMDLINE_ATTRIB_NONE,
+      set_video_standard, (void *)MACHINE_SYNC_PALN, "MachineVideoStandard", (void *)MACHINE_SYNC_PALN,
+      NULL, "Use PAL-N sync factor" },
+    { "-power50", SET_RESOURCE, CMDLINE_ATTRIB_NONE,
+      NULL, NULL, "MachinePowerFrequency", (void *)50,
+      NULL, "Use 50Hz Power-grid frequency" },
+    { "-power60", SET_RESOURCE, CMDLINE_ATTRIB_NONE,
+      NULL, NULL, "MachinePowerFrequency", (void *)60,
+      NULL, "Use 60Hz Power-grid frequency" },
+    { "-kernal", SET_RESOURCE, CMDLINE_ATTRIB_NEED_ARGS,
       NULL, NULL, "KernalName", NULL,
-      USE_PARAM_ID, USE_DESCRIPTION_ID,
-      IDCLS_P_NAME, IDCLS_SPECIFY_KERNAL_ROM_NAME,
-      NULL, NULL },
-    { "-basic", SET_RESOURCE, 1,
+      "<Name>", "Specify name of Kernal ROM image" },
+    { "-basic", SET_RESOURCE, CMDLINE_ATTRIB_NEED_ARGS,
       NULL, NULL, "BasicName", NULL,
-      USE_PARAM_ID, USE_DESCRIPTION_ID,
-      IDCLS_P_NAME, IDCLS_SPECIFY_BASIC_ROM_NAME,
-      NULL, NULL },
-    { "-chargen", SET_RESOURCE, 1,
+      "<Name>", "Specify name of BASIC ROM image" },
+    { "-chargen", SET_RESOURCE, CMDLINE_ATTRIB_NEED_ARGS,
       NULL, NULL, "ChargenName", NULL,
-      USE_PARAM_ID, USE_DESCRIPTION_ID,
-      IDCLS_P_NAME, IDCLS_SPECIFY_CHARGEN_ROM_NAME,
-      NULL, NULL },
-    { "-kernalrev", CALL_FUNCTION, 1,
+      "<Name>", "Specify name of character generator ROM image" },
+    { "-kernalrev", CALL_FUNCTION, CMDLINE_ATTRIB_NEED_ARGS,
       set_kernal_revision, NULL, NULL, NULL,
-      USE_PARAM_ID, USE_DESCRIPTION_ID,
-      IDCLS_P_REVISION, IDCLS_PATCH_KERNAL_TO_REVISION,
-      NULL, NULL },
+      "<Revision>", "Patch the Kernal ROM to the specified <revision> "
+      "(0/jap: japanese 1: rev. 1, 2: rev. 2, 3: rev. 3, 39/gs: C64 GS, 67/sx: sx64, 100/4064: 4064)" },
 #if defined(HAVE_RS232DEV) || defined(HAVE_RS232NET)
-    { "-acia1", SET_RESOURCE, 0,
+    { "-acia1", SET_RESOURCE, CMDLINE_ATTRIB_NONE,
       NULL, NULL, "Acia1Enable", (void *)1,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_ENABLE_DEXX_ACIA_RS232_EMU,
-      NULL, NULL },
-    { "+acia1", SET_RESOURCE, 0,
+      NULL, "Enable the ACIA RS232 interface emulation" },
+    { "+acia1", SET_RESOURCE, CMDLINE_ATTRIB_NONE,
       NULL, NULL, "Acia1Enable", (void *)0,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_DISABLE_DEXX_ACIA_RS232_EMU,
-      NULL, NULL },
+      NULL, "Disable the ACIA RS232 interface emulation" },
 #endif
-    { "-ciamodel", CALL_FUNCTION, 1,
+    { "-ciamodel", CALL_FUNCTION, CMDLINE_ATTRIB_NEED_ARGS,
       set_cia_model, NULL, NULL, NULL,
-      USE_PARAM_ID, USE_DESCRIPTION_ID,
-      IDCLS_P_MODEL, IDCLS_SET_BOTH_CIA_MODELS,
-      NULL, NULL },
-    { "-cia1model", SET_RESOURCE, 1,
+      "<Model>", "Set both CIA models (0 = old 6526, 1 = new 8521)" },
+    { "-cia1model", SET_RESOURCE, CMDLINE_ATTRIB_NEED_ARGS,
       NULL, NULL, "CIA1Model", NULL,
-      USE_PARAM_ID, USE_DESCRIPTION_ID,
-      IDCLS_P_MODEL, IDCLS_SET_CIA1_MODEL,
-      NULL, NULL },
-    { "-cia2model", SET_RESOURCE, 1,
+      "<Model>", "Set CIA 1 model (0 = old 6526, 1 = new 8521)" },
+    { "-cia2model", SET_RESOURCE, CMDLINE_ATTRIB_NEED_ARGS,
       NULL, NULL, "CIA2Model", NULL,
-      USE_PARAM_ID, USE_DESCRIPTION_ID,
-      IDCLS_P_MODEL, IDCLS_SET_CIA2_MODEL,
-      NULL, NULL },
-    { "-model", CALL_FUNCTION, 1,
+      "<Model>", "Set CIA 2 model (0 = old 6526, 1 = new 8521)" },
+    { "-model", CALL_FUNCTION, CMDLINE_ATTRIB_NEED_ARGS,
       set_c64_model, NULL, NULL, NULL,
-      USE_PARAM_ID, USE_DESCRIPTION_ID,
-      IDCLS_P_MODEL, IDCLS_SET_C64_MODEL,
-      NULL, NULL },
-    { "-burstmod", SET_RESOURCE, 1,
+      "<Model>", "Set C64 model (c64/c64c/c64old, ntsc/newntsc/oldntsc, drean, jap, c64gs, pet64, ultimax)" },
+    { "-burstmod", SET_RESOURCE, CMDLINE_ATTRIB_NEED_ARGS,
       NULL, NULL, "BurstMod", NULL,
-      USE_PARAM_ID, USE_DESCRIPTION_ID,
-      IDCLS_P_VALUE, IDCLS_SET_BURST_MOD,
-      NULL, NULL },
-    { "-iecreset", SET_RESOURCE, 1,
+      "<value>", "Burst modification (0 = None, 1 = CIA1, 2 = CIA2)" },
+    { "-iecreset", SET_RESOURCE, CMDLINE_ATTRIB_NEED_ARGS,
       NULL, NULL, "IECReset", NULL,
-      USE_PARAM_ID, USE_DESCRIPTION_ID,
-      IDCLS_P_VALUE, IDCLS_SET_IEC_RESET,
-      NULL, NULL },
+      "<value>", "Computer reset goes to IEC bus (0 = No, 1 = Yes)" },
     CMDLINE_LIST_END
 };
 

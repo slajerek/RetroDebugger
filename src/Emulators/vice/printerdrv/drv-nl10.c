@@ -26,6 +26,8 @@
 
 #include "vice.h"
 
+/* #define DEBUG_PRINTER */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -37,9 +39,17 @@
 #include "output-select.h"
 #include "output.h"
 #include "palette.h"
+#include "printer.h"
 #include "sysfile.h"
 #include "vicetypes.h"
 #include "lib.h"
+#include "userport.h"
+
+#ifdef DEBUG_PRINTER
+#define DBG(x) log_printf  x
+#else
+#define DBG(x)
+#endif
 
 /* MAX_COL must be a multiple of 32 */
 /* 2432 x 3172 */
@@ -83,12 +93,12 @@
 #define NL10_ESCBUF_SIZE   60
 
 typedef struct nl10_s {
-    BYTE esc[NL10_ESCBUF_SIZE], esc_ctr;
-    BYTE line[BUF_ROW][MAX_COL];
-    BYTE htabs[41], vtabs[41], macro[16];
-    BYTE mapping[256];
-    BYTE *char_ram, *char_ram_nlq;
-    BYTE expand, expand_half;
+    uint8_t esc[NL10_ESCBUF_SIZE], esc_ctr;
+    uint8_t line[BUF_ROW][MAX_COL];
+    uint8_t htabs[41], vtabs[41], macro[16];
+    uint8_t mapping[256];
+    uint8_t *char_ram, *char_ram_nlq;
+    uint8_t expand, expand_half;
 
     int marg_l, marg_r, marg_t, marg_b;
     int mapping_intl_id;
@@ -96,30 +106,28 @@ typedef struct nl10_s {
     int col_nr, line_nr;
     int isopen, mode, gfx_mode, gfx_count;
     int linespace; /* in 1/216 inch */
+
+    int first_open_type;    /* if not 0, the driver will initialize itself (for the given type) if needed */
 } nl10_t;
 
 
 static palette_t *palette = NULL;
 
 /* Logging goes here.  */
-static log_t drvnl10_log = LOG_ERR;
+static log_t drvnl10_log = LOG_DEFAULT;
 
-#ifdef USE_EMBEDDED
-#include "printernl10cbm.h"
-#else
-static BYTE drv_nl10_rom[NL10_ROM_SIZE];
-#endif
+static uint8_t drv_nl10_rom[NL10_ROM_SIZE];
 
-static BYTE *drv_nl10_charset = drv_nl10_rom;
-static BYTE drv_nl10_charset_nlq[CHARSET_SIZE * 47];
-static BYTE drv_nl10_charset_nlq_italic[CHARSET_SIZE * 47];
+static uint8_t *drv_nl10_charset = drv_nl10_rom;
+static uint8_t drv_nl10_charset_nlq[CHARSET_SIZE * 47];
+static uint8_t drv_nl10_charset_nlq_italic[CHARSET_SIZE * 47];
 
-STATIC_PROTOTYPE const BYTE drv_nl10_charset_mapping_intl[3][8][14];
-STATIC_PROTOTYPE const BYTE drv_nl10_charset_mapping[3][256];
+static const uint8_t drv_nl10_charset_mapping_intl[3][8][14];
+static const uint8_t drv_nl10_charset_mapping[3][256];
 
 static int drv_nl10_init_charset(void);
-static int handle_control_sequence(nl10_t *nl10, unsigned int prnr, const BYTE c);
-static int handle_esc_control_sequence(nl10_t *nl10, unsigned int prnr, const BYTE c);
+static int handle_control_sequence(nl10_t *nl10, unsigned int prnr, const uint8_t c);
+static int handle_esc_control_sequence(nl10_t *nl10, unsigned int prnr, const uint8_t c);
 
 static nl10_t drv_nl10[NUM_OUTPUT_SELECT];
 
@@ -143,9 +151,9 @@ static inline int is_mode(nl10_t *nl10, unsigned int m)
 }
 
 
-static BYTE *get_char_data(nl10_t *nl10, BYTE c)
+static uint8_t *get_char_data(nl10_t *nl10, uint8_t c)
 {
-    BYTE *data;
+    uint8_t *data;
 
     if (nl10->mapping[c] == 0xff) {
         data = NULL;
@@ -169,9 +177,9 @@ static BYTE *get_char_data(nl10_t *nl10, BYTE c)
 }
 
 
-static double get_char_width(nl10_t *nl10, BYTE c, int no_prop)
+static double get_char_width(nl10_t *nl10, uint8_t c, int no_prop)
 {
-    BYTE *data = get_char_data(nl10, c);
+    uint8_t *data = get_char_data(nl10, c);
     double w;
 
     if (data == NULL) {
@@ -259,22 +267,26 @@ static void reset(nl10_t *nl10)
 static void reset_hard(nl10_t *nl10)
 {
     reset(nl10);
-    memset(nl10->char_ram, 0, 12 * 96);
-    memset(nl10->char_ram_nlq, 0, 47 * 96);
+    if (nl10->char_ram) {
+        memset(nl10->char_ram, 0, 12 * 96);
+    }
+    if (nl10->char_ram_nlq) {
+        memset(nl10->char_ram_nlq, 0, 47 * 96);
+    }
 }
 
 
-static int store_char(BYTE *dest, const BYTE *src)
+static int store_char(uint8_t *dest, const uint8_t *src)
 {
-    BYTE c, r;
+    uint8_t c, r;
     int ret = 0, s = (src[0] >> 4) & 7, e = src[0] & 15;
 
     if (s < 0 || s > 7) {
-        log_warning(drvnl10_log, "Illegal prop-start value: %u\n", s);
+        log_warning(drvnl10_log, "Illegal prop-start value: %d\n", s);
     } else if (e < 4 || e > 11) {
-        log_warning(drvnl10_log, "Illegal prop-end value: %u\n", e);
+        log_warning(drvnl10_log, "Illegal prop-end value: %d\n", e);
     } else if ((e - s) < 4) {
-        log_warning(drvnl10_log, "Illegal character width: (s=%u, e=%u)\n", s, e);
+        log_warning(drvnl10_log, "Illegal character width: (s=%d, e=%d)\n", s, e);
     } else {
         ret = 1;
     }
@@ -286,7 +298,7 @@ static int store_char(BYTE *dest, const BYTE *src)
         if (c != 0) {
             for (r = 0; r < 8; r++) {
                 if ((dest[c] & (1 << r)) && (dest[c + 1] & (1 << r))) {
-                    log_warning(drvnl10_log, "Illegal dot col=%u, row=%u\n", c + 1, r + 1);
+                    log_warning(drvnl10_log, "Illegal dot col=%d, row=%d\n", c + 1, r + 1);
                     dest[c + 1] = dest[c + 1] & ~(1 << r);
                     ret = 0;
                 }
@@ -298,9 +310,9 @@ static int store_char(BYTE *dest, const BYTE *src)
 }
 
 
-static int store_char_nlq(BYTE *dest, const BYTE *src)
+static int store_char_nlq(uint8_t *dest, const uint8_t *src)
 {
-    BYTE c, r;
+    uint8_t c, r;
     int ret = 1;
 
     dest[0] = src[0];
@@ -310,7 +322,7 @@ static int store_char_nlq(BYTE *dest, const BYTE *src)
         if (c != 0 && c != 23) {
             for (r = 0; r < 8; r++) {
                 if ((dest[c] & (1 << r)) && (dest[c + 1] & (1 << r))) {
-                    log_warning(drvnl10_log, "Illegal dot col=%u, row=%u\n", c + 1, r + 1);
+                    log_warning(drvnl10_log, "Illegal dot col=%d, row=%d\n", c + 1, r + 1);
                     dest[c + 1] = dest[c + 1] & ~(1 << r);
                     ret = 0;
                 }
@@ -341,21 +353,21 @@ static void linefeed(nl10_t *nl10, unsigned int prnr)
     for (i = 0; i < nl10->linespace; i++) {
         for (j = inc_y(nl10); j > 0; j--) {
             while (nl10->pos_y_pix < BORDERY) {
-                output_select_putc(prnr, (BYTE)(OUTPUT_NEWLINE));
+                output_select_putc(prnr, (uint8_t)(OUTPUT_NEWLINE));
                 nl10->pos_y_pix++;
             }
 
             /* output topmost row */
             for (c = 0; c < MAX_COL; c++) {
-                output_select_putc(prnr, (BYTE)(nl10->line[0][c] ? OUTPUT_PIXEL_BLACK : OUTPUT_PIXEL_WHITE));
+                output_select_putc(prnr, (uint8_t)(nl10->line[0][c] ? OUTPUT_PIXEL_BLACK : OUTPUT_PIXEL_WHITE));
             }
-            output_select_putc(prnr, (BYTE)(OUTPUT_NEWLINE));
+            output_select_putc(prnr, (uint8_t)(OUTPUT_NEWLINE));
 
             /* move everything else one row up */
-            memmove(nl10->line[0], nl10->line[1], (BUF_ROW - 1) * MAX_COL * sizeof(BYTE));
+            memmove(nl10->line[0], nl10->line[1], (BUF_ROW - 1) * MAX_COL * sizeof(uint8_t));
 
             /* clear bottom row */
-            memset(nl10->line[BUF_ROW - 1], 0, MAX_COL * sizeof(BYTE));
+            memset(nl10->line[BUF_ROW - 1], 0, MAX_COL * sizeof(uint8_t));
 
             /* increase pixel row count */
             nl10->pos_y_pix++;
@@ -363,7 +375,7 @@ static void linefeed(nl10_t *nl10, unsigned int prnr)
             /* check end-of-page */
             if (nl10->pos_y_pix >= MAX_ROW - BORDERY) {
                 while (nl10->pos_y_pix++ < MAX_ROW) {
-                    output_select_putc(prnr, (BYTE)(OUTPUT_NEWLINE));
+                    output_select_putc(prnr, (uint8_t)(OUTPUT_NEWLINE));
                 }
                 nl10->line_nr = 0;
                 nl10->pos_y = 0;
@@ -383,13 +395,13 @@ static void output_buf(nl10_t *nl10, unsigned int prnr)
     /* output buffer */
     for (r = 0; r < BUF_ROW; r++) {
         for (c = 0; c < MAX_COL; c++) {
-            output_select_putc(prnr, (BYTE)(drv_nl10[prnr].line[r][c] ? OUTPUT_PIXEL_BLACK : OUTPUT_PIXEL_WHITE));
+            output_select_putc(prnr, (uint8_t)(drv_nl10[prnr].line[r][c] ? OUTPUT_PIXEL_BLACK : OUTPUT_PIXEL_WHITE));
         }
-        output_select_putc(prnr, (BYTE)(OUTPUT_NEWLINE));
+        output_select_putc(prnr, (uint8_t)(OUTPUT_NEWLINE));
     }
 
     /* clear buffer */
-    memset(nl10->line, 0, BUF_ROW * MAX_COL * sizeof(BYTE));
+    memset(nl10->line, 0, BUF_ROW * MAX_COL * sizeof(uint8_t));
 
     nl10->pos_y += (BUF_ROW / 4 * 3);
     nl10->pos_y_pix += BUF_ROW;
@@ -401,13 +413,17 @@ static void formfeed(nl10_t *nl10, unsigned int prnr)
     int r;
     output_buf(nl10, prnr);
     for (r = nl10->pos_y_pix; r < MAX_ROW; r++) {
-        output_select_putc(prnr, (BYTE)(OUTPUT_NEWLINE));
+        output_select_putc(prnr, (uint8_t)(OUTPUT_NEWLINE));
     }
     nl10->line_nr = 1;
     nl10->pos_y = 0;
     nl10->pos_y_pix = 0;
 }
 
+
+#define valid_xpos(X)   ((X) >= 0 && (X) < MAX_COL)
+#define valid_ypos(Y)   ((Y) >= 0 && (Y) < BUF_ROW)
+#define valid_pos(X, Y) (valid_xpos(X) && valid_ypos(Y))
 
 inline static void draw_point2(nl10_t *nl10, int x, int y)
 {
@@ -417,12 +433,24 @@ inline static void draw_point2(nl10_t *nl10, int x, int y)
    **
 */
 
-    nl10->line[y][x] = 1;
-    nl10->line[y][x + 1] = 1;
-    nl10->line[y + 1][x] = 1;
-    nl10->line[y - 1][x] = 1;
-    nl10->line[y + 1][x + 1] = 1;
-    nl10->line[y - 1][x + 1] = 1;
+    if (valid_pos(x, y)) {
+        nl10->line[y][x] = 1;
+    }
+    if (valid_pos(x + 1, y)) {
+        nl10->line[y][x + 1] = 1;
+    }
+    if (valid_pos(x, y + 1)) {
+        nl10->line[y + 1][x] = 1;
+    }
+    if (valid_pos(x, y - 1)) {
+        nl10->line[y - 1][x] = 1;
+    }
+    if (valid_pos(x + 1, y + 1)) {
+        nl10->line[y + 1][x + 1] = 1;
+    }
+    if (valid_pos(x + 1, y - 1)) {
+        nl10->line[y - 1][x + 1] = 1;
+    }
 }
 
 inline static void draw_point3(nl10_t *nl10, int x, int y)
@@ -433,14 +461,24 @@ inline static void draw_point3(nl10_t *nl10, int x, int y)
     *
 */
 
-    nl10->line[y][x] = 1;
-    nl10->line[y][x - 1] = 1;
-    nl10->line[y][x + 1] = 1;
-    nl10->line[y - 1][x] = 1;
-    nl10->line[y + 1][x] = 1;
+    if (valid_pos(x, y)) {
+        nl10->line[y][x] = 1;
+    }
+    if (valid_pos(x - 1, y)) {
+        nl10->line[y][x - 1] = 1;
+    }
+    if (valid_pos(x + 1, y)) {
+        nl10->line[y][x + 1] = 1;
+    }
+    if (valid_pos(x, y - 1)) {
+        nl10->line[y - 1][x] = 1;
+    }
+    if (valid_pos(x, y + 1)) {
+        nl10->line[y + 1][x] = 1;
+    }
 }
 
-static void draw_char_nlq(nl10_t *nl10, const BYTE c)
+static void draw_char_nlq(nl10_t *nl10, const uint8_t c)
 {
 /*
      NLQ (80 char per line, 30 pixels per char):
@@ -456,11 +494,11 @@ static void draw_char_nlq(nl10_t *nl10, const BYTE c)
 */
 
     int i, j, k, n, rs, re, underline, expanded;
-    BYTE *cdata = get_char_data(nl10, c);
+    uint8_t *cdata = get_char_data(nl10, c);
 
     if (cdata) {
         int xs = nl10->pos_x;
-        BYTE desc = (cdata[0] & 128) ? 0 : 1;
+        uint8_t desc = (cdata[0] & 128) ? 0 : 1;
 
         underline = is_mode(nl10, NL10_UNDERLINE) ? 1 : 0;
         expanded = (is_mode(nl10, NL10_EXPANDED | NL10_EXPANDED_LINE) ? 2 : 1) * nl10->expand;
@@ -478,7 +516,7 @@ static void draw_char_nlq(nl10_t *nl10, const BYTE c)
         for (i = 0; i < 23; i++) {
             for (k = 0; k < expanded; k++)
             {
-                WORD data;
+                uint16_t data;
                 data = ((cdata[i + 1] & 0x01 ? 0x0002 : 0) + (cdata[i + 24] & 0x01 ? 0x0001 : 0) +
                         (cdata[i + 1] & 0x02 ? 0x0008 : 0) + (cdata[i + 24] & 0x02 ? 0x0004 : 0) +
                         (cdata[i + 1] & 0x04 ? 0x0020 : 0) + (cdata[i + 24] & 0x04 ? 0x0010 : 0) +
@@ -518,7 +556,7 @@ static void draw_char_nlq(nl10_t *nl10, const BYTE c)
     }
 }
 
-static void draw_char_draft(nl10_t *nl10, const BYTE c)
+static void draw_char_draft(nl10_t *nl10, const uint8_t c)
 {
 /*
      Pica (80 char per line, 30 pixels per char):
@@ -557,7 +595,7 @@ static void draw_char_draft(nl10_t *nl10, const BYTE c)
 
     int i, j, k, l, m, n, cs, ce, rs, re, expanded, condensed, pinspace, pinoffset;
     int bold, emphasize, underline, elite;
-    BYTE desc, *cdata = get_char_data(nl10, c);
+    uint8_t desc, *cdata = get_char_data(nl10, c);
 
     if (cdata) {
         int xs = nl10->pos_x;
@@ -590,7 +628,7 @@ static void draw_char_draft(nl10_t *nl10, const BYTE c)
         desc = (cdata[0] & 128) ? 0 : 1;
         for (i = cs; i <= ce; i++)
         {
-            BYTE data = cdata[i + 1];
+            uint8_t data = cdata[i + 1];
             for (j = rs; j < re; j++) {
                 if (data & (1 << (7 - j))) {
                     for (l = 0; l <= emphasize; l++) {
@@ -649,10 +687,10 @@ static void draw_char_draft(nl10_t *nl10, const BYTE c)
 }
 
 
-static void draw_char_draft_reverse(nl10_t *nl10, const BYTE c)
+static void draw_char_draft_reverse(nl10_t *nl10, const uint8_t c)
 {
     int i, j, k, expanded;
-    BYTE *cdata = get_char_data(nl10, c);
+    uint8_t *cdata = get_char_data(nl10, c);
 
     if (cdata) {
         expanded = (is_mode(nl10, NL10_EXPANDED | NL10_EXPANDED_LINE) ? 2 : 1) * nl10->expand;
@@ -660,7 +698,7 @@ static void draw_char_draft_reverse(nl10_t *nl10, const BYTE c)
         for (i = 0; i <= 11; i++) {
             for (k = 0; k < expanded; k++) {
                 for (j = 0; j < 7; j++) {
-                    BYTE bit = 1 << (7 - j);
+                    uint8_t bit = 1 << (7 - j);
 
                     if ((i < 11 && (cdata[i + 1] & bit)) || (i > 0 && (cdata[i] & bit))) {
                     } else {
@@ -683,7 +721,7 @@ static void draw_char_draft_reverse(nl10_t *nl10, const BYTE c)
 }
 
 
-static void draw_char(nl10_t *nl10, const BYTE c)
+static void draw_char(nl10_t *nl10, const uint8_t c)
 {
     /*printf("draw_char %i %i\n", c, cc);*/
 
@@ -704,7 +742,7 @@ static void draw_char(nl10_t *nl10, const BYTE c)
 }
 
 
-static void draw_graphics(nl10_t *nl10, BYTE c)
+static void draw_graphics(nl10_t *nl10, uint8_t c)
 {
     int j;
 
@@ -873,7 +911,7 @@ static void draw_graphics(nl10_t *nl10, BYTE c)
 }
 
 
-static void print_char(nl10_t *nl10, unsigned int prnr, const BYTE c)
+static void print_char(nl10_t *nl10, unsigned int prnr, const uint8_t c)
 {
     /* handle dot-graphics pringing */
     if (nl10->gfx_mode != NL10_GFX_OFF) {
@@ -897,7 +935,7 @@ static void print_char(nl10_t *nl10, unsigned int prnr, const BYTE c)
     /* handle CBM quoted-mode (print description strings for control characters,
        e.g. print "(rvs)" for character 0x12) */
     if (is_mode(nl10, NL10_QUOTED)) {
-        WORD i = 0;
+        uint16_t i = 0;
 
         /* find pointer to description string in ROM */
         if ((c >= 0x01) && (c < 0x20) && (c != 0x0d)) {
@@ -957,7 +995,7 @@ static void print_char(nl10_t *nl10, unsigned int prnr, const BYTE c)
 }
 
 
-static int handle_control_sequence(nl10_t *nl10, unsigned int prnr, const BYTE c)
+static int handle_control_sequence(nl10_t *nl10, unsigned int prnr, const uint8_t c)
 {
     if (nl10->esc_ctr >= NL10_ESCBUF_SIZE) {
         /* We should never get here.  If we do then there is a bug
@@ -1208,7 +1246,7 @@ static int handle_control_sequence(nl10_t *nl10, unsigned int prnr, const BYTE c
 }
 
 
-static int handle_esc_control_sequence(nl10_t *nl10, unsigned int prnr, const BYTE c)
+static int handle_esc_control_sequence(nl10_t *nl10, unsigned int prnr, const uint8_t c)
 {
     switch (nl10->esc[1]) {
         case 10:
@@ -1389,7 +1427,7 @@ static int handle_esc_control_sequence(nl10_t *nl10, unsigned int prnr, const BY
                     nl10->esc_ctr++;
                 } else if (nl10->esc[2] == 1) {
                     /* execute macro */
-                    BYTE i;
+                    uint8_t i;
                     for (i = 0; i < 16; i++) {
                         if (nl10->macro[i] == 30) {
                             break;
@@ -1402,7 +1440,7 @@ static int handle_esc_control_sequence(nl10_t *nl10, unsigned int prnr, const BY
                     nl10->esc_ctr++;
                 } else {
                     /* define macro */
-                    BYTE i;
+                    uint8_t i;
                     for (i = 0; i < 16; i++) {
                         nl10->macro[i] = nl10->esc[2 + i];
                     }
@@ -1478,10 +1516,10 @@ static int handle_esc_control_sequence(nl10_t *nl10, unsigned int prnr, const BY
                     nl10->esc_ctr++;
                 } else {
                     if (nl10->esc[2] == 0 && nl10->esc[3] == 0 && nl10->esc[4] == 0) {
-                        int c;
-                        for (c = 0; c < 96; c++) {
-                            memcpy(nl10->char_ram + c * 12, drv_nl10_charset + nl10->mapping[c + 32] * 12, 12);
-                            memcpy(nl10->char_ram_nlq + c * 47, drv_nl10_charset_nlq + nl10->mapping[c + 32] * 47, 47);
+                        int b;
+                        for (b = 0; b < 96; b++) {
+                            memcpy(nl10->char_ram + b * 12, drv_nl10_charset + nl10->mapping[b + 32] * 12, 12);
+                            memcpy(nl10->char_ram_nlq + b * 47, drv_nl10_charset_nlq + nl10->mapping[b + 32] * 47, 47);
                         }
                     }
                     nl10->esc_ctr = 0;
@@ -1896,25 +1934,80 @@ static int handle_esc_control_sequence(nl10_t *nl10, unsigned int prnr, const BY
 /* ------------------------------------------------------------------------- */
 /* Interface to the upper layer.  */
 
+static int nl10_palette_init(void)
+{
+    const char *color_names[2] = {"Black", "White"};
+
+    /* FIXME: rename the palette somehow? */
+    palette = palette_create(2, color_names);
+
+    if (palette == NULL) {
+        return -1;
+    }
+
+    if (palette_load("nl10.vpl", "PRINTER", palette) < 0) {
+        log_error(drvnl10_log, "Cannot load palette file `%s'.",
+                  "nl10.vpl");
+        return -1;
+    }
+
+    return 0;
+}
+
+static int drv_nl10_first_open(unsigned int prnr)
+{
+    int i;
+    DBG(("drv_nl10_first_open(prnr:%u secondary:DRIVER_FIRST_OPEN) device:%u", prnr, 4 + prnr));
+    output_parameter_t output_parameter;
+
+    /* allocate RAM buffers */
+    for (i = 0; i < NUM_OUTPUT_SELECT; i++) {
+        if (drv_nl10[i].char_ram == NULL) {
+            drv_nl10[i].char_ram = lib_malloc(96 * 12);
+            memset(drv_nl10[i].char_ram, 0, 12 * 96);
+        }
+        if (drv_nl10[i].char_ram_nlq == NULL) {
+            drv_nl10[i].char_ram_nlq = lib_malloc(96 * 47);
+            memset(drv_nl10[i].char_ram_nlq, 0, 47 * 96);
+        }
+        reset_hard(&(drv_nl10[i]));
+        drv_nl10[i].isopen = 0;
+    }
+
+    /* load ROM, init charset */
+    if (drv_nl10_init_charset() < 0) {
+        return -1;
+    }
+
+    /* load palette (if needed) */
+    if ((palette == NULL) && (nl10_palette_init() < 0)) {
+        return -1;
+    }
+
+    output_parameter.maxcol = MAX_COL;
+    output_parameter.maxrow = MAX_ROW;
+    output_parameter.dpi_x = 300;
+    output_parameter.dpi_y = 300;
+    output_parameter.palette = palette;
+
+    drv_nl10[prnr].pos_y = 0;
+    drv_nl10[prnr].pos_y_pix = 0;
+    drv_nl10[prnr].isopen = 1;
+
+    drv_nl10[prnr].first_open_type = 0;
+
+    return output_select_open(prnr, &output_parameter);
+}
+
 static int drv_nl10_open(unsigned int prnr, unsigned int secondary)
 {
     nl10_t *nl10 = &(drv_nl10[prnr]);
 
     if (secondary == DRIVER_FIRST_OPEN) {
-        output_parameter_t output_parameter;
-
-        output_parameter.maxcol = MAX_COL;
-        output_parameter.maxrow = MAX_ROW;
-        output_parameter.dpi_x = 300;
-        output_parameter.dpi_y = 300;
-        output_parameter.palette = palette;
-
-        drv_nl10[prnr].pos_y = 0;
-        drv_nl10[prnr].pos_y_pix = 0;
-        drv_nl10[prnr].isopen = 1;
-
-        return output_select_open(prnr, &output_parameter);
+        drv_nl10[prnr].first_open_type = 10;
+        return 0;
     }
+    DBG(("drv_nl10_open(prnr:%u secondary:%u) device:%u", prnr, secondary, 4 + prnr));
 
     if (secondary == 7) {
         set_mode(nl10, NL10_CBMTEXT);
@@ -1927,8 +2020,29 @@ static int drv_nl10_open(unsigned int prnr, unsigned int secondary)
     return 0;
 }
 
+static int drv_first_open(unsigned int prnr)
+{
+    DBG(("drv_first_open(prnr:%u first_open_type:%d)", prnr, drv_nl10[prnr].first_open_type));
+
+    if ((palette == NULL) && (nl10_palette_init() < 0)) {
+        return -1;
+    }
+
+    switch (drv_nl10[prnr].first_open_type) {
+        case 10:
+            return drv_nl10_first_open(prnr);
+        case 0:
+            return 0;
+    }
+    return -1;
+}
+
 static void drv_nl10_close(unsigned int prnr, unsigned int secondary)
 {
+    DBG(("drv_nl10_close(prnr:%u secondary:%u) device:%u", prnr, secondary, 4 + prnr));
+    if (drv_first_open(prnr) < 0) {
+        return;
+    }
     /* cannot call output_select_close() here since it would eject the
        current page, which is not what "close"ing a channel to a real
        printer does */
@@ -1939,43 +2053,80 @@ static void drv_nl10_close(unsigned int prnr, unsigned int secondary)
     */
 }
 
-static int drv_nl10_putc(unsigned int prnr, unsigned int secondary, BYTE b)
+static int drv_nl10_putc(unsigned int prnr, unsigned int secondary, uint8_t b)
 {
+    if (drv_first_open(prnr) < 0) {
+        return 0;
+    }
     print_char(&drv_nl10[prnr], prnr, b);
     return 0;
 }
 
-static int drv_nl10_getc(unsigned int prnr, unsigned int secondary, BYTE *b)
+static int drv_nl10_getc(unsigned int prnr, unsigned int secondary, uint8_t *b)
 {
+    if (drv_first_open(prnr) < 0) {
+        return 0;
+    }
     return 0x80;
 }
 
 static int drv_nl10_flush(unsigned int prnr, unsigned int secondary)
 {
+    DBG(("drv_nl10_flush(prnr:%u secondary:%u) device:%u", prnr, secondary, 4 + prnr));
+    if (drv_first_open(prnr) < 0) {
+        return -1;
+    }
     return 0;
 }
 
 static int drv_nl10_formfeed(unsigned int prnr)
 {
+    DBG(("drv_nl10_formfeed(prnr:%u) device:%u", prnr, 4 + prnr));
     nl10_t *nl10 = &(drv_nl10[prnr]);
+#if 0 /* do not auto-init on formfeed, avoid superflous init at shutdown */
+    if (drv_first_open(prnr) < 0) {
+        return -1;
+    }
+#endif
     if (nl10->isopen) {
         formfeed(nl10, prnr);
     }
     return 0;
 }
 
+static int drv_nl10_select(unsigned int prnr)
+{
+    DBG(("drv_nl10_select(prnr:%u) device:%u", prnr, 4 + prnr));
+    if (drv_first_open(prnr) < 0) {
+        return -1;
+    }
+    if ((prnr == PRINTER_USERPORT) && (userport_get_device() == USERPORT_DEVICE_PRINTER)) {
+        return drv_nl10_open(prnr, DRIVER_FIRST_OPEN);
+    }
+    return 0;
+}
+
 int drv_nl10_init_resources(void)
 {
-    driver_select_t driver_select;
+    driver_select_t driver_select = {
+        .drv_name     = "nl10",
+        .ui_name      = "NL10",
+        .drv_select   = drv_nl10_select,
+        .drv_open     = drv_nl10_open,
+        .drv_close    = drv_nl10_close,
+        .drv_putc     = drv_nl10_putc,
+        .drv_getc     = drv_nl10_getc,
+        .drv_flush    = drv_nl10_flush,
+        .drv_formfeed = drv_nl10_formfeed,
 
-    driver_select.drv_name = "nl10";
-    driver_select.drv_open = drv_nl10_open;
-    driver_select.drv_close = drv_nl10_close;
-    driver_select.drv_putc = drv_nl10_putc;
-    driver_select.drv_getc = drv_nl10_getc;
-    driver_select.drv_flush = drv_nl10_flush;
-    driver_select.drv_formfeed = drv_nl10_formfeed;
-
+        .printer      = true,
+        .plotter      = false,
+        .iec          = true,
+        .ieee488      = false,
+        .userport     = true,
+        .text         = true,
+        .graphics     = true
+    };
     driver_select_register(&driver_select);
 
     return 0;
@@ -1983,38 +2134,9 @@ int drv_nl10_init_resources(void)
 
 int drv_nl10_init(void)
 {
-    int i;
-    static const char *color_names[2] =
-    {
-        "Black", "White"
-    };
+    DBG(("drv_nl10_init"));
 
     drvnl10_log = log_open("NL10");
-
-    for (i = 0; i < NUM_OUTPUT_SELECT; i++) {
-        drv_nl10[i].char_ram = lib_malloc(96 * 12);
-        drv_nl10[i].char_ram_nlq = lib_malloc(96 * 47);
-        reset_hard(&(drv_nl10[i]));
-        drv_nl10[i].isopen = 0;
-    }
-
-    if (drv_nl10_init_charset() < 0) {
-        return -1;
-    }
-
-    palette = palette_create(2, color_names);
-
-    if (palette == NULL) {
-        return -1;
-    }
-
-    if (palette_load("nl10" FSDEV_EXT_SEP_STR "vpl", palette) < 0) {
-        log_error(drvnl10_log, "Cannot load palette file `%s'.",
-                  "nl10" FSDEV_EXT_SEP_STR "vpl");
-        return -1;
-    }
-
-    log_message(drvnl10_log, "Printer driver initialized.");
 
     return 0;
 }
@@ -2022,7 +2144,10 @@ int drv_nl10_init(void)
 void drv_nl10_shutdown(void)
 {
     int i;
+    DBG(("drv_nl10_shutdown"));
+
     palette_free(palette);
+    palette = NULL;
 
     for (i = 0; i < NUM_OUTPUT_SELECT; i++) {
         if (drv_nl10[i].isopen) {
@@ -2031,6 +2156,8 @@ void drv_nl10_shutdown(void)
 
         lib_free(drv_nl10[i].char_ram);
         lib_free(drv_nl10[i].char_ram_nlq);
+        drv_nl10[i].char_ram = NULL;
+        drv_nl10[i].char_ram_nlq = NULL;
     }
 }
 
@@ -2048,7 +2175,7 @@ void drv_nl10_reset(void)
 /* character data and mappings  */
 
 
-static const BYTE drv_nl10_charset_mapping_intl[3][8][14] =
+static const uint8_t drv_nl10_charset_mapping_intl[3][8][14] =
 {   /* ASCII */
     {
         /*    #     $     @     [     \     ]     {     |     }     ~    */
@@ -2091,7 +2218,7 @@ static const BYTE drv_nl10_charset_mapping_intl[3][8][14] =
 };
 
 
-static const BYTE drv_nl10_charset_mapping[3][256] =
+static const uint8_t drv_nl10_charset_mapping[3][256] =
 {   /* ASCII */
     {
         /* unprintable */
@@ -2198,16 +2325,21 @@ static const BYTE drv_nl10_charset_mapping[3][256] =
 
 /* -------------------------------------------------------------------------- */
 
+/* loads drv_nl10_rom,
+ * inits drv_nl10_charset_nlq, drv_nl10_charset_nlq_italic
+ */
 static int drv_nl10_init_charset(void)
 {
-    char *name = "nl10-cbm";
+    char *name = NL10_ROM_NAME;
     int i, j;
 
+    DBG(("drv_nl10_init_charset"));
+    /* NOTE: we could dynamically allocate drv_nl10_charset_nlq and -_italic here */
     memset(drv_nl10_charset_nlq, 0, CHARSET_SIZE * 47);
     memset(drv_nl10_charset_nlq_italic, 0, CHARSET_SIZE * 47);
 
     /* load nl-10 rom file */
-    if (sysfile_load(name, drv_nl10_rom, NL10_ROM_SIZE, NL10_ROM_SIZE) < 0) {
+    if (sysfile_load(name, "PRINTER", drv_nl10_rom, NL10_ROM_SIZE, NL10_ROM_SIZE) < 0) {
         memset(drv_nl10_rom, 0, NL10_ROM_SIZE);
         log_error(drvnl10_log, "Could not load NL-10 ROM file '%s'.", name);
         return -1;
@@ -2235,7 +2367,7 @@ static int drv_nl10_init_charset(void)
         drv_nl10_charset_nlq_italic[i * 47] = drv_nl10_charset[i * 12] & 128 ? 255 : 0;
 
         for (j = 0; j < 6; j++) {
-            BYTE b = drv_nl10_charset[i * 12 + j * 2 + 1];
+            uint8_t b = drv_nl10_charset[i * 12 + j * 2 + 1];
             drv_nl10_charset_nlq[i * 47 + j * 4 + 1] = b;
             drv_nl10_charset_nlq[i * 47 + j * 4 + 3] = b;
             drv_nl10_charset_nlq[i * 47 + j * 4 + 24] = b;

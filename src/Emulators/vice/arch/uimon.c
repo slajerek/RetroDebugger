@@ -37,6 +37,7 @@
 #include "uimenu.h"
 #include "log.h"
 #include "ViceWrapper.h"
+#include "vice_debugger_hook.h"
 
 static console_t mon_console = {
     40,
@@ -57,7 +58,7 @@ void uimon_window_close(void)
 
 console_t c64d_console_log = { 80, 25, 1, 0 };
 
-console_t *uimon_window_open(void)
+console_t *uimon_window_open(bool display_now)	/* VICE 3.10: + display_now */
 {
 	return &c64d_console_log;
 	
@@ -78,7 +79,7 @@ void uimon_window_suspend(void)
 
 console_t *uimon_window_resume(void)
 {
-    return uimon_window_open();
+    return uimon_window_open(true);
 }
 
 int uimon_out(const char *buffer)
@@ -95,7 +96,7 @@ int uimon_out(const char *buffer)
             p[i] = 0;
             //sdl_ui_print(p, x_pos, y);
             //sdl_ui_scroll_screen_up();
-			c64d_uimon_print_line(p);
+			VICE_HOOK_LIFECYCLE_UIMON_LINE(p);
 
             //x_pos = 0;
             p += i + 1;
@@ -107,7 +108,7 @@ int uimon_out(const char *buffer)
 
     if (p[0] != 0) {
         //x_pos += sdl_ui_print(p, x_pos, y);
-		c64d_uimon_print(p);
+		VICE_HOOK_LIFECYCLE_UIMON_PRINT(p);
     }
     return 0;
 }
@@ -125,7 +126,7 @@ char *uimon_get_in(char **ppchCommandLine, const char *prompt)
     sdl_ui_scroll_screen_up();
 
     if (input == NULL) {
-        input = lib_stralloc("x");
+        input = lib_strdup("x");
     }
 
     return input;

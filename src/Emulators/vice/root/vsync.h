@@ -1,5 +1,5 @@
 /*
- * vsyn.h - Common vsync API.
+ * vsync.h - Common vsync API.
  *
  * Written by
  *  Andreas Boose <viceteam@t-online.de>
@@ -33,18 +33,27 @@
 #define VSYNC_DEBUG
 #endif
 
+typedef void (*vsync_callback_func_t)(void *param);
+typedef struct vsync_callback {
+    vsync_callback_func_t callback;
+    void *param;
+} vsync_callback_t;
+
 struct video_canvas_s;
 
-extern int vsync_frame_counter;
-
-extern void vsync_suspend_speed_eval(void);
-extern void vsync_sync_reset(void);
-extern int vsync_resources_init(void);
-extern int vsync_cmdline_options_init(void);
-extern void vsync_init(void (*hook)(void));
-extern void vsync_set_machine_parameter(double refresh_rate, long cycles);
-extern double vsync_get_refresh_frequency(void);
-extern int vsync_do_vsync(struct video_canvas_s *c, int been_skipped, int isPaused);
-extern int vsync_disable_timer(void);
+void vsync_suspend_speed_eval(void);
+void vsync_reset_hook(void);
+int vsync_resources_init(void);
+int vsync_cmdline_options_init(void);
+void vsync_init(void (*hook)(void));
+void vsync_shutdown(void);
+void vsync_set_machine_parameter(double refresh_rate, long cycles);
+double vsync_get_refresh_frequency(void);
+void vsync_do_end_of_line(void);
+bool vsync_should_skip_frame(struct video_canvas_s *canvas);
+void vsync_do_vsync(struct video_canvas_s *c);
+void vsync_on_vsync_do(vsync_callback_func_t callback_func, void *callback_param);
+void vsync_set_warp_mode(int val);
+int vsync_get_warp_mode(void);
 
 #endif

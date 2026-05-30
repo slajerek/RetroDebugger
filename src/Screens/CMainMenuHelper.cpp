@@ -1631,7 +1631,7 @@ void CMainMenuHelper::ThreadRun(void *data)
 			else if (c64SettingsAutoJmpDoReset == MACHINE_LOADPRG_RESET_MODE_LOAD_SNAPSHOT_BASIC)
 			{
 				LOGD("c64SettingsAutoJmpDoReset is MACHINE_LOAD_SNAPSHOT_BASIC");
-				
+
 				if (viewC64->debugInterfaceC64->GetC64ModelType() != 0)
 				{
 					viewC64->debugInterfaceC64->ForceRunAndUnJamCpu();
@@ -1639,11 +1639,11 @@ void CMainMenuHelper::ThreadRun(void *data)
 					C64DebuggerSetSetting("C64Model", &modelId);
 					SYS_Sleep(200);
 				}
-				
+
 				viewC64->debugInterfaceC64->PauseEmulationBlockedWait();
 
 				guiMain->LockMutex();
-				
+
 				CSlrFileZlib *fileZlib = RES_GetFileZlib("/template/reset_basic_snapshot", DEPLOY_FILE_TYPE_DATA);
 				u32 fileSize = fileZlib->GetFileSize();
 				u8 *snapshotData = new u8[fileSize];
@@ -1652,13 +1652,13 @@ void CMainMenuHelper::ThreadRun(void *data)
 				viewC64->debugInterfaceC64->LoadFullSnapshot(byteBuffer);
 				delete byteBuffer;
 				delete fileZlib;
-				
+
 				// be sure that snapshot is loaded, run one instruction
 				viewC64->debugInterfaceC64->PauseEmulationBlockedWait();
-				
+
 				// and then switch to RUNNING
 				viewC64->debugInterfaceC64->SetDebugMode(DEBUGGER_MODE_RUNNING);
-				
+
 				SetupC64Defaults();
 
 				// and insert disk
@@ -1666,15 +1666,13 @@ void CMainMenuHelper::ThreadRun(void *data)
 				{
 					debugInterfaceVice->InsertD64(c64SettingsPathToD64);
 				}
-				// inserting is synched, does not need sleep here
-//				SYS_Sleep(50);
 
 				viewC64->debugInterfaceC64->PauseEmulationBlockedWait();
 				viewC64->debugInterfaceC64->SetDebugMode(DEBUGGER_MODE_RUNNING);
 
 				// prepare drive RAM, set vectors etc
 				debugInterfaceVice->PrepareDriveForBasicRun();
-				
+
 				guiMain->UnlockMutex();
 			}
 		}
@@ -1765,26 +1763,54 @@ bool CMainMenuHelper::LoadPRGNotThreaded(CByteBuffer *byteBuffer, bool autoStart
 		
 		if (startAddr == 0x0801 || startAddr == 0x0800)
 		{
-//			if (isRunBasicCompatibleMode)
 			{
-				// new "RUN"
 				SetBasicVectors(endAddr);
-				
-//				viewC64->ShowMessage("LoadPRGNotThreaded");
-				
+
 				viewC64->debugInterfaceC64->symbols->memory->ClearReadWriteDebugMarkers();
 				viewC64->debugInterfaceC64->symbolsDrive1541->memory->ClearReadWriteDebugMarkers();
-				
-				
-				viewC64->debugInterfaceC64->MakeJMPToBasicRunC64();
 
-//				viewC64->ShowMainScreen();
+				/* Parse "SYS NNNN" from the first line and JMP directly to NNNN.
+				   The BASIC RUN trap to $A659 was not reliably advancing through
+				   NEWSTT on 3.10 — execution diverted to zero-page BRK. Parsing
+				   the SYS argument directly works for every SYS-stub PRG. */
+				int sysTarget = -1;
+				u8 b = viewC64->debugInterfaceC64->GetByteC64(0x0805);
+				int numStartAddr = -1;
+				if (b == 0x9E) {
+					numStartAddr = 0x0806;
+				} else if (b == 0x00) {
+					for (int i = 0x0806; i < 0x0900; i++) {
+						if (viewC64->debugInterfaceC64->GetByteC64(i) == 0x9E) {
+							numStartAddr = i + 1;
+							break;
+						}
+					}
+				}
+				if (numStartAddr != -1) {
+					int val = 0; int digits = 0;
+					for (int i = numStartAddr; i < numStartAddr + 8; i++) {
+						u8 c = viewC64->debugInterfaceC64->GetByteC64((u16)i);
+						if (c == 0x20) continue;
+						if (c < 0x30 || c > 0x39) break;
+						val = val * 10 + (c - 0x30);
+						digits++;
+					}
+					if (digits > 0 && val >= 0x0400 && val <= 0xFFFF) {
+						sysTarget = val;
+					}
+				}
+
+				if (sysTarget != -1) {
+					LOGD("LoadPRG: auto-RUN via SYS %d ($%04x)", sysTarget, sysTarget);
+					viewC64->debugInterfaceC64->MakeJmpC64((uint16)sysTarget);
+				} else {
+					LOGD("LoadPRG: no SYS found, using BASIC RUN trap");
+					viewC64->debugInterfaceC64->MakeJMPToBasicRunC64();
+				}
 
 				viewC64->debugInterfaceC64->ForceRunAndUnJamCpu();
-				
-				
-				
-				
+
+				foundBasicSys = true;
 			}
 			/*
 			else

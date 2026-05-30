@@ -48,12 +48,12 @@ alarm_context_t *alarm_context_new(const char *name)
 
 void alarm_context_init(alarm_context_t *context, const char *name)
 {
-    context->name = lib_stralloc(name);
+    context->name = lib_strdup(name);
 
     context->alarms = NULL;
 
     context->num_pending_alarms = 0;
-    context->next_pending_alarm_clk = (CLOCK) ~0L;
+    context->next_pending_alarm_clk = CLOCK_MAX;
 }
 
 void alarm_context_destroy(alarm_context_t *context)
@@ -105,7 +105,7 @@ void alarm_context_time_warp(alarm_context_t *context, CLOCK warp_amount,
 static void alarm_init(alarm_t *alarm, alarm_context_t *context,
                        const char *name, alarm_callback_t callback, void *data)
 {
-    alarm->name = lib_stralloc(name);
+    alarm->name = lib_strdup(name);
     alarm->context = context;
     alarm->callback = callback;
     alarm->data = data;
@@ -199,7 +199,7 @@ void alarm_unset(alarm_t *alarm)
         }
     } else {
         context->num_pending_alarms = 0;
-        context->next_pending_alarm_clk = (CLOCK) ~0L;
+        context->next_pending_alarm_clk = CLOCK_MAX;
         context->next_pending_alarm_idx = -1;
     }
 

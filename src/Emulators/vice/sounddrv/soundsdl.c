@@ -394,6 +394,16 @@ static int sdl_resume(void)
     return 0;
 }
 
+/* VICE 3.10's sound_flush() at sound.c:1786 polls bufferspace() in a tight loop
+   that tick_sleep()s 1 ms whenever the audio device claims it's full. RD's SDL
+   driver depends on sdl_callback() (invoked by MTEngineSDL's audio engine via
+   CAudioChannelVice::FillBuffer) to advance sdl_outptr and free space. Under the
+   3.10 merge the engine doesn't seem to call FillBuffer reliably during cold-start
+   -- sdl_bufferspace() then returns 0 forever, the C64 thread blocks in nanosleep,
+   the kernal never reaches the BASIC ready prompt, the screen stays black. Setting
+   bufferspace=NULL makes sound.c treat us as a blocking driver and write everything
+   in one shot, so sound_flush() returns promptly and the CPU keeps running.
+   Audio fidelity may suffer; correctness wins. */
 static sound_device_t sdl_device =
 {
     "sdl",
@@ -401,7 +411,7 @@ static sound_device_t sdl_device =
     sdl_write,
     NULL,
     NULL,
-    sdl_bufferspace,
+    NULL,           /* bufferspace -- was sdl_bufferspace; see comment above */
     sdl_close,
     sdl_suspend,
     sdl_resume,

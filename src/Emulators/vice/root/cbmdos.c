@@ -4,6 +4,9 @@
  * Written by
  *  Andreas Boose <viceteam@t-online.de>
  *
+ * Parser plus by
+ *  Roberto Muscedere <rmusced@uwindsor.ca>
+ *
  * This file is part of VICE, the Versatile Commodore Emulator.
  * See README for copyright notice.
  *
@@ -62,7 +65,7 @@ static const cbmdos_errortext_t cbmdos_error_messages[] =
     { 33, "SYNTAX ERROR" },
     { 34, "SYNTAX ERROR" },
     { 39, "FILE NOT FOUND" }, /* 2000/4000 */
-    { 50, "RECORD NOT RESENT" },
+    { 50, "RECORD NOT PRESENT" },
     { 51, "OVERFLOW IN RECORD" },
     { 52, "FILE TOO LARGE" },   /* 1581 */
     { 60, "WRITE FILE OPEN" },
@@ -72,11 +75,13 @@ static const cbmdos_errortext_t cbmdos_error_messages[] =
     { 64, "FILE TYPE MISMATCH" },
     { 65, "NO BLOCK" },
     { 66, "ILLEGAL TRACK OR SECTOR" },
-    { 67, "ILLEGAL SYSTEM T OR S" },
+    { 67, "ILLEGAL SYSTEM T OR S" }, /* on 1581 it is still ILLEGAL TRACK OR SECTOR */
     { 70, "NO CHANNEL" },
+    { 71, "DIRECTORY ERROR" },
     { 72, "DISK FULL" },
-    { 73, "VIRTUAL DRIVE EMULATION V2.2" }, /* The program version */
+    { 73, "VIRTUAL DRIVE EMULATION V3.5" }, /* The program version */
     { 74, "DRIVE NOT READY" },
+    { 75, "FORMAT ERROR" },
     { 77, "SELECTED PARTITION ILLEGAL" },   /* 1581 */
     { 80, "DIRECTORY NOT EMPTY" },
     { 81, "PERMISSION DENIED" },
@@ -86,7 +91,7 @@ static const cbmdos_errortext_t cbmdos_error_messages[] =
 /* types 0 - 6 are regular CBM file types. real drives return random garbage
  * from the ROM when type 7 appears in the directoy
  */
-static const char *cbmdos_ft[] = {
+static const char * const cbmdos_ft[] = {
     "DEL", "SEQ", "PRG", "USR", "REL", "CBM", "DIR", "???"
 };
 
@@ -122,7 +127,7 @@ unsigned int cbmdos_parse_wildcard_check(const char *name, unsigned int len)
     return 0;
 }
 
-unsigned int cbmdos_parse_wildcard_compare(const BYTE *name1, const BYTE *name2)
+unsigned int cbmdos_parse_wildcard_compare(const uint8_t *name1, const uint8_t *name2)
 {
     unsigned int index;
 
@@ -147,9 +152,9 @@ unsigned int cbmdos_parse_wildcard_compare(const BYTE *name1, const BYTE *name2)
     return 1; /* matched completely */
 }
 
-BYTE *cbmdos_dir_slot_create(const char *name, unsigned int len)
+uint8_t *cbmdos_dir_slot_create(const char *name, unsigned int len)
 {
-    BYTE *slot;
+    uint8_t *slot;
 
     if (len > CBMDOS_SLOT_NAME_LENGTH) {
         len = CBMDOS_SLOT_NAME_LENGTH;
@@ -163,20 +168,22 @@ BYTE *cbmdos_dir_slot_create(const char *name, unsigned int len)
     return slot;
 }
 
-/* Parse command `parsecmd', type and read/write mode from the given string
-   `cmd' with `cmdlength. '@' on write must be checked elsewhere.  */
+/* Parse file-name `parsecmd', type, and read/write mode from the given string
+   `cmd' with `cmdlength'. '@' on write must be checked elsewhere. */
 
 unsigned int cbmdos_command_parse(cbmdos_cmd_parse_t *cmd_parse)
 {
-    const BYTE *p;
+    const uint8_t *p;
     char *parsecmd, *c;
     int cmdlen;
 
 #ifdef DEBUG_CBMDOS
-    log_debug("CBMDOS parse cmd: '%s' cmdlen: %d", cmd_parse->cmd, cmd_parse->cmdlength);
+    log_debug(LOG_DEFAULT, "CBMDOS parse cmd: '%s' cmdlen: %u", cmd_parse->cmd, cmd_parse->cmdlength);
 #endif
 
+    cmd_parse->atsign = 0;
     cmd_parse->parsecmd = NULL;
+    cmd_parse->recordlength = 0;
     cmd_parse->readmode = (cmd_parse->secondary == 1)
                           ? CBMDOS_FAM_WRITE : CBMDOS_FAM_READ;
 
@@ -196,12 +203,18 @@ unsigned int cbmdos_command_parse(cbmdos_cmd_parse_t *cmd_parse)
             }
             /* skip colon */
             if (*p == ':') {
-                p++;
+                if (*++p == '\0') {
+                    /* "Nothing" after a colon is actually an empty pattern.
+                     * Make it match nothing -- count the NUL byte.
+                     * At the end, parselength will be the pattern's length.
+                     */
+                    ++cmd_parse->cmdlength;
+                }
             }
             /* everything from here is the pattern */
         } else {
-            /* Just a single $, set pointer to null byte */
-            p = cmd_parse->cmd + cmd_parse->cmdlength;
+            /* Just a single $, set pointer to NUL byte */
+            ++p;
         }
     } else {
         p = memchr(cmd_parse->cmd, ':', cmd_parse->cmdlength);
@@ -223,13 +236,7 @@ unsigned int cbmdos_command_parse(cbmdos_cmd_parse_t *cmd_parse)
     }
 
 #ifdef DEBUG_CBMDOS
-    log_debug("CBMDOS parse pattern: '%s' drive:%d", p, cmd_parse->drive);
-#endif
-
-#if 0
-    if (cmd_parse->cmd[0] == '@' && p == cmd_parse->cmd) {
-        p++;
-    }
+    log_debug(LOG_DEFAULT, "CBMDOS parse pattern: '%s' drive:%d", p, cmd_parse->drive);
 #endif
 
     cmdlen = cmd_parse->cmdlength - (int)(p - cmd_parse->cmd);
@@ -247,7 +254,7 @@ unsigned int cbmdos_command_parse(cbmdos_cmd_parse_t *cmd_parse)
     }
 
 #ifdef DEBUG_CBMDOS
-    log_debug("CBMDOS parsed cmd: '%s'", cmd_parse->parsecmd);
+    log_debug(LOG_DEFAULT, "CBMDOS parsed cmd: '%s'", cmd_parse->parsecmd);
 #endif
 
     /* Preset the file-type if the LOAD/SAVE secondary addresses are used. */
@@ -274,20 +281,33 @@ unsigned int cbmdos_command_parse(cbmdos_cmd_parse_t *cmd_parse)
             case 'U':
                 cmd_parse->filetype = CBMDOS_FT_USR;
                 break;
+            case 'L'|0x80:
             case 'L':                   /* L,(#record length)  max 254 */
-                if (p[1] == ',') {
-                    cmd_parse->recordlength = p[2]; /* Changing RL causes error */
+                /*
+                 * Allow extra text between L and the comma,
+                 * like with other file types.
+                 */
+                {
+                    uint8_t *comma = memchr(p+1, ',', cmdlen);
+                    if (comma && p + cmdlen > comma + 1) {
+                        cmd_parse->recordlength = comma[1]; /* Changing RL causes error */
 
-                    /* Don't allow REL file record lengths less than 2 or
-                       greater than 254.  The 1541/71/81 lets you create a
-                       REL file of record length 0, but it locks up the CPU
-                       on the drive - nice. */
-                    if (cmd_parse->recordlength < 2 || cmd_parse->recordlength > 254) {
-                        return CBMDOS_IPE_OVERFLOW;
+#ifdef DEBUG_CBMDOS
+                        log_debug(LOG_DEFAULT, "L recordlength=%u", cmd_parse->recordlength);
+#endif
+                        /* Don't allow REL file record lengths less than 2 or
+                           greater than 254.  The 1541/71/81 lets you create a
+                           REL file of record length 0, but it locks up the CPU
+                           on the drive - nice. */
+                        if (cmd_parse->recordlength < 2 || cmd_parse->recordlength > 254) {
+                            return CBMDOS_IPE_OVERFLOW;
+                        }
+                        /* skip the rest */
+                        cmdlen = 0;
+                    } else {
+                        /* No record length: we can only read this file, not write it */
+                        cmd_parse->readmode = CBMDOS_FAM_READ;
                     }
-                    /* skip the REL length */
-                    p += 3;
-                    cmdlen -= 3;
                 }
                 cmd_parse->filetype = CBMDOS_FT_REL;
                 break;
@@ -310,7 +330,7 @@ unsigned int cbmdos_command_parse(cbmdos_cmd_parse_t *cmd_parse)
         c = (char *)memchr(p, ',', cmdlen);
         if (c) {
             cmdlen -= (int)(c - (const char *)p);
-            p = (BYTE *)c;
+            p = (uint8_t *)c;
         } else {
             cmdlen = 0;
         }
@@ -322,6 +342,405 @@ unsigned int cbmdos_command_parse(cbmdos_cmd_parse_t *cmd_parse)
     }
     if (cmd_parse->secondary == 1) {
         cmd_parse->readmode = CBMDOS_FAM_WRITE;
+    }
+
+    return CBMDOS_IPE_OK;
+}
+
+unsigned int cbmdos_command_parse_plus(cbmdos_cmd_parse_plus_t *cmd_parse)
+{
+    const uint8_t *p, *limit, *p1, *p2;
+    uint8_t temp[256];
+    int special = 0;
+    int i, templength = 0;
+
+#ifdef DEBUG_CBMDOS
+    log_debug(LOG_DEFAULT, "CBMDOS parse plus cmd: '%s' cmdlen: %u", cmd_parse->full, cmd_parse->fulllength);
+#endif
+
+    cmd_parse->command = NULL;
+    cmd_parse->commandlength = 0;
+    cmd_parse->abbrv = NULL;
+    cmd_parse->abbrvlength = 0;
+    cmd_parse->path = NULL;
+    cmd_parse->pathlength = 0;
+    cmd_parse->file = NULL;
+    cmd_parse->filelength = 0;
+    cmd_parse->more = NULL;
+    cmd_parse->morelength = 0;
+    cmd_parse->recordlength = 0;
+    cmd_parse->filetype = 0;
+    cmd_parse->readmode = (cmd_parse->secondary == 1)
+                          ? CBMDOS_FAM_WRITE : CBMDOS_FAM_READ;
+    cmd_parse->colon = 0;
+    /* drive is not reset here */
+
+    if (cmd_parse->full == NULL || cmd_parse->fulllength == 0) {
+        return CBMDOS_IPE_NO_NAME;
+    }
+
+    p = cmd_parse->full;
+    limit = p + cmd_parse->fulllength;
+
+    /* in file mode */
+    if ((cmd_parse->mode == 0 || cmd_parse->mode == 2) && p < limit) {
+        if (cmd_parse->mode == 0) {
+            cmd_parse->drive = 0;
+        }
+        /* look for a ':' to separate the unit/part-path from name */
+        p2 = memchr(p, ':', limit - p);
+        /* if a colon is found, flag it */
+        if (p2) {
+            cmd_parse->colon = 1;
+        }
+        /* check for special commands without : */
+        if (*p == '$' || *p == '#') {
+            special = 1;
+        }
+        /* check for special commands with : */
+        if (p2 && *p == '@') {
+            special = 1;
+        }
+        if (p2 || special) {
+            /* check for anything before unit/partition number (@,&), but not a '/' */
+            if (*p != '/' && (*p < '0' || *p > '9')) {
+                p1 = p;
+                /* wait for numbers to appear */
+                if (special) {
+                    /* compensate for CMD $*=P and $*=T syntax */
+                    if (*p == '$' && (p + 2) < limit && *(p + 1) == '='
+                        && (*(p + 2) == 'P' || *(p + 2) == 'T') ) {
+                        p += 2;
+                    } else if (!p2 && *p == '$' && (p + 1) < limit
+                        && *(p + 1) >= '0' && *(p + 1) <= '9') {
+                        /* compensate for just $n */
+                        p2 = limit;
+                    }
+                    p++;
+                } else {
+                    while (p < limit && (*p < '0' || *p > '9')) {
+                        p++;
+                    }
+                }
+                cmd_parse->commandlength = (unsigned int)(p - p1);
+                cmd_parse->command = lib_calloc(1, cmd_parse->commandlength + 1);
+                memcpy(cmd_parse->command, p1, cmd_parse->commandlength);
+                cmd_parse->command[cmd_parse->commandlength] = 0;
+            }
+            /* if in special mode, and no unit/path is provided, anything after first character is the filename */
+            if (p2) {
+                /* skip any more spaces */
+                while (p < limit && *p == ' ') {
+                    p++;
+                }
+                /* get unit/part number if not at ':' yet and next value is a digit*/
+                if (p < p2 && (*p >= '0' || *p <= '9')) {
+                    cmd_parse->drive = 0;
+                    while (p < p2 && (*p >= '0' && *p <= '9')) {
+                        /* unit/part should never be more than 256, if so, skip them */
+                        i = cmd_parse->drive * 10 + (*p - '0');
+                        if (i < 256) {
+                            cmd_parse->drive = i;
+                        }
+                        p++;
+                    }
+                }
+                /* skip any more spaces */
+                while (p < limit && *p == ' ') {
+                    p++;
+                }
+/* TODO: CMD limits paths by having them begin and end with a '/' */
+                /* get path if not at ':' yet and next value is not a ':'; just use p2 limit here*/
+                if (p < p2) {
+                    p1 = p;
+                    p = p2;
+                    cmd_parse->pathlength = (unsigned int)(p - p1);
+                    cmd_parse->path = lib_calloc(1, cmd_parse->pathlength + 1);
+                    memcpy(cmd_parse->path, p1, cmd_parse->pathlength);
+                    cmd_parse->path[cmd_parse->pathlength] = 0;
+                    p = p2;
+                }
+            }
+        }
+        /* skip first colon, others are allowed in the file name */
+        if (*p == ':') {
+            p++;
+        }
+        /* file to follow */
+        p1 = p;
+        p = p2 = memchr(p, ',', limit - p);
+        /* find end of input or first ',' */
+        /* compensate for CMD $*=P, and $*=T, syntax (coma) */
+        if (p2 && cmd_parse->command && cmd_parse->command[0]=='$') {
+            p = NULL;
+        }
+        if (!p) {
+            p = limit;
+        }
+        cmd_parse->filelength = (unsigned int)(p - p1);
+        cmd_parse->file = lib_calloc(1, cmd_parse->filelength + 1);
+        memcpy(cmd_parse->file, p1, cmd_parse->filelength);
+        cmd_parse->file[cmd_parse->filelength] = 0;
+
+        /* Preset the file-type if the LOAD/SAVE secondary addresses are used. */
+        cmd_parse->filetype = (cmd_parse->secondary < 2) ? CBMDOS_FT_PRG : 0;
+
+        if (p2) {
+        /* type and mode next */
+            while (p < limit) {
+                p++;
+                switch (*p) {
+                    case 'S':
+                        cmd_parse->filetype = CBMDOS_FT_SEQ;
+                        break;
+                    case 'P':
+                        cmd_parse->filetype = CBMDOS_FT_PRG;
+                        break;
+                    case 'U':
+                        cmd_parse->filetype = CBMDOS_FT_USR;
+                        break;
+                    case 'L'|0x80:
+                    case 'L':                   /* L,(#record length)  max 254 */
+                        {
+                            /*
+                             * Allow extra text between L and the comma,
+                             * like with other file types.
+                             */
+                            uint8_t *comma = memchr(p + 1, ',', limit - (p + 1));
+                            if (comma && comma + 1 < limit) {
+                                cmd_parse->recordlength = comma[1]; /* Changing RL causes error */
+#ifdef DEBUG_CBMDOS
+                                log_debug(LOG_DEFAULT, "L recordlength=%u", cmd_parse->recordlength);
+#endif
+                                /* Don't allow REL file record lengths less than 2 or
+                                   greater than 254.  The 1541/71/81 lets you create a
+                                   REL file of record length 0, but it locks up the CPU
+                                   on the drive - nice. */
+                                if (cmd_parse->recordlength < 2 || cmd_parse->recordlength > 254) {
+                                    return CBMDOS_IPE_OVERFLOW;
+                                }
+                                /* skip the REL length */
+                                p = comma + 1;
+                            } else {
+                                /* No record length: we can only read this file, not write it */
+                                cmd_parse->readmode = CBMDOS_FAM_READ;
+                            }
+                        }
+                        cmd_parse->filetype = CBMDOS_FT_REL;
+                        break;
+                    case 'R':
+                        cmd_parse->readmode = CBMDOS_FAM_READ;
+                        break;
+                    case 'W':
+                        cmd_parse->readmode = CBMDOS_FAM_WRITE;
+                        break;
+                    case 'A':
+                        cmd_parse->readmode = CBMDOS_FAM_APPEND;
+                        break;
+                    default:
+                        return CBMDOS_IPE_INVAL;
+                }
+                p++;
+                /* skip extra characters after first ','; ",sequential,write" is allowed for example */
+                p = memchr(p, ',', limit - p);
+                if (!p) {
+                    break;
+                }
+            }
+            /* Override read mode if secondary is 0 or 1.  */
+            if (cmd_parse->secondary == 0) {
+                cmd_parse->readmode = CBMDOS_FAM_READ;
+            }
+            if (cmd_parse->secondary == 1) {
+                cmd_parse->readmode = CBMDOS_FAM_WRITE;
+            }
+        }
+    } else
+    /* in standard (flexible) command mode; too hard to merge everything
+        - too many special cases */
+    if (cmd_parse->mode == 1 && p < limit) {
+        cmd_parse->drive = 0;
+        /* any command beginning with P, or M do not require any parsing,
+            copy all information into command */
+        /* only process U1, U2, UA, UB */
+        special = 0;
+        if (*p == 'U' || *p == 'M') {
+            special++;
+            if (p + 1 < limit) {
+                if (p[0] == 'U'
+                    && (p[1] == '1' || p[1] == 'A' || p[1] == '2' || p[1] == 'B')) {
+                    special = 0;
+                }
+                if (p[0] == 'M' && p[1] == 'D') {
+                    special = 0;
+                }
+            } else {
+                return CBMDOS_IPE_INVAL;
+            }
+        }
+        if (special || *p == 'P') {
+            cmd_parse->commandlength = cmd_parse->fulllength;
+            cmd_parse->command = lib_calloc(1, cmd_parse->commandlength);
+            memcpy(cmd_parse->command, cmd_parse->full, cmd_parse->commandlength);
+            return CBMDOS_IPE_OK;
+        }
+        /* look for a ':' to separate the unit/part-path from name */
+        p2 = memchr(p, ':', limit - p);
+        /* if a colon is found, flag it */
+        if (p2) {
+            cmd_parse->colon = 1;
+        }
+
+        special = (*p == 'U');
+        /* check for command before unit/partition number (I,V,C,etc) */
+        if (*p < '0' || *p > '9') {
+            p1 = p;
+            /* compensate for "BLOCK-ALLOCATE", for example, which will
+                become "B-A" , but not for UA, etc*/
+            while (p < limit) {
+                /* alpha */
+                temp[templength++] = *p;
+                p++;
+                if(p >= limit) {
+                    break;
+                }
+                /* if first character of command is not alpha, then it is only 1 character */
+                if(*p1 < 'A') {
+                    break;
+                }
+                /* if command is CP or C(shift P) */
+                if (*p1 == 'C') {
+                    if (*p == 'P' || *p == 'D') {
+                        /* for CP, partition # is the file name */
+                        /* for CD, "<-" is the file name, or the unit and part
+                            go in the right place */
+                        p++;
+                        break;
+                    } else if (*p == ('P' | 0x80)) {
+                        /* for C{shift}P, copy the command */
+                        cmd_parse->commandlength = 3;
+                        cmd_parse->command = lib_calloc(1, cmd_parse->commandlength);
+                        memcpy(cmd_parse->command, cmd_parse->full, cmd_parse->commandlength);
+                        return CBMDOS_IPE_OK;
+                    }
+                } else if (*p1 == 'M' && *p == 'D') {
+                    /* MD */
+                    p++;
+                    break;
+                }
+                /* wait for non-alpha to appear or next character after U */
+                if (!special) {
+                    while (p < limit
+                        && ((*p >= 'A' && *p <= 'Z')
+                            || (*p >= ('A' | 0x80) && *p <= ('Z' | 0x80)))) {
+                        p++;
+                    }
+                }
+                if (p >= limit) {
+                    break;
+                }
+                /* get out the moment we see a delimiter */
+                if (*p == ':' || *p == ' ' || *p == 29 ) {
+                    break;
+                }
+                if (!special) {
+                    if (*p == '/' || (*p >= '0' && *p <= '9')) {
+                        break;
+                    }
+                }
+                /* non-alpha */
+                temp[templength++] = *p;
+                p++;
+                if (p >= limit) {
+                    break;
+                }
+                /* get out the moment we see a delimiter */
+                if (*p == ':' || *p == ' ' || *p == 29 ) {
+                    break;
+                }
+                if (!special) {
+                    if (*p == '/' || (*p >= '0' && *p <= '9')) {
+                        break;
+                    }
+                }
+            }
+
+            cmd_parse->commandlength = (unsigned int)(p - p1);
+            cmd_parse->command = lib_calloc(1, cmd_parse->commandlength + 1);
+            memcpy(cmd_parse->command, p1, cmd_parse->commandlength);
+            cmd_parse->command[cmd_parse->commandlength] = 0;
+            cmd_parse->abbrvlength = templength;
+            cmd_parse->abbrv = lib_calloc(1, cmd_parse->abbrvlength + 1);
+            memcpy(cmd_parse->abbrv, temp, cmd_parse->abbrvlength);
+            cmd_parse->abbrv[cmd_parse->abbrvlength] = 0;
+        }
+
+        if (p >= limit) {
+            return CBMDOS_IPE_OK;
+        }
+
+        /* skip any spaces or cursor-lefts */
+        while (p < limit && (*p == ' ' || *p == 29) ) {
+            p++;
+        }
+
+        /* get unit/part number if not at ':' yet and next value is a digit*/
+        if (p < p2 && (*p >= '0' || *p <= '9')) {
+            while (p < p2 && (*p >= '0' && *p <= '9')) {
+                /* unit/part should never be more than 256, if so, skip them */
+                i = cmd_parse->drive * 10 + (*p - '0');
+                if (i < 256) {
+                    cmd_parse->drive = i;
+                }
+                p++;
+            }
+        }
+
+        /* skip any more spaces */
+        while (p < limit && *p ==' ') {
+            p++;
+        }
+
+        /* get path if not at ':' yet and next value is not a ':'; just use p2 limit here*/
+        if (p < p2) {
+            p1 = p;
+            p = p2;
+            cmd_parse->pathlength = (unsigned int)(p - p1);
+            cmd_parse->path = lib_calloc(1, cmd_parse->pathlength + 1);
+            memcpy(cmd_parse->path, p1, cmd_parse->pathlength);
+            cmd_parse->path[cmd_parse->pathlength] = 0;
+            p = p2;
+        }
+
+        /* skip first colon, others are allowed in the file name */
+        if (*p == ':') {
+            p++;
+        }
+        /* file to follow */
+        p1 = p;
+        p = memchr(p1, '=', limit - p1);
+        p2 = memchr(p1, ',', limit - p1);
+        if (p && p2 && (p2 < p)) {
+            p = p2;
+        } else if (!p && p2) {
+            p = p2;
+        }
+        /* find end of input or first ',' */
+        if (!p) {
+            p = limit;
+        }
+        cmd_parse->filelength = (unsigned int)(p - p1);
+        cmd_parse->file = lib_calloc(1, cmd_parse->filelength + 1);
+        memcpy(cmd_parse->file, p1, cmd_parse->filelength);
+        cmd_parse->file[cmd_parse->filelength] = 0;
+
+        if (p < limit) {
+            cmd_parse->morelength = (unsigned int)(limit - p);
+            cmd_parse->more = lib_calloc(1, cmd_parse->morelength + 1);
+            memcpy(cmd_parse->more, p, cmd_parse->morelength);
+            cmd_parse->more[cmd_parse->morelength] = 0;
+        }
+
     }
 
     return CBMDOS_IPE_OK;

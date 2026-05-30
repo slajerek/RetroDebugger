@@ -33,27 +33,31 @@
 extern int c64_256k_start;
 extern int c64_256k_enabled;
 
-extern int c64_256k_resources_init(void);
-extern void c64_256k_resources_shutdown(void);
-extern int c64_256k_cmdline_options_init(void);
+int c64_256k_resources_init(void);
+void c64_256k_resources_shutdown(void);
+int c64_256k_cmdline_options_init(void);
 
-extern void c64_256k_init(void);
-extern void c64_256k_reset(void);
-extern void c64_256k_cia_set_vbank(int ciabank);
-extern void c64_256k_shutdown(void);
+void c64_256k_init(void);
+void c64_256k_reset(void);
+void c64_256k_cia_set_vbank(int ciabank);
+void c64_256k_shutdown(void);
 
-extern void c64_256k_ram_segment0_store(WORD addr, BYTE value);
-extern void c64_256k_ram_segment1_store(WORD addr, BYTE value);
-extern void c64_256k_ram_segment2_store(WORD addr, BYTE value);
-extern void c64_256k_ram_segment3_store(WORD addr, BYTE value);
-extern BYTE c64_256k_ram_segment0_read(WORD addr);
-extern BYTE c64_256k_ram_segment1_read(WORD addr);
-extern BYTE c64_256k_ram_segment2_read(WORD addr);
-extern BYTE c64_256k_ram_segment3_read(WORD addr);
+void c64_256k_ram_inject(uint16_t addr, uint8_t value);
+void c64_256k_ram_segment0_store(uint16_t addr, uint8_t value);
+void c64_256k_ram_segment1_store(uint16_t addr, uint8_t value);
+void c64_256k_ram_segment2_store(uint16_t addr, uint8_t value);
+void c64_256k_ram_segment3_store(uint16_t addr, uint8_t value);
+uint8_t c64_256k_ram_segment0_read(uint16_t addr);
+uint8_t c64_256k_ram_segment1_read(uint16_t addr);
+uint8_t c64_256k_ram_segment2_read(uint16_t addr);
+uint8_t c64_256k_ram_segment3_read(uint16_t addr);
 
-extern int set_c64_256k_enabled(int value, int disable_reset);
+int set_c64_256k_enabled(int value, int disable_reset);
 
-extern int c64_256k_snapshot_write(struct snapshot_s *s);
-extern int c64_256k_snapshot_read(struct snapshot_s *s);
+int c64_256k_snapshot_write(struct snapshot_s *s);
+int c64_256k_snapshot_read(struct snapshot_s *s);
+
+uint8_t c64_256k_read(uint16_t addr);
+void c64_256k_store(uint16_t addr, uint8_t byte);
 
 #endif

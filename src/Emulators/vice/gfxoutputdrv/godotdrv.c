@@ -45,13 +45,13 @@
 typedef struct gfxoutputdrv_data_s {
     FILE *fd;
     char *ext_filename;
-    BYTE *data;
+    uint8_t *data;
     unsigned int line;
     unsigned int count;
     unsigned int byte;
 } gfxoutputdrv_data_t;
 
-STATIC_PROTOTYPE gfxoutputdrv_t godot_drv;
+static gfxoutputdrv_t godot_drv;
 
 static int godotdrv_write_file_header(screenshot_t *screenshot)
 {
@@ -63,7 +63,10 @@ static int godotdrv_write_file_header(screenshot_t *screenshot)
         }
         return 0;
     }
-    if (fprintf(fd, "GOD1%c%c%c%c", 0, 0, screenshot->width / 8, screenshot->height / 8) < 0) {
+    if (fprintf(fd, "GOD1%c%c%c%c",
+                0, 0,
+                (int)(screenshot->width / 8),
+                (int)(screenshot->height / 8)) < 0) {
         return -1;
     }
     return 0;
@@ -198,6 +201,7 @@ static int godotdrv_save(screenshot_t *screenshot, const char *filename)
 
 static gfxoutputdrv_t godot_drv =
 {
+    GFXOUTPUTDRV_TYPE_SCREENSHOT_NATIVE,
     "4BT",
     "Godot screenshot",
     "4bt",

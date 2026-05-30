@@ -87,7 +87,7 @@ UI_MENU_CALLBACK(ETHERNET_INTERFACE_dynmenu_callback)
     }
 
     if (!rawnet_enumadapter_open()) {
-        ethernet_interface_dyn_menu[0].string = (char *)lib_stralloc("No Devices Present");
+        ethernet_interface_dyn_menu[0].string = (char *)lib_strdup("No Devices Present");
         ethernet_interface_dyn_menu[0].type = MENU_ENTRY_TEXT;
         ethernet_interface_dyn_menu[0].callback = seperator_callback;
         ethernet_interface_dyn_menu[0].data = NULL;
@@ -97,10 +97,10 @@ UI_MENU_CALLBACK(ETHERNET_INTERFACE_dynmenu_callback)
         ethernet_interface_dyn_menu[1].data = NULL;
     } else {
         for (i = 0; (rawnet_enumadapter(&pname, &pdescription)) && (i < 20); i++) {
-            ethernet_interface_dyn_menu[i].string = (char *)lib_stralloc(pdescription);
+            ethernet_interface_dyn_menu[i].string = (char *)lib_strdup(pdescription);
             ethernet_interface_dyn_menu[i].type = MENU_ENTRY_RESOURCE_RADIO;
             ethernet_interface_dyn_menu[i].callback = radio_ETHERNET_INTERFACE_callback;
-            ethernet_interface_dyn_menu[i].data = (ui_callback_data_t)(char *)lib_stralloc(pname);
+            ethernet_interface_dyn_menu[i].data = (ui_callback_data_t)(char *)lib_strdup(pname);
         }
         ethernet_interface_dyn_menu[i].string = NULL;
         ethernet_interface_dyn_menu[i].type = 0;

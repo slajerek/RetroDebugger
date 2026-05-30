@@ -163,7 +163,7 @@ UI_MENU_CALLBACK(MIDIInDev_dynmenu_callback)
     }
 
     if (num_in == 0) {
-        midi_in_dyn_menu[i].string = (char *)lib_stralloc("No Devices Present");
+        midi_in_dyn_menu[i].string = (char *)lib_strdup("No Devices Present");
         midi_in_dyn_menu[i].type = MENU_ENTRY_TEXT;
         midi_in_dyn_menu[i].callback = seperator_callback;
         midi_in_dyn_menu[i].data = NULL;
@@ -172,7 +172,7 @@ UI_MENU_CALLBACK(MIDIInDev_dynmenu_callback)
         for (j = 0; (j < num_in) && (i < 20); j++) {
             ret = midiInGetDevCaps(j, &mic, sizeof(MIDIINCAPS));
             if (ret == MMSYSERR_NOERROR) {
-                midi_in_dyn_menu[i].string = (char *)lib_stralloc(mic.szPname);
+                midi_in_dyn_menu[i].string = (char *)lib_strdup(mic.szPname);
                 midi_in_dyn_menu[i].type = MENU_ENTRY_RESOURCE_RADIO;
                 midi_in_dyn_menu[i].callback = radio_MIDIInDev_callback;
                 midi_in_dyn_menu[i].data = (ui_callback_data_t)j;
@@ -205,7 +205,7 @@ UI_MENU_CALLBACK(MIDIOutDev_dynmenu_callback)
     }
 
     if (num_out == 0) {
-        midi_out_dyn_menu[i].string = (char *)lib_stralloc("No Devices Present");
+        midi_out_dyn_menu[i].string = (char *)lib_strdup("No Devices Present");
         midi_out_dyn_menu[i].type = MENU_ENTRY_TEXT;
         midi_out_dyn_menu[i].callback = seperator_callback;
         midi_out_dyn_menu[i].data = NULL;
@@ -214,7 +214,7 @@ UI_MENU_CALLBACK(MIDIOutDev_dynmenu_callback)
         for (j = 0; (j < num_out) && (i < 20); j++) {
             ret = midiOutGetDevCaps(j, &moc, sizeof(MIDIOUTCAPS));
             if (ret == MMSYSERR_NOERROR) {
-                midi_out_dyn_menu[i].string = (char *)lib_stralloc(moc.szPname);
+                midi_out_dyn_menu[i].string = (char *)lib_strdup(moc.szPname);
                 midi_out_dyn_menu[i].type = MENU_ENTRY_RESOURCE_RADIO;
                 midi_out_dyn_menu[i].callback = radio_MIDIOutDev_callback;
                 midi_out_dyn_menu[i].data = (ui_callback_data_t)j;

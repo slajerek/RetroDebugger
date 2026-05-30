@@ -1,5 +1,5 @@
 /*
- * printer-uerport.c - Userport printer interface.
+ * printer-userport.c - Userport printer interface.
  *
  * Written by
  *  Andreas Boose <viceteam@t-online.de>
@@ -29,14 +29,19 @@
 #include "interface-userport.h"
 #include "printer.h"
 #include "vicetypes.h"
+#include "log.h"
 
+/* #define DEBUG_PRINTER */
 
+#ifdef DEBUG_PRINTER
+#define DBG(x) log_printf  x
+#else
+#define DBG(x)
+#endif
+
+/* called via machine_printer_resources_init() */
 int printer_userport_init_resources(void)
 {
+    DBG(("printer_userport_init_resources"));
     return interface_userport_init_resources();
-}
-
-int printer_userport_init_cmdline_options(void)
-{
-    return interface_userport_init_cmdline_options();
 }

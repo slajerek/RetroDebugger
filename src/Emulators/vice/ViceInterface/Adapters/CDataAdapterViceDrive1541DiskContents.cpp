@@ -447,7 +447,7 @@ void CDataAdapterViceDrive1541DiskContents::FormatDisk(const char *diskName, con
 
 	vdrive_device_setup(vdrive, 8);
 	vdrive->image = diskImage;
-	vdrive_attach_image(diskImage, 8, vdrive);
+	vdrive_attach_image(diskImage, 8, 0, vdrive);
 	
 	char *commandBuf = SYS_GetCharBuf();
 	
@@ -459,8 +459,8 @@ void CDataAdapterViceDrive1541DiskContents::FormatDisk(const char *diskName, con
 
 	SYS_ReleaseCharBuf(commandBuf);
 
-	vdrive_detach_image(diskImage, (unsigned int)8, vdrive);
-	drive_image_attach(diskImage, 8);
+	vdrive_detach_image(diskImage, (unsigned int)8, 0, vdrive);
+	drive_image_attach(diskImage, 8, 0);
 	
 	DiskAttached();
 	
@@ -482,12 +482,12 @@ int CDataAdapterViceDrive1541DiskContents::InsertFile(std::filesystem::path file
 
 	vdrive_device_setup(vdrive, 8);
 	vdrive->image = diskImage;
-	vdrive_attach_image(diskImage, 8, vdrive);
+	vdrive_attach_image(diskImage, 8, 0, vdrive);
 
 	fileio_info_t *finfo;
 	finfo = fileio_open(filePath.string().c_str(), NULL, FILEIO_FORMAT_RAW | FILEIO_FORMAT_P00,
 						FILEIO_COMMAND_READ | FILEIO_COMMAND_FSNAME,
-						FILEIO_TYPE_PRG);
+						FILEIO_TYPE_PRG, NULL);
 	if (finfo == NULL)
 	{
 		LOGError("CDataAdapterViceDrive1541DiskContents::FormatDisk: file not found %s", filePath.string().c_str());
@@ -498,7 +498,7 @@ int CDataAdapterViceDrive1541DiskContents::InsertFile(std::filesystem::path file
 	CSlrString *fileNameNoExt = fileName->GetFileNameWithoutExtensionAndPath();
 	char *cFileNameNoExt = fileNameNoExt->GetStdASCII();
 		
-//	char *dest_name = lib_stralloc((char *)filePath.filename().string().c_str()); //(finfo->name));
+//	char *dest_name = lib_strdup((char *)filePath.filename().string().c_str()); //(finfo->name));
 	char *dest_name = cFileNameNoExt;
 	unsigned int dest_len = strlen(cFileNameNoExt); //finfo->length;
 	
@@ -586,8 +586,8 @@ int CDataAdapterViceDrive1541DiskContents::InsertFile(std::filesystem::path file
 //	lib_free(dest_name);
 	STRFREE(cFileNameNoExt);
 	
-	vdrive_detach_image(diskImage, (unsigned int)8, vdrive);
-	drive_image_attach(diskImage, 8);
+	vdrive_detach_image(diskImage, (unsigned int)8, 0, vdrive);
+	drive_image_attach(diskImage, 8, 0);
 	
 	DiskAttached();
 	

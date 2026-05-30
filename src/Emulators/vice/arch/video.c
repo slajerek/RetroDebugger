@@ -46,7 +46,6 @@
 #include "palette.h"
 #include "raster.h"
 #include "resources.h"
-#include "translate.h"
 #include "uimenu.h"
 #include "uistatusbar.h"
 #include "util.h"
@@ -56,6 +55,7 @@
 #include "vsync.h"
 
 #include "ViceWrapper.h"
+#include "vice_debugger_hook.h"
 
 #ifdef SDL_DEBUG
 #define DBG(x)  log_debug x
@@ -63,7 +63,7 @@
 #define DBG(x)
 #endif
 
-static log_t sdlvideo_log = LOG_ERR;
+static log_t sdlvideo_log = LOG_DEFAULT;
 
 static int sdl_bitdepth;
 
@@ -206,7 +206,7 @@ static int set_sdl_gl_aspect_mode(int v, void *param)
     sdl_gl_aspect_mode = v;
 
     if (old_v != v) {
-        if (sdl_active_canvas && sdl_active_canvas->videoconfig->hwscale) {
+        if (sdl_active_canvas) {	/* VICE 3.10: hwscale removed (always hardware-scaled) */
             video_viewport_resize(sdl_active_canvas, 1);
         }
     }
@@ -242,7 +242,7 @@ static int set_aspect_ratio(const char *val, void *param)
     util_string_set(&aspect_ratio_s, buf);
 
     if (old_aspect != aspect_ratio) {
-        if (sdl_active_canvas && sdl_active_canvas->videoconfig->hwscale) {
+        if (sdl_active_canvas) {	/* VICE 3.10: hwscale removed (always hardware-scaled) */
             video_viewport_resize(sdl_active_canvas, 1);
         }
     }
@@ -332,37 +332,17 @@ void video_arch_resources_shutdown(void)
 /* Video-related command-line options.  */
 
 static const cmdline_option_t cmdline_options[] = {
-    { "-sdlbitdepth", SET_RESOURCE, 1, NULL, NULL, "SDLBitdepth", NULL,
-      USE_PARAM_STRING, USE_DESCRIPTION_STRING, IDCLS_UNUSED, IDCLS_UNUSED,
-      "<bpp>", "Set bitdepth (0 = current, 8, 15, 16, 24, 32)" },
-    { "-sdllimitmode", SET_RESOURCE, 1, NULL, NULL, "SDLLimitMode", NULL,
-      USE_PARAM_STRING, USE_DESCRIPTION_STRING, IDCLS_UNUSED, IDCLS_UNUSED,
-      "<mode>", "Set resolution limiting mode (0 = off, 1 = max, 2 = fixed)" },
-    { "-sdlcustomw", SET_RESOURCE, 1, NULL, NULL, "SDLCustomWidth", NULL,
-      USE_PARAM_STRING, USE_DESCRIPTION_STRING, IDCLS_UNUSED, IDCLS_UNUSED,
-      "<width>", "Set custom resolution width" },
-    { "-sdlcustomh", SET_RESOURCE, 1, NULL, NULL, "SDLCustomHeight", NULL,
-      USE_PARAM_STRING, USE_DESCRIPTION_STRING, IDCLS_UNUSED, IDCLS_UNUSED,
-      "<height>", "Set custom resolution height" },
+    { "-sdlbitdepth", SET_RESOURCE, 1, NULL, NULL, "SDLBitdepth", NULL, "<bpp>", "Set bitdepth (0 = current, 8, 15, 16, 24, 32)"},
+    { "-sdllimitmode", SET_RESOURCE, 1, NULL, NULL, "SDLLimitMode", NULL, "<mode>", "Set resolution limiting mode (0 = off, 1 = max, 2 = fixed)"},
+    { "-sdlcustomw", SET_RESOURCE, 1, NULL, NULL, "SDLCustomWidth", NULL, "<width>", "Set custom resolution width"},
+    { "-sdlcustomh", SET_RESOURCE, 1, NULL, NULL, "SDLCustomHeight", NULL, "<height>", "Set custom resolution height"},
 #ifdef HAVE_HWSCALE
-    { "-sdlaspectmode", SET_RESOURCE, 1, NULL, NULL, "SDLGLAspectMode", NULL,
-      USE_PARAM_STRING, USE_DESCRIPTION_STRING, IDCLS_UNUSED, IDCLS_UNUSED,
-      "<mode>", "Set aspect ratio mode (0 = off, 1 = custom, 2 = true)" },
-    { "-aspect", SET_RESOURCE, 1, NULL, NULL, "AspectRatio", NULL,
-      USE_PARAM_STRING, USE_DESCRIPTION_STRING, IDCLS_UNUSED, IDCLS_UNUSED,
-      "<aspect ratio>", "Set custom aspect ratio (0.5 - 2.0)" },
-    { "-sdlflipx", SET_RESOURCE, 0, NULL, NULL, "SDLGLFlipX", (resource_value_t)1,
-      USE_PARAM_STRING, USE_DESCRIPTION_STRING, IDCLS_UNUSED, IDCLS_UNUSED,
-      NULL, "Enable X flip" },
-    { "+sdlflipx", SET_RESOURCE, 0, NULL, NULL, "SDLGLFlipX", (resource_value_t)0,
-      USE_PARAM_STRING, USE_DESCRIPTION_STRING, IDCLS_UNUSED, IDCLS_UNUSED,
-      NULL, "Disable X flip" },
-    { "-sdlflipy", SET_RESOURCE, 0, NULL, NULL, "SDLGLFlipY", (resource_value_t)1,
-      USE_PARAM_STRING, USE_DESCRIPTION_STRING, IDCLS_UNUSED, IDCLS_UNUSED,
-      NULL, "Enable Y flip" },
-    { "+sdlflipy", SET_RESOURCE, 0, NULL, NULL, "SDLGLFlipY", (resource_value_t)0,
-      USE_PARAM_STRING, USE_DESCRIPTION_STRING, IDCLS_UNUSED, IDCLS_UNUSED,
-      NULL, "Disable Y flip" },
+    { "-sdlaspectmode", SET_RESOURCE, 1, NULL, NULL, "SDLGLAspectMode", NULL, "<mode>", "Set aspect ratio mode (0 = off, 1 = custom, 2 = true)"},
+    { "-aspect", SET_RESOURCE, 1, NULL, NULL, "AspectRatio", NULL, "<aspect ratio>", "Set custom aspect ratio (0.5 - 2.0)"},
+    { "-sdlflipx", SET_RESOURCE, 0, NULL, NULL, "SDLGLFlipX", (resource_value_t)1, NULL, "Enable X flip"},
+    { "+sdlflipx", SET_RESOURCE, 0, NULL, NULL, "SDLGLFlipX", (resource_value_t)0, NULL, "Disable X flip"},
+    { "-sdlflipy", SET_RESOURCE, 0, NULL, NULL, "SDLGLFlipY", (resource_value_t)1, NULL, "Enable Y flip"},
+    { "+sdlflipy", SET_RESOURCE, 0, NULL, NULL, "SDLGLFlipY", (resource_value_t)0, NULL, "Disable Y flip"},
 #endif
     CMDLINE_LIST_END
 };
@@ -729,7 +709,7 @@ void video_canvas_refresh(struct video_canvas_s *canvas, unsigned int xs, unsign
 	// draw directly from c64 screen
 	
 	// from: canvas->draw_buffer->draw_buffer
-	c64d_refresh_screen();
+	VICE_HOOK_VIC_REFRESH_SCREEN();
 	
 	
 //    if ((canvas == NULL) || (canvas->screen == NULL)) {

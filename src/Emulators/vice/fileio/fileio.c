@@ -24,6 +24,8 @@
  *
  */
 
+/* #define DEBUGFILEIO */
+
 #include "vice.h"
 
 #include <stdio.h>
@@ -35,20 +37,29 @@
 #include "vicetypes.h"
 #include "util.h"
 
+#ifdef DEBUGFILEIO
+#define DBG(x)  printf x
+#else
+#define DBG(x)
+#endif
 
 fileio_info_t *fileio_open(const char *file_name, const char *path,
                            unsigned int format, unsigned int command,
-                           unsigned int type)
+                           unsigned int type, int *reclenp)
 {
     fileio_info_t *info = NULL;
     char *new_file, *new_path;
 
+    if (file_name == NULL || *file_name == '\0') {
+        return NULL;
+    }
+
     if ((command & FILEIO_COMMAND_FSNAME) && path == NULL) {
         util_fname_split(file_name, &new_path, &new_file);
     } else {
-        new_file = lib_stralloc(file_name);
+        new_file = lib_strdup(file_name);
         if (path != NULL) {
-            new_path = lib_stralloc(path);
+            new_path = lib_strdup(path);
         } else {
             new_path = NULL;
         }
@@ -56,7 +67,7 @@ fileio_info_t *fileio_open(const char *file_name, const char *path,
 
     do {
         if (format & FILEIO_FORMAT_P00) {
-            info = p00_open(new_file, new_path, command, type);
+            info = p00_open(new_file, new_path, command, type, reclenp);
         }
 
         if (info != NULL) {
@@ -65,6 +76,9 @@ fileio_info_t *fileio_open(const char *file_name, const char *path,
 
         if (format & FILEIO_FORMAT_RAW) {
             info = cbmfile_open(new_file, new_path, command, type);
+            if (reclenp) {
+                *reclenp = 0;
+            }
         }
 
         if (info != NULL) {
@@ -94,7 +108,7 @@ void fileio_close(fileio_info_t *info)
     }
 }
 
-unsigned int fileio_read(fileio_info_t *info, BYTE *buf, unsigned int len)
+unsigned int fileio_read(fileio_info_t *info, uint8_t *buf, unsigned int len)
 {
     switch (info->format) {
         case FILEIO_FORMAT_RAW:
@@ -106,7 +120,7 @@ unsigned int fileio_read(fileio_info_t *info, BYTE *buf, unsigned int len)
     return 0;
 }
 
-unsigned int fileio_write(fileio_info_t *info, BYTE *buf, unsigned int len)
+unsigned int fileio_write(fileio_info_t *info, uint8_t *buf, unsigned int len)
 {
     switch (info->format) {
         case FILEIO_FORMAT_RAW:
@@ -130,6 +144,30 @@ unsigned int fileio_get_bytes_left(fileio_info_t *info)
     return 0;
 }
 
+unsigned int fileio_seek(fileio_info_t *info, off_t offset, int whence)
+{
+    switch (info->format) {
+        case FILEIO_FORMAT_RAW:
+            return cbmfile_seek(info, offset, whence);
+        case FILEIO_FORMAT_P00:
+            return p00_seek(info, offset, whence);
+    }
+
+    return 0;
+}
+
+unsigned int fileio_tell(fileio_info_t *info)
+{
+    switch (info->format) {
+        case FILEIO_FORMAT_RAW:
+            return cbmfile_tell(info);
+        case FILEIO_FORMAT_P00:
+            return p00_tell(info);
+    }
+
+    return 0;
+}
+
 unsigned int fileio_ferror(fileio_info_t *info)
 {
     switch (info->format) {
@@ -146,6 +184,8 @@ unsigned int fileio_rename(const char *src_name, const char *dest_name,
                            const char *path, unsigned int format)
 {
     unsigned int rc = FILEIO_FILE_NOT_FOUND;
+
+    DBG(("fileio_rename '%s' to '%s'\n", src_name, dest_name));
 
     if (format & FILEIO_FORMAT_P00) {
         rc = p00_rename(src_name, dest_name, path);

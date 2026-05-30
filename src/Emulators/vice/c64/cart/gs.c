@@ -24,6 +24,8 @@
  *
  */
 
+/* #define DEBUGC64GS */
+
 #include "vice.h"
 
 #include <stdio.h>
@@ -36,49 +38,53 @@
 #include "cartridge.h"
 #include "export.h"
 #include "gs.h"
+#include "log.h"
 #include "monitor.h"
 #include "snapshot.h"
 #include "vicetypes.h"
 #include "util.h"
 #include "crt.h"
 
+#ifdef DEBUGC64GS
+#define DBG(x)  log_printf x
+#else
+#define DBG(x)
+#endif
+
 /*
     C64GS (C64 Game System/System 3) Cartridge
 
-    - 512kb ROM (64*8k), mapped to $8000 in 8k game config
+    - 512kb ROM (64*8k), (permanently) mapped to $8000 in 8k game config
 
-    - reading from io1 switches to bank 0
+    - on any access (read or write) to IO1, the lower 6 bits of the address will
+      be latched and used as the bank number
 
-    - writing to io1 switches banks. the lower 6 bits of the address are the 
-      bank number
+    CAUTION: the above is confirmed to be correct from looking at the "C64GS 4in1"
+    cartridge, whether the same is true for the System 3 cartridges is unknown yet.
 */
 
 static int currbank = 0;
-static BYTE regval = 0;
+static uint8_t regval = 0;
 
-static void gs_io1_store(WORD addr, BYTE value)
+static void gs_io1_store(uint16_t addr, uint8_t value)
 {
-    addr &= 0xff;
     regval = value;
     currbank = addr & 0x3f;
     cart_romlbank_set_slotmain(currbank);
-    /* 8k config */
-    cart_set_port_exrom_slotmain(1);
-    cart_set_port_game_slotmain(0);
     cart_port_config_changed_slotmain();
-    /* printf("C64GS: w addr: $de%02x value: $%02x bank: $%02x\n", addr, value, currbank); */
+    DBG(("C64GS: w addr: $de%02x bank: $%02x value: $%02x", addr, currbank, value));
 }
 
-static BYTE gs_io1_read(WORD addr)
+static uint8_t gs_io1_read(uint16_t addr)
 {
-    currbank = 0;
-    /* 8k configuration */
-    cart_config_changed_slotmain(0, 0, CMODE_READ);
-    /* printf("C64GS: r addr: $de%02x\n", addr); */
+    currbank = addr & 0x3f;
+    cart_romlbank_set_slotmain(currbank);
+    cart_port_config_changed_slotmain();
+    DBG(("C64GS: r addr: $de%02x bank: $%02x", addr, currbank));
     return 0;
 }
 
-static BYTE gs_io1_peek(WORD addr)
+static uint8_t gs_io1_peek(uint16_t addr)
 {
     return regval;
 }
@@ -92,18 +98,20 @@ static int gs_dump(void)
 /* ---------------------------------------------------------------------*/
 
 static io_source_t gs_device = {
-    CARTRIDGE_NAME_GS,
-    IO_DETACH_CART,
-    NULL,
-    0xde00, 0xdeff, 0xff,
-    0, /* read is never valid */
-    gs_io1_store,
-    gs_io1_read,
-    gs_io1_peek,
-    gs_dump,
-    CARTRIDGE_GS,
-    0,
-    0
+    CARTRIDGE_NAME_GS,     /* name of the device */
+    IO_DETACH_CART,        /* use cartridge ID to detach the device when involved in a read-collision */
+    IO_DETACH_NO_RESOURCE, /* does not use a resource for detach */
+    0xde00, 0xdeff, 0x3f,  /* range for the device, regs:$de00-$de3f, mirrors:$de40-$deff */
+    0,                     /* read is never valid */
+    gs_io1_store,          /* store function */
+    NULL,                  /* NO poke function */
+    gs_io1_read,           /* read function */
+    gs_io1_peek,           /* peek function */
+    gs_dump,               /* device state information dump function */
+    CARTRIDGE_GS,          /* cartridge ID */
+    IO_PRIO_NORMAL,        /* normal priority, device read needs to be checked for collisions */
+    0,                     /* insertion order, gets filled in by the registration function */
+    IO_MIRROR_NONE         /* NO mirroring */
 };
 
 static io_source_list_t *gs_list_item = NULL;
@@ -117,15 +125,15 @@ static const export_resource_t export_res = {
 void gs_config_init(void)
 {
     /* 8k configuration */
-    cart_config_changed_slotmain(0, 0, CMODE_READ);
-    gs_io1_store((WORD)0xde00, 0);
+    cart_config_changed_slotmain(CMODE_8KGAME, CMODE_8KGAME, CMODE_READ);
+    gs_io1_store((uint16_t)0xde00, 0);
 }
 
-void gs_config_setup(BYTE *rawcart)
+void gs_config_setup(uint8_t *rawcart)
 {
     memcpy(roml_banks, rawcart, 0x2000 * 64);
     /* 8k configuration */
-    cart_config_changed_slotmain(0, 0, CMODE_READ);
+    cart_config_changed_slotmain(CMODE_8KGAME, CMODE_8KGAME, CMODE_READ);
 }
 
 /* ---------------------------------------------------------------------*/
@@ -138,7 +146,7 @@ static int gs_common_attach(void)
     return 0;
 }
 
-int gs_bin_attach(const char *filename, BYTE *rawcart)
+int gs_bin_attach(const char *filename, uint8_t *rawcart)
 {
     if (util_file_load(filename, rawcart, 0x80000, UTIL_FILE_LOAD_SKIP_ADDRESS) < 0) {
         return -1;
@@ -146,7 +154,7 @@ int gs_bin_attach(const char *filename, BYTE *rawcart)
     return gs_common_attach();
 }
 
-int gs_crt_attach(FILE *fd, BYTE *rawcart)
+int gs_crt_attach(FILE *fd, uint8_t *rawcart)
 {
     crt_chip_header_t chip;
 
@@ -189,7 +197,7 @@ int gs_snapshot_write_module(snapshot_t *s)
 
     if (0
         || (SMW_B(m, regval) < 0)
-        || (SMW_B(m, (BYTE)currbank) < 0)
+        || (SMW_B(m, (uint8_t)currbank) < 0)
         || (SMW_BA(m, roml_banks, 0x2000 * 64) < 0)) {
         snapshot_module_close(m);
         return -1;
@@ -201,7 +209,7 @@ int gs_snapshot_write_module(snapshot_t *s)
 
 int gs_snapshot_read_module(snapshot_t *s)
 {
-    BYTE vmajor, vminor;
+    uint8_t vmajor, vminor;
     snapshot_module_t *m;
 
     m = snapshot_module_open(s, SNAP_MODULE_NAME, &vmajor, &vminor);

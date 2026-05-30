@@ -45,7 +45,6 @@
 #include "mouse.h"
 #include "mousedrv.h"
 #include "resources.h"
-#include "translate.h"
 #include "vicetypes.h"
 #include "ui.h"
 #include "uiapi.h"
@@ -59,6 +58,7 @@
 #include "vsync.h"
 
 #include "ViceWrapper.h"
+#include "vice_debugger_hook.h"
 
 #ifndef SDL_DISABLE
 #define SDL_DISABLE SDL_IGNORE
@@ -301,51 +301,21 @@ void ui_resources_shutdown(void)
 
 static const cmdline_option_t cmdline_options[] =
 {
-//    { "-menukey", SET_RESOURCE, 1, NULL, NULL, "MenuKey", NULL,
-//      USE_PARAM_STRING, USE_DESCRIPTION_STRING, IDCLS_UNUSED, IDCLS_UNUSED,
-//      "<key>", "Keycode of the menu activate key" },
-//    { "-menukeyup", SET_RESOURCE, 1, NULL, NULL, "MenuKeyUp", NULL,
-//      USE_PARAM_STRING, USE_DESCRIPTION_STRING, IDCLS_UNUSED, IDCLS_UNUSED,
-//      "<key>", "Keycode of the menu up key" },
-//    { "-menukeydown", SET_RESOURCE, 1, NULL, NULL, "MenuKeyDown", NULL,
-//      USE_PARAM_STRING, USE_DESCRIPTION_STRING, IDCLS_UNUSED, IDCLS_UNUSED,
-//      "<key>", "Keycode of the menu down key" },
-//    { "-menukeyleft", SET_RESOURCE, 1, NULL, NULL, "MenuKeyLeft", NULL,
-//      USE_PARAM_STRING, USE_DESCRIPTION_STRING, IDCLS_UNUSED, IDCLS_UNUSED,
-//      "<key>", "Keycode of the menu left key" },
-//    { "-menukeyright", SET_RESOURCE, 1, NULL, NULL, "MenuKeyRight", NULL,
-//      USE_PARAM_STRING, USE_DESCRIPTION_STRING, IDCLS_UNUSED, IDCLS_UNUSED,
-//      "<key>", "Keycode of the menu right key" },
-//    { "-menukeyselect", SET_RESOURCE, 1, NULL, NULL, "MenuKeySelect", NULL,
-//      USE_PARAM_STRING, USE_DESCRIPTION_STRING, IDCLS_UNUSED, IDCLS_UNUSED,
-//      "<key>", "Keycode of the menu select key" },
-//    { "-menukeycancel", SET_RESOURCE, 1, NULL, NULL, "MenuKeyCancel", NULL,
-//      USE_PARAM_STRING, USE_DESCRIPTION_STRING, IDCLS_UNUSED, IDCLS_UNUSED,
-//      "<key>", "Keycode of the menu cancel key" },
-//    { "-menukeyexit", SET_RESOURCE, 1, NULL, NULL, "MenuKeyExit", NULL,
-//      USE_PARAM_STRING, USE_DESCRIPTION_STRING, IDCLS_UNUSED, IDCLS_UNUSED,
-//      "<key>", "Keycode of the menu exit key" },
-//    { "-menukeymap", SET_RESOURCE, 1, NULL, NULL, "MenuKeyMap", NULL,
-//      USE_PARAM_STRING, USE_DESCRIPTION_STRING, IDCLS_UNUSED, IDCLS_UNUSED,
-//      "<key>", "Keycode of the menu map key" },
-//    { "-saveresourcesonexit", SET_RESOURCE, 0, NULL, NULL, "SaveResourcesOnExit", (resource_value_t)1,
-//      USE_PARAM_STRING, USE_DESCRIPTION_STRING, IDCLS_UNUSED, IDCLS_UNUSED,
-//      NULL, "Enable save resource on exit" },
-//    { "+saveresourcesonexit", SET_RESOURCE, 0, NULL, NULL, "SaveResourcesOnExit", (resource_value_t)0,
-//      USE_PARAM_STRING, USE_DESCRIPTION_STRING, IDCLS_UNUSED, IDCLS_UNUSED,
-//      NULL, "Disable save resource on exit" },
-//    { "-confirmonexit", SET_RESOURCE, 0, NULL, NULL, "ConfirmOnExit", (resource_value_t)1,
-//      USE_PARAM_STRING, USE_DESCRIPTION_STRING, IDCLS_UNUSED, IDCLS_UNUSED,
-//      NULL, "Enable confirm on exit" },
-//    { "+confirmonexit", SET_RESOURCE, 0, NULL, NULL, "ConfirmOnExit", (resource_value_t)0,
-//      USE_PARAM_STRING, USE_DESCRIPTION_STRING, IDCLS_UNUSED, IDCLS_UNUSED,
-//      NULL, "Disable confirm on exit" },
-//    { "-statusbar", SET_RESOURCE, 0, NULL, NULL, "SDLStatusbar", (resource_value_t)1,
-//      USE_PARAM_STRING, USE_DESCRIPTION_STRING, IDCLS_UNUSED, IDCLS_UNUSED,
-//      NULL, "Enable statusbar" },
-//    { "+statusbar", SET_RESOURCE, 0, NULL, NULL, "SDLStatusbar", (resource_value_t)0,
-//      USE_PARAM_STRING, USE_DESCRIPTION_STRING, IDCLS_UNUSED, IDCLS_UNUSED,
-//      NULL, "Disable statusbar" },
+//    { "-menukey", SET_RESOURCE, 1, NULL, NULL, "MenuKey", NULL, //      "<key>", "Keycode of the menu activate key"},
+//    { "-menukeyup", SET_RESOURCE, 1, NULL, NULL, "MenuKeyUp", NULL, //      "<key>", "Keycode of the menu up key"},
+//    { "-menukeydown", SET_RESOURCE, 1, NULL, NULL, "MenuKeyDown", NULL, //      "<key>", "Keycode of the menu down key"},
+//    { "-menukeyleft", SET_RESOURCE, 1, NULL, NULL, "MenuKeyLeft", NULL, //      "<key>", "Keycode of the menu left key"},
+//    { "-menukeyright", SET_RESOURCE, 1, NULL, NULL, "MenuKeyRight", NULL, //      "<key>", "Keycode of the menu right key"},
+//    { "-menukeyselect", SET_RESOURCE, 1, NULL, NULL, "MenuKeySelect", NULL, //      "<key>", "Keycode of the menu select key"},
+//    { "-menukeycancel", SET_RESOURCE, 1, NULL, NULL, "MenuKeyCancel", NULL, //      "<key>", "Keycode of the menu cancel key"},
+//    { "-menukeyexit", SET_RESOURCE, 1, NULL, NULL, "MenuKeyExit", NULL, //      "<key>", "Keycode of the menu exit key"},
+//    { "-menukeymap", SET_RESOURCE, 1, NULL, NULL, "MenuKeyMap", NULL, //      "<key>", "Keycode of the menu map key"},
+//    { "-saveresourcesonexit", SET_RESOURCE, 0, NULL, NULL, "SaveResourcesOnExit", (resource_value_t)1, //      NULL, "Enable save resource on exit"},
+//    { "+saveresourcesonexit", SET_RESOURCE, 0, NULL, NULL, "SaveResourcesOnExit", (resource_value_t)0, //      NULL, "Disable save resource on exit"},
+//    { "-confirmonexit", SET_RESOURCE, 0, NULL, NULL, "ConfirmOnExit", (resource_value_t)1, //      NULL, "Enable confirm on exit"},
+//    { "+confirmonexit", SET_RESOURCE, 0, NULL, NULL, "ConfirmOnExit", (resource_value_t)0, //      NULL, "Disable confirm on exit"},
+//    { "-statusbar", SET_RESOURCE, 0, NULL, NULL, "SDLStatusbar", (resource_value_t)1, //      NULL, "Enable statusbar"},
+//    { "+statusbar", SET_RESOURCE, 0, NULL, NULL, "SDLStatusbar", (resource_value_t)0, //      NULL, "Disable statusbar"},
     CMDLINE_LIST_END
 };
 
@@ -429,11 +399,11 @@ ui_jam_action_t ui_jam_dialog(const char *format, ...)
 {
  //   int retval;
 	
-	c64d_is_cpu_in_jam_state = 1;
+	VICE_HOOK_LIFECYCLE_JAM_FLAG();
 
-	c64d_show_message("CPU JAM has occurred");
-	
-	c64d_set_debug_mode(DEBUGGER_MODE_PAUSED);
+	VICE_HOOK_LIFECYCLE_MESSAGE("CPU JAM has occurred");
+
+	VICE_HOOK_LIFECYCLE_DEBUG_MODE(DEBUGGER_MODE_PAUSED);
 	
 	return UI_JAM_NONE;
 }

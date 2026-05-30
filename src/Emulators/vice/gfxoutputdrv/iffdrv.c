@@ -44,20 +44,20 @@
 typedef struct gfxoutputdrv_data_s {
     FILE *fd;
     char *ext_filename;
-    BYTE *data;
-    BYTE *iff_data;
+    uint8_t *data;
+    uint8_t *iff_data;
     unsigned int line;
     int iff_rowbytes;
 } gfxoutputdrv_data_t;
 
-STATIC_PROTOTYPE gfxoutputdrv_t iff_drv;
+static gfxoutputdrv_t iff_drv;
 
-static BYTE powers[8]= { 1,2,4,8,16,32,64,128 };
+static uint8_t powers[8]= { 1, 2, 4, 8, 16, 32, 64, 128 };
 
 static int iffdrv_write_file_header(screenshot_t *screenshot)
 {
     gfxoutputdrv_data_t *sdata;
-    BYTE header[836];
+    uint8_t header[836];
     int i;
     int totalsize;
 
@@ -83,11 +83,11 @@ static int iffdrv_write_file_header(screenshot_t *screenshot)
     header[14] = 'H';
     header[15] = 'D';
     util_dword_to_be_buf(&header[16], 20);
-    util_word_to_be_buf(&header[20], (WORD)(screenshot->width));
-    util_word_to_be_buf(&header[22], (WORD)(screenshot->height));
+    util_word_to_be_buf(&header[20], (uint16_t)(screenshot->width));
+    util_word_to_be_buf(&header[22], (uint16_t)(screenshot->height));
     header[28] = 8;
-    util_word_to_be_buf(&header[36], (WORD)(screenshot->width));
-    util_word_to_be_buf(&header[38], (WORD)(screenshot->height));
+    util_word_to_be_buf(&header[36], (uint16_t)(screenshot->width));
+    util_word_to_be_buf(&header[38], (uint16_t)(screenshot->height));
     header[40] = 'C';
     header[41] = 'M';
     header[42] = 'A';
@@ -151,7 +151,7 @@ static int iffdrv_open(screenshot_t *screenshot, const char *filename)
     return 0;
 }
 
-static void iff_c2p(BYTE *chunky, BYTE *planar, int amount, int plane)
+static void iff_c2p(uint8_t *chunky, uint8_t *planar, int amount, int plane)
 {
     int i;
 
@@ -220,7 +220,7 @@ static int iffdrv_save(screenshot_t *screenshot, const char *filename)
 #ifdef FEATURE_CPUMEMHISTORY
 static FILE *iffdrv_memmap_fd;
 static char *iffdrv_memmap_ext_filename;
-static BYTE *iffdrv_memmap_iff_data;
+static uint8_t *iffdrv_memmap_iff_data;
 static int iffdrv_memmap_iff_rowbytes;
 
 static int iffdrv_close_memmap(void)
@@ -232,7 +232,7 @@ static int iffdrv_close_memmap(void)
     return 0;
 }
 
-static int iffdrv_write_memmap(int line, int x_size, BYTE *gfx)
+static int iffdrv_write_memmap(int line, int x_size, uint8_t *gfx)
 {
     int j;
 
@@ -245,9 +245,9 @@ static int iffdrv_write_memmap(int line, int x_size, BYTE *gfx)
     return 0;
 }
 
-static int iffdrv_write_file_header_memmap(int x_size, int y_size, BYTE *palette)
+static int iffdrv_write_file_header_memmap(int x_size, int y_size, uint8_t *palette)
 {
-    BYTE header[836];
+    uint8_t header[836];
     int i;
     int totalsize;
 
@@ -271,11 +271,11 @@ static int iffdrv_write_file_header_memmap(int x_size, int y_size, BYTE *palette
     header[14] = 'H';
     header[15] = 'D';
     util_dword_to_be_buf(&header[16], 20);
-    util_word_to_be_buf(&header[20], (WORD)(x_size));
-    util_word_to_be_buf(&header[22], (WORD)(y_size));
+    util_word_to_be_buf(&header[20], (uint16_t)(x_size));
+    util_word_to_be_buf(&header[22], (uint16_t)(y_size));
     header[28] = 8;
-    util_word_to_be_buf(&header[36], (WORD)(x_size));
-    util_word_to_be_buf(&header[38], (WORD)(y_size));
+    util_word_to_be_buf(&header[36], (uint16_t)(x_size));
+    util_word_to_be_buf(&header[38], (uint16_t)(y_size));
     header[40] = 'C';
     header[41] = 'M';
     header[42] = 'A';
@@ -305,7 +305,7 @@ static int iffdrv_write_file_header_memmap(int x_size, int y_size, BYTE *palette
     return 0;
 }
 
-static int iffdrv_open_memmap(const char *filename, int x_size, int y_size, BYTE *palette)
+static int iffdrv_open_memmap(const char *filename, int x_size, int y_size, uint8_t *palette)
 {
     iffdrv_memmap_ext_filename = util_add_extension_const(filename, iff_drv.default_extension);
     iffdrv_memmap_fd = fopen(iffdrv_memmap_ext_filename, "wb");
@@ -326,7 +326,7 @@ static int iffdrv_open_memmap(const char *filename, int x_size, int y_size, BYTE
     return 0;
 }
 
-static int iffdrv_save_memmap(const char *filename, int x_size, int y_size, BYTE *gfx, BYTE *palette)
+static int iffdrv_save_memmap(const char *filename, int x_size, int y_size, uint8_t *gfx, uint8_t *palette)
 {
     int line;
 
@@ -348,6 +348,7 @@ static int iffdrv_save_memmap(const char *filename, int x_size, int y_size, BYTE
 
 static gfxoutputdrv_t iff_drv =
 {
+    GFXOUTPUTDRV_TYPE_SCREENSHOT_IMAGE,
     "IFF",
     "IFF screenshot",
     "iff",

@@ -24,13 +24,17 @@
  *
  */
 
-#ifdef HAVE_PCAP
+#ifdef HAVE_RAWNET
 #else
-  #error RAWNET.H should not be included if HAVE_PCAP is not defined!
-#endif /* #ifdef HAVE_PCAP */
+  #error RAWNET.H should not be included if HAVE_RAWNET is not defined!
+#endif /* #ifdef HAVE_RAWNET */
 
 #ifndef VICE_RAWNET_H
 #define VICE_RAWNET_H
+
+int rawnet_resources_init(void);
+int rawnet_cmdline_options_init(void);
+void rawnet_resources_shutdown(void);
 
 /*
  This is a helper for the _receive() function of the emulated ethernet chip to determine
@@ -41,8 +45,8 @@
  using rawnet_set_should_accept_func at init time.
 */
 
-extern int rawnet_should_accept(unsigned char *buffer, int length, int *phashed, int *phash_index, int *pcorrect_mac, int *pbroadcast, int *pmulticast);
-extern void rawnet_set_should_accept_func(int (*func)(unsigned char *, int, int *, int *, int *, int *, int *));
+int rawnet_should_accept(unsigned char *buffer, int length, int *phashed, int *phash_index, int *pcorrect_mac, int *pbroadcast, int *pmulticast);
+void rawnet_set_should_accept_func(int (*func)(unsigned char *, int, int *, int *, int *, int *, int *));
 
 /*
 
@@ -58,6 +62,8 @@ extern void rawnet_set_should_accept_func(int (*func)(unsigned char *, int, int 
 
    For each of these parameters, new memory is allocated, so it has to be
    freed with lib_free().
+   Note: The description can be NULL, since pcap_if_t.desc can be NULL, so
+   check the description before calling lib_free() on it.
 
  rawnet_enumadapter_close() must be used to stop processing.
 
@@ -65,9 +71,14 @@ extern void rawnet_set_should_accept_func(int (*func)(unsigned char *, int, int 
  rawnet_enumadapter() only fails if there is no more adpater; in this case,
    *ppname and *ppdescription are not altered.
 */
-extern int rawnet_enumadapter_open(void);
-extern int rawnet_enumadapter(char **ppname, char **ppdescription);
-extern int rawnet_enumadapter_close(void);
-extern char *rawnet_get_standard_interface(void);
+int rawnet_enumadapter_open(void);
+int rawnet_enumadapter(char **ppname, char **ppdescription);
+int rawnet_enumadapter_close(void);
+char *rawnet_get_standard_interface(void);
+
+int rawnet_enumdriver_open(void);
+int rawnet_enumdriver(char **ppname, char **ppdescription);
+int rawnet_enumdriver_close(void);
+char *rawnet_get_standard_driver(void);
 
 #endif

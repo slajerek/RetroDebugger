@@ -27,6 +27,6 @@
 #ifndef VICE_BMPDRV_H
 #define VICE_BMPDRV_H
 
-extern void gfxoutput_init_bmp(int help);
+void gfxoutput_init_bmp(int help);
 
 #endif

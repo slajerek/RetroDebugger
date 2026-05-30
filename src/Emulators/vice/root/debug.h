@@ -63,13 +63,15 @@ typedef struct debug_s {
     int trace_mode;
 
      /*
-      * if this is set, the CPU will break into the monitor before executing the 
+      * if this is set, the CPU will break into the monitor before executing the
       * next statement. This is often handy for debugging.
       */
     int perform_break_into_monitor;
 
     /*! If this is set, inputs and outputs to the IEC bus are output. */
     int iec;
+    /*! If this is set, inputs and outputs to the IEEE-488 bus are output. */
+    int ieee;
 #endif
     int do_core_dumps;
 } debug_t;
@@ -78,38 +80,36 @@ extern debug_t debug;
 
 struct interrupt_cpu_status_s;
 
-extern int debug_resources_init(void);
-extern int debug_cmdline_options_init(void);
+int debug_resources_init(void);
+int debug_cmdline_options_init(void);
 
-extern void debug_set_machine_parameter(unsigned int cycles,
-                                        unsigned int lines);
-extern void debug_maincpu(DWORD reg_pc, CLOCK mclk, const char *dis,
-                          BYTE reg_a, BYTE reg_x, BYTE reg_y, BYTE reg_sp);
-extern void debug_main65816cpu(DWORD reg_pc, CLOCK mclk, const char *dis, WORD reg_c,
-                               WORD reg_x, WORD reg_y, WORD reg_sp, BYTE reg_pbr);
-extern void debug_drive(DWORD reg_pc, CLOCK mclk, const char *dis,
-                        BYTE reg_a, BYTE reg_x, BYTE reg_y, BYTE reg_sp,
-                        unsigned int driveno);
-extern void debug_irq(struct interrupt_cpu_status_s *cs, CLOCK iclk);
-extern void debug_nmi(struct interrupt_cpu_status_s *cs, CLOCK iclk);
-extern void debug_dma(const char *txt, CLOCK dclk, int num);
-extern void debug_text(const char *text);
-extern void debug_start_recording(void);
-extern void debug_stop_recording(void);
-extern void debug_start_playback(void);
-extern void debug_stop_playback(void);
-extern void debug_set_milestone(void);
-extern void debug_reset_milestone(void);
-extern void debug_check_autoplay_mode(void);
+void debug_set_machine_parameter(unsigned int cycles, unsigned int lines);
+void debug_maincpu(uint32_t reg_pc, CLOCK mclk, const char *dis, uint8_t reg_a, uint8_t reg_x,
+                   uint8_t reg_y, uint8_t reg_sp);
+void debug_main65816cpu(uint32_t reg_pc, CLOCK mclk, const char *dis, uint16_t reg_c,
+                        uint16_t reg_x, uint16_t reg_y, uint16_t reg_sp, uint8_t reg_pbr);
+void debug_drive(uint32_t reg_pc, CLOCK mclk, const char *dis, uint8_t reg_a, uint8_t reg_x,
+                        uint8_t reg_y, uint8_t reg_sp, unsigned int driveno);
+void debug_irq(struct interrupt_cpu_status_s *cs, CLOCK iclk);
+void debug_nmi(struct interrupt_cpu_status_s *cs, CLOCK iclk);
+void debug_dma(const char *txt, CLOCK dclk, CLOCK num);
+void debug_text(const char *text);
+void debug_start_recording(void);
+void debug_stop_recording(void);
+void debug_start_playback(void);
+void debug_stop_playback(void);
+void debug_set_milestone(void);
+void debug_reset_milestone(void);
+void debug_check_autoplay_mode(void);
 
 
 #ifdef VICE_DEBUG
 
-extern void debug_iec_drv_write(unsigned int data);
-extern void debug_iec_drv_read(unsigned int data);
+void debug_iec_drv_write(unsigned int data);
+void debug_iec_drv_read(unsigned int data);
 
-extern void debug_iec_bus_write(unsigned int data);
-extern void debug_iec_bus_read(unsigned int data);
+void debug_iec_bus_write(unsigned int data);
+void debug_iec_bus_read(unsigned int data);
 
 # define DEBUG_IEC_DRV_WRITE(_data) debug_iec_drv_write(_data)
 # define DEBUG_IEC_DRV_READ(_data) debug_iec_drv_read(_data)
@@ -136,7 +136,7 @@ extern void debug_iec_bus_read(unsigned int data);
 
 # define STATIC_ASSERT(_x) \
     { \
-        BYTE dummy[1 - 2 * ((_x) == 0)]; \
+        uint8_t dummy[1 - 2 * ((_x) == 0)]; \
         dummy[0] = dummy[0] - dummy[0]; /* prevent "unused variable" warning */ \
     }
 

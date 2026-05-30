@@ -40,6 +40,8 @@
 #include "vicetypes.h"
 #include "util.h"
 
+#include "gifdrv.h"
+
 #if GIFLIB_MAJOR >= 5
 #define VICE_EGifOpenFileName(x, y, z) EGifOpenFileName(x, y, z)
 #define VICE_MakeMapObject GifMakeMapObject
@@ -192,7 +194,7 @@ static int gifdrv_close_memmap(void)
   return 0;
 }
 
-static int gifdrv_write_memmap(int line, int x_size, BYTE *gfx)
+static int gifdrv_write_memmap(int line, int x_size, uint8_t *gfx)
 {
   if (EGifPutLine(gifdrv_memmap_fd, gfx+(line*x_size), x_size)==GIF_ERROR)
     return -1;
@@ -200,7 +202,7 @@ static int gifdrv_write_memmap(int line, int x_size, BYTE *gfx)
   return 0;
 }
 
-static int gifdrv_open_memmap(const char *filename, int x_size, int y_size, BYTE *palette)
+static int gifdrv_open_memmap(const char *filename, int x_size, int y_size, uint8_t *palette)
 {
   unsigned int i;
   GifColorType ColorMap256[256];
@@ -241,7 +243,7 @@ static int gifdrv_open_memmap(const char *filename, int x_size, int y_size, BYTE
   return 0;
 }
 
-static int gifdrv_save_memmap(const char *filename, int x_size, int y_size, BYTE *gfx, BYTE *palette)
+static int gifdrv_save_memmap(const char *filename, int x_size, int y_size, uint8_t *gfx, uint8_t *palette)
 {
   int line;
 
@@ -262,6 +264,7 @@ static int gifdrv_save_memmap(const char *filename, int x_size, int y_size, BYTE
 
 static gfxoutputdrv_t gif_drv =
 {
+    GFXOUTPUTDRV_TYPE_SCREENSHOT_IMAGE,
     "GIF",
     "GIF screenshot",
     "gif",
@@ -280,7 +283,7 @@ static gfxoutputdrv_t gif_drv =
 #endif
 };
 
-void gfxoutput_init_gif(void)
+void gfxoutput_init_gif(int help)	/* VICE 3.10: + help arg (unused here, matches other drivers) */
 {
   gfxoutput_register(&gif_drv);
 }

@@ -38,6 +38,8 @@
 #include <pwd.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#include <time.h>
+#include <mach/mach_time.h>
 
 #include "vice_sdl.h"
 #include <sys/stat.h>
@@ -105,6 +107,64 @@ void archdep_network_shutdown(void)
 {
 }
 
+/* VICE 3.10: replaced ioutil_access(); ARCHDEP_ACCESS_* values match POSIX. */
+int archdep_access(const char *pathname, int mode)
+{
+	return access(pathname, mode);
+}
+
+/* VICE 3.10 tick subsystem (mach_absolute_time on macOS). Vanilla's
+   arch/shared/archdep_tick.c is gated on configure-set MACOS_COMPILE which RD's
+   Xcode build doesn't define, so the implementation lives here. */
+static mach_timebase_info_data_t c64d_timebase_info;
+
+void tick_init(void)
+{
+	mach_timebase_info(&c64d_timebase_info);
+}
+
+tick_t tick_per_second(void)
+{
+	return TICK_PER_SECOND;
+}
+
+tick_t tick_now(void)
+{
+	return NANO_TO_TICK(mach_absolute_time() * c64d_timebase_info.numer / c64d_timebase_info.denom);
+}
+
+void tick_sleep(tick_t sleep_ticks)
+{
+	uint64_t nanos = TICK_TO_NANO(sleep_ticks);
+	struct timespec ts;
+
+	if (nanos < NANO_PER_SECOND) {
+		ts.tv_sec = 0;
+		ts.tv_nsec = nanos;
+	} else {
+		ts.tv_sec = nanos / NANO_PER_SECOND;
+		ts.tv_nsec = nanos % NANO_PER_SECOND;
+	}
+
+	nanosleep(&ts, NULL);
+}
+
+tick_t tick_now_after(tick_t previous_tick)
+{
+	tick_t after = tick_now();
+
+	if (after == previous_tick - 1) {
+		after = previous_tick;
+	}
+
+	return after;
+}
+
+tick_t tick_now_delta(tick_t previous_tick)
+{
+	return tick_now_after(previous_tick) - previous_tick;
+}
+
 static int archdep_init_extra(int *argc, char **argv)
 {
 #ifdef USE_PROC_SELF_EXE
@@ -123,12 +183,12 @@ static int archdep_init_extra(int *argc, char **argv)
 	archdep_pref_path = archdep_boot_path();
 	
 #else
-	argv0 = lib_stralloc(argv[0]);
+	argv0 = lib_strdup(argv[0]);
 #endif
 	return 0;
 }
 
-char *archdep_program_name(void)
+const char *archdep_program_name(void)
 {
 	static char *program_name = NULL;
 	
@@ -137,9 +197,9 @@ char *archdep_program_name(void)
 		
 		p = strrchr(argv0, '/');
 		if (p == NULL) {
-			program_name = lib_stralloc(argv0);
+			program_name = lib_strdup(argv0);
 		} else {
-			program_name = lib_stralloc(p + 1);
+			program_name = lib_strdup(p + 1);
 		}
 	}
 	
@@ -151,9 +211,9 @@ const char *archdep_boot_path(void)
 	if (boot_path == NULL) {
 #ifdef USE_PROC_SELF_EXE
 		/* known from setup in archdep_init_extra() so just reuse it */
-		boot_path = lib_stralloc(argv0);
+		boot_path = lib_strdup(argv0);
 #else
-		boot_path = findpath(argv0, getenv("PATH"), IOUTIL_ACCESS_X_OK);
+		boot_path = findpath(argv0, getenv("PATH"), NULL, IOUTIL_ACCESS_X_OK);
 #endif
 		
 		/* Remove the program name.  */
@@ -220,35 +280,19 @@ char *archdep_default_sysfile_pathlist(const char *emu_id)
 		lib_free(default_path_temp);
 		
 #else
-#if defined(MACOSX_BUNDLE)
-		/* Mac OS X Bundles keep their ROMS in Resources/bin/../ROM */
-#if defined(MACOSX_COCOA) || defined(USE_SDLUI)
-#define MACOSX_ROMDIR "/../Resources/ROM/"
-#else
-#define MACOSX_ROMDIR "/../ROM/"
-#endif
-		default_path = util_concat(boot_path, MACOSX_ROMDIR, emu_id, ARCHDEP_FINDPATH_SEPARATOR_STRING,
-								   boot_path, "/", emu_id, ARCHDEP_FINDPATH_SEPARATOR_STRING,
-								   home_path, "/", VICEUSERDIR, "/", emu_id, ARCHDEP_FINDPATH_SEPARATOR_STRING,
-								   
-								   boot_path, MACOSX_ROMDIR, "DRIVES", ARCHDEP_FINDPATH_SEPARATOR_STRING,
-								   boot_path, "/DRIVES", ARCHDEP_FINDPATH_SEPARATOR_STRING,
-								   home_path, "/", VICEUSERDIR, "/DRIVES", ARCHDEP_FINDPATH_SEPARATOR_STRING,
-								   
-								   boot_path, MACOSX_ROMDIR, "PRINTER", ARCHDEP_FINDPATH_SEPARATOR_STRING,
-								   boot_path, "/PRINTER", ARCHDEP_FINDPATH_SEPARATOR_STRING,
-								   home_path, "/", VICEUSERDIR, "/PRINTER", NULL);
-#else
-		default_path = util_concat(LIBDIR, "/", emu_id, ARCHDEP_FINDPATH_SEPARATOR_STRING,
-								   home_path, "/", VICEUSERDIR, "/", emu_id, ARCHDEP_FINDPATH_SEPARATOR_STRING,
-								   boot_path, "/", emu_id, ARCHDEP_FINDPATH_SEPARATOR_STRING,
-								   LIBDIR, "/DRIVES", ARCHDEP_FINDPATH_SEPARATOR_STRING,
-								   home_path, "/", VICEUSERDIR, "/DRIVES", ARCHDEP_FINDPATH_SEPARATOR_STRING,
-								   boot_path, "/DRIVES", ARCHDEP_FINDPATH_SEPARATOR_STRING,
-								   LIBDIR, "/PRINTER", ARCHDEP_FINDPATH_SEPARATOR_STRING,
-								   home_path, "/", VICEUSERDIR, "/PRINTER", ARCHDEP_FINDPATH_SEPARATOR_STRING,
-								   boot_path, "/PRINTER", NULL);
-#endif
+		/* VICE 3.10 changed the contract: sysfile_open now appends a subpath ("C64",
+		   "DRIVES", "PRINTER", ...) onto each search-path element. The 3.1-vintage
+		   list below baked the machine name *into* each path, which would now produce
+		   "<dir>/C64/C64/kernal-901227-03.bin" -- double-suffix, never found, hard
+		   reset jumps to PC=$0000. Return generic VICE-data roots and let the caller
+		   supply the subpath. (void)emu_id since the caller already encodes it.
+		   Also add /opt/homebrew/share/vice for arm64 Homebrew (LIBDIR points at
+		   /usr/local/lib/vice from the legacy Intel prefix). */
+		(void)emu_id;
+		default_path = util_concat("/opt/homebrew/share/vice", ARCHDEP_FINDPATH_SEPARATOR_STRING,
+								   LIBDIR, ARCHDEP_FINDPATH_SEPARATOR_STRING,
+								   home_path, "/", VICEUSERDIR, ARCHDEP_FINDPATH_SEPARATOR_STRING,
+								   boot_path, NULL);
 #endif
 	}
 	
@@ -450,7 +494,7 @@ int archdep_expand_path(char **return_path, const char *orig_name)
 {
 	/* Unix version.  */
 	if (*orig_name == '/') {
-		*return_path = lib_stralloc(orig_name);
+		*return_path = lib_strdup(orig_name);
 	} else {
 		static char *cwd;
 		
@@ -473,13 +517,13 @@ void archdep_startup_log_error(const char *format, ...)
 char *archdep_filename_parameter(const char *name)
 {
 	/* nothing special(?) */
-	return lib_stralloc(name);
+	return lib_strdup(name);
 }
 
 char *archdep_quote_parameter(const char *name)
 {
 	/*not needed(?) */
-	return lib_stralloc(name);
+	return lib_strdup(name);
 }
 
 char *archdep_tmpnam(void)
@@ -510,11 +554,11 @@ char *archdep_tmpnam(void)
 		close(fd);
 	}
 	
-	final_name = lib_stralloc(tmp_name);
+	final_name = lib_strdup(tmp_name);
 	lib_free(tmp_name);
 	return final_name;
 #else
-	return lib_stralloc(tmpnam(NULL));
+	return lib_strdup(tmpnam(NULL));
 #endif
 }
 
@@ -571,7 +615,7 @@ FILE *archdep_mkstemp_fd(char **filename, const char *mode)
 		return NULL;
 	}
 	
-	*filename = lib_stralloc(tmp);
+	*filename = lib_strdup(tmp);
 	
 	return fd;
 #endif
@@ -601,19 +645,19 @@ int archdep_mkdir(const char *pathname, int mode)
 #endif
 }
 
-int archdep_stat(const char *file_name, unsigned int *len, unsigned int *isdir)
+int archdep_stat(const char *file_name, size_t *len, unsigned int *isdir)
 {
 	struct stat statbuf;
-	
+
 	if (stat(file_name, &statbuf) < 0) {
-		*len = 0;
-		*isdir = 0;
+		if (len)   { *len = 0; }
+		if (isdir) { *isdir = 0; }
 		return -1;
 	}
-	
-	*len = statbuf.st_size;
-	*isdir = S_ISDIR(statbuf.st_mode);
-	
+
+	if (len)   { *len = (size_t)statbuf.st_size; }
+	if (isdir) { *isdir = S_ISDIR(statbuf.st_mode); }
+
 	return 0;
 }
 
@@ -799,7 +843,15 @@ int archdep_init(int *argc, char **argv)
 //		fprintf(stderr, "SDL error: %s\n", SDL_GetError());
 //		return 1;
 //	}
-	
+
+	/* VICE 3.10 expects the host tick subsystem live before main_program starts.
+	   Without this, c64d_timebase_info stays zeroed, tick_now() does an integer
+	   divide-by-zero (returns 0 on arm64), the throttle loop sees "no wallclock
+	   advance" and lets the OS scheduler dribble cycles in -- C64 runs at ~3 kHz
+	   instead of ~1 MHz and the kernal cold-start never reaches the BASIC prompt
+	   (black screen). */
+	tick_init();
+
 	return archdep_init_extra(argc, argv);
 }
 

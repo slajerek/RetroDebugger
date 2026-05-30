@@ -30,8 +30,10 @@
 #include "vicetypes.h"
 
 struct vdrive_s;
+struct bufinfo_s;
 
-extern int fsdevice_write(struct vdrive_s *vdrive, BYTE data,
-                          unsigned int secondary);
+void fsdevice_listen(struct vdrive_s *vdrive, unsigned int secondary);
+int fsdevice_write(struct vdrive_s *vdrive, uint8_t data,
+                   unsigned int secondary);
 
 #endif

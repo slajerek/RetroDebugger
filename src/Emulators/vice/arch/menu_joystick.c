@@ -306,60 +306,9 @@ const ui_menu_entry_t joystick_menu[] = {
     SDL_MENU_LIST_END
 };
 
-UI_MENU_DEFINE_TOGGLE(ExtraJoy)
-UI_MENU_DEFINE_RADIO(ExtraJoyType)
-
-static const ui_menu_entry_t joystick_extra_joy_type_menu[] = {
-    { "CGA/Protovision userport adapter",
-      MENU_ENTRY_RESOURCE_RADIO,
-      radio_ExtraJoyType_callback,
-      (ui_callback_data_t)USERPORT_JOYSTICK_CGA },
-    { "DXS/HIT userport adapter",
-      MENU_ENTRY_RESOURCE_RADIO,
-      radio_ExtraJoyType_callback,
-      (ui_callback_data_t)USERPORT_JOYSTICK_HIT },
-    { "Kingsoft userport adapter",
-      MENU_ENTRY_RESOURCE_RADIO,
-      radio_ExtraJoyType_callback,
-      (ui_callback_data_t)USERPORT_JOYSTICK_KINGSOFT },
-    { "Starbyte userport adapter",
-      MENU_ENTRY_RESOURCE_RADIO,
-      radio_ExtraJoyType_callback,
-      (ui_callback_data_t)USERPORT_JOYSTICK_STARBYTE },
-    { "PET userport adapter",
-      MENU_ENTRY_RESOURCE_RADIO,
-      radio_ExtraJoyType_callback,
-      (ui_callback_data_t)USERPORT_JOYSTICK_PET },
-    { "Hummer userport adapter",
-      MENU_ENTRY_RESOURCE_RADIO,
-      radio_ExtraJoyType_callback,
-      (ui_callback_data_t)USERPORT_JOYSTICK_HUMMER },
-    { "OEM userport adapter",
-      MENU_ENTRY_RESOURCE_RADIO,
-      radio_ExtraJoyType_callback,
-      (ui_callback_data_t)USERPORT_JOYSTICK_OEM },
-    SDL_MENU_LIST_END
-};
-
-static const ui_menu_entry_t joystick_extra_joy_type_no_hit_menu[] = {
-    { "CGA/Protovision userport adapter",
-      MENU_ENTRY_RESOURCE_RADIO,
-      radio_ExtraJoyType_callback,
-      (ui_callback_data_t)USERPORT_JOYSTICK_CGA },
-    { "PET userport adapter",
-      MENU_ENTRY_RESOURCE_RADIO,
-      radio_ExtraJoyType_callback,
-      (ui_callback_data_t)USERPORT_JOYSTICK_PET },
-    { "HUMMER userport adapter",
-      MENU_ENTRY_RESOURCE_RADIO,
-      radio_ExtraJoyType_callback,
-      (ui_callback_data_t)USERPORT_JOYSTICK_HUMMER },
-    { "OEM userport adapter",
-      MENU_ENTRY_RESOURCE_RADIO,
-      radio_ExtraJoyType_callback,
-      (ui_callback_data_t)USERPORT_JOYSTICK_OEM },
-    SDL_MENU_LIST_END
-};
+/* VICE 3.10 removed the ExtraJoy/ExtraJoyType resources and the
+   USERPORT_JOYSTICK_* type constants; userport joystick adapters are now
+   selected as userport devices. The "Extra Joystick Adapter" menus are dropped. */
 
 const ui_menu_entry_t joystick_c64_menu[] = {
     { "Joystick device in port 1",
@@ -396,14 +345,7 @@ const ui_menu_entry_t joystick_c64_menu[] = {
       submenu_callback,
       (ui_callback_data_t)define_keyset_menu },
     SDL_MENU_ITEM_SEPARATOR,
-    { "Extra Joystick Adapter",
-      MENU_ENTRY_RESOURCE_TOGGLE,
-      toggle_ExtraJoy_callback,
-      NULL },
-    { "Extra Joystick Adapter type",
-      MENU_ENTRY_SUBMENU,
-      submenu_radio_callback,
-      (ui_callback_data_t)joystick_extra_joy_type_menu },
+    /* VICE 3.10: "Extra Joystick Adapter" (ExtraJoy/ExtraJoyType) removed. */
 #ifdef HAVE_SDL_NUMJOYSTICKS
     SDL_MENU_ITEM_SEPARATOR,
     { "Joystick 1 mapping", /* TODO better name */
@@ -465,14 +407,7 @@ const ui_menu_entry_t joystick_c64dtv_menu[] = {
       submenu_callback,
       (ui_callback_data_t)define_keyset_menu },
     SDL_MENU_ITEM_SEPARATOR,
-    { "Extra Joystick Adapter",
-      MENU_ENTRY_RESOURCE_TOGGLE,
-      toggle_ExtraJoy_callback,
-      NULL },
-    { "Extra Joystick Adapter type",
-      MENU_ENTRY_SUBMENU,
-      submenu_radio_callback,
-      (ui_callback_data_t)joystick_extra_joy_type_no_hit_menu },
+    /* VICE 3.10: "Extra Joystick Adapter" (ExtraJoy/ExtraJoyType) removed. */
 #ifdef HAVE_SDL_NUMJOYSTICKS
     SDL_MENU_ITEM_SEPARATOR,
     { "Joystick 1 mapping", /* TODO better name */
@@ -585,14 +520,7 @@ const ui_menu_entry_t joystick_vic20_menu[] = {
       submenu_callback,
       (ui_callback_data_t)define_keyset_menu },
     SDL_MENU_ITEM_SEPARATOR,
-    { "Extra Joystick Adapter",
-      MENU_ENTRY_RESOURCE_TOGGLE,
-      toggle_ExtraJoy_callback,
-      NULL },
-    { "Extra Joystick Adapter type",
-      MENU_ENTRY_SUBMENU,
-      submenu_radio_callback,
-      (ui_callback_data_t)joystick_extra_joy_type_no_hit_menu },
+    /* VICE 3.10: "Extra Joystick Adapter" (ExtraJoy/ExtraJoyType) removed. */
 #ifdef HAVE_SDL_NUMJOYSTICKS
     SDL_MENU_ITEM_SEPARATOR,
     { "Joystick 1 mapping",
@@ -638,14 +566,7 @@ const ui_menu_entry_t joystick_userport_only_menu[] = {
       submenu_callback,
       (ui_callback_data_t)define_keyset_menu },
     SDL_MENU_ITEM_SEPARATOR,
-    { "Extra Joystick Adapter",
-      MENU_ENTRY_RESOURCE_TOGGLE,
-      toggle_ExtraJoy_callback,
-      NULL },
-    { "Extra Joystick Adapter type",
-      MENU_ENTRY_SUBMENU,
-      submenu_radio_callback,
-      (ui_callback_data_t)joystick_extra_joy_type_no_hit_menu },
+    /* VICE 3.10: "Extra Joystick Adapter" (ExtraJoy/ExtraJoyType) removed. */
 #ifdef HAVE_SDL_NUMJOYSTICKS
     SDL_MENU_ITEM_SEPARATOR,
     { "Extra joystick 1 mapping",

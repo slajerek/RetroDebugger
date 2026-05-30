@@ -25,71 +25,105 @@
  */
 
 #include "vice.h"
-
 #include <stdio.h>
 
-#include "c64exp-resources.h"
 #include "drive.h"
 #include "drivemem.h"
+#include "init.h"
 #include "lib.h"
 #include "profdos.h"
 #include "resources.h"
 #include "stardos-exp.h"
 #include "supercard.h"
+#include "vicetypes.h"
+#include "uiapi.h"
+#include "userport.h"
 #include "util.h"
 
+#include "c64exp-resources.h"
+
+/* #define DEBUG_C64EXP */
+
+#ifdef DEBUG_C64EXP
+#define DBG(x)  log_printf x
+#else
+#define DBG(x)
+#endif
 
 static char *profdos_1571_name = NULL;
 static char *supercard_name = NULL;
 static char *stardos_name = NULL;
 
-
-static void set_drive_ram(unsigned int dnr)
-{
-    drive_t *drive = drive_context[dnr]->drive;
-
-    if (drive->type != DRIVE_TYPE_1570 && drive->type != DRIVE_TYPE_1571
-        && drive->type != DRIVE_TYPE_1571CR) {
-        return;
-    }
-
-    drivemem_init(drive_context[dnr], drive->type);
-
-    return;
-}
-
 static int set_drive_parallel_cable(int val, void *param)
 {
-    drive_t *drive = drive_context[vice_ptr_to_uint(param)]->drive;
+    diskunit_context_t *unit = diskunit_context[vice_ptr_to_uint(param)];
+    int userport_device = -1;
 
     switch (val) {
         case DRIVE_PC_NONE:
         case DRIVE_PC_STANDARD:
         case DRIVE_PC_DD3:
         case DRIVE_PC_FORMEL64:
+        case DRIVE_PC_21SEC_BACKUP:
             break;
         default:
             return -1;
     }
 
-    drive->parallel_cable = val;
-    set_drive_ram(vice_ptr_to_uint(param));
+    unit->parallel_cable = val;
+    /* don't reset CMDHD drives */
+    if (unit->type != DRIVE_TYPE_CMDHD) {
+        drivemem_init(unit);
+    }
+
+    /* some magic to automatically insert or remove the parallel cable into/from the user port */
+    resources_get_int("UserportDevice", &userport_device);
+
+    if ((val == DRIVE_PC_NONE) && (userport_device == USERPORT_DEVICE_DRIVE_PAR_CABLE)) {
+        int hasparcable = 0;
+        int dnr;
+        /* check if any drive has a parallel cable enabled */
+        for (dnr = 0; dnr < NUM_DISK_UNITS; dnr++) {
+            int cable;
+            resources_get_int_sprintf("Drive%iParallelCable", &cable, dnr + 8);
+            if (cable != DRIVE_PC_NONE) {
+                hasparcable = 1;
+            }
+        }
+        /* if no drive uses parallel cable, disable it in the userport settings */
+        if (hasparcable == 0) {
+            resources_set_int("UserportDevice", USERPORT_DEVICE_NONE);
+        }
+    } else if (val != DRIVE_PC_NONE) {
+        if (userport_device == USERPORT_DEVICE_NONE) {
+            resources_set_int("UserportDevice", USERPORT_DEVICE_DRIVE_PAR_CABLE);
+        } else if (userport_device != USERPORT_DEVICE_DRIVE_PAR_CABLE) {
+            if (init_main_is_done()) {
+                ui_message("Warning: the user port is already being used for another device.\n"
+                            "To be able to use the parallel cable, you must also set up the user port accordingly.");
+            }
+        }
+    }
 
     return 0;
 }
 
 static int set_drive_profdos(int val, void *param)
 {
-    drive_t *drive = drive_context[vice_ptr_to_uint(param)]->drive;
+    diskunit_context_t *unit = diskunit_context[vice_ptr_to_uint(param)];
 
-    drive->profdos = val ? 1 : 0;
-    set_drive_ram(vice_ptr_to_uint(param));
+    DBG(("set_drive_profdos profdos:%d", val));
+
+    unit->profdos = val ? 1 : 0;
+    drivemem_init(unit);
 
     return 0;
 }
 
 static int set_profdos_1571_name(const char *val, void *param)
 {
+    DBG(("set_profdos_1571_name name:%s", val));
+
     if (util_string_set(&profdos_1571_name, val)) {
         return 0;
     }
@@ -99,10 +133,10 @@ static int set_profdos_1571_name(const char *val, void *param)
 
 static int set_drive_supercard(int val, void *param)
 {
-    drive_t *drive = drive_context[vice_ptr_to_uint(param)]->drive;
+    diskunit_context_t *unit = diskunit_context[vice_ptr_to_uint(param)];
 
-    drive->supercard = val ? 1 : 0;
-    set_drive_ram(vice_ptr_to_uint(param));
+    unit->supercard = val ? 1 : 0;
+    drivemem_init(unit);
 
     return 0;
 }
@@ -118,9 +152,9 @@ static int set_supercard_name(const char *val, void *param)
 
 static int set_drive_stardos(int val, void *param)
 {
-    drive_t *drive = drive_context[vice_ptr_to_uint(param)]->drive;
+    diskunit_context_t *unit = diskunit_context[vice_ptr_to_uint(param)];
 
-    drive->stardos = val ? 1 : 0;
+    unit->stardos = val ? 1 : 0;
 
     return 0;
 }
@@ -134,6 +168,15 @@ static int set_stardos_name(const char *val, void *param)
     return stardos_exp_load(stardos_name);
 }
 
+static int set_drive_dd3(int val, void *param)
+{
+    diskunit_context_t *unit = diskunit_context[vice_ptr_to_uint(param)];
+
+    unit->dolphindos3 = val ? 1 : 0;
+
+    return 0;
+}
+
 static resource_int_t res_drive[] = {
     { NULL, DRIVE_PC_NONE, RES_EVENT_SAME, NULL,
       NULL, set_drive_parallel_cable, NULL },
@@ -143,6 +186,8 @@ static resource_int_t res_drive[] = {
       NULL, set_drive_supercard, NULL },
     { NULL, 0, RES_EVENT_SAME, NULL,
       NULL, set_drive_stardos, NULL },
+    { NULL, 0, RES_EVENT_SAME, NULL,
+      NULL, set_drive_dd3, NULL },
     RESOURCE_INT_LIST_END
 };
 
@@ -153,30 +198,32 @@ static const resource_string_t resources_string[] =
     { "DriveSuperCardName", "", RES_EVENT_NO, NULL,
       &supercard_name, set_supercard_name, NULL },
     { "DriveStarDosName", "", RES_EVENT_NO, NULL,
-      &supercard_name, set_stardos_name, NULL },
+      &stardos_name, set_stardos_name, NULL },
     RESOURCE_STRING_LIST_END
 };
 
 int c64exp_resources_init(void)
 {
-    unsigned int dnr;
-    drive_t *drive;
+    int dnr;
 
-    for (dnr = 0; dnr < DRIVE_NUM; dnr++) {
-        drive = drive_context[dnr]->drive;
+    for (dnr = 0; dnr < NUM_DISK_UNITS; dnr++) {
+        diskunit_context_t *unit = diskunit_context[dnr];
 
         res_drive[0].name = lib_msprintf("Drive%iParallelCable", dnr + 8);
-        res_drive[0].value_ptr = &(drive->parallel_cable);
-        res_drive[0].param = uint_to_void_ptr(dnr);
+        res_drive[0].value_ptr = &(unit->parallel_cable);
+        res_drive[0].param = vice_uint_to_ptr(dnr);
         res_drive[1].name = lib_msprintf("Drive%iProfDOS", dnr + 8);
-        res_drive[1].value_ptr = &(drive->profdos);
-        res_drive[1].param = uint_to_void_ptr(dnr);
+        res_drive[1].value_ptr = &(unit->profdos);
+        res_drive[1].param = vice_uint_to_ptr(dnr);
         res_drive[2].name = lib_msprintf("Drive%iSuperCard", dnr + 8);
-        res_drive[2].value_ptr = &(drive->supercard);
-        res_drive[2].param = uint_to_void_ptr(dnr);
+        res_drive[2].value_ptr = &(unit->supercard);
+        res_drive[2].param = vice_uint_to_ptr(dnr);
         res_drive[3].name = lib_msprintf("Drive%iStarDos", dnr + 8);
-        res_drive[3].value_ptr = &(drive->stardos);
-        res_drive[3].param = uint_to_void_ptr(dnr);
+        res_drive[3].value_ptr = &(unit->stardos);
+        res_drive[3].param = vice_uint_to_ptr(dnr);
+        res_drive[4].name = lib_msprintf("Drive%iDolphinDos3", dnr + 8);
+        res_drive[4].value_ptr = &(unit->dolphindos3);
+        res_drive[4].param = vice_uint_to_ptr(dnr);
 
         if (resources_register_int(res_drive) < 0) {
             return -1;
@@ -186,6 +233,7 @@ int c64exp_resources_init(void)
         lib_free(res_drive[1].name);
         lib_free(res_drive[2].name);
         lib_free(res_drive[3].name);
+        lib_free(res_drive[4].name);
     }
 
     return resources_register_string(resources_string);

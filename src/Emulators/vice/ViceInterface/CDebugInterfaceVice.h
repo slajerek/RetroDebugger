@@ -6,8 +6,15 @@
 #include "SYS_Threading.h"
 #include "CPool.h"
 
+/* VICE 3.10 sound.h sets SOUND_SIDS_MAX=8 (was 3 in 3.1). RD's earlier fallback to
+   C64_MAX_NUM_SIDS (3) created an ODR violation: TUs that didn't include sound.h
+   saw a 192-byte CSidData; TUs that did saw a 512-byte one. new CSidData() then
+   allocated 192 bytes and the ctor wrote 256+256 -> heap corruption -> WS thread
+   malloc trap. Caught by ASAN as a 256B write past a 192B allocation made from
+   CDebuggerServerApiVice ctor's `this->sidData = new CSidData();`. Match VICE 3.10's
+   value unconditionally so every TU agrees on the struct layout. */
 #ifndef SOUND_SIDS_MAX
-#define SOUND_SIDS_MAX C64_MAX_NUM_SIDS
+#define SOUND_SIDS_MAX 8
 #endif
 
 //HAVE_NETWORK  ?

@@ -36,8 +36,8 @@
 #include "archdep.h"
 #include "cmdline.h"
 #include "lib.h"
+#include "log.h"
 #include "resources.h"
-#include "translate.h"
 #include "vicetypes.h"
 #include "uicmdline.h"
 #include "util.h"
@@ -51,6 +51,8 @@
 
 static unsigned int num_options, num_allocated_options;
 static cmdline_option_ram_t *options;
+
+static char *combined_string = NULL;
 
 int cmdline_init(void)
 {
@@ -76,6 +78,11 @@ static cmdline_option_ram_t *lookup_exact(const char *name)
     return NULL;
 }
 
+int cmdline_option_exists(const char *name)
+{
+    return lookup_exact(name) != NULL;
+}
+
 int cmdline_register_options(const cmdline_option_t *c)
 {
     cmdline_option_ram_t *p;
@@ -83,15 +90,23 @@ int cmdline_register_options(const cmdline_option_t *c)
     p = options + num_options;
     for (; c->name != NULL; c++, p++) {
         if (lookup_exact(c->name)) {
-            archdep_startup_log_error("CMDLINE: (%d) Duplicated option '%s'.\n", num_options, c->name);
+            archdep_startup_log_error("CMDLINE: (%u) Duplicated option '%s'.\n", num_options, c->name);
             return -1;
         }
 
-        if (c->use_description_id != USE_DESCRIPTION_ID) {
-            if (c->description == NULL) {
-                archdep_startup_log_error("CMDLINE: (%d) description id not used and description NULL for '%s'.\n", num_options, c->name);
-                return -1;
-            }
+        if (c->description == NULL) {
+            archdep_startup_log_error("CMDLINE: (%u) description id not used and description NULL for '%s'.\n", num_options, c->name);
+            return -1;
+        }
+
+        if ((c->attributes & CMDLINE_ATTRIB_NEED_ARGS) && (c->param_name == NULL)) {
+            archdep_startup_log_error("CMDLINE: (%u) Parameter description missing for '%s'.\n", num_options, c->name);
+            return -1;
+        }
+
+        if (!(c->attributes & CMDLINE_ATTRIB_NEED_ARGS) && (c->param_name != NULL)) {
+            archdep_startup_log_error("CMDLINE: (%u) Parameter description used, but attribute is missing for '%s'.\n", num_options, c->name);
+            return -1;
         }
 
         /* archdep_startup_log_error("CMDLINE: (%d) registering option '%s'.\n", num_options, c->name); */
@@ -102,28 +117,20 @@ int cmdline_register_options(const cmdline_option_t *c)
             p = options + num_options;
         }
 
-        p->name = lib_stralloc(c->name);
+        p->name = lib_strdup(c->name);
         p->type = c->type;
-        p->need_arg = c->need_arg;
+        p->attributes = c->attributes;
         p->set_func = c->set_func;
         p->extra_param = c->extra_param;
         if (c->resource_name != NULL) {
-            p->resource_name = lib_stralloc(c->resource_name);
+            p->resource_name = lib_strdup(c->resource_name);
         } else {
             p->resource_name = NULL;
         }
         p->resource_value = c->resource_value;
 
-        p->use_param_name_id = c->use_param_name_id;
-        p->use_description_id = c->use_description_id;
-
         p->param_name = c->param_name;
         p->description = c->description;
-
-        p->param_name_trans = c->param_name_trans;
-        p->description_trans = c->description_trans;
-
-        p->combined_string = NULL;
 
         num_options++;
     }
@@ -135,12 +142,14 @@ static void cmdline_free(void)
 {
     unsigned int i;
 
+    if (combined_string) {
+        lib_free(combined_string);
+        combined_string = NULL;
+    }
+
     for (i = 0; i < num_options; i++) {
         lib_free((options + i)->name);
         lib_free((options + i)->resource_name);
-        if ((options + i)->combined_string) {
-            lib_free((options + i)->combined_string);
-        }
     }
 }
 
@@ -229,21 +238,21 @@ int cmdline_parse(int *argc, char **argv)
                                           argv[i]);
                 return -1;
             }
-            if (p->need_arg && i >= *argc - 1) {
+            if ((p->attributes & CMDLINE_ATTRIB_NEED_ARGS) && i >= *argc - 1) {
                 archdep_startup_log_error("Option '%s' requires a parameter.\n",
                                           p->name);
                 return -1;
             }
             switch (p->type) {
                 case SET_RESOURCE:
-                    if (p->need_arg) {
+                    if (p->attributes & CMDLINE_ATTRIB_NEED_ARGS) {
                         retval = resources_set_value_string(p->resource_name, argv[i + 1]);
                     } else {
                         retval = resources_set_value(p->resource_name, p->resource_value);
                     }
                     break;
                 case CALL_FUNCTION:
-                    retval = p->set_func(p->need_arg ? argv[i + 1] : NULL,
+                    retval = p->set_func((p->attributes & CMDLINE_ATTRIB_NEED_ARGS) ? argv[i + 1] : NULL,
                                          p->extra_param);
                     break;
                 default:
@@ -252,7 +261,7 @@ int cmdline_parse(int *argc, char **argv)
                     return -1;
             }
             if (retval < 0) {
-                if (p->need_arg) {
+                if (p->attributes & CMDLINE_ATTRIB_NEED_ARGS) {
                     archdep_startup_log_error("Argument '%s' not valid for option `%s'.\n",
                                               argv[i + 1], p->name);
                 } else {
@@ -261,7 +270,7 @@ int cmdline_parse(int *argc, char **argv)
                 return -1;
             }
 
-            i += p->need_arg ? 2 : 1;
+            i += (p->attributes & CMDLINE_ATTRIB_NEED_ARGS) ? 2 : 1;
         } else {
             break;
         }
@@ -285,47 +294,65 @@ int cmdline_parse(int *argc, char **argv)
     return 0;
 }
 
+
+/** \brief  Dump command line options on stdout
+ *
+ * \param[in]   num_options number of options
+ * \param[in]   options     list of options
+ * \param[in]   userparm    ignored for some reason
+ *
+ * XXX: this function and its brethren where all over archdep, while basically
+ *      doing the same thing.
+ *
+ *      On Windows it seems we need to use `x64 -help|more` to make the list
+ *      appear on the console. (thanks Greg)
+ *
+ *      Once this works, we can remove a lot of 'uicmdline.c' files from
+ *      various src/arch/$arch directories. -- compyx, 2017-08-12
+ */
 void cmdline_show_help(void *userparam)
 {
-    ui_cmdline_show_help(num_options, options, userparam);
+    unsigned int i;
+
+    /* AmigaOS used some translation function for this string: */
+    printf("\nAvailable command-line options:\n\n");
+    for (i = 0; i < num_options; i++) {
+        const char *param = cmdline_options_get_param(i);
+        if ((options[i].attributes & CMDLINE_ATTRIB_NEED_ARGS) && param != NULL) {
+            printf("%s %s\n", options[i].name, param);
+        } else {
+            puts(options[i].name);
+        }
+        printf("\t%s\n", cmdline_options_get_description(i));
+    }
+    putchar('\n');
 }
+
 
 char *cmdline_options_get_name(int counter)
 {
-    return (char *)_(options[counter].name);
+    return (char *)options[counter].name;
 }
 
-char *cmdline_options_get_param(int counter)
+const char *cmdline_options_get_param(int counter)
 {
-    if (options[counter].use_param_name_id == USE_PARAM_ID) {
-        return translate_text(options[counter].param_name_trans);
-    } else {
-        return (char *)_(options[counter].param_name);
-    }
+    return options[counter].param_name;
 }
 
 char *cmdline_options_get_description(int counter)
 {
-    union char_func cf;
-
-    if (options[counter].use_description_id == USE_DESCRIPTION_ID) {
-        return translate_text(options[counter].description_trans);
-    } else if (options[counter].use_description_id == USE_DESCRIPTION_COMBO) {
-        if (options[counter].combined_string) {
-            lib_free(options[counter].combined_string);
-        }
-        options[counter].combined_string = util_concat(translate_text(options[counter].description_trans), options[counter].description, NULL);
-        return options[counter].combined_string;
-    } else if (options[counter].use_description_id == USE_DESCRIPTION_DYN) {
-        if (options[counter].combined_string) {
-            lib_free(options[counter].combined_string);
-        }
-        cf.c = options[counter].description;
-        options[counter].combined_string = cf.f(options[counter].description_trans);
-        return options[counter].combined_string;
-    } else {
-        return (char *)_(options[counter].description);
+    if (combined_string != NULL) {
+        lib_free(combined_string);
+        combined_string = NULL;
     }
+    if (options[counter].attributes & CMDLINE_ATTRIB_DYNAMIC_DESCRIPTION) {
+        union char_func cf;
+        cf.c = options[counter].description;
+        combined_string = cf.f(options[counter].attributes >> 8);
+    } else {
+        combined_string = lib_strdup(options[counter].description);
+    }
+    return combined_string;
 }
 
 char *cmdline_options_string(void)
@@ -334,13 +361,13 @@ char *cmdline_options_string(void)
     char *cmdline_string, *new_cmdline_string;
     char *add_to_options1, *add_to_options2, *add_to_options3;
 
-    cmdline_string = lib_stralloc("\n");
+    cmdline_string = lib_strdup("\n");
 
     for (i = 0; i < num_options; i++) {
         add_to_options1 = lib_msprintf("%s", options[i].name);
         add_to_options3 = lib_msprintf("\n\t%s\n", cmdline_options_get_description(i));
-        if (options[i].need_arg && cmdline_options_get_param(i) != NULL) {
-            if (options[i].need_arg == -1) {
+        if ((options[i].attributes & CMDLINE_ATTRIB_NEED_ARGS) && cmdline_options_get_param(i) != NULL) {
+            if (options[i].attributes & CMDLINE_ATTRIB_NEED_BRACKETS) {
                 add_to_options2 = lib_msprintf(" <%s>", cmdline_options_get_param(i));
             } else {
                 add_to_options2 = lib_msprintf(" %s", cmdline_options_get_param(i));
@@ -366,4 +393,114 @@ char *cmdline_options_string(void)
 int cmdline_get_num_options(void)
 {
     return num_options;
+}
+
+/* #define DEBUG_OPTIONS_LOG */
+/* #define DEBUG_OPTIONS_LOG_2 */     /* list options that are not related to a resource */
+
+void cmdline_log_active(void)
+{
+    unsigned int i;
+    char *cmdline, *cmd;
+
+    cmdline = lib_strdup("-default");
+
+    for (i = 0; i < num_options; i++) {
+        const char *param = cmdline_options_get_param(i);
+        const char *resname = options[i].resource_name;
+        const char *optname = options[i].name;
+        const char *resval_str = NULL;
+        char *resval_str_default = NULL;
+        int restype = -1;
+        int resval_int = -1;
+        int resval_int_default = -1;
+        if (resname) {
+            restype = resources_query_type(resname);
+            if (restype == RES_INTEGER) {
+                resources_get_int(resname, &resval_int);
+                resources_get_default_value(resname, &resval_int_default);
+#ifdef DEBUG_OPTIONS_LOG
+                printf("\n(int) opt: %s res: %s val: %d default: %d attribs:%x -> ",
+                       optname, resname, resval_int, resval_int_default, (unsigned int)options[i].attributes);
+#endif
+            } else if (restype == RES_STRING) {
+                resources_get_string(resname, &resval_str);
+                resources_get_default_value(resname, &resval_str_default);
+#ifdef DEBUG_OPTIONS_LOG
+                printf("\n(str) opt: %s res: %s val: %s default: %s attribs:%x -> ",
+                       optname, resname, resval_str, resval_str_default, (unsigned int)options[i].attributes);
+#endif
+            }
+        }
+#ifdef DEBUG_OPTIONS_LOG_2
+        else {
+                printf("\nopt: %s attribs:%x -> ",
+                       optname, (unsigned int)options[i].attributes);
+        }
+#endif
+        cmd = NULL;
+        if ((options[i].attributes & CMDLINE_ATTRIB_NEED_ARGS) && (param != NULL)) {
+            /* the cmdline option needs a parameter, we assume this is what the resource got assigned */
+#ifdef DEBUG_OPTIONS_LOG
+            printf("has param, ");
+#endif
+            if (restype == RES_INTEGER) {
+#ifdef DEBUG_OPTIONS_LOG
+            printf("int, ");
+#endif
+                if (resval_int != resval_int_default) {
+                    char tmp[32];
+                    sprintf(tmp, "%d", resval_int);
+                    cmd = util_concat(optname, " \"", tmp, "\"", NULL);
+                }
+            } else if (restype == RES_STRING) {
+#ifdef DEBUG_OPTIONS_LOG
+            printf("str, ");
+#endif
+                if ((resval_str != NULL) && (resval_str_default != NULL)) {
+                    if (strcmp(resval_str, resval_str_default)) {
+                        cmd = util_concat(optname, " \"", resval_str, "\"", NULL);
+                    }
+                }
+            }
+        } else {
+#ifdef DEBUG_OPTIONS_LOG
+            printf("no param, ");
+#endif
+            /* the options does not need a parameter, the resource value should match the value
+               defined in the option itself */
+            if (restype == RES_INTEGER) {
+#ifdef DEBUG_OPTIONS_LOG
+            printf("int, ");
+#endif
+                if (resval_int != resval_int_default) {
+                    if (resval_int == vice_ptr_to_int(options[i].resource_value)) {
+                        cmd = lib_strdup(optname);
+                    }
+                }
+            } else if (restype == RES_STRING) {
+#ifdef DEBUG_OPTIONS_LOG
+            printf("str, ");
+#endif
+                if ((resval_str != NULL) && (resval_str_default != NULL) && (options[i].resource_value != NULL)) {
+                    if (strcmp(resval_str, resval_str_default)) {
+                        if (!strcmp(resval_str, options[i].resource_value)) {
+                            cmd = lib_strdup(optname);
+                        }
+                    }
+                }
+            }
+        }
+
+        if (cmd) {
+            char *p;
+            p = cmdline; /* remember old pointer */
+            cmdline = util_concat(p, " ", cmd, NULL);
+            lib_free(p); /* free old pointer */
+            lib_free(cmd); /* free old pointer */
+        }
+    }
+    log_message(LOG_DEFAULT, "\n" LOG_COL_LWHITE "reconstructed commandline options (might be incomplete)" LOG_COL_OFF ":");
+    log_message(LOG_DEFAULT, "%s\n", cmdline);
+    lib_free(cmdline);
 }

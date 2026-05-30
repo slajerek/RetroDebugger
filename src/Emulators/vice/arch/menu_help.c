@@ -47,7 +47,7 @@ static char *concat_all(char **text)
 {
     int i;
     char *new_text;
-    char *old_text = lib_stralloc("\n");
+    char *old_text = lib_strdup("\n");
 
     for (i = 0; text[i] != NULL; i++) {
         new_text = util_concat(old_text, text[i], NULL);

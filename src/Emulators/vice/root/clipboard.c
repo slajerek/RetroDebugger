@@ -35,13 +35,16 @@
 #include "mem.h"
 #include "vicetypes.h"
 
+#include "clipboard.h"
+
+
 char *clipboard_read_screen_output(const char *line_ending)
 {
     char * outputbuffer = NULL;
 
     do {
-        WORD base;
-        BYTE allrows, allcols;
+        uint16_t base;
+        uint8_t allrows, allcols;
         unsigned int row, col;
         unsigned int size;
         unsigned int line_ending_length = (unsigned int)strlen(line_ending);
@@ -64,10 +67,10 @@ char *clipboard_read_screen_output(const char *line_ending)
             char * last_non_whitespace = p - 1;
 
             for (col = 0; col < allcols; col++) {
-                BYTE data;
+                uint8_t data;
 
                 data = mem_bank_peek(bank, base++, NULL);
-                data = charset_p_toascii(charset_screencode_to_petcii(data), 1);
+                data = charset_p_toascii(charset_screencode_to_petscii(data), CONVERT_WITH_CTRLCODES);
 
                 if (data != ' ') {
                     last_non_whitespace = p;

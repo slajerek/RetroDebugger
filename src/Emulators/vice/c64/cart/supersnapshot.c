@@ -39,10 +39,10 @@
 #include "cmdline.h"
 #include "export.h"
 #include "monitor.h"
+#include "ram.h"
 #include "resources.h"
 #include "snapshot.h"
 #include "supersnapshot.h"
-#include "translate.h"
 #include "vicetypes.h"
 #include "util.h"
 #include "crt.h"
@@ -72,35 +72,40 @@
     bit 0    GAME (0: low, 1: high)
 */
 
+#define CART_RAM_SIZE (32 * 1024)
+
 /* Super Snapshot configuration flags.  */
-static BYTE romconfig = 9;
+static uint8_t romconfig = 9;
 static int ram_bank = 0; /* Version 5 supports 4 - 8Kb RAM banks. */
 static int currbank = 0;
 static int currreg  = 0;
 static int ss_32k_enabled = 0;
 static int ss_rom_disabled = 0;
+static int ss_rom_banks = 4;
 
 /* ---------------------------------------------------------------------*/
 
 /* some prototypes are needed */
-static BYTE supersnapshot_v5_io1_read(WORD addr);
-static BYTE supersnapshot_v5_io1_peek(WORD addr);
-static void supersnapshot_v5_io1_store(WORD addr, BYTE value);
+static uint8_t supersnapshot_v5_io1_read(uint16_t addr);
+static uint8_t supersnapshot_v5_io1_peek(uint16_t addr);
+static void supersnapshot_v5_io1_store(uint16_t addr, uint8_t value);
 static int supersnapshot_v5_dump(void);
 
 static io_source_t ss5_device = {
-    CARTRIDGE_NAME_SUPER_SNAPSHOT_V5,
-    IO_DETACH_CART,
-    NULL,
-    0xde00, 0xdeff, 0xff,
-    0,
-    supersnapshot_v5_io1_store,
-    supersnapshot_v5_io1_read,
-    supersnapshot_v5_io1_peek,
-    supersnapshot_v5_dump,
-    CARTRIDGE_SUPER_SNAPSHOT_V5,
-    0,
-    0
+    CARTRIDGE_NAME_SUPER_SNAPSHOT_V5, /* name of the device */
+    IO_DETACH_CART,                   /* use cartridge ID to detach the device when involved in a read-collision */
+    IO_DETACH_NO_RESOURCE,            /* does not use a resource for detach */
+    0xde00, 0xdeff, 0xff,             /* range for the device, regs:$de00-$deff */
+    0,                                /* read validity is determined by the device upon a read */
+    supersnapshot_v5_io1_store,       /* store function */
+    NULL,                             /* NO poke function */
+    supersnapshot_v5_io1_read,        /* read function */
+    supersnapshot_v5_io1_peek,        /* peek function */
+    supersnapshot_v5_dump,            /* device state information dump function */
+    CARTRIDGE_SUPER_SNAPSHOT_V5,      /* cartridge ID */
+    IO_PRIO_NORMAL,                   /* normal priority, device read needs to be checked for collisions */
+    0,                                /* insertion order, gets filled in by the registration function */
+    IO_MIRROR_NONE                    /* NO mirroring */
 };
 
 static io_source_list_t *ss5_list_item = NULL;
@@ -111,21 +116,12 @@ static const export_resource_t export_res_v5 = {
 
 /* ---------------------------------------------------------------------*/
 
-static BYTE supersnapshot_v5_io1_read(WORD addr)
+static uint8_t supersnapshot_v5_io1_read(uint16_t addr)
 {
     ss5_device.io_source_valid = 1;
 
     if (!ss_rom_disabled) {
-        switch (roml_bank) {
-            case 0:
-                return roml_banks[0x1e00 + (addr & 0xff)];
-            case 1:
-                return roml_banks[0x1e00 + (addr & 0xff) + 0x2000];
-            case 2:
-                return roml_banks[0x1e00 + (addr & 0xff) + 0x4000];
-            case 3:
-                return roml_banks[0x1e00 + (addr & 0xff) + 0x6000];
-        }
+        return roml_banks[0x1e00 + (addr & 0xff) + (roml_bank << 13)];
     }
 
     ss5_device.io_source_valid = 0;
@@ -133,22 +129,12 @@ static BYTE supersnapshot_v5_io1_read(WORD addr)
     return 0;
 }
 
-static BYTE supersnapshot_v5_io1_peek(WORD addr)
+static uint8_t supersnapshot_v5_io1_peek(uint16_t addr)
 {
-    switch (roml_bank) {
-        case 0:
-            return roml_banks[0x1e00 + (addr & 0xff)];
-        case 1:
-            return roml_banks[0x1e00 + (addr & 0xff) + 0x2000];
-        case 2:
-            return roml_banks[0x1e00 + (addr & 0xff) + 0x4000];
-        case 3:
-            return roml_banks[0x1e00 + (addr & 0xff) + 0x6000];
-    }
-    return 0;
+    return roml_banks[0x1e00 + (addr & 0xff) + (roml_bank << 13)];
 }
 
-static void supersnapshot_v5_io1_store(WORD addr, BYTE value)
+static void supersnapshot_v5_io1_store(uint16_t addr, uint8_t value)
 {
     if (!ss_rom_disabled) {
         int mode = CMODE_WRITE;
@@ -161,8 +147,11 @@ static void supersnapshot_v5_io1_store(WORD addr, BYTE value)
         }
 
         romconfig = ((value & 1) ^ 1) | ((value & 2) ^ 2);
-        currbank = ((value >> 2) & 0x1) | (((value >> 4) & 0x1) << 1) /* | (((value >> 5) & 0x1) << 2)*/;
+        currbank = ((value >> 2) & 0x1) | (((value >> 4) & 0x1) << 1);
         ram_bank = ss_32k_enabled ? currbank : 0; /* Select RAM banknr. */
+        if (ss_rom_banks == 8) {
+            currbank |= (((value >> 5) & 0x1) << 2);
+        }
         ss_rom_disabled = ((value >> 3) & 0x1);
         romconfig |= (currbank << CMODE_BANK_SHIFT);
         if (((value >> 1) & 1) == 0) {
@@ -174,16 +163,16 @@ static void supersnapshot_v5_io1_store(WORD addr, BYTE value)
 
 static int supersnapshot_v5_dump(void)
 {
-    mon_out("Register: $%02x (%s)\n", currreg, (ss_rom_disabled) ? "disabled" : "enabled");
-    mon_out(" EXROM: %d GAME: %d (%s)\n", ((romconfig >> 1) & 1), (romconfig & 1) ^ 1, cart_config_string((BYTE)(romconfig & 3)));
-    mon_out(" ROM %s, Bank: %d\n", (ss_rom_disabled) ? "disabled" : "enabled", currbank);
-    mon_out(" RAM %s, Bank: %d\n", (export_ram) ? "enabled" : "disabled", ram_bank);
+    mon_out("Register: $%02x (%s)\n", (unsigned int)currreg, (ss_rom_disabled) ? "disabled" : "enabled");
+    mon_out(" EXROM: %d GAME: %d (%s)\n", ((romconfig >> 1) & 1), (romconfig & 1) ^ 1, cart_config_string((uint8_t)(romconfig & 3)));
+    mon_out(" ROM %s, Bank: %d of %d\n", (ss_rom_disabled) ? "disabled" : "enabled", currbank, ss_rom_banks);
+    mon_out(" RAM %s, Bank: %d of %d\n", (export_ram) ? "enabled" : "disabled", ram_bank, ss_32k_enabled ? 4 : 1);
     return 0;
 }
 
 /* ---------------------------------------------------------------------*/
 
-BYTE supersnapshot_v5_roml_read(WORD addr)
+uint8_t supersnapshot_v5_roml_read(uint16_t addr)
 {
     if (export_ram) {
         return export_ram0[(addr & 0x1fff) + (ram_bank << 13)];
@@ -195,14 +184,14 @@ BYTE supersnapshot_v5_roml_read(WORD addr)
     return 0; /* FIXME: open bus? */
 }
 
-void supersnapshot_v5_roml_store(WORD addr, BYTE value)
+void supersnapshot_v5_roml_store(uint16_t addr, uint8_t value)
 {
     if (export_ram) {
         export_ram0[(addr & 0x1fff) + (ram_bank << 13)] = value;
     }
 }
 
-void supersnapshot_v5_mmu_translate(unsigned int addr, BYTE **base, int *start, int *limit)
+void supersnapshot_v5_mmu_translate(unsigned int addr, uint8_t **base, int *start, int *limit)
 {
     switch (addr & 0xe000) {
         case 0x8000:
@@ -224,6 +213,25 @@ void supersnapshot_v5_mmu_translate(unsigned int addr, BYTE **base, int *start, 
 
 /* ---------------------------------------------------------------------*/
 
+/* FIXME: this still needs to be tweaked to match the hardware */
+static RAMINITPARAM ramparam = {
+    .start_value = 255,
+    .value_invert = 2,
+    .value_offset = 1,
+
+    .pattern_invert = 0x100,
+    .pattern_invert_value = 255,
+
+    .random_start = 0,
+    .random_repeat = 0,
+    .random_chance = 0,
+};
+
+void supersnapshot_v5_powerup(void)
+{
+    ram_init_with_pattern(export_ram0, CART_RAM_SIZE, &ramparam);
+}
+
 void supersnapshot_v5_freeze(void)
 {
     ss_rom_disabled = 0; /* enable the register */
@@ -233,20 +241,17 @@ void supersnapshot_v5_freeze(void)
 void supersnapshot_v5_config_init(void)
 {
     ss_rom_disabled = 0; /* enable the register */
-    supersnapshot_v5_io1_store((WORD)0xde00, 2);
+    supersnapshot_v5_io1_store((uint16_t)0xde00, 0);    /* start up in ultimax mode! */
 }
 
-void supersnapshot_v5_config_setup(BYTE *rawcart)
+void supersnapshot_v5_config_setup(uint8_t *rawcart)
 {
-    memcpy(&roml_banks[0x0000], &rawcart[0x0000], 0x2000);
-    memcpy(&romh_banks[0x0000], &rawcart[0x2000], 0x2000);
-    memcpy(&roml_banks[0x2000], &rawcart[0x4000], 0x2000);
-    memcpy(&romh_banks[0x2000], &rawcart[0x6000], 0x2000);
-    memcpy(&roml_banks[0x4000], &rawcart[0x8000], 0x2000);
-    memcpy(&romh_banks[0x4000], &rawcart[0xa000], 0x2000);
-    memcpy(&roml_banks[0x6000], &rawcart[0xc000], 0x2000);
-    memcpy(&romh_banks[0x6000], &rawcart[0xe000], 0x2000);
-    supersnapshot_v5_io1_store((WORD)0xde00, 2);
+    int i;
+    for (i = 0; i < 8; i++) {
+        memcpy(&roml_banks[0x2000 * i], &rawcart[0x0000 + (0x4000 * i)], 0x2000);
+        memcpy(&romh_banks[0x2000 * i], &rawcart[0x2000 + (0x4000 * i)], 0x2000);
+    }
+    supersnapshot_v5_io1_store((uint16_t)0xde00, 2);
 }
 
 /* ---------------------------------------------------------------------*/
@@ -262,26 +267,31 @@ static int supersnapshot_v5_common_attach(void)
     return 0;
 }
 
-int supersnapshot_v5_bin_attach(const char *filename, BYTE *rawcart)
+int supersnapshot_v5_bin_attach(const char *filename, uint8_t *rawcart)
 {
+    ss_rom_banks = 4;
     if (util_file_load(filename, rawcart, 0x10000, UTIL_FILE_LOAD_SKIP_ADDRESS) < 0) {
-        return -1;
+        if (util_file_load(filename, rawcart, 0x20000, UTIL_FILE_LOAD_SKIP_ADDRESS) < 0) {
+            return -1;
+        }
+        ss_rom_banks = 8;
     }
 
     return supersnapshot_v5_common_attach();
 }
 
-int supersnapshot_v5_crt_attach(FILE *fd, BYTE *rawcart)
+int supersnapshot_v5_crt_attach(FILE *fd, uint8_t *rawcart)
 {
     crt_chip_header_t chip;
     int i;
 
-    for (i = 0; i < 4; i++) {
+    ss_rom_banks = 4;
+    for (i = 0; i < 8; i++) {
         if (crt_read_chip_header(&chip, fd)) {
-            return -1;
+            break;
         }
 
-        if (chip.start != 0x8000 || chip.size != 0x4000 || chip.bank > 3) {
+        if (chip.start != 0x8000 || chip.size != 0x4000 || chip.bank > 7) {
             return -1;
         }
 
@@ -289,6 +299,11 @@ int supersnapshot_v5_crt_attach(FILE *fd, BYTE *rawcart)
             return -1;
         }
     }
+
+    if (!((i == 4) || (i == 8))) {
+        return -1;
+    }
+    ss_rom_banks = i;
 
     return supersnapshot_v5_common_attach();
 }
@@ -330,16 +345,12 @@ void supersnapshot_v5_resources_shutdown(void)
 
 static const cmdline_option_t cmdline_options[] =
 {
-    { "-ssramexpansion", SET_RESOURCE, 0,
+    { "-ssramexpansion", SET_RESOURCE, CMDLINE_ATTRIB_NONE,
       NULL, NULL, "SSRamExpansion", (resource_value_t)1,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_ENABLE_SS_RAM_EXPANSION,
-      NULL, NULL },
-    { "+ssramexpansion", SET_RESOURCE, 0,
+      NULL, "Enable SS 32KiB RAM expansion" },
+    { "+ssramexpansion", SET_RESOURCE, CMDLINE_ATTRIB_NONE,
       NULL, NULL, "SSRamExpansion", (resource_value_t)0,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_DISABLE_SS_RAM_EXPANSION,
-      NULL, NULL },
+      NULL, "Disable SS 32KiB RAM expansion" },
     CMDLINE_LIST_END
 };
 
@@ -359,18 +370,20 @@ int supersnapshot_v5_cmdline_options_init(void)
    BYTE  | RAM bank    |   0.0+  | current RAM bank
    BYTE  | 32K enabled |   0.1+  | 32KB enabled flag
    BYTE  | ROM disable |   0.1+  | ROM disable flag
-   ARRAY | ROML        |   0.0+  | 32768 BYTES of ROML data
-   ARRAY | ROMH        |   0.0+  | 32768 BYTES of ROMH data
+   BYTE  | ROM banks   |   0.3   | number of ROM banks (4 or 8)
+   ARRAY | ROML        |   0.0+  | 0x8000 or 0x10000 BYTES of ROML data
+   ARRAY | ROMH        |   0.0+  | 0x8000 or 0x10000 BYTES of ROMH data
    ARRAY | RAM         |   0.0+  | 32768 BYTES of RAM data
  */
 
-static char snap_module_name[] = "CARTSS5";
+static const char snap_module_name[] = "CARTSS5";
 #define SNAP_MAJOR   0
-#define SNAP_MINOR   2
+#define SNAP_MINOR   3
 
 int supersnapshot_v5_snapshot_write_module(snapshot_t *s)
 {
     snapshot_module_t *m;
+    unsigned int rom_bank_size = ss_rom_banks * 0x2000;
 
     m = snapshot_module_create(s, snap_module_name, SNAP_MAJOR, SNAP_MINOR);
 
@@ -379,14 +392,15 @@ int supersnapshot_v5_snapshot_write_module(snapshot_t *s)
     }
 
     if (0
-        || SMW_B(m, (BYTE)currbank) < 0
-        || SMW_B(m, (BYTE)currreg) < 0
+        || SMW_B(m, (uint8_t)currbank) < 0
+        || SMW_B(m, (uint8_t)currreg) < 0
         || SMW_B(m, romconfig) < 0
-        || SMW_B(m, (BYTE)ram_bank) < 0
-        || SMW_B(m, (BYTE)ss_32k_enabled) < 0
-        || SMW_B(m, (BYTE)ss_rom_disabled) < 0
-        || SMW_BA(m, roml_banks, 0x8000) < 0
-        || SMW_BA(m, romh_banks, 0x8000) < 0
+        || SMW_B(m, (uint8_t)ram_bank) < 0
+        || SMW_B(m, (uint8_t)ss_32k_enabled) < 0
+        || SMW_B(m, (uint8_t)ss_rom_disabled) < 0
+        || SMW_B(m, (uint8_t)ss_rom_banks) < 0
+        || SMW_BA(m, roml_banks, rom_bank_size) < 0
+        || SMW_BA(m, romh_banks, rom_bank_size) < 0
         || SMW_BA(m, export_ram0, 0x8000) < 0) {
         snapshot_module_close(m);
         return -1;
@@ -397,8 +411,9 @@ int supersnapshot_v5_snapshot_write_module(snapshot_t *s)
 
 int supersnapshot_v5_snapshot_read_module(snapshot_t *s)
 {
-    BYTE vmajor, vminor;
+    uint8_t vmajor, vminor;
     snapshot_module_t *m;
+    unsigned int rom_bank_size;
 
     m = snapshot_module_open(s, snap_module_name, &vmajor, &vminor);
 
@@ -407,13 +422,13 @@ int supersnapshot_v5_snapshot_read_module(snapshot_t *s)
     }
 
     /* Do not accept versions higher than current */
-    if (vmajor > SNAP_MAJOR || vminor > SNAP_MINOR) {
+    if (snapshot_version_is_bigger(vmajor, vminor, SNAP_MAJOR, SNAP_MINOR)) {
         snapshot_set_error(SNAPSHOT_MODULE_HIGHER_VERSION);
         goto fail;
     }
 
     /* new in 0.2 */
-    if (SNAPVAL(vmajor, vminor, 0, 2)) {
+    if (!snapshot_version_is_smaller(vmajor, vminor, 0, 2)) {
         if (0
             || SMR_B_INT(m, &currbank) < 0
             || SMR_B_INT(m, &currreg) < 0) {
@@ -431,7 +446,7 @@ int supersnapshot_v5_snapshot_read_module(snapshot_t *s)
     }
 
     /* new in 0.1 */
-    if (SNAPVAL(vmajor, vminor, 0, 1)) {
+    if (!snapshot_version_is_smaller(vmajor, vminor, 0, 1)) {
         if (0
             || SMR_B_INT(m, &ss_32k_enabled) < 0
             || SMR_B_INT(m, &ss_rom_disabled) < 0) {
@@ -442,9 +457,21 @@ int supersnapshot_v5_snapshot_read_module(snapshot_t *s)
         ss_rom_disabled = 0;
     }
 
+    /* new in 0.3 */
+    if (!snapshot_version_is_smaller(vmajor, vminor, 0, 3)) {
+        if (0
+            || SMR_B_INT(m, &ss_rom_banks) < 0) {
+            goto fail;
+        }
+    } else {
+        ss_rom_banks = 4;
+    }
+
+    rom_bank_size = ss_rom_banks * 0x2000;
+
     if (0
-        || SMR_BA(m, roml_banks, 0x8000) < 0
-        || SMR_BA(m, romh_banks, 0x8000) < 0
+        || SMR_BA(m, roml_banks, rom_bank_size) < 0
+        || SMR_BA(m, romh_banks, rom_bank_size) < 0
         || SMR_BA(m, export_ram0, 0x8000) < 0) {
         goto fail;
     }

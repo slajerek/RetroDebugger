@@ -27,6 +27,6 @@
 #ifndef VICE_PPMDRV_H
 #define VICE_PPMDRV_H
 
-extern void gfxoutput_init_ppm(int help);
+void gfxoutput_init_ppm(int help);
 
 #endif

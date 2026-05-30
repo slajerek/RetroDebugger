@@ -8,7 +8,7 @@ class CDebugInterfaceVice;
 class CDebuggerApiVice;
 class CSidData;
 
-const int MAX_DRIVE_NUM = DRIVE_NUM - 1;
+const int MAX_DRIVE_NUM = NUM_DISK_UNITS - 1;
 
 class CDebuggerServerApiVice : public CDebuggerServerApi
 {

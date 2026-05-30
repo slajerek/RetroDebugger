@@ -32,31 +32,32 @@
 struct output_parameter_s;
 
 struct output_select_s {
-    const char *output_name;
+    char *output_name;
     int (*output_open)(unsigned int prnr, struct output_parameter_s *output_parameter);
     void (*output_close)(unsigned int prnr);
-    int (*output_putc)(unsigned int prnr, BYTE b);
-    int (*output_getc)(unsigned int prnr, BYTE *b);
+    int (*output_putc)(unsigned int prnr, uint8_t b);
+    int (*output_getc)(unsigned int prnr, uint8_t *b);
     int (*output_flush)(unsigned int prnr);
+    int (*output_formfeed)(unsigned int prnr);
 };
 typedef struct output_select_s output_select_t;
 
 #define NUM_OUTPUT_SELECT       4 /* serial dev 4, 5, 6 and user port */
 
-extern int output_select_init_resources(void);
-extern int output_select_userport_init_resources(void);
-extern void output_select_shutdown(void);
-extern int output_select_init_cmdline_options(void);
-extern int output_select_userport_init_cmdline_options(void);
+int output_select_init_resources(void);
+int output_select_userport_init_resources(void);
+void output_select_shutdown(void);
+int output_select_init_cmdline_options(void);
+int output_select_userport_init_cmdline_options(void);
 
-extern void output_select_register(output_select_t *output_select);
+void output_select_register(output_select_t *output_select);
 
-extern int output_select_open(unsigned int prnr,
-                              struct output_parameter_s *output_parameter);
-extern void output_select_close(unsigned int prnr);
-extern int output_select_putc(unsigned int prnr, BYTE b);
-extern int output_select_getc(unsigned int prnr, BYTE *b);
-extern int output_select_flush(unsigned int prnr);
-extern void output_select_writeline(unsigned int prnr);
+int output_select_open(unsigned int prnr, struct output_parameter_s *output_parameter);
+void output_select_close(unsigned int prnr);
+int output_select_putc(unsigned int prnr, uint8_t b);
+int output_select_getc(unsigned int prnr, uint8_t *b);
+int output_select_flush(unsigned int prnr);
+int output_select_formfeed(unsigned int prnr);
+void output_select_writeline(unsigned int prnr);
 
 #endif
