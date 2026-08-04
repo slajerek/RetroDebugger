@@ -81,11 +81,44 @@ void CDebuggerServerApiVice::RegisterEndpoints(CDebuggerServer *server)
 		desc.description = "Write VIC-II registers";
 		server->AddEndpointFunction(desc, [this, server](const string token, json params, unsigned char *binaryData, int binaryDataSize) -> vector<char>*
 		{
+			// Accept both shapes: the object {"27": 0} and the list of pairs
+			// [[27, 0], ...] that vic/read hands back. Read-modify-write is the
+			// natural cycle for VIC registers, so feeding a read result straight
+			// back in has to work.
+			json registerPairs = json::array();
+			{
+				const json &requested = params["registers"];
+				if (requested.is_array())
+				{
+					for (const auto& entry : requested)
+					{
+						if (!entry.is_array() || entry.size() != 2)
+						{
+							return server->PrepareResult(HTTP_NOT_ACCEPTABLE, token, json(), NULL, 0);
+						}
+						registerPairs.push_back(entry);
+					}
+				}
+				else if (requested.is_object())
+				{
+					for (auto& [key, value] : requested.items())
+					{
+						registerPairs.push_back(json::array({key, value}));
+					}
+				}
+				else
+				{
+					// anything else (scalar, null, missing) is a client mistake, not a
+					// server error -- say so instead of throwing out of the handler
+					return server->PrepareResult(HTTP_NOT_ACCEPTABLE, token, json(), NULL, 0);
+				}
+			}
+
 			{
 				CDebugInterfaceMutexGuard lock(debugInterfaceVice);
-				for (auto& [key, value] : params["registers"].items())
+				for (const auto& pair : registerPairs)
 				{
-					u64 registerNum = FUN_DecOrHexStrWithPrefixToU64(key.c_str());
+					u64 registerNum = FUN_JsonValueDecOrHexStrWithPrefixToU64(pair[0]);
 					if (registerNum >= 0xD000 && registerNum < 0xD040)
 					{
 						registerNum -= 0xD000;
@@ -94,7 +127,7 @@ void CDebuggerServerApiVice::RegisterEndpoints(CDebuggerServer *server)
 					{
 						return server->PrepareResult(HTTP_NOT_ACCEPTABLE, token, json(), NULL, 0);
 					}
-					u64 registerValue = FUN_JsonValueDecOrHexStrWithPrefixToU64(value);
+					u64 registerValue = FUN_JsonValueDecOrHexStrWithPrefixToU64(pair[1]);
 					debuggerApiVice->SetVicRegister(registerNum, registerValue);
 				}
 			}

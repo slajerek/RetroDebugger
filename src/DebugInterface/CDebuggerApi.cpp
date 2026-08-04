@@ -31,6 +31,8 @@
 #include "CSlrTextParser.h"
 #include <sstream>
 #include <cstring>
+#include <cctype>
+#include <cstdlib>
 
 // static factory
 CDebuggerApi *CDebuggerApi::GetDebuggerApi(u8 emulatorType)
@@ -539,6 +541,11 @@ void CDebuggerApi::SetWarpSpeed(bool isWarpSpeed)
 	debugInterface->SetSettingIsWarpSpeed(isWarpSpeed);
 }
 
+bool CDebuggerApi::GetWarpSpeed()
+{
+	return debugInterface->GetSettingIsWarpSpeed();
+}
+
 bool CDebuggerApi::KeyboardDown(u32 mtKeyCode)
 {
 	return debugInterface->KeyboardDown(mtKeyCode);
@@ -842,8 +849,24 @@ json CDebuggerApi::AssembleCode(int startAddr, const std::string &code)
 		strncpy(lineBuf, lines[i].c_str(), sizeof(lineBuf) - 1);
 		lineBuf[sizeof(lineBuf) - 1] = 0;
 
-		// Strip '$' for the assembler (it expects bare hex)
-		// Actually the assembler handles '$' by stripping it internally via token parsing
+		// Remove '$' characters (assembler is hex-only), same as CViewMonitorConsole does.
+		// '$' is the canonical 6502 notation, so clients send "lda #$07" and used to get
+		// "Not a number after #" back. Stripping here keeps the shared assembler grammar
+		// untouched, so a malformed "lda #$" still fails instead of silently assembling.
+		{
+			char *src = lineBuf;
+			char *dst = lineBuf;
+			while (*src)
+			{
+				if (*src != '$')
+				{
+					*dst = *src;
+					dst++;
+				}
+				src++;
+			}
+			*dst = 0x00;
+		}
 
 		int instructionOpcode = -1;
 		uint16 instructionValue = 0;
@@ -1040,10 +1063,25 @@ json CDebuggerApi::SearchOpcodePattern(const std::string &pattern, int startAddr
 
 	// Build set of matching opcodes
 	std::vector<u8> matchingOpcodes;
-	for (int op = 0; op < 256; op++)
+
+	// A first token of exactly two hex digits is a raw opcode byte ("a9 ??"), not a
+	// mnemonic. Hex bytes are the most common way to write a pattern by hand, and this
+	// cannot collide with a mnemonic: every name in the opcode table is 3 characters
+	// long (ADC, BCC and DEC look hex-ish but are 3 chars, not 2).
+	bool isOpcodeByte = (strlen(mnemonicBuf) == 2
+						 && isxdigit((unsigned char)mnemonicBuf[0])
+						 && isxdigit((unsigned char)mnemonicBuf[1]));
+	if (isOpcodeByte)
 	{
-		if (strcmp(opcodes[op].name, mnemonicBuf) == 0)
-			matchingOpcodes.push_back(op);
+		matchingOpcodes.push_back((u8)strtol(mnemonicBuf, NULL, 16));
+	}
+	else
+	{
+		for (int op = 0; op < 256; op++)
+		{
+			if (strcmp(opcodes[op].name, mnemonicBuf) == 0)
+				matchingOpcodes.push_back(op);
+		}
 	}
 
 	if (matchingOpcodes.empty())
