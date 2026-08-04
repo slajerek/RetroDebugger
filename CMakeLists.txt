@@ -35,6 +35,15 @@ link_directories(${GTK3_LIBRARY_DIRS})
 add_definitions(${GTK3_CFLAGS_OTHER})
 find_package(ALSA REQUIRED)
 
+# The bundled libpng (1.5.2, in MTEngineSDL) is what actually gets linked into the
+# binary. pkg-config for gtk+-3.0 drags in -I/usr/include/libpng16, which lands in the
+# include path BEFORE the bundled one, so png.h resolves to the system 1.6.x header.
+# png_create_write_struct() then receives PNG_LIBPNG_VER_STRING "1.6.x", fails its
+# version handshake against the 1.5.2 implementation and returns NULL -- silently
+# breaking every PNG write (screen/snapshot, screen/save, VICE pngdrv, Atari screen).
+# BEFORE puts the bundled headers first so the header and the implementation match.
+include_directories(BEFORE "${CMAKE_CURRENT_SOURCE_DIR}/../MTEngineSDL/src/Engine/Libs/libpng")
+
 include_directories(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Plugins"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Plugins/CrtMaker"
