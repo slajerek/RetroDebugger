@@ -3044,21 +3044,32 @@ void CMainMenuBar::RenderImGui()
 				ImGui::Separator();
 				if (ImGui::MenuItem("WebSockets debugger server", "", &c64SettingsRunDebuggerServerWebSockets))
 				{
-					if (viewC64->debuggerServer == NULL)
+					if (c64SettingsRunDebuggerServerWebSockets)
 					{
-						viewC64->DebuggerServerWebSocketsStart();
-					}
-					if (viewC64->debuggerServer != NULL)
-					{
-						if (c64SettingsRunDebuggerServerWebSockets)
+						// DebuggerServerWebSocketsStart() creates AND starts the server, so
+						// calling Start() afterwards used to start the same thread twice and
+						// kill the process in SYS_StartThread. Start() only when the server
+						// object already exists.
+						if (viewC64->debuggerServer == NULL)
+						{
+							viewC64->DebuggerServerWebSocketsStart();
+						}
+						else
 						{
 							viewC64->debuggerServer->Start();
+						}
+
+						if (viewC64->debuggerServer != NULL)
+						{
 							char *buf = SYS_GetCharBuf();
 							sprintf(buf, "WebSockets server started on port %d.", c64SettingsRunDebuggerServerWebSocketsPort);
 							guiMain->ShowNotification("Information", buf);
 							SYS_ReleaseCharBuf(buf);
 						}
-						else
+					}
+					else
+					{
+						if (viewC64->debuggerServer != NULL)
 						{
 							viewC64->debuggerServer->Stop();
 							if (viewC64->debuggerServer->AreClientsConnected())

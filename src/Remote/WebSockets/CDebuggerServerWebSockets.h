@@ -17,6 +17,9 @@ public:
 	virtual void Stop();
 	
 	bool serverStarted;
+	// set synchronously by Start(), unlike serverStarted/isRunning which are only set
+	// once the server thread is already up — see the comment in Start()
+	bool startRequested;
 	int numConnectedClients;
 
 	virtual void AddEndpointFunction(const std::string& endpointName, std::function<std::vector<char> *(const std::string, const nlohmann::json, u8 *, int)> func);

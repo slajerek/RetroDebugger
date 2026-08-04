@@ -32,6 +32,7 @@ CDebuggerServerWebSockets::CDebuggerServerWebSockets(int port)
 {
 	app = NULL;
 	serverStarted = false;
+	startRequested = false;
 	numConnectedClients = 0;
 }
 
@@ -42,12 +43,18 @@ void CDebuggerServerWebSockets::SetPort(int port)
 
 void CDebuggerServerWebSockets::Start()
 {
-	if (serverStarted)
+	// serverStarted and isRunning are both set by the server thread once it is up, so
+	// two Start() calls in a row (the menu handler used to do exactly that) both see
+	// them false and the second SYS_StartThread hits SYS_FatalExit("thread is already
+	// running") — the process dies instantly, with no dialog and no log entry. This
+	// flag is set here, synchronously, so the second call is refused instead.
+	if (startRequested || serverStarted)
 	{
 		LOGError("CDebuggerServerWebSockets: server already started");
 		return;
 	}
 
+	startRequested = true;
 	SYS_StartThread(this);
 }
 
@@ -58,13 +65,16 @@ void CDebuggerServerWebSockets::Stop()
 	if (!serverStarted)
 	{
 		LOGError("CDebuggerServerWebSockets: server is not running");
+		// a start that never reached the listening state must not block the next one
+		startRequested = false;
 		return;
 	}
-	
+
 	if (!listenSocket)
 	{
 		LOGError("CDebuggerServerWebSockets: listenSocket is NULL");
 		serverStarted = false;
+		startRequested = false;
 		return;
 	}
 	
@@ -279,6 +289,12 @@ void CDebuggerServerWebSockets::ThreadRun(void *passData)
 	// for uWS topic management. They don't go through RunEndpointFunction.
 
 	app->ws<SocketData>("/stream", {
+		// uWS defaults to 16 kB, and anything above it is dropped by closing the socket
+		// without an error or a close frame — so a client sending a whole PRG or disk
+		// image in one writeBlock just loses the connection with no way to tell why.
+		// 4 MB covers every realistic payload here (64 kB RAM, D64, D81, CRT) with room
+		// to spare. Field order must match the declaration order in uWS::WebSocketBehavior.
+		.maxPayloadLength = 4 * 1024 * 1024,
 		.idleTimeout = 0,              // Disable uWS idle timeout — bridge has its own 30s socket timeout
 		.sendPingsAutomatically = false, // No auto-pings when idle timeout is disabled
 		.open = [this](auto* ws)
@@ -437,6 +453,7 @@ void CDebuggerServerWebSockets::ThreadRun(void *passData)
 	delete app;
 	app = NULL;
 	serverStarted = false;
+	startRequested = false;
 }
 
 void CDebuggerServerWebSockets::AddEndpointFunction(const string& functionName, function<vector<char>*(const string, const json, u8 *, int)> func)
@@ -447,6 +464,20 @@ void CDebuggerServerWebSockets::AddEndpointFunction(const string& functionName, 
 void CDebuggerServerWebSockets::AddEndpointFunction(const EndpointDescriptor &desc, EndpointHandlerV1 handler)
 {
 	endpointFunctions[desc.fn] = handler;
+
+	// The handler map is keyed by fn, so a re-registration replaces it; the descriptor
+	// vector has no such key and would keep a stale twin. That happens for real: a
+	// duplicated registration, and every Stop()+Start() cycle, which re-runs the whole
+	// registration and would otherwise grow the descriptor list without bound.
+	for (size_t i = 0; i < endpointDescriptors.size(); i++)
+	{
+		if (endpointDescriptors[i].fn == desc.fn)
+		{
+			endpointDescriptors[i] = desc;
+			return;
+		}
+	}
+
 	endpointDescriptors.push_back(desc);
 }
 
