@@ -107,7 +107,19 @@ void CDebuggerServerApi::RegisterEndpoints(CDebuggerServer *server)
 	{
 		bool warp = params.at("warp").get<bool>();
 		debuggerApi->SetWarpSpeed(warp);
-		return server->PrepareResult(HTTP_OK, token, json(), NULL, 0);
+		// read the state back so a client can verify its own action in one round trip
+		json result;
+		result["warp"] = debuggerApi->GetWarpSpeed();
+		return server->PrepareResult(HTTP_OK, token, result, NULL, 0);
+	});
+
+	sprintf(buf, "%s/warp/get", plat);
+	RegisterEndpoint(server, buf, plat, "control", "Get current warp speed state",
+	[this, server](const string token, json params, unsigned char *binaryData, int binaryDataSize) -> vector<char>*
+	{
+		json result;
+		result["warp"] = debuggerApi->GetWarpSpeed();
+		return server->PrepareResult(HTTP_OK, token, result, NULL, 0);
 	});
 
 	sprintf(buf, "%s/pause", plat);
@@ -1090,23 +1102,47 @@ void CDebuggerServerApi::RegisterEndpoints(CDebuggerServer *server)
 
 	// Helper lambda: get screen pixels cropped to actual content size, encode as PNG.
 	// Uses debuggerApi->GetScreenImage() which handles cropping per platform.
-	auto encodeScreenPng = [this](int &outW, int &outH) -> vector<uint8_t>
+	auto encodeScreenPng = [this](int &outW, int &outH, string &errorText) -> vector<uint8_t>
 	{
+		errorText = "";
 		CImageData *img = debuggerApi->GetScreenImage(&outW, &outH);
 		if (!img || !img->resultData || outW <= 0 || outH <= 0)
+		{
+			// not an encoder problem: the emulator has no frame to hand out
+			errorText = "Screen image not available";
+			LOGError("encodeScreenPng: screen image not available (img=%s data=%s w=%d h=%d)",
+					 img ? "ok" : "NULL", (img && img->resultData) ? "ok" : "NULL", outW, outH);
 			return {};
+		}
 
 		uint8_t *pixels = img->resultData;
 
 		vector<uint8_t> pngData;
 		png_structp png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
-		if (!png_ptr) return {};
+		if (!png_ptr)
+		{
+			// most likely cause: png.h version does not match the linked libpng
+			errorText = "PNG encoder init failed (libpng version mismatch?): header "
+						PNG_LIBPNG_VER_STRING ", library ";
+			errorText += png_get_libpng_ver(NULL);
+			LOGError("encodeScreenPng: png_create_write_struct failed, header=%s library=%s",
+					 PNG_LIBPNG_VER_STRING, png_get_libpng_ver(NULL));
+			return {};
+		}
 
 		png_infop info_ptr = png_create_info_struct(png_ptr);
-		if (!info_ptr) { png_destroy_write_struct(&png_ptr, NULL); return {}; }
+		if (!info_ptr)
+		{
+			errorText = "PNG info struct allocation failed";
+			LOGError("encodeScreenPng: png_create_info_struct failed");
+			png_destroy_write_struct(&png_ptr, NULL);
+			return {};
+		}
 
 		if (setjmp(png_jmpbuf(png_ptr)))
 		{
+			errorText = "PNG encoding failed";
+			LOGError("encodeScreenPng: libpng longjmp during encoding");
 			png_destroy_write_struct(&png_ptr, &info_ptr);
 			return {};
 		}
@@ -1131,11 +1167,12 @@ void CDebuggerServerApi::RegisterEndpoints(CDebuggerServer *server)
 	[this, server, encodeScreenPng](const string token, json params, unsigned char *binaryData, int binaryDataSize) -> vector<char>*
 	{
 		int w = 0, h = 0;
-		vector<uint8_t> pngData = encodeScreenPng(w, h);
+		string errorText;
+		vector<uint8_t> pngData = encodeScreenPng(w, h, errorText);
 		if (pngData.empty())
 		{
 			json errorJson;
-			errorJson["error"] = "Screen image not available or PNG encoding failed";
+			errorJson["error"] = errorText;
 			return server->PrepareResult(HTTP_INTERNAL_SERVER_ERROR, token, errorJson, NULL, 0);
 		}
 		json result;
@@ -1152,11 +1189,12 @@ void CDebuggerServerApi::RegisterEndpoints(CDebuggerServer *server)
 		string path = params.at("path").get<string>();
 
 		int w = 0, h = 0;
-		vector<uint8_t> pngData = encodeScreenPng(w, h);
+		string errorText;
+		vector<uint8_t> pngData = encodeScreenPng(w, h, errorText);
 		if (pngData.empty())
 		{
 			json errorJson;
-			errorJson["error"] = "Screen image not available or PNG encoding failed";
+			errorJson["error"] = errorText;
 			return server->PrepareResult(HTTP_INTERNAL_SERVER_ERROR, token, errorJson, NULL, 0);
 		}
 
