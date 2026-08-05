@@ -539,6 +539,11 @@ void CDebuggerApi::SetWarpSpeed(bool isWarpSpeed)
 	debugInterface->SetSettingIsWarpSpeed(isWarpSpeed);
 }
 
+bool CDebuggerApi::GetWarpSpeed()
+{
+	return debugInterface->GetSettingIsWarpSpeed();
+}
+
 bool CDebuggerApi::KeyboardDown(u32 mtKeyCode)
 {
 	return debugInterface->KeyboardDown(mtKeyCode);

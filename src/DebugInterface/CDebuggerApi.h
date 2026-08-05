@@ -111,6 +111,7 @@ public:
 	
 	//
 	virtual void SetWarpSpeed(bool isWarpSpeed);
+	virtual bool GetWarpSpeed();
 
 	// input
 	virtual bool KeyboardDown(u32 mtKeyCode);
