@@ -15,12 +15,13 @@ jobs:
       - name: Checkout RetroDebugger
         uses: actions/checkout@v6
 
-      # SDL2 is the only external (Homebrew) dependency of the macOS build; it
-      # provides libSDL2.a, which the MTEngineSDL static lib merges in (libtool).
-      # llama.cpp / ftxui / mbedtls are built by MTEngineSDL's Xcode script phases,
-      # and uSockets is built by build-macos.sh — neither needs Homebrew here.
-      - name: Install macOS dependencies
-        run: brew install sdl2
+      # No Homebrew "sdl2" dependency anymore. `brew install sdl2` used to provide
+      # libSDL2.a, but the formula is nowadays an alias for sdl2-compat (a dynamic
+      # shim over SDL3) which ships no static archive — the libtool step of
+      # MTEngineSDL then failed with "could not find 'libSDL2.a'". SDL2 is now
+      # built from vendored source by MTEngineSDL's own "Build SDL2" Xcode script
+      # phase (platform/MacOS/build-sdl2.sh), the same pattern already used there
+      # for llama.cpp / ftxui / mbedtls. uSockets is built by build-macos.sh.
 
       - name: Build and package release
         id: release
