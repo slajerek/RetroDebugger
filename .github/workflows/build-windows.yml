@@ -9,7 +9,16 @@ on:
 
 jobs:
   build-windows:
-    runs-on: windows-latest
+    # Pinned: windows-latest now resolves to the Windows Server 2025 / VS 2026
+    # image, whose bundled clang-cl is >= 21 and defines _m_prefetch as a builtin.
+    # MTEngineSDL's bundled SDL 2.28.5 header (SDL_endian.h) redefines it under
+    # plain "#ifdef __clang__", which is now a hard error:
+    #   SDL_endian.h(40,1): error : definition of builtin function '_m_prefetch'
+    # windows-2022 ships VS 2022 (clang-cl 19.x, servicing-only, so it will stay
+    # < 21). The proper fix is upstream SDL's one-line guard change in the
+    # bundled header (MTEngineSDL repo); once that lands, this pin can go back
+    # to windows-latest.
+    runs-on: windows-2022
 
     steps:
       - name: Checkout RetroDebugger
