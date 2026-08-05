@@ -1,6 +1,7 @@
 #include "CDebuggerServerApiAtari.h"
 #include "CDebugInterfaceAtari.h"
 #include "CDebuggerServer.h"
+#include "SYS_Funct.h"
 
 using namespace std;
 using namespace nlohmann;
@@ -155,7 +156,10 @@ void CDebuggerServerApiAtari::RegisterEndpoints(CDebuggerServer *server)
 				CDebugInterfaceMutexGuard lock(debugInterfaceAtari);
 				for (auto &[key, value] : params["registers"].items())
 				{
-					int regNum = stoi(key);
+					// stoi() is base-10 only: "0x18" silently parsed as register 0,
+					// landing the write on the wrong register with no error. Use the
+					// same dec/hex parser the C64 endpoints use.
+					int regNum = (int)FUN_DecOrHexStrWithPrefixToU64(key.c_str());
 					u8 val = value.get<int>();
 					debugInterfaceAtari->SetAnticRegister(regNum, val);
 				}
@@ -176,7 +180,10 @@ void CDebuggerServerApiAtari::RegisterEndpoints(CDebuggerServer *server)
 				CDebugInterfaceMutexGuard lock(debugInterfaceAtari);
 				for (auto &[key, value] : params["registers"].items())
 				{
-					int regNum = stoi(key);
+					// stoi() is base-10 only: "0x18" silently parsed as register 0,
+					// landing the write on the wrong register with no error. Use the
+					// same dec/hex parser the C64 endpoints use.
+					int regNum = (int)FUN_DecOrHexStrWithPrefixToU64(key.c_str());
 					u8 val = value.get<int>();
 					debugInterfaceAtari->SetGtiaRegister(regNum, val);
 				}
@@ -197,7 +204,10 @@ void CDebuggerServerApiAtari::RegisterEndpoints(CDebuggerServer *server)
 				CDebugInterfaceMutexGuard lock(debugInterfaceAtari);
 				for (auto &[key, value] : params["registers"].items())
 				{
-					int regNum = stoi(key);
+					// stoi() is base-10 only: "0x18" silently parsed as register 0,
+					// landing the write on the wrong register with no error. Use the
+					// same dec/hex parser the C64 endpoints use.
+					int regNum = (int)FUN_DecOrHexStrWithPrefixToU64(key.c_str());
 					u8 val = value.get<int>();
 					debugInterfaceAtari->SetPokeyRegister(regNum, val);
 				}
@@ -218,7 +228,10 @@ void CDebuggerServerApiAtari::RegisterEndpoints(CDebuggerServer *server)
 				CDebugInterfaceMutexGuard lock(debugInterfaceAtari);
 				for (auto &[key, value] : params["registers"].items())
 				{
-					int regNum = stoi(key);
+					// stoi() is base-10 only: "0x18" silently parsed as register 0,
+					// landing the write on the wrong register with no error. Use the
+					// same dec/hex parser the C64 endpoints use.
+					int regNum = (int)FUN_DecOrHexStrWithPrefixToU64(key.c_str());
 					u8 val = value.get<int>();
 					debugInterfaceAtari->SetPiaRegister(regNum, val);
 				}

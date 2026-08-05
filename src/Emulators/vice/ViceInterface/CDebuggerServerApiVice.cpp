@@ -15,6 +15,71 @@ extern "C" {
 using namespace std;
 using namespace nlohmann;
 
+// Canonical shape for chip register writes, agreed in the #116 discussion.
+//
+// A "registers" request field accepts three forms:
+//   1. canonical list of records: [{"reg": 17, "value": 155}, {"addr": "$D019", "value": 255}]
+//   2. legacy object:             {"17": 155, "$D019": 255}
+//   3. legacy list of pairs:      [[17, 155], [25, 255]]   (the shape reads used to emit)
+// Register keys and values may be numbers or dec/hex strings ("27", "0x1B", "$D01B").
+// "reg" and "addr" go through the same per-chip address normalization, so either works;
+// a record with both is rejected as ambiguous.
+//
+// Only the list forms guarantee ORDER and allow DUPLICATE writes to one register --
+// a JSON object carries neither, which is exactly why it could not stay the canon:
+// register order is semantics on memory-mapped chips (interrupt acks, $D011/$D012
+// sequences), and writing the same register twice in one batch is a legal use case.
+//
+// Output: ordered (key, value) pairs; keys raw, address bases not yet subtracted.
+static bool ParseRegisterWrites(const json &registers, std::vector<std::pair<u64, u64>> &outWrites)
+{
+	outWrites.clear();
+
+	if (registers.is_array())
+	{
+		for (const auto &entry : registers)
+		{
+			if (entry.is_array() && entry.size() == 2)
+			{
+				// legacy pair [reg, value]
+				outWrites.push_back({ FUN_JsonValueDecOrHexStrWithPrefixToU64(entry[0]),
+									  FUN_JsonValueDecOrHexStrWithPrefixToU64(entry[1]) });
+			}
+			else if (entry.is_object())
+			{
+				// canonical record {"reg"|"addr": ..., "value": ...}; reads emit both
+				// fields, so when both are present "addr" wins -- it is unambiguous
+				// across multi-chip endpoints (CIA1/CIA2, VIA1/VIA2)
+				bool hasReg = entry.contains("reg");
+				bool hasAddr = entry.contains("addr");
+				if ((!hasReg && !hasAddr) || !entry.contains("value"))
+					return false;
+				const json &key = hasAddr ? entry.at("addr") : entry.at("reg");
+				outWrites.push_back({ FUN_JsonValueDecOrHexStrWithPrefixToU64(key),
+									  FUN_JsonValueDecOrHexStrWithPrefixToU64(entry.at("value")) });
+			}
+			else
+			{
+				return false;
+			}
+		}
+		return true;
+	}
+
+	if (registers.is_object())
+	{
+		// legacy object; JSON objects have no defined order and cannot carry duplicates
+		for (auto &[key, value] : registers.items())
+		{
+			outWrites.push_back({ FUN_DecOrHexStrWithPrefixToU64(key.c_str()),
+								  FUN_JsonValueDecOrHexStrWithPrefixToU64(value) });
+		}
+		return true;
+	}
+
+	return false;
+}
+
 CDebuggerServerApiVice::CDebuggerServerApiVice(CDebugInterface *debugInterface)
 : CDebuggerServerApi(debugInterface)
 {
@@ -78,47 +143,22 @@ void CDebuggerServerApiVice::RegisterEndpoints(CDebuggerServer *server)
 		desc.fn = buf;
 		desc.platform = plat;
 		desc.category = "chips";
-		desc.description = "Write VIC-II registers";
+		desc.description = "Write VIC-II registers; ordered list of {reg|addr, value} records (also accepts the legacy object and pair-list shapes)";
 		server->AddEndpointFunction(desc, [this, server](const string token, json params, unsigned char *binaryData, int binaryDataSize) -> vector<char>*
 		{
-			// Accept both shapes: the object {"27": 0} and the list of pairs
-			// [[27, 0], ...] that vic/read hands back. Read-modify-write is the
-			// natural cycle for VIC registers, so feeding a read result straight
-			// back in has to work.
-			json registerPairs = json::array();
+			std::vector<std::pair<u64, u64>> writes;
+			if (!params.contains("registers") || !ParseRegisterWrites(params["registers"], writes))
 			{
-				const json &requested = params["registers"];
-				if (requested.is_array())
-				{
-					for (const auto& entry : requested)
-					{
-						if (!entry.is_array() || entry.size() != 2)
-						{
-							return server->PrepareResult(HTTP_NOT_ACCEPTABLE, token, json(), NULL, 0);
-						}
-						registerPairs.push_back(entry);
-					}
-				}
-				else if (requested.is_object())
-				{
-					for (auto& [key, value] : requested.items())
-					{
-						registerPairs.push_back(json::array({key, value}));
-					}
-				}
-				else
-				{
-					// anything else (scalar, null, missing) is a client mistake, not a
-					// server error -- say so instead of throwing out of the handler
-					return server->PrepareResult(HTTP_NOT_ACCEPTABLE, token, json(), NULL, 0);
-				}
+				// a client mistake, not a server error -- say so instead of throwing
+				return server->PrepareResult(HTTP_NOT_ACCEPTABLE, token, json(), NULL, 0);
 			}
 
 			{
 				CDebugInterfaceMutexGuard lock(debugInterfaceVice);
-				for (const auto& pair : registerPairs)
+				// in request order, duplicates included -- order is semantics here
+				for (const auto &write : writes)
 				{
-					u64 registerNum = FUN_JsonValueDecOrHexStrWithPrefixToU64(pair[0]);
+					u64 registerNum = write.first;
 					if (registerNum >= 0xD000 && registerNum < 0xD040)
 					{
 						registerNum -= 0xD000;
@@ -127,8 +167,7 @@ void CDebuggerServerApiVice::RegisterEndpoints(CDebuggerServer *server)
 					{
 						return server->PrepareResult(HTTP_NOT_ACCEPTABLE, token, json(), NULL, 0);
 					}
-					u64 registerValue = FUN_JsonValueDecOrHexStrWithPrefixToU64(pair[1]);
-					debuggerApiVice->SetVicRegister(registerNum, registerValue);
+					debuggerApiVice->SetVicRegister(registerNum, write.second);
 				}
 			}
 
@@ -142,14 +181,16 @@ void CDebuggerServerApiVice::RegisterEndpoints(CDebuggerServer *server)
 		desc.fn = buf;
 		desc.platform = plat;
 		desc.category = "chips";
-		desc.description = "Read VIC-II registers";
+		desc.description = "Read VIC-II registers; returns ordered records {reg, addr, value} in request order, a valid input for vic/write";
 		server->AddEndpointFunction(desc, [this, server](const string token, json params, unsigned char *binaryData, int binaryDataSize) -> vector<char>*
 		{
 			json j;
 			{
 				CDebugInterfaceMutexGuard lock(debugInterfaceVice);
 
-				std::unordered_map<u64, u8> registers;
+				// records in request order -- the previous unordered_map made the
+				// response order random between calls, an accident of serialization
+				json registers = json::array();
 				for (const auto& reg : params["registers"])
 				{
 					u64 registerNum = FUN_JsonValueDecOrHexStrWithPrefixToU64(reg);
@@ -162,8 +203,11 @@ void CDebuggerServerApiVice::RegisterEndpoints(CDebuggerServer *server)
 						return server->PrepareResult(HTTP_NOT_ACCEPTABLE, token, json(), NULL, 0);
 					}
 
-					u8 registerValue = debugInterfaceVice->GetVicRegister(registerNum);
-					registers[registerNum] = registerValue;
+					json record;
+					record["reg"] = registerNum;
+					record["addr"] = 0xD000 + registerNum;
+					record["value"] = debugInterfaceVice->GetVicRegister(registerNum);
+					registers.push_back(record);
 				}
 
 				j["registers"] = registers;
@@ -225,9 +269,15 @@ void CDebuggerServerApiVice::RegisterEndpoints(CDebuggerServer *server)
 		desc.fn = buf;
 		desc.platform = plat;
 		desc.category = "chips";
-		desc.description = "Write CIA registers (CIA1 or CIA2)";
+		desc.description = "Write CIA registers (CIA1 or CIA2); ordered list of {reg|addr, value} records (also accepts the legacy object and pair-list shapes)";
 		server->AddEndpointFunction(desc, [this, server](const string token, json params, unsigned char *binaryData, int binaryDataSize) -> vector<char>*
 		{
+			std::vector<std::pair<u64, u64>> writes;
+			if (!params.contains("registers") || !ParseRegisterWrites(params["registers"], writes))
+			{
+				return server->PrepareResult(HTTP_NOT_ACCEPTABLE, token, json(), NULL, 0);
+			}
+
 			{
 				CDebugInterfaceMutexGuard lock(debugInterfaceVice);
 
@@ -241,10 +291,10 @@ void CDebuggerServerApiVice::RegisterEndpoints(CDebuggerServer *server)
 					}
 				}
 
-				for (auto& [key, value] : params["registers"].items())
+				for (const auto &write : writes)
 				{
 					int ciaNum = selectedCiaNum;
-					u64 registerNum = FUN_DecOrHexStrWithPrefixToU64(key.c_str());
+					u64 registerNum = write.first;
 					if (registerNum >= 0xDC00 && registerNum < 0xDC10)
 					{
 						registerNum -= 0xDC00;
@@ -259,8 +309,7 @@ void CDebuggerServerApiVice::RegisterEndpoints(CDebuggerServer *server)
 					{
 						return server->PrepareResult(HTTP_NOT_ACCEPTABLE, token, json(), NULL, 0);
 					}
-					u64 registerValue = FUN_JsonValueDecOrHexStrWithPrefixToU64(value);
-					debuggerApiVice->SetCiaRegister(ciaNum, registerNum, registerValue);
+					debuggerApiVice->SetCiaRegister(ciaNum, registerNum, write.second);
 				}
 			}
 
@@ -274,7 +323,7 @@ void CDebuggerServerApiVice::RegisterEndpoints(CDebuggerServer *server)
 		desc.fn = buf;
 		desc.platform = plat;
 		desc.category = "chips";
-		desc.description = "Read CIA registers (CIA1 or CIA2)";
+		desc.description = "Read CIA registers (CIA1 or CIA2); returns ordered records {reg, num, addr, value} in request order, a valid input for cia/write";
 		server->AddEndpointFunction(desc, [this, server](const string token, json params, unsigned char *binaryData, int binaryDataSize) -> vector<char>*
 		{
 			json j;
@@ -291,7 +340,7 @@ void CDebuggerServerApiVice::RegisterEndpoints(CDebuggerServer *server)
 					}
 				}
 
-				std::unordered_map<u64, u8> registers;
+				json registers = json::array();
 				for (const auto& reg : params["registers"])
 				{
 					int ciaNum = selectedCiaNum;
@@ -311,8 +360,14 @@ void CDebuggerServerApiVice::RegisterEndpoints(CDebuggerServer *server)
 						return server->PrepareResult(HTTP_NOT_ACCEPTABLE, token, json(), NULL, 0);
 					}
 
-					u8 registerValue = debuggerApiVice->GetCiaRegister(ciaNum, registerNum);
-					registers[registerNum] = registerValue;
+					// "addr" makes the record unambiguous across both CIAs, so a
+					// read result written back lands on the same chip
+					json record;
+					record["reg"] = registerNum;
+					record["num"] = ciaNum;
+					record["addr"] = (ciaNum == 0 ? 0xDC00 : 0xDD00) + registerNum;
+					record["value"] = debuggerApiVice->GetCiaRegister(ciaNum, registerNum);
+					registers.push_back(record);
 				}
 
 				j["registers"] = registers;
@@ -328,7 +383,7 @@ void CDebuggerServerApiVice::RegisterEndpoints(CDebuggerServer *server)
 		desc.fn = buf;
 		desc.platform = plat;
 		desc.category = "chips";
-		desc.description = "Write SID registers with burst-write to avoid side-effects";
+		desc.description = "Write SID registers with burst-write to avoid side-effects; per-SID registers accept {reg, value} records, the legacy object, or pair lists (burst = final state, so a later duplicate wins)";
 		server->AddEndpointFunction(desc, [this, server](const string token, json params, unsigned char *binaryData, int binaryDataSize) -> vector<char>*
 		{
 			{
@@ -352,17 +407,28 @@ void CDebuggerServerApiVice::RegisterEndpoints(CDebuggerServer *server)
 						return server->PrepareResult(HTTP_NOT_ACCEPTABLE, token, json(), NULL, 0);
 					}
 
-					for (auto& [key, value] : jsonSidData["registers"].items())
+					std::vector<std::pair<u64, u64>> writes;
+					if (!jsonSidData.contains("registers") || !ParseRegisterWrites(jsonSidData["registers"], writes))
 					{
-						u64 registerNum = FUN_DecOrHexStrWithPrefixToU64(key.c_str());
+						return server->PrepareResult(HTTP_NOT_ACCEPTABLE, token, json(), NULL, 0);
+					}
+
+					for (const auto &write : writes)
+					{
+						u64 registerNum = write.first;
 						// TODO: subtract selected sid# address  --> debugInterfaceVice->GetSidStereoAddress(sidNum)
 	//				if (registerNum >= 0xD400 && registerNum < 0xDFFF)
 	//				{
 	//					registerNum -= 0xD400;
 	//				}
+						if (registerNum >= C64_NUM_SID_REGISTERS)
+						{
+							return server->PrepareResult(HTTP_NOT_ACCEPTABLE, token, json(), NULL, 0);
+						}
 
-						u64 registerValue = FUN_JsonValueDecOrHexStrWithPrefixToU64(value);
-						sidData->sidRegs[sidNum][registerNum] = registerValue;
+						// burst semantics: this batch describes the SID's final state,
+						// so duplicates resolve to the last write on purpose
+						sidData->sidRegs[sidNum][registerNum] = write.second;
 						sidData->shouldSetSidReg[sidNum][registerNum] = true;
 					}
 				}
@@ -381,7 +447,7 @@ void CDebuggerServerApiVice::RegisterEndpoints(CDebuggerServer *server)
 		desc.fn = buf;
 		desc.platform = plat;
 		desc.category = "chips";
-		desc.description = "Read SID registers";
+		desc.description = "Read SID registers; returns ordered records {reg, num, value} in request order";
 		server->AddEndpointFunction(desc, [this, server](const string token, json params, unsigned char *binaryData, int binaryDataSize) -> vector<char>*
 		{
 			json j;
@@ -398,7 +464,7 @@ void CDebuggerServerApiVice::RegisterEndpoints(CDebuggerServer *server)
 					}
 				}
 
-				std::unordered_map<u64, u8> registers;
+				json registers = json::array();
 				for (const auto& reg : params["registers"])
 				{
 					u64 registerNum = FUN_JsonValueDecOrHexStrWithPrefixToU64(reg);
@@ -407,13 +473,18 @@ void CDebuggerServerApiVice::RegisterEndpoints(CDebuggerServer *server)
 	//			{
 	//				registerNum -= 0xD400;
 	//			}
-	//			if (registerNum > 0x0F)
-	//			{
-	//				return server->PrepareResult(HTTP_NOT_ACCEPTABLE, token, json(), NULL, 0);
-	//			}
+					if (registerNum >= C64_NUM_SID_REGISTERS)
+					{
+						return server->PrepareResult(HTTP_NOT_ACCEPTABLE, token, json(), NULL, 0);
+					}
 
-					u8 registerValue = debuggerApiVice->GetSidRegister(sidNum, registerNum);
-					registers[registerNum] = registerValue;
+					// no "addr" here: the stereo SID base mapping is still a TODO above,
+					// so the record carries the SID number instead
+					json record;
+					record["reg"] = registerNum;
+					record["num"] = sidNum;
+					record["value"] = debuggerApiVice->GetSidRegister(sidNum, registerNum);
+					registers.push_back(record);
 				}
 
 				j["registers"] = registers;
@@ -584,9 +655,15 @@ void CDebuggerServerApiVice::RegisterEndpoints(CDebuggerServer *server)
 		desc.fn = buf;
 		desc.platform = plat;
 		desc.category = "chips";
-		desc.description = "Write 1541 drive VIA registers (VIA1 or VIA2)";
+		desc.description = "Write 1541 drive VIA registers (VIA1 or VIA2); ordered list of {reg|addr, value} records (also accepts the legacy object and pair-list shapes)";
 		server->AddEndpointFunction(desc, [this, server](const string token, json params, unsigned char *binaryData, int binaryDataSize) -> vector<char>*
 		{
+			std::vector<std::pair<u64, u64>> writes;
+			if (!params.contains("registers") || !ParseRegisterWrites(params["registers"], writes))
+			{
+				return server->PrepareResult(HTTP_NOT_ACCEPTABLE, token, json(), NULL, 0);
+			}
+
 			{
 				CDebugInterfaceMutexGuard lock(debugInterfaceVice);
 
@@ -610,10 +687,10 @@ void CDebuggerServerApiVice::RegisterEndpoints(CDebuggerServer *server)
 					}
 				}
 
-				for (auto& [key, value] : params["registers"].items())
+				for (const auto &write : writes)
 				{
 					int viaNum = selectedViaNum;
-					u64 registerNum = FUN_DecOrHexStrWithPrefixToU64(key.c_str());
+					u64 registerNum = write.first;
 					if (registerNum >= 0x1800 && registerNum < 0x1810)
 					{
 						registerNum -= 0x1800;
@@ -628,8 +705,7 @@ void CDebuggerServerApiVice::RegisterEndpoints(CDebuggerServer *server)
 					{
 						return server->PrepareResult(HTTP_NOT_ACCEPTABLE, token, json(), NULL, 0);
 					}
-					u64 registerValue = FUN_JsonValueDecOrHexStrWithPrefixToU64(value);
-					debuggerApiVice->SetDrive1541ViaRegister(selectedDriveNum, viaNum, registerNum, registerValue);
+					debuggerApiVice->SetDrive1541ViaRegister(selectedDriveNum, viaNum, registerNum, write.second);
 				}
 			}
 
@@ -643,7 +719,7 @@ void CDebuggerServerApiVice::RegisterEndpoints(CDebuggerServer *server)
 		desc.fn = buf;
 		desc.platform = plat;
 		desc.category = "chips";
-		desc.description = "Read 1541 drive VIA registers (VIA1 or VIA2)";
+		desc.description = "Read 1541 drive VIA registers (VIA1 or VIA2); returns ordered records {reg, num, addr, value} in request order, a valid input for via/write";
 		server->AddEndpointFunction(desc, [this, server](const string token, json params, unsigned char *binaryData, int binaryDataSize) -> vector<char>*
 		{
 			json j;
@@ -670,7 +746,7 @@ void CDebuggerServerApiVice::RegisterEndpoints(CDebuggerServer *server)
 					}
 				}
 
-				std::unordered_map<u64, u8> registers;
+				json registers = json::array();
 				for (const auto& reg : params["registers"])
 				{
 					int viaNum = selectedViaNum;
@@ -690,8 +766,12 @@ void CDebuggerServerApiVice::RegisterEndpoints(CDebuggerServer *server)
 						return server->PrepareResult(HTTP_NOT_ACCEPTABLE, token, json(), NULL, 0);
 					}
 
-					u8 registerValue = debuggerApiVice->GetDrive1541ViaRegister(selectedDriveNum, viaNum, registerNum);
-					registers[registerNum] = registerValue;
+					json record;
+					record["reg"] = registerNum;
+					record["num"] = viaNum;
+					record["addr"] = (viaNum == 0 ? 0x1800 : 0x1C00) + registerNum;
+					record["value"] = debuggerApiVice->GetDrive1541ViaRegister(selectedDriveNum, viaNum, registerNum);
+					registers.push_back(record);
 				}
 
 				j["registers"] = registers;
