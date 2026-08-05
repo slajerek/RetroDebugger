@@ -30,6 +30,24 @@ echo "Building uSockets and staging uSockets.a for MTEngineSDL (macOS)"
 mkdir -p "$CURRENT_DIR/../MTEngineSDL/platform/MacOS/libs/"
 cp -f "$CURRENT_DIR/../uSockets/uSockets.a" "$CURRENT_DIR/../MTEngineSDL/platform/MacOS/libs/"
 
+# SDL2: Homebrew's "sdl2" formula is nowadays an alias for sdl2-compat (a dynamic
+# shim over SDL3) and no longer ships a static libSDL2.a, so `brew install sdl2`
+# stopped providing the archive MTEngineSDL's libtool step merges in. Build static
+# SDL2 from source and stage it next to uSockets.a — with the file present, Xcode
+# hands libtool a full path (same as uSockets.a) instead of relying on -L/-lSDL2.
+SDL2_VER=2.32.10
+SDL2_A="$CURRENT_DIR/../MTEngineSDL/platform/MacOS/libs/libSDL2.a"
+if [ ! -f "$SDL2_A" ]; then
+	echo "Building static SDL2 $SDL2_VER and staging libSDL2.a for MTEngineSDL (macOS)"
+	curl -fL -o "$CURRENT_DIR/../SDL2-src.tar.gz" "https://github.com/libsdl-org/SDL/releases/download/release-$SDL2_VER/SDL2-$SDL2_VER.tar.gz"
+	tar xzf "$CURRENT_DIR/../SDL2-src.tar.gz" -C "$CURRENT_DIR/.."
+	cmake -S "$CURRENT_DIR/../SDL2-$SDL2_VER" -B "$CURRENT_DIR/../sdl2-build" \
+		-DSDL_STATIC=ON -DSDL_SHARED=OFF -DSDL_TEST=OFF \
+		-DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_DEPLOYMENT_TARGET=10.15
+	cmake --build "$CURRENT_DIR/../sdl2-build" -j"$(sysctl -n hw.ncpu)"
+	cp -f "$CURRENT_DIR/../sdl2-build/libSDL2.a" "$SDL2_A"
+fi
+
 # --- build RetroDebugger via Xcode ---
 cd "$CURRENT_DIR"
 DERIVED="$CURRENT_DIR/build-macos"
