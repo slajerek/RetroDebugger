@@ -10,6 +10,12 @@ extern "C" {
 	void c64d_joystick_key_up(int key, unsigned int joyport);
 	int keyboard_key_pressed(signed long key);
 	int keyboard_key_released(signed long key);
+	int keyboard_key_pressed_matrix(int row, int column, int shift);
+	int keyboard_key_released_matrix(int row, int column, int shift);
+	int keyboard_set_latch_keyarr(int row, int col, int value);
+	void keyboard_set_keyarr_any(int row, int col, int value);
+	void c64d_keyboard_key_down_latch();
+	void c64d_keyboard_key_up_latch();
 }
 
 CDebugInterfaceViceTaskJoystickEvent::CDebugInterfaceViceTaskJoystickEvent(
@@ -83,11 +89,15 @@ void CDebugInterfaceViceTaskJoystickEvent::ExecuteTask()
 }
 
 CDebugInterfaceViceTaskKeyboardEvent::CDebugInterfaceViceTaskKeyboardEvent(
-	CDebugInterfaceVice *debugInterface, u8 buttonState, u32 mtKeyCode)
+	CDebugInterfaceVice *debugInterface, u8 buttonState, u32 mtKeyCode,
+	int matrixRow, int matrixCol, int shift)
 {
 	this->debugInterface = debugInterface;
 	this->buttonState = buttonState;
 	this->mtKeyCode = mtKeyCode;
+	this->matrixRow = matrixRow;
+	this->matrixCol = matrixCol;
+	this->shift = shift;
 }
 
 void CDebugInterfaceViceTaskKeyboardEvent::ExecuteTask()
@@ -100,13 +110,34 @@ void CDebugInterfaceViceTaskKeyboardEvent::ExecuteTask()
 		inputEventsBuffer->PutU8(buttonState);
 	}
 
+	// press/release via the resolved matrix position — same sequence the virtual keyboard
+	// uses (CViewC64KeyMap::SelectKey); the c64d_*_latch calls latch immediately, without
+	// the randomized KEYBOARD_RAND alarm, so measurements stay cycle-deterministic
 	if (buttonState == DEBUGGER_EVENT_BUTTON_DOWN)
 	{
-		keyboard_key_pressed((signed long)mtKeyCode);
+		if (matrixRow < 0)
+		{
+			keyboard_set_keyarr_any(matrixRow, matrixCol, 1);
+		}
+		else
+		{
+			keyboard_key_pressed_matrix(matrixRow, matrixCol, shift);
+			keyboard_set_latch_keyarr(matrixRow, matrixCol, 1);
+			c64d_keyboard_key_down_latch();
+		}
 	}
 	else
 	{
-		keyboard_key_released((signed long)mtKeyCode);
+		if (matrixRow < 0)
+		{
+			keyboard_set_keyarr_any(matrixRow, matrixCol, 0);
+		}
+		else
+		{
+			keyboard_key_released_matrix(matrixRow, matrixCol, shift);
+			keyboard_set_latch_keyarr(matrixRow, matrixCol, 0);
+			c64d_keyboard_key_up_latch();
+		}
 	}
 }
 

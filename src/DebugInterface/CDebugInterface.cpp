@@ -619,6 +619,14 @@ void CDebugInterface::StepOverSubroutine()
 
 bool CDebugInterface::RunEmulationForOneFrame()
 {
+	return RunEmulationForFrames(1);
+}
+
+bool CDebugInterface::RunEmulationForFrames(uint32 numFrames)
+{
+	if (numFrames < 1)
+		return false;
+
 	if (!isRunning)
 		return false;
 
@@ -642,7 +650,7 @@ bool CDebugInterface::RunEmulationForOneFrame()
 
 		frameStepRequestGeneration++;
 		requestGeneration = frameStepRequestGeneration;
-		frameStepTargetFrameNumber = GetEmulationFrameNumber() + 1;
+		frameStepTargetFrameNumber = GetEmulationFrameNumber() + numFrames;
 		frameStepPending = true;
 		frameStepTargetVSyncReached = false;
 	}
@@ -650,7 +658,9 @@ bool CDebugInterface::RunEmulationForOneFrame()
 	SetDebugMode(DEBUGGER_MODE_RUNNING);
 
 	bool frameCompleted = false;
-	for (int tries = 0; tries < 100; tries++)
+	// wait budget scales with the requested frame count (50 ms per try; a realtime PAL frame is 20 ms)
+	const int maxTries = 100 + (int)numFrames * 2;
+	for (int tries = 0; tries < maxTries; tries++)
 	{
 		std::unique_lock<std::mutex> lock(frameStepMutex);
 		frameCompleted = frameStepCV.wait_for(lock, std::chrono::milliseconds(50), [this, requestGeneration]() {
