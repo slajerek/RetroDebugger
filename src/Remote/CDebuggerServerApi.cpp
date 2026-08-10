@@ -144,6 +144,37 @@ void CDebuggerServerApi::RegisterEndpoints(CDebuggerServer *server)
 		return server->PrepareResult(HTTP_OK, token, json(), NULL, 0);
 	});
 
+	// Deterministic replay: run exactly N frames then pause. Blocks until finished,
+	// so the reply arriving means the frames have already run (frame = final counter).
+	sprintf(buf, "%s/run/frames", plat);
+	RegisterEndpoint(server, buf, plat, "control", "Run exactly N frames then pause (blocks until finished; count 1..100000)",
+	[this, server](const string token, json params, unsigned char *binaryData, int binaryDataSize) -> vector<char>*
+	{
+		int count = 1;
+		if (params.is_object() && params.contains("count"))
+		{
+			count = params.at("count").get<int>();
+		}
+		if (count < 1 || count > 100000)
+		{
+			return server->PrepareResult(HTTP_NOT_ACCEPTABLE, token, json(), NULL, 0);
+		}
+		if (debugInterface->GetDebugMode() != DEBUGGER_MODE_PAUSED)
+		{
+			json errorJson;
+			errorJson["error"] = "machine must be paused; current+N would race the emulation thread";
+			return server->PrepareResult(HTTP_NOT_ACCEPTABLE, token, errorJson, NULL, 0);
+		}
+		unsigned int frameStart = debuggerApi->GetEmulationFrameNumber();
+		bool completed = debugInterface->RunEmulationForFrames((uint32)count);
+		json result;
+		result["completed"] = completed;
+		result["count"] = count;
+		result["frameStart"] = frameStart;
+		result["frame"] = debuggerApi->GetEmulationFrameNumber();
+		return server->PrepareResult(completed ? HTTP_OK : HTTP_NOT_ACCEPTABLE, token, result, NULL, 0);
+	});
+
 	sprintf(buf, "%s/step/cycle", plat);
 	RegisterEndpoint(server, buf, plat, "cpu", "Step one CPU cycle",
 	[this, server](const string token, json params, unsigned char *binaryData, int binaryDataSize) -> vector<char>*
@@ -319,18 +350,34 @@ void CDebuggerServerApi::RegisterEndpoints(CDebuggerServer *server)
 	RegisterEndpoint(server, buf, plat, "input", "Send key-down event",
 	[this, server](const string token, json params, unsigned char* binaryData, int binaryDataSize) -> vector<char>*
 	{
+		if (!params.is_object() || !params.contains("keyCode") || !params.at("keyCode").is_number_integer())
+		{
+			return server->PrepareResult(HTTP_NOT_ACCEPTABLE, token, json(), NULL, 0);
+		}
 		int mtKeyCode = params.at("keyCode").get<int>();
+		debugInterface->LockIoMutex();
 		bool res = debuggerApi->KeyboardDown(mtKeyCode);
-		return server->PrepareResult(res ? HTTP_OK : HTTP_NOT_ACCEPTABLE, token, json(), NULL, 0);
+		debugInterface->UnlockIoMutex();
+		json result;
+		result["queued"] = res;
+		return server->PrepareResult(res ? HTTP_ACCEPTED : HTTP_NOT_ACCEPTABLE, token, result, NULL, 0);
 	});
 
 	sprintf(buf, "%s/input/key/up", plat);
 	RegisterEndpoint(server, buf, plat, "input", "Send key-up event",
 	[this, server](const string token, json params, unsigned char* binaryData, int binaryDataSize) -> vector<char>*
 	{
+		if (!params.is_object() || !params.contains("keyCode") || !params.at("keyCode").is_number_integer())
+		{
+			return server->PrepareResult(HTTP_NOT_ACCEPTABLE, token, json(), NULL, 0);
+		}
 		int mtKeyCode = params.at("keyCode").get<int>();
+		debugInterface->LockIoMutex();
 		bool res = debuggerApi->KeyboardUp(mtKeyCode);
-		return server->PrepareResult(res ? HTTP_OK : HTTP_NOT_ACCEPTABLE, token, json(), NULL, 0);
+		debugInterface->UnlockIoMutex();
+		json result;
+		result["queued"] = res;
+		return server->PrepareResult(res ? HTTP_ACCEPTED : HTTP_NOT_ACCEPTABLE, token, result, NULL, 0);
 	});
 
 	sprintf(buf, "%s/input/joystick/down", plat);
@@ -941,11 +988,18 @@ void CDebuggerServerApi::RegisterEndpoints(CDebuggerServer *server)
 	RegisterEndpoint(server, buf, plat, "input", "Press a keyboard key (keyCode: MTKEY/SDL keycode; ASCII for printable chars)",
 	[this, server](const string token, json params, unsigned char *binaryData, int binaryDataSize) -> vector<char>*
 	{
+		if (!params.is_object() || !params.contains("keyCode") || !params.at("keyCode").is_number_integer())
+		{
+			return server->PrepareResult(HTTP_NOT_ACCEPTABLE, token, json(), NULL, 0);
+		}
 		uint32_t keyCode = params.at("keyCode").get<uint32_t>();
-		debugInterface->KeyboardDown(keyCode);
+		debugInterface->LockIoMutex();
+		bool queued = debugInterface->KeyboardDown(keyCode);
+		debugInterface->UnlockIoMutex();
 		json result;
 		result["keyCode"] = keyCode;
-		return server->PrepareResult(HTTP_OK, token, result, NULL, 0);
+		result["queued"] = queued;
+		return server->PrepareResult(queued ? HTTP_ACCEPTED : HTTP_NOT_ACCEPTABLE, token, result, NULL, 0);
 	});
 
 	// Keyboard key release
@@ -953,11 +1007,18 @@ void CDebuggerServerApi::RegisterEndpoints(CDebuggerServer *server)
 	RegisterEndpoint(server, buf, plat, "input", "Release a keyboard key (keyCode: MTKEY/SDL keycode; ASCII for printable chars)",
 	[this, server](const string token, json params, unsigned char *binaryData, int binaryDataSize) -> vector<char>*
 	{
+		if (!params.is_object() || !params.contains("keyCode") || !params.at("keyCode").is_number_integer())
+		{
+			return server->PrepareResult(HTTP_NOT_ACCEPTABLE, token, json(), NULL, 0);
+		}
 		uint32_t keyCode = params.at("keyCode").get<uint32_t>();
-		debugInterface->KeyboardUp(keyCode);
+		debugInterface->LockIoMutex();
+		bool queued = debugInterface->KeyboardUp(keyCode);
+		debugInterface->UnlockIoMutex();
 		json result;
 		result["keyCode"] = keyCode;
-		return server->PrepareResult(HTTP_OK, token, result, NULL, 0);
+		result["queued"] = queued;
+		return server->PrepareResult(queued ? HTTP_ACCEPTED : HTTP_NOT_ACCEPTABLE, token, result, NULL, 0);
 	});
 
 	// Emulator start — starts the emulation thread for this platform
