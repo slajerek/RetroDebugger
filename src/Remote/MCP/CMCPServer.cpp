@@ -81,6 +81,7 @@ CMCPServer::CMCPServer()
 	shouldStop = false;
 	toolsRegistered = false;
 	debuggerToolsRegistered = false;
+	debuggerServer.store(NULL, std::memory_order_release);
 	bridgeClient = NULL;
 	isBridgeMode = false;
 }
@@ -102,6 +103,19 @@ void CMCPServer::Start()
 void CMCPServer::Stop()
 {
 	shouldStop = true;
+}
+
+void CMCPServer::SetDebuggerServer(CDebuggerServer *server)
+{
+	debuggerServer.store(server, std::memory_order_release);
+}
+
+CDebuggerServer *CMCPServer::GetReadyDebuggerServer()
+{
+	CDebuggerServer *server = debuggerServer.load(std::memory_order_acquire);
+	if (server == NULL || !server->IsEndpointRegistryReady())
+		return NULL;
+	return server;
 }
 
 // Read a JSON-RPC message from stdin.
@@ -205,7 +219,9 @@ void CMCPServer::CheckPlatformStateChanges()
 		return;
 	}
 
-	if (!viewC64) return;
+	// Loading the ready server is the synchronization barrier that makes
+	// viewC64 and its completed debugInterfaces vector safe to inspect.
+	if (!GetReadyDebuggerServer()) return;
 
 	set<string> currentPlatforms;
 	for (auto *di : viewC64->debugInterfaces)
@@ -381,15 +397,18 @@ json CMCPServer::HandleToolsList()
 		}
 		else
 		{
-			// Headless mode: wait for viewC64 + debuggerServer to be ready
-			for (int i = 0; i < 100 && !(viewC64 && viewC64->debuggerServer); i++)
+			// Headless mode: wait until the view and endpoint registry have been
+			// published through the synchronized debugger-server readiness gate.
+			CDebuggerServer *server = GetReadyDebuggerServer();
+			for (int i = 0; i < 100 && server == NULL; i++)
 			{
 				SYS_Sleep(100);
+				server = GetReadyDebuggerServer();
 			}
-			if (viewC64 && viewC64->debuggerServer)
+			if (server != NULL)
 			{
 				toolsRegistered = true;
-				RegisterDebuggerTools(viewC64->debuggerServer);
+				RegisterDebuggerTools(server);
 				RegisterStaticResources();
 				RegisterPrompts();
 
@@ -421,7 +440,7 @@ json CMCPServer::HandleToolsList()
 			}
 		}
 	}
-	else if (viewC64)
+	else if (GetReadyDebuggerServer())
 	{
 		for (auto *di : viewC64->debugInterfaces)
 		{
@@ -479,6 +498,19 @@ void CMCPServer::EnsureToolsRegistered()
 json CMCPServer::HandleToolsCall(const json &params)
 {
 	EnsureToolsRegistered();
+
+	if (!isBridgeMode && !GetReadyDebuggerServer())
+	{
+		json result;
+		json content = json::array();
+		json textContent;
+		textContent["type"] = "text";
+		textContent["text"] = "Error: Debugger is not ready";
+		content.push_back(textContent);
+		result["content"] = content;
+		result["isError"] = true;
+		return result;
+	}
 
 	string toolName = params.value("name", "");
 	json toolArgs = params.value("arguments", json::object());
@@ -2510,6 +2542,12 @@ void MCP_ServerStart()
 	if (mcpServer == NULL)
 	{
 		mcpServer = new CMCPServer();
+	}
+
+	// MCP can also be started from the GUI after the debugger server exists.
+	if (viewC64 && viewC64->debuggerServer)
+	{
+		mcpServer->SetDebuggerServer(viewC64->debuggerServer);
 	}
 
 	// Ignore SIGPIPE so broken stdout pipe doesn't kill the process

@@ -286,6 +286,7 @@ CViewC64::CViewC64(float posX, float posY, float posZ, float sizeX, float sizeY)
 	isInitialized = false;
 	
 	this->name = "CViewC64";
+	this->debuggerServer = NULL;
 	viewC64 = this;
 	
 	mutexShowMessage = new CSlrMutex("CViewC64::ShowMessage");
@@ -749,7 +750,6 @@ CViewC64::CViewC64(float posX, float posY, float posZ, float sizeX, float sizeY)
 	// Note: c64SettingsRunMCPServer alone should NOT start the WS server — it is
 	// handled by the MCP auto-start in MT_Render which creates the WS server
 	// after the MCP server is actually running.
-	debuggerServer = NULL;
 	bool isBridge = (mcpServer != NULL && mcpServer->isBridgeMode);
 	bool mcpNeedsWS = (mcpServer != NULL && !isBridge);
 	if (c64SettingsRunDebuggerServerWebSockets || mcpNeedsWS)
@@ -4479,20 +4479,22 @@ char *CViewC64::ATRD_GetPathForRoms_IMPL()
 
 void CViewC64::DebuggerServerWebSocketsStart()
 {
-	if (debuggerServer != NULL)
+	if (debuggerServer == NULL)
 	{
-		if (debuggerServer->isRunning)
-		{
-			LOGWarning("CViewC64::DebuggerServerWebSocketsStart: debuggerServer != NULL and isRunning=true");
-		}
-		else
-		{
-			debuggerServer->Start();
-		}
+		debuggerServer = REMOTE_CreateDebuggerServerWebSockets(c64SettingsRunDebuggerServerWebSocketsPort);
+	}
+
+	if (mcpServer != NULL && !mcpServer->isBridgeMode)
+	{
+		mcpServer->SetDebuggerServer(debuggerServer);
+	}
+
+	if (debuggerServer->isRunning)
+	{
+		LOGWarning("CViewC64::DebuggerServerWebSocketsStart: debuggerServer != NULL and isRunning=true");
 	}
 	else
 	{
-		debuggerServer = REMOTE_CreateDebuggerServerWebSockets(c64SettingsRunDebuggerServerWebSocketsPort);
 		debuggerServer->Start();
 	}
 }

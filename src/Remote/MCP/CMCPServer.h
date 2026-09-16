@@ -10,6 +10,7 @@
 #include <functional>
 #include <mutex>
 #include <set>
+#include <atomic>
 
 class CDebuggerServer;
 class CMCPBridgeClient;
@@ -65,6 +66,11 @@ public:
 	void RegisterPrompts();
 	void RegisterBridgeLocalTools();
 
+	// The debugger server is published before its endpoint registry is ready.
+	// MCP callers may only use the pointer returned by GetReadyDebuggerServer().
+	void SetDebuggerServer(CDebuggerServer *server);
+	CDebuggerServer *GetReadyDebuggerServer();
+
 	// Bridge mode
 	void SetBridgeMode(CMCPBridgeClient *bridge);
 	void OnBridgeStateChanged(int oldState, int newState);
@@ -109,6 +115,7 @@ private:
 	bool initialized;
 	bool shouldStop;
 	bool toolsRegistered;
+	std::atomic<CDebuggerServer *> debuggerServer;
 
 	// Platform state tracking for change detection
 	std::set<std::string> lastActivePlatforms;

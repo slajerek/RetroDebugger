@@ -1,5 +1,6 @@
 #include "CTestMCPProtocol.h"
 #include "CMCPServer.h"
+#include "CDebuggerServer.h"
 #include "CDebuggerServerProtocol.h"
 #include "CViewC64.h"
 #include "CDebugInterface.h"
@@ -10,6 +11,30 @@
 using namespace nlohmann;
 
 static char failureMsg[512];
+
+class CTestMCPDebuggerServer : public CDebuggerServer
+{
+public:
+	CTestMCPDebuggerServer()
+	{
+		numCalls = 0;
+	}
+
+	virtual std::vector<char> *RunEndpointFunction(const std::string& endpointName, const std::string token, nlohmann::json params, u8 *binaryData, int binaryDataSize)
+	{
+		numCalls++;
+		lastEndpointName = endpointName;
+
+		json response;
+		response["status"] = 200;
+		response["result"]["pc"] = 0x1000;
+		std::string responseStr = response.dump();
+		return new std::vector<char>(responseStr.begin(), responseStr.end());
+	}
+
+	int numCalls;
+	std::string lastEndpointName;
+};
 
 void CTestMCPProtocol::Run(ITestCallback *cb)
 {
@@ -191,7 +216,67 @@ void CTestMCPProtocol::Run(ITestCallback *cb)
 		}
 	}
 
-	TestCompleted(true, "All MCP protocol tests passed (8/8)");
+	// --- Test 9: MCP cannot acquire a server before endpoint registration ---
+	{
+		CTestMCPDebuggerServer debuggerServer;
+		CMCPServer server;
+		server.SetDebuggerServer(&debuggerServer);
+
+		if (server.GetReadyDebuggerServer() != NULL)
+		{
+			sprintf(failureMsg, "Test 9 FAIL: unready debugger server was published");
+			TestCompleted(false, failureMsg);
+			return;
+		}
+
+		debuggerServer.SetEndpointRegistryReady(true);
+		if (server.GetReadyDebuggerServer() != &debuggerServer)
+		{
+			sprintf(failureMsg, "Test 9 FAIL: ready debugger server was not acquired");
+			TestCompleted(false, failureMsg);
+			return;
+		}
+
+		debuggerServer.SetEndpointRegistryReady(false);
+		if (server.GetReadyDebuggerServer() != NULL)
+		{
+			sprintf(failureMsg, "Test 9 FAIL: stopped debugger server remained ready");
+			TestCompleted(false, failureMsg);
+			return;
+		}
+	}
+
+	// --- Test 10: debugger tools capture the server acquired after readiness ---
+	{
+		CTestMCPDebuggerServer debuggerServer;
+		debuggerServer.SetEndpointRegistryReady(true);
+
+		CMCPServer server;
+		server.SetDebuggerServer(&debuggerServer);
+
+		json request;
+		request["jsonrpc"] = "2.0";
+		request["id"] = 3;
+		request["method"] = "tools/call";
+		request["params"]["name"] = "retro_cpu_status";
+		request["params"]["arguments"]["platform"] = "c64";
+
+		json response = server.HandleRequest(request);
+		if (!response.contains("result") || debuggerServer.numCalls != 1)
+		{
+			sprintf(failureMsg, "Test 10 FAIL: debugger tool did not call the ready server");
+			TestCompleted(false, failureMsg);
+			return;
+		}
+		if (debuggerServer.lastEndpointName != "c64/cpu/status")
+		{
+			sprintf(failureMsg, "Test 10 FAIL: endpoint='%s'", debuggerServer.lastEndpointName.c_str());
+			TestCompleted(false, failureMsg);
+			return;
+		}
+	}
+
+	TestCompleted(true, "All MCP protocol tests passed (10/10)");
 }
 
 void CTestMCPProtocol::Cancel()
