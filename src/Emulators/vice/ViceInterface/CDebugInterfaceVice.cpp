@@ -1317,11 +1317,20 @@ bool CDebugInterfaceVice::KeyboardDown(uint32 mtKeyCode)
 			return false;
 	}
 
+	C64KeyMap *keyMap = C64KeyMapGetDefault();
+	if (keyMap == NULL)
+		return false;
+
+	C64KeyCode *key = keyMap->FindKeyCode(mtKeyCode);
+	if (key == NULL)
+		return false;
+
 	CDebugInterfaceViceTaskKeyboardEvent *task =
-		new CDebugInterfaceViceTaskKeyboardEvent(this, DEBUGGER_EVENT_BUTTON_DOWN, mtKeyCode);
+		new CDebugInterfaceViceTaskKeyboardEvent(this, DEBUGGER_EVENT_BUTTON_DOWN, mtKeyCode,
+												 key->matrixRow, key->matrixCol, key->shift);
 	AddCpuDebugInterruptTask(task);
 	c64d_vice_input_tasks_flag = 1;
-	return false;
+	return true;
 }
 
 bool CDebugInterfaceVice::KeyboardUp(uint32 mtKeyCode)
@@ -1335,11 +1344,20 @@ bool CDebugInterfaceVice::KeyboardUp(uint32 mtKeyCode)
 			return false;
 	}
 
+	C64KeyMap *keyMap = C64KeyMapGetDefault();
+	if (keyMap == NULL)
+		return false;
+
+	C64KeyCode *key = keyMap->FindKeyCode(mtKeyCode);
+	if (key == NULL)
+		return false;
+
 	CDebugInterfaceViceTaskKeyboardEvent *task =
-		new CDebugInterfaceViceTaskKeyboardEvent(this, DEBUGGER_EVENT_BUTTON_UP, mtKeyCode);
+		new CDebugInterfaceViceTaskKeyboardEvent(this, DEBUGGER_EVENT_BUTTON_UP, mtKeyCode,
+												 key->matrixRow, key->matrixCol, key->shift);
 	AddCpuDebugInterruptTask(task);
 	c64d_vice_input_tasks_flag = 1;
-	return false;
+	return true;
 }
 
 void CDebugInterfaceVice::JoystickDown(int port, uint32 axis)

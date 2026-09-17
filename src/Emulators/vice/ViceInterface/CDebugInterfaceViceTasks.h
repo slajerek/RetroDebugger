@@ -21,12 +21,17 @@ public:
 class CDebugInterfaceViceTaskKeyboardEvent : public CDebugInterfaceTask
 {
 public:
-	CDebugInterfaceViceTaskKeyboardEvent(CDebugInterfaceVice *debugInterface, u8 buttonState, u32 mtKeyCode);
+	CDebugInterfaceViceTaskKeyboardEvent(CDebugInterfaceVice *debugInterface, u8 buttonState, u32 mtKeyCode,
+										 int matrixRow, int matrixCol, int shift);
 	virtual void ExecuteTask();
 
 	CDebugInterfaceVice *debugInterface;
 	u8 buttonState;
 	u32 mtKeyCode;
+	// C64 keyboard matrix position resolved from C64KeyMap (matrixRow < 0 = special key, e.g. RESTORE)
+	int matrixRow;
+	int matrixCol;
+	int shift;
 };
 
 class CDebugInterfaceViceTaskReset : public CDebugInterfaceTask
