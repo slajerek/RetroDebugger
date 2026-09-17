@@ -89,7 +89,7 @@ Get-ChildItem $ToolsDir -Recurse -Directory -Filter node_modules -ErrorAction Si
     Remove-Item -Recurse -Force
 
 Write-Host "==> [2/5] Building RetroDebugger (clean)"
-[string[]]$logsArg = if ($Logs) { @('-Logs', $Logs) } else { @() }
+$logsArg = if ($Logs) { @{ Logs = $Logs } } else { @{} }
 & (Join-Path $Root 'build-windows.ps1') -Platform $Platform -Configuration Release -Clean
 & (Join-Path $Root 'build-windows.ps1') -Platform $Platform -Configuration Release @logsArg
 if ($LASTEXITCODE -ne 0) { throw "build-windows.ps1 failed with exit code $LASTEXITCODE" }
