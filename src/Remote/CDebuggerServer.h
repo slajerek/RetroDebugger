@@ -5,6 +5,7 @@
 #include "SYS_Threading.h"
 #include "json.hpp"
 #include "CDebuggerServerProtocol.h"
+#include <atomic>
 
 class CDebuggerServer : public CSlrThread
 {
@@ -35,6 +36,12 @@ public:
 
 	// Endpoint registry for discovery
 	virtual std::vector<EndpointDescriptor> GetEndpointDescriptors();
+
+	void SetEndpointRegistryReady(bool isReady);
+	bool IsEndpointRegistryReady();
+
+private:
+	std::atomic<bool> endpointRegistryReady;
 };
 
 // 1xx: Informational

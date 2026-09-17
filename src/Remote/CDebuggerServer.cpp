@@ -2,6 +2,7 @@
 
 CDebuggerServer::CDebuggerServer()
 {
+	endpointRegistryReady.store(false, std::memory_order_release);
 }
 
 void CDebuggerServer::Start()
@@ -57,4 +58,14 @@ bool CDebuggerServer::AreClientsConnected()
 std::vector<EndpointDescriptor> CDebuggerServer::GetEndpointDescriptors()
 {
 	return std::vector<EndpointDescriptor>();
+}
+
+void CDebuggerServer::SetEndpointRegistryReady(bool isReady)
+{
+	endpointRegistryReady.store(isReady, std::memory_order_release);
+}
+
+bool CDebuggerServer::IsEndpointRegistryReady()
+{
+	return endpointRegistryReady.load(std::memory_order_acquire);
 }

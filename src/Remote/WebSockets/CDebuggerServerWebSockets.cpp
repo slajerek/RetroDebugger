@@ -54,6 +54,7 @@ void CDebuggerServerWebSockets::Start()
 		return;
 	}
 
+	SetEndpointRegistryReady(false);
 	startRequested = true;
 	SYS_StartThread(this);
 }
@@ -445,11 +446,16 @@ void CDebuggerServerWebSockets::ThreadRun(void *passData)
 		}
 	});
 
+	// Publish endpoint-map completion only after all handlers and WebSocket
+	// behavior have been installed. MCP uses this as its startup barrier.
+	SetEndpointRegistryReady(true);
+
 	LOGD("CDebuggerServerWebSockets: run");
 	serverStarted = true;
 	app->run();
 	
 	LOGM("WebSockets debugger server shutdown");
+	SetEndpointRegistryReady(false);
 	delete app;
 	app = NULL;
 	serverStarted = false;
