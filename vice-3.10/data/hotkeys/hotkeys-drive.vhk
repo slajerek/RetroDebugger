@@ -1,0 +1,26 @@
+# VICE hotkeys for drives
+#
+# Author:   Bas Wassink
+# Updated:  2023-09-03
+#
+# See src/arch/shared/uiactions.h for a list of action names.
+
+!if !MACOS
+    drive-attach-8:0        <Alt>8
+    drive-attach-9:0        <Alt>9
+    drive-attach-10:0       <Alt>0
+    drive-attach-11:0       <Alt>1
+    drive-detach-8:0        <Control><Alt>8
+    drive-detach-9:0        <Control><Alt>9
+    drive-detach-10:0       <Control><Alt>0
+    drive-detach-11:0       <Control><Alt>1
+!else
+    drive-attach-8:0        <Command>8
+    drive-attach-9:0        <Command>9
+    drive-attach-10:0       <Command>0
+    drive-attach-11:0       <Command>1
+    drive-detach-8:0        <Control><Command>8
+    drive-detach-9:0        <Control><Command>9
+    drive-detach-10:0       <Control><Command>0
+    drive-detach-11:0       <Control><Command>1
+!endif

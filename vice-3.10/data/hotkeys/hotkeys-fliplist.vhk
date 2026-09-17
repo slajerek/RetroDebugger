@@ -1,0 +1,19 @@
+# VICE hotkeys for fliplists
+#
+# Author:   Bas Wassink
+# Updated:  2023-09-03
+#
+# See doc/hotkeys.md for documentation on the syntax of hotkeys files.
+# See src/arch/shared/uiactions.h for a list of action names.
+
+!if !MACOS
+    fliplist-add-8:0        <Alt>i
+    fliplist-remove-8:0     <Alt>k
+    fliplist-next-8:0       <Alt>n
+    fliplist-previous-8:0   <Shift><Alt>n
+!else
+    fliplist-add-8:0        <Command>i
+    fliplist-remove-8:0     <Command>k
+    fliplist-next-8:0       <Command>n
+    fliplist-previous-8:0   <Shift><Command>n
+!endif

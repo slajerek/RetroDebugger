@@ -1,0 +1,56 @@
+#
+# VICE Palette file
+#
+# Syntax:
+# Red Green Blue
+#
+# TYPE:VICII
+# NAME:original VICE palette
+
+# Black
+00 00 00
+
+# White
+FD FE FC
+
+# Red
+BE 1A 24
+
+# Cyan
+30 E6 C6
+
+# Purple
+B4 1A E2
+
+# Green
+1F D2 1E
+
+# Blue
+21 1B AE
+
+# Yellow
+DF F6 0A
+
+# Orange
+B8 41 04
+
+# Brown
+6A 33 04
+
+# Light Red
+FE 4A 57
+
+# Dark Gray
+42 45 40
+
+# Medium Gray
+70 74 6F
+
+# Light Green
+59 FE 59
+
+# Light Blue
+5F 53 FE
+
+# Light Gray
+A4 A7 A2

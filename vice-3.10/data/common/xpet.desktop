@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=VICE (xpet)
+Comment=Commodore PET emulator
+Exec=xpet
+Terminal=false
+Icon=vice-xpet
+Categories=Game;Emulator;

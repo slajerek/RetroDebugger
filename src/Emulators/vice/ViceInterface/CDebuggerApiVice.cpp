@@ -1,5 +1,6 @@
 #include "CDebuggerApiVice.h"
 #include "CDebugInterfaceVice.h"
+#include "ViceWrapper.h"
 #include "CViewC64.h"
 #include "CViewMonitorConsole.h"
 #include "CViewC64VicEditor.h"
@@ -190,9 +191,9 @@ long CDebuggerApiVice::GetCurrentTimeInMilliseconds()
 	return SYS_GetCurrentTimeInMillis();
 }
 
-void CDebuggerApiVice::MakeJmp(int addr)
+bool CDebuggerApiVice::MakeJmp(int addr)
 {
-	debugInterfaceVice->MakeJmpC64(addr);
+	return debugInterfaceVice->MakeJmpC64(addr);
 }
 
 CDataAdapter *CDebuggerApiVice::GetDataAdapterDrive1541MemoryWithIO()
@@ -244,6 +245,20 @@ u8 CDebuggerApiVice::GetByteFromRamC64(int addr)
 void CDebuggerApiVice::DetachEverything()
 {
 	viewC64->mainMenuBar->DetachEverything(false, false);
+}
+
+bool CDebuggerApiVice::DetachDriveDisk(int deviceNumber)
+{
+	// VICE units are 8..11
+	if (deviceNumber < 8 || deviceNumber > 11)
+	{
+		LOGError("CDebuggerApiVice::DetachDriveDisk: invalid device number %d, expected 8..11", deviceNumber);
+		return false;
+	}
+
+	// same code path as the GUI "Detach Disk Image" action: no reset, machine state is kept
+	viewC64->mainMenuBar->DetachDiskImageC64(deviceNumber, true);
+	return true;
 }
 
 void CDebuggerApiVice::ClearRam(int startAddr, int endAddr, u8 value)
@@ -642,6 +657,15 @@ nlohmann::json CDebuggerApiVice::GetCpuStatusJson()
 	cpuStatus["rasterY"] = viewC64->c64RasterPosToShowY;
 	cpuStatus["exrom"] = viewC64->viciiStateToShow.exrom;
 	cpuStatus["game"] = viewC64->viciiStateToShow.game;
+	
+	// A debugger-requested PC change that has not reached the CPU yet. "pc" already
+	// reflects the request, so this only appears when the CPU would still execute at
+	// the old PC — which normally cannot happen, as MakeJmpC64 waits for the commit.
+	if (c64d_is_pc_change_pending())
+	{
+		cpuStatus["pendingPc"] = viewC64->viciiStateToShow.pc;
+	}
+	
 	return cpuStatus;
 }
 

@@ -7,14 +7,18 @@
 #include "CDebugAsmSource.h"
 #include "CDebugSymbols.h"
 #include "CDebugSymbolsSegment.h"
-#include "CDebugInterfaceNes.h"
+#include "CDebugInterfaceAtari.h"
 #include "CViewDataMap.h"
 #include "CViewDataWatch.h"
+#include "CMainMenuBar.h"
+
+// atari800 SIO_MAX_DRIVES, kept as a literal so this file stays free of emulator headers
+#define ATARI_MAX_DISK_DRIVES 8
 
 CDebuggerApiAtari::CDebuggerApiAtari(CDebugInterface *debugInterface)
 : CDebuggerApi(debugInterface)
 {
-	this->debugInterfaceAtari = (CDebugInterfaceNes*)debugInterface;
+	this->debugInterfaceAtari = (CDebugInterfaceAtari*)debugInterface;
 	this->cachedScreenImage = NULL;
 }
 
@@ -154,9 +158,10 @@ u8 CDebuggerApiAtari::PaintReferenceImagePixel(int x, int y, u8 r, u8 g, u8 b, u
 	return PAINT_RESULT_ERROR;
 }
 
-void CDebuggerApiAtari::MakeJmp(int addr)
+bool CDebuggerApiAtari::MakeJmp(int addr)
 {
 	LOGTODO("CDebuggerApiAtari::MakeJMP: not implemented");
+	return false;
 }
 
 void CDebuggerApiAtari::SetByteWithIo(int addr, u8 v)
@@ -178,6 +183,25 @@ void CDebuggerApiAtari::SetWord(int addr, u16 v)
 void CDebuggerApiAtari::DetachEverything()
 {
 	debugInterfaceAtari->DetachEverything();
+}
+
+bool CDebuggerApiAtari::DetachDriveDisk(int deviceNumber)
+{
+	// atari800 drives are D1: .. D8:, SIO_DisableDrive() indexes SIO_drive_status[deviceNumber-1]
+	if (deviceNumber < 1 || deviceNumber > ATARI_MAX_DISK_DRIVES)
+	{
+		LOGError("CDebuggerApiAtari::DetachDriveDisk: invalid device number %d, expected 1..%d", deviceNumber, ATARI_MAX_DISK_DRIVES);
+		return false;
+	}
+	
+	// same code path as the GUI "Detach Disk Image" action: no reset, machine state is kept
+	viewC64->mainMenuBar->DetachDiskImageAtari(deviceNumber, true);
+	return true;
+}
+
+int CDebuggerApiAtari::GetDefaultDiskDriveNumber()
+{
+	return 1;
 }
 
 int CDebuggerApiAtari::Assemble(int addr, char *assembleText)

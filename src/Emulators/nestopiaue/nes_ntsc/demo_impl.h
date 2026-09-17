@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
-#include "SDL.h"
+#include <SDL3/SDL.h>
 
 /* Image loader */
 typedef struct image_t

@@ -1,0 +1,56 @@
+#
+# VICE Palette file
+#
+# Syntax:
+# Red Green Blue
+#
+# TYPE:VICII
+# NAME:Godot
+
+# Black
+00 00 00
+
+# White
+FF FF FF
+
+# Red
+88 00 00
+
+# Cyan
+AA FF EE
+
+# Purple
+CC 44 CC
+
+# Green
+00 CC 55
+
+# Blue
+00 00 AA
+
+# Yellow
+EE EE 77
+
+# Orange
+DD 88 55
+
+# Brown
+66 44 00
+
+# Light Red
+FE 77 77
+
+# Dark Gray
+33 33 33
+
+# Medium Gray
+77 77 77
+
+# Light Green
+AA FF 66
+
+# Light Blue
+00 88 FF
+
+# Light Gray
+BB BB BB

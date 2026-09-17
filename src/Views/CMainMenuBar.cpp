@@ -1,3 +1,4 @@
+#include "DBG_Log.h"
 #include "GUI_Main.h"
 #include "SYS_DefaultConfig.h"
 #include "EmulatorsConfig.h"
@@ -11,6 +12,9 @@
 #include "CDebugInterfaceAtari.h"
 #include "CDebugInterfaceNes.h"
 #include "C64SettingsStorage.h"
+#include "C64DUiScale.h"
+#include <cmath>
+#include "MT_Theme.h"
 #include "CViewKeyboardShortcuts.h"
 #include "CSlrKeyboardShortcuts.h"
 #include "C64KeyboardShortcuts.h"
@@ -169,6 +173,19 @@ CMainMenuBar::CMainMenuBar()
 	extensionsExportLabels.push_back(new CSlrString("labels"));
 	
 	extensionsREU.push_back(new CSlrString("reu"));
+
+	// IDE64: .crt goes through the generic CRT path, .bin/.rom are raw dumps
+	extensionsIDE64Rom.push_back(new CSlrString("crt"));
+	extensionsIDE64Rom.push_back(new CSlrString("bin"));
+	extensionsIDE64Rom.push_back(new CSlrString("rom"));
+
+	// HD image extensions, matching VICE's own IDE64 file filter
+	extensionsIDE64Image.push_back(new CSlrString("hdd"));
+	extensionsIDE64Image.push_back(new CSlrString("iso"));
+	extensionsIDE64Image.push_back(new CSlrString("fdd"));
+	extensionsIDE64Image.push_back(new CSlrString("cfa"));
+	extensionsIDE64Image.push_back(new CSlrString("dsk"));
+	extensionsIDE64Image.push_back(new CSlrString("img"));
 
 	extensionsWatches.push_back(new CSlrString("watches"));
 	extensionsBreakpoints.push_back(new CSlrString("breakpoints"));
@@ -2007,6 +2024,121 @@ void CMainMenuBar::RenderImGui()
 
 					*/
 					
+					if (ImGui::BeginMenu("IDE64"))
+					{
+						if (ImGui::MenuItem("Attach IDE64 cartridge ROM..."))
+						{
+							systemDialogOperation = SystemDialogOperationAttachIDE64Rom;
+							SYS_DialogOpenFile(this, &extensionsIDE64Rom, NULL, NULL);
+						}
+						if (c64SettingsIDE64RomPath != NULL)
+						{
+							char *romName = c64SettingsIDE64RomPath->GetStdASCII();
+							ImGui::TextDisabled("ROM: %s", romName);
+							delete [] romName;
+						}
+
+						ImGui::Separator();
+
+						// IDE64 revision (resource IDE64Version: 0=V3, 1=V4.1, 2=V4.2).
+						// Separate ifs, not an ||-chain: || short-circuits, so on the
+						// click frame the later radio buttons would not render.
+						int ide64Version = c64SettingsIDE64Version;
+						bool ide64VersionChanged = false;
+						if (ImGui::RadioButton("Version 3##IDE64", &ide64Version, 0))
+							ide64VersionChanged = true;
+						if (ImGui::RadioButton("Version 4.1##IDE64", &ide64Version, 1))
+							ide64VersionChanged = true;
+						if (ImGui::RadioButton("Version 4.2##IDE64", &ide64Version, 2))
+							ide64VersionChanged = true;
+						if (ide64VersionChanged)
+						{
+							C64DebuggerSetSetting("IDE64Version", &ide64Version);
+							C64DebuggerStoreSettings();
+						}
+
+						ImGui::Separator();
+
+						if (ImGui::MenuItem("Enable USB server (pc-link)", "", &c64SettingsIDE64UsbServerEnabled))
+						{
+							C64DebuggerSetSetting("IDE64USBServer", &c64SettingsIDE64UsbServerEnabled);
+							C64DebuggerStoreSettings();
+						}
+
+						// String settings do NOT go through C64DebuggerSetSetting from
+						// the UI: its string handlers take a CSlrString* (that is what
+						// the restore path passes). Follow the C64U hostname pattern --
+						// update the global, call the interface, store.
+						static char ide64UsbAddressBuf[128];
+						static bool ide64UsbAddressBufInitialized = false;
+						if (!ide64UsbAddressBufInitialized)
+						{
+							if (c64SettingsIDE64UsbServerAddress != NULL)
+							{
+								char *tmp = c64SettingsIDE64UsbServerAddress->GetStdASCII();
+								strncpy(ide64UsbAddressBuf, tmp, sizeof(ide64UsbAddressBuf) - 1);
+								delete [] tmp;
+							}
+							ide64UsbAddressBufInitialized = true;
+						}
+						if (ImGui::InputText("USB server address##IDE64", ide64UsbAddressBuf, sizeof(ide64UsbAddressBuf)))
+						{
+							if (c64SettingsIDE64UsbServerAddress != NULL)
+								delete c64SettingsIDE64UsbServerAddress;
+							c64SettingsIDE64UsbServerAddress = new CSlrString(ide64UsbAddressBuf);
+							viewC64->debugInterfaceC64->SetIde64UsbServerAddress(ide64UsbAddressBuf);
+							C64DebuggerStoreSettings();
+						}
+
+						if (ImGui::MenuItem("Enable RTC saving##IDE64", "", &c64SettingsIDE64RtcSave))
+						{
+							C64DebuggerSetSetting("IDE64RTCSave", &c64SettingsIDE64RtcSave);
+							C64DebuggerStoreSettings();
+						}
+
+						ImGui::Separator();
+
+						for (int ide64Device = 0; ide64Device < 4; ide64Device++)
+						{
+							char label[80];
+
+							sprintf(label, "Attach HD image %d...##IDE64", ide64Device + 1);
+							if (ImGui::MenuItem(label))
+							{
+								systemDialogOperation = (SystemDialogOperation)
+									(SystemDialogOperationAttachIDE64Image1 + ide64Device);
+								SYS_DialogOpenFile(this, &extensionsIDE64Image, NULL, NULL);
+							}
+
+							if (c64SettingsIDE64Image[ide64Device] != NULL)
+							{
+								char *imageName = c64SettingsIDE64Image[ide64Device]->GetStdASCII();
+								ImGui::TextDisabled("   %s", imageName);
+								delete [] imageName;
+
+								sprintf(label, "Detach HD image %d##IDE64", ide64Device + 1);
+								if (ImGui::MenuItem(label))
+								{
+									delete c64SettingsIDE64Image[ide64Device];
+									c64SettingsIDE64Image[ide64Device] = NULL;
+									viewC64->debugInterfaceC64->SetIde64Image(ide64Device + 1, "");
+									C64DebuggerStoreSettings();
+								}
+							}
+
+							sprintf(label, "Autodetect size %d##IDE64", ide64Device + 1);
+							if (ImGui::MenuItem(label, "", &c64SettingsIDE64AutodetectSize[ide64Device]))
+							{
+								char settingName[32];
+								sprintf(settingName, "IDE64AutodetectSize%d", ide64Device + 1);
+								C64DebuggerSetSetting(settingName, &c64SettingsIDE64AutodetectSize[ide64Device]);
+								C64DebuggerStoreSettings();
+							}
+						}
+
+						ImGui::EndMenu();
+					}
+
 					if (ImGui::BeginMenu("REU"))
 					{
 						if (ImGui::MenuItem("Enabled", "", &c64SettingsReuEnabled))
@@ -2769,30 +2901,92 @@ void CMainMenuBar::RenderImGui()
 				
 				ImGui::Separator();
 
+				if (ImGui::BeginMenu("UI Scale"))
+				{
+					// HiDPI. On Windows/Linux one ImGui unit is one physical
+					// pixel (SDL3 declares per-monitor DPI awareness for us),
+					// so on a 200% display the app has to scale itself or it
+					// renders at half size. On macOS the OS already did it and
+					// the detected value is always 1.0.
+					float currentScale = MT_GetUiScale();
+					float detected = MT_DetectDisplayUiScale();
+
+					char autoLabel[64];
+					snprintf(autoLabel, sizeof(autoLabel), "Auto (display is %d%%)", (int)(detected * 100.0f + 0.5f));
+					if (ImGui::MenuItem(autoLabel, NULL, C64D_IsUiScaleAuto()))
+					{
+						C64D_UiScaleSet(detected, true);
+						C64DebuggerStoreSettings();
+					}
+
+					ImGui::Separator();
+
+					for (int i = 0; i < MT_kGuiScaleStepCount; i++)
+					{
+						float step = MT_kGuiScaleSteps[i];
+						char label[32];
+						snprintf(label, sizeof(label), "%d%%", (int)(step * 100.0f + 0.5f));
+
+						// Tick the rung that is ACTUALLY IN FORCE, whether it
+						// came from Auto or from a click. Ticking it only in
+						// manual mode hid the one case where it matters: the
+						// scale is resolved once at startup, so after the
+						// window moves to a differently-scaled monitor "Auto"
+						// reports the new display while the app still runs at
+						// the old value -- and with no rung ticked there was
+						// nothing on screen saying which.
+						bool selected = (fabsf(step - currentScale) < 0.001f);
+						if (ImGui::MenuItem(label, NULL, selected))
+						{
+							C64D_UiScaleSet(step, false);
+							C64DebuggerStoreSettings();
+						}
+					}
+
+					ImGui::Separator();
+					ImGui::TextDisabled("Rescales workspaces and window positions");
+					if (C64D_IsUiScaleAuto() && fabsf(detected - currentScale) > 0.001f)
+					{
+						ImGui::TextDisabled("Display changed since startup -- click Auto to follow it");
+					}
+
+					ImGui::EndMenu();
+				}
+
 				if (ImGui::BeginMenu("Theme style"))
 				{
 					int currentThemeStyle = VID_GetDefaultImGuiStyle();
-					std::vector<const char *> themeStyleNames;
-					themeStyleNames.push_back("Dark Alternative");
-					themeStyleNames.push_back("Dark");
-					themeStyleNames.push_back("Light");
-					themeStyleNames.push_back("Classic");
-					themeStyleNames.push_back("IntelliJ");
-					themeStyleNames.push_back("Photoshop");
-					themeStyleNames.push_back("Corporate Grey");
-					themeStyleNames.push_back("Corporate Grey 3D");
-					themeStyleNames.push_back("Nice");
-					
-					int i = 0;
-					for (std::vector<const char *>::iterator it = themeStyleNames.begin(); it != themeStyleNames.end(); it++)
+					struct ThemeEntry { const char *name; ImGuiStyleType style; };
+					ThemeEntry themes[] = {
+						{"Dark Alternative",   IMGUI_STYLE_DARK_ALTERNATIVE},
+						{"Dark",               IMGUI_STYLE_DARK},
+						{"Light",              IMGUI_STYLE_LIGHT},
+						{"Classic",            IMGUI_STYLE_CLASSIC},
+						{"IntelliJ",           IMGUI_STYLE_INTELIJ},
+						{"Photoshop",          IMGUI_STYLE_PHOTOSHOP},
+						{"Corporate Grey",     IMGUI_STYLE_CORPORATE_GREY},
+						{"Corporate Grey 3D",  IMGUI_STYLE_CORPORATE_GREY_3D},
+						{"Nice",               IMGUI_STYLE_NICE},
+						{"System",             IMGUI_STYLE_SYSTEM},
+					};
+					int numThemes = sizeof(themes) / sizeof(themes[0]);
+					for (int i = 0; i < numThemes; i++)
 					{
-						const char *name = *it;
-						bool selected = (i == currentThemeStyle);
-						if (ImGui::MenuItem(name, NULL, &selected))
+						bool selected = ((int)themes[i].style == currentThemeStyle);
+						if (ImGui::MenuItem(themes[i].name, NULL, &selected))
 						{
-							VID_SetDefaultImGuiStyle((ImGuiStyleType)i);
+							// The engine re-applies the UI scale itself, in
+							// VID_FinishStyleChange -- nothing to do here.
+							VID_SetDefaultImGuiStyle(themes[i].style);
 						}
-						i++;
+					}
+					if (VID_HasCustomImGuiStyle())
+					{
+						bool selected = (currentThemeStyle == IMGUI_STYLE_CUSTOM);
+						if (ImGui::MenuItem("Custom", NULL, &selected))
+						{
+							VID_SetDefaultImGuiStyle(IMGUI_STYLE_CUSTOM);
+						}
 					}
 
 					ImGui::EndMenu();
@@ -2975,6 +3169,72 @@ void CMainMenuBar::RenderImGui()
 					viewC64->config->SetBool("uiRaiseWindowOnPass", &uiRaiseWindowOnPass);
 				}
 				
+				// S-4: the render backend, reachable without editing a config file.
+				// Under Settings > UI because that is where the rest of the
+				// presentation settings live -- theme style, fonts, emulator screen --
+				// and c64d's CRT filter, the most visible thing a backend switch
+				// affects, is configured from the same menu.
+				if (VID_IsRenderBackendSwitchable())
+				{
+					// The RUNNING backend in the label, the PERSISTED one on the ticks:
+					// they differ whenever a switch is pending a restart, and showing
+					// only one of them makes that state unreadable. Persisted, not
+					// VID_GetPreferredRenderBackend(), which returns any
+					// --render-backend override -- under a flag the tick would sit on
+					// the flag's value rather than the user's choice and switching would
+					// appear to do nothing.
+					// The EFFECTIVE selection, not the raw persisted string: a
+					// settings.hjson naming a backend this build does not have
+					// -- carried from another machine, or hand-edited to
+					// "OpenGL4" because that is what the submenu title used to
+					// say -- would otherwise leave NO item ticked while the app
+					// plainly ran one of them. One engine function, so all three
+					// UIs that offer this choice cannot disagree.
+					const char *preferredBackend = VID_GetEffectiveRenderBackendSelection();
+
+					// ONE VOCABULARY IN THE WHOLE SUBMENU. The title used to
+					// show the RUNNING name ("OpenGL4") over items labelled
+					// "OpenGL", which reads as two different backends.
+					char submenuLabel[64];
+					snprintf(submenuLabel, sizeof(submenuLabel), "Render Backend: %s",
+							 VID_GetRenderBackendDisplayName(VID_GetCurrentRenderBackendSelection()));
+					if (ImGui::BeginMenu(submenuLabel))
+					{
+						// ITERATE THE AVAILABLE LIST, never write the items out by hand.
+						//
+						// This menu used to emit "Metal" and "OpenGL4" literally,
+						// under a bare VID_IsRenderBackendSwitchable() with no
+						// #if defined(MACOS) around it (one private app's copy of the
+						// same menu IS wrapped). That was harmless only while
+						// macOS was the only platform with a choice: the moment
+						// Windows gained Direct3D 11, this menu would have
+						// offered -- and persisted -- "Metal" on Windows, a
+						// backend that does not exist there. Caught by review
+						// round 3 of the S-6 plan, fixed here in the same commit
+						// as the engine change that would have exposed it.
+						const char *backends[8];
+						const int backendCount = VID_GetAvailableRenderBackends(backends, 8);
+						for (int i = 0; i < backendCount; i++)
+						{
+							const char *name = backends[i];
+							const bool selected = (strcmp(preferredBackend, name) == 0);
+							if (ImGui::MenuItem(VID_GetRenderBackendDisplayName(name),
+												NULL, selected, !selected))
+							{
+								VID_SetPreferredRenderBackend(name);
+								guiMain->ShowMessageBox("Render Backend",
+									"Restart the application to apply the render backend change.");
+							}
+						}
+						if (VID_IsRenderBackendOverriddenByCommandLine())
+						{
+							ImGui::Separator();
+							ImGui::TextDisabled("--render-backend is overriding this run");
+						}
+						ImGui::EndMenu();
+					}
+				}
+
 				ImGui::Separator();
 				if (ImGui::MenuItem("Clear recently opened files lists"))
 				{
@@ -3544,13 +3804,11 @@ void CMainMenuBar::RenderImGui()
 				guiMain->StoreLayoutInSettingsAtEndOfThisFrame();
 			}
 
-#if !defined(GLOBAL_DEBUG_OFF)
 			if (ImGui::MenuItem("Debug Log", "", &guiViewDebugLog->visible))
 			{
 				guiViewDebugLog->SetFocus();
 				guiMain->StoreLayoutInSettingsAtEndOfThisFrame();
 			}
-#endif
 			// end Help menu
 			ImGui::EndMenu();
 		}
@@ -3559,7 +3817,7 @@ void CMainMenuBar::RenderImGui()
 		{
 			ImGui::Begin("Retro Debugger v" RETRODEBUGGER_VERSION_STRING " About", &show_retro_debugger_about);
 			ImGui::Text("Retro Debugger is a multiplatform debugger APIs host with ImGui implementation.");
-			ImGui::Text("(C) 2016-2026 Marcin 'slajerek' Skoczylas, see README for libraries copyright.");
+			ImGui::Text("(C) 2016-2025 Marcin 'slajerek' Skoczylas, see README for libraries copyright.");
 			ImGui::Separator();
 			ImGui::Text("");
 			ImGui::Text("If you like this tool and you feel that you would like to share with me some beers,");
@@ -3601,6 +3859,12 @@ void CMainMenuBar::RenderImGui()
 			ImGui::Begin("Dear ImGui Style Editor", &show_app_style_editor);
 			ImGui::ShowStyleEditor();
 			ImGui::End();
+			if (!show_app_style_editor)
+			{
+				// User closed the Style Editor — persist the custom style
+				VID_SaveCustomImGuiStyle();
+				VID_SetDefaultImGuiStyle(IMGUI_STYLE_CUSTOM);
+			}
 		}
 		if (show_app_demo)         { ImGui::ShowDemoWindow(&show_app_demo); }
 		if (show_implot_demo)		{ ImPlot::ShowDemoWindow(); }
@@ -5030,14 +5294,28 @@ void CMainMenuBar::DetachEverything(bool showMessage, bool storeSettings)
 
 void CMainMenuBar::DetachDiskImage(bool showMessage)
 {
+	DetachDiskImageC64(8, false);
+	DetachDiskImageAtari(1, false);
+	
+	C64DebuggerStoreSettings();
+	
+	if (showMessage)
+	{
+		viewC64->ShowMessageInfo("Drive image detached");
+	}
+}
+
+void CMainMenuBar::DetachDiskImageC64(int deviceNumber, bool storeSettings)
+{
 	if (viewC64->debugInterfaceC64)
 	{
 		// detach drive
-		viewC64->debugInterfaceC64->DetachDriveDisk();
+		viewC64->debugInterfaceC64->DetachDriveDisk(deviceNumber);
 		
 		guiMain->LockMutex();
 		
-		if (c64SettingsPathToD64)
+		// the stored path only tracks the default unit
+		if (deviceNumber == 8 && c64SettingsPathToD64)
 		{
 			delete c64SettingsPathToD64;
 			c64SettingsPathToD64 = NULL;
@@ -5046,14 +5324,23 @@ void CMainMenuBar::DetachDiskImage(bool showMessage)
 		guiMain->UnlockMutex();
 	}
 	
+	if (storeSettings)
+	{
+		C64DebuggerStoreSettings();
+	}
+}
+
+void CMainMenuBar::DetachDiskImageAtari(int driveNumber, bool storeSettings)
+{
 	if (viewC64->debugInterfaceAtari)
 	{
 		// detach drive
-		viewC64->debugInterfaceAtari->DetachDriveDisk();
+		viewC64->debugInterfaceAtari->DetachDriveDisk(driveNumber);
 		
 		guiMain->LockMutex();
 		
-		if (c64SettingsPathToATR)
+		// the stored path only tracks D1:
+		if (driveNumber == 1 && c64SettingsPathToATR)
 		{
 			delete c64SettingsPathToATR;
 			c64SettingsPathToATR = NULL;
@@ -5062,11 +5349,9 @@ void CMainMenuBar::DetachDiskImage(bool showMessage)
 		guiMain->UnlockMutex();
 	}
 	
-	C64DebuggerStoreSettings();
-	
-	if (showMessage)
+	if (storeSettings)
 	{
-		viewC64->ShowMessageInfo("Drive image detached");
+		C64DebuggerStoreSettings();
 	}
 }
 
@@ -5398,6 +5683,36 @@ void CMainMenuBar::SystemDialogFileOpenSelected(CSlrString *path)
 		C64DebuggerStoreSettings();
 	}
 
+	else if (systemDialogOperation == SystemDialogOperationAttachIDE64Rom)
+	{
+		// picking a ROM by hand overrides whatever the command line said
+		c64SettingsIDE64CliOverrideRom = false;
+
+		if (c64SettingsIDE64RomPath != NULL)
+			delete c64SettingsIDE64RomPath;
+		c64SettingsIDE64RomPath = new CSlrString(path);
+
+		viewC64->debugInterfaceC64->AttachIde64Cartridge(c64SettingsIDE64RomPath);
+		C64DebuggerStoreSettings();
+	}
+
+	else if (systemDialogOperation >= SystemDialogOperationAttachIDE64Image1
+			 && systemDialogOperation <= SystemDialogOperationAttachIDE64Image4)
+	{
+		int deviceIndex = systemDialogOperation - SystemDialogOperationAttachIDE64Image1;
+		c64SettingsIDE64CliOverrideImage[deviceIndex] = false;
+
+		if (c64SettingsIDE64Image[deviceIndex] != NULL)
+			delete c64SettingsIDE64Image[deviceIndex];
+		c64SettingsIDE64Image[deviceIndex] = new CSlrString(path);
+
+		char *asciiPath = c64SettingsIDE64Image[deviceIndex]->GetStdASCII();
+		viewC64->debugInterfaceC64->SetIde64Image(deviceIndex + 1, asciiPath);
+		delete [] asciiPath;
+
+		C64DebuggerStoreSettings();
+	}
+
 	else if (systemDialogOperation == SystemDialogOperationSaveREU)
 	{
 		viewC64->mainMenuHelper->SaveReu(path, true, true);
@@ -5577,6 +5892,11 @@ void CMainMenuBar::ClearRecentlyOpenedFilesLists()
 	viewC64->viewVicEditor->recentlyOpened->Clear();
 	viewC64->viewVicEditor->recentlyOpened->StoreToSettings();
 
+	if (pluginGoatTracker != NULL && pluginGoatTracker->recentlyOpenedSongs != NULL)
+	{
+		pluginGoatTracker->recentlyOpenedSongs->Clear();
+		pluginGoatTracker->recentlyOpenedSongs->StoreToSettings();
+	}
 }
 
 void CMainMenuBar::ClearSettingsToFactoryDefault()

@@ -1,11 +1,24 @@
 node_modules
-build
+# ANCHORED to the repo root. An unanchored `build` ignores a directory of
+# that name at ANY depth, and here it silently covered vice-3.10/build --
+# a TRACKED VICE source directory (Makefile.am, bindist.sh, the autotools
+# scripts). Tracked files stay tracked, but any NEW file added there would
+# have been ignored with no diagnostic. Same rule class as the bug that hid
+# an app's post-build hook for a phase, and the engine's `core` bug
+# (33a4404).
+/build/
 *.mode1v3
 *.mode2v3
 *.pbxuser
 *.perspectivev3
 *~.nib
+# .gitattributes sits in this list of editor and IDE droppings because a
+# VENDORED tree's own copy is noise here. THE REPOSITORY'S OWN is not: it is
+# deliberate Git configuration, and it is what pins LF endings for the
+# commit-msg hook so Git for Windows cannot rewrite its shebang. Same shape as
+# the `core` rule: ignore the pattern, exempt the one that is ours.
 .gitattributes
+!/.gitattributes
 .vs
 .DS_Store
 log/
@@ -13,19 +26,30 @@ _RUNTIME_/log/
 _RUNTIME_/Documents/deploy/
 DEADJOE
 UserInterfaceState.xcuserstate
+Browse.VC.db
 *.so
 *.a
 *.ncb
 platform/MacOS/c64d.xcodeproj/project.xcworkspace/xcuserdata/mars.xcuserdatad/xcdebugger/
+platform/MacOS/c64d.xcodeproj/project.xcworkspace/xcuserdata/
 platform/MacOS/c64d.xcodeproj/project.xcworkspace/xcshareddata/
 platform/MacOS/c64d.xcodeproj/project.xcworkspace/xcshareddata/MTEngineSDL.xccheckout
 platform/MacOS/c64d.xcodeproj/.idea/
 platform/MacOS/DerivedData/
+platform/MacOS/build
 platform/Windows/.vs/
 platform/Windows/bin/
+platform/Windows/prod/
+# The release package the macOS and Linux drivers produce, same shape as the
+# Windows one above. Build output that happens to live in the checkout
+# because that is where a release is assembled; never tracked.
+platform/MacOS/prod/
+platform/Linux/prod/
 platform/Windows/c64d/x64/
 platform/Windows/c64d/Win32/
+platform/Windows/c64d/ARM64/
 tools/DeployMaker_v1.0/Debug/
+tools/websockets-debugger-test/node_modules/
 bmfont2slrfont/Debug/
 Debug/
 core.*
@@ -37,11 +61,37 @@ core
 !src/Emulators/nestopiaue/core/
 !src/Emulators/nestopiaue/core/*
 !src/Emulators/nestopiaue/core/**/*
-/releases/
 
-# AI-coding artifacts — never commit/push to GitHub (see CLAUDE.md)
-docs/superpowers/
-.claude/
+# Local/generated artifacts (do not commit)
+/releases/
+vice-3.1-compiled/
+tests/logs/
+src/.cache/
+platform/MacOS/.cache/
+platform/MacOS/compile_commands.json
+docs/**/__pycache__/
+**/*.pyc
 .superpowers/
-claude/
+.claude/
 /build-macos/
+
+# Test output: the XParty suite writes these into the repo root, one or two
+# per --run-suite run. They are test artefacts, not work, and an untracked
+# file here fails every "tree must be clean before branching" check.
+xpartyanniversary-*.prg
+
+# Written by the Xcode capability pre-action. It normally lives BESIDE the
+# repos, not inside one -- this entry only matters if someone relocates it.
+.mtengine-ide/
+
+# One developer's Visual Studio state; MSBuild imports it after the project.
+*.vcxproj.user
+
+# Rules the published repository carries and the private one lacked; adopted
+# on export so the union check never drops a published rule silently.
+# - build: the Linux CMake output directory.
+# - the other two: agent-workspace paths, excluded from the public export and
+#   never meant to appear as scratch inside the tree.
+build
+/claude/
+/docs/superpowers/

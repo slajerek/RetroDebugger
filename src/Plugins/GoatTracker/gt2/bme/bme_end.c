@@ -1,5 +1,6 @@
 #include <stdio.h>
-#include "SDL_types.h"
+// SDL3 removed SDL_types.h (SDL2 kept it as a deprecated alias for SDL_stdinc.h).
+#include <SDL3/SDL_stdinc.h>
 
 void fwrite8(FILE *file, unsigned data)
 {

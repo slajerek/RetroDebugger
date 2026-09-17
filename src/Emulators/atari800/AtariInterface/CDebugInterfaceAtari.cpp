@@ -1121,7 +1121,20 @@ void CDebugInterfaceAtari::DetachEverything()
 
 void CDebugInterfaceAtari::DetachDriveDisk()
 {
-	SIO_DisableDrive(1);
+	DetachDriveDisk(1);
+}
+
+void CDebugInterfaceAtari::DetachDriveDisk(int driveNumber)
+{
+	// SIO_DisableDrive() indexes SIO_drive_status[driveNumber-1] without bounds checking
+	if (driveNumber < 1 || driveNumber > SIO_MAX_DRIVES)
+	{
+		LOGError("CDebugInterfaceAtari::DetachDriveDisk: invalid drive number %d, expected 1..%d", driveNumber, SIO_MAX_DRIVES);
+		return;
+	}
+	
+	// NOTE: this does NOT reset the machine, unlike DetachEverything()
+	SIO_DisableDrive(driveNumber);
 }
 
 void CDebugInterfaceAtari::DetachCartridge()

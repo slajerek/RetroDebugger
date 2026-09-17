@@ -1,0 +1,82 @@
+// c64d -- TRACKED app build settings.
+//
+// The app half of the capability channel. WITHOUT IT THIS APP'S OWN TRANSLATION
+// UNITS COMPILE WITH NO CAPABILITY DEFINES while the engine archive they link
+// has them -- the two-sources-of-truth shape that produced the httplib ODR bug,
+// where an engine built with MT_ENABLE_MBEDTLS=1 and an app TU compiled with it
+// off allocate different-sized httplib::Client objects.
+//
+// This file is tracked, hand-written and never regenerated. What is FORBIDDEN is
+// a baseConfigurationReference pointing at the GENERATED MTEngineCaps.xcconfig,
+// whose path carries a capability hash and therefore cannot be tracked. A
+// tracked file has no such problem; banning both would leave app TUs with no
+// channel at all.
+//
+// It references $(MT_CAPS_DEFINES) and NOT $(MT_CAPS_DEFINES_ENGINE). That
+// asymmetry IS the per-target split: measured, a command-line setting reaches
+// every target in an invocation and cannot be scoped by the supplier, so the
+// split is made here by which settings each target's xcconfig chooses to read.
+//
+// The define list was MOVED here rather than added alongside: a target's own
+// buildSettings OUTRANK its own xcconfig, so leaving them in the project would
+// have made this file inert.
+
+// MACOS is a platform define, not a capability: mtcaps has no source for it.
+GCC_PREPROCESSOR_DEFINITIONS = $(inherited) MACOS $(MT_CAPS_DEFINES) $(MT_APP_DEFAULT_CAPS)
+
+// Fallback for opening this project directly in Xcode with no wrapper run. The
+// build still fails at the agreement check -- that is the designed outcome, not
+// a shortfall -- but it fails with a message rather than a thousand errors from
+// a TU compiled with no capability defines at all.
+MT_APP_DEFAULT_CAPS = $(MT_APP_DEFAULT_CAPS_$(MT_CAPS_SUPPLIED))
+MT_CAPS_SUPPLIED = NO
+MT_APP_DEFAULT_CAPS_NO = MT_ENABLE_IMGUI_TEST_ENGINE=1
+MT_APP_DEFAULT_CAPS_YES =
+
+// Where the dependency archives live. LIBRARY_SEARCH_PATHS in the project reads
+// this, so it must have a value even in the no-wrapper case above -- an empty
+// setting there would silently search the wrong directory rather than fail.
+//
+// Both real channels override it: the CLI wrapper passes MT_CAPS_LIBS_DIR on
+// the xcodebuild command line, and the pre-action writes it into the file
+// #include?d at the bottom of this file. This literal is only the fallback, and
+// it must agree with mt_caps_lib_dir's own fallback in the engine's
+// platform/caps-lib.sh, which is what the acquisition scripts use in the same
+// situation. An xcconfig cannot read $MTENGINE_BUILD_ROOT or $XDG_CACHE_HOME,
+// so the default location is spelled out.
+MT_CAPS_LIBS_DIR = $(HOME)/.cache/mtengine/_deps/standalone/libs
+
+// ---------------------------------------------------------------------------
+// THE IDE CHANNEL.
+//
+// Written by the scheme's build PRE-ACTION (tools/mtcaps/xcode-preaction.sh) at
+// the start of every Xcode build, and OUTSIDE every checkout. It is what makes
+// an IDE Build or Archive honour mtengine.caps rather than the engine's
+// defaults -- without it, Archive could ship libraries the manifest turns off.
+//
+// `#include?`, not `#include`: a missing file degrades SILENTLY, so a developer
+// who has never run the pre-action still gets a working build (falling back to
+// the defaults below, with the in-target backstop deciding whether that is
+// acceptable for this manifest).
+//
+// Measured: a pre-action's write takes effect in the SAME build, and an absolute
+// #include? resolves. See the engine's xcconfig spike README.
+//
+// A command-line setting still beats this, so the script path is unaffected:
+// the wrapper's values win and the two agree anyway.
+//
+//
+// THE PATH IS RELATIVE, and it has to be. Measured: $(HOME) and build settings
+// generally do NOT expand inside an #include? path -- only a literal absolute
+// path works there, and hardcoding one is both forbidden here and wrong for
+// anyone else's machine. A relative path resolves from THIS file's directory,
+// which lands on `.mtengine-ide/` beside the five repos: inside none of them,
+// and requiring only the sibling layout the whole programme already assumes.
+//
+// IT MUST COME LAST IN THIS FILE. In an xcconfig a LATER assignment wins, so
+// an include placed above the fallback defaults is silently overwritten by
+// them -- measured: MT_CAPS_SUPPLIED stayed NO with the include at the top,
+// and the IDE build compiled against the defaults while the pre-action had
+// written the correct file.
+#include? "../../../.mtengine-ide/c64d/caps.xcconfig"
+

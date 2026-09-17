@@ -10,6 +10,7 @@
 #include "CSlrFileZlib.h"
 
 #include "M_Circlebuf.h"
+#include <chrono>
 
 // TODO: rewriting map frame snapshot...  (?)
 // DONE?: attach regular snapshots -> clear rewind data
@@ -256,7 +257,16 @@ CSnapshotsManager::CSnapshotsManager(CDebugInterface *debugInterface)
 	isStoreInputEventsEnabled = false;
 	isReplayInputEventsEnabled = false;
 	lastReplayedCycle = 0;
-	
+
+	externalSnapshotRequestType = EXTERNAL_SNAPSHOT_REQUEST_NONE;
+	externalSnapshotBuffer = NULL;
+	externalSnapshotInProgress = false;
+	snapshotOperationDepth = 0;
+	externalSnapshotCompleted = false;
+	externalSnapshotResult = false;
+	externalSnapshotRequestSeq = 0;
+	externalSnapshotPendingSeq = 0;
+	externalSnapshotCompletedSeq = 0;
 
 	LOGD("CSnapshotsManager::CSnapshotsManager: snapshotsIntervalInFrames=%d snapshotsLimit=%d",
 		 c64SettingsSnapshotsIntervalNumFrames, c64SettingsSnapshotsLimit);
@@ -447,6 +457,71 @@ bool CSnapshotsManager::CheckMainCpuCycle()
 	return false;
 }
 
+bool CSnapshotsManager::PerformExternalSnapshotRequest(int requestType, CByteBuffer *buffer, u32 timeoutMs)
+{
+	if (buffer == NULL
+		|| (requestType != EXTERNAL_SNAPSHOT_REQUEST_LOAD && requestType != EXTERNAL_SNAPSHOT_REQUEST_SAVE))
+	{
+		LOGError("CSnapshotsManager::PerformExternalSnapshotRequest: invalid arguments (buffer=%p requestType=%d)", buffer, requestType);
+		return false;
+	}
+
+	// one external request at a time
+	std::lock_guard<std::mutex> serialize(externalSnapshotRequestSerializeMutex);
+
+	if (!debugInterface->isRunning)
+	{
+		LOGError("CSnapshotsManager::PerformExternalSnapshotRequest: emulation thread not running");
+		return false;
+	}
+
+	u64 mySeq;
+	{
+		std::lock_guard<std::mutex> lk(externalSnapshotSignalMutex);
+		externalSnapshotCompleted = false;
+		externalSnapshotResult = false;
+		mySeq = ++externalSnapshotRequestSeq;
+	}
+
+	this->LockMutex();
+	externalSnapshotRequestType = requestType;
+	externalSnapshotBuffer = buffer;
+	externalSnapshotPendingSeq = mySeq;
+	this->UnlockMutex();
+
+	std::unique_lock<std::mutex> lk(externalSnapshotSignalMutex);
+	bool done = externalSnapshotSignalCV.wait_for(lk, std::chrono::milliseconds(timeoutMs),
+					[this, mySeq]{ return externalSnapshotCompleted && externalSnapshotCompletedSeq == mySeq; });
+	lk.unlock();
+
+	if (!done)
+	{
+		// timeout — cancel the request if it is still pending
+		this->LockMutex();
+		if (externalSnapshotRequestType != EXTERNAL_SNAPSHOT_REQUEST_NONE)
+		{
+			externalSnapshotRequestType = EXTERNAL_SNAPSHOT_REQUEST_NONE;
+			externalSnapshotBuffer = NULL;
+			this->UnlockMutex();
+			LOGError("CSnapshotsManager::PerformExternalSnapshotRequest: timeout waiting for CPU instruction boundary");
+			return false;
+		}
+		this->UnlockMutex();
+
+		// consumed between the timeout and the cancel — the operation is in
+		// progress on the emulation thread; wait (bounded) for it to complete
+		std::unique_lock<std::mutex> lk2(externalSnapshotSignalMutex);
+		if (!externalSnapshotSignalCV.wait_for(lk2, std::chrono::milliseconds(30000),
+				[this, mySeq]{ return externalSnapshotCompleted && externalSnapshotCompletedSeq == mySeq; }))
+		{
+			LOGError("CSnapshotsManager::PerformExternalSnapshotRequest: in-progress operation never completed");
+			return false;
+		}
+	}
+
+	return externalSnapshotResult;
+}
+
 extern "C" {
 	void c64d_reset_sound_clk();
 }
@@ -511,9 +586,80 @@ bool CSnapshotsManager::CheckSnapshotRestore()
 		return true;
 	}
 	
-//	LOGD("CSnapshotsManager::CheckSnapshotRestore: UnlockMutex (2)");
+	if (externalSnapshotRequestType != EXTERNAL_SNAPSHOT_REQUEST_NONE)
+	{
+		// consumes the request and unlocks the manager mutex
+		return ConsumeExternalSnapshotRequestUnlocks();
+	}
+
 	this->UnlockMutex();
 	return false;
+}
+
+// Called by CheckSnapshotRestore() on the emulation thread at a CPU instruction
+// boundary, with the manager mutex HELD and no timeline restore pending.
+// UNLOCKS the manager mutex before returning.
+bool CSnapshotsManager::ConsumeExternalSnapshotRequestUnlocks()
+{
+	int requestType = externalSnapshotRequestType;
+	CByteBuffer *buffer = externalSnapshotBuffer;
+	u64 requestSeq = externalSnapshotPendingSeq;
+	externalSnapshotRequestType = EXTERNAL_SNAPSHOT_REQUEST_NONE;
+	externalSnapshotBuffer = NULL;
+
+	// Let paused emulation-thread pause loops (main CPU and drive CPUs, which
+	// share c64d_debug_pause_check) unwind to this instruction boundary
+	// instead of parking, via IsExternalSnapshotRequestActive() — mirrors the
+	// contract the timeline restore gets from isPerformingSnapshotRestore,
+	// but as a dedicated flag: isPerformingSnapshotRestore's getter has
+	// LOGError/forced-resume side effects we must not trigger here.
+	externalSnapshotInProgress = true;
+
+	gSoundEngine->LockMutex("CSnapshotsManager::ConsumeExternalSnapshotRequest");
+
+	bool result;
+	if (requestType == EXTERNAL_SNAPSHOT_REQUEST_LOAD)
+	{
+		result = debugInterface->LoadChipsSnapshotSynced(buffer);
+		c64d_reset_sound_clk();
+	}
+	else
+	{
+		result = debugInterface->SaveChipsSnapshotSynced(buffer);
+	}
+
+	gSoundEngine->UnlockMutex("CSnapshotsManager::ConsumeExternalSnapshotRequest");
+
+	externalSnapshotInProgress = false;
+
+	this->UnlockMutex();
+
+	bool loadPerformed = (requestType == EXTERNAL_SNAPSHOT_REQUEST_LOAD && result);
+
+	if (loadPerformed)
+	{
+		// An external full-state jump invalidates recorded history — same
+		// semantics as the GUI full-snapshot load (load_snapshot_trap in
+		// CDebugInterfaceVice.cpp). Must run WITHOUT the manager mutex held:
+		// ClearSnapshotsHistory re-locks it. ClearHistory is proven safe on
+		// the emulation thread (load_snapshot_trap calls it there today).
+		debugInterface->ClearHistory();
+		debugInterface->mainCpuStack.Clear();
+		debugInterface->RefreshScreenNoCallback();
+	}
+
+	{
+		std::lock_guard<std::mutex> lk(externalSnapshotSignalMutex);
+		externalSnapshotResult = result;
+		externalSnapshotCompletedSeq = requestSeq;
+		externalSnapshotCompleted = true;
+	}
+	externalSnapshotSignalCV.notify_all();
+
+	// true → the CPU loop re-imports registers (IMPORT_REGISTERS in
+	// c64d_check_cpu_snapshot_manager_restore / UPDATE_LOCAL_REGS on Atari).
+	// A save must NOT trigger the restore-import path.
+	return loadPerformed;
 }
 
 // @returns false=snapshot was not found, not possible to restore. cycleNum is optional, if -1 only frame will be searched.

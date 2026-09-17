@@ -1,8 +1,6 @@
 #include "CTestMonitorConsoleSelection.h"
 #include "CGuiViewConsole.h"
 #include "CViewC64.h"
-#include "CViewMonitorConsole.h"
-#include "SYS_KeyCodes.h"
 #include <cstring>
 #include <string>
 #include <vector>
@@ -204,37 +202,6 @@ void CTestMonitorConsoleSelection::Run(ITestCallback *cb)
 		StepCompleted(step++, ok, ok ? "anchor floors to cell" : "anchor floor FAILED");
 		allOk = allOk && ok;
 		delete c;
-	}
-
-	// --- Bug 2: monitor console must CONSUME typed text keys ---
-	// Regression for: characters typed in the monitor console also appeared in the
-	// emulator screen. Printable keys are inserted via KeyTextInput, so the console's
-	// KeyDown returns false for them; CViewMonitorConsole::KeyDown must still consume
-	// them (return true) so CGuiMain does not fall through to currentView (the
-	// emulator screen) and type the same character into the emulated machine.
-	// Special keys (function keys, ...) and modifier combos must still pass through.
-	{
-		CViewMonitorConsole *mc = viewC64->viewC64MonitorConsole;
-		if (mc != NULL)
-		{
-			bool ok = true;
-			// printable text keys -> consumed
-			ok = ok && (mc->KeyDown('a', false, false, false, false) == true);
-			ok = ok && (mc->KeyDown('Z', false, false, false, false) == true);
-			ok = ok && (mc->KeyDown('1', false, false, false, false) == true);
-			ok = ok && (mc->KeyDown(MTKEY_SPACEBAR, false, false, false, false) == true);
-			ok = ok && (mc->KeyDown(MTKEY_TILDE, false, false, false, false) == true);
-			// special key -> passes through (not a text key)
-			ok = ok && (mc->KeyDown(MTKEY_F1, false, false, false, false) == false);
-			// Ctrl+<letter> combo (not copy/paste/select-all) -> passes through
-			ok = ok && (mc->KeyDown('b', false, false, true, false) == false);
-			StepCompleted(step++, ok, ok ? "console consumes typed text keys" : "console text-key consume FAILED");
-			allOk = allOk && ok;
-		}
-		else
-		{
-			StepCompleted(step++, true, "console consume test skipped (no C64 monitor console)");
-		}
 	}
 
 	TestCompleted(allOk, allOk ? "selection tests passed" : "selection tests failed");

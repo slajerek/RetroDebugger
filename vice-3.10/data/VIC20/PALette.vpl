@@ -1,0 +1,56 @@
+#
+# VICE Palette file: PALette_6561-101_v1
+#
+# Syntax:
+# Red Green Blue Dither
+#
+# TYPE:VIC
+# NAME:PALette 6561-101_v1 (by Tobias)
+
+# Black
+00 00 00
+
+# White
+FF FF FF
+
+# Red
+97 2A 2E
+
+# Cyan
+64 E3 DE
+
+# Purple
+AD 3C BF
+
+# Green
+5C DC 54
+
+# Blue
+40 32 B9
+
+# Yellow
+D7 E7 45
+
+# Orange
+BA 6A 24
+
+# Light Orange
+E1 B9 96
+
+# Light Red
+DA A3 A5
+
+# Light Cyan
+B6 F6 F3
+
+# Light Purple
+DE A6 E8
+
+# Light Green
+B2 F3 AF
+
+# Light Blue
+A6 9E E2
+
+# Light Yellow
+F4 FC AB

@@ -60,7 +60,7 @@ rm -rf "$ROOT/build"
 echo "==> Running build-linux.sh with verbose logging"
 set -x
 chmod +x "$ROOT/build-linux.sh"
-( cd "$ROOT" && ./build-linux.sh )
+( cd "$ROOT" && ./build-linux.sh ${MT_LOGS:+--logs "$MT_LOGS"} )
 set +x
 
 echo "==> [3/5] Copying binary"

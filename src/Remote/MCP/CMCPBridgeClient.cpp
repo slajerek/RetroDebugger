@@ -22,7 +22,7 @@ typedef SSIZE_T ssize_t;
 #include "CMCPServer.h"
 #include "DBG_Log.h"
 #include "SYS_Main.h"
-#include <SDL.h>
+#include <SDL3/SDL.h>
 
 #include <cstring>
 #include <random>

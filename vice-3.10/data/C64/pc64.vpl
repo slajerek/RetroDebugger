@@ -1,0 +1,56 @@
+#
+# VICE Palette file
+#
+# Syntax:
+# Red Green Blue Diter
+#
+# TYPE:VICII
+# NAME:PC64
+
+# Black
+21 21 21
+
+# Wite
+FF FF FF
+
+# Red
+B5 21 21
+
+# Cyan
+73 FF FF
+
+# Purple
+B5 21 B5
+
+# Green
+21 B5 21
+
+# Blue
+21 21 B5
+
+# Yellow
+FF FF 21
+
+# Orange
+B5 73 21
+
+# Brown
+94 42 21
+
+# Ligt Red
+FF 73 73
+
+# Dark Gray
+73 73 73
+
+# Medium Gray
+94 94 94
+
+# Ligt Green
+73 FF 73
+
+# Ligt Blue
+73 73 FF
+
+# Ligt Gray
+B5 B5 B5

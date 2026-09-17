@@ -1,0 +1,44 @@
+#
+# VICE Palette file
+#
+# Syntax:
+# Red Green Blue
+#
+# TYPE:VICII
+# NAME:Pepto (old PAL)
+
+# this palette was calculated for PAL according to http://www.pepto.de/projects/colorvic/
+# using the 5 lumas present in R1 chips
+
+# Black
+00 00 00
+# White
+ff ff ff
+# Red
+58 29 1d
+# Cyan
+91 c6 d5
+# Purple
+91 5c a8
+# Green
+58 8d 43
+# Blue
+35 28 79
+# Yellow
+b8 c7 6f
+# Orange
+91 6f 43
+# Brown
+43 39 00
+# Light Red
+9a 67 59
+# Dark Gray
+35 35 35
+# Medium Gray
+74 74 74
+# Light Green
+9a d2 84
+# Light Blue
+74 66 be
+# Light Gray
+b8 b8 b8

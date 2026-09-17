@@ -1269,12 +1269,20 @@ CLOCK c64d_get_maincpu_clock()
 void interrupt_maincpu_trigger_trap(void (*trap_func)(uint16_t, void *data),
 									void *data);
 
-int _c64d_new_pc = -1;
+/* c64d: PC change requested by the debugger. -1 means "nothing is pending".
+   Written from the UI/MCP thread, read by the emulation thread. */
+volatile int _c64d_new_pc = -1;
 
 void _c64d_set_c64_pc_trap(uint16_t addr, void *data)
 {
-	uint16_t *newpc = data;
-	maincpu_regs.pc = *newpc;
+	/* The pending PC may already have been applied directly by
+	   c64d_apply_pending_debugger_pc() while the debugger was paused, or it may
+	   have been superseded by a later request that queued its own trap. Both
+	   leave the sentinel at -1, and applying that would put the CPU at $FFFF. */
+	if (_c64d_new_pc < 0)
+		return;
+	
+	maincpu_regs.pc = (uint16_t)_c64d_new_pc;
 	
 	_c64d_new_pc = -1;
 }
@@ -1283,7 +1291,47 @@ void c64d_set_c64_pc(uint16 pc)
 {
 	viceCurrentC64PC = pc;
 	_c64d_new_pc = pc;
-	interrupt_maincpu_trigger_trap(_c64d_set_c64_pc_trap, (void*)&_c64d_new_pc);
+	interrupt_maincpu_trigger_trap(_c64d_set_c64_pc_trap, NULL);
+}
+
+int c64d_is_pc_change_pending(void)
+{
+	return _c64d_new_pc != -1;
+}
+
+/* c64d: apply a debugger-requested PC change directly to the CPU working
+   register set, without waiting for the queued trap to be dispatched.
+   
+   MUST be called from the emulation thread with the CPU between instructions:
+   either from the pause loop while the CPU is parked, or at the pause-loop exit
+   in maincpu_mainloop() before the next opcode fetch. The queued trap is left in
+   the VICE trap queue and no-ops when it eventually fires (see the sentinel
+   check in _c64d_set_c64_pc_trap above).
+   
+   This exists because the trap dispatch point (DO_INTERRUPT) sits ABOVE the
+   pre-fetch pause point in the main loop body: a jump requested while parked on
+   a CPU breakpoint would otherwise not reach reg_pc before the next instruction
+   is fetched, and a single step would execute at the old PC.
+   
+   Returns 1 if a pending change was applied, 0 if there was nothing pending. */
+int c64d_apply_pending_debugger_pc(void)
+{
+	int newPc = _c64d_new_pc;
+	
+	if (newPc < 0)
+		return 0;
+	
+	/* Force the opcode-fetch bank cache to be re-translated for the new PC,
+	   exactly as IMPORT_REGISTERS does. */
+	bank_start = bank_limit = 0;
+	JUMP((uint16_t)newPc);
+	
+	maincpu_regs.pc = (uint16_t)reg_pc;
+	viceCurrentC64PC = (uint16)reg_pc;
+	
+	_c64d_new_pc = -1;
+	
+	return 1;
 }
 
 ////
@@ -3310,6 +3358,19 @@ INC_PC(1);                \
 						c64d_c64_check_pc_breakpoint(reg_pc);
 						viceCurrentC64PC = reg_pc;
 						c64d_debug_pause_check(1);
+						
+						// c64d: this is the pause point a CPU breakpoint parks on, and it
+						// sits BELOW the trap dispatch (DO_INTERRUPT) in this loop body.
+						// A PC change requested by the debugger while we were parked above
+						// is carried by a trap that will not be dispatched until the next
+						// iteration, so without applying it here the opcode fetched below
+						// would come from the stale reg_pc and a single step would execute
+						// at the old PC. See c64d_apply_pending_debugger_pc().
+						if (c64d_apply_pending_debugger_pc())
+						{
+							LOGD("maincpu_mainloop: applied deferred debugger PC=%04x at pause exit", reg_pc);
+						}
+						
 						debug_iterations_after_restore = 0;
 					}
 				}
@@ -4411,6 +4472,77 @@ INC_PC(1);                \
 
 void c64d_set_debug_mode(int newMode)
 {
+	// Circuit breaker for a real, reproduced-but-non-deterministic hang:
+	// something outside this file (observed correlating with the MCP/snapshot
+	// test group, not confirmed) can end up calling this with
+	// RUN_ONE_INSTRUCTION repeatedly, once per external observation of
+	// DEBUGGER_MODE_PAUSED, each time expecting a one-shot nudge to let a
+	// scheduled trap (see CDebugInterfaceVice::LoadFullSnapshot/
+	// SaveFullSnapshot) fire on the next executed instruction. The CPU thread
+	// dutifully executes exactly one instruction and returns to PAUSED via
+	// c64d_debug_mode_store() directly (see "cpu-post-step" above), NOT
+	// through this function -- so if the trap never actually fires (or
+	// whatever is waiting for it never notices), the external caller can
+	// re-arm RUN_ONE_INSTRUCTION again, forever, at whatever rate it's being
+	// called -- sub-millisecond in the observed case, since nothing paces it.
+	// That is an unbounded spin with no error, timeout, or log line: a silent
+	// hang. CDebugInterface::PauseEmulationBlockedWait already caps an
+	// equivalent poll loop at 100 tries (2s) for this exact class of hazard;
+	// this applies the same discipline at the one chokepoint every external
+	// caller of RUN_ONE_INSTRUCTION/RUN_ONE_CYCLE goes through, regardless of
+	// which caller it turns out to be.
+	//
+	// COUNT ALONE IS NOT A SAFE DISCRIMINATOR, so the streak is RATE-GATED.
+	// Single-stepping is what a debugger is FOR: CViewDisassembly's step key
+	// and CDebugInterface::StepOverInstruction/StepOneCycle all funnel through
+	// here, and because the CPU thread returns to PAUSED via
+	// c64d_debug_mode_store() rather than through this function, an ordinary
+	// interactive stepping session accumulates an UNBROKEN streak too. Holding
+	// the step key at key-repeat rate reaches 300 in about ten seconds, so a
+	// count-only breaker would drop one of the user's steps (silently, from
+	// their point of view) every 301st press while stepping through a routine.
+	//
+	// What actually separates the runaway from legitimate use is CADENCE, not
+	// volume. The observed spin re-arms at sub-3ms because nothing paces it;
+	// every legitimate caller is paced well above that -- interactive stepping
+	// by key repeat and the UI frame (>= ~16ms), and the stepping tests by an
+	// explicit SYS_Sleep(50) between steps. So only re-arms arriving within
+	// kSingleStepSpinIntervalMs of the previous one extend the streak; anything
+	// slower starts a new one. Tripping therefore requires ~300 consecutive
+	// re-arms with no gap longer than 5ms -- at least 1.5 continuous seconds of
+	// a spin no human, test, or UI-paced caller can produce.
+	static const unsigned long kSingleStepSpinIntervalMs = 5;
+	static int singleStepRearmStreak = 0;
+	static unsigned long singleStepLastRearmMillis = 0;
+	if (newMode == DEBUGGER_MODE_RUN_ONE_INSTRUCTION || newMode == DEBUGGER_MODE_RUN_ONE_CYCLE)
+	{
+		unsigned long nowMillis = mt_SYS_GetCurrentTimeInMillis();
+		// First call ever: singleStepLastRearmMillis is 0, so the delta is huge
+		// and the streak correctly starts at 1 rather than continuing one.
+		unsigned long sinceLastRearm = nowMillis - singleStepLastRearmMillis;
+		singleStepLastRearmMillis = nowMillis;
+
+		if (sinceLastRearm > kSingleStepSpinIntervalMs)
+			singleStepRearmStreak = 1;
+		else
+			singleStepRearmStreak++;
+
+		if (singleStepRearmStreak > 300)
+		{
+			log_error(maincpu_log,
+				"c64d_set_debug_mode: refusing RUN_ONE_INSTRUCTION/CYCLE re-arm #%d in an unbroken streak of re-arms less than %lums apart -- forcing PAUSED to break what looks like a runaway single-step loop instead of hanging",
+				singleStepRearmStreak, kSingleStepSpinIntervalMs);
+			singleStepRearmStreak = 0;
+			c64d_debug_mode_trace(DEBUGGER_MODE_PAUSED, "SetDebugMode-watchdog-break");
+			c64d_debug_mode_store(DEBUGGER_MODE_PAUSED);
+			return;
+		}
+	}
+	else
+	{
+		singleStepRearmStreak = 0;
+	}
+
 	LOGD("c64d_set_debug_mode: %d", newMode);
 	c64d_debug_mode_trace(newMode, "SetDebugMode-UI");
 	c64d_debug_mode_store(newMode);

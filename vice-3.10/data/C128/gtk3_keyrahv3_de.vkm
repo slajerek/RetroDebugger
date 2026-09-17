@@ -1,0 +1,74 @@
+
+# Positional Mapping, Keyrah V3 with German Layout, C128, GTK
+
+# we just include the regular german mapping here, and patch the keys that
+# need to be different.
+
+!INCLUDE gtk3_pos_de.vkm
+
+# F1,F3,F5,F7
+# help - linefeed - (40/80) - no scroll
+# esc - tab - alt - (caps lock)
+
+# F1 / F3 / F5 / F7
+F1 0 4 8
+F3 0 5 8
+F5 0 6 8
+F7 0 3 8
+
+# help
+F2  8 0 8
+# line feed
+F6  9 3 8
+# 40/80 column key (locking key!)
+F4 -4 0  0x8000
+# no scroll
+F8 10 7 8
+
+# esc
+F9  9 0 8
+# tab
+F10 8 3 8
+# alt
+F11 10 0 8
+# CAPS LOCK (ASCII/DIN) key (locking key!)
+F12 -4 1  0x8000
+
+# BUG: redefining the keys from the alternative set does not work
+# https://sourceforge.net/p/vice-emu/bugs/1830/
+
+# alternative set (c64 mode)
+
+# Right in c128 mode mapped to A.RIGHT
+Delete          10 6 0x108
+# Down in c128 mode mapped to A.DOWN
+Insert          10 4 0x108
+# Up in c128 mode mapped to A.UP
+Up      10 3 0x108
+# Left in c128 mode mapped to A.LEFT
+Left    10 5 0x108
+
+# Right in c128 mode mapped to A.RIGHT
+Delete          10 6 8
+# Down in c128 mode mapped to A.DOWN
+Insert          10 4 8
+# Up in c128 mode mapped to A.UP
+Up      10 3 8
+# Left in c128 mode mapped to A.LEFT
+Left    10 5 8
+
+# alternative set (c64 mode)
+
+# cursor r/l
+Right            0 2 0x101
+Right            0 2 0x108
+# cursor u/d
+Down             0 7 0x101
+Down             0 7 0x108
+
+# cursor r/l
+Right            0 2 0x001
+Right            0 2 0x008
+# cursor u/d
+Down             0 7 0x001
+Down             0 7 0x008

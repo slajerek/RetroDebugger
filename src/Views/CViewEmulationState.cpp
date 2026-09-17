@@ -14,6 +14,7 @@
 #include "CGuiEditHex.h"
 #include "VID_ImageBinding.h"
 #include "CLayoutParameter.h"
+#include "MT_UiScale.h"
 
 CViewEmulationState::CViewEmulationState(const char *name, float posX, float posY, float posZ, float sizeX, float sizeY, CDebugInterfaceC64 *debugInterface)
 : CGuiView(name, posX, posY, posZ, sizeX, sizeY)
@@ -23,7 +24,7 @@ CViewEmulationState::CViewEmulationState(const char *name, float posX, float pos
 	imGuiNoWindowPadding = true;
 	imGuiNoScrollbar = true;
 
-	fontSize = 10.0f;
+	fontSize = MT_UiScaled(10.0f);
 	hasManualFontSize = false;
 	AddLayoutParameter(new CLayoutParameterFloat("Font Size", &fontSize));
 

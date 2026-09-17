@@ -1,0 +1,135 @@
+--------------------------------------------------------------------------------
+Binary Distribution:
+--------------------------------------------------------------------------------
+
+The binary distribution script now requires that MacPorts be used for
+dependencies. MacPorts can be configured to compile for older versions of macOS.
+
+1. Make sure Xcode 10 or earlier is active, otherwise the .app files created by
+   platypus will require macOS 10.11. You can use xcode-select to choose which
+   Xcode.app is the active one.
+
+2. Follow macOS-Howto.txt to get a MacPorts VICE build environment working.
+
+3. Bundled dependencies need to be rebuilt to target macOS 10.10 for x86_64 or
+   11.0 for arm64. First, set macosx_deployment_target to 10.10 or 11.0 in
+   /opt/local/etc/macports/macports.conf.
+
+   Then I usually then nuke all installed ports and start again with runtime deps
+   built from source, like this:
+
+   $ sudo port -N uninstall installed || true
+   $ sudo port -N selfupdate
+   $ sudo port -N -s install coreutils libomp
+   $ sudo port -N -s install gtk3 +quartz
+   $ sudo port -N -s install librsvg adwaita-icon-theme libsdl2 libsdl2_image lame glew libvorbis flac libjpeg-turbo
+   $ sudo port -N -s install ffmpeg +darwinssl
+   $ sudo port -N install platypus xa texlive-basic dos2unix
+
+4. Now build VICE against the reinstalled dependencies, and make the bindist:
+
+   $ cd <build folder>
+
+   SDL2:
+   $ <path to VICE source>/configure \
+       --enable-sdl2ui \
+       --enable-lame \
+       --enable-arch=no
+
+   Gtk3:
+   $ <path to VICE source>/configure \
+       --enable-gtk3ui \
+       --enable-lame \
+       --enable-arch=no
+
+   $ make clean
+   $ make -j
+   $ make bindistzip
+
+   At some point soon it would be good to build with --enable-ffmpeg,
+   but without including the dylibs in the bindary distribution and rely on
+   locally installed version of ffmpeg. This works, however the app currently
+   segfaults if it doesn't find the libs somewhere.
+
+--------------------------------------------------------------------------------
+Codesigning and notarising:
+--------------------------------------------------------------------------------
+
+Without codesigning, all versions of macOS will complain when you install
+and launch. Without notarising, it's a huge pain the arse to try and run
+the builds on macOS 10.15 Catalina. You'll need an Apple developer ID for
+codesigning, and a paid up Apple developer subscription to make a notarised
+build. Sorry :(
+
+1. Find your code signing ids:
+
+   $ security find-identity -v -p codesigning
+
+   You are looking for something like:
+   "Developer ID Application: David Hogan (3RAEHPQQ6Z)"
+
+2. 'make bindist(zip)' will now code sign everything if the CODE_SIGN_ID
+   environment variable is set:
+
+   $ export CODE_SIGN_ID="<Your code signing id>"
+   $ make bindistzip
+
+3. Follow Apple steps for notarisation at the URL below. If your Apple ID
+   belongs to more than one team, you'll need to use the --asc-provider
+   argument when you xcrun altool. You can xcode-select back to Xcode 11
+   so that you can xcrun altool --list-providers to find the right id to
+   use.
+
+   https://tinyurl.com/macOS-notarisation
+
+   See below for the notarisation script that I wrote the to automate the
+   notarisation process for the offical VICE dmg files.
+
+--------------------------------------------------------------------------------
+Notarisation script
+--------------------------------------------------------------------------------
+
+#!/bin/bash
+set -o errexit
+set -o nounset
+
+APPLE_ID_EMAIL="<your apple ID email address>"
+NOTARISATION_PASSWORD="<a single app password for your apple ID>"
+NOTARISATION_PROVIDER="<your asc provider, see below>"
+
+#
+# You don't need the --asc-provider part if your apple ID is only in one team.
+#
+
+# verify that the signing looks ok
+codesign -vvv --deep --strict "$1"
+
+OUTPUT="$(mktemp)"
+xcrun altool --notarize-app \
+             --primary-bundle-id "$1" \
+             --username "$APPLE_ID_EMAIL" \
+             --password "$NOTARISATION_PASSWORD" \
+             --asc-provider "$NOTARISATION_PROVIDER" \
+             --file "$1" \
+             2>&1 | tee "$OUTPUT"
+UUID=$(awk '/RequestUUID/ { print $3 }' "$OUTPUT")
+
+if [ -z "$UUID" ]
+then
+    echo "ERROR: Failed to capture RequestUUID from xcrun output".
+    exit 1
+fi
+
+echo "Waiting for Status: success"
+
+while [ -z "$(grep "Status: success" "$OUTPUT")" ]
+do
+    sleep 10
+    xcrun altool --notarization-info "$UUID" \
+                 -u "$APPLE_ID_EMAIL" \
+                 -p "$NOTARISATION_PASSWORD" \
+                 2>&1 | tee "$OUTPUT"
+done
+
+xcrun stapler staple "$1"
+

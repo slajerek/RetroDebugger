@@ -9,6 +9,7 @@
 #include "CViewC64.h"
 #include "CDebugInterface.h"
 #include "CDebuggerServerApi.h"
+#include "C64DShutdown.h"
 #include "CGuiMain.h"
 #include "SYS_FileSystem.h"
 #include "json.hpp"
@@ -284,6 +285,40 @@ void CDebuggerServerWebSockets::ThreadRun(void *passData)
 		result["events"] = events;
 		return PrepareResult(HTTP_OK, token, result, NULL, 0);
 	});
+
+	// Graceful application shutdown, so a remote client can end the session
+	// through the normal File -> Quit path instead of killing the process from
+	// the outside (taskkill and friends, which can leave a Windows error popup
+	// or an orphaned process behind).
+	{
+		EndpointDescriptor desc;
+		desc.fn = "server/shutdown";
+		desc.category = "server";
+		desc.description = "Shut down RetroDebugger through its normal quit path (saves settings, layouts and plugin state)";
+		desc.paramsSchema = {
+			{"type", "object"},
+			{"properties", {
+				{"force", {{"type", "boolean"}, {"description", "Use the shorter watchdog deadline. Still runs the full graceful path and still saves state."}}},
+				{"timeoutMs", {{"type", "integer"}, {"description", "Watchdog deadline in ms before the process is forced to exit. Defaults to 8000, or 1500 when force is set."}}},
+				{"graceMs", {{"type", "integer"}, {"description", "Delay before quitting, so this reply reaches the client first. Defaults to 300."}}},
+				{"reason", {{"type", "string"}, {"description", "Free-form reason, recorded in the log"}}}
+			}}
+		};
+		AddEndpointFunction(desc, [this](const string token, json params, unsigned char *binaryData, int binaryDataSize) -> vector<char>*
+		{
+			C64DShutdownRequest request = C64DParseShutdownParams(params, "remote:server/shutdown");
+
+			json result = C64DShutdownRequestToJson(request);
+			if (!C64DRequestShutdown(request))
+			{
+				// Already on the way out. Report it as success -- the caller
+				// asked for the application to stop and it is stopping.
+				result["status"] = "already_shutting_down";
+			}
+
+			return PrepareResult(HTTP_OK, token, result, NULL, 0);
+		});
+	}
 
 	// Note: server/events/subscribe and server/events/unsubscribe are handled
 	// directly in the message handler (above) because they need the ws pointer

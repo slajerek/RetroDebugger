@@ -1,0 +1,158 @@
+The following notes come from an edited IRC session and the distribution used
+was Ubuntu, package names and installation commands may differ in other distros.
+
+Note that you may need a semi-recent distribution for the appropriate GTK3.2
+libraries to be available. E.g. the below doesn't work on LinuxMint 18.3 or
+earlier, though you may be able to manually download and compile GTK3.22 for
+your platform (untested).
+
+Tested on:  Linux Mint 19, 20
+            Ubuntu 17.10.1, 18.04, 19.04, 20.04.3-LTS 22.04 22.10 23.04 23.10
+            Debian 9.0-9.8, 10.0, 10.3, 10.4, 10.5, 10.6, 11.0-11.7 12.0-12.9
+
+--------------------------------------------------------------------------------
+1. adhoc build from SVN
+--------------------------------------------------------------------------------
+
+first, check out the svn:
+
+if you dont have svn, install it first
+$ sudo apt-get install subversion
+
+$ mkdir myworkdir
+$ cd myworkdir
+$ svn checkout https://svn.code.sf.net/p/vice-emu/code/trunk trunk
+
+now ... you will need some packages:
+$ sudo apt-get install autoconf
+$ sudo apt-get install automake
+$ sudo apt-get install build-essential      # (contains gcc, make)
+$ sudo apt-get install byacc
+$ sudo apt-get install flex
+$ sudo apt-get install xa65                 # needed to build the vsid driver
+$ sudo apt-get install gawk                 # or mawk
+$ sudo apt-get install libgtk-3-dev
+$ sudo apt-get install texinfo
+$ sudo apt-get install texlive-fonts-recommended
+$ sudo apt-get install texlive-latex-extra  # needed for the VICE logo in the pdf
+$ sudo apt-get install dos2unix             # only used when doing `make dist`
+$ sudo apt-get install libpulse-dev         # for Pulse Audio sound support
+$ sudo apt-get install libasound2-dev       # for ALSA sound support
+$ sudo apt-get install libglew-dev          # for OpenGL hardware scaling support
+$ sudo apt-get install libcurl4-openssl-dev # for WiC64, >= 7.71.0 is required
+$ sudo apt-get install libevdev-dev         # for Linux evdev joystick driver
+
+If you plan on building the PDF documentation, you will also need to install
+whatever package includes "epsf.tex". It was recently in "texlive-plain-generic".
+
+(libpng-dev is required but is a hard dependency of libgtk-3-dev)
+
+The following are optional but recommended (not required for a basic build):
+
+$ sudo apt-get install libgif-dev       # GIF screenshot support
+$ sudo apt-get install libpcap-dev      # Ethernet support
+
+
+If you have those installed, do run autogen.sh inside the vice dir:
+$ cd trunk/vice/
+$ ./autogen.sh
+that should complete without error (and generate the actual configure scripts)
+
+try configuring now:
+$ ./configure --enable-gtk3ui
+it should complete without error
+
+lets try compiling it... we'll reconfigure again later and enable the options
+you are missing :)
+$ make
+
+try running x64sc
+$ ./src/x64sc
+
+
+Note: VICE expects ROM images, shaders and other data at $PREFIX/share/vice,
+      if you've not installed VICE before, these won't be found and x64sc will
+      fail.
+      In that case, tell x64sc where to find the data:
+      $ ./src/x64sc -directory ./data
+
+      Once you've succesfully run `make install`, the ROMs will be present at
+      $PREFIX/share/vice/$EMU and the above command won't be necessary anymore.
+
+
+Finally, once one is satisfied with the compiler options etc:
+$ sudo make install
+
+
+NOTE: The following is from the previous Linux build readme and may not be
+      relevant (I've updated most of this for Gtk3 now, I think --compyx)
+
+--------------------------------------------------------------------------------
+2. tweak the configuration
+--------------------------------------------------------------------------------
+
+run x64 in a terminal, it should print a line that tells some config details:
+
+$ ./src/x64
+<...>
+*** VICE Version 3.3, rev 35869:35870 ***
+
+Welcome to x64, the free portable C64 emulator.
+<...>
+
+
+install additional packages:
+
+$ sudo apt-get install libpcap-dev        # for ethernet emulation
+
+$ sudo apt-get install libavcodec-dev     # for video capturing support
+$ sudo apt-get install libavformat-dev
+$ sudo apt-get install libswscale-dev
+
+$ sudo apt-get install libmp3lame-dev     # required for MP3 encoding
+$ sudo apt-get install libmpg123-dev      # required for MP3 decoding (and for
+                                          # mp3@64 cartridge support)
+$ sudo apt-get install libvorbis-dev      # Ogg/Vorbis support
+$ sudo apt-get install libflac-dev        # FLAC support
+
+
+reconfigure with a few more options (check if you really want/need them!):
+$ ./configure --enable-arch=native --with-resid --enable-gtk3ui \
+    --enable-ethernet --with-pulse --with-alsa --enable-cpuhistory \
+    --enable-ffmpeg
+
+(optionally add --enable-debug-gtk3ui --enable-debug to get debugging messages
+ to better debug problems, or to help reporting bugs)
+
+
+compile again...
+$ make
+
+... and finally install
+$ sudo make install
+
+--------------------------------------------------------------------------------
+3. staying up to date
+--------------------------------------------------------------------------------
+
+Once you did all this, you can keep your local work directory, and build
+yourself a cutting edge version simply by doing:
+
+$ svn up
+$ make
+$ sudo make install
+
+--------------------------------------------------------------------------------
+4. For KDE users
+--------------------------------------------------------------------------------
+
+If opening the PDF doesn't work, you may have to register a KDE-based
+application to handle opening the PDF:
+
+In a normal-user shell, issue:
+
+$ gio mime application/x-pdf org.kde.okular.desktop
+
+This will register okular with GIO as the PDF handler.
+
+Hopefully this is a temporary solution which we can fix by using xdg-open.

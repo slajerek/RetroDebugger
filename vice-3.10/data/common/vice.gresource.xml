@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- When compiling with glib-compile-resources, the `sourcedir` argument is
+     $(top_srcdir).
+-->
+<gresources>
+  <gresource prefix="/org/pokefinder/vice">
+    <file alias="vice-logo-black.svg">data/common/vice-logo-black.svg</file>
+    <file alias="CBM_Logo.svg">data/common/CBM_Logo.svg</file>
+    <!-- emu icons, aliases are supposed to match `machine_name`, excl. 'svg'
+         currently xcbm5x0 uses the 'CBM-II' icon -->
+    <file alias="C64.svg">data/common/vice-x64_1024.svg</file>
+    <file alias="C64SC.svg">data/common/vice-x64_1024.svg</file>
+    <file alias="C64DTV.svg">data/common/vice-x64dtv_1024.svg</file>
+    <file alias="SCPU64.svg">data/common/vice-xscpu64_1024.svg</file>
+    <file alias="C128.svg">data/common/vice-x128_1024.svg</file>
+    <file alias="PLUS4.svg">data/common/vice-xplus4_1024.svg</file>
+    <file alias="CBM-II.svg">data/common/vice-xcbm2_1024.svg</file>
+    <file alias="VIC20.svg">data/common/vice-xvic_1024.svg</file>
+    <file alias="PET.svg">data/common/vice-xpet_1024.svg</file>
+    <file alias="SID.svg">data/common/vice-vsid_1024.svg</file>
+  </gresource>
+</gresources>
+
+<!-- vim: set et ts=2 sw=2 sts=2 fileencoding=utf-8 syntax=xml: -->

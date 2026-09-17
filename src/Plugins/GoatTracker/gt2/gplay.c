@@ -51,20 +51,33 @@ int startpattpos = 0;
 void sequencer(int c, CHN *cptr);
 
 // Rebuild the arpnotes[] array from the base note and per-column arp state.
-// The base note is included when gate is on (channel is sounding).
+//
+// Gate ownership: the main track (column 0) owns the gate, the hard
+// restart and the instrument, exactly as in stock GT2. Arp columns only
+// add pitches to the cycle. So the base note is part of the cycle
+// whenever the channel has one, regardless of the gate: after a KEYOFF
+// the chord keeps cycling through the ADSR release until the arp columns
+// are cleared or a new base note arrives. A pending newnote replaces the
+// base immediately (the packer in greloc.c does the same per row, which
+// keeps the C and 6502 players' cycles aligned).
+//
 // cptr->note holds the current note index (0-based, already - FIRSTNOTE).
+// arpbase records whether arpnotes[0] is the base note, so the caller can
+// tell "plain note, nothing to cycle" (arpcount==1 && arpbase) from
+// "one arp note on a channel without a base" (arpcount==1 && !arpbase).
 void rebuildarp(CHN *cptr)
 {
   int count = 0;
+  unsigned char basenote = cptr->note;
 
-  // Base note: include if gate is on (0xff) and a note has been set
-  if (cptr->gate == 0xff && (cptr->note || cptr->newnote))
+  if (cptr->newnote)
+    basenote = cptr->newnote - FIRSTNOTE;
+
+  cptr->arpbase = 0;
+  if (basenote)
   {
-    // Use the latest known note index
-    unsigned char basenote = cptr->note;
-    if (cptr->newnote)
-      basenote = cptr->newnote - FIRSTNOTE;
     cptr->arpnotes[count++] = basenote;
+    cptr->arpbase = 1;
   }
 
   // Arp columns: add active notes (already stored as 0-based indices)
@@ -77,6 +90,17 @@ void rebuildarp(CHN *cptr)
   cptr->arpcount = count;
   if (cptr->arppos >= count && count > 0)
     cptr->arppos = 0;
+}
+
+// True when the arp cycle should drive the channel frequency: two or
+// more notes, or a single arp-column note on a channel with no base
+// note. A plain note (base only) keeps stock GT2's wavetable/effect
+// frequency pipeline untouched.
+static int arpcycling(CHN *cptr)
+{
+  if (cptr->arpcount >= 2) return 1;
+  if (cptr->arpcount == 1 && !cptr->arpbase) return 1;
+  return 0;
 }
 
 void initchannels(void)
@@ -106,6 +130,34 @@ void initchannels(void)
   {
     funktable[0] = 9-1;
     funktable[1] = 6-1;
+  }
+}
+
+/* The largest gatetimer the "illegally high gatetimer" guard in playroutine()
+   will accept, i.e. the smallest tick the player can reload at this song's
+   tempo. Kept next to the guard so the two cannot drift apart.
+
+   The guard compares against cptr->tick, which is reloaded either from the
+   channel tempo (when >= 2) or from funktable (funktempo, which alternates
+   between two values -- the smaller one is what has to fit). The channel tempo
+   at song start comes from initchannels()/PLAY_BEGINNING, and the reserved
+   tempo-override instrument (MAX_INSTR-1) overrides it when set. */
+int gt2MaxSafeGatetimer(void)
+{
+  int tempo = multiplier ? (6*multiplier-1) : (6-1);
+
+  if ((ginstr[MAX_INSTR-1].ad >= 2) && (!(ginstr[MAX_INSTR-1].ptr[WTBL])))
+    tempo = ginstr[MAX_INSTR-1].ad - 1;
+
+  if (tempo >= 2)
+    return tempo;
+
+  /* Funktempo: the tick alternates between the two funktable entries, so only
+     the smaller of them is always safe. */
+  {
+    int a = funktable[0];
+    int b = funktable[1];
+    return (a < b) ? a : b;
   }
 }
 
@@ -175,14 +227,11 @@ void triggerpatternrow(int pattpos)
         cptr->arpcolnotes[a] = (arpnote + cptr->trans) - FIRSTNOTE;
     }
 
+    // Stock GT2 gate handling. KEYOFF releases the channel and keeps
+    // cptr->note so the arp cycle (if any) carries on through the
+    // release; a new base note always hard-restarts, arp or not.
     if (newnote == KEYOFF)
-    {
-      cptr->note = 0;
-      cptr->newnote = 0;
-      rebuildarp(cptr);
-      if (cptr->arpcount == 0)
-        cptr->gate = 0xfe;
-    }
+      cptr->gate = 0xfe;
     if (newnote == KEYON)
       cptr->gate = 0xff;
     if (newnote <= LASTNOTE)
@@ -190,11 +239,7 @@ void triggerpatternrow(int pattpos)
       cptr->newnote = newnote+cptr->trans;
       if ((cptr->newcommand) != CMD_TONEPORTA)
       {
-        if (cptr->arpcount >= 2)
-        {
-          rebuildarp(cptr);
-        }
-        else if (!(ginstr[cptr->instr].gatetimer & 0x40))
+        if (!(ginstr[cptr->instr].gatetimer & 0x40))
         {
           cptr->gate = 0xfe;
           if (!(ginstr[cptr->instr].gatetimer & 0x80))
@@ -206,7 +251,6 @@ void triggerpatternrow(int pattpos)
       }
     }
 
-    rebuildarp(cptr);
     // Mirror playtestnote()'s tick / gatetimer setup so the hard-restart
     // release has time to drain the SID envelope before the next gate-on.
     // With tick=1 the trigger flipped the gate back on after a single tick
@@ -237,6 +281,27 @@ void rewindsong(void)
   initsong(psnum, lastsonginit);
 }
 
+/* Last note auditioned from the editor, and the channel it went to -- pattern
+   keys, Space in the table / instrument views, the on-screen piano and MIDI all
+   funnel through here. Read by the instruments browser so its preview
+   re-triggers whatever the user last heard, wherever they last heard it.
+   Note 0 means nothing has been played yet. */
+int gt2LastPreviewNote = 0;
+int gt2LastPreviewChannel = 0;
+
+/* Set by the "illegally high gatetimer" guard in playroutine(); consumed and
+   cleared by the editor on the main thread. */
+volatile int gt2GatetimerStopPending = 0;
+volatile int gt2GatetimerStopGatetimer = 0;
+volatile int gt2GatetimerStopTick = 0;
+volatile int gt2GatetimerStopInstr = 0;
+
+/* Set by the ImGui-side instrument loaders (see
+   C64DebuggerPluginGoatTracker::LoadInstrumentFromFile) so auditioning an
+   instrument does not cut the song off. Zero for every native GT2 path, which
+   keeps text mode behaving exactly as before. */
+int gt2KeepPlayingOnInstrumentLoad = 0;
+
 void playtestnote(int note, int ins, int chnnum)
 {
   if (note == KEYON) return;
@@ -245,6 +310,9 @@ void playtestnote(int note, int ins, int chnnum)
     releasenote(chnnum);
     return;
   }
+
+  gt2LastPreviewNote = note;
+  gt2LastPreviewChannel = chnnum;
 
   if (!(ginstr[ins].gatetimer & 0x40))
   {
@@ -456,7 +524,18 @@ void playroutine(void)
         }
         // Check for illegally high gatetimer and stop the song in this case
         if (chn->gatetimer > cptr->tick)
+        {
+          /* Stock GT2 stops here and says nothing at all, so the song simply
+             refuses to start: pressing play jumps to row 0 and stays there,
+             silent, with no hint of why. Record what tripped it so the editor
+             can tell the user -- see PLUGIN_GoatTrackerDoFrame. The audio
+             thread runs this, so it only stores values; the UI reads them. */
+          gt2GatetimerStopGatetimer = chn->gatetimer;
+          gt2GatetimerStopTick = cptr->tick;
+          gt2GatetimerStopInstr = cptr->instr;
+          gt2GatetimerStopPending = 1;
           stopsong();
+        }
       }
       goto WAVEEXEC;
 
@@ -520,6 +599,14 @@ void playroutine(void)
           }
           sidreg[0x5+7*c] = iptr->ad;
           sidreg[0x6+7*c] = iptr->sr;
+
+          // Write the new note's frequency on TICK0 instead of leaving
+          // the previous note's frequency in SID until the wavetable's
+          // first "play note" row one frame later (the 6502 player's
+          // mt_freq_catchup does the same at mt_newnoteinit). Relative
+          // and absolute wavetable notes still override it next tick.
+          cptr->freq = freqtbllo[cptr->note] | (freqtblhi[cptr->note] << 8);
+          cptr->vibtime = 0;
         }
       }
 
@@ -1047,16 +1134,10 @@ void playroutine(void)
             cptr->arpcolnotes[a] = (arpnote + cptr->trans) - FIRSTNOTE;
         }
 
+        // Stock GT2 gate handling — see triggerpatternrow(). The gate
+        // belongs to the main track; arp columns never touch it.
         if (newnote == KEYOFF)
-        {
-          cptr->note = 0;       // Remove base note from arp cycle
-          cptr->newnote = 0;
-          // Rebuild to see if arp notes remain
-          rebuildarp(cptr);
-          if (cptr->arpcount == 0)
-            cptr->gate = 0xfe;  // No notes left — release
-          // else: arp continues with remaining notes, gate stays on
-        }
+          cptr->gate = 0xfe;
         if (newnote == KEYON)
           cptr->gate = 0xff;
         if (newnote <= LASTNOTE)
@@ -1064,12 +1145,7 @@ void playroutine(void)
           cptr->newnote = newnote+cptr->trans;
           if ((cptr->newcommand) != CMD_TONEPORTA)
           {
-            // Skip hard restart if arp is active (channel already sounding)
-            if (cptr->arpcount >= 2)
-            {
-              rebuildarp(cptr);
-            }
-            else if (!(ginstr[cptr->instr].gatetimer & 0x40))
+            if (!(ginstr[cptr->instr].gatetimer & 0x40))
             {
               cptr->gate = 0xfe;
               if (!(ginstr[cptr->instr].gatetimer & 0x80))
@@ -1080,75 +1156,24 @@ void playroutine(void)
             }
           }
         }
-
-        // Rebuild arp note set after all columns processed
-        rebuildarp(cptr);
-
-        // NOTE: Do NOT override gate here. Let NEXTCHN handle it.
-        // NEXTCHN's instrument trigger checks gate != 0xff to know if
-        // the channel needs instrument loading. If we set gate=0xff here,
-        // NEXTCHN skips the trigger and ADSR/waveform are never loaded.
       }
       NEXTCHN:
-      // If gate is off and no new note pending, this is a KEYOFF (not HR).
-      // Clear base note so rebuildarp excludes it from arp cycle.
-      // (HR also sets gate=0xfe, but HR always has newnote set.)
-      if (cptr->gate == 0xfe && !cptr->newnote)
-        cptr->note = 0;
-
-      // Rebuild arp state every tick (cheap, ensures consistency
-      // when notes enter via playtestnote or other paths)
+      // Rebuild the arp cycle every tick (cheap; notes also enter via
+      // playtestnote and the editor's arpcolnotes cache). When the cycle
+      // is more than the plain base note, it drives the frequency —
+      // after the wavetable and tick-N effects, so the arp wins, matching
+      // the 6502 player's mt_loadregs arp block. A plain note never gets
+      // here: its frequency comes from the tick-0 note init and the
+      // wavetable, so relative wavetable notes, vibrato and portamento
+      // keep working as in stock GT2.
       rebuildarp(cptr);
-
-      // If arp notes exist but channel is silent, trigger instrument
-      if (cptr->arpcount > 0 && cptr->gate != 0xff)
-      {
-        iptr = &ginstr[cptr->instr];
-        cptr->gate = 0xff;
-        if (iptr->firstwave && iptr->firstwave < 0xfe)
-          cptr->wave = iptr->firstwave;
-        sidreg[0x5+7*c] = iptr->ad;
-        sidreg[0x6+7*c] = iptr->sr;
-        if (iptr->ptr[WTBL])
-          cptr->ptr[WTBL] = iptr->ptr[WTBL];
-        if (iptr->ptr[PTBL])
-        {
-          cptr->ptr[PTBL] = iptr->ptr[PTBL];
-          cptr->pulsetime = 0;
-        }
-      }
-
-      // If all arp notes gone and no base note, gate off
-      if (cptr->arpcount == 0 && !cptr->newnote && !cptr->note)
-        cptr->gate = 0xfe;
-
-      // Arp cycling: if multiple notes active, override frequency
-      if (cptr->arpcount >= 2)
+      if (arpcycling(cptr))
       {
         unsigned char arpnote = cptr->arpnotes[cptr->arppos];
         cptr->freq = freqtbllo[arpnote] | (freqtblhi[arpnote] << 8);
         cptr->arppos++;
         if (cptr->arppos >= cptr->arpcount)
           cptr->arppos = 0;
-      }
-      else if (cptr->arpcount == 1)
-      {
-        // Single note in arpnotes[] — write freq directly.
-        //
-        // This branch fires for ANY sounding note: a plain non-arp note
-        // (rebuildarp puts the base into arpnotes[0] when gate==0xff)
-        // and a sustaining arp-col after KEYOFF on the base. Writing
-        // freq from here is the C player's authoritative behavior; the
-        // wavetable path is one frame later and not reliable for every
-        // instrument config (empty WTBL, zero first row, etc.).
-        //
-        // Phase 7E earlier suppressed this write when gate==0xff to
-        // match the 6502 player tick-for-tick, but the design direction
-        // is the opposite: the 6502 player should be brought up to the
-        // C reference, not the C player dragged down. Restoring the
-        // unconditional override keeps the in-editor preview sounding
-        // the same as it did in production before that suppression.
-        cptr->freq = freqtbllo[cptr->arpnotes[0]] | (freqtblhi[cptr->arpnotes[0]] << 8);
       }
 
       if (cptr->mute)

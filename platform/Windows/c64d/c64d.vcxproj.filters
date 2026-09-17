@@ -205,9 +205,6 @@
     <Filter Include="Source Files\src\Emulators\nestopiaue\core\vssystem">
       <UniqueIdentifier>{738238b9-3f1a-4a42-97ad-25a1bafeef3f}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source Files\src\Tools\TextEditor">
-      <UniqueIdentifier>{84a12387-7208-452a-a1fe-8877119f8042}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Source Files\src\Plugins\GoatTracker">
       <UniqueIdentifier>{595758cd-3397-4118-ba0d-421c2439e1ad}</UniqueIdentifier>
     </Filter>
@@ -227,6 +224,37 @@
     </Filter>
     <Filter Include="Source Files\src\Plugins\CrtMaker">
       <UniqueIdentifier>{d4c98f09-4571-41d2-805d-d6d305531694}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\src\Plugins\Remapper">
+      <UniqueIdentifier>{f3a21c45-8b62-4d9e-a17f-3c509e2b1234}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\src\Plugins\Fade">
+      <UniqueIdentifier>{a52e3b71-9c4d-4f12-b8a6-1f5d8e2c4b91}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\src\Plugins\Fire">
+      <UniqueIdentifier>{d2c4b6a8-1e3f-4920-b5c7-8d9ea0b1c2f3}</UniqueIdentifier>
+    </Filter>
+      <UniqueIdentifier>{a1b2c3d4-0001-4f00-9a00-00000000f1e0}</UniqueIdentifier>
+    </Filter>
+      <UniqueIdentifier>{a1b2c3d4-0002-4f00-9a00-00000000f1c0}</UniqueIdentifier>
+    </Filter>
+      <UniqueIdentifier>{a1b2c3d4-0003-4f00-9a00-000000003ea0}</UniqueIdentifier>
+    </Filter>
+      <UniqueIdentifier>{a1b2c3d4-0004-4f00-9a00-0000000f1a0e}</UniqueIdentifier>
+    </Filter>
+      <UniqueIdentifier>{a1b2c3d4-0005-4f00-9a00-00000000fade}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\src\Plugins\Fireworks">
+      <UniqueIdentifier>{c1b9e2f3-4a5d-46e8-9d27-3b8a1c5f7e90}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\src\Plugins\XPartyAnniversary">
+      <UniqueIdentifier>{e7d2c5a1-9b34-4f80-8c1e-2a6f3d4b5c7d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\src\Plugins\MoonshineDragons">
+      <UniqueIdentifier>{a8b9c0d1-2e3f-4051-6273-849506172839}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\src\Plugins\FlameTiles">
+      <UniqueIdentifier>{f1a2e3b4-5c6d-47e8-9f10-1b2c3d4e5f60}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source Files\src.Windows\hardsid">
       <UniqueIdentifier>{b730cbaa-9927-41cd-b03e-780aeed38b63}</UniqueIdentifier>
@@ -260,6 +288,9 @@
     </Filter>
     <Filter Include="Source Files\src\Emulators\vice\ViceInterface\Adapters">
       <UniqueIdentifier>{da4c08a7-3ccf-4804-b001-5eef902d5ef8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\src\Plugins\Slideshow">
+      <UniqueIdentifier>{c04896c9-3f9c-4714-a338-b5fbbac3244a}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source Files\src\Remote">
       <UniqueIdentifier>{d1406b71-a32f-4393-9871-aafa15f92907}</UniqueIdentifier>
@@ -2397,6 +2428,9 @@
     <ClCompile Include="..\..\..\src\Tools\C64CommandLine.cpp">
       <Filter>Source Files\src\Tools</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\src\Tools\C64DShutdown.cpp">
+      <Filter>Source Files\src\Tools</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\..\src\Tools\C64FileDataAdapter.cpp">
       <Filter>Source Files\src\Tools</Filter>
     </ClCompile>
@@ -2407,6 +2441,9 @@
       <Filter>Source Files\src\Tools</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\Tools\C64Palette.cpp">
+      <Filter>Source Files\src\Tools</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Tools\C64DUiScale.cpp">
       <Filter>Source Files\src\Tools</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\Tools\C64SettingsStorage.cpp">
@@ -2503,6 +2540,9 @@
       <Filter>Source Files\src\Tools\stilview</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\Views\CViewBaseStateCPU.cpp">
+      <Filter>Source Files\src\Views</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Views\CViewBaseStateSID.cpp">
       <Filter>Source Files\src\Views</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\Views\CViewDataDump.cpp">
@@ -2742,6 +2782,9 @@
     <ClCompile Include="..\..\..\src\Views\Nes\CViewNesStatePPU.cpp">
       <Filter>Source Files\src\Views\Nes</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\src\Tests\CTestUiScale.cpp">
+      <Filter>Source Files\src\Tests</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\..\src\Tests\CTestSuiteRetroDebugger.cpp">
       <Filter>Source Files\src\Tests</Filter>
     </ClCompile>
@@ -2793,6 +2836,21 @@
     <ClCompile Include="..\..\..\src\Tests\CTestViceSnapshot.cpp">
       <Filter>Source Files\src\Tests</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\src\Tests\CTestViceNetworkSocket.cpp">
+      <Filter>Source Files\src\Tests</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Tests\CTestViceCmdlinePassthrough.cpp">
+      <Filter>Source Files\src\Tests</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Tests\CTestIde64Settings.cpp">
+      <Filter>Source Files\src\Tests</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Tests\CTestIde64UsbListener.cpp">
+      <Filter>Source Files\src\Tests</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Tests\CTestSnapshotBoundary.cpp">
+      <Filter>Source Files\src\Tests</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\..\src\Tests\CTestViceRewindWhileRunning.cpp">
       <Filter>Source Files\src\Tests</Filter>
     </ClCompile>
@@ -2811,7 +2869,19 @@
     <ClCompile Include="..\..\..\src\Tests\CTestVicePeripherals.cpp">
       <Filter>Source Files\src\Tests</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\src\Tests\CTestDiskDetach.cpp">
+      <Filter>Source Files\src\Tests</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Tests\CTestKeyboardShortcuts.cpp">
+      <Filter>Source Files\src\Tests</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Tests\CTestDetachCartridgePaused.cpp">
+      <Filter>Source Files\src\Tests</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\..\src\Tests\CTestViceInstructionStepping.cpp">
+      <Filter>Source Files\src\Tests</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Tests\CTestViceJumpWhilePaused.cpp">
       <Filter>Source Files\src\Tests</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\Tests\CTestViceInputReplay.cpp">
@@ -2847,6 +2917,12 @@
     <ClCompile Include="..\..\..\src\Tests\CTestGT2SongInfo.cpp">
       <Filter>Source Files\src\Tests</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\src\Tests\CTestGT2SongSettings.cpp">
+      <Filter>Source Files\src\Tests</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Tests\CTestGT2SidRegisters.cpp">
+      <Filter>Source Files\src\Tests</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\..\src\Tests\CTestGT2Status.cpp">
       <Filter>Source Files\src\Tests</Filter>
     </ClCompile>
@@ -2854,6 +2930,9 @@
       <Filter>Source Files\src\Tests</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\Tests\CTestGT2InstrumentOps.cpp">
+      <Filter>Source Files\src\Tests</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Tests\CTestGT2InstrumentsBrowser.cpp">
       <Filter>Source Files\src\Tests</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\Tests\CTestGT2TableEditor.cpp">
@@ -2874,20 +2953,170 @@
     <ClCompile Include="..\..\..\src\Tests\CTestArpCycling.cpp">
       <Filter>Source Files\src\Tests</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\src\Tests\CTestGT2ArpGate.cpp">
+      <Filter>Source Files\src\Tests</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\..\src\Tests\CTestArpParity.cpp">
+      <Filter>Source Files\src\Tests</Filter>
+    </ClCompile>
+    </ClCompile>
+    </ClCompile>
+    </ClCompile>
+    </ClCompile>
+    </ClCompile>
+    </ClCompile>
+    </ClCompile>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Tests\CTestXPartyMpxIrqEmit.cpp">
+      <Filter>Source Files\src\Tests</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Tests\CTestXPartyMpxRunning.cpp">
+      <Filter>Source Files\src\Tests</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Tests\CTestXPartyScrollRunning.cpp">
+      <Filter>Source Files\src\Tests</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Tests\CTestXPartyScrollScreenshot.cpp">
+      <Filter>Source Files\src\Tests</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Tests\CTestXPartyIrqDiagnostic.cpp">
+      <Filter>Source Files\src\Tests</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Tests\CTestXPartyMpxJitter.cpp">
+      <Filter>Source Files\src\Tests</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Tests\CTestXPartyFrameTrace.cpp">
+      <Filter>Source Files\src\Tests</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Tests\CTestXPartyImageSwap.cpp">
+      <Filter>Source Files\src\Tests</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Tests\CTestXPartyStripeAnim.cpp">
+      <Filter>Source Files\src\Tests</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Tests\CTestXPartyScrollFont.cpp">
+      <Filter>Source Files\src\Tests</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Tests\CTestXPartyScrollEmit.cpp">
       <Filter>Source Files\src\Tests</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\Tests\CTestMonitorConsoleSelection.cpp">
       <Filter>Source Files\src\Tests</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\src\Tests\CTestXPartyMirrorLUT.cpp">
+      <Filter>Source Files\src\Tests</Filter>
+    </ClCompile>
+    </ClCompile>
+    </ClCompile>
+    </ClCompile>
+    </ClCompile>
+    </ClCompile>
+    </ClCompile>
+    </ClCompile>
+    </ClCompile>
     <ClCompile Include="..\..\..\src\Plugins\CPluginTestRegistry.cpp">
       <Filter>Source Files\src\Plugins</Filter>
+    </ClCompile>
+    </ClCompile>
+    </ClCompile>
+    </ClCompile>
+    </ClCompile>
+    </ClCompile>
+    </ClCompile>
+    </ClCompile>
+    </ClCompile>
+    </ClCompile>
+    </ClCompile>
+    </ClCompile>
+    </ClCompile>
+    </ClCompile>
+    </ClCompile>
+    </ClCompile>
+    </ClCompile>
+    </ClCompile>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Tests\CTestMoonshineDragons.cpp">
+      <Filter>Source Files\src\Tests</Filter>
+    </ClCompile>
+    </ClCompile>
+    </ClCompile>
+    </ClCompile>
+    </ClCompile>
+    </ClCompile>
+    </ClCompile>
+    </ClCompile>
+    </ClCompile>
+    </ClCompile>
+    </ClCompile>
+    </ClCompile>
+    </ClCompile>
+    </ClCompile>
+    </ClCompile>
+    </ClCompile>
+    </ClCompile>
+    </ClCompile>
+    </ClCompile>
+    </ClCompile>
+    </ClCompile>
+    </ClCompile>
+    </ClCompile>
+      <Filter>Source Files\src\Plugins\FlameTiles</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\Tests\CTestMCPProtocol.cpp">
       <Filter>Source Files\src\Tests</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\Tests\CTestMCPBridge.cpp">
       <Filter>Source Files\src\Tests</Filter>
+    </ClCompile>
+    </ClCompile>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Tests\CTestFramebufferMirrorSync.cpp">
+      <Filter>Source Files\src\Tests</Filter>
+    </ClCompile>
+    </ClCompile>
+    </ClCompile>
+    </ClCompile>
+    </ClCompile>
+    </ClCompile>
+    </ClCompile>
+    </ClCompile>
+    </ClCompile>
+    </ClCompile>
+    </ClCompile>
+    </ClCompile>
+    </ClCompile>
+    </ClCompile>
+    </ClCompile>
+    </ClCompile>
+    </ClCompile>
+    </ClCompile>
+    </ClCompile>
+    </ClCompile>
+    </ClCompile>
+    </ClCompile>
+    </ClCompile>
+    </ClCompile>
+    </ClCompile>
+    </ClCompile>
+    </ClCompile>
+    </ClCompile>
+    </ClCompile>
+    </ClCompile>
+    </ClCompile>
+    </ClCompile>
+    </ClCompile>
+    </ClCompile>
+    </ClCompile>
+    </ClCompile>
+    </ClCompile>
+    </ClCompile>
+    </ClCompile>
+    </ClCompile>
+    </ClCompile>
+    </ClCompile>
+    </ClCompile>
+    </ClCompile>
+    </ClCompile>
     </ClCompile>
     <ClCompile Include="..\..\..\src\Tests\CTestRemoteProtocol.cpp">
       <Filter>Source Files\src\Tests</Filter>
@@ -3813,11 +4042,213 @@
     <ClCompile Include="..\..\..\src\Emulators\nestopiaue\core\NstZlib.cpp">
       <Filter>Source Files\src\Emulators\nestopiaue\core</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\src\Tools\TextEditor\TestTextEditor.cpp">
-      <Filter>Source Files\src\Tools\TextEditor</Filter>
+      <Filter>Source Files\src\Plugins\Remapper</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\src\Tools\TextEditor\TextEditor.cpp">
-      <Filter>Source Files\src\Tools\TextEditor</Filter>
+      <Filter>Source Files\src\Plugins\Fade</Filter>
+    </ClCompile>
+      <Filter>Source Files\src\Plugins\Fade</Filter>
+    </ClCompile>
+      <Filter>Source Files\src\Plugins\Fade</Filter>
+    </ClCompile>
+      <Filter>Source Files\src\Plugins\Fade</Filter>
+    </ClCompile>
+      <Filter>Source Files\src\Plugins\Fade</Filter>
+    </ClCompile>
+      <Filter>Source Files\src\Plugins\Fade</Filter>
+    </ClInclude>
+      <Filter>Source Files\src\Plugins\Fade</Filter>
+    </ClInclude>
+      <Filter>Source Files\src\Plugins\Fade</Filter>
+    </ClInclude>
+      <Filter>Source Files\src\Plugins\Fade</Filter>
+    </ClInclude>
+      <Filter>Source Files\src\Plugins\Fade</Filter>
+    </ClInclude>
+      <Filter>Source Files\src\Plugins\Fade</Filter>
+    </ClCompile>
+      <Filter>Source Files\src\Plugins\Fade</Filter>
+    </ClInclude>
+      <Filter>Source Files\src\Plugins\Fade</Filter>
+    </ClCompile>
+      <Filter>Source Files\src\Plugins\Fade</Filter>
+    </ClInclude>
+      <Filter>Source Files\src\Plugins\Fade</Filter>
+    </ClCompile>
+      <Filter>Source Files\src\Plugins\Fade</Filter>
+    </ClInclude>
+      <Filter>Source Files\src\Plugins\Fire</Filter>
+    </ClInclude>
+      <Filter>Source Files\src\Plugins\Fire</Filter>
+    </ClCompile>
+      <Filter>Source Files\src\Plugins\Fire</Filter>
+    </ClInclude>
+      <Filter>Source Files\src\Plugins\Fire</Filter>
+    </ClCompile>
+      <Filter>Source Files\src\Plugins\Fire</Filter>
+    </ClInclude>
+      <Filter>Source Files\src\Plugins\Fire</Filter>
+    </ClCompile>
+      <Filter>Source Files\src\Plugins\Fire</Filter>
+    </ClInclude>
+      <Filter>Source Files\src\Plugins\Fire</Filter>
+    </ClCompile>
+      <Filter>Source Files\src\Plugins\Fire</Filter>
+    </ClInclude>
+      <Filter>Source Files\src\Plugins\Fire</Filter>
+    </ClCompile>
+      <Filter>Source Files\src\Plugins\Fire</Filter>
+    </ClInclude>
+      <Filter>Source Files\src\Plugins\Fire</Filter>
+    </ClCompile>
+      <Filter>Source Files\src\Plugins\Fire</Filter>
+    </ClInclude>
+      <Filter>Source Files\src\Plugins\Fire</Filter>
+    </ClCompile>
+      <Filter>Source Files\src\Plugins\Fire</Filter>
+    </ClInclude>
+      <Filter>Source Files\src\Plugins\Fire</Filter>
+    </ClCompile>
+      <Filter>Source Files\src\Plugins\Fireworks</Filter>
+    </ClInclude>
+      <Filter>Source Files\src\Plugins\Fireworks</Filter>
+    </ClInclude>
+      <Filter>Source Files\src\Plugins\Fireworks</Filter>
+    </ClCompile>
+      <Filter>Source Files\src\Plugins\Fireworks</Filter>
+    </ClInclude>
+      <Filter>Source Files\src\Plugins\Fireworks</Filter>
+    </ClCompile>
+      <Filter>Source Files\src\Plugins\Fireworks</Filter>
+    </ClInclude>
+      <Filter>Source Files\src\Plugins\Fireworks</Filter>
+    </ClCompile>
+      <Filter>Source Files\src\Plugins\Fireworks</Filter>
+    </ClInclude>
+      <Filter>Source Files\src\Plugins\Fireworks</Filter>
+    </ClCompile>
+      <Filter>Source Files\src\Plugins\Fireworks</Filter>
+    </ClInclude>
+      <Filter>Source Files\src\Plugins\Fireworks</Filter>
+    </ClCompile>
+      <Filter>Source Files\src\Plugins\Fireworks</Filter>
+    </ClInclude>
+      <Filter>Source Files\src\Plugins\Fireworks</Filter>
+    </ClCompile>
+      <Filter>Source Files\src\Plugins\Fireworks</Filter>
+    </ClInclude>
+      <Filter>Source Files\src\Plugins\Fireworks</Filter>
+    </ClCompile>
+      <Filter>Source Files\src\Plugins\Fireworks</Filter>
+    </ClInclude>
+      <Filter>Source Files\src\Plugins\Fireworks</Filter>
+    </ClCompile>
+      <Filter>Source Files\src\Plugins\XPartyAnniversary</Filter>
+    </ClInclude>
+      <Filter>Source Files\src\Plugins\XPartyAnniversary</Filter>
+    </ClInclude>
+      <Filter>Source Files\src\Plugins\XPartyAnniversary</Filter>
+    </ClCompile>
+    <ClInclude Include="..\..\..\src\Plugins\MoonshineDragons\C64DebuggerPluginMoonshineDragons.h">
+      <Filter>Source Files\src\Plugins\MoonshineDragons</Filter>
+    </ClInclude>
+    <ClCompile Include="..\..\..\src\Plugins\MoonshineDragons\C64DebuggerPluginMoonshineDragons.cpp">
+      <Filter>Source Files\src\Plugins\MoonshineDragons</Filter>
+    </ClCompile>
+      <Filter>Source Files\src\Plugins\XPartyAnniversary</Filter>
+    </ClInclude>
+      <Filter>Source Files\src\Plugins\XPartyAnniversary</Filter>
+    </ClCompile>
+      <Filter>Source Files\src\Plugins\XPartyAnniversary</Filter>
+    </ClInclude>
+      <Filter>Source Files\src\Plugins\XPartyAnniversary</Filter>
+    </ClCompile>
+      <Filter>Source Files\src\Plugins\XPartyAnniversary</Filter>
+    </ClInclude>
+      <Filter>Source Files\src\Plugins\XPartyAnniversary</Filter>
+    </ClCompile>
+      <Filter>Source Files\src\Plugins\XPartyAnniversary</Filter>
+    </ClInclude>
+      <Filter>Source Files\src\Plugins\XPartyAnniversary</Filter>
+    </ClCompile>
+      <Filter>Source Files\src\Plugins\XPartyAnniversary</Filter>
+    </ClInclude>
+      <Filter>Source Files\src\Plugins\XPartyAnniversary</Filter>
+    </ClCompile>
+      <Filter>Source Files\src\Plugins\XPartyAnniversary</Filter>
+    </ClInclude>
+      <Filter>Source Files\src\Plugins\XPartyAnniversary</Filter>
+    </ClCompile>
+      <Filter>Source Files\src\Plugins\XPartyAnniversary</Filter>
+    </ClInclude>
+      <Filter>Source Files\src\Plugins\XPartyAnniversary</Filter>
+    </ClCompile>
+      <Filter>Source Files\src\Plugins\XPartyAnniversary</Filter>
+    </ClCompile>
+      <Filter>Source Files\src\Plugins\XPartyAnniversary</Filter>
+    </ClInclude>
+      <Filter>Source Files\src\Plugins\XPartyAnniversary</Filter>
+    </ClCompile>
+      <Filter>Source Files\src\Plugins\XPartyAnniversary</Filter>
+    </ClCompile>
+      <Filter>Source Files\src\Plugins\XPartyAnniversary</Filter>
+    </ClInclude>
+      <Filter>Source Files\src\Plugins\XPartyAnniversary</Filter>
+    </ClInclude>
+      <Filter>Source Files\src\Plugins\FlameTiles</Filter>
+    </ClInclude>
+      <Filter>Source Files\src\Plugins\FlameTiles</Filter>
+    </ClCompile>
+      <Filter>Source Files\src\Plugins\FlameTiles</Filter>
+    </ClInclude>
+      <Filter>Source Files\src\Plugins\FlameTiles</Filter>
+    </ClCompile>
+      <Filter>Source Files\src\Plugins\FlameTiles</Filter>
+    </ClInclude>
+      <Filter>Source Files\src\Plugins\FlameTiles</Filter>
+    </ClInclude>
+      <Filter>Source Files\src\Plugins\FlameTiles</Filter>
+    </ClCompile>
+      <Filter>Source Files\src\Plugins\FlameTiles</Filter>
+    </ClInclude>
+      <Filter>Source Files\src\Plugins\FlameTiles</Filter>
+    </ClCompile>
+      <Filter>Source Files\src\Plugins\FlameTiles</Filter>
+    </ClInclude>
+      <Filter>Source Files\src\Plugins\FlameTiles</Filter>
+    </ClCompile>
+      <Filter>Source Files\src\Plugins\Remapper</Filter>
+    </ClInclude>
+      <Filter>Source Files\src\Plugins\Remapper</Filter>
+    </ClCompile>
+      <Filter>Source Files\src\Plugins\Remapper</Filter>
+    </ClInclude>
+      <Filter>Source Files\src\Plugins\Remapper</Filter>
+    </ClCompile>
+      <Filter>Source Files\src\Plugins\Remapper</Filter>
+    </ClInclude>
+      <Filter>Source Files\src\Plugins\Remapper</Filter>
+    </ClInclude>
+      <Filter>Source Files\src\Plugins\Remapper</Filter>
+    </ClInclude>
+      <Filter>Source Files\src\Plugins\Remapper</Filter>
+    </ClCompile>
+      <Filter>Source Files\src\Plugins\Remapper</Filter>
+    </ClCompile>
+      <Filter>Source Files\src\Plugins\Remapper</Filter>
+    </ClCompile>
+      <Filter>Source Files\src\Plugins\Remapper</Filter>
+    </ClCompile>
+      <Filter>Source Files\src\Plugins\Remapper</Filter>
+    </ClCompile>
+      <Filter>Source Files\src\Plugins\Remapper</Filter>
+    </ClCompile>
+      <Filter>Source Files\src\Plugins\Remapper</Filter>
+    </ClInclude>
+      <Filter>Source Files\src\Plugins\Remapper</Filter>
+    </ClCompile>
+      <Filter>Source Files\src\Plugins\Remapper</Filter>
+    </ClInclude>
+      <Filter>Source Files\src\Plugins\Remapper</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\Plugins\GoatTracker\C64DebuggerPluginGoatTracker.cpp">
       <Filter>Source Files\src\Plugins\GoatTracker</Filter>
@@ -3826,6 +4257,21 @@
       <Filter>Source Files\src\Plugins\GoatTracker</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\Plugins\GoatTracker\CViewGT2Oscilloscope.cpp">
+      <Filter>Source Files\src\Plugins\GoatTracker</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Plugins\GoatTracker\CViewGT2StateSID.cpp">
+      <Filter>Source Files\src\Plugins\GoatTracker</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Plugins\GoatTracker\CGT2SidRegisters.cpp">
+      <Filter>Source Files\src\Plugins\GoatTracker</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Plugins\GoatTracker\CViewGT2InstrumentsBrowser.cpp">
+      <Filter>Source Files\src\Plugins\GoatTracker</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Plugins\GoatTracker\CViewGT2InstrumentTableRow.cpp">
+      <Filter>Source Files\src\Plugins\GoatTracker</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Plugins\GoatTracker\CViewGT2PatternRow.cpp">
       <Filter>Source Files\src\Plugins\GoatTracker</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\Plugins\GoatTracker\CGT2VoiceWaveforms.cpp">
@@ -3864,10 +4310,16 @@
     <ClCompile Include="..\..\..\src\Plugins\GoatTracker\CGT2Favorites.cpp">
       <Filter>Source Files\src\Plugins\GoatTracker</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\src\Plugins\GoatTracker\CGT2UndoHistory.cpp">
+      <Filter>Source Files\src\Plugins\GoatTracker</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\..\src\Plugins\GoatTracker\CViewGT2Tables.cpp">
       <Filter>Source Files\src\Plugins\GoatTracker</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\Plugins\GoatTracker\CViewGT2SongInfo.cpp">
+      <Filter>Source Files\src\Plugins\GoatTracker</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Plugins\GoatTracker\CViewGT2SongSettings.cpp">
       <Filter>Source Files\src\Plugins\GoatTracker</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\Plugins\GoatTracker\CViewGT2Status.cpp">
@@ -4416,6 +4868,8 @@
     <ClCompile Include="..\..\..\src\Emulators\vice\ViceInterface\Adapters\CDataAddressEditBoxDiskContents.cpp">
       <Filter>Source Files\src\Emulators\vice\ViceInterface\Adapters</Filter>
     </ClCompile>
+      <Filter>Source Files\src\Plugins\Slideshow</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\..\src\Views\C64\CViewC64BreakpointsIrq.cpp">
       <Filter>Source Files\src\Views\C64</Filter>
     </ClCompile>
@@ -4542,6 +4996,18 @@
     <ClCompile Include="..\..\..\src\Tools\Shaders\CRenderShaderCRTMonitorOpenGL4.cpp">
       <Filter>Source Files\src\Tools\Shaders</Filter>
     </ClCompile>
+    <ClInclude Include="..\..\..\src\Tools\Shaders\Generated\C64DCRTMonitorMetallib.h">
+      <Filter>src\Tools\Shaders\Generated</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Tools\Shaders\CRenderShaderCRTMonitorMetal.h">
+      <Filter>src\Tools\Shaders</Filter>
+    </ClInclude>
+    <ClCompile Include="..\..\..\src\Tools\Shaders\CRTMonitorShaderFactory.cpp">
+      <Filter>src\Tools\Shaders</Filter>
+    </ClCompile>
+    <ClInclude Include="..\..\..\src\Tools\Shaders\CRTMonitorShaderFactory.h">
+      <Filter>src\Tools\Shaders</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\src\C64D_Version.h">
@@ -6678,6 +7144,9 @@
     <ClInclude Include="..\..\..\src\Tools\C64CommandLine.h">
       <Filter>Source Files\src\Tools</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\src\Tools\C64DShutdown.h">
+      <Filter>Source Files\src\Tools</Filter>
+    </ClInclude>
     <ClInclude Include="..\..\..\src\Tools\C64FileDataAdapter.h">
       <Filter>Source Files\src\Tools</Filter>
     </ClInclude>
@@ -6691,6 +7160,9 @@
       <Filter>Source Files\src\Tools</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\src\Tools\C64Palette.h">
+      <Filter>Source Files\src\Tools</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Tools\C64DUiScale.h">
       <Filter>Source Files\src\Tools</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\src\Tools\C64SettingsStorage.h">
@@ -6859,6 +7331,9 @@
       <Filter>Source Files\src\Tools\stilview</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\src\Views\CViewBaseStateCPU.h">
+      <Filter>Source Files\src\Views</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Views\CViewBaseStateSID.h">
       <Filter>Source Files\src\Views</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\src\Views\CViewDataDump.h">
@@ -7104,6 +7579,9 @@
     <ClInclude Include="..\..\..\src\Views\Nes\CViewNesStatePPU.h">
       <Filter>Source Files\src\Views\Nes</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\src\Tests\CTestUiScale.h">
+      <Filter>Source Files\src\Tests</Filter>
+    </ClInclude>
     <ClInclude Include="..\..\..\src\Tests\CTestSuiteRetroDebugger.h">
       <Filter>Source Files\src\Tests</Filter>
     </ClInclude>
@@ -7167,6 +7645,9 @@
     <ClInclude Include="..\..\..\src\Tests\CTestViceSnapshot.h">
       <Filter>Source Files\src\Tests</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\src\Tests\CTestSnapshotBoundary.h">
+      <Filter>Source Files\src\Tests</Filter>
+    </ClInclude>
     <ClInclude Include="..\..\..\src\Tests\CTestViceRewindWhileRunning.h">
       <Filter>Source Files\src\Tests</Filter>
     </ClInclude>
@@ -7185,7 +7666,19 @@
     <ClInclude Include="..\..\..\src\Tests\CTestVicePeripherals.h">
       <Filter>Source Files\src\Tests</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\src\Tests\CTestDiskDetach.h">
+      <Filter>Source Files\src\Tests</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Tests\CTestKeyboardShortcuts.h">
+      <Filter>Source Files\src\Tests</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Tests\CTestDetachCartridgePaused.h">
+      <Filter>Source Files\src\Tests</Filter>
+    </ClInclude>
     <ClInclude Include="..\..\..\src\Tests\CTestViceInstructionStepping.h">
+      <Filter>Source Files\src\Tests</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Tests\CTestViceJumpWhilePaused.h">
       <Filter>Source Files\src\Tests</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\src\Tests\CTestViceInputReplay.h">
@@ -7221,6 +7714,12 @@
     <ClInclude Include="..\..\..\src\Tests\CTestGT2SongInfo.h">
       <Filter>Source Files\src\Tests</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\src\Tests\CTestGT2SongSettings.h">
+      <Filter>Source Files\src\Tests</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Tests\CTestGT2SidRegisters.h">
+      <Filter>Source Files\src\Tests</Filter>
+    </ClInclude>
     <ClInclude Include="..\..\..\src\Tests\CTestGT2Status.h">
       <Filter>Source Files\src\Tests</Filter>
     </ClInclude>
@@ -7228,6 +7727,9 @@
       <Filter>Source Files\src\Tests</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\src\Tests\CTestGT2InstrumentOps.h">
+      <Filter>Source Files\src\Tests</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Tests\CTestGT2InstrumentsBrowser.h">
       <Filter>Source Files\src\Tests</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\src\Tests\CTestGT2TableEditor.h">
@@ -7239,11 +7741,114 @@
     <ClInclude Include="..\..\..\src\Tests\CTestArpParity.h">
       <Filter>Source Files\src\Tests</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\src\Tests\CTestGT2ArpGate.h">
+      <Filter>Source Files\src\Tests</Filter>
+    </ClInclude>
+    </ClInclude>
+    </ClInclude>
+    </ClInclude>
+    </ClInclude>
+    </ClInclude>
+    </ClInclude>
+    </ClInclude>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Tests\CTestXPartyMpxIrqEmit.h">
+      <Filter>Source Files\src\Tests</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Tests\CTestXPartyMpxRunning.h">
+      <Filter>Source Files\src\Tests</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Tests\CTestXPartyScrollRunning.h">
+      <Filter>Source Files\src\Tests</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Tests\CTestXPartyScrollScreenshot.h">
+      <Filter>Source Files\src\Tests</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Tests\CTestXPartyIrqDiagnostic.h">
+      <Filter>Source Files\src\Tests</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Tests\CTestXPartyMpxJitter.h">
+      <Filter>Source Files\src\Tests</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Tests\CTestXPartyFrameTrace.h">
+      <Filter>Source Files\src\Tests</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Tests\CTestXPartyImageSwap.h">
+      <Filter>Source Files\src\Tests</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Tests\CTestXPartyStripeAnim.h">
+      <Filter>Source Files\src\Tests</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Tests\CTestXPartyScrollFont.h">
+      <Filter>Source Files\src\Tests</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Tests\CTestXPartyScrollEmit.h">
+      <Filter>Source Files\src\Tests</Filter>
+    </ClInclude>
     <ClInclude Include="..\..\..\src\Tests\CTestMonitorConsoleSelection.h">
       <Filter>Source Files\src\Tests</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\src\Tests\CTestXPartyMirrorLUT.h">
+      <Filter>Source Files\src\Tests</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Tests\CTestXPartyMpxIrqAnalysis.h">
+      <Filter>Source Files\src\Tests</Filter>
+    </ClInclude>
+    </ClInclude>
+    </ClInclude>
+    </ClInclude>
+    </ClInclude>
+    </ClInclude>
+    </ClInclude>
+    </ClInclude>
+    </ClInclude>
     <ClInclude Include="..\..\..\src\Plugins\CPluginTestRegistry.h">
       <Filter>Source Files\src\Plugins</Filter>
+    </ClInclude>
+    </ClInclude>
+    </ClInclude>
+    </ClInclude>
+    </ClInclude>
+    </ClInclude>
+    </ClInclude>
+    </ClInclude>
+    </ClInclude>
+    </ClInclude>
+    </ClInclude>
+    </ClInclude>
+    </ClInclude>
+    </ClInclude>
+    </ClInclude>
+    </ClInclude>
+    </ClInclude>
+    </ClInclude>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Tests\CTestMoonshineDragons.h">
+      <Filter>Source Files\src\Tests</Filter>
+    </ClInclude>
+    </ClInclude>
+    </ClInclude>
+    </ClInclude>
+    </ClInclude>
+    </ClInclude>
+    </ClInclude>
+    </ClInclude>
+    </ClInclude>
+    </ClInclude>
+    </ClInclude>
+    </ClInclude>
+    </ClInclude>
+    </ClInclude>
+    </ClInclude>
+    </ClInclude>
+    </ClInclude>
+    </ClInclude>
+    </ClInclude>
+    </ClInclude>
+    </ClInclude>
+    </ClInclude>
+    </ClInclude>
+      <Filter>Source Files\src\Plugins\FlameTiles</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\src\Tests\CTestDataDumpSelection.h">
       <Filter>Source Files\src\Tests</Filter>
@@ -7253,6 +7858,56 @@
     </ClInclude>
     <ClInclude Include="..\..\..\src\Tests\CTestDefaultWorkspaceSpecs.h">
       <Filter>Source Files\src\Tests</Filter>
+    </ClInclude>
+    </ClInclude>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Tests\CTestFramebufferMirrorSync.h">
+      <Filter>Source Files\src\Tests</Filter>
+    </ClInclude>
+    </ClInclude>
+    </ClInclude>
+    </ClInclude>
+    </ClInclude>
+    </ClInclude>
+    </ClInclude>
+    </ClInclude>
+    </ClInclude>
+    </ClInclude>
+    </ClInclude>
+    </ClInclude>
+    </ClInclude>
+    </ClInclude>
+    </ClInclude>
+    </ClInclude>
+    </ClInclude>
+    </ClInclude>
+    </ClInclude>
+    </ClInclude>
+    </ClInclude>
+    </ClInclude>
+    </ClInclude>
+    </ClInclude>
+    </ClInclude>
+    </ClInclude>
+    </ClInclude>
+    </ClInclude>
+    </ClInclude>
+    </ClInclude>
+    </ClInclude>
+    </ClInclude>
+    </ClInclude>
+    </ClInclude>
+    </ClInclude>
+    </ClInclude>
+    </ClInclude>
+    </ClInclude>
+    </ClInclude>
+    </ClInclude>
+    </ClInclude>
+    </ClInclude>
+    </ClInclude>
+    </ClInclude>
+    </ClInclude>
     </ClInclude>
     <ClInclude Include="..\..\..\src\Views\C64\CViewC64Screen.h">
       <Filter>Source Files\src\Views\C64</Filter>
@@ -8277,14 +8932,21 @@
     <ClInclude Include="..\..\..\src\Emulators\nestopiaue\core\NstZlib.hpp">
       <Filter>Source Files\src\Emulators\nestopiaue\core</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\src\Tools\TextEditor\TextEditor.h">
-      <Filter>Source Files\src\Tools\TextEditor</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\..\src\Embedded\icon_tool_on_top_off_gfx.h">
       <Filter>Source Files\src\Embedded</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\src\Embedded\icon_tool_on_top_on_gfx.h">
       <Filter>Source Files\src\Embedded</Filter>
+    </ClInclude>
+      <Filter>Source Files\src\Plugins\Remapper</Filter>
+    </ClInclude>
+      <Filter>Source Files\src\Plugins\Remapper</Filter>
+    </ClInclude>
+      <Filter>Source Files\src\Plugins\Remapper</Filter>
+    </ClInclude>
+      <Filter>Source Files\src\Plugins\Remapper</Filter>
+    </ClInclude>
+      <Filter>Source Files\src\Plugins\Remapper</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\src\Plugins\GoatTracker\C64DebuggerPluginGoatTracker.h">
       <Filter>Source Files\src\Plugins\GoatTracker</Filter>
@@ -8293,6 +8955,21 @@
       <Filter>Source Files\src\Plugins\GoatTracker</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\src\Plugins\GoatTracker\CViewGT2Oscilloscope.h">
+      <Filter>Source Files\src\Plugins\GoatTracker</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Plugins\GoatTracker\CViewGT2StateSID.h">
+      <Filter>Source Files\src\Plugins\GoatTracker</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Plugins\GoatTracker\CGT2SidRegisters.h">
+      <Filter>Source Files\src\Plugins\GoatTracker</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Plugins\GoatTracker\CViewGT2InstrumentsBrowser.h">
+      <Filter>Source Files\src\Plugins\GoatTracker</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Plugins\GoatTracker\CViewGT2InstrumentTableRow.h">
+      <Filter>Source Files\src\Plugins\GoatTracker</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Plugins\GoatTracker\CViewGT2PatternRow.h">
       <Filter>Source Files\src\Plugins\GoatTracker</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\src\Plugins\GoatTracker\CGT2VoiceWaveforms.h">
@@ -8331,10 +9008,16 @@
     <ClInclude Include="..\..\..\src\Plugins\GoatTracker\CGT2Favorites.h">
       <Filter>Source Files\src\Plugins\GoatTracker</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\src\Plugins\GoatTracker\CGT2UndoHistory.h">
+      <Filter>Source Files\src\Plugins\GoatTracker</Filter>
+    </ClInclude>
     <ClInclude Include="..\..\..\src\Plugins\GoatTracker\CViewGT2Tables.h">
       <Filter>Source Files\src\Plugins\GoatTracker</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\src\Plugins\GoatTracker\CViewGT2SongInfo.h">
+      <Filter>Source Files\src\Plugins\GoatTracker</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Plugins\GoatTracker\CViewGT2SongSettings.h">
       <Filter>Source Files\src\Plugins\GoatTracker</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\src\Plugins\GoatTracker\CViewGT2Status.h">
@@ -8933,6 +9616,8 @@
     </ClInclude>
     <ClInclude Include="..\..\..\src\Emulators\vice\ViceInterface\Adapters\CDataAddressEditBoxDiskContents.h">
       <Filter>Source Files\src\Emulators\vice\ViceInterface\Adapters</Filter>
+    </ClInclude>
+      <Filter>Source Files\src\Plugins\Slideshow</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\src\Views\C64\CViewC64BreakpointsIrq.h">
       <Filter>Source Files\src\Views\C64</Filter>

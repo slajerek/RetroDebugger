@@ -26,6 +26,7 @@ extern "C"{
 #include "CGuiMain.h"
 
 #include "CDebugInterfaceVice.h"
+#include "MT_UiScale.h"
 
 #define KeyCodeFromRowCol(row, col)  ( ((row)+8)*8 + (col) )
 
@@ -39,7 +40,7 @@ CViewC64KeyMap::CViewC64KeyMap(float posX, float posY, float posZ, float sizeX, 
 
 	font = viewC64->fontDefaultCBMShifted;
 	
-	fontScale = 2;
+	fontScale = MT_UiScaled(2.0f);
 	fontWidth = font->GetCharWidth('@', fontScale);
 	fontHeight = font->GetCharHeight('@', fontScale) + 2;
 	
@@ -119,7 +120,7 @@ CViewC64KeyMap::CViewC64KeyMap(float posX, float posY, float posZ, float sizeX, 
 	// keyboard
 	selectedKeyData = NULL;
 	
-	fontScale = 1.5;
+	fontScale = MT_UiScaled(1.5f);
 	fontHeight = font->GetCharHeight(' ', fontScale) + 2;
 	fontWidth = font->GetCharWidth(' ', fontScale)+2;
 	fontProp = viewC64->fontDefaultCBMShifted; //guiMain->fntEngineDefault;
@@ -567,7 +568,7 @@ void CViewC64KeyMap::Render()
 	float px = scrx + gap;
 	float py = scry + gap;
 	
-	fontScale = 3.0f;
+	fontScale = MT_UiScaled(3.0f);
 	fontHeight = font->GetCharHeight('@', fontScale) + 1;
 
 	font->BlitTextColor(strHeader, cx, py, -1, fontScale, tr, tg, tb, 1, FONT_ALIGN_CENTER);
@@ -584,7 +585,7 @@ void CViewC64KeyMap::Render()
 	//// TODO: this is a quick way to have it immediately implemented
 	//// this needs of course to be changed into some more meaningful
 	
-	fontScale = 2.0f;
+	fontScale = MT_UiScaled(2.0f);
 	fontHeight = font->GetCharHeight('@', fontScale) + 1;
 
 	

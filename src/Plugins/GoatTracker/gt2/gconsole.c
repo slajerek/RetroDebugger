@@ -60,7 +60,7 @@ int initscreen(void)
 //  if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_TIMER) < 0)
 //    return 0;
 //  win_openwindow("GoatTracker", NULL);
-//#ifdef __MACOSX__
+//#ifdef __APPLE__
 //  win_setmousemode(MOUSE_ALWAYS_VISIBLE);
 //#else
 //  win_setmousemode(MOUSE_ALWAYS_HIDDEN);
@@ -148,7 +148,7 @@ void initicon(void)
   int handle = io_open("goattrk2.bmp");
   if (handle != -1)
   {
-    SDL_RWops *rw;
+    SDL_IOStream *rw;
     SDL_Surface *icon;
     char *iconbuffer;
     int size;
@@ -160,8 +160,8 @@ void initicon(void)
     {
       io_read(handle, iconbuffer, size);
       io_close(handle);
-      rw = SDL_RWFromMem(iconbuffer, size);
-      icon = SDL_LoadBMP_RW(rw, 0);
+      rw = SDL_IOFromMem(iconbuffer, size);
+      icon = SDL_LoadBMP_IO(rw, 0);
       SDL_WM_SetIcon(icon, 0);
       free(iconbuffer);
     }
@@ -578,7 +578,7 @@ void fliptoscreen(void)
 //    int ey = (mousepixely + MOUSESIZEY - 1) >> 4;
 //    if (ey >= MAX_ROWS) ey = MAX_ROWS - 1;
 //
-//#ifndef __MACOSX__
+//#ifndef __APPLE__
 //    gfx_drawsprite(mousepixelx, mousepixely, 0x1);
 //#endif
 //    for (y = sy; y <= ey; y++)
@@ -597,7 +597,7 @@ void fliptoscreen(void)
   {
     if (region[y])
     {
-#ifndef __MACOSX__
+#ifndef __APPLE__
 //		LOGD("SDL_UpdateRect(gfx_screen, 0, y*16, MAX_COLUMNS*8, 16);");
 //      SDL_UpdateRect(gfx_screen, 0, y*16, MAX_COLUMNS*8, 16);
 #endif
@@ -648,7 +648,7 @@ void getkey(void)
       (win_keystate[KEY_CTRL])||(win_keystate[KEY_RIGHTCTRL]))
     shiftpressed = 1;
 
-#ifdef __MACOSX__
+#ifdef __APPLE__
     altpressed = 0;
     if (win_keystate[KEY_ALT] || win_keystate[KEY_RIGHTALT])
         altpressed = 1;
@@ -671,7 +671,7 @@ void getkey(void)
   if (rawkey == SDLK_KP_8) key = '8';
   if (rawkey == SDLK_KP_9) key = '9';
 
-#ifdef __MACOSX__
+#ifdef __APPLE__
 //  SDL_UpdateRect(gfx_screen, 0, 0, MAX_COLUMNS*8, MAX_ROWS*16);
 //	LOGD("SDL_UpdateRect(gfx_screen, 0, 0, 0, 0);");
 //	SDL_UpdateRect(gfx_screen, 0, 0, 0, 0);

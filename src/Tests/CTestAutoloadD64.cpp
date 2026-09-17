@@ -87,7 +87,7 @@ void CTestAutoloadD64::Run(ITestCallback *cb)
 	if (c64SettingsAutoJmpWaitAfterReset < 1500)
 		c64SettingsAutoJmpWaitAfterReset = 1500;
 
-	CSlrString *path = new CSlrString("tests/data/bitbreaker.d64");
+	CSlrString *path = new CSlrString(CTest::ResolveProjectPath("tests/data/bitbreaker.d64").c_str());
 
 	bool inserted = viewC64->mainMenuHelper->InsertD64(path, false, true, 0, false);
 	delete path;

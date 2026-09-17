@@ -27,6 +27,7 @@
 #include "CSlrFileFromOS.h"
 #include "CSlrFileFromDocuments.h"
 #include <list>
+#include "MT_UiScale.h"
 
 CViewC64VicEditorCreateNewPicture::CViewC64VicEditorCreateNewPicture(const char *name, float posX, float posY, float posZ, CViewC64VicEditor *vicEditor)
 : CGuiView(name, posX, posY, posZ, 233, 250)			// 233 x 250 WTF?????
@@ -43,7 +44,7 @@ CViewC64VicEditorCreateNewPicture::CViewC64VicEditorCreateNewPicture(const char 
 	float sy = sizeY; //57;
 	
 	font = viewC64->fontDefaultCBMShifted;
-	fontScale = 3.0f;
+	fontScale = MT_UiScaled(3.0f);
 	float fontHeight = this->vicEditor->fontHeight;
 
 	

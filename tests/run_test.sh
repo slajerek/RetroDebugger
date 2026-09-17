@@ -6,10 +6,13 @@
 #   tests/run_test.sh [OPTIONS] [TestName] [-- APP_OPTIONS...]
 #
 # Options:
-#   --skip-build    Skip the xcodebuild step
+#   --skip-build    Skip the build step
+#   --package       Run the newest release package under platform/*/prod/ from
+#                   its own directory (a FINAL build, ./build-macos.sh --prod).
+#                   An error when there is none -- never a fallback.
 #   --clean-build   Force a clean rebuild before running tests
 #   --visible       Run without --headless
-#   --imgui-tests   Run all ImGui UI tests
+#   --imgui         Run all ImGui UI tests (alias: --imgui-tests)
 #   --imgui-test FILTER  Run ImGui UI tests matching FILTER
 #   --timeout N     Set timeout in seconds (default: 60)
 #   --log-dir DIR   Set log output directory (default: /tmp)
@@ -34,11 +37,17 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 SKIP_BUILD=false
+RUN_PACKAGE=false
 CLEAN_BUILD=false
 VISIBLE=false
 RUN_IMGUI_ALL=false
 RUN_IMGUI_FILTER=""
-TIMEOUT=60
+# 300, not 60: the full --run-suite is ~90 s of emulation on the maintainer's
+# Mac and much slower on a CI VM, so 60 s TIMEOUT-killed a healthy suite and
+# reported whatever had finished (e.g. "72/75") as if it were the result.
+# Single-test runs finish in seconds either way, so a generous ceiling costs
+# nothing and a tight one silently truncates.
+TIMEOUT=900
 TEST_NAME=""
 LOG_DIR="/tmp"
 LAYOUTS_FIXTURE=""
@@ -77,6 +86,11 @@ while [[ $# -gt 0 ]]; do
             SKIP_BUILD=true
             shift
             ;;
+        --package)
+            RUN_PACKAGE=true
+            SKIP_BUILD=true
+            shift
+            ;;
         --clean-build)
             CLEAN_BUILD=true
             shift
@@ -85,7 +99,7 @@ while [[ $# -gt 0 ]]; do
             VISIBLE=true
             shift
             ;;
-        --imgui-tests)
+        --imgui|--imgui-tests)
             RUN_IMGUI_ALL=true
             shift
             ;;
@@ -158,7 +172,9 @@ fi
 
 RESULTS_DIR="$PROJECT_DIR/tests/results"
 RESULTS_FILE="$RESULTS_DIR/last_run.txt"
-XCODE_PROJECT="$PROJECT_DIR/platform/MacOS/c64d.xcodeproj"
+# Not where this script builds -- that is build-macos/, via build-macos.sh. This
+# is Xcode.app's per-project DerivedData, kept in the search below because a
+# maintainer who just hit Cmd-B in the IDE expects --skip-build to find it.
 BUILD_DIR="$PROJECT_DIR/platform/MacOS/DerivedData"
 APP_BINARY=""
 APP_BINARY_MTIME=0
@@ -169,7 +185,20 @@ select_newest_binary() {
 
     for candidate in "$@"; do
         if [ -f "$candidate" ]; then
-            mtime=$(stat -f "%m" "$candidate" 2>/dev/null || printf '0')
+            # macOS/BSD stat takes -f "%m" for a file's mtime. GNU stat
+            # (Linux) has a DIFFERENT -f that means "show filesystem info
+            # instead of file info", so `stat -f "%m" file` does not fail on
+            # Linux -- it silently succeeds and prints multi-line filesystem
+            # info that is not a number.
+            #
+            # GNU FORM FIRST, then BSD, rather than branching on "is it Linux".
+            # That branch sent Git Bash -- where uname -s is MINGW64_NT-... --
+            # down the BSD path, onto a GNU stat, and back into exactly the
+            # garbage it was written to avoid. Trying -c first is safe in both
+            # directions: BSD stat rejects -c, GNU stat accepts it.
+            mtime=$(stat -c "%Y" "$candidate" 2>/dev/null \
+                    || stat -f "%m" "$candidate" 2>/dev/null \
+                    || printf '0')
             if [ "$mtime" -gt "$APP_BINARY_MTIME" ]; then
                 APP_BINARY="$candidate"
                 APP_BINARY_MTIME="$mtime"
@@ -263,14 +292,35 @@ elif [ -n "$FORWARDED_LAYOUTS_FILE" ]; then
 fi
 
 # Step 1: Build
+#
+# Through the PLATFORM WRAPPER, never `xcodebuild -project ...` directly. Under
+# the MTEngineSDL capability programme the app cannot be built from the Xcode
+# project alone: the wrapper first stages the vendored uSockets into the keyed
+# dependency directory for the current engine revision, then resolves
+# mtengine.caps into the MT_ENABLE_* settings that BOTH the engine target and the
+# app target have to be compiled with. A bare xcodebuild does neither, so it
+# builds the engine with the engine's own defaults (MT_ENABLE_MBEDTLS=1 on macOS)
+# while linking against the capability-keyed libs directory this app's manifest
+# produced (MT_CAP_HTTPS=0 -> an empty mbedTLS archive), and the link dies on
+# missing _mbedtls_* symbols with nothing to suggest the cause. That is what this
+# runner did until 2026-08-27, which made it unusable on macOS.
 if [ "$SKIP_BUILD" = false ]; then
     echo "=== Building Retro Debugger ==="
-    BUILD_ARGS=(-project "$XCODE_PROJECT" -scheme "Retro Debugger" -derivedDataPath "$BUILD_DIR")
-    if [ "$CLEAN_BUILD" = true ]; then
-        BUILD_ARGS+=(clean build)
+
+    if [ "$(uname -s)" = "Linux" ]; then
+        # build-linux.sh is cmake + make: already incremental, no clean switch.
+        BUILD_CMD=("$PROJECT_DIR/build-linux.sh")
+    else
+        # Default to --incremental: this runs on every test invocation, and the
+        # release default of wiping build-macos/ would make each run a full
+        # rebuild. --clean-build asks for that wipe explicitly.
+        BUILD_CMD=("$PROJECT_DIR/build-macos.sh" --incremental)
+        if [ "$CLEAN_BUILD" = true ]; then
+            BUILD_CMD=("$PROJECT_DIR/build-macos.sh")
+        fi
     fi
 
-    if ! xcodebuild "${BUILD_ARGS[@]}" -quiet 2>&1; then
+    if ! bash "${BUILD_CMD[@]}"; then
         echo "BUILD FAILED"
         exit 2
     fi
@@ -287,14 +337,63 @@ select_newest_binary \
     "$BUILD_DIR"/*/Build/Products/Release/"Retro Debugger.app"/Contents/MacOS/"Retro Debugger" \
     "$BUILD_DIR"/*/Build/Products/Debug/"Retro Debugger.app"/Contents/MacOS/"Retro Debugger"
 
-if [ -z "$APP_BINARY" ]; then
-    select_newest_binary \
-        "$HOME"/Library/Developer/Xcode/DerivedData/*/Build/Products/Release/"Retro Debugger.app"/Contents/MacOS/"Retro Debugger" \
-        "$HOME"/Library/Developer/Xcode/DerivedData/*/Build/Products/Debug/"Retro Debugger.app"/Contents/MacOS/"Retro Debugger"
+# ALSO consider build-macos/ and Xcode's shared DerivedData -- unconditionally,
+# not "only if nothing was found above".
+#
+# This used to be an `if [ -z "$APP_BINARY" ]` fallback, and that was a real
+# bug, found 2026-08-18 while capturing the S-2 SDL3 baseline: build-macos.sh
+# writes to $PROJECT_DIR/build-macos, which was not searched AT ALL, while
+# platform/MacOS/DerivedData still held a binary from 9 June. The runner
+# happily selected the ten-week-old one and reported 72/75 for a tree that had
+# just been rebuilt. select_newest_binary already picks by mtime across
+# everything it is handed -- it just was not being handed the right paths.
+select_newest_binary \
+    "$PROJECT_DIR"/build-macos/Build/Products/Release/"Retro Debugger.app"/Contents/MacOS/"Retro Debugger" \
+    "$PROJECT_DIR"/build-macos/Build/Products/Debug/"Retro Debugger.app"/Contents/MacOS/"Retro Debugger" \
+    "$HOME"/Library/Developer/Xcode/DerivedData/*/Build/Products/Release/"Retro Debugger.app"/Contents/MacOS/"Retro Debugger" \
+    "$HOME"/Library/Developer/Xcode/DerivedData/*/Build/Products/Debug/"Retro Debugger.app"/Contents/MacOS/"Retro Debugger"
+
+# Linux: build-linux.sh / CMake put the binary straight at build/retrodebugger
+# -- no app-bundle wrapper. Never searched here before this line was added
+# (2026-08-18, first real Linux pass), so a Linux checkout always hit the
+# "could not find binary" error below regardless of --skip-build.
+select_newest_binary \
+    "$PROJECT_DIR"/build/retrodebugger
+
+# Windows: MSBuild leaves c64d.exe at platform/Windows/bin/<Platform>/<Config>/
+# -- the convention every app in this programme shares, through the engine's
+# Directory.Build.props and the vcxproj OutDir. bin/ holds x64 and ARM64,
+# Debug and Release side by side, and select_newest_binary picks by mtime as
+# it does everywhere else. Never searched here before, so Git Bash reported
+# "could not find binary" straight after a successful build.
+select_newest_binary \
+    "$PROJECT_DIR"/platform/Windows/bin/*/*/c64d.exe
+
+# --package: the binary AND the working directory come from the newest
+# release package (a FINAL build). Without it this runner never looks at
+# platform/*/prod/ -- a development build runs from the git root, and a
+# package can be older than the build that just happened. See
+# MTEngineSDL/docs/testing.md.
+PACKAGE_DIR=""
+if [ "$RUN_PACKAGE" = true ]; then
+    _mt_lib="${MTENGINE_DIR:-$PROJECT_DIR/../MTEngineSDL}/tools/appbuild/appbuild-lib.sh"
+    [ -f "$_mt_lib" ] || { echo "ERROR: --package needs the engine (appbuild-lib.sh) at ${MTENGINE_DIR:-$PROJECT_DIR/../MTEngineSDL}"; exit 2; }
+    . "$_mt_lib"
+    _mt_hit="$(mt_appbuild_prod_binary "$PROJECT_DIR" "Retro Debugger" || true)"
+    [ -z "$_mt_hit" ] && _mt_hit="$(mt_appbuild_prod_binary "$PROJECT_DIR" "c64d" || true)"
+    if [ -z "$_mt_hit" ]; then
+        echo "ERROR: --package given but no release package under platform/*/prod/."
+        echo "       Build one first: ./build-macos.sh --prod"
+        exit 2
+    fi
+    APP_BINARY="${_mt_hit##*|}"
+    PACKAGE_DIR="${_mt_hit%%|*}"
 fi
 
 if [ -z "$APP_BINARY" ]; then
-    echo "ERROR: Could not find Retro Debugger binary. Build first or check DerivedData path."
+    echo "ERROR: Could not find Retro Debugger binary. Build first, or check the"
+    echo "       DerivedData / build tree path, or build a release package"
+    echo "       (platform/*/prod/<arch>/) which this runner also accepts."
     exit 2
 fi
 
@@ -303,7 +402,77 @@ echo "=== Using binary: $APP_BINARY ==="
 # Step 4: Run the binary with test flags.
 # Extra app arguments can be forwarded after --, for example layout files.
 # Change to project directory so results file path is correct
-cd "$PROJECT_DIR"
+# ---------------------------------------------------------------------------
+# WHERE THE BINARY RUNS FROM -- the git root, unless --package.
+#
+# An MTEngineSDL app finds its assets through the CURRENT WORKING DIRECTORY and
+# nothing else. A DEVELOPMENT build runs from the git root, which holds assets/
+# as tracked. A FINAL build (./build-macos.sh --prod) is verified from its
+# package with --package. Nothing is copied into a package to make a test work:
+# fixtures are reached through CTest::ResolveProjectPath(), and
+# MT_TEST_PROJECT_DIR short-cuts its walk. Procedure: MTEngineSDL/docs/testing.md.
+# ---------------------------------------------------------------------------
+RUN_DIR="$PROJECT_DIR"
+MTENGINE_DIR="${MTENGINE_DIR:-$PROJECT_DIR/../MTEngineSDL}"
+# MT_TEST_RUN_DIR pins the working directory outright; for tests OF this runner.
+if [ -n "${MT_TEST_RUN_DIR:-}" ]; then
+    RUN_DIR="$MT_TEST_RUN_DIR"
+    echo "=== Run directory pinned by MT_TEST_RUN_DIR: $RUN_DIR ==="
+elif [ -n "$PACKAGE_DIR" ]; then
+    RUN_DIR="$PACKAGE_DIR"
+    echo "=== Running from release package: $RUN_DIR ==="
+else
+    echo "=== Running from the git root: $RUN_DIR ==="
+fi
+# The binary must be ABSOLUTE before the cd, or a relative --binary resolves
+# against the wrong directory the moment we move.
+case "$APP_BINARY" in
+    /* | [A-Za-z]:[\/]*) ;;
+    *) APP_BINARY="$(cd "$(dirname "$APP_BINARY")" && pwd)/$(basename "$APP_BINARY")" ;;
+esac
+
+# Where the repository is, for CTest::ResolveProjectPath().
+# A test run must never write into the user's real settings folder. The app
+# rewrites layouts.dat, imgui.ini and settings.dat on every shutdown, so a run
+# pointed at it silently replaces the workspace the user built. MT_SETTINGS_DIR
+# redirects it (honoured by MTEngineSDL's SYS_InitFileSystem on all three
+# platforms). Respect an explicit one from the caller; otherwise use a
+# per-run temp folder.
+if [ -z "${MT_SETTINGS_DIR:-}" ]; then
+    MT_SETTINGS_DIR="$(mktemp -d "${TMPDIR:-/tmp}/retrodebugger-settings.XXXXXX")"
+
+    # Seed it from the real folder, so the run sees the same configuration the
+    # user has and only the COPY is written. Two reasons not to start empty:
+    # tests would silently exercise a different configuration than the one
+    # being debugged, and an empty settings folder is a first-run path that
+    # currently aborts partway through the suite (see src/TODO.txt) -- a real
+    # bug, but not one every test run should trip over.
+    REAL_SETTINGS_DIR=""
+    case "$(uname -s)" in
+        Darwin) REAL_SETTINGS_DIR="$HOME/Library/RetroDebugger" ;;
+        Linux)  REAL_SETTINGS_DIR="$HOME/.RetroDebugger" ;;
+    esac
+    if [ -n "$REAL_SETTINGS_DIR" ] && [ -d "$REAL_SETTINGS_DIR" ]; then
+        cp -R "$REAL_SETTINGS_DIR/." "$MT_SETTINGS_DIR/" 2>/dev/null || true
+        echo "=== Settings folder for this run: $MT_SETTINGS_DIR (copied from $REAL_SETTINGS_DIR) ==="
+    else
+        echo "=== Settings folder for this run: $MT_SETTINGS_DIR (empty) ==="
+    fi
+fi
+export MT_SETTINGS_DIR
+
+# A test run must be silent -- it must not play out of the speakers of whatever
+# machine it happens to run on. The app forces SDL_AUDIODRIVER=dummy for
+# automated runs itself, with overwrite=0 semantics so an explicit value still
+# wins; set it here too so the rule holds for any binary and is visible in the
+# run log.
+export SDL_AUDIODRIVER="${SDL_AUDIODRIVER:-dummy}"
+
+export MT_TEST_PROJECT_DIR="$PROJECT_DIR"
+
+export MT_TEST_RESULTS="$RESULTS_FILE"
+mkdir -p "$RESULTS_DIR"
+cd "$RUN_DIR"
 
 APP_ARGS=(--log-dir "$LOG_DIR")
 if [ "$VISIBLE" = false ]; then

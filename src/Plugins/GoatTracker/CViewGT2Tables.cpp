@@ -19,8 +19,6 @@ extern int editmode, cursorflash, eamode;
 extern int cursorcolortable[];
 }
 
-static const size_t kGT2TableUndoLimit = 32;
-
 // GT2 color constants (from gdisplay.h)
 #define CNORMAL  8
 #define CEDIT    10
@@ -69,17 +67,6 @@ static void DrawTableTextGT2(CViewGT2Tables *view, ImDrawList *dl, CGT2FontAtlas
 	}
 }
 
-CViewGT2Tables::TableUndoSnapshot::TableUndoSnapshot()
-: tableNum(0)
-, tablePos(0)
-, tableColumn(0)
-, tableLock(1)
-, tableMarkNum(-1)
-, tableMarkStart(0)
-, tableMarkEnd(0)
-{
-}
-
 CViewGT2Tables::CViewGT2Tables(const char *name, float posX, float posY, float posZ,
 								float sizeX, float sizeY, CGT2FontAtlas *fontAtlas)
 : CGuiView(posX, posY, posZ, sizeX, sizeY)
@@ -87,129 +74,74 @@ CViewGT2Tables::CViewGT2Tables(const char *name, float posX, float posY, float p
 	this->name = name;
 	this->fontAtlas = fontAtlas;
 	this->pendingTableUndoSnapshotActive = false;
+	this->pendingTableUndoDepth = 0;
+	this->lastCursorTable = -1;
+	this->lastCursorPos = -1;
+	this->lastCursorColumn = -1;
+	this->tableWheelAccum = 0.0f;
+	this->tableWheelLastTable = -1;
+	// The columns scroll themselves, so the window must not also scroll
+	// under the wheel -- and a window that cannot scroll keeps the
+	// visible-row measurement in RenderImGui() exact.
+	imGuiNoScrollbar = true;
 }
 
 CViewGT2Tables::~CViewGT2Tables()
 {
 }
 
+// Capture / restore / compare are the shared history's -- one snapshot type,
+// one stack, so a table edit, a pattern edit and an instrument load all land
+// on the same timeline. See CGT2UndoHistory.h.
 CViewGT2Tables::TableUndoSnapshot CViewGT2Tables::CaptureTableUndoSnapshot() const
 {
-	TableUndoSnapshot snapshot;
-	const u8 *leftBegin = &ltable[0][0];
-	const u8 *rightBegin = &rtable[0][0];
-	const u8 *patternBegin = &pattern[0][0];
-	const u8 *instrumentBegin = reinterpret_cast<const u8 *>(&ginstr[0]);
-	snapshot.leftTableData.assign(leftBegin, leftBegin + sizeof(ltable));
-	snapshot.rightTableData.assign(rightBegin, rightBegin + sizeof(rtable));
-	snapshot.patternData.assign(patternBegin, patternBegin + sizeof(pattern));
-	snapshot.instrumentData.assign(instrumentBegin, instrumentBegin + sizeof(ginstr));
-	snapshot.tableViews.assign(etview, etview + MAX_TABLES);
-	snapshot.tableNum = etnum;
-	snapshot.tablePos = etpos;
-	snapshot.tableColumn = etcolumn;
-	snapshot.tableLock = etlock;
-	snapshot.tableMarkNum = etmarknum;
-	snapshot.tableMarkStart = etmarkstart;
-	snapshot.tableMarkEnd = etmarkend;
-	return snapshot;
-}
-
-void CViewGT2Tables::RestoreTableUndoSnapshot(const TableUndoSnapshot &snapshot)
-{
-	if (snapshot.leftTableData.size() == sizeof(ltable))
-		memcpy(&ltable[0][0], snapshot.leftTableData.data(), sizeof(ltable));
-	if (snapshot.rightTableData.size() == sizeof(rtable))
-		memcpy(&rtable[0][0], snapshot.rightTableData.data(), sizeof(rtable));
-	if (snapshot.patternData.size() == sizeof(pattern))
-		memcpy(&pattern[0][0], snapshot.patternData.data(), sizeof(pattern));
-	if (snapshot.instrumentData.size() == sizeof(ginstr))
-		memcpy(&ginstr[0], snapshot.instrumentData.data(), sizeof(ginstr));
-	if (snapshot.tableViews.size() == MAX_TABLES)
-		memcpy(etview, snapshot.tableViews.data(), sizeof(int) * MAX_TABLES);
-	etnum = snapshot.tableNum;
-	etpos = snapshot.tablePos;
-	etcolumn = snapshot.tableColumn;
-	etlock = snapshot.tableLock;
-	etmarknum = snapshot.tableMarkNum;
-	etmarkstart = snapshot.tableMarkStart;
-	etmarkend = snapshot.tableMarkEnd;
-}
-
-bool CViewGT2Tables::TableUndoSnapshotsHaveSameData(const TableUndoSnapshot &a, const TableUndoSnapshot &b) const
-{
-	return a.leftTableData == b.leftTableData
-		&& a.rightTableData == b.rightTableData
-		&& a.patternData == b.patternData
-		&& a.instrumentData == b.instrumentData;
-}
-
-void CViewGT2Tables::PushTableUndoSnapshot(const TableUndoSnapshot &snapshot)
-{
-	tableUndoStack.push_back(snapshot);
-	if (tableUndoStack.size() > kGT2TableUndoLimit)
-		tableUndoStack.erase(tableUndoStack.begin());
-	tableRedoStack.clear();
+	return GT2UndoHistory()->Capture();
 }
 
 bool CViewGT2Tables::CommitTableUndoSnapshotIfChanged(const TableUndoSnapshot &before)
 {
-	TableUndoSnapshot after = CaptureTableUndoSnapshot();
-	if (TableUndoSnapshotsHaveSameData(before, after))
-		return false;
-	PushTableUndoSnapshot(before);
-	if (pluginGoatTracker && pluginGoatTracker->viewPatterns)
-		pluginGoatTracker->viewPatterns->ClearPatternUndoHistory();
-	return true;
+	return GT2UndoHistory()->CommitIfChanged(before);
 }
 
 bool CViewGT2Tables::CanUndoTableEdit() const
 {
-	return !tableUndoStack.empty();
+	return GT2UndoHistory()->CanUndo();
 }
 
 bool CViewGT2Tables::CanRedoTableEdit() const
 {
-	return !tableRedoStack.empty();
+	return GT2UndoHistory()->CanRedo();
 }
 
 bool CViewGT2Tables::UndoTableEdit()
 {
-	if (tableUndoStack.empty())
+	if (!GT2UndoHistory()->Undo())
 		return false;
-	TableUndoSnapshot current = CaptureTableUndoSnapshot();
-	TableUndoSnapshot previous = tableUndoStack.back();
-	tableUndoStack.pop_back();
-	tableRedoStack.push_back(current);
-	if (tableRedoStack.size() > kGT2TableUndoLimit)
-		tableRedoStack.erase(tableRedoStack.begin());
-	RestoreTableUndoSnapshot(previous);
+	// The pattern editor's row-spill stash belongs to the edit that filled it.
+	if (pluginGoatTracker != NULL && pluginGoatTracker->viewPatterns != NULL)
+		pluginGoatTracker->viewPatterns->OnUndoHistoryRestored();
 	return true;
 }
 
 bool CViewGT2Tables::RedoTableEdit()
 {
-	if (tableRedoStack.empty())
+	if (!GT2UndoHistory()->Redo())
 		return false;
-	TableUndoSnapshot current = CaptureTableUndoSnapshot();
-	TableUndoSnapshot next = tableRedoStack.back();
-	tableRedoStack.pop_back();
-	tableUndoStack.push_back(current);
-	if (tableUndoStack.size() > kGT2TableUndoLimit)
-		tableUndoStack.erase(tableUndoStack.begin());
-	RestoreTableUndoSnapshot(next);
+	if (pluginGoatTracker != NULL && pluginGoatTracker->viewPatterns != NULL)
+		pluginGoatTracker->viewPatterns->OnUndoHistoryRestored();
 	return true;
 }
 
 void CViewGT2Tables::ClearTableUndoHistory()
 {
-	tableUndoStack.clear();
-	tableRedoStack.clear();
+	GT2UndoHistory()->Clear();
 	pendingTableUndoSnapshotActive = false;
+	pendingTableUndoDepth = 0;
 }
 
 void CViewGT2Tables::BeginTableUndoStep()
 {
+	pendingTableUndoDepth++;
 	if (pendingTableUndoSnapshotActive)
 		return;
 	pendingTableUndoSnapshot = CaptureTableUndoSnapshot();
@@ -218,6 +150,12 @@ void CViewGT2Tables::BeginTableUndoStep()
 
 bool CViewGT2Tables::CommitTableUndoStep()
 {
+	// Nested steps (loadinstrument() reached from docommand()) must not
+	// consume the outer snapshot -- only the outermost commit records it.
+	if (pendingTableUndoDepth > 0)
+		pendingTableUndoDepth--;
+	if (pendingTableUndoDepth > 0)
+		return false;
 	if (!pendingTableUndoSnapshotActive)
 		return false;
 	TableUndoSnapshot before = pendingTableUndoSnapshot;
@@ -227,6 +165,7 @@ bool CViewGT2Tables::CommitTableUndoStep()
 
 void CViewGT2Tables::CancelTableUndoStep()
 {
+	pendingTableUndoDepth = 0;
 	pendingTableUndoSnapshotActive = false;
 }
 
@@ -238,14 +177,69 @@ void CViewGT2Tables::RenderImGui()
 	ImDrawList *dl = ImGui::GetWindowDrawList();
 	ImVec2 origin = ImGui::GetCursorScreenPos();
 
-	// Compute visible rows from window height
+	// Compute visible rows from window height (row 0 is the header).
 	ImVec2 avail = ImGui::GetContentRegionAvail();
-	float windowH = avail.y;
-
-	int visibleRows = (int)(windowH / GT2CellH()) - 1; // -1 for header row
-	if (visibleRows < 1) visibleRows = 1;
+	int visibleRows = GT2TableVisibleRows(avail.y - GT2CellH(), GT2CellH());
+	// Never more rows than the pool holds -- the draw loop indexes
+	// ltable/rtable directly, so an over-tall window would read past the row.
+	if (visibleRows > MAX_TABLELEN) visibleRows = MAX_TABLELEN;
 
 	int cc = cursorcolortable[cursorflash];
+
+	// Follow the edit cursor only when it actually moved -- a keypress, a
+	// click, gototable(). Native validatetableview() (gt2/gtable.c) already
+	// does this, but against the fixed VISIBLETABLEROWS (15): in a window
+	// showing fewer rows than that it leaves the cursor off screen. Redo it
+	// here with the window's real row count. Following every frame instead
+	// would undo a mouse-wheel scroll on the very next frame.
+	bool followCursor = (etnum != lastCursorTable)
+					 || (etpos != lastCursorPos)
+					 || (etcolumn != lastCursorColumn);
+	lastCursorTable  = etnum;
+	lastCursorPos    = etpos;
+	lastCursorColumn = etcolumn;
+
+	// Mouse wheel over a column scrolls it without moving the edit cursor.
+	// Under etlock the four columns share one view, so the wheel moves them
+	// together -- the same coupling native validatetableview() applies.
+	int wheelTable = -1;
+	int wheelRows  = 0;
+	if (ImGui::IsWindowHovered() && ImGui::GetIO().MouseWheel != 0.0f)
+	{
+		ImVec2 wheelPos = ImGui::GetIO().MousePos;
+		// Guard on the pixel, not the column: GT2PixelToCol() truncates
+		// toward zero, so a mouse left of origin would map to column 0.
+		int wheelCol = GT2PixelToCol(wheelPos.x - origin.x);
+		if (wheelPos.x >= origin.x && wheelCol / 10 < MAX_TABLES)
+		{
+			wheelTable = wheelCol / 10;
+			if (wheelTable != tableWheelLastTable)
+			{
+				tableWheelAccum = 0.0f;
+				tableWheelLastTable = wheelTable;
+			}
+			// Three rows per notch, the ImGui default feel.
+			tableWheelAccum -= ImGui::GetIO().MouseWheel * 3.0f;
+			wheelRows = (int)tableWheelAccum;
+			tableWheelAccum -= (float)wheelRows;
+		}
+	}
+
+	for (int c = 0; c < MAX_TABLES; c++)
+	{
+		if (wheelRows != 0 && (c == wheelTable || etlock))
+			etview[c] += wheelRows;
+
+		int cursorRow = (followCursor && etnum == c) ? etpos : -1;
+		etview[c] = GT2TableScrollOffset(etview[c], MAX_TABLELEN,
+										 visibleRows, cursorRow);
+	}
+	// Table view lock: all four columns show the same pool rows.
+	if (etlock && etnum >= 0 && etnum < MAX_TABLES)
+	{
+		for (int c = 0; c < MAX_TABLES; c++)
+			etview[c] = etview[etnum];
+	}
 
 	char textbuffer[64];
 

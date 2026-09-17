@@ -160,6 +160,7 @@ public:
 
 	virtual void InsertD64(CSlrString *path);
 	virtual void DetachDriveDisk();
+	virtual void DetachDriveDisk(int deviceNumber);
 
 	virtual bool GetSettingIsWarpSpeed();
 	virtual void SetSettingIsWarpSpeed(bool isWarpSpeed);
@@ -202,7 +203,7 @@ public:
 	virtual uint8 GetByteC64(uint16 addr);
 	virtual uint8 GetByteFromRamC64(uint16 addr);
 	virtual uint8 GetByteC64ForCycleState(uint16 addr, uint8 memory0001, uint8 exrom, uint8 game);
-	virtual void MakeJmpC64(uint16 addr);
+	virtual bool MakeJmpC64(uint16 addr);
 	virtual void MakeJmpNoResetC64(uint16 addr);
 	virtual void MakeJsrC64(uint16 addr);
 	
@@ -284,6 +285,7 @@ public:
 	// tape
 	virtual void AttachTape(CSlrString *filePath);
 	virtual void DetachTape();
+	void DetachTapeSynced();
 	virtual void DatasettePlay();
 	virtual void DatasetteStop();
 	virtual void DatasetteForward();
@@ -297,6 +299,7 @@ public:
 
 	virtual void AttachCartridge(CSlrString *filePath);
 	virtual void DetachCartridge();
+	void DetachCartridgeSynced();
 	virtual void CartridgeFreezeButtonPressed();
 	virtual void GetC64CartridgeState(C64StateCartridge *cartridgeState);
 
@@ -305,6 +308,16 @@ public:
 	// reu
 	virtual void SetReuEnabled(bool isEnabled);
 	virtual void SetReuSize(int reuSize);
+
+	// IDE64 (deviceNum is 1..4)
+	virtual void AttachIde64Cartridge(CSlrString *filePath);
+	virtual void DetachIde64Cartridge();
+	virtual void SetIde64Image(int deviceNum, const char *path);
+	virtual void SetIde64Version(int version);
+	virtual void SetIde64UsbServerEnabled(bool enabled);
+	virtual void SetIde64UsbServerAddress(const char *address);
+	virtual void SetIde64RtcSave(bool enabled);
+	virtual void SetIde64AutodetectSize(int deviceNum, bool enabled);
 	virtual bool LoadReu(char *filePath);
 	virtual bool SaveReu(char *filePath);
 

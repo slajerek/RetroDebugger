@@ -25,12 +25,23 @@ public:
 	virtual bool KeyDown(u32 keyCode, bool isShift, bool isAlt, bool isControl, bool isSuper);
 	virtual bool KeyUp(u32 keyCode, bool isShift, bool isAlt, bool isControl, bool isSuper);
 	virtual bool KeyDownRepeat(u32 keyCode, bool isShift, bool isAlt, bool isControl, bool isSuper);
+	// A *.ins dragged in from the OS lands in the slot under the cursor.
+	virtual bool DoDropFile(char *filePath);
 	void SelectInstrument(int instrumentNum);
 	static int GetInstrumentGridRow(int instrumentNum);
 	static GT2InstrumentListRect GetInstrumentRowBackgroundRect(float originX, float originY, int row);
 	static GT2InstrumentListRect GetInstrumentListFrameRect(float originX, float originY);
 
 	CGT2FontAtlas *fontAtlas;
+
+	// Origin of the last drawn frame. DoDropFile() runs outside the render
+	// pass and still has to map the cursor to a row.
+	float lastRenderOriginX;
+	float lastRenderOriginY;
+
+	// Last instrument the view scrolled to, so a selection made with the
+	// keyboard is brought into view without fighting the mouse wheel.
+	int lastScrolledToInstrument;
 
 	// Inline rename state.
 	bool renaming;

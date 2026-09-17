@@ -39,6 +39,7 @@
 #include "CDebugInterfaceNes.h"
 
 #include "CSnapshotsManager.h"
+#include "MT_UiScale.h"
 
 
 #if defined(WIN32)
@@ -58,7 +59,7 @@ CViewSettingsMenu::CViewSettingsMenu(float posX, float posY, float posZ, float s
 	this->name = "CViewSettingsMenu";
 
 	font = viewC64->fontDefaultCBMShifted;
-	fontScale = 2.7;
+	fontScale = MT_UiScaled(2.7f);
 	fontHeight = font->GetCharHeight('@', fontScale) + 3;
 
 //	strHeader = new CSlrString("Settings");

@@ -25,6 +25,7 @@ extern "C" {
 #include "VID_ImageBinding.h"
 #include "CViewWaveform.h"
 #include "CLayoutParameter.h"
+#include "MT_UiScale.h"
 
 // KOLORY BY KK do PIANO
 // RED
@@ -109,7 +110,7 @@ CViewAtariStatePOKEY::CViewAtariStatePOKEY(const char *name, float posX, float p
 	imGuiNoScrollbar = true;
 
 	fontBytes = viewC64->fontDisassembly;
-	fontSize = 7.0f;
+	fontSize = MT_UiScaled(7.0f);
 	hasManualFontSize = false;
 	AddLayoutParameter(new CLayoutParameterFloat("Font Size", &fontSize));
 

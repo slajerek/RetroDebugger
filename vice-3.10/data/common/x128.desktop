@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=VICE (x128)
+Comment=Commodore 128 emulator
+Exec=x128
+Terminal=false
+Icon=vice-x128
+Categories=Game;Emulator;

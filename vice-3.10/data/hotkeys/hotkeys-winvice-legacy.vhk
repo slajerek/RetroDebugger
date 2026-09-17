@@ -1,0 +1,93 @@
+# Gtk3 hotkeys file for C64SC
+#
+# This is a preliminary WIP definition that restores the old hotkeys
+# as used in WinVICE until 3.2
+
+!debug off
+!clear
+
+!if !WINDOWS
+    !warning Using WinVICE legacy hotkeys on non-Windows, expect weirdness =)
+!endif
+
+# first the hand full hotkeys that were different in the Windows UI:
+
+quit                            <Alt>x
+reset-soft                      <Alt>r
+reset-hard                      <Control><Alt>r
+fliplist-previous-8:0           <Alt>b
+monitor-open                    <Alt>m
+snapshot-quickload              <Alt>l
+snapshot-quicksave              <Alt>s
+history-milestone-set           <Alt>g
+history-milestone-reset         <Alt>h
+media-record                    <Alt>c
+mouse-grab-toggle               <Alt>q
+fliplist-clear-8:0              <Alt>a
+advance-frame                   <Alt>KP_Add
+
+# the following ones did not have a hotkey in the Windows UI
+
+#!UNDEF restore-display
+#!UNDEF fullscreen-decorations-toggle
+#!UNDEF snapshot-load
+#!UNDEF snapshot-save
+#!UNDEF cart-attach
+#!UNDEF smart-attach
+
+#restore-display                 <Alt>r
+#fullscreen-decorations-toggle   <Alt>b
+#snapshot-load                   <Alt>l
+#snapshot-save                   <Alt>s
+#cart-attach                     <Alt>c
+#smart-attach                    <Alt>a
+
+# The rest of the hotkeys were exactly the same as in the GTK port (all of the
+# following can be removed later)
+
+drive-attach-8:0                <Alt>8
+drive-attach-9:0                <Alt>9
+drive-attach-10:0               <Alt>0
+drive-attach-11:0               <Alt>1
+drive-detach-8:0                <Control><Alt>8
+drive-detach-9:0                <Control><Alt>9
+drive-detach-10:0               <Control><Alt>0
+drive-detach-11:0               <Control><Alt>1
+fliplist-add-8:0                <Alt>i
+fliplist-remove-8:0             <Alt>k
+fliplist-next-8:0               <Alt>n
+
+# Tape items
+!if !(C64DTV || SCPU64)
+    tape-attach-1                   <Alt>t
+    tape-detach-1                   <Shift><Alt>t
+!endif
+
+# Cartridge items
+!if !(C64DTV || CBM5X0 || PET)
+    cart-detach                     <Shift><Alt>c
+    !if C64 || C64SC || SCPU64 || C128
+        cart-freeze                     <Alt>z
+    !endif
+!endif
+
+!if !SDL1
+    edit-copy                       <Alt>Delete
+    edit-paste                      <Alt>Insert
+!endif
+
+media-stop                      <Shift><Alt>s
+# No quicksave screenshot feature in WinVICE
+# screenshot-quicksave            Pause
+fullscreen-toggle               <Alt>d
+warp-mode-toggle                <Alt>w
+pause-toggle                    <Alt>p
+
+!if !(VIC20 || CBM6X0 || PET)
+    swap-controlport-toggle         <Alt>j
+!endif
+
+!if GTK3
+    settings-dialog                 <Alt>o
+!endif
+settings-default                <Shift><Alt>o

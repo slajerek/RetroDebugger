@@ -1,0 +1,32 @@
+# VICE keyboard mapping file
+
+# use business (uk) as base
+!INCLUDE gtk3_buuk_sym.vkm
+
+# this is a PET business (de) keyboard mapping (symbolic)
+
+# 2001, 3032 and 4032 use graphics keyboard
+# 4032B, 8032 and up use business keyboard
+#
+# http://www.6502.org/users/andre/petindex/keyboards.html
+
+# Business (DE) matrix (differences to UK)
+#   +--------+--------+--------+--------+--------+--------+--------+--------+
+# 1 |        |        |        |        |        |   ß    |        |        |
+#   +--------+--------+--------+--------+--------+--------+--------+--------+
+# 2 |        |        |        |        |   ü    |        |        |        |
+#   +--------+--------+--------+--------+--------+--------+--------+--------+
+# 3 |        |        |        |        |        |        |        |        |
+#   +--------+--------+--------+--------+--------+--------+--------+--------+
+# 4 |        |        |        |        |   ö    |        |        |        |
+#   +--------+--------+--------+--------+--------+--------+--------+--------+
+# 5 |        |        |        |        |        |        |   ä    |        |
+#   +--------+--------+--------+--------+--------+--------+--------+--------+
+#
+# german 8032 layout:
+#
+#   <>  1!  2"  3§  4$  5%  6&  7'  8(  9)  0=  ß?  ´`  u/d l/r clr     7   8   9
+#    tab  q   w   e   r   t   z   u   i  o   p   ü   +*  [^  ]\         4   5   6
+#   esc SL  a   s   d   f   g   h   j   k   l   ö   ä   #'  ret         1   2   3
+#   ctrl LS   y   x   c   v   b   n   m   ,;  .:  -_  RS  r/s del       0       ./pi
+#                   space

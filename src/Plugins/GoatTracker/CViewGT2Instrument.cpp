@@ -4,7 +4,9 @@
 #include "CGT2FontAtlas.h"
 #include "C64DebuggerPluginGoatTracker.h"
 #include "CViewGT2Patterns.h"
+#include "CViewGT2InstrumentsBrowser.h"
 #include "imgui.h"
+#include "imgui_internal.h"   // BeginDragDropTargetCustom / ImRect
 #include "SYS_KeyCodes.h"
 #include <cstdio>
 #include <cstring>
@@ -21,6 +23,9 @@ extern unsigned char ltable[MAX_TABLES][MAX_TABLELEN];
 extern unsigned char rtable[MAX_TABLES][MAX_TABLELEN];
 extern int etnum, etpos, etcolumn;
 }
+
+// tableViewOffset[] in the header is sized without gcommon.h in scope.
+static_assert(MAX_TABLES == 4, "CViewGT2Instrument::tableViewOffset[] must match MAX_TABLES");
 
 // GT2 color constants (from gdisplay.h)
 #define CNORMAL  8
@@ -115,8 +120,66 @@ int GT2InstrumentTableFromGridCol(int gridCol)
 	return tableNum;
 }
 
+bool GT2InstrumentTableCursorStep(int direction, const int *sliceLen,
+								  int *inOutTable, int *inOutRow, int *inOutColumn)
+{
+	if (direction != 1 && direction != -1) return false;
+	if (sliceLen == NULL || inOutTable == NULL || inOutRow == NULL || inOutColumn == NULL)
+		return false;
+
+	int table = *inOutTable;
+	if (table < 0 || table >= MAX_TABLES) return false;
+
+	// Four columns per table -- left byte hi/lo, right byte hi/lo -- same as
+	// native gtable.c. Inside them nothing but the column moves.
+	int column = *inOutColumn + direction;
+	if (column >= 0 && column <= 3)
+	{
+		*inOutColumn = column;
+		return true;
+	}
+
+	// Ran off the edge: hop to the next table THIS instrument owns rows in,
+	// skipping the ones it does not. The last candidate is the current table
+	// itself, so an instrument with a single populated table wraps within it
+	// instead of escaping into the pool.
+	for (int i = 1; i <= MAX_TABLES; i++)
+	{
+		int t = (table + direction * i) % MAX_TABLES;
+		if (t < 0) t += MAX_TABLES;
+		if (sliceLen[t] <= 0) continue;
+
+		int row = *inOutRow;
+		if (row < 0) row = 0;
+		if (row > sliceLen[t] - 1) row = sliceLen[t] - 1;
+
+		*inOutTable  = t;
+		*inOutRow    = row;
+		*inOutColumn = (direction > 0) ? 0 : 3;
+		return true;
+	}
+	return false;
+}
+
 // Per-table help shown (as ImGui tables) in the right-click context menu.
-struct GT2HelpRow { const char *key; const char *desc; };
+// Which byte of the table row a help line is about, so the line describing
+// what the cursor is actually on can be picked out. etcolumn 0/1 are the left
+// byte's nybbles and 2/3 the right byte's (gtable.c), which is the whole
+// mapping. GT2_HELP_BOTH is for lines that genuinely describe both bytes at
+// once -- the pulse/filter modes, where the left value selects the mode and
+// the right is its parameter.
+enum
+{
+	GT2_HELP_LEFT = 0,
+	GT2_HELP_RIGHT,
+	GT2_HELP_BOTH,
+};
+
+// `loValue`/`hiValue` are the range of LEFT-byte values the line describes, so
+// only the line that actually applies to the row under the cursor lights up.
+// -1/-1 means the line has no value range (it describes the right byte, or a
+// speedtable usage rather than a byte value) and follows its column alone.
+struct GT2HelpRow { const char *key; const char *desc; int column; int loValue; int hiValue; };
 
 static const char *GT2_TableIntro[MAX_TABLES] =
 {
@@ -128,34 +191,36 @@ static const char *GT2_TableIntro[MAX_TABLES] =
 
 static const GT2HelpRow GT2_WtblRows[] =
 {
-	{ "$00-$0F", "delay (wait that many frames)" },
-	{ "$10-$EF", "waveform byte (see below)" },
-	{ "$F0-$FE", "command (see below)" },
-	{ "$FF",     "jump: right = target, $00 = end" },
-	{ "right",   "note: $00-$7F relative, $81-$DF absolute" },
-	{ 0, 0 },
+	{ "left $00-$0F", "delay (wait that many frames)",              GT2_HELP_LEFT,  0x00, 0x0F },
+	{ "left $10-$EF", "waveform byte (see below)",                  GT2_HELP_LEFT,  0x10, 0xEF },
+	{ "left $F0-$FE", "command (see below)",                        GT2_HELP_LEFT,  0xF0, 0xFE },
+	{ "left $FF",     "jump, right = target ($00 = end)",           GT2_HELP_LEFT,  0xFF, 0xFF },
+	{ "right",        "note: $00-$7F relative, $81-$DF absolute",   GT2_HELP_RIGHT,   -1,   -1 },
+	{ 0, 0, 0, 0, 0 },
 };
 static const GT2HelpRow GT2_PtblRows[] =
 {
-	{ "$01-$7F", "modulate (left = frames, right = speed)" },
-	{ "$80-$FE", "set pulse width directly (12-bit)" },
-	{ "$FF",     "jump: right = target, $00 = stop" },
-	{ 0, 0 },
+	{ "left $01-$7F", "modulate (left = frames, right = speed)",    GT2_HELP_BOTH,  0x01, 0x7F },
+	{ "left $80-$FE", "set pulse width directly (12-bit)",          GT2_HELP_BOTH,  0x80, 0xFE },
+	{ "left $FF",     "jump, right = target ($00 = stop)",          GT2_HELP_BOTH,  0xFF, 0xFF },
+	{ 0, 0, 0, 0, 0 },
 };
 static const GT2HelpRow GT2_FtblRows[] =
 {
-	{ "$00",     "set cutoff (right = cutoff value)" },
-	{ "$01-$7F", "modulate cutoff (left = frames, right = speed)" },
-	{ "$80-$F0", "set passband / resonance / routing" },
-	{ "$FF",     "jump: right = target, $00 = stop" },
-	{ 0, 0 },
+	{ "left $00",     "set cutoff (right = cutoff value)",          GT2_HELP_BOTH,  0x00, 0x00 },
+	{ "left $01-$7F", "modulate cutoff (left = frames, right = speed)", GT2_HELP_BOTH, 0x01, 0x7F },
+	{ "left $80-$FE", "set passband / resonance / routing",         GT2_HELP_BOTH,  0x80, 0xFE },
+	{ "left $FF",     "jump, right = target ($00 = stop)",          GT2_HELP_BOTH,  0xFF, 0xFF },
+	{ 0, 0, 0, 0, 0 },
 };
 static const GT2HelpRow GT2_StblRows[] =
 {
-	{ "vibrato",    "left = speed, right = depth" },
-	{ "portamento", "left:right = 16-bit speed per tick" },
-	{ "funktempo",  "left & right = the two tempo values" },
-	{ 0, 0 },
+	// No value ranges: a speedtable row is read as vibrato / portamento /
+	// funktempo depending on what points at it, not on the byte it holds.
+	{ "vibrato",    "left = speed, right = depth",                  GT2_HELP_BOTH,    -1,   -1 },
+	{ "portamento", "left:right = 16-bit speed per tick",           GT2_HELP_BOTH,    -1,   -1 },
+	{ "funktempo",  "left & right = the two tempo values",          GT2_HELP_BOTH,    -1,   -1 },
+	{ 0, 0, 0, 0, 0 },
 };
 static const GT2HelpRow *GT2_TableRows[MAX_TABLES] =
 	{ GT2_WtblRows, GT2_PtblRows, GT2_FtblRows, GT2_StblRows };
@@ -195,15 +260,23 @@ static const char *GT2_FilterPassbands[8] =
 
 static int GT2FtblSelectedPassbandIndex(unsigned char leftValue)
 {
-	// $80, $90, … $F0 — anything outside that grid (including modulate rows
-	// or a $00 cutoff command) reports no selection.
-	if (leftValue < 0x80 || leftValue > 0xF0) return -1;
-	if ((leftValue & 0x0F) != 0) return -1;
-	return ((int)leftValue - 0x80) >> 4;
+	// What the player calls a passband row, not what the grid happens to
+	// print. gplay.c:447 takes $FF as the jump and then treats EVERY value
+	// >= $80 as a passband set, reading only bits 4-6: filtertype =
+	// ltable[FTBL][ptr] & 0x70. greloc.c:1574 packs it the same way for the
+	// 6502 player -- ((v & 0x70) >> 1) | 0x80, which mt_setfilt shifts back --
+	// so the low nibble is discarded by both and $B5 plays exactly as $B0.
+	//
+	// This used to demand a zero low nibble and a value no higher than $F0,
+	// so a row the player treats as LP+BP showed no selection at all.
+	if (leftValue < 0x80 || leftValue == 0xff) return -1;
+	return ((int)leftValue & 0x70) >> 4;
 }
 
 static unsigned char GT2FtblApplyPassbandSelection(int index)
 {
+	// Writes the canonical $80 + (index << 4). Clearing the low nibble is
+	// safe: both players discard it, and the packer would drop it anyway.
 	if (index < 0) index = 0;
 	if (index > 7) index = 7;
 	return (unsigned char)(0x80 + (index << 4));
@@ -247,6 +320,16 @@ static bool GT2_RenderSelectableHelpGrid(const char *id, const char *const *item
 	if (ImGui::BeginTable(id, cols,
 		ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_BordersInnerV))
 	{
+		// The selected entry is a FILLED green chip with a dark glyph, not green
+		// text on ImGui's default grey selection bar. Green on grey is what the
+		// selected passband looked like, and it read as not selected at all --
+		// the resonance chips right below it, and the pattern command picker,
+		// have used the filled form all along.
+		ImVec4 selBgIdle   (selectedColor.x, selectedColor.y, selectedColor.z, 0.75f);
+		ImVec4 selBgHovered(selectedColor.x, selectedColor.y, selectedColor.z, 0.90f);
+		ImVec4 selBgActive (selectedColor.x, selectedColor.y, selectedColor.z, 1.00f);
+		ImVec4 selGlyph    (0.05f, 0.05f, 0.05f, 1.00f);
+
 		for (int i = 0; i < count; i++)
 		{
 			ImGui::TableNextColumn();
@@ -255,6 +338,12 @@ static bool GT2_RenderSelectableHelpGrid(const char *id, const char *const *item
 			const ImGuiStyle &style = ImGui::GetStyle();
 			const float textGapX = 2.0f;
 			ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0, 0, 0, 0));
+			if (selected)
+			{
+				ImGui::PushStyleColor(ImGuiCol_Header,        selBgIdle);
+				ImGui::PushStyleColor(ImGuiCol_HeaderHovered, selBgHovered);
+				ImGui::PushStyleColor(ImGuiCol_HeaderActive,  selBgActive);
+			}
 			if (ImGui::Selectable(items[i], selected,
 				(ImGuiSelectableFlags)GT2WtblContextSelectableFlags(),
 				ImVec2(textSize.x + textGapX, 0.0f)))
@@ -265,12 +354,14 @@ static bool GT2_RenderSelectableHelpGrid(const char *id, const char *const *item
 			bool hovered = ImGui::IsItemHovered();
 			ImVec2 textMin = ImGui::GetItemRectMin();
 			ImVec2 textMax = ImGui::GetItemRectMax();
+			if (selected)
+				ImGui::PopStyleColor(3);
 			ImGui::PopStyleColor();
 			float textInsetX = style.ItemSpacing.x * 0.5f + textGapX;
 			ImVec2 textPos(textMin.x + textInsetX,
 				textMin.y + (textMax.y - textMin.y - textSize.y) * 0.5f);
 			int colorMode = GT2WtblContextTextColorMode(selected, hovered);
-			ImVec4 color = colorMode == 2 ? selectedColor
+			ImVec4 color = colorMode == 2 ? selGlyph
 				: colorMode == 1 ? ImGui::GetStyleColorVec4(ImGuiCol_Text)
 				: ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled);
 			ImDrawList *dl = ImGui::GetWindowDrawList();
@@ -300,7 +391,8 @@ static bool GT2_RenderTableHelp(int t, CGT2FontAtlas *fontAtlas,
 								 int currentWtblLeft, bool allowWtblSelection,
 								 unsigned char *newWtblLeft,
 								 int currentFtblLeft, int currentFtblRight,
-								 bool allowFtblSelection, GT2FtblEdit *ftblEdit)
+								 bool allowFtblSelection, GT2FtblEdit *ftblEdit,
+								 int activeColumn, int currentLeftValue)
 {
 	if (t < 0 || t >= MAX_TABLES)
 		return false;
@@ -311,10 +403,47 @@ static bool GT2_RenderTableHelp(int t, CGT2FontAtlas *fontAtlas,
 	if (ImGui::BeginTable("##gt2tblranges", 2,
 		ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_BordersInnerV))
 	{
+		// activeColumn < 0 means "no row is being edited", so nothing is
+		// singled out. Otherwise the lines describing the byte the cursor is
+		// on are drawn in full colour and the rest stay dimmed -- the same
+		// treatment the waveform / command lists below already get.
+		int activeSide = -1;
+		if (activeColumn >= 0)
+			activeSide = (activeColumn <= 1) ? GT2_HELP_LEFT : GT2_HELP_RIGHT;
+
+		ImVec4 activeColor = GT2_SelectedContextMenuColor(fontAtlas);
+		int previousColumnKind = -1;
+
 		for (const GT2HelpRow *r = GT2_TableRows[t]; r->key; r++)
 		{
-			ImGui::TableNextColumn(); ImGui::TextDisabled("%s", r->key);
-			ImGui::TableNextColumn(); ImGui::TextDisabled("%s", r->desc);
+			// A rule line between the left-byte lines and the right-byte ones:
+			// "right note: ..." on its own reads as if it were another left
+			// value rather than the other half of the row.
+			if (previousColumnKind == GT2_HELP_LEFT && r->column == GT2_HELP_RIGHT)
+			{
+				ImGui::TableNextColumn(); ImGui::Separator();
+				ImGui::TableNextColumn(); ImGui::Separator();
+			}
+			previousColumnKind = r->column;
+
+			// The column has to match AND, for a line that names a range of
+			// left-byte values, the row's actual left byte has to fall in it.
+			// Without the value test every left line lit up at once: a
+			// pulsetable row holding $85 highlighted "$01-$7F", "$80-$FE" and
+			// "$FF" together, which says nothing about the row.
+			bool columnMatches = (activeSide >= 0)
+				&& (r->column == GT2_HELP_BOTH || r->column == activeSide);
+			bool valueMatches = (r->loValue < 0)
+				|| (currentLeftValue >= r->loValue && currentLeftValue <= r->hiValue);
+			bool active = columnMatches && valueMatches;
+
+			ImGui::TableNextColumn();
+			if (active) ImGui::TextColored(activeColor, "%s", r->key);
+			else        ImGui::TextDisabled("%s", r->key);
+
+			ImGui::TableNextColumn();
+			if (active) ImGui::TextColored(activeColor, "%s", r->desc);
+			else        ImGui::TextDisabled("%s", r->desc);
 		}
 		ImGui::EndTable();
 	}
@@ -327,6 +456,29 @@ static bool GT2_RenderTableHelp(int t, CGT2FontAtlas *fontAtlas,
 			? GT2WtblSelectedCommandIndex((unsigned char)currentWtblLeft) : -1;
 		ImVec4 selectedColor = GT2_SelectedContextMenuColor(fontAtlas);
 
+		// Commands before waveforms, and a rule between every section: the
+		// blocks ran together as one wall of text, and the ranges table above
+		// lists $F0-$FE (command) before $10-$EF (waveform), so this order
+		// reads in the same direction.
+		ImGui::Spacing();
+		ImGui::Separator();
+		ImGui::Spacing();
+		GT2_RenderHelpTitle("Commands ($F0-$FE):", selectedCommand >= 0);
+		int clickedCommand = -1;
+		if (interactive && GT2_RenderSelectableHelpGrid("##gt2cmd", GT2_WaveCmds, 15, 2,
+			selectedCommand, selectedColor, &clickedCommand))
+		{
+			if (newWtblLeft)
+				*newWtblLeft = GT2WtblApplyCommandSelection(clickedCommand);
+			changed = true;
+		}
+		else if (!interactive)
+		{
+			GT2_RenderHelpGrid("##gt2cmd", GT2_WaveCmds, 15, 2);
+		}
+
+		ImGui::Spacing();
+		ImGui::Separator();
 		ImGui::Spacing();
 		GT2_RenderHelpTitle("Waveform = mix (high nibble) + control (low nibble).",
 			selectedWaveform >= 0);
@@ -345,25 +497,11 @@ static bool GT2_RenderTableHelp(int t, CGT2FontAtlas *fontAtlas,
 		{
 			GT2_RenderHelpGrid("##gt2wf", GT2_Waveforms, 14, 2);
 		}
-		ImGui::Spacing();
-		GT2_RenderHelpTitle("Commands ($F0-$FE):", selectedCommand >= 0);
-		int clickedCommand = -1;
-		if (interactive && GT2_RenderSelectableHelpGrid("##gt2cmd", GT2_WaveCmds, 15, 2,
-			selectedCommand, selectedColor, &clickedCommand))
-		{
-			if (newWtblLeft)
-				*newWtblLeft = GT2WtblApplyCommandSelection(clickedCommand);
-			changed = true;
-		}
-		else if (!interactive)
-		{
-			GT2_RenderHelpGrid("##gt2cmd", GT2_WaveCmds, 15, 2);
-		}
 	}
 	if (t == FTBL && currentFtblLeft >= 0)
 	{
 		// Clickable passband / resonance / routing editor. Click on any
-		// passband entry to set / convert the row into a $80-$F0 passband
+		// passband entry to set / convert the row into a $80-$FE passband
 		// row; the resonance + routing controls appear once the row is
 		// in that range. A modulate ($01-$7F), cutoff-set ($00) or jump
 		// ($FF) row reports no current passband selection (highlight =
@@ -371,6 +509,8 @@ static bool GT2_RenderTableHelp(int t, CGT2FontAtlas *fontAtlas,
 		// row into passband mode.
 		ImVec4 selectedColor = GT2_SelectedContextMenuColor(fontAtlas);
 		int passband = GT2FtblSelectedPassbandIndex((unsigned char)currentFtblLeft);
+		ImGui::Spacing();
+		ImGui::Separator();
 		ImGui::Spacing();
 		GT2_RenderHelpTitle("Passband (left high nibble):", passband >= 0);
 		int clickedPassband = -1;
@@ -690,6 +830,37 @@ static void DrawInstrumentTableTextGT2(CViewGT2Instrument *view, ImDrawList *dl,
 	}
 }
 
+// Hidden-row marker: a small filled triangle, drawn with primitives rather
+// than a glyph. GT2's chargen.bin has no arrow characters, and FontAwesome is
+// not baked into any atlas in this build (CGuiFontManager bakes Inter /
+// JetBrains with Latin ranges only, and nothing initialises imguial_fonts), so
+// an ICON_FA_* string would render as a missing glyph. A primitive also stays
+// small enough to sit clear of the slice's hex digits at any GT2 zoom.
+static void DrawGT2HiddenRowsMarker(ImDrawList *dl, CGT2FontAtlas *fontAtlas,
+									float colX, float rowY, bool pointingUp)
+{
+	// Centred in the two-column gap that follows each slice's "XX:XX XX",
+	// so the marker never crowds the last hex pair.
+	float cx = colX + GT2CellW() * 0.55f;
+	float cy = rowY + GT2CellH() * 0.5f;
+	float hw = GT2CellW() * 0.28f;
+	float hh = GT2CellH() * 0.16f;
+	ImU32 col = fontAtlas->palette[CTITLE & 0x0F];
+
+	if (pointingUp)
+	{
+		dl->AddTriangleFilled(ImVec2(cx, cy - hh),
+							  ImVec2(cx - hw, cy + hh),
+							  ImVec2(cx + hw, cy + hh), col);
+	}
+	else
+	{
+		dl->AddTriangleFilled(ImVec2(cx, cy + hh),
+							  ImVec2(cx + hw, cy - hh),
+							  ImVec2(cx - hw, cy - hh), col);
+	}
+}
+
 CViewGT2Instrument::CViewGT2Instrument(const char *name, float posX, float posY, float posZ,
 										float sizeX, float sizeY, CGT2FontAtlas *fontAtlas)
 : CGuiView(posX, posY, posZ, sizeX, sizeY)
@@ -698,6 +869,18 @@ CViewGT2Instrument::CViewGT2Instrument(const char *name, float posX, float posY,
 	this->fontAtlas = fontAtlas;
 	this->tableContextHasClickedRow = false;
 	this->tableContextCanEdit = false;
+	for (int i = 0; i < MAX_TABLES; i++)
+		this->tableViewOffset[i] = 0;
+	this->lastInstrumentNum = -1;
+	this->lastCursorTable = -1;
+	this->lastCursorPos = -1;
+	this->lastCursorColumn = -1;
+	this->tableWheelAccum = 0.0f;
+	this->tableWheelLastTable = -1;
+	// The slices scroll themselves now, so the window must not also scroll
+	// under the wheel -- and a window that cannot scroll keeps the
+	// visible-row measurement in RenderImGui() exact.
+	imGuiNoScrollbar = true;
 }
 
 CViewGT2Instrument::~CViewGT2Instrument()
@@ -853,6 +1036,68 @@ void CViewGT2Instrument::SetWavetableRight(unsigned char value)
 	pluginGoatTracker->viewPatterns->BeginPatternUndoStep();
 	rtable[WTBL][etpos] = value;
 	pluginGoatTracker->viewPatterns->CommitPatternUndoStep();
+}
+
+// The table-name heading and the interactive help block for one
+// instrument-table row, plus applying whatever the user changes there.
+//
+// Shared so there is exactly one implementation of it: the right-click context
+// menu renders it under its Insert / Delete items, and CViewGT2InstrumentTableRow
+// renders it on its own, following the live cursor. The two differ only in how
+// they decide `hasRow` / `canEdit` -- the menu from the row that was clicked,
+// the view from where the cursor is now.
+void CViewGT2Instrument::RenderTableRowHelp(int tableNum, int rowPos,
+											bool hasRow, bool canEdit,
+											int activeColumn)
+{
+	if (tableNum < 0 || tableNum >= MAX_TABLES)
+		return;
+
+	static const char *kTableName[MAX_TABLES] =
+		{ "Wavetable", "Pulsetable", "Filtertable", "Speedtable" };
+
+	int start = ginstr[einum].ptr[tableNum]
+				? ginstr[einum].ptr[tableNum] - 1 : -1;
+	int len = (start >= 0) ? gettablepartlen(tableNum, start) : 0;
+
+	ImGui::TextUnformatted(kTableName[tableNum]);
+
+	bool hasCurrentWtblRow = (tableNum == WTBL)
+		&& hasRow
+		&& GT2WtblContextHasValidRow(start, len, rowPos);
+	bool canCreateWtblRow = (tableNum == WTBL)
+		&& canEdit && start < 0;
+	int currentWtblLeft = hasCurrentWtblRow
+		? (int)ltable[WTBL][rowPos] : -1;
+	unsigned char newWtblLeft = 0;
+	bool hasCurrentFtblRow = (tableNum == FTBL)
+		&& hasRow
+		&& start >= 0 && rowPos >= 0 && rowPos < MAX_TABLELEN;
+	int currentFtblLeft  = hasCurrentFtblRow ? (int)ltable[FTBL][rowPos] : -1;
+	int currentFtblRight = hasCurrentFtblRow ? (int)rtable[FTBL][rowPos] : -1;
+	GT2FtblEdit ftblEdit = { false, false, 0, 0 };
+
+	// The row's left byte, for every table -- the ranges in the help rows are
+	// left-byte ranges, so the value decides which single line applies.
+	// -1 when there is no row, which matches no range and highlights nothing.
+	int currentLeftValue = (hasRow && rowPos >= 0 && rowPos < MAX_TABLELEN)
+		? (int)ltable[tableNum][rowPos] : -1;
+
+	if (GT2_RenderTableHelp(tableNum, fontAtlas, currentWtblLeft,
+		hasCurrentWtblRow || canCreateWtblRow, &newWtblLeft,
+		currentFtblLeft, currentFtblRight,
+		hasCurrentFtblRow && canEdit, &ftblEdit,
+		hasRow ? activeColumn : -1, currentLeftValue))
+	{
+		if (hasCurrentWtblRow && currentWtblLeft != (int)newWtblLeft)
+			SetWavetableLeft(newWtblLeft);
+		else if (canCreateWtblRow)
+			CreateWavetableRowWithLeft(newWtblLeft);
+		if (ftblEdit.leftChanged)
+			SetFiltertableLeft(ftblEdit.newLeft);
+		if (ftblEdit.rightChanged)
+			SetFiltertableRight(ftblEdit.newRight);
+	}
 }
 
 void CViewGT2Instrument::SetFiltertableLeft(unsigned char value)
@@ -1149,6 +1394,82 @@ void CViewGT2Instrument::RenderImGui()
 	RenderTablePalette();
 	float tableY = ImGui::GetCursorScreenPos().y + GT2CellH() * 0.3f;
 
+	// Clamp the GT2 table cursor to the current instrument's slice.
+	// tablecommands() may move etpos outside the slice; pull it back each frame.
+	// This runs BEFORE the slice rendering below, so the scroll offset never
+	// chases an out-of-slice etpos for a frame.
+	if (editmode == EDIT_TABLES && etnum >= 0 && etnum < MAX_TABLES)
+	{
+		int start = ginstr[einum].ptr[etnum] ? ginstr[einum].ptr[etnum] - 1 : -1;
+		int len   = (start >= 0) ? gettablepartlen(etnum, start) : 0;
+		if (len > 0)
+		{
+			if (etpos < start)           etpos = start;
+			if (etpos > start + len - 1) etpos = start + len - 1;
+		}
+	}
+
+	// Switching instrument shows a different set of slices; start them at
+	// the top rather than at the previous instrument's scroll position.
+	bool instrumentChanged = (einum != lastInstrumentNum);
+	if (instrumentChanged)
+	{
+		for (int i = 0; i < MAX_TABLES; i++)
+			tableViewOffset[i] = 0;
+		lastInstrumentNum = einum;
+	}
+
+	// How many slice rows actually fit below the header, measured from the
+	// window -- not the native VISIBLETABLEROWS, which knows nothing about
+	// this view's height.
+	// Not GetWindowContentRegionMax(): that one is an obsolete ImGui API
+	// (compiled only without IMGUI_DISABLE_OBSOLETE_FUNCTIONS) and its value
+	// shifts with window scroll. Bottom edge minus the padding is exact here
+	// -- the window carries no bottom decoration and cannot scroll.
+	float sliceRowsTop  = tableY + GT2RowToPixel(kTblFirstRow);
+	float contentBottom = ImGui::GetWindowPos().y + ImGui::GetWindowSize().y
+						- ImGui::GetStyle().WindowPadding.y;
+	int visibleRows = GT2TableVisibleRows(contentBottom - sliceRowsTop, GT2CellH());
+
+	// Follow the edit cursor only when it actually moved -- a keypress, a
+	// click, gototable(). Following it every frame would undo a mouse-wheel
+	// scroll on the very next frame and make peeking down a long table
+	// impossible. etcolumn counts as movement too, so typing hex digits into
+	// a row the user had scrolled away from brings that row back.
+	bool followCursor = (etnum != lastCursorTable)
+					 || (etpos != lastCursorPos)
+					 || (etcolumn != lastCursorColumn)
+					 || instrumentChanged;
+	lastCursorTable  = etnum;
+	lastCursorPos    = etpos;
+	lastCursorColumn = etcolumn;
+
+	// Mouse wheel over a slice column scrolls that column alone, leaving the
+	// edit cursor where it is. The accumulator carries the fractional part so
+	// a trackpad scrolls smoothly rather than rounding every delta to zero.
+	int wheelTable = -1;
+	int wheelRows  = 0;
+	if (ImGui::IsWindowHovered() && ImGui::GetIO().MouseWheel != 0.0f)
+	{
+		ImVec2 wheelPos = ImGui::GetIO().MousePos;
+		// Guard on the pixel, not the column: GT2PixelToCol() truncates
+		// toward zero, so a mouse left of origin would map to column 0.
+		int wheelCol = GT2PixelToCol(wheelPos.x - origin.x);
+		if (wheelPos.y >= tableY && wheelPos.x >= origin.x && wheelCol / 10 < MAX_TABLES)
+		{
+			wheelTable = wheelCol / 10;
+			if (wheelTable != tableWheelLastTable)
+			{
+				tableWheelAccum = 0.0f;
+				tableWheelLastTable = wheelTable;
+			}
+			// Three rows per notch, the ImGui default feel.
+			tableWheelAccum -= ImGui::GetIO().MouseWheel * 3.0f;
+			wheelRows = (int)tableWheelAccum;
+			tableWheelAccum -= (float)wheelRows;
+		}
+	}
+
 	// Table slice rendering — four compact slices below the palette
 	DrawTextGT2(dl, fontAtlas, origin.x + GT2ColToPixel(0),
 		tableY + GT2RowToPixel(kTblHeaderRow), CTITLE,
@@ -1160,6 +1481,7 @@ void CViewGT2Instrument::RenderImGui()
 		int len   = (start >= 0) ? gettablepartlen(c, start) : 0;
 		if (len == 0)
 		{
+			tableViewOffset[c] = 0;
 			// Editable placeholder — click it to start the table program
 			// (the speedtable just gets one atomic entry).
 			float px = origin.x + GT2ColToPixel(10*c);
@@ -1170,7 +1492,19 @@ void CViewGT2Instrument::RenderImGui()
 				GT2_EditableFieldColor());
 			continue;
 		}
-		for (int d = 0; d < len; d++)
+		if (c == wheelTable)
+			tableViewOffset[c] += wheelRows;
+
+		// Keep the row being edited on screen, and range-clamp the offset so
+		// a slice shortened by deletetable() cannot leave a gap at the bottom.
+		int cursorRow = (followCursor && editmode == EDIT_TABLES && etnum == c)
+						? etpos - start : -1;
+		tableViewOffset[c] = GT2TableScrollOffset(tableViewOffset[c],
+									len, visibleRows, cursorRow);
+		int firstRow = tableViewOffset[c];
+		int lastRow  = (firstRow + visibleRows < len) ? firstRow + visibleRows : len;
+
+		for (int d = firstRow; d < lastRow; d++)
 		{
 			int p = start + d;
 			int sliceColor = CNORMAL;
@@ -1185,7 +1519,25 @@ void CViewGT2Instrument::RenderImGui()
 			char tb[32];
 			sprintf(tb, "%02X:%02X %02X", p + 1, ltable[c][p], rtable[c][p]);
 			DrawInstrumentTableTextGT2(this, dl, fontAtlas, origin.x + GT2ColToPixel(10*c),
-				tableY + GT2RowToPixel(kTblFirstRow + d), c, p, (u8)sliceColor, tb, cc);
+				tableY + GT2RowToPixel(kTblFirstRow + (d - firstRow)), c, p,
+				(u8)sliceColor, tb, cc);
+		}
+
+		// Hidden-row markers, so a slice longer than the window says so.
+		// The up marker rides the header row above this column, the down
+		// marker the last visible row.
+		if (firstRow > 0)
+		{
+			DrawGT2HiddenRowsMarker(dl, fontAtlas,
+				origin.x + GT2ColToPixel(10*c + 8),
+				tableY + GT2RowToPixel(kTblHeaderRow), true);
+		}
+		if (lastRow < len)
+		{
+			DrawGT2HiddenRowsMarker(dl, fontAtlas,
+				origin.x + GT2ColToPixel(10*c + 8),
+				tableY + GT2RowToPixel(kTblFirstRow + (lastRow - firstRow - 1)),
+				false);
 		}
 	}
 
@@ -1225,7 +1577,8 @@ void CViewGT2Instrument::RenderImGui()
 			{
 				int start = ginstr[einum].ptr[c] ? ginstr[einum].ptr[c] - 1 : -1;
 				int len   = (start >= 0) ? gettablepartlen(c, start) : 0;
-				int d = tableGridRow - kTblFirstRow;
+				// Screen row -> slice row, through this column's scroll offset.
+				int d = tableGridRow - kTblFirstRow + tableViewOffset[c];
 				if (len > 0 && d >= 0 && d < len)
 				{
 					editmode = EDIT_TABLES;
@@ -1250,19 +1603,6 @@ void CViewGT2Instrument::RenderImGui()
 						AllocateSpeedtableEntry();
 				}
 			}
-		}
-	}
-
-	// Clamp the GT2 table cursor to the current instrument's slice.
-	// tablecommands() may move etpos outside the slice; pull it back each frame.
-	if (editmode == EDIT_TABLES && etnum >= 0 && etnum < MAX_TABLES)
-	{
-		int start = ginstr[einum].ptr[etnum] ? ginstr[einum].ptr[etnum] - 1 : -1;
-		int len   = (start >= 0) ? gettablepartlen(etnum, start) : 0;
-		if (len > 0)
-		{
-			if (etpos < start)           etpos = start;
-			if (etpos > start + len - 1) etpos = start + len - 1;
 		}
 	}
 
@@ -1331,49 +1671,30 @@ void CViewGT2Instrument::RenderImGui()
 			ImGui::CloseCurrentPopup();
 		if (etnum >= 0 && etnum < MAX_TABLES)
 		{
-			static const char *kTableName[MAX_TABLES] =
-				{ "Wavetable", "Pulsetable", "Filtertable", "Speedtable" };
 			int start = ginstr[einum].ptr[etnum]
 						? ginstr[einum].ptr[etnum] - 1 : -1;
-			int len = (start >= 0) ? gettablepartlen(etnum, start) : 0;
 			bool canEdit = (etnum < STBL) && tableContextCanEdit;
 
-			// Actions first, the help reference below.
 			if (ImGui::MenuItem("Insert table row", "Insert / Shift+Down", false, canEdit))
 				InsertTableRow();
 			if (ImGui::MenuItem("Delete table row", "Delete / Shift+Up", false,
 								canEdit && start >= 0 && tableContextHasClickedRow))
 				DeleteTableRow();
-			ImGui::Separator();
-			ImGui::TextUnformatted(kTableName[etnum]);
-			bool hasCurrentWtblRow = (etnum == WTBL)
-				&& tableContextHasClickedRow
-				&& GT2WtblContextHasValidRow(start, len, etpos);
-			bool canCreateWtblRow = (etnum == WTBL)
-				&& tableContextCanEdit && start < 0;
-			int currentWtblLeft = hasCurrentWtblRow
-				? (int)ltable[WTBL][etpos] : -1;
-			unsigned char newWtblLeft = 0;
-			bool hasCurrentFtblRow = (etnum == FTBL)
-				&& tableContextHasClickedRow
-				&& start >= 0 && etpos >= 0 && etpos < MAX_TABLELEN;
-			int currentFtblLeft  = hasCurrentFtblRow ? (int)ltable[FTBL][etpos] : -1;
-			int currentFtblRight = hasCurrentFtblRow ? (int)rtable[FTBL][etpos] : -1;
-			GT2FtblEdit ftblEdit = { false, false, 0, 0 };
-			if (GT2_RenderTableHelp(etnum, fontAtlas, currentWtblLeft,
-				hasCurrentWtblRow || canCreateWtblRow, &newWtblLeft,
-				currentFtblLeft, currentFtblRight,
-				hasCurrentFtblRow && tableContextCanEdit, &ftblEdit))
-			{
-				if (hasCurrentWtblRow && currentWtblLeft != (int)newWtblLeft)
-					SetWavetableLeft(newWtblLeft);
-				else if (canCreateWtblRow)
-					CreateWavetableRowWithLeft(newWtblLeft);
-				if (ftblEdit.leftChanged)
-					SetFiltertableLeft(ftblEdit.newLeft);
-				if (ftblEdit.rightChanged)
-					SetFiltertableRight(ftblEdit.newRight);
-			}
+
+			// The help / edit reference that used to sit here now lives in its
+			// own view -- GoatTracker -> GT2 Instrument Table Row -- which
+			// renders this exact call and follows the cursor instead of a
+			// click target. Two copies of it on screen is one too many, so the
+			// menu keeps only its actions.
+			//
+			// Deliberately kept, not deleted: this is the other half of the
+			// shared-renderer arrangement described in the
+			// instrument-table-row notes, and uncommenting
+			// the line is how the menu gets it back.
+			//
+			//   ImGui::Separator();
+			//   RenderTableRowHelp(etnum, etpos, tableContextHasClickedRow,
+			//                      tableContextCanEdit, etcolumn);
 		}
 		// If the popup grew (e.g. picking a passband revealed the
 		// resonance + routing controls), pull it back inside the viewport
@@ -1407,8 +1728,36 @@ void CViewGT2Instrument::RenderImGui()
 		ImGui::EndPopup();
 	}
 
+	// Whole-window drop target: an instrument dragged from the browser lands
+	// in the instrument this view is editing.
+	if (ImGui::BeginDragDropTargetCustom(ImRect(ImGui::GetWindowPos(),
+			ImVec2(ImGui::GetWindowPos().x + ImGui::GetWindowSize().x,
+				   ImGui::GetWindowPos().y + ImGui::GetWindowSize().y)),
+			ImGui::GetCurrentWindow()->GetID("##gt2InstrEditorDrop")))
+	{
+		const ImGuiPayload *payload = ImGui::AcceptDragDropPayload(GT2_INSTRUMENT_FILE_PAYLOAD);
+		if (payload != NULL && payload->Data != NULL && pluginGoatTracker != NULL)
+		{
+			bool preview = pluginGoatTracker->viewInstrumentsBrowser != NULL
+				? pluginGoatTracker->viewInstrumentsBrowser->previewOnClick : false;
+			pluginGoatTracker->LoadInstrumentFromFile((const char *)payload->Data, einum, preview);
+		}
+		ImGui::EndDragDropTarget();
+	}
+
 	GT2_PropagateChildWindowFocus(this);
 	PostRenderImGui();
+}
+
+bool CViewGT2Instrument::DoDropFile(char *filePath)
+{
+	if (filePath == NULL) return false;
+	if (!CViewGT2InstrumentsBrowser::IsInstrumentFile(filePath)) return false;
+	if (pluginGoatTracker == NULL) return false;
+
+	bool preview = pluginGoatTracker->viewInstrumentsBrowser != NULL
+		? pluginGoatTracker->viewInstrumentsBrowser->previewOnClick : false;
+	return pluginGoatTracker->LoadInstrumentFromFile(filePath, einum, preview);
 }
 
 bool CViewGT2Instrument::HandleInstrumentTablePointerEnter(bool isShift, bool isAlt, bool isControl, bool isSuper)
@@ -1454,6 +1803,43 @@ bool CViewGT2Instrument::KeyDown(u32 keyCode, bool isShift, bool isAlt, bool isC
 		&& HandleInstrumentTablePointerEnter(isShift, isAlt, isControl, isSuper))
 	{
 		return true;
+	}
+
+	// Left / Right walk the table columns. Native tablecommands() (gtable.c:99)
+	// wraps to the next table through etview[], a pool-absolute scroll offset
+	// shared by every instrument — so crossing a table edge here would drop the
+	// cursor onto rows this instrument does not own, rows only the GT2 Tables
+	// view shows. Keep the walk inside the instrument's own slices instead.
+	// Ctrl/Cmd+Left/Right belong to Renoise (order-list pattern number), so
+	// they stay out of this block and reach the dispatcher below.
+	if ((keyCode == MTKEY_ARROW_LEFT || keyCode == MTKEY_ARROW_RIGHT)
+		&& !isControl && !isSuper
+		&& editmode == EDIT_TABLES && !eamode
+		&& einum > 0 && einum < MAX_INSTR
+		&& etnum >= 0 && etnum < MAX_TABLES)
+	{
+		int sliceStart[MAX_TABLES];
+		int sliceLen[MAX_TABLES];
+		for (int c = 0; c < MAX_TABLES; c++)
+		{
+			sliceStart[c] = ginstr[einum].ptr[c] ? ginstr[einum].ptr[c] - 1 : -1;
+			sliceLen[c]   = (sliceStart[c] >= 0) ? gettablepartlen(c, sliceStart[c]) : 0;
+		}
+		if (sliceLen[etnum] > 0)
+		{
+			int table     = etnum;
+			int row       = etpos - sliceStart[etnum];
+			int column    = etcolumn;
+			int direction = (keyCode == MTKEY_ARROW_RIGHT) ? 1 : -1;
+			if (GT2InstrumentTableCursorStep(direction, sliceLen, &table, &row, &column))
+			{
+				etnum    = table;
+				etpos    = sliceStart[table] + row;
+				etcolumn = column;
+				if (isShift) etmarknum = -1;   // mirrors gtable.c:107
+			}
+			return true;
+		}
 	}
 
 	// Insert / Delete a table row — wavetable / pulsetable / filtertable only.

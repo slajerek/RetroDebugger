@@ -51,7 +51,7 @@ public:
 	virtual void SetByteWithIo(int addr, u8 v);
 	virtual void SetByteToRam(int addr, u8 v);
 	virtual void SetWord(int addr, u16 v);
-	virtual void MakeJmp(int addr);
+	virtual bool MakeJmp(int addr);
 
 	//
 	virtual void DetachEverything();

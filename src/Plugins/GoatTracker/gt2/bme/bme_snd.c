@@ -6,7 +6,7 @@
 #include <string.h>
 #include <stdio.h>
 
-#include "SDL.h"
+#include <SDL3/SDL.h>
 #include "bme_main.h"
 #include "bme_cfg.h"
 #include "bme_win.h"
@@ -73,28 +73,29 @@ int snd_init(unsigned mixrate, unsigned mixmode, unsigned bufferlength, unsigned
     }
 
     desired.freq = mixrate;
-    desired.format = AUDIO_U8;
+    desired.format = SDL_AUDIO_U8;
     if (mixmode & SIXTEENBIT)
     {
-        desired.format = AUDIO_S16SYS;
+        desired.format = SDL_AUDIO_S16;
     }
     desired.channels = 1;
     if (mixmode & STEREO) desired.channels = 2;
-    desired.samples = bufferlength * mixrate / 1000;
-    {
-        int bits = 0;
 
-        for (;;)
-        {
-            desired.samples >>= 1;
-            if (!desired.samples) break;
-            bits++;
-        }
-        desired.samples = 1 << bits;    
-    }
-
-    desired.callback = snd_mixer;
-    desired.userdata = NULL;
+    // SDL3's SDL_AudioSpec has only freq/format/channels: `samples`, `callback`
+    // and `userdata` are gone, because the buffer size is no longer part of the
+    // format and audio is driven by streams rather than a device callback.
+    //
+    // Nothing is lost here, because NOTHING IN THIS FUNCTION OPENS A DEVICE any
+    // more -- SDL_OpenAudio/SDL_PauseAudio/SDL_CloseAudio were commented out
+    // when RetroDebugger routed GoatTracker's audio through the engine's own
+    // mixer instead (see snd_buffersize/snd_mixrate below, which are hardcoded
+    // rather than read back from `obtained`). These three fields were writes to
+    // a struct nobody reads. Removed rather than emulated: rebuilding a
+    // power-of-two buffer size for an SDL_AudioSpec that is never passed to SDL
+    // would be maintaining a calculation with no consumer.
+    //
+    // snd_mixer() is likewise now unreferenced here; it stays because the file
+    // still calls it internally through snd_custommixer.
 
     // Init tempo count
 
@@ -150,9 +151,9 @@ int snd_init(unsigned mixrate, unsigned mixmode, unsigned bufferlength, unsigned
 //        snd_mixmode |= STEREO;
 //        snd_samplesize <<= 1;
 //    }
-//    if ((obtained.format == AUDIO_S16SYS) ||
-//       (obtained.format == AUDIO_S16LSB) ||
-//       (obtained.format == AUDIO_S16MSB))
+//    if ((obtained.format == SDL_AUDIO_S16) ||
+//       (obtained.format == SDL_AUDIO_S16LE) ||
+//       (obtained.format == SDL_AUDIO_S16BE))
 //    {
         snd_mixmode |= SIXTEENBIT;
         snd_samplesize <<= 1;

@@ -17,6 +17,7 @@ extern "C" {
 #include "CGuiEditHex.h"
 #include "VID_ImageBinding.h"
 #include "CLayoutParameter.h"
+#include "MT_UiScale.h"
 
 #define VIA_STATE_DEFAULT_SIZE_X 142.0f
 
@@ -35,7 +36,7 @@ CViewDrive1541StateVIA::CViewDrive1541StateVIA(const char *name, float posX, flo
 	renderDriveLED = true;
 	isVertical = false;
 
-	fontSize = 7.0f;
+	fontSize = MT_UiScaled(7.0f);
 //	AddLayoutParameter(new CLayoutParameterFloat("Font Size", &fontSize));
 	AddLayoutParameter(new CLayoutParameterBool("Vertical layout", &isVertical));
 	AddLayoutParameter(new CLayoutParameterBool("Show Drive led", &renderDriveLED));

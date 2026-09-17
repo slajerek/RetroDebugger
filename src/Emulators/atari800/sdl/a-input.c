@@ -1,3 +1,10 @@
+/* [C64D-REFERENCE-LIVE-EXCEPTION]
+ * Vendored from atari800, and unlike every other file under
+ * src/Emulators/atari800/sdl and src/Emulators/vice/arch, this one contains
+ * LIVE SDL library calls: SDL_GetTicks() x12. That is the entire genuine SDL
+ * surface of the whole emulator tree.
+ * It IS ported when SDL changes -- see src/Emulators/REFERENCE_FILES.md.
+ */
 /*
  * sdl/input.c - SDL library specific port code - input device support
  *
@@ -1639,7 +1646,15 @@ static int SDL_controller_kb1(void)
 	static int prev_up = FALSE, prev_down = FALSE, prev_trigger = FALSE,
 		prev_keyb = FALSE, prev_left = FALSE, prev_right = FALSE,
 		prev_leave = FALSE, prev_ui = FALSE;
-	static int repdelay_timeout = REPEAT_DELAY;
+	/* SDL3 widened SDL_GetTicks() from Uint32 to Uint64, and this was an INT.
+	   That was already a latent truncation under SDL2 (an int overflows at
+	   2^31 ms, ~24.8 days of uptime, and goes NEGATIVE); under SDL3 it is
+	   worse, because the comparison below promotes the negative int to a huge
+	   Uint64 and the "has the repeat delay elapsed?" test then never fires --
+	   silently killing keyboard auto-repeat in the Atari emulator on a
+	   long-running session. Widened to match what SDL_GetTicks() actually
+	   returns. */
+	static Uint64 repdelay_timeout = REPEAT_DELAY;
 	struct js_state *state = &sdl_js_state[0];
 
 	if (! joystick0) return(AKEY_NONE);  /* no controller present */

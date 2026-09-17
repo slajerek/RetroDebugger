@@ -153,9 +153,10 @@ u8 CDebuggerApiNestopia::PaintReferenceImagePixel(int x, int y, u8 r, u8 g, u8 b
 	return PAINT_RESULT_ERROR;
 }
 
-void CDebuggerApiNestopia::MakeJmp(int addr)
+bool CDebuggerApiNestopia::MakeJmp(int addr)
 {
 	LOGTODO("CDebuggerApiNestopia::MakeJMP: not implemented");
+	return false;
 }
 
 void CDebuggerApiNestopia::SetByteWithIo(int addr, u8 v)

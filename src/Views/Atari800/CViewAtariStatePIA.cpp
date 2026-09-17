@@ -23,6 +23,7 @@ extern "C" {
 #include "CGuiEditHex.h"
 #include "VID_ImageBinding.h"
 #include "CLayoutParameter.h"
+#include "MT_UiScale.h"
 
 #if defined(RUN_ATARI)
 
@@ -34,7 +35,7 @@ CViewAtariStatePIA::CViewAtariStatePIA(const char *name, float posX, float posY,
 	imGuiNoWindowPadding = true;
 	imGuiNoScrollbar = true;
 
-	fontSize = 7.0f;
+	fontSize = MT_UiScaled(7.0f);
 	hasManualFontSize = false;
 	AddLayoutParameter(new CLayoutParameterFloat("Font Size", &fontSize));
 

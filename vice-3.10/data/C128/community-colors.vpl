@@ -1,0 +1,28 @@
+#
+# VICE Palette file
+#
+# Syntax:
+# Red Green Blue
+#
+# colors taken from "C64 Community Colors V1.2a" palette, see
+# https://p1x3l.net/36/c64-community-colors-theor/
+#
+# TYPE:VICII
+# NAME:Community Colors (Retrofan et al)
+
+00 00 00
+ff ff ff
+af 2a 29
+62 d8 cc
+b0 3f b6
+4a c6 4a
+37 39 c4
+e4 ed 4e
+b6 59 1c
+68 38 08
+ea 74 6c
+4d 4d 4d
+84 84 84
+a6 fa 9e
+70 7c e6
+b6 b6 b5

@@ -1,34 +1,61 @@
 name: macOS build
 
+# `devel` is not an afterthought here: under the odd/even convention it is where
+# work LANDS, and `master` only ever receives a merge that devel has already
+# proved. CI that runs on master and not on devel therefore runs after the
+# question has been answered rather than while it is open -- which is how a
+# devel branch can be published green and untested, as v3.21.1 was.
 on:
   push:
-    branches: [ master, main ]
+    branches: [ master, main, devel ]
   pull_request:
-    branches: [ master, main ]
+    branches: [ master, main, devel ]
   workflow_dispatch:
+
+env:
+  # MTENGINE_REF holds a BRANCH by default (`origin/master`), and a branch is
+  # tracked rather than pinned -- CI clones it fresh every run, so it always
+  # matches and this flag is inert. The flag stays because it stops being inert
+  # the moment MTENGINE_REF is set to a SHA to freeze an engine for a release:
+  # then a checkout that does not match the pin must fail the run, not warn.
+  MTENGINE_PIN_STRICT: '1'
 
 jobs:
   build-macos:
     runs-on: macos-latest
+    # Both logging configurations on every push: the "off" leg compiles the
+    # shipping shape (MT_DEBUG_LOGS=0), which used to be discovered at release.
+    strategy:
+      fail-fast: false
+      matrix:
+        logs: ["on", "off"]
 
     steps:
       - name: Checkout RetroDebugger
         uses: actions/checkout@v6
 
-      # No Homebrew "sdl2" dependency anymore. `brew install sdl2` used to provide
-      # libSDL2.a, but the formula is nowadays an alias for sdl2-compat (a dynamic
-      # shim over SDL3) which ships no static archive — the libtool step of
-      # MTEngineSDL then failed with "could not find 'libSDL2.a'". SDL2 is now
-      # built from vendored source by MTEngineSDL's own "Build SDL2" Xcode script
-      # phase (platform/MacOS/build-sdl2.sh), the same pattern already used there
-      # for llama.cpp / ftxui / mbedtls. uSockets is built by build-macos.sh.
+      # No Homebrew dependencies. SDL used to be one: `brew install sdl2` supplied
+      # libSDL2.a for MTEngineSDL's libtool step. Since S-2 (SDL 3.4.14) the engine
+      # builds its own static libSDL3.a from vendored source via its "Build SDL3"
+      # Xcode script phase, so there is nothing left to install -- and the sdl2
+      # formula is now an alias for sdl2-compat (a dynamic shim over SDL3) that
+      # ships no static archive anyway. llama.cpp / ftxui / mbedtls are built by
+      # MTEngineSDL's Xcode script phases, and uSockets by build-macos.sh.
+
+      - name: Install dependencies
+        # nasm, for the x86_64 half of the universal video-codec build. libvpx
+        # has no assembler-less fallback the way FFmpeg's --disable-x86asm is,
+        # so without this its configure stops at "Neither yasm nor nasm have
+        # been found" -- inside an Xcode script phase, where the message is
+        # nearly unfindable. GitHub's arm64 macOS image does not ship one.
+        run: brew list nasm >/dev/null 2>&1 || brew install nasm
 
       - name: Build and package release
         id: release
         run: |
           set -euxo pipefail
           chmod +x ./tools/make-release/make-release-macos.sh
-          ./tools/make-release/make-release-macos.sh
+          MT_LOGS=${{ matrix.logs }} ./tools/make-release/make-release-macos.sh
         env:
           # Empty/unset on a free Apple account -> ad-hoc signing.
           # Populate these repo secrets to enable Developer ID + notarization
@@ -40,9 +67,21 @@ jobs:
 
       # macOS uploads the ditto .zip itself (preserves the .app bundle); GitHub
       # wraps it in the artifact zip. Folder-upload would corrupt the bundle.
+      - name: mtcaps golden tests
+        run: |
+          # tools/mtcaps is the single point of failure for the whole capability
+          # system, so its own tests run before anything that depends on it.
+          python3 ../MTEngineSDL/tools/mtcaps/tests/test_mtcaps.py
+
+      - name: Run tests (both suites)
+        run: |
+          # Chunk 0.6. See the Linux job -- these workflows ran no tests at all.
+          chmod +x ./tests/run_test.sh
+          ./tests/run_test.sh --skip-build
+
       - name: Upload release artifact
         uses: actions/upload-artifact@v7
         with:
-          name: ${{ steps.release.outputs.artifact_name }}
+          name: ${{ steps.release.outputs.artifact_name }}-logs-${{ matrix.logs }}
           path: ${{ steps.release.outputs.zip_path }}
           if-no-files-found: error

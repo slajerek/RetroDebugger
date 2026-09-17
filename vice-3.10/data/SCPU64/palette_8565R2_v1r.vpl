@@ -1,0 +1,57 @@
+#
+# VICE Palette file: PALette_8565R2_v1r
+#
+# Syntax:
+# Red Green Blue
+#
+# TYPE:VICII
+# NAME:PALette 8565R2 (by Tobias)
+#
+
+# Black
+00 00 00
+
+# White
+FF FF FF
+
+# Red
+8B 34 36
+
+# Cyan
+65 BE B9
+
+# Purple
+8D 36 A2
+
+# Green
+4A A6 46
+
+# Blue
+2D 30 A8
+
+# Yellow
+D2 CF 57
+
+# Orange
+8E 50 1B
+
+# Brown
+54 3D 00
+
+# Light Red
+BC 65 68
+
+# Dark Grey
+4E 4E 4E
+
+# Medium Grey
+76 76 76
+
+# Light Green
+8D E9 89
+
+# Light Blue
+66 69 E1
+
+# Light Grey
+A3 A3 A3

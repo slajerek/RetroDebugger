@@ -1,0 +1,302 @@
+# VICE keyboard mapping file
+#
+# A Keyboard map is read in as patch to the current map.
+#
+# File format:
+# - comment lines start with '#'
+# - keyword lines start with '!keyword'
+# - normal lines have 'keysym/scancode row column shiftflag'
+#
+# Keywords and their lines are:
+# '!CLEAR'               clear whole table
+# '!INCLUDE filename'    read file as mapping file
+# '!LSHIFT row col'      left shift keyboard row/column
+# '!RSHIFT row col'      right shift keyboard row/column
+# '!VSHIFT shiftkey'     virtual shift key (RSHIFT or LSHIFT)
+# '!SHIFTL shiftkey'     shift lock key (RSHIFT or LSHIFT)
+#  for emulated keyboards that have only one shift key, set both LSHIFT
+#  and RSHIFT to the same row/col and use RSHIFT for VSHIFT and SHIFTL.
+# '!LCTRL row col'       left control keyboard row/column
+# '!VCTRL ctrlkey'       virtual control key (LCTRL)
+# '!LCBM row col'        left CBM keyboard row/column
+# '!VCBM cbmkey'         virtual CBM key (LCBM)
+# '!UNDEF keysym'        remove keysym from table
+#
+# Shiftflag can have these values, flags can be ORed to combine them:
+# 0x0000      0  key is not shifted for this keysym/scancode
+# 0x0001      1  key is combined with shift for this keysym/scancode
+# 0x0002      2  key is left shift on emulated machine
+# 0x0004      4  key is right shift on emulated machine (use only this one
+#                for emulated keyboards that have only one shift key)
+# 0x0008      8  key can be shifted or not with this keysym/scancode
+# 0x0010     16  deshift key for this keysym/scancode
+# 0x0020     32  another definition for this keysym/scancode follows
+# 0x0040     64  key is shift-lock on emulated machine
+# 0x0080    128  shift modifier required on host
+# 0x0100    256  key is used for an alternative keyboard mapping, e.g. C64 mode in x128
+# 0x0200    512  alt-r (alt-gr) modifier required on host
+# 0x0400   1024  ctrl modifier required on host
+# 0x0800   2048  key is combined with cbm for this keysym/scancode
+# 0x1000   4096  key is combined with ctrl for this keysym/scancode
+# 0x2000   8192  key is (left) cbm on emulated machine
+# 0x4000  16384  key is (left) ctrl on emulated machine
+#
+# Negative row values:
+# 'keysym -1 n' joystick keymap A, direction n
+# 'keysym -2 n' joystick keymap B, direction n
+# 'keysym -3 0' first RESTORE key
+# 'keysym -3 1' second RESTORE key
+# 'keysym -4 0' 40/80 column key (x128)
+# 'keysym -4 1' CAPS (ASCII/DIN) key (x128)
+# 'keysym -5 n' joyport keypad, key n (not supported in x128)
+#
+# Joystick direction values:
+# 0      Fire
+# 1      South/West
+# 2      South
+# 3      South/East
+# 4      West
+# 5      East
+# 6      North/West
+# 7      North
+# 8      North/East
+#
+# Joyport keypad key layout:
+# --------------------------
+# |  0 |  1 |  2 |  3 |  4 |
+# --------------------------
+# |  5 |  6 |  7 |  8 |  9 |
+# --------------------------
+# | 10 | 11 | 12 | 13 | 14 |
+# --------------------------
+# | 15 | 16 | 17 | 18 | 19 |
+# --------------------------
+#
+# When a bigger spaced key is used,
+# it uses the upper left most key value.
+
+# Symbolic Mapping, German Layout, C64, SDL, pc(105)-de keyboard
+
+# note: For some reason SDL does not get keyboard events for "dead keys" at all,
+#       so a "nodeadkeys" layout must be used. CAUTION: apparently SDL generates
+#       some tables internally at startup - switching the host layout while
+#       the emulator is running produces unpredictable results (broken keycodes)
+
+# C64 keyboard matrix:
+#
+#       +-----+-----+-----+-----+-----+-----+-----+-----+
+#       |Bit 0|Bit 1|Bit 2|Bit 3|Bit 4|Bit 5|Bit 6|Bit 7|
+# +-----+-----+-----+-----+-----+-----+-----+-----+-----+
+# |Bit 0| DEL |Retrn|C_L/R|  F7 |  F1 |  F3 |  F5 |C_U/D|
+# +-----+-----+-----+-----+-----+-----+-----+-----+-----+
+# |Bit 1| 3 # |  W  |  A  | 4 $ |  Z  |  S  |  E  | S_L |
+# +-----+-----+-----+-----+-----+-----+-----+-----+-----+
+# |Bit 2| 5 % |  R  |  D  | 6 & |  C  |  F  |  T  |  X  |
+# +-----+-----+-----+-----+-----+-----+-----+-----+-----+
+# |Bit 3| 7 ' |  Y  |  G  | 8 ( |  B  |  H  |  U  |  V  |
+# +-----+-----+-----+-----+-----+-----+-----+-----+-----+
+# |Bit 4| 9 ) |  I  |  J  |  0  |  M  |  K  |  O  |  N  |
+# +-----+-----+-----+-----+-----+-----+-----+-----+-----+
+# |Bit 5|  +  |  P  |  L  |  -  | . > | : [ |  @  | , < |
+# +-----+-----+-----+-----+-----+-----+-----+-----+-----+
+# |Bit 6|POUND|  *  | ; ] | HOME| S_R |  =  | A_UP| / ? |
+# +-----+-----+-----+-----+-----+-----+-----+-----+-----+
+# |Bit 7| 1 ! |A_LFT| CTRL| 2 " |SPACE|  C= |  Q  | R/S |
+# +-----+-----+-----+-----+-----+-----+-----+-----+-----+
+
+# C64 Keyboard layout:
+#
+#   arrow 1!  2"  3#  4$  5%  6&  7'  8(  9)  0   +   -   pound clr del     f1/f2
+#    ctrl   q   w   e   r   t   y   u   i   o   p   @   *   ^   restore     f3/f4
+#   r/s SL    a   s   d   f   g   h   j   k   l   :[  ;]  =   return        f5/f6
+#   CBM LS      z   x   c   v   b   n   m   ,<  .>  /?  RS  u/d l/r         f7/f8
+#                               space
+
+!CLEAR
+!LSHIFT 1 7
+!RSHIFT 6 4
+!VSHIFT RSHIFT
+!SHIFTL LSHIFT
+!LCBM 7 5
+!VCBM LCBM
+!LCTRL 7 2
+!VCTRL LCTRL
+
+# keys that can't be mapped symbolically are:
+# (row0) arrow left (-> end), pound (-> ß), clr/home (-> home)
+# (row1) restore (-> page up)
+# (row2) run/stop (-> escape)
+# (row3) commodore (-> control)
+
+# extra keys are:
+# ins/del (-> delete)
+# ins/del+shift (-> insert)
+# arrow left (-> underscore, ssharp, altgr+~)
+# arrow up+shift (-> altgr+m)
+# : (-> oe)
+# :+shift (-> OE, altgr+[)
+# ; (-> ae)
+# ;+shift (-> AE, altgr+])
+# @ (-> ue, altgr+Q)
+# @+shift (-> UE)
+
+# some extra keys with AltGr
+109 6 6 545            /*        altr+M -> pi (shift+arrow up) */
+56 3 3 40              /*             8 -> 8            */
+# 512 + 1 alt-gr on host, shifted on c64
+56 5 5 513             /*        altr+8 -> [  (shift+:) */
+57 4 0 40              /*             9 -> 9            */
+# 512 + 1 alt-gr on host, shifted on c64
+57 6 2 513             /*        altr+9 -> ]  (shift+;) */
+113 7 6 32             /*             Q -> Q            */
+# 512 + 32 alt-gr on host, not shifted on c64
+113 5 6 512            /*        altr+Q -> @            */
+
+# not shifted on host, not shifted on c64
+45 5 3 32              /*             - -> -            */
+# 16+2048+128+32 shifted on host, not shifted but with CBM on C64
+45 5 6 2224            /*             _ -> _ (cbm+@)    */
+
+94 6 6 8               /*             ^ -> Up Arrow     */
+223 7 1 0x20           /* (de)       sz -> Left Arrow   */
+223 6 7 0xa0           /* (de)  shft+sz -> ?            */
+223 6 3 0x208          /* (de) altgr+sz -> clr/home     */
+180 6 0 8              /* (de)      ` ? -> Pound        */
+8 0 0 8                /*     Backspace -> Ins          */
+
+#306 7 2 8+16384  key is CTRL
+306 7 2 16392          /*     Left Ctrl -> Ctrl         */
+252 5 6 8              /* (de)       ue -> @            */
+# not shifted on host, not shifted on c64
+43 5 0 32              /*             + -> +            */
+# 128+16 shifted on host, not shifted on c64
+43 6 1 0xb0            /*             * -> *            */
+43 7 1 0x200           /*       altgr+* -> left arrow   */
+
+246 5 5 8              /* (de)       oe -> [            */
+228 6 2 8              /* (de)       ae -> ]            */
+# not shifted on host, shift+3 on c64
+35 1 0 33              /*             # -> #            */
+# shifted on host, shift+7 on c64
+35 3 0 128             /*             ' -> '            */
+13 0 1 8               /*        Return -> Return       */
+
+# 32+1 not shifted on host, shifted on c64
+60 5 7 33              /*             < -> <            */
+# 32+128 shifted on host, shifted on c64
+60 5 4 160             /*             > -> >            */
+60 6 0 0x210           /*        altr+< -> pound        */
+
+# not shifted on host, not shifted on c64
+44 5 7 32              /*             , -> ,            */
+# 128+16 shifted on host, not shifted on c64
+44 6 2 144             /*             ; -> ;            */
+# not shifted on host, not shifted on c64
+46 5 4 32              /*             . -> .            */
+# 128+16 shifted on host, not shifted on c64
+46 5 5 144             /*             : -> :            */
+
+# key is right shift
+303 6 4 4              /*   Right Shift -> Right Shift  */
+# key is left shift
+304 1 7 2              /*    Left Shift -> Left Shift   */
+# key is shift lock
+301 1 7 64             /*     Caps Lock -> Shift Lock   */
+# key is CBM 8+8192
+9 7 5 8200             /*           TAB -> CBM          */
+
+32 7 4 8               /*         Space -> Space        */
+
+27 7 7 8               /*           ESC -> Run/Stop     */
+
+282 0 4 8              /*            F1 -> F1           */
+283 0 4 1              /*            F2 -> F2           */
+284 0 5 8              /*            F3 -> F3           */
+285 0 5 1              /*            F4 -> F4           */
+286 0 6 8              /*            F5 -> F5           */
+287 0 6 1              /*            F6 -> F6           */
+288 0 3 8              /*            F7 -> F7           */
+289 0 3 1              /*            F8 -> F8           */
+
+127 0 0 8              /*           Ins -> Ins          */
+277 0 0 1              /*           Del -> Del          */
+278 6 3 8              /*          Pos1 -> CLR/HOME     */
+279 7 1 8              /*           End -> Left Arrow   */
+
+273 0 7 1              /*            Up -> CRSR UP      */
+274 0 7 8              /*          Down -> CRSR DOWN    */
+275 0 2 8              /*         Right -> CRSR RIGHT   */
+276 0 2 1              /*          Left -> CRSR LEFT    */
+
+267 6 7 8              /*      NumPad / -> /            */
+268 6 1 8              /*      NumPad * -> *            */
+269 5 3 8              /*      NumPad - -> -            */
+270 5 0 8              /*      NumPad + -> +            */
+271 0 1 8              /*     NP Return -> Return       */
+
+49 7 0 8               /*             1 -> 1            */
+50 7 3 8               /*             2 -> 2            */
+51 1 0 8               /*             3 -> 3            */
+52 1 3 8               /*             4 -> 4            */
+53 2 0 8               /*             5 -> 5            */
+54 2 3 8               /*             6 -> 6            */
+# not shifted on host, unshifted on C64
+55 3 0 32              /*             7 -> 7            */
+# shifted on host, deshifted on C64 128+16
+55 6 7 144             /*             / -> /            */
+# not shifted on host, unshifted on C64
+48 4 3 32              /*             0 -> 0            */
+# shifted on host, deshifted on C64  128+16
+48 6 5 144             /*             = -> =            */
+
+97 1 2 8               /*             A -> A            */
+98 3 4 8               /*             B -> B            */
+99 2 4 8               /*             C -> C            */
+100 2 2 8              /*             D -> D            */
+101 1 6 8              /*             E -> E            */
+102 2 5 8              /*             F -> F            */
+103 3 2 8              /*             G -> G            */
+104 3 5 8              /*             H -> H            */
+105 4 1 8              /*             I -> I            */
+106 4 2 8              /*             J -> J            */
+107 4 5 8              /*             K -> K            */
+108 5 2 8              /*             L -> L            */
+109 4 4 8              /*             M -> M            */
+110 4 7 8              /*             N -> N            */
+111 4 6 8              /*             O -> O            */
+112 5 1 8              /*             P -> P            */
+#113 7 6 8              /*             Q -> Q            */
+114 2 1 8              /*             R -> R            */
+115 1 5 8              /*             S -> S            */
+116 2 6 8              /*             T -> T            */
+117 3 6 8              /*             U -> U            */
+118 3 7 8              /*             V -> V            */
+119 1 1 8              /*             W -> W            */
+120 2 7 8              /*             X -> X            */
+121 3 1 8              /*             Y -> Y            */
+122 1 4 8              /*             Z -> Z            */
+
+# Restore key mappings
+280 -3 0               /*      Page Up -> RESTORE      */
+
+# Joyport attached keypad key mappings
+300 -5 0               /*      NumLock  -> keypad x0    */
+263 -5 1               /*     NumPad 7  -> keypad 7     */
+264 -5 2               /*     NumPad 8  -> keypad 8     */
+265 -5 3               /*     NumPad 9  -> keypad 9     */
+267 -5 4               /*     NumPad /  -> keypad /     */
+302 -5 5               /*   ScrollLock  -> keypad x1    */
+260 -5 6               /*     NumPad 4  -> keypad 4     */
+261 -5 7               /*     NumPad 5  -> keypad 5     */
+262 -5 8               /*     NumPad 6  -> keypad 6     */
+268 -5 9               /*     NumPad *  -> keypad *     */
+317 -5 10              /*       SysReq  -> keypad x2    */
+257 -5 11              /*     NumPad 1  -> keypad 1     */
+258 -5 12              /*     NumPad 2  -> keypad 2     */
+259 -5 13              /*     NumPad 3  -> keypad 3     */
+269 -5 14              /*     NumPad -  -> keypad -     */
+316 -5 15              /*       PrtScr  -> keypad x3    */
+256 -5 16              /*     NumPad 0  -> keypad 0     */
+266 -5 17              /*     NumPad ,  -> keypad .     */
+271 -5 18              /* NumPad Enter  -> keypad enter */
+270 -5 19              /*     NumPad +  -> keypad +     */

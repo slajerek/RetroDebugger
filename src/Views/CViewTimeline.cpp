@@ -7,6 +7,7 @@
 #include "CMainMenuBar.h"
 #include "CGuiLockableList.h"
 #include "C64SettingsStorage.h"
+#include "MT_UiScale.h"
 
 CViewTimeline::CViewTimeline(const char *name, float posX, float posY, float posZ, float sizeX, float sizeY, CDebugInterface *debugInterface)
 : CGuiView(name, posX, posY, posZ, sizeX, sizeY)
@@ -19,7 +20,7 @@ CViewTimeline::CViewTimeline(const char *name, float posX, float posY, float pos
 	enteredGoToFrameNum = 1;
 	enteredGoToCycleNum = 1;
 	
-	fontSize = 8.0f;
+	fontSize = MT_UiScaled(8.0f);
 	
 	isLockedVisible = false;
 	isScrubbing = false;

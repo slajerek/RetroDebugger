@@ -1,15 +1,34 @@
 name: Linux build
 
+# `devel` is not an afterthought here: under the odd/even convention it is where
+# work LANDS, and `master` only ever receives a merge that devel has already
+# proved. CI that runs on master and not on devel therefore runs after the
+# question has been answered rather than while it is open -- which is how a
+# devel branch can be published green and untested, as v3.21.1 was.
 on:
   push:
-    branches: [ master, main ]
+    branches: [ master, main, devel ]
   pull_request:
-    branches: [ master, main ]
+    branches: [ master, main, devel ]
   workflow_dispatch:
+
+env:
+  # MTENGINE_REF holds a BRANCH by default (`origin/master`), and a branch is
+  # tracked rather than pinned -- CI clones it fresh every run, so it always
+  # matches and this flag is inert. The flag stays because it stops being inert
+  # the moment MTENGINE_REF is set to a SHA to freeze an engine for a release:
+  # then a checkout that does not match the pin must fail the run, not warn.
+  MTENGINE_PIN_STRICT: '1'
 
 jobs:
   build-linux:
     runs-on: ubuntu-latest
+    # Both logging configurations on every push: the "off" leg compiles the
+    # shipping shape (MT_DEBUG_LOGS=0), which used to be discovered at release.
+    strategy:
+      fail-fast: false
+      matrix:
+        logs: ["on", "off"]
 
     steps:
       - name: Checkout RetroDebugger
@@ -21,6 +40,9 @@ jobs:
           sudo apt-get install -y \
             build-essential \
             cmake \
+            nasm \
+            xvfb \
+            libheif-dev \
             git \
             libsdl2-dev \
             libglew-dev \
@@ -36,18 +58,24 @@ jobs:
             libxi-dev \
             libxinerama-dev \
             libwayland-dev \
-            libxkbcommon-dev
-
+            libxkbcommon-dev \
+            libxss-dev
       - name: Build and stage release (no zip; GitHub zips the artifact once)
         id: release
         run: |
           set -euxo pipefail
           chmod +x ./tools/make-release/make-release-linux.sh
-          ./tools/make-release/make-release-linux.sh --no-zip
+          MT_LOGS=${{ matrix.logs }} ./tools/make-release/make-release-linux.sh --no-zip
+
+      - name: mtcaps golden tests
+        run: |
+          # tools/mtcaps is the single point of failure for the whole capability
+          # system, so its own tests run before anything that depends on it.
+          python3 ../MTEngineSDL/tools/mtcaps/tests/test_mtcaps.py
 
       - name: Upload release artifact
         uses: actions/upload-artifact@v7
         with:
-          name: ${{ steps.release.outputs.artifact_name }}
+          name: ${{ steps.release.outputs.artifact_name }}-logs-${{ matrix.logs }}
           path: ${{ steps.release.outputs.release_dir }}
           if-no-files-found: error

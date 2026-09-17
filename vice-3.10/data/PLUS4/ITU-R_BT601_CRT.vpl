@@ -1,0 +1,143 @@
+#
+# VICE Palette file
+#
+# Syntax:
+# Red Green Blue
+#
+# NAME:ITU-R BT601 CRT (PAL)
+# TYPE:TED
+#
+# TED palette based on Wikipedia TED and YCbCr pages
+#
+# YCbCr values taken from https://en.wikipedia.org/wiki/MOS_Technology_TED
+#
+# provided by Mac Reiter, see #471
+
+00 00 00
+1f 1f 1f
+72 00 00
+00 41 4b
+5f 00 6f
+00 4f 00
+1f 09 90
+1f 35 00
+5f 0f 00
+42 22 00
+00 45 00
+79 00 1f
+00 4d 1f
+00 30 6f
+42 00 88
+00 52 00
+00 00 00
+3f 3f 3f
+92 1e 14
+00 61 6a
+7e 10 8f
+00 6f 00
+3f 29 b0
+3f 55 00
+7e 2f 00
+61 42 00
+1d 65 00
+99 12 3f
+00 6d 3f
+00 50 8f
+61 1a a8
+00 72 14
+00 00 00
+5f 5f 5f
+b2 3d 34
+0d 81 8a
+9e 2f af
+20 8f 0f
+5f 49 d0
+5f 75 00
+9e 4e 0f
+81 62 00
+3d 85 00
+b9 32 5f
+06 8d 5f
+20 70 af
+81 39 c7
+0d 92 34
+00 00 00
+7f 7f 7f
+d2 5d 54
+2c a1 aa
+be 4f cf
+40 af 2f
+7f 69 f0
+7f 95 0e
+be 6e 2f
+a1 82 17
+5d a5 17
+d8 51 7f
+26 ad 7f
+40 90 cf
+a1 59 e7
+2c b1 54
+00 00 00
+9f 9f 9f
+f1 7d 74
+4c c1 ca
+de 6f ef
+60 cf 4f
+9f 89 ff
+9f b5 2e
+de 8e 4f
+c1 a2 37
+7d c5 37
+f8 71 9f
+45 cc 9f
+60 b0 ef
+c1 79 ff
+4c d1 74
+00 00 00
+bf bf bf
+ff 9d 94
+6c e0 ea
+fe 8f ff
+80 ee 6f
+bf a9 ff
+bf d5 4e
+fe ae 6f
+e1 c2 56
+9d e4 56
+ff 91 bf
+65 ec bf
+80 cf ff
+e1 99 ff
+6c f1 94
+00 00 00
+df df df
+ff bd b3
+8c ff ff
+ff af ff
+9f ff 8f
+df c9 ff
+df f5 6e
+ff ce 8f
+ff e1 76
+bc ff 76
+ff b1 df
+85 ff df
+9f ef ff
+ff b9 ff
+8c ff b3
+00 00 00
+ff ff ff
+ff dd d3
+ac ff ff
+ff cf ff
+bf ff af
+ff e9 ff
+ff ff 8e
+ff ee af
+ff ff 96
+dc ff 96
+ff d1 ff
+a5 ff ff
+bf ff ff
+ff d9 ff
+ac ff d3

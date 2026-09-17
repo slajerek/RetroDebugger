@@ -15,9 +15,10 @@ void CDebuggerApiC64U::DetachEverything()
 	LOGError("CDebuggerApiC64U::DetachEverything: not supported by C64U backend");
 }
 
-void CDebuggerApiC64U::MakeJmp(int addr)
+bool CDebuggerApiC64U::MakeJmp(int addr)
 {
 	LOGError("CDebuggerApiC64U::MakeJmp: not supported by C64U backend");
+	return false;
 }
 
 json CDebuggerApiC64U::GetCpuStatusJson()

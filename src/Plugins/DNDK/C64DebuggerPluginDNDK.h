@@ -16,6 +16,9 @@ void PLUGIN_DdnkSetVisible(bool isVisible);
 
 class CImageData;
 class CConfigStorageHjson;
+class C64DebuggerPluginDNDK;
+
+extern C64DebuggerPluginDNDK *pluginDDNK;
 
 class C64DebuggerPluginDNDK : public CDebuggerEmulatorPluginNestopia, public CGuiView, CSlrThread,
 CGuiButtonCallback, CGuiViewMenuCallback, CSystemFileDialogCallback, CFeatureConfig
@@ -37,7 +40,5 @@ public:
 	const ImGuiInputTextFlags defaultHexInputFlags = ImGuiInputTextFlags_CharsHexadecimal | ImGuiInputTextFlags_CharsUppercase;
 
 };
-
-extern C64DebuggerPluginDNDK *pluginDDNK;
 
 #endif

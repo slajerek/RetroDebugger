@@ -57,7 +57,7 @@ void CTestViceRewindWhileRunning::Run(ITestCallback *cb)
 
 	// Load the frozen raster-IRQ demo (a stable copy of xparty.prg) and
 	// autostart it, so the rewind path exercises VIC raster IRQ restore.
-	CSlrString *path = new CSlrString("tests/data/rewind-jam-test.prg");
+	CSlrString *path = new CSlrString(CTest::ResolveProjectPath("tests/data/rewind-jam-test.prg").c_str());
 	bool loaded = viewC64->mainMenuHelper->LoadPRG(path, true, false, false, false);
 	delete path;
 	if (!loaded)

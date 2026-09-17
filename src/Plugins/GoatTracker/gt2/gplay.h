@@ -41,6 +41,7 @@ typedef struct
   unsigned char arpnotes[MAX_ARP_COLS+1];  // Active note set for cycling (including base)
   unsigned char arpcount;                   // Number of active notes in arpnotes[]
   unsigned char arppos;                     // Current position in arp cycle
+  unsigned char arpbase;                    // 1 when arpnotes[0] is the base note
 } CHN;
 
 #ifndef GPLAY_C
@@ -61,6 +62,28 @@ void triggerpatternrow(int pattpos);
 void stopsong(void);
 void rewindsong(void);
 void playtestnote(int note, int ins, int chnnum);
+
+/* Last note passed to playtestnote() and the channel it went to; note is 0 if
+   nothing has been auditioned yet. */
+extern int gt2LastPreviewNote;
+extern int gt2LastPreviewChannel;
+
+/* playroutine() refuses to play a song whose current instrument has a
+   gatetimer longer than the tick interval, and stock GT2 stops dead without
+   a word -- play just parks on row 0 in silence. These carry the reason out
+   to the editor, which reports it once and clears the flag. */
+extern volatile int gt2GatetimerStopPending;
+extern volatile int gt2GatetimerStopGatetimer;
+extern volatile int gt2GatetimerStopTick;
+extern volatile int gt2GatetimerStopInstr;
+
+/* Largest gatetimer that guard will accept at the current song tempo. */
+int gt2MaxSafeGatetimer(void);
+
+/* Non-zero makes loadinstrument() skip its stopsong(), so an instrument can be
+   auditioned without cutting the song off. Only the ImGui-side loaders set it;
+   every native GT2 path leaves it at 0. */
+extern int gt2KeepPlayingOnInstrumentLoad;
 void releasenote(int chnnum);
 void mutechannel(int chnnum);
 int isplaying(void);

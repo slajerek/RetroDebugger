@@ -24,6 +24,7 @@
 #include "CViewDataMap.h"
 
 #include "CGuiMain.h"
+#include "MT_UiScale.h"
 
 CViewAbout::CViewAbout(float posX, float posY, float posZ, float sizeX, float sizeY)
 : CGuiView(posX, posY, posZ, sizeX, sizeY)
@@ -31,7 +32,7 @@ CViewAbout::CViewAbout(float posX, float posY, float posZ, float sizeX, float si
 	this->name = "CViewAbout";
 	
 	font = viewC64->fontDefaultCBMShifted;
-	fontScale = 1.5;
+	fontScale = MT_UiScaled(1.5f);
 	fontHeight = font->GetCharHeight('@', fontScale) + 2;
 	
 	strHeader = new CSlrString("About Retro Debugger");
@@ -93,7 +94,7 @@ void CViewAbout::RenderC64ViceLicense()
 	float px = scrx + gap;
 	float py = scry + gap;
 	
-	fontScale = 3.0f;
+	fontScale = MT_UiScaled(3.0f);
 	fontHeight = font->GetCharHeight('@', fontScale) + 1;
 
 	float htr = viewC64->colorsTheme->colorTextHeaderR;
@@ -114,7 +115,7 @@ void CViewAbout::RenderC64ViceLicense()
 	//// TODO: this is a quick way to have it immediately implemented
 	//// this needs of course to be changed into some more meaningful
 	
-	fontScale = 2.0f;
+	fontScale = MT_UiScaled(2.0f);
 	fontHeight = font->GetCharHeight('@', fontScale) + 1;
 
 	font->BlitTextColor("C64 Debugger is (C) Marcin Skoczylas, aka Slajerek/Samar", px, py, posZ, fontScale, tr, tg, tb, 1); py += fontHeight;
@@ -122,7 +123,7 @@ void CViewAbout::RenderC64ViceLicense()
 	
 	py += fontHeight;
 	
-	fontScale = 1.45f;
+	fontScale = MT_UiScaled(1.45f);
 	fontHeight = font->GetCharHeight('@', fontScale) + 1;
 	
 	font->BlitTextColor("VICE, the Versatile Commodore Emulator", px, py, posZ, fontScale, tr, tg, tb, 1); py += fontHeight;
@@ -159,12 +160,12 @@ void CViewAbout::RenderC64ViceLicense()
 //	font->BlitTextColor("", px, py, posZ, fontScale, tr, tg, tb, 1);
 	py += fontHeight;
 
-	fontScale = 0.8f;
+	fontScale = MT_UiScaled(0.8f);
 	font->BlitTextColor("The ROM files embedded in the source code are Copyright C by Commodore Business Machines.", px, py, posZ, fontScale, tr, tg, tb, 1); py += fontHeight;
 
 	
 	
-	fontScale = 0.8f;
+	fontScale = MT_UiScaled(0.8f);
 	fontHeight = font->GetCharHeight('@', fontScale) + 1;
 
 	font->BlitTextColor("This program is free software; you can redistribute it and/or", px, py, posZ, fontScale, tr, tg, tb, 1); py += fontHeight;
@@ -223,7 +224,7 @@ void CViewAbout::RenderAtari800License()
 	float px = scrx + gap;
 	float py = scry + gap;
 	
-	fontScale = 3.0f;
+	fontScale = MT_UiScaled(3.0f);
 	fontHeight = font->GetCharHeight('@', fontScale) + 1;
 	
 	float htr = viewC64->colorsTheme->colorTextHeaderR;
@@ -244,7 +245,7 @@ void CViewAbout::RenderAtari800License()
 	//// TODO: this is a quick way to have it immediately implemented
 	//// this needs of course to be changed into some more meaningful
 	
-	fontScale = 2.0f;
+	fontScale = MT_UiScaled(2.0f);
 	fontHeight = font->GetCharHeight('@', fontScale) + 1;
 	
 	font->BlitTextColor("65XE Debugger is (C) Marcin Skoczylas, aka Slajerek/Samar", px, py, posZ, fontScale, tr, tg, tb, 1); py += fontHeight;
@@ -252,7 +253,7 @@ void CViewAbout::RenderAtari800License()
 	
 	py += fontHeight;
 	
-	fontScale = 1.45f;
+	fontScale = MT_UiScaled(1.45f);
 	fontHeight = font->GetCharHeight('@', fontScale) + 1;
 
 	// TODO: SCROLL ME + ADD ALL CREDITS All contributors
@@ -276,7 +277,7 @@ void CViewAbout::RenderAtari800License()
 	//	font->BlitTextColor("", px, py, posZ, fontScale, tr, tg, tb, 1);
 	py += fontHeight;
 	
-	fontScale = 0.8f;
+	fontScale = MT_UiScaled(0.8f);
 //	font->BlitTextColor("The ROM files embedded in the source code are Copyright C by Atari.", px, py, posZ, fontScale, tr, tg, tb, 1); py += fontHeight;
 	
 	fontHeight = font->GetCharHeight('@', fontScale) + 1;

@@ -81,6 +81,22 @@ extern int c64SettingsEmulationMaximumSpeed;
 extern bool c64SettingsFastBootKernalPatch;
 
 extern bool c64SettingsReuEnabled;
+
+// IDE64 (restored in the POSTLAUNCH block -- see C64SettingsStorage.cpp)
+extern CSlrString *c64SettingsIDE64RomPath;
+extern CSlrString *c64SettingsIDE64Image[4];
+extern int c64SettingsIDE64Version;				// 0=V3, 1=V4.1, 2=V4.2
+extern bool c64SettingsIDE64UsbServerEnabled;
+extern CSlrString *c64SettingsIDE64UsbServerAddress;
+extern bool c64SettingsIDE64RtcSave;
+extern bool c64SettingsIDE64AutodetectSize[4];
+
+// set from the command-line scan; suppress applying the stored value
+extern bool c64SettingsIDE64CliOverrideUsbServer;
+extern bool c64SettingsIDE64CliOverrideUsbAddress;
+extern bool c64SettingsIDE64CliOverrideVersion;
+extern bool c64SettingsIDE64CliOverrideImage[4];
+extern bool c64SettingsIDE64CliOverrideRom;
 extern int c64SettingsReuSize;
 
 extern uint8 c64SettingsSIDEngineModel;

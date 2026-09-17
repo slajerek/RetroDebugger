@@ -1,0 +1,217 @@
+Prerequisites:
+--------------
+
+- update NEWS
+
+to get a list of all changes since last release you can use svn log like this:
+
+$ svn log -r <rev of last release>:<current rev> > log.txt
+
+you can look up the revision of the last release in the tags directory in the
+repo: https://sourceforge.net/p/vice-emu/code/HEAD/tree/tags/
+
+- update the html pages in doc/html
+  - use the checklinks.sh script to check all links.
+  - index.html ("news" update release date and new major.minor, "Download VICE"
+    update new major.minor)
+  - macosx.html (duplicate top paragraph and update for new major.minor)
+  - windows.html (duplicate "Binary distributions" top paragraph and update for
+    new major.minor)
+
+$ cd doc/html
+$ ./checklinks.sh
+$ cd ../..
+
+- update vice.texi. use checkdoc.mak to find missing resources and options in
+  the documentation.
+
+$ make
+$ cd doc
+$ make -f checkdoc.mak full
+$ cd ..
+
+  (this only works for in-tree builds and with --enable-x64)
+
+- make sure the list of team members is correct (vice.texi, infocontrib.sed)
+  vice.texi contains the author list twice, once under "@c
+  ---vice-core-team---", and once under "@node Copyright"
+
+Everything up to this point can be prepared in advance. The following should be
+done in one go when creating the actual release.
+
+$ svn commit -m "preparing release - no more committing until after the release is done!"
+
+- ANNOUNCE A CODE FREEZE ;)
+
+- make sure the version in configure.ac is updated:
+
+    m4_define(vice_version_major, 3)
+    m4_define(vice_version_minor, 8)
+    m4_define(vice_version_build, 0)
+
+  These three defines are all that is needed for a version number, the absence
+  or presence of an SVN revision determines if a release is a point release or
+  a development release.
+  We do not use odd/even MINOR/BUILD numbering for development/stable releases.
+
+  The BUILD number is bumped by one on each point release, except when we do
+  our "traditional" Christmas release, then we bump MINOR and reset BUILD to 0.
+
+  For massive changes we can decide to bump MAJOR and set MINOR and BUILD to 0,
+  for example when merging the 'vice-4' branch somewhere in the future.
+
+- run src/buildtools/updatereadme.sh to update README with the current year.
+- run ./src/buildtools/genvicedate_h.sh to update vicedate.h with the current
+  year.
+- make sure to 'touch' vice.texi so that the current year will be put into all
+  needed files.
+- after changing any of the above, make sure to run "make" so the changes will
+  propagate to various files, and then commit the changed files.
+
+$ touch doc/vice.texi
+$ ./src/buildtools/updatereadme.sh
+$ ./src/buildtools/genvicedate_h.sh
+$ make all
+
+This will update the user-visible version in the binary/docs (README, index.html
+etc), so it should happen only immediately before the release.
+
+
+Make sure everything is fine, and commit the release
+
+$ svn commit -m "this is the 3.8.0 release - merry xmas"
+
+
+while at it, also check the following:
+
+- are the "banners" on various sourceforge pages (tickets) still up to date?
+- are the "readmes" in the files areas still up to date?
+
+
+****************************************
+ Tarball verification using Github
+****************************************
+
+  The file in .github/workflows/check-make-dist.yml contains a worflow to check
+  if `make dist` works for all UIs, with `make dist` being run configured for
+  each UI and then a Linux `configure && make && make install` being run for
+  each UI for the generated tarballs, so currently nine combinations of
+  `make dist` and `make [install]`.
+
+  To trigger this workflow go to:
+  https://github.com/VICE-Team/svn-mirror/actions/workflows/check-make-dist.yml
+  Click on the "Run workflow" dropdown and click on the "Run workflow" button.
+
+  The process usually takes about 7 minutes to finish if successful. If not
+  successful check the logs and fix missing files in Makefile.am files.
+
+****************************************
+ Tarball and Windows Builds - Automated
+****************************************
+
+  The file in .github/workflows/make-release.yml implements a release process that
+  will create the dist tarball and then windows builds from that tarball. To trigger it,
+  push a git tag like v3.8.0 to our github mirror. This will create a release on Github
+  which can be seen at https://github.com/VICE-Team/svn-mirror/releases. The build
+  process can be observed at https://github.com/VICE-Team/svn-mirror/actions.
+
+  Please note that the 'clean' git branch is a direct sync from our svn repo. The 'main'
+  branch adds in the Readme.md file that is displayed on Github but not present in the
+  svn repo.
+
+  Before triggering the build, you might want to make sure that the most recent SVN commit
+  has a nice commit message about the release, as this will appear in certain places in
+  Github. Make sure that the commit has synchronised over to Github before you trigger the
+  build process.
+
+  $ RELEASE=3.8.0
+
+  $ git clone --branch clean --depth 1 git@github.com:VICE-Team/svn-mirror.git
+     or if that doesnt work because github doesnt have your ssh key:
+  $ git clone --branch clean --depth 1 https://github.com/VICE-Team/svn-mirror.git
+
+  $ cd svn-mirror
+
+  $ git tag $RELEASE
+  $ git push origin $RELEASE
+
+  Pushing the tag triggers the release build, and creates a 'release' on Github called 3.8.0.
+  Annoyingly, this release will automatically include a zip and tgz of the source for that
+  commit, without any way to prevent it.
+
+  OOOOPS! now something doesnt work as intended - for example the release creation
+  itself fails for some reason. Now you can revert the tag like this:
+
+  $ git tag -d $RELEASE
+  $ git push --delete origin $RELEASE
+
+  Now fix your stuff, commit to svn, and if you are ready push the tag again:
+
+  $ git pull
+  $ git tag $RELEASE
+  $ git push origin $RELEASE
+
+*************************************
+ Tarball and Windows Builds - Manual
+*************************************
+
+  generate tarball:
+  -----------------
+
+  (make sure dos2unix is installed)
+
+  first update and clean your source tree
+
+  $ svn up
+  $ make distclean
+
+  now configure the source tree with sid engines included. this is
+  needed because make dist propagates through the source tree, and if resid is
+  not configured it will not have any makefiles to get 'make dist'ed
+
+  $ ./autogen.sh
+  $ ./configure --with-resid
+  $ make dist
+
+  now unpack into a separate directory and test if compiling works. fix makefiles
+  in case files are missing and build the tarball again.
+
+  generate windows binaries:
+  --------------------------
+
+  in msys2 configure the source as described above, then do
+
+  $ make bindistzip
+
+*************************************
+
+create a tagged branch on the svn
+---------------------------------
+
+  $ svn cp <url of svn trunk> <url of svn tag>
+
+  e.g.
+
+  $ svn cp --username=gpz -r <revision of release> svn+ssh://gpz@svn.code.sf.net/p/vice-emu/code/trunk/ svn+ssh://gpz@svn.code.sf.net/p/vice-emu/code/tags/v3.4/
+
+
+publish the release
+-------------------
+
+- upload changes to the website on sf (don't forget the html documentation)
+
+- upload the tarball to sf
+
+- in the file list (downloads) on sf, click on the (I) symbol on the right of
+  the new file(s) and then set it to the respective platform to change the
+  default downloads
+
+- on the tracker update the milestones
+
+    admin->admin->bugs->field management->new milestone (save)
+
+- announce the release on the ml (and eventually elsewhere)
+
+- update the TODO wiki page (remove old crossed out things)
+
+- PROFIT!!!

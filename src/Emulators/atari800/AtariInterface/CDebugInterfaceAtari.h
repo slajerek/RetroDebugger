@@ -83,7 +83,10 @@ public:
 	virtual bool AttachTape(char *fullFilePath, bool readOnly);
 	
 	virtual void DetachEverything();
+	// detaches the disk from the default drive (D1:)
 	virtual void DetachDriveDisk();
+	// detaches the disk from the given drive (1..8, D1: .. D8:). Does not reset the machine.
+	virtual void DetachDriveDisk(int driveNumber);
 	virtual void DetachCartridge();
 
 	//

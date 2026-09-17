@@ -18,7 +18,7 @@ public:
 
 	// Base class calls SYS_FatalExit — override as no-op
 	virtual void DetachEverything() override;
-	virtual void MakeJmp(int addr) override;
+	virtual bool MakeJmp(int addr) override;
 
 	// Return meaningful status even when C64U is not connected
 	virtual nlohmann::json GetCpuStatusJson() override;

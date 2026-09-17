@@ -1,0 +1,24 @@
+# The MTEngineSDL revision this repository is built against.
+#
+# One non-comment line: a branch name, a full SHA, or a tag.
+#
+# `origin/master` -- the default -- means TRACK the engine's head. These apps are
+# developed against the newest engine and adapt to it, so there is nothing to
+# adopt in a separate commit and nothing to forget. Forgetting was the real cost
+# of a SHA: CI clones what this file says, so a stale line ships a release binary
+# built from a stale engine -- green, silent -- while every local build used head.
+#
+# A full SHA or a tag FREEZES the engine instead, which is what to put here when
+# cutting a release that has to stay reproducible. The scripts treat the two
+# differently:
+#
+#   branch   a checkout that is BEHIND prints a note. Never fatal: being ahead,
+#            diverged or dirty is ordinary engine work.
+#   SHA/tag  a mismatched checkout warns, and MTENGINE_PIN_STRICT=1 (which the
+#            workflows set) makes it a hard error.
+#
+# Read by build-linux.sh, build-macos.sh, build-windows.ps1 and the workflows.
+# On a FRESH clone the scripts check this revision out -- a branch ref stays on
+# the branch, only a SHA or tag detaches. An EXISTING checkout is never moved: a
+# build must not discard a developer's engine work in progress.
+origin/devel

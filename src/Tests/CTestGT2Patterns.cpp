@@ -16,15 +16,19 @@
 #include "CViewGT2Toolbar.h"
 #include "CPianoKeyboardGT2.h"
 #include "CViewC64GoatTracker.h"
+#include "CGuiEvent.h"   // the queue is deleted here; the type must be complete
 #include "GT2RenderHelper.h"
+#include "GT2ViewCommon.h"
+#include "CAudioChannelGoatTracker.h"
 #include "CByteBuffer.h"
 #include "C64SettingsStorage.h"
 #include "SYS_Funct.h"
 #include "SYS_KeyCodes.h"
-#include <SDL.h>
+#include <SDL3/SDL.h>
 #include <cstring>
 #include <cstdio>
 #include <vector>
+#include <string>
 
 // GT2 globals — only resolved when GoatTracker plugin is linked and initialized
 extern "C" {
@@ -39,7 +43,15 @@ extern "C" {
 #include "ginstrops.h"
 #include "goattrk2.h"
 	extern char *notename[];
+	// The bridge gtmain() uses to locate goattrk2.cfg (see the step that
+	// checks it, near the end of this test).
+	extern void gt2GetConfigFilePath(char *outPath, int maxLen);
 	extern unsigned char *chardata;
+	// gconsole.c defines this with C linkage. It used to be declared with a bare
+	// `extern` at BLOCK scope down in Test 6, which gives it C++ linkage and fails
+	// the link with `undefined symbol: unsigned int *scrbuffer` -- the mangled name.
+	// Every sibling CTestGT2*.cpp declares it here instead; this file did not.
+	extern unsigned *scrbuffer;
 	extern unsigned char pattern[208][128*4+4];  // MAX_PATT=208, MAX_PATTROWS=128
 	extern int pattlen[208];                      // MAX_PATT=208
 	extern int epnum[3];                          // MAX_CHN=3
@@ -520,7 +532,7 @@ void CTestGT2Patterns::Run(ITestCallback *cb)
 
 	// --- Test 2: Renoise shifted backquote can arrive as '~' ---
 	// Some input paths deliver Shift+Backquote as the shifted printable ASCII
-	// character instead of SDLK_BACKQUOTE. Renoise edit-step decrement must
+	// character instead of SDLK_GRAVE. Renoise edit-step decrement must
 	// still work for that route.
 	step++;
 	if (pluginGoatTracker != NULL && pluginGoatTracker->viewPatterns != NULL)
@@ -800,7 +812,7 @@ void CTestGT2Patterns::Run(ITestCallback *cb)
 		epchn = 1;
 		eppos = 6;
 		view->eparpcol = -1;
-		bool shortcutPastesWithoutActiveSelection = view->HandlePatternSelectionShortcut(SDLK_v, true);
+		bool shortcutPastesWithoutActiveSelection = view->HandlePatternSelectionShortcut(SDLK_V, true);
 		bool shortcutPastedAtCursor = pattern[1][6*4] == FIRSTNOTE + 1
 			&& pattern[1][6*4+1] == 0x23
 			&& pattern[1][6*4+2] == 0x04
@@ -831,11 +843,11 @@ void CTestGT2Patterns::Run(ITestCallback *cb)
 		keypreset = 0; // platform clipboard shortcuts are not Renoise-layout-only
 		view->BeginMousePatternSelection(srcMain, 2);
 		view->UpdateMousePatternSelection(srcArp, 2);
-		bool ctrlCopied = view->KeyDown(SDLK_c, false, false, true, false);
+		bool ctrlCopied = view->KeyDown(SDLK_C, false, false, true, false);
 		epchn = 1;
 		eppos = 9;
 		view->eparpcol = -1;
-		bool ctrlPasted = view->KeyDown(SDLK_v, false, false, true, false);
+		bool ctrlPasted = view->KeyDown(SDLK_V, false, false, true, false);
 		bool ctrlPastedAtCursor = pattern[1][9*4] == FIRSTNOTE + 1
 			&& pattern[1][9*4+1] == 0x23
 			&& pattern[1][9*4+2] == 0x04
@@ -843,7 +855,7 @@ void CTestGT2Patterns::Run(ITestCallback *cb)
 			&& arpdata[1][1][9][0] == FIRSTNOTE + 5;
 		view->BeginMousePatternSelection(srcMain, 2);
 		view->UpdateMousePatternSelection(srcArp, 2);
-		bool cmdCut = view->KeyDown(SDLK_x, false, false, false, true);
+		bool cmdCut = view->KeyDown(SDLK_X, false, false, false, true);
 		bool cmdCutClearedSource = pattern[0][2*4] == REST
 			&& pattern[0][2*4+1] == 0
 			&& pattern[0][2*4+2] == 0
@@ -852,7 +864,7 @@ void CTestGT2Patterns::Run(ITestCallback *cb)
 		epchn = 1;
 		eppos = 10;
 		view->eparpcol = -1;
-		bool cmdPastedCut = view->KeyDown(SDLK_v, false, false, false, true);
+		bool cmdPastedCut = view->KeyDown(SDLK_V, false, false, false, true);
 		bool cmdPastedCutAtCursor = pattern[1][10*4] == FIRSTNOTE + 1
 			&& pattern[1][10*4+1] == 0x23
 			&& pattern[1][10*4+2] == 0x04
@@ -867,11 +879,11 @@ void CTestGT2Patterns::Run(ITestCallback *cb)
 		epchn = 0;
 		eppos = 2;
 		view->eparpcol = -1;
-		bool ctrlCopiedCursor = view->KeyDown(SDLK_c, false, false, true, false);
+		bool ctrlCopiedCursor = view->KeyDown(SDLK_C, false, false, true, false);
 		epchn = 1;
 		eppos = 11;
 		view->eparpcol = -1;
-		bool ctrlPastedCursor = view->KeyDown(SDLK_v, false, false, true, false);
+		bool ctrlPastedCursor = view->KeyDown(SDLK_V, false, false, true, false);
 		bool ctrlPastedSingleTrackAtCursor = pattern[1][11*4] == FIRSTNOTE + 1
 			&& pattern[1][11*4+1] == 0x23
 			&& pattern[1][11*4+2] == 0x04
@@ -883,7 +895,7 @@ void CTestGT2Patterns::Run(ITestCallback *cb)
 		bool transposed = view->TransposePatternSelection(12);
 		bool transposedMain = pattern[0][2*4] == FIRSTNOTE + 13;
 		bool transposedArp = arpdata[0][0][2][0] == FIRSTNOTE + 17;
-		bool shortcutCopies = view->HandlePatternSelectionShortcut(SDLK_c, true);
+		bool shortcutCopies = view->HandlePatternSelectionShortcut(SDLK_C, true);
 		bool cut = view->CutPatternSelection();
 		bool cutMain = pattern[0][2*4] == REST
 			&& pattern[0][2*4+1] == 0
@@ -1164,17 +1176,17 @@ void CTestGT2Patterns::Run(ITestCallback *cb)
 		arpdata[1][1][6][0] = originalArp1Row6;
 		bool pastedForShortcut = view->PastePatternClipboardAt(dstMain, 6);
 		keypreset = 0;
-		bool defaultLayoutConsumed = pluginGoatTracker->renoiseInput->HandleKey(SDLK_z, false, false, true, false);
+		bool defaultLayoutConsumed = pluginGoatTracker->renoiseInput->HandleKey(SDLK_Z, false, false, true, false);
 		bool defaultLayoutDidNotUndo = pattern[1][6*4] == FIRSTNOTE + 1
 			&& arpdata[1][1][6][0] == FIRSTNOTE + 5;
 		keypreset = 4; // KEY_RENOISE
-		bool renoiseUndoConsumed = view->KeyDown(SDLK_z, false, false, true, false);
+		bool renoiseUndoConsumed = view->KeyDown(SDLK_Z, false, false, true, false);
 		bool renoiseUndoRestored = memcmp(&pattern[1][6*4], originalPattern1Row6, 4) == 0
 			&& arpdata[1][1][6][0] == originalArp1Row6;
-		bool renoiseRedoConsumed = view->KeyDown(SDLK_y, false, false, true, false);
+		bool renoiseRedoConsumed = view->KeyDown(SDLK_Y, false, false, true, false);
 		bool renoiseRedoRestored = pattern[1][6*4] == FIRSTNOTE + 1
 			&& arpdata[1][1][6][0] == FIRSTNOTE + 5;
-		bool renoiseSuperUndoConsumed = view->KeyDown(SDLK_z, false, false, false, true);
+		bool renoiseSuperUndoConsumed = view->KeyDown(SDLK_Z, false, false, false, true);
 		bool renoiseSuperUndoRestored = memcmp(&pattern[1][6*4], originalPattern1Row6, 4) == 0
 			&& arpdata[1][1][6][0] == originalArp1Row6;
 		view->ClearPatternUndoHistory();
@@ -1185,7 +1197,7 @@ void CTestGT2Patterns::Run(ITestCallback *cb)
 		epcolumn = 0;
 		arpdata[0][0][4][0] = 0;
 		view->eparpcol = 0;
-		bool defaultViewCtrlZReturned = view->KeyDown(SDLK_z, false, false, true, false);
+		bool defaultViewCtrlZReturned = view->KeyDown(SDLK_Z, false, false, true, false);
 		// Global undo: Ctrl+Z is consumed as the undo shortcut in every GT2
 		// view and keyboard preset. With an empty history it is a no-op — no
 		// arp edit, no cursor change, nothing to undo.
@@ -1196,8 +1208,8 @@ void CTestGT2Patterns::Run(ITestCallback *cb)
 		view->ClearPatternUndoHistory();
 		keypreset = 4; // KEY_RENOISE
 		view->eparpcol = -1;
-		bool renoiseEmptyUndoConsumed = view->KeyDown(SDLK_z, false, false, true, false);
-		bool renoiseEmptyRedoConsumed = view->KeyDown(SDLK_y, false, false, true, false);
+		bool renoiseEmptyUndoConsumed = view->KeyDown(SDLK_Z, false, false, true, false);
+		bool renoiseEmptyRedoConsumed = view->KeyDown(SDLK_Y, false, false, true, false);
 		bool renoiseEmptyHistoryStillEmpty = !view->CanUndoPatternEdit() && !view->CanRedoPatternEdit();
 		view->ClearPatternUndoHistory();
 		pattern[0][8*4+1] = 0;
@@ -1396,10 +1408,10 @@ void CTestGT2Patterns::Run(ITestCallback *cb)
 		hexnybble = 5;
 		docommand();
 		bool tableEdited = ltable[WTBL][4] == 0x50 && rtable[WTBL][4] == 0x12;
-		bool shortcutUndo = pluginGoatTracker->viewTables->KeyDown(SDLK_z, false, false, true, false);
+		bool shortcutUndo = pluginGoatTracker->viewTables->KeyDown(SDLK_Z, false, false, true, false);
 		bool shortcutUndoRestored = ltable[WTBL][4] == 0x00 && rtable[WTBL][4] == 0x12
 			&& etnum == WTBL && etpos == 4 && etcolumn == 0;
-		bool shortcutRedo = pluginGoatTracker->viewTables->KeyDown(SDLK_y, false, false, true, false);
+		bool shortcutRedo = pluginGoatTracker->viewTables->KeyDown(SDLK_Y, false, false, true, false);
 		bool shortcutRedoRestored = ltable[WTBL][4] == 0x50 && rtable[WTBL][4] == 0x12;
 		bool toolbarUndo = pluginGoatTracker->viewToolbar->TriggerUndo();
 		bool toolbarUndoRestored = ltable[WTBL][4] == 0x00 && rtable[WTBL][4] == 0x12;
@@ -1444,7 +1456,14 @@ void CTestGT2Patterns::Run(ITestCallback *cb)
 		return;
 	}
 
-	// --- Test 8: Pattern/table undo histories invalidate overlapping snapshots ---
+	// --- Test 8: pattern and table edits share ONE undo timeline ---
+	// They rewrite overlapping blocks -- pattern[][] carries table pointers,
+	// and a table insert renumbers them -- which is why they cannot live on
+	// two stacks: the stale one would restore a snapshot that no longer agreed
+	// with the pool. The editor used to solve that by having each kind of edit
+	// wipe the other's history. It no longer does; there is one stack, so an
+	// edit of either kind leaves the earlier ones reachable and undo walks
+	// back through them in the order they were made.
 	step++;
 	if (pluginGoatTracker != NULL && pluginGoatTracker->viewPatterns != NULL
 		&& pluginGoatTracker->viewTables != NULL)
@@ -1483,9 +1502,15 @@ void CTestGT2Patterns::Run(ITestCallback *cb)
 		patternsView->BeginPatternUndoStep();
 		pattern[0][12*4+3] = 0x21;
 		bool patternCommitAfterTableEdit = patternsView->CommitPatternUndoStep();
-		bool patternEditClearedTableHistory = !tablesView->CanUndoTableEdit()
-			&& !tablesView->UndoTableEdit()
-			&& pattern[0][12*4+3] == 0x21;
+		// One timeline: undo takes back the pattern edit first, then the table
+		// edit that came before it. Neither wipes the other.
+		bool patternEditKeptTableHistory = patternsView->CanUndoPatternEdit()
+			&& patternsView->UndoPatternEdit()
+			&& pattern[0][12*4+3] == 0x20
+			&& ltable[WTBL][12] == 0x11
+			&& tablesView->CanUndoTableEdit()
+			&& tablesView->UndoTableEdit()
+			&& ltable[WTBL][12] == 0x10;
 
 		patternsView->ClearPatternUndoHistory();
 		tablesView->ClearTableUndoHistory();
@@ -1494,6 +1519,7 @@ void CTestGT2Patterns::Run(ITestCallback *cb)
 		ginstr[1].ptr[WTBL] = 5;
 		ltable[WTBL][4] = 0xaa;
 		rtable[WTBL][4] = 0xbb;
+		pattern[0][15*4] = REST;   // a known starting value, so undo can be checked exactly
 		patternsView->BeginPatternUndoStep();
 		pattern[0][15*4] = FIRSTNOTE + 1;
 		bool patternCommitBeforeTableEdit = patternsView->CommitPatternUndoStep();
@@ -1509,9 +1535,14 @@ void CTestGT2Patterns::Run(ITestCallback *cb)
 		bool tableRedoRestoredRenumberedState = tablesView->RedoTableEdit()
 			&& pattern[0][14*4+3] == 0x06
 			&& ginstr[1].ptr[WTBL] == 6;
-		bool tableEditClearedPatternHistory = !patternsView->CanUndoPatternEdit()
-			&& !patternsView->UndoPatternEdit()
-			&& pattern[0][15*4] == FIRSTNOTE + 1;
+		// And the same the other way round: the pattern edit made before the
+		// table insert is still reachable underneath it.
+		bool tableEditKeptPatternHistory = patternsView->CanUndoPatternEdit()
+			&& patternsView->UndoPatternEdit()
+			&& pattern[0][14*4+3] == 0x05
+			&& patternsView->CanUndoPatternEdit()
+			&& patternsView->UndoPatternEdit()
+			&& pattern[0][15*4] == REST;
 
 		memcpy(&pattern[0][0], savedPattern.data(), sizeof(pattern));
 		memcpy(&ltable[0][0], savedLeftTable.data(), sizeof(ltable));
@@ -1535,22 +1566,22 @@ void CTestGT2Patterns::Run(ITestCallback *cb)
 		tablesView->ClearTableUndoHistory();
 
 		bool ok = tableCommitBeforePatternEdit && tableHistoryBeforePatternEdit
-			&& patternCommitAfterTableEdit && patternEditClearedTableHistory
+			&& patternCommitAfterTableEdit && patternEditKeptTableHistory
 			&& patternCommitBeforeTableEdit && patternHistoryBeforeTableEdit
 			&& tableCommitAfterPatternEdit && insertRenumberedPattern && insertRenumberedInstrument
 			&& tableUndoRestoredRenumberedState && tableRedoRestoredRenumberedState
-			&& tableEditClearedPatternHistory;
+			&& tableEditKeptPatternHistory;
 		if (!ok)
 		{
 			snprintf(msg, sizeof(msg),
-				"GT2 undo history invalidation failed: patternClearedTable=%d tableClearedPattern=%d insertUndo=%d",
-				(int)patternEditClearedTableHistory,
-				(int)tableEditClearedPatternHistory,
+				"GT2 shared undo timeline failed: patternKeptTable=%d tableKeptPattern=%d insertUndo=%d",
+				(int)patternEditKeptTableHistory,
+				(int)tableEditKeptPatternHistory,
 				(int)(insertRenumberedPattern && insertRenumberedInstrument && tableUndoRestoredRenumberedState && tableRedoRestoredRenumberedState));
 			allPassed = false;
 		}
 		StepCompleted(step, ok, ok
-			? "Pattern/table undo histories invalidate overlapping snapshots"
+			? "Pattern and table edits share one undo timeline"
 			: msg);
 	}
 	else
@@ -1564,7 +1595,11 @@ void CTestGT2Patterns::Run(ITestCallback *cb)
 		return;
 	}
 
-	// --- Test 9: Loading an instrument clears stale table undo history ---
+	// --- Test 9: Loading an instrument is an undoable table step ---
+	// It used to throw the whole history away. It no longer does: gsong.c
+	// loadinstrument() wraps itself in gt2Begin/CommitTableUndoStep(), and a
+	// table undo snapshot already covers every block the load can touch
+	// (ginstr, ltable, rtable, pattern).
 	step++;
 	if (pluginGoatTracker != NULL && pluginGoatTracker->viewTables != NULL)
 	{
@@ -1599,12 +1634,31 @@ void CTestGT2Patterns::Run(ITestCallback *cb)
 		tablesView->BeginTableUndoStep();
 		ltable[WTBL][20] = 0x33;
 		bool tableHistoryCreated = tablesView->CommitTableUndoStep() && tablesView->CanUndoTableEdit();
+
+		// State right before the load, so undo can be checked byte for byte.
+		std::vector<unsigned char> preLoadLeftTable(&ltable[0][0], &ltable[0][0] + sizeof(ltable));
+		std::vector<unsigned char> preLoadRightTable(&rtable[0][0], &rtable[0][0] + sizeof(rtable));
+		const unsigned char *preLoadInstrBegin = reinterpret_cast<const unsigned char *>(&ginstr[0]);
+		std::vector<unsigned char> preLoadInstruments(preLoadInstrBegin, preLoadInstrBegin + sizeof(ginstr));
+
 		einum = 1;
 		strcpy(instrfilename, testInstrumentPath);
 		loadinstrument();
 		bool instrumentLoaded = ginstr[1].ad == 0x12 && ginstr[1].sr == 0x34 && ginstr[1].vibdelay == 0x56;
-		bool instrumentLoadClearedTableHistory = !tablesView->CanUndoTableEdit()
-			&& !tablesView->UndoTableEdit();
+
+		// The load pushed a step of its own on top of the table edit.
+		bool loadIsUndoable = tablesView->CanUndoTableEdit();
+		bool loadUndone = loadIsUndoable && tablesView->UndoTableEdit();
+		bool loadUndoRestoredState = loadUndone
+			&& memcmp(&ltable[0][0], preLoadLeftTable.data(), sizeof(ltable)) == 0
+			&& memcmp(&rtable[0][0], preLoadRightTable.data(), sizeof(rtable)) == 0
+			&& memcmp(&ginstr[0], preLoadInstruments.data(), sizeof(ginstr)) == 0;
+
+		// The table edit made before the load survived it -- the old code
+		// wiped the history here, which is exactly what this now guards.
+		bool priorHistorySurvived = tablesView->CanUndoTableEdit()
+			&& tablesView->UndoTableEdit()
+			&& ltable[WTBL][20] == 0x22;
 
 		memcpy(&ltable[0][0], savedLeftTable.data(), sizeof(ltable));
 		memcpy(&rtable[0][0], savedRightTable.data(), sizeof(rtable));
@@ -1614,19 +1668,22 @@ void CTestGT2Patterns::Run(ITestCallback *cb)
 		tablesView->ClearTableUndoHistory();
 		remove(testInstrumentPath);
 
-		bool ok = instrumentFileWritten && tableHistoryCreated && instrumentLoaded && instrumentLoadClearedTableHistory;
+		bool ok = instrumentFileWritten && tableHistoryCreated && instrumentLoaded
+			&& loadIsUndoable && loadUndoRestoredState && priorHistorySurvived;
 		if (!ok)
 		{
 			snprintf(msg, sizeof(msg),
-				"Instrument load undo invalidation failed: wrote=%d history=%d loaded=%d cleared=%d",
+				"Instrument load undo failed: wrote=%d history=%d loaded=%d undoable=%d restored=%d priorKept=%d",
 				(int)instrumentFileWritten,
 				(int)tableHistoryCreated,
 				(int)instrumentLoaded,
-				(int)instrumentLoadClearedTableHistory);
+				(int)loadIsUndoable,
+				(int)loadUndoRestoredState,
+				(int)priorHistorySurvived);
 			allPassed = false;
 		}
 		StepCompleted(step, ok, ok
-			? "Loading an instrument clears stale table undo history"
+			? "Loading an instrument is undoable and keeps the earlier table history"
 			: msg);
 	}
 	else
@@ -1640,7 +1697,10 @@ void CTestGT2Patterns::Run(ITestCallback *cb)
 		return;
 	}
 
-	// --- Test 10: Manual instrument edits clear stale table undo history ---
+	// --- Test 10: Manual instrument edits are undoable table steps ---
+	// goattrk2.c docommand() records EDIT_INSTRUMENT commands on the table
+	// undo stack instead of invalidating it; the snapshot already covers the
+	// four blocks the old code memcmp'd to decide whether to clear.
 	step++;
 	if (pluginGoatTracker != NULL && pluginGoatTracker->viewTables != NULL)
 	{
@@ -1674,9 +1734,13 @@ void CTestGT2Patterns::Run(ITestCallback *cb)
 		hexnybble = 4;
 		docommand();
 		bool instrumentEdited = ginstr[1].ad == 0x42;
-		bool manualInstrumentEditClearedTableHistory = !tablesView->CanUndoTableEdit()
-			&& !tablesView->UndoTableEdit()
-			&& ginstr[1].ad == 0x42;
+
+		bool editIsUndoable = tablesView->CanUndoTableEdit();
+		bool editUndone = editIsUndoable && tablesView->UndoTableEdit() && ginstr[1].ad == 0x12;
+		// And the table edit made before it is still there underneath.
+		bool priorHistorySurvived = tablesView->CanUndoTableEdit()
+			&& tablesView->UndoTableEdit()
+			&& ltable[WTBL][21] == 0x44;
 
 		memcpy(&ltable[0][0], savedLeftTable.data(), sizeof(ltable));
 		memcpy(&rtable[0][0], savedRightTable.data(), sizeof(rtable));
@@ -1691,24 +1755,170 @@ void CTestGT2Patterns::Run(ITestCallback *cb)
 		hexnybble = savedHexnybble;
 		tablesView->ClearTableUndoHistory();
 
-		bool ok = tableHistoryCreated && instrumentEdited && manualInstrumentEditClearedTableHistory;
+		bool ok = tableHistoryCreated && instrumentEdited && editIsUndoable
+			&& editUndone && priorHistorySurvived;
 		if (!ok)
 		{
 			snprintf(msg, sizeof(msg),
-				"Manual instrument edit undo invalidation failed: history=%d edited=%d cleared=%d",
+				"Manual instrument edit undo failed: history=%d edited=%d undoable=%d undone=%d priorKept=%d",
 				(int)tableHistoryCreated,
 				(int)instrumentEdited,
-				(int)manualInstrumentEditClearedTableHistory);
+				(int)editIsUndoable,
+				(int)editUndone,
+				(int)priorHistorySurvived);
 			allPassed = false;
 		}
 		StepCompleted(step, ok, ok
-			? "Manual instrument edits clear stale table undo history"
+			? "Manual instrument edits are undoable and keep the earlier table history"
 			: msg);
 	}
 	else
 	{
 		allPassed = false;
 		StepCompleted(step, false, "GT2 table undo dependencies were not initialized");
+	}
+	if (!allPassed)
+	{
+		TestCompleted(false, "Some GT2Patterns tests failed");
+		return;
+	}
+
+	// --- Test 11: undo is ONE timeline across pattern and instrument edits ---
+	// Reported case: load instrument A into slot 1, type notes in the pattern
+	// editor, load instrument B into the same slot, then press Ctrl+Z with the
+	// pattern editor focused. Undo must take back the LAST change whatever
+	// kind it was -- so the first Ctrl+Z restores instrument A, the second one
+	// removes the notes, and redo replays both in order. The two edits used to
+	// live on two stacks that wiped each other, and Ctrl+Z picked a stack by
+	// editmode, so the instrument load was unreachable from the pattern editor.
+	step++;
+	if (pluginGoatTracker != NULL && pluginGoatTracker->viewPatterns != NULL
+		&& pluginGoatTracker->viewTables != NULL)
+	{
+		CViewGT2Patterns *view = pluginGoatTracker->viewPatterns;
+		CViewGT2Tables *tablesView = pluginGoatTracker->viewTables;
+		std::vector<unsigned char> savedPattern(&pattern[0][0], &pattern[0][0] + sizeof(pattern));
+		std::vector<unsigned char> savedLeftTable(&ltable[0][0], &ltable[0][0] + sizeof(ltable));
+		std::vector<unsigned char> savedRightTable(&rtable[0][0], &rtable[0][0] + sizeof(rtable));
+		const unsigned char *instrumentBegin = reinterpret_cast<const unsigned char *>(&ginstr[0]);
+		std::vector<unsigned char> savedInstruments(instrumentBegin, instrumentBegin + sizeof(ginstr));
+		std::vector<int> savedEpnum(epnum, epnum + MAX_CHN);
+		std::vector<int> savedPattLen(pattlen, pattlen + MAX_PATT);
+		char savedInstrFilename[MAX_FILENAME];
+		strncpy(savedInstrFilename, instrfilename, MAX_FILENAME - 1);
+		savedInstrFilename[MAX_FILENAME - 1] = 0;
+		int savedEinum = einum;
+		int savedEditmode = editmode;
+		unsigned savedKeypreset = keypreset;
+
+		// Two instruments that differ in every byte the test reads back.
+		auto writeInstrument = [](const char *path, unsigned char ad, unsigned char sr,
+								  unsigned char vibdelay, const char *insName) -> bool {
+			FILE *f = fopen(path, "wb");
+			if (f == NULL) return false;
+			const unsigned char ident[] = { 'G', 'T', 'I', '5' };
+			const unsigned char header[] = { ad, sr, 0, 0, 0, 0, vibdelay, 0x02, 0x11 };
+			char name[MAX_INSTRNAMELEN];
+			memset(name, 0, sizeof(name));
+			strncpy(name, insName, sizeof(name) - 1);
+			const unsigned char zero = 0;
+			bool ok = fwrite(ident, sizeof(ident), 1, f) == 1
+				&& fwrite(header, sizeof(header), 1, f) == 1
+				&& fwrite(name, sizeof(name), 1, f) == 1;
+			for (int table = 0; table < MAX_TABLES; table++)
+				ok = fwrite(&zero, 1, 1, f) == 1 && ok;
+			fclose(f);
+			return ok;
+		};
+
+		const char *pathA = "/tmp/gt2-undo-timeline-a.ins";
+		const char *pathB = "/tmp/gt2-undo-timeline-b.ins";
+		bool filesWritten = writeInstrument(pathA, 0x11, 0x22, 0x33, "TimelineA")
+			&& writeInstrument(pathB, 0x44, 0x55, 0x66, "TimelineB");
+
+		editmode = 0;      // EDIT_PATTERN -- the pattern editor has focus
+		keypreset = 4;     // KEY_RENOISE
+		einum = 1;
+		epnum[0] = 0;
+		pattlen[0] = 16;
+		view->ClearPatternUndoHistory();
+		tablesView->ClearTableUndoHistory();
+
+		// (1) load instrument A into slot 1
+		strncpy(instrfilename, pathA, MAX_FILENAME - 1);
+		instrfilename[MAX_FILENAME - 1] = 0;
+		loadinstrument();
+		bool loadedA = ginstr[1].ad == 0x11 && ginstr[1].sr == 0x22 && ginstr[1].vibdelay == 0x33;
+
+		// (2) type a note in the pattern editor
+		unsigned char noteBefore = pattern[0][5*4];
+		view->BeginPatternUndoStep();
+		pattern[0][5*4] = FIRSTNOTE + 12;
+		bool noteRecorded = view->CommitPatternUndoStep();
+
+		// (3) load instrument B into the same slot
+		strncpy(instrfilename, pathB, MAX_FILENAME - 1);
+		instrfilename[MAX_FILENAME - 1] = 0;
+		loadinstrument();
+		bool loadedB = ginstr[1].ad == 0x44 && ginstr[1].sr == 0x55 && ginstr[1].vibdelay == 0x66;
+
+		// (4) Ctrl+Z in the pattern editor -- takes back the instrument load
+		bool undo1Consumed = view->KeyDown(SDLK_Z, false, false, true, false);
+		bool undo1RestoredA = ginstr[1].ad == 0x11 && ginstr[1].sr == 0x22 && ginstr[1].vibdelay == 0x33;
+		bool undo1KeptNote = pattern[0][5*4] == FIRSTNOTE + 12;
+
+		// (5) Ctrl+Z again -- now the note goes
+		bool undo2Consumed = view->KeyDown(SDLK_Z, false, false, true, false);
+		bool undo2RemovedNote = pattern[0][5*4] == noteBefore;
+		bool undo2KeptA = ginstr[1].ad == 0x11;
+
+		// (6) redo replays them in the order they were made
+		bool redo1Consumed = view->KeyDown(SDLK_Y, false, false, true, false);
+		bool redo1RestoredNote = pattern[0][5*4] == FIRSTNOTE + 12 && ginstr[1].ad == 0x11;
+		bool redo2Consumed = view->KeyDown(SDLK_Y, false, false, true, false);
+		bool redo2RestoredB = ginstr[1].ad == 0x44 && ginstr[1].sr == 0x55 && ginstr[1].vibdelay == 0x66;
+
+		memcpy(&pattern[0][0], savedPattern.data(), sizeof(pattern));
+		memcpy(&ltable[0][0], savedLeftTable.data(), sizeof(ltable));
+		memcpy(&rtable[0][0], savedRightTable.data(), sizeof(rtable));
+		memcpy(&ginstr[0], savedInstruments.data(), sizeof(ginstr));
+		memcpy(epnum, savedEpnum.data(), sizeof(int) * MAX_CHN);
+		memcpy(pattlen, savedPattLen.data(), sizeof(int) * MAX_PATT);
+		strncpy(instrfilename, savedInstrFilename, MAX_FILENAME - 1);
+		instrfilename[MAX_FILENAME - 1] = 0;
+		einum = savedEinum;
+		editmode = savedEditmode;
+		keypreset = savedKeypreset;
+		view->ClearPatternUndoHistory();
+		tablesView->ClearTableUndoHistory();
+		remove(pathA);
+		remove(pathB);
+
+		bool ok = filesWritten && loadedA && noteRecorded && loadedB
+			&& undo1Consumed && undo1RestoredA && undo1KeptNote
+			&& undo2Consumed && undo2RemovedNote && undo2KeptA
+			&& redo1Consumed && redo1RestoredNote && redo2Consumed && redo2RestoredB;
+		if (!ok)
+		{
+			snprintf(msg, sizeof(msg),
+				"GT2 undo timeline failed: wrote=%d loadA=%d note=%d loadB=%d "
+				"undo1(consumed=%d gotA=%d keptNote=%d) undo2(consumed=%d noteGone=%d keptA=%d) "
+				"redo1(consumed=%d note=%d) redo2(consumed=%d gotB=%d)",
+				(int)filesWritten, (int)loadedA, (int)noteRecorded, (int)loadedB,
+				(int)undo1Consumed, (int)undo1RestoredA, (int)undo1KeptNote,
+				(int)undo2Consumed, (int)undo2RemovedNote, (int)undo2KeptA,
+				(int)redo1Consumed, (int)redo1RestoredNote,
+				(int)redo2Consumed, (int)redo2RestoredB);
+			allPassed = false;
+		}
+		StepCompleted(step, ok, ok
+			? "Undo is one timeline: Ctrl+Z in patterns takes back an instrument load"
+			: msg);
+	}
+	else
+	{
+		allPassed = false;
+		StepCompleted(step, false, "GT2 undo timeline dependencies were not initialized");
 	}
 	if (!allPassed)
 	{
@@ -1910,15 +2120,15 @@ void CTestGT2Patterns::Run(ITestCallback *cb)
 			&& gt2RenoiseEditStep == 5;
 
 		gt2RenoiseEditStep = 2;
-		bool backquoteIncreased = pluginGoatTracker->viewPatterns->KeyDown(SDLK_BACKQUOTE, false, false, false, false)
+		bool backquoteIncreased = pluginGoatTracker->viewPatterns->KeyDown(SDLK_GRAVE, false, false, false, false)
 			&& gt2RenoiseEditStep == 3;
 
 		gt2RenoiseEditStep = 3;
-		bool tildeDecreased = pluginGoatTracker->viewPatterns->KeyDown(SDLK_BACKQUOTE, true, false, false, false)
+		bool tildeDecreased = pluginGoatTracker->viewPatterns->KeyDown(SDLK_GRAVE, true, false, false, false)
 			&& gt2RenoiseEditStep == 2;
 
 		gt2RenoiseEditStep = 0;
-		bool tildeClamped = pluginGoatTracker->viewPatterns->KeyDown(SDLK_BACKQUOTE, true, false, false, false)
+		bool tildeClamped = pluginGoatTracker->viewPatterns->KeyDown(SDLK_GRAVE, true, false, false, false)
 			&& gt2RenoiseEditStep == 0;
 
 		cleanupGoatTrackerForTest();
@@ -1939,7 +2149,7 @@ void CTestGT2Patterns::Run(ITestCallback *cb)
 		gt2RenoiseEditStep = 5;
 		bool trackerLayoutFallsThrough = pluginGoatTracker->viewPatterns->KeyDown(SDLK_EQUALS, false, false, true, false)
 			&& gt2RenoiseEditStep == 5;
-		bool trackerBackquoteFallsThrough = pluginGoatTracker->viewPatterns->KeyDown(SDLK_BACKQUOTE, false, false, false, false)
+		bool trackerBackquoteFallsThrough = pluginGoatTracker->viewPatterns->KeyDown(SDLK_GRAVE, false, false, false, false)
 			&& gt2RenoiseEditStep == 5;
 
 		gt2RenoiseEditStep = savedRenoiseEditStep;
@@ -2672,7 +2882,7 @@ void CTestGT2Patterns::Run(ITestCallback *cb)
 
 		eppos = 11;
 		epview = 99;
-		SDL_SetModState(KMOD_NONE);
+		SDL_SetModState(SDL_KMOD_NONE);
 		memset(&pattern[pattNum][11 * 4], 0, sizeof(savedCapsKeyUpRow));
 		bool capsKeyUpConsumed = pluginGoatTracker->viewPatterns->KeyUp(MTKEY_CAPS_LOCK, false, false, false, false);
 		bool capsKeyUpInsertedKeyoff = capsKeyUpConsumed && pattern[pattNum][11 * 4] == KEYOFF
@@ -2681,7 +2891,7 @@ void CTestGT2Patterns::Run(ITestCallback *cb)
 
 		eppos = 3;
 		epview = 99;
-		SDL_SetModState(KMOD_CAPS);
+		SDL_SetModState(SDL_KMOD_CAPS);
 		memset(&pattern[pattNum][3 * 4], 0, sizeof(savedCapsRow));
 		bool capsConsumed = pluginGoatTracker->renoiseInput->HandleKey(MTKEY_CAPS_LOCK, false, false, false, false);
 		bool capsInsertedKeyoff = capsConsumed && pattern[pattNum][3 * 4] == KEYOFF
@@ -2690,7 +2900,7 @@ void CTestGT2Patterns::Run(ITestCallback *cb)
 
 		eppos = 13;
 		epview = 99;
-		SDL_SetModState(KMOD_CAPS);
+		SDL_SetModState(SDL_KMOD_CAPS);
 		memset(&pattern[pattNum][13 * 4], 0, sizeof(savedCapsSamePressRow));
 		memset(&pattern[pattNum][14 * 4], 0, sizeof(savedCapsSamePressNextRow));
 		bool capsSamePressDownConsumed = pluginGoatTracker->renoiseInput->HandleKey(MTKEY_CAPS_LOCK, false, false, false, false);
@@ -2703,7 +2913,7 @@ void CTestGT2Patterns::Run(ITestCallback *cb)
 
 		eppos = 5;
 		epview = 99;
-		SDL_SetModState(KMOD_NONE);
+		SDL_SetModState(SDL_KMOD_NONE);
 		memset(&pattern[pattNum][5 * 4], 0, sizeof(savedARow));
 		bool aConsumed = pluginGoatTracker->renoiseInput->HandleKey('a', false, false, false, false);
 		bool aInsertedKeyoff = aConsumed && pattern[pattNum][5 * 4] == KEYOFF
@@ -2728,7 +2938,7 @@ void CTestGT2Patterns::Run(ITestCallback *cb)
 
 		eppos = 15;
 		epview = 99;
-		SDL_SetModState(KMOD_SHIFT);
+		SDL_SetModState(SDL_KMOD_SHIFT);
 		memset(&pattern[pattNum][15 * 4], 0, sizeof(savedModifiedCapsKeyUpRow));
 		pluginGoatTracker->viewPatterns->KeyUp(MTKEY_CAPS_LOCK, true, false, false, false);
 		bool modifiedCapsKeyUpFallsThrough = pattern[pattNum][15 * 4] == 0
@@ -2736,13 +2946,13 @@ void CTestGT2Patterns::Run(ITestCallback *cb)
 
 		keypreset = 0; // KEY_TRACKER
 		eppos = 10;
-		SDL_SetModState(KMOD_CAPS);
+		SDL_SetModState(SDL_KMOD_CAPS);
 		pluginGoatTracker->viewPatterns->eparpcol = -1;
 		bool trackerCapsFallsThrough = !pluginGoatTracker->renoiseInput->HandleKey(MTKEY_CAPS_LOCK, false, false, false, false)
 			&& eppos == 10;
 		eppos = 12;
 		epview = 99;
-		SDL_SetModState(KMOD_NONE);
+		SDL_SetModState(SDL_KMOD_NONE);
 		memset(&pattern[pattNum][12 * 4], 0, sizeof(savedTrackerCapsKeyUpRow));
 		pluginGoatTracker->viewPatterns->KeyUp(MTKEY_CAPS_LOCK, false, false, false, false);
 		bool trackerCapsKeyUpFallsThrough = pattern[pattNum][12 * 4] == 0
@@ -3187,7 +3397,7 @@ void CTestGT2Patterns::Run(ITestCallback *cb)
 		arpdata[0][0][5][0] = 0;
 		chn[0].arpcolnotes[0] = 0;
 		ImGui::GetIO().WantTextInput = false;
-		bool toolbarArpNoteConsumed = pluginGoatTracker->viewToolbar->KeyDown(SDLK_q, false, false, false, false);
+		bool toolbarArpNoteConsumed = pluginGoatTracker->viewToolbar->KeyDown(SDLK_Q, false, false, false, false);
 		cleanupGoatTrackerForTest();
 		bool toolbarFocusEntersArpNote = toolbarArpNoteConsumed
 			&& arpdata[0][0][5][0] == FIRSTNOTE + 60
@@ -3197,7 +3407,7 @@ void CTestGT2Patterns::Run(ITestCallback *cb)
 		chn[0].arpcolnotes[0] = 0;
 		pluginGoatTracker->viewPatterns->eparpcol = 0;
 		ImGui::GetIO().WantTextInput = true;
-		bool toolbarTextInputDoesNotEnterArpNote = !pluginGoatTracker->viewToolbar->KeyDown(SDLK_q, false, false, false, false)
+		bool toolbarTextInputDoesNotEnterArpNote = !pluginGoatTracker->viewToolbar->KeyDown(SDLK_Q, false, false, false, false)
 			&& arpdata[0][0][5][0] == 0
 			&& chn[0].arpcolnotes[0] == 0
 			&& pluginGoatTracker->viewPatterns->eparpcol == 0;
@@ -3371,6 +3581,230 @@ void CTestGT2Patterns::Run(ITestCallback *cb)
 	{
 		allPassed = false;
 		StepCompleted(step, false, "GT2 toolbar view was not initialized");
+	}
+	if (!allPassed)
+	{
+		TestCompleted(false, "Some GT2Patterns tests failed");
+		return;
+	}
+
+	// --- Test 13: every toolbar control explains itself and names its shortcut ---
+	// The toolbar is icons and three bare number fields, so the tooltip is the
+	// only place the user is told what a control does. Two things rot here and
+	// this step is what catches them: a control added without a tooltip, and a
+	// shortcut hint left behind when the binding moved. It reads the same
+	// strings the user hovers -- CViewGT2Toolbar::GetControlTooltip().
+	//
+	// The preset matters. Transport and note-entry bindings live in
+	// CGT2RenoiseInput, which ignores keys under any other keyboard preset, so
+	// naming "Space" outside Renoise would be a lie. Undo/redo and the
+	// highlight step are handled in CViewGT2Patterns with no preset gate.
+	step++;
+	if (pluginGoatTracker != NULL && pluginGoatTracker->viewToolbar != NULL)
+	{
+		CViewGT2Toolbar *toolbarView = pluginGoatTracker->viewToolbar;
+		unsigned savedKeypreset = keypreset;
+		const char *cmd = GT2_CmdKey();
+		char cmdZ[32], cmdY[32], cmdBracket[32];
+		snprintf(cmdZ, sizeof(cmdZ), "%s+Z", cmd);
+		snprintf(cmdY, sizeof(cmdY), "%s+Y", cmd);
+		snprintf(cmdBracket, sizeof(cmdBracket), "%s+]", cmd);
+
+		auto tipOf = [&](int control) { return toolbarView->GetControlTooltip(control); };
+		auto has = [](const std::string &tip, const char *needle) {
+			return tip.find(needle) != std::string::npos;
+		};
+		auto namesAShortcut = [&](const std::string &tip) { return has(tip, "Shortcut: "); };
+
+		// (1) Every control describes itself, in every preset, and the
+		// description comes before any shortcut line.
+		bool allDescribed = true;
+		int firstUndescribed = -1;
+		const unsigned presets[] = { 4 /* KEY_RENOISE */, 0 /* KEY_TRACKER */ };
+		for (int p = 0; p < 2 && allDescribed; p++)
+		{
+			keypreset = presets[p];
+			for (int c = 0; c < GT2_TOOLBAR_CONTROL_COUNT; c++)
+			{
+				std::string tip = tipOf(c);
+				size_t firstLineEnd = tip.find('\n');
+				std::string firstLine = tip.substr(0, firstLineEnd);
+				if (tip.empty() || firstLine.empty() || firstLine.rfind("Shortcut:", 0) == 0)
+				{
+					allDescribed = false;
+					firstUndescribed = c;
+					break;
+				}
+			}
+		}
+
+		// (2) Renoise preset: the bindings that exist are named, with the
+		// platform's own modifier word.
+		keypreset = 4;
+		bool renoiseShortcutsNamed =
+			   has(tipOf(GT2_TOOLBAR_PLAY), "Shortcut: Space")
+			&& has(tipOf(GT2_TOOLBAR_PLAY), "Shift+Space")
+			&& has(tipOf(GT2_TOOLBAR_PAUSE), "Shortcut: Space")
+			&& has(tipOf(GT2_TOOLBAR_UNDO), cmdZ)
+			&& has(tipOf(GT2_TOOLBAR_REDO), cmdY)
+			&& has(tipOf(GT2_TOOLBAR_HIGHLIGHT), "Shift+M")
+			&& has(tipOf(GT2_TOOLBAR_HIGHLIGHT), "Shift+N")
+			&& has(tipOf(GT2_TOOLBAR_HIGHLIGHT_DEC), "Shortcut: Shift+N")
+			&& has(tipOf(GT2_TOOLBAR_HIGHLIGHT_INC), "Shortcut: Shift+M")
+			&& has(tipOf(GT2_TOOLBAR_EDIT_STEP), "`")
+			&& has(tipOf(GT2_TOOLBAR_EDIT_STEP), "~")
+			&& has(tipOf(GT2_TOOLBAR_EDIT_STEP_DEC), "Shortcut: ~")
+			&& has(tipOf(GT2_TOOLBAR_EDIT_STEP_INC), "Shortcut: `")
+			&& has(tipOf(GT2_TOOLBAR_OCTAVE), "Num*")
+			&& has(tipOf(GT2_TOOLBAR_OCTAVE), "Num/")
+			&& has(tipOf(GT2_TOOLBAR_OCTAVE_INC), cmdBracket);
+
+		// (3) The four controls that genuinely have no binding must not invent
+		// one -- silence is the answer there, not a stale key name.
+		bool unboundStaySilent =
+			   !namesAShortcut(tipOf(GT2_TOOLBAR_LOOP))
+			&& !namesAShortcut(tipOf(GT2_TOOLBAR_STOP))
+			&& !namesAShortcut(tipOf(GT2_TOOLBAR_FOLLOW))
+			&& !namesAShortcut(tipOf(GT2_TOOLBAR_METRONOME));
+
+		// (4) Outside Renoise the transport keys are dead, so the tooltip must
+		// stop naming them -- while undo/redo and the highlight step, which are
+		// not preset-gated, keep theirs.
+		keypreset = 0;
+		bool nonRenoiseHidesDeadBindings =
+			   !namesAShortcut(tipOf(GT2_TOOLBAR_PLAY))
+			&& !namesAShortcut(tipOf(GT2_TOOLBAR_PAUSE))
+			&& !namesAShortcut(tipOf(GT2_TOOLBAR_EDIT_STEP))
+			&& !namesAShortcut(tipOf(GT2_TOOLBAR_OCTAVE))
+			&& has(tipOf(GT2_TOOLBAR_UNDO), cmdZ)
+			&& has(tipOf(GT2_TOOLBAR_REDO), cmdY)
+			&& has(tipOf(GT2_TOOLBAR_HIGHLIGHT), "Shift+M");
+
+		keypreset = savedKeypreset;
+
+		bool ok = allDescribed && renoiseShortcutsNamed && unboundStaySilent
+			&& nonRenoiseHidesDeadBindings;
+		if (!ok)
+		{
+			snprintf(msg, sizeof(msg),
+				"GT2 toolbar tooltips failed: described=%d (firstBad=%d) renoiseNamed=%d "
+				"unboundSilent=%d nonRenoiseHides=%d",
+				(int)allDescribed, firstUndescribed, (int)renoiseShortcutsNamed,
+				(int)unboundStaySilent, (int)nonRenoiseHidesDeadBindings);
+			allPassed = false;
+		}
+		StepCompleted(step, ok, ok
+			? "Every GT2 toolbar control has a tooltip that names its shortcut when it has one"
+			: msg);
+	}
+	else
+	{
+		allPassed = false;
+		StepCompleted(step, false, "GT2 toolbar view was not initialized");
+	}
+	if (!allPassed)
+	{
+		TestCompleted(false, "Some GT2Patterns tests failed");
+		return;
+	}
+
+	// --- Test 14: the toolbar's song tempo field ---
+	// GT2 has no tempo field in the song header. The song's default tempo is
+	// the `ad` byte of the RESERVED instrument slot MAX_INSTR-1 -- the slot
+	// GT2_LAST_INSTR keeps out of the instrument editor -- and it counts only
+	// while that slot carries no wavetable pointer, which is the flag GT2 uses
+	// to tell "tempo override" from "a real instrument". gplay.c reads it at
+	// PLAY_BEGINNING, greloc.c exports it as DEFAULTTEMPO. Every assertion
+	// below pins one half of that contract.
+	step++;
+	if (pluginGoatTracker != NULL && pluginGoatTracker->viewToolbar != NULL
+		&& pluginGoatTracker->viewTables != NULL)
+	{
+		CViewGT2Toolbar *toolbarView = pluginGoatTracker->viewToolbar;
+		CViewGT2Tables *tablesView = pluginGoatTracker->viewTables;
+		INSTR savedTempoSlot = ginstr[MAX_INSTR-1];
+		unsigned char savedChnTempo[MAX_CHN];
+		for (int c = 0; c < MAX_CHN; c++) savedChnTempo[c] = chn[c].tempo;
+
+		// (1) No override -> the value initchannels() would use.
+		memset(&ginstr[MAX_INSTR-1], 0, sizeof(INSTR));
+		int expectedDefault = multiplier ? (int)(6 * multiplier) : 6;
+		bool defaultReported = toolbarView->GetSongTempo() == expectedDefault;
+
+		// (2) Setting it writes the reserved slot on the F command's scale...
+		toolbarView->SetSongTempo(9);
+		bool storedInReservedSlot = ginstr[MAX_INSTR-1].ad == 9
+			&& toolbarView->GetSongTempo() == 9;
+		// ...and reaches the live channels as ad-1, so a change is heard
+		// without restarting the song. Same arithmetic as CMD_SETTEMPO.
+		bool reachedLiveChannels = chn[0].tempo == 8 && chn[1].tempo == 8 && chn[2].tempo == 8;
+
+		// (3) The field is clamped to plain tempos. 2 and below are the
+		// funktempo recall, which belongs to the E command, not here.
+		toolbarView->SetSongTempo(1);
+		bool clampedLow = toolbarView->GetSongTempo() == GT2_SONG_TEMPO_MIN;
+		toolbarView->SetSongTempo(999);
+		bool clampedHigh = toolbarView->GetSongTempo() == GT2_SONG_TEMPO_MAX;
+
+		// (4) The arrows step it, and stop at the same limits.
+		toolbarView->SetSongTempo(6);
+		toolbarView->AdjustSongTempo(1);
+		bool steppedUp = toolbarView->GetSongTempo() == 7;
+		toolbarView->AdjustSongTempo(-1);
+		bool steppedDown = toolbarView->GetSongTempo() == 6;
+		toolbarView->SetSongTempo(GT2_SONG_TEMPO_MIN);
+		toolbarView->AdjustSongTempo(-1);
+		bool stepStopsAtMin = toolbarView->GetSongTempo() == GT2_SONG_TEMPO_MIN;
+
+		// (5) A wavetable pointer in that slot means it is a real instrument,
+		// not a tempo override -- gplay.c ignores it, and so must the field.
+		toolbarView->SetSongTempo(11);
+		ginstr[MAX_INSTR-1].ptr[WTBL] = 1;
+		bool wavetablePointerDisablesOverride = toolbarView->GetSongTempo() == expectedDefault;
+		ginstr[MAX_INSTR-1].ptr[WTBL] = 0;
+		bool overrideBackWithoutPointer = toolbarView->GetSongTempo() == 11;
+
+		// (6) It is song data, so it rides the shared undo history.
+		tablesView->ClearTableUndoHistory();
+		toolbarView->SetSongTempo(6);
+		tablesView->BeginTableUndoStep();
+		toolbarView->SetSongTempo(12);
+		bool tempoEditIsUndoable = tablesView->CommitTableUndoStep()
+			&& tablesView->CanUndoTableEdit();
+		bool tempoUndone = tempoEditIsUndoable && tablesView->UndoTableEdit()
+			&& toolbarView->GetSongTempo() == 6;
+		bool tempoRedone = tempoUndone && tablesView->RedoTableEdit()
+			&& toolbarView->GetSongTempo() == 12;
+
+		tablesView->ClearTableUndoHistory();
+		ginstr[MAX_INSTR-1] = savedTempoSlot;
+		for (int c = 0; c < MAX_CHN; c++) chn[c].tempo = savedChnTempo[c];
+
+		bool ok = defaultReported && storedInReservedSlot && reachedLiveChannels
+			&& clampedLow && clampedHigh && steppedUp && steppedDown && stepStopsAtMin
+			&& wavetablePointerDisablesOverride && overrideBackWithoutPointer
+			&& tempoEditIsUndoable && tempoUndone && tempoRedone;
+		if (!ok)
+		{
+			snprintf(msg, sizeof(msg),
+				"GT2 song tempo failed: default=%d stored=%d live=%d clampLo=%d clampHi=%d "
+				"up=%d down=%d stopMin=%d wtblDisables=%d wtblRestores=%d "
+				"undoable=%d undone=%d redone=%d",
+				(int)defaultReported, (int)storedInReservedSlot, (int)reachedLiveChannels,
+				(int)clampedLow, (int)clampedHigh, (int)steppedUp, (int)steppedDown,
+				(int)stepStopsAtMin, (int)wavetablePointerDisablesOverride,
+				(int)overrideBackWithoutPointer, (int)tempoEditIsUndoable,
+				(int)tempoUndone, (int)tempoRedone);
+			allPassed = false;
+		}
+		StepCompleted(step, ok, ok
+			? "Toolbar song tempo reads/writes GT2's reserved tempo slot, clamps, plays live, and undoes"
+			: msg);
+	}
+	else
+	{
+		allPassed = false;
+		StepCompleted(step, false, "GT2 toolbar/tables views were not initialized");
 	}
 	if (!allPassed)
 	{
@@ -3763,7 +4197,7 @@ void CTestGT2Patterns::Run(ITestCallback *cb)
 		pluginGoatTracker->viewPatterns->eparpcol = 0;
 		pluginGoatTracker->viewKeyboard->currentOctave = 1;
 		pluginGoatTracker->viewKeyboard->hasFocus = true;
-		bool keyboardForwardConsumed = pluginGoatTracker->viewKeyboard->KeyDown(SDLK_q, false, false, false, false);
+		bool keyboardForwardConsumed = pluginGoatTracker->viewKeyboard->KeyDown(SDLK_Q, false, false, false, false);
 		pluginGoatTracker->viewKeyboard->hasFocus = false;
 		bool keyboardForwardsPatternKey = keyboardForwardConsumed
 			&& arpdata[pattNum][0][11][0] == FIRSTNOTE + 60
@@ -4752,6 +5186,153 @@ void CTestGT2Patterns::Run(ITestCallback *cb)
 		return;
 	}
 
+	// --- Test: instrument-view table slices scroll to keep the cursor visible ---
+	step++;
+	{
+		// Visible-row count comes from the real window height, never from
+		// the native VISIBLETABLEROWS constant. Always at least one row, and
+		// a zero cell height (font atlas not loaded yet) must not divide.
+		bool okVisibleRows = (GT2TableVisibleRows(100.0f, 10.0f) == 10)
+			&& (GT2TableVisibleRows(105.0f, 10.0f) == 10)
+			&& (GT2TableVisibleRows(5.0f, 10.0f) == 1)
+			&& (GT2TableVisibleRows(0.0f, 10.0f) == 1)
+			&& (GT2TableVisibleRows(-50.0f, 10.0f) == 1)
+			&& (GT2TableVisibleRows(100.0f, 0.0f) == 1);
+
+		// A slice that fits entirely needs no scrolling.
+		bool okFits = (GT2TableScrollOffset(5, 3, 6, 2) == 0)
+			&& (GT2TableScrollOffset(0, 6, 6, 5) == 0)
+			&& (GT2TableScrollOffset(3, 0, 6, -1) == 0);
+
+		// Stepping one row below the last visible row advances the first
+		// visible row by exactly one -- and again on the next step down.
+		bool okStepDown = (GT2TableScrollOffset(0, 20, 6, 6) == 1)
+			&& (GT2TableScrollOffset(1, 20, 6, 7) == 2);
+
+		// Stepping back above the first visible row pulls it up by one.
+		bool okStepUp = (GT2TableScrollOffset(5, 20, 6, 4) == 4)
+			&& (GT2TableScrollOffset(4, 20, 6, 3) == 3);
+
+		// A cursor already inside the window leaves the offset alone.
+		bool okNoMove = (GT2TableScrollOffset(3, 20, 6, 3) == 3)
+			&& (GT2TableScrollOffset(3, 20, 6, 5) == 3)
+			&& (GT2TableScrollOffset(3, 20, 6, 8) == 3);
+
+		// A jump (click, gototable, wavetable F-command) lands the cursor at
+		// the window edge rather than scrolling one row at a time.
+		bool okJump = (GT2TableScrollOffset(0, 20, 6, 19) == 14)
+			&& (GT2TableScrollOffset(14, 20, 6, 0) == 0);
+
+		// Without a cursor in this table (etnum != c) the offset is only
+		// range-clamped -- including after deletetable() shrank the slice.
+		bool okClamp = (GT2TableScrollOffset(18, 20, 6, -1) == 14)
+			&& (GT2TableScrollOffset(14, 8, 6, -1) == 2)
+			&& (GT2TableScrollOffset(-3, 20, 6, -1) == 0);
+
+		// A shrunken slice must not leave the cursor off-window either.
+		bool okShrink = (GT2TableScrollOffset(14, 8, 6, 7) == 2)
+			&& (GT2TableScrollOffset(14, 8, 6, 0) == 0);
+
+		// Degenerate window height still yields a usable offset.
+		bool okDegenerate = (GT2TableScrollOffset(0, 20, 0, 5) == 5)
+			&& (GT2TableScrollOffset(0, 20, -4, 5) == 5);
+
+		bool ok = okVisibleRows && okFits && okStepDown && okStepUp && okNoMove
+			&& okJump && okClamp && okShrink && okDegenerate;
+		if (!ok) allPassed = false;
+		StepCompleted(step, ok, ok
+			? "instrument table slices scroll so the edited row stays visible"
+			: "instrument table slice scrolling failed to follow the cursor");
+	}
+	if (!allPassed)
+	{
+		cleanupGoatTrackerForTest();
+		TestCompleted(false, "Some GT2Patterns tests failed");
+		return;
+	}
+
+	// --- Test: instrument-view Left/Right stay inside the instrument's slices ---
+	step++;
+	{
+		// Four tables, every one populated: right off the last column of the
+		// wavetable lands on column 0 of the pulsetable, keeping the row.
+		const int allFour[4] = { 6, 4, 5, 1 };
+		int t = 0, r = 2, c = 3;
+		bool okRightCross = GT2InstrumentTableCursorStep(1, allFour, &t, &r, &c)
+			&& (t == 1) && (r == 2) && (c == 0);
+
+		// Inside a table only the column moves.
+		t = 1; r = 2; c = 0;
+		bool okRightInside = GT2InstrumentTableCursorStep(1, allFour, &t, &r, &c)
+			&& (t == 1) && (r == 2) && (c == 1);
+
+		// Left off column 0 goes back to the previous table's column 3.
+		t = 1; r = 2; c = 0;
+		bool okLeftCross = GT2InstrumentTableCursorStep(-1, allFour, &t, &r, &c)
+			&& (t == 0) && (r == 2) && (c == 3);
+
+		// Right off the speedtable wraps around to the wavetable.
+		t = 3; r = 0; c = 3;
+		bool okWrapRight = GT2InstrumentTableCursorStep(1, allFour, &t, &r, &c)
+			&& (t == 0) && (r == 0) && (c == 0);
+		// ... and left off the wavetable wraps back to the speedtable.
+		t = 0; r = 0; c = 0;
+		bool okWrapLeft = GT2InstrumentTableCursorStep(-1, allFour, &t, &r, &c)
+			&& (t == 3) && (r == 0) && (c == 3);
+
+		// A row past the end of the table being entered is clamped to its
+		// last row, never left pointing outside the slice.
+		t = 0; r = 5; c = 3;
+		bool okClampRow = GT2InstrumentTableCursorStep(1, allFour, &t, &r, &c)
+			&& (t == 1) && (r == 3) && (c == 0);
+
+		// THE BUG: the instrument owns no pulsetable and no filtertable, so
+		// crossing right out of the wavetable must skip both and land on the
+		// speedtable -- not on the pool rows native tablecommands() would
+		// pick, which only the GT2 Tables view shows.
+		const int wtblAndStbl[4] = { 6, 0, 0, 1 };
+		t = 0; r = 4; c = 3;
+		bool okSkipEmptyRight = GT2InstrumentTableCursorStep(1, wtblAndStbl, &t, &r, &c)
+			&& (t == 3) && (r == 0) && (c == 0);
+		t = 0; r = 4; c = 0;
+		bool okSkipEmptyLeft = GT2InstrumentTableCursorStep(-1, wtblAndStbl, &t, &r, &c)
+			&& (t == 3) && (r == 0) && (c == 3);
+
+		// Only one populated table: the cursor wraps within it rather than
+		// escaping the instrument.
+		const int wtblOnly[4] = { 3, 0, 0, 0 };
+		t = 0; r = 1; c = 3;
+		bool okSelfWrap = GT2InstrumentTableCursorStep(1, wtblOnly, &t, &r, &c)
+			&& (t == 0) && (r == 1) && (c == 0);
+
+		// Nothing populated at all, or a bad table index / direction: no move.
+		const int nothing[4] = { 0, 0, 0, 0 };
+		t = 0; r = 0; c = 3;
+		bool okNoSlices = !GT2InstrumentTableCursorStep(1, nothing, &t, &r, &c)
+			&& (t == 0) && (r == 0) && (c == 3);
+		t = 7; r = 0; c = 0;
+		bool okBadTable = !GT2InstrumentTableCursorStep(1, allFour, &t, &r, &c);
+		t = 0; r = 0; c = 0;
+		bool okBadDir = !GT2InstrumentTableCursorStep(0, allFour, &t, &r, &c)
+			&& !GT2InstrumentTableCursorStep(2, allFour, &t, &r, &c);
+		bool okNullArgs = !GT2InstrumentTableCursorStep(1, NULL, &t, &r, &c)
+			&& !GT2InstrumentTableCursorStep(1, allFour, NULL, &r, &c);
+
+		bool ok = okRightCross && okRightInside && okLeftCross && okWrapRight
+			&& okWrapLeft && okClampRow && okSkipEmptyRight && okSkipEmptyLeft
+			&& okSelfWrap && okNoSlices && okBadTable && okBadDir && okNullArgs;
+		if (!ok) allPassed = false;
+		StepCompleted(step, ok, ok
+			? "instrument table Left/Right walks the instrument's own slices only"
+			: "instrument table Left/Right escaped the instrument's slices");
+	}
+	if (!allPassed)
+	{
+		cleanupGoatTrackerForTest();
+		TestCompleted(false, "Some GT2Patterns tests failed");
+		return;
+	}
+
 	// --- Test: Enter on an empty instrument table pointer allocates and jumps ---
 	step++;
 	if (pluginGoatTracker != NULL && pluginGoatTracker->view != NULL
@@ -4963,7 +5544,7 @@ void CTestGT2Patterns::Run(ITestCallback *cb)
 		gt2RenoiseEditStep = 1;
 
 		// 'z' is renoisekeytbl1[0] → C at the active octave (FIRSTNOTE + 0 + epoctave*12).
-		view->KeyDown(SDLK_z, false, false, false, false);
+		view->KeyDown(SDLK_Z, false, false, false, false);
 
 		int expectedNote = FIRSTNOTE + 0 + epoctave * 12;
 		bool wroteNote = pattern[0][8 * 4 + 0] == (unsigned char)expectedNote;
@@ -4995,6 +5576,180 @@ void CTestGT2Patterns::Run(ITestCallback *cb)
 	{
 		allPassed = false;
 		StepCompleted(step, false, "GT2 pattern view not initialized");
+	}
+	if (!allPassed)
+	{
+		cleanupGoatTrackerForTest();
+		TestCompleted(false, "Some GT2Patterns tests failed");
+		return;
+	}
+
+	// --- Clicking the toolbar must not cost the pattern editor its keys ---
+	// A toolbar click (octave arrows, Follow, ...) makes CViewGT2Toolbar the
+	// focused view, so every subsequent KeyDown is dispatched there. The
+	// toolbar owns no keyboard of its own and delegates to CViewGT2Patterns,
+	// the same way the Instrument / Tables views delegate to native GT2.
+	//
+	// Regression: the toolbar used to route through
+	// GT2_HandleRenoiseOrForwardKeyDown, which only sees the Renoise
+	// dispatcher's global bindings and whose native fallback is a no-op under
+	// KEY_RENOISE. Main-track note entry and cursor navigation live in
+	// CViewGT2Patterns::KeyDown, so both were silently dropped after a click.
+	step++;
+	if (pluginGoatTracker != NULL && pluginGoatTracker->viewPatterns != NULL
+		&& pluginGoatTracker->viewToolbar != NULL)
+	{
+		CViewGT2Patterns *view = pluginGoatTracker->viewPatterns;
+		CViewGT2Toolbar *toolbar = pluginGoatTracker->viewToolbar;
+		unsigned savedKeypreset = keypreset;
+		int savedRecordmode = recordmode;
+		int savedEditmode = editmode;
+		int savedEamode = eamode;
+		int savedMenu = menu;
+		int savedEppos = eppos;
+		int savedEpchn = epchn;
+		int savedEpcolumn = epcolumn;
+		int savedEparpcol = view->eparpcol;
+		int savedEinum = einum;
+		int savedEpoctave = epoctave;
+		int savedEpnum0 = epnum[0];
+		int savedPattLen0 = pattlen[0];
+		int savedEditStep = gt2RenoiseEditStep;
+		bool savedWantTextInput = ImGui::GetIO().WantTextInput;
+		unsigned char savedRows[12];   // rows 8, 9, 10
+		memcpy(savedRows, &pattern[0][8 * 4], sizeof(savedRows));
+
+		keypreset = KEY_RENOISE;
+		recordmode = 1;
+		editmode = 0;  // EDIT_PATTERN
+		eamode = 0;
+		menu = 0;
+		epnum[0] = 0;
+		pattlen[0] = 16;
+		epchn = 0;
+		eppos = 8;
+		epcolumn = 0;
+		view->eparpcol = -1;
+		einum = 3;
+		epoctave = 4;
+		gt2RenoiseEditStep = 1;
+		memset(&pattern[0][8 * 4], 0, sizeof(savedRows));
+		ImGui::GetIO().WantTextInput = false;
+
+		// 'z' is renoisekeytbl1[0] -> C at the active octave, exactly as it
+		// behaves when the pattern view itself holds focus.
+		int expectedNote = FIRSTNOTE + 0 + epoctave * 12;
+		bool noteConsumed = toolbar->KeyDown(SDLK_Z, false, false, false, false);
+		cleanupGoatTrackerForTest();
+		bool toolbarKeepsNoteEntry = noteConsumed
+			&& pattern[0][8 * 4 + 0] == (unsigned char)expectedNote
+			&& pattern[0][8 * 4 + 1] == (unsigned char)einum
+			&& eppos == 9;
+
+		// Cursor navigation is the other half that used to vanish: bare
+		// arrows are handled by HandleMainTrackNavigation, never by the
+		// Renoise dispatcher.
+		bool downConsumed = toolbar->KeyDown(MTKEY_ARROW_DOWN, false, false, false, false);
+		cleanupGoatTrackerForTest();
+		bool toolbarKeepsNavigation = downConsumed && eppos == 10;
+
+		// A toolbar number field being edited still owns the keyboard: no
+		// note may be written behind the user's back.
+		ImGui::GetIO().WantTextInput = true;
+		bool textInputConsumed = toolbar->KeyDown(SDLK_Z, false, false, false, false);
+		cleanupGoatTrackerForTest();
+		bool toolbarTextFieldKeepsKeys = !textInputConsumed
+			&& pattern[0][10 * 4 + 0] == 0
+			&& eppos == 10;
+
+		// Restore
+		ImGui::GetIO().WantTextInput = savedWantTextInput;
+		memcpy(&pattern[0][8 * 4], savedRows, sizeof(savedRows));
+		gt2RenoiseEditStep = savedEditStep;
+		epoctave = savedEpoctave;
+		einum = savedEinum;
+		view->eparpcol = savedEparpcol;
+		epcolumn = savedEpcolumn;
+		epchn = savedEpchn;
+		eppos = savedEppos;
+		pattlen[0] = savedPattLen0;
+		epnum[0] = savedEpnum0;
+		menu = savedMenu;
+		eamode = savedEamode;
+		editmode = savedEditmode;
+		recordmode = savedRecordmode;
+		keypreset = savedKeypreset;
+
+		bool ok = toolbarKeepsNoteEntry && toolbarKeepsNavigation && toolbarTextFieldKeepsKeys;
+		if (!ok) allPassed = false;
+		StepCompleted(step, ok, ok
+			? "Toolbar focus keeps pattern note entry and cursor navigation alive"
+			: "Toolbar focus dropped pattern keys (note entry / navigation / text-field guard)");
+	}
+	else
+	{
+		allPassed = false;
+		StepCompleted(step, false, "GT2 pattern view or toolbar not initialized");
+	}
+	if (!allPassed)
+	{
+		cleanupGoatTrackerForTest();
+		TestCompleted(false, "Some GT2Patterns tests failed");
+		return;
+	}
+
+	// --- GT2's own goattrk2.cfg stays inside RetroDebugger's settings ---
+	// gtmain() reads and writes that file with plain fopen(). It used to build
+	// the path itself and land on GoatTracker 2's OWN locations -- on macOS
+	// ~/Library/Preferences/org.c64.covertbitops.*, on Linux ~/.goattrk/, on
+	// Windows next to the executable. Three things were wrong with that: it
+	// overwrote the config of a real GT2 install, its save target had drifted
+	// away from its load target so the settings never round-tripped, and it
+	// never went through gPathToSettings -- so it ignored MT_SETTINGS_DIR and a
+	// test run wrote into the developer's real home directory, which is exactly
+	// what the isolation in bcead24b exists to prevent.
+	//
+	// This checks the path builder rather than a real save, deliberately:
+	// gtmain() does not run headlessly (chardata stays NULL, which is why this
+	// test reports SKIP at the end), so a run-and-look assertion would pass
+	// while testing nothing at all.
+	step++;
+	{
+		char cfgPath[MAX_PATHNAME];
+		memset(cfgPath, 0, sizeof(cfgPath));
+		gt2GetConfigFilePath(cfgPath, MAX_PATHNAME);
+
+		std::string path(cfgPath);
+		std::string settings = gPathToSettings ? gPathToSettings : "";
+
+		bool nonEmpty       = !path.empty();
+		bool underSettings  = !settings.empty() && path.compare(0, settings.size(), settings) == 0;
+		bool inGt2Subfolder = path.find("gt2") != std::string::npos;
+		bool rightName      = path.size() >= 12
+			&& path.compare(path.size() - 12, 12, "goattrk2.cfg") == 0;
+
+		// The three places it must never go again.
+		bool notInPreferences = path.find("Library/Preferences") == std::string::npos;
+		bool notInDotGoattrk  = path.find("/.goattrk") == std::string::npos;
+		bool notCovertbitops  = path.find("covertbitops") == std::string::npos;
+
+		bool ok = nonEmpty && underSettings && inGt2Subfolder && rightName
+			&& notInPreferences && notInDotGoattrk && notCovertbitops;
+		if (!ok) allPassed = false;
+
+		char msg[MAX_PATHNAME + 256];
+		if (ok)
+		{
+			snprintf(msg, sizeof(msg), "goattrk2.cfg resolves inside the settings folder: %s", cfgPath);
+		}
+		else
+		{
+			snprintf(msg, sizeof(msg),
+					 "goattrk2.cfg path wrong: '%s' (settings='%s' underSettings=%d gt2=%d name=%d prefs=%d dot=%d cb=%d)",
+					 cfgPath, settings.c_str(), (int)underSettings, (int)inGt2Subfolder,
+					 (int)rightName, (int)notInPreferences, (int)notInDotGoattrk, (int)notCovertbitops);
+		}
+		StepCompleted(step, ok, msg);
 	}
 	if (!allPassed)
 	{
@@ -5571,7 +6326,7 @@ void CTestGT2Patterns::Run(ITestCallback *cb)
 	}
 
 	// --- Restored native bindings: pattern nav + extras (audit-decided ports) ---
-	// User audit (claude/2026-05-24-gt2-pattern-native-key-audit.md) signed off
+	// User audit (signed off in the pattern-native-key audit notes)
 	// on porting these gpattern.c bindings since KEY_RENOISE no longer
 	// forwards to native. This step exercises all four ports end-to-end:
 	//   * Shift+Enter on note column → KEYON written (gpattern.c:266).
@@ -5711,6 +6466,146 @@ void CTestGT2Patterns::Run(ITestCallback *cb)
 			? "cleanup preserved GT2 plugin for subsequent suite tests"
 			: "cleanup requested GT2 shutdown before subsequent suite tests");
 	}
+	// --- Transport stop policy, and Pause/Space parity ---
+	// Placed before the chardata gate below: this exercises chn[] and songinit
+	// only, so it runs headlessly where the pattern-data tests cannot.
+	//
+	// Two claims. gt2KeepPlayingOnStop off still cuts the sound exactly as
+	// stock GT2 does and on leaves the voices ringing; and the toolbar's
+	// Play/Pause button lands on byte-identical state to Space under both
+	// settings, because it delegates to the same handler.
+	step++;
+	{
+		// playroutine() runs on the plugin's audio thread over the same chn[]
+		// globals this step drives, so quiesce it first.
+		bool audioWasPlaying = false;
+		if (pluginGoatTracker && pluginGoatTracker->audioChannel)
+		{
+			audioWasPlaying = true;
+			pluginGoatTracker->audioChannel->Stop();
+			SYS_Sleep(50);
+		}
+
+		bool keepFlagBefore = gt2KeepPlayingOnStop;
+		int songinitBefore = songinit;
+		int eamodeBefore = eamode;
+		int menuBefore = menu;
+		int followplayBefore = followplay;
+		CHN channelsBefore[MAX_CHN];
+		memcpy(channelsBefore, chn, sizeof(channelsBefore));
+
+		// Both handlers bail out early in these modes.
+		eamode = 0;
+		menu = 0;
+
+		// A channel that is audibly sounding, with no wavetable running so a
+		// playroutine() pass cannot legitimately change wave.
+		auto armSoundingChannel = []()
+		{
+			for (int c = 0; c < MAX_CHN; c++)
+			{
+				chn[c].mute = 0;
+				chn[c].tick = 8;
+				chn[c].tempo = 6;
+				chn[c].ptr[WTBL] = 0;
+				chn[c].ptr[PTBL] = 0;
+				chn[c].command = 0;
+				chn[c].newnote = 0;
+				chn[c].gatetimer = 0;
+			}
+			chn[0].wave = 0x41;   // pulse + gate
+			chn[0].gate = 0xff;
+			songinit = PLAY_PLAYING;
+		};
+
+		// What a stop leaves behind: the state it set immediately, and the
+		// state that survives the next player pass.
+		struct StopOutcome { int afterAction; int settled; unsigned char wave; unsigned char gate; };
+		auto captureStop = [&](int which) -> StopOutcome
+		{
+			armSoundingChannel();
+			if (which == 0)
+				pluginGoatTracker->renoiseInput->HandlePlayStop(false);   // Space
+			else if (which == 1)
+				pluginGoatTracker->viewToolbar->TriggerPlayPause();       // toolbar Pause
+			else
+				pluginGoatTracker->viewToolbar->TriggerStop();            // toolbar Stop
+			StopOutcome o;
+			o.afterAction = songinit;
+			playroutine();
+			o.settled = songinit;
+			o.wave = chn[0].wave;
+			o.gate = chn[0].gate;
+			return o;
+		};
+		auto sameOutcome = [](const StopOutcome &a, const StopOutcome &b)
+		{
+			return a.afterAction == b.afterAction && a.settled == b.settled
+				&& a.wave == b.wave && a.gate == b.gate;
+		};
+
+		bool haveControls = pluginGoatTracker
+						 && pluginGoatTracker->renoiseInput
+						 && pluginGoatTracker->viewToolbar;
+
+		bool offSilenced = false, onKeptSounding = false;
+		bool offParity = false, onParity = false;
+		bool stopIsIdempotent = false, spaceResumes = false, stopButtonStillHard = false;
+
+		if (haveControls)
+		{
+			// --- setting OFF: stock behaviour, the sound is cut ---
+			gt2KeepPlayingOnStop = false;
+			StopOutcome offSpace = captureStop(0);
+			StopOutcome offPause = captureStop(1);
+			offSilenced = (offSpace.afterAction == PLAY_STOP)
+					   && (offSpace.settled == PLAY_STOPPED)
+					   && (offSpace.wave == 0);
+			offParity = sameOutcome(offSpace, offPause);
+
+			// --- setting ON: sequencer stops, voices ring on ---
+			gt2KeepPlayingOnStop = true;
+			StopOutcome onSpace = captureStop(0);
+			StopOutcome onPause = captureStop(1);
+			onKeptSounding = (onSpace.afterAction == PLAY_STOPPED)
+						  && (onSpace.settled == PLAY_STOPPED)
+						  && (onSpace.wave == 0x41)
+						  && (onSpace.gate == 0xff);
+			onParity = sameOutcome(onSpace, onPause);
+
+			// Stopping twice is a no-op. Pressing Space twice is NOT the same
+			// thing -- Space is a toggle, so the second press starts playback.
+			GT2_StopSong();
+			stopIsIdempotent = (songinit == PLAY_STOPPED) && (chn[0].wave == 0x41);
+			pluginGoatTracker->renoiseInput->HandlePlayStop(false);
+			spaceResumes = GT2_IsTransportActive();
+
+			// The Stop button is deliberately outside that parity: it stays a
+			// hard reset even while Keep Playing on Stop is on.
+			StopOutcome onStopButton = captureStop(2);
+			stopButtonStillHard = (onStopButton.wave == 0)
+							   && (onStopButton.settled == PLAY_STOPPED);
+		}
+
+		gt2KeepPlayingOnStop = keepFlagBefore;
+		memcpy(chn, channelsBefore, sizeof(channelsBefore));
+		songinit = songinitBefore;
+		eamode = eamodeBefore;
+		menu = menuBefore;
+		followplay = followplayBefore;
+		if (audioWasPlaying && pluginGoatTracker && pluginGoatTracker->audioChannel)
+			pluginGoatTracker->audioChannel->Start();
+
+		bool ok = haveControls && offSilenced && onKeptSounding && offParity && onParity
+			   && stopIsIdempotent && spaceResumes && stopButtonStillHard;
+		if (!ok) allPassed = false;
+		snprintf(msg, sizeof(msg),
+				 "stop policy: offSilenced=%d onKeptSounding=%d | Pause==Space off=%d on=%d | stopIdempotent=%d spaceResumes=%d stopButtonHard=%d",
+				 offSilenced, onKeptSounding, offParity, onParity,
+				 stopIsIdempotent, spaceResumes, stopButtonStillHard);
+		StepCompleted(step, ok, msg);
+	}
+
 	if (!allPassed)
 	{
 		TestCompleted(false, "Some GT2Patterns tests failed");
@@ -5722,7 +6617,8 @@ void CTestGT2Patterns::Run(ITestCallback *cb)
 	if (chardata == NULL)
 	{
 		cleanupGoatTrackerForTest();
-		TestCompleted(true, "Skipped GT2 data tests (GT2 not active); Renoise shortcut tests passed");
+		TestSkipped("GT2 plugin not active -- the GT2 pattern-data tests never ran "
+		            "(the Renoise shortcut tests did pass)");
 		return;
 	}
 
@@ -5855,7 +6751,6 @@ void CTestGT2Patterns::Run(ITestCallback *cb)
 	// least once).
 	step++;
 	{
-		extern unsigned *scrbuffer;
 		bool ok = true;
 
 		if (scrbuffer != NULL)

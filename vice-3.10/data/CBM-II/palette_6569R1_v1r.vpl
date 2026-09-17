@@ -1,0 +1,57 @@
+#
+# VICE Palette file: PALette_6569R1_v1r
+#
+# Syntax:
+# Red Green Blue
+#
+# TYPE:VICII
+# NAME:PALette 6569R1 (by Tobias)
+#
+
+# Black
+00 00 00
+
+# White
+FF FF FF
+
+# Red
+7B 1F 32
+
+# Cyan
+86 DF CD
+
+# Purple
+B3 58 C2
+
+# Green
+49 A6 4B
+
+# Blue
+38 29 AD
+
+# Yellow
+C7 D5 55
+
+# Orange
+B1 74 3A
+
+# Brown
+53 3D 00
+
+# Light Red
+BE 62 75
+
+# Dark Grey
+3D 3D 3D
+
+# Medium Grey
+80 80 80
+
+# Light Green
+8C E8 8E
+
+# Light Blue
+7B 6C F0
+
+# Light Grey
+C2 C2 C2

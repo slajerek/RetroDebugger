@@ -1,0 +1,57 @@
+#
+# VICE Palette file: PALette_C64_cyan
+#
+# Syntax:
+# Red Green Blue
+#
+# TYPE:VICII
+# NAME:PALette Cyan (by Tobias)
+#
+
+# Black
+00 23 19
+
+# White
+00 FF B6
+
+# Red
+00 67 49
+
+# Cyan
+00 B0 7D
+
+# Purple
+00 73 51
+
+# Green
+00 91 67
+
+# Blue
+00 58 3E
+
+# Yellow
+00 CB 90
+
+# Orange
+00 73 51
+
+# Brown
+00 58 3E
+
+# Light Red
+00 91 67
+
+# Dark Grey
+00 67 49
+
+# Medium Grey
+00 89 61
+
+# Light Green
+00 CB 90
+
+# Light Blue
+00 89 61
+
+# Light Grey
+00 B0 7D

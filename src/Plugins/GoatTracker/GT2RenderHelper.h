@@ -10,8 +10,12 @@
 // (see C64DebuggerPluginGoatTracker.h). Persisted per workspace.
 extern float gt2RenoiseUIScale;
 
-// Render-time scale. Legacy GT2 layouts always render at 1.0; only the
-// Renoise keyboard/layout mode uses gt2RenoiseUIScale.
+// Render-time scale. Legacy GT2 layouts always render at the user zoom 1.0;
+// only the Renoise keyboard/layout mode uses gt2RenoiseUIScale. BOTH are then
+// multiplied by the app's HiDPI UI scale, because GT2_CHAR_W/H are raw pixel
+// constants and an ImGui unit is a physical pixel on a DPI-aware Windows or
+// Linux build -- so "100%" keeps meaning "native size on this display" rather
+// than "half size on a Retina one".
 float GT2EffectiveUIScale();
 
 // On-screen GT2 character cell size, scaled by the zoom factor.
@@ -49,5 +53,24 @@ inline float GT2ColToPixel(int col) { return (float)col * GT2CellW(); }
 inline float GT2RowToPixel(int row) { return (float)row * GT2CellH(); }
 inline int GT2PixelToCol(float px)  { return (int)(px / GT2CellW()); }
 inline int GT2PixelToRow(float py)  { return (int)(py / GT2CellH()); }
+
+// --- Table scrolling ---------------------------------------------------
+// Shared by the Tables view (which shows the whole ltable/rtable pool) and
+// the Instrument view (which shows one instrument's slice of it). Pure
+// functions, so they are unit-tested headlessly.
+
+// How many table rows fit in `availableHeight` pixels below the header row.
+// At least 1, and safe when the font atlas has not set a cell height yet.
+// Deliberately runtime-measured: the native GT2 constant VISIBLETABLEROWS
+// (15) describes the fixed text-mode screen, not a resizable ImGui window.
+int GT2TableVisibleRows(float availableHeight, float cellH);
+
+// Scroll clamp for one table column. `offset` is the first visible row,
+// `len` the number of rows that exist (MAX_TABLELEN for the pool, the slice
+// length for an instrument), `cursorRow` the row to keep on screen -- or -1
+// to range-clamp only, which is what a mouse-wheel scroll passes so the view
+// does not snap back to the edit cursor. Stepping past an edge moves the
+// offset by one; a jump lands the cursor at the edge.
+int GT2TableScrollOffset(int offset, int len, int visibleRows, int cursorRow);
 
 #endif // _GT2RenderHelper_H_

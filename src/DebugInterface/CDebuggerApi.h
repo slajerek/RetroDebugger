@@ -74,10 +74,20 @@ public:
 	virtual u8 GetByteFromRam(int addr);
 	
 	virtual void SetWord(int addr, u16 v);
-	virtual void MakeJmp(int addr);
+	// Sets the CPU program counter. Returns true when the new PC has been committed
+	// to the CPU, false when the backend could not commit it (still queued, or not
+	// supported by this backend).
+	virtual bool MakeJmp(int addr);
 	
 	//
 	virtual void DetachEverything();
+	// Detaches the disk image from a single drive WITHOUT resetting the machine.
+	// This is the "Detach Disk Image" GUI action, as opposed to DetachEverything()
+	// which power-cycles the machine. Returns false when the platform has no disk
+	// drives or when deviceNumber is out of range.
+	virtual bool DetachDriveDisk(int deviceNumber);
+	// Drive/device number used when the caller does not specify one (C64: 8, Atari: 1)
+	virtual int GetDefaultDiskDriveNumber();
 	virtual void ClearRam(int startAddr, int endAddr, u8 value);
 	
 	//

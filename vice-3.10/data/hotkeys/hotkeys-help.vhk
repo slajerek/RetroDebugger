@@ -1,0 +1,12 @@
+# VICE hotkeys for help items
+#
+# Author:   Bas Wassink
+# Updated:  2023-09-03
+#
+# See src/arch/shared/uiactions.h for a list of action names.
+
+#help-manual        # Alt+F1 would be nice, but taken by my WM
+#help-command-line
+#help-compile-time
+#help-hotkeys
+#help-about

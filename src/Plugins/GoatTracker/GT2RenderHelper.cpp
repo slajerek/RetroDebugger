@@ -1,13 +1,15 @@
 #include "GT2RenderHelper.h"
 #include "CSlrImage.h"
 #include "goattrk2.h"
+#include "MT_UiScale.h"
 
 // Default 100%. Clamped/snapped only via GT2_SetRenoiseUIScale.
 float gt2RenoiseUIScale = 1.0f;
 
 float GT2EffectiveUIScale()
 {
-	return keypreset == KEY_RENOISE ? gt2RenoiseUIScale : 1.0f;
+	float userZoom = (keypreset == KEY_RENOISE) ? gt2RenoiseUIScale : 1.0f;
+	return userZoom * MT_GetUiScale();
 }
 
 void DrawCharGT2(ImDrawList *dl, CGT2FontAtlas *font,
@@ -107,4 +109,35 @@ void DrawBoxGT2(ImDrawList *dl, CGT2FontAtlas *font,
 		DrawCharGT2(dl, font, px, py + row * ch, '|', fgColor, bgColor);
 		DrawCharGT2(dl, font, px + (widthChars - 1) * cw, py + row * ch, '|', fgColor, bgColor);
 	}
+}
+
+int GT2TableVisibleRows(float availableHeight, float cellH)
+{
+	if (cellH <= 0.0f)
+		return 1;
+	int rows = (int)(availableHeight / cellH);
+	return (rows < 1) ? 1 : rows;
+}
+
+int GT2TableScrollOffset(int offset, int len, int visibleRows, int cursorRow)
+{
+	if (visibleRows < 1)
+		visibleRows = 1;
+	if (len <= visibleRows)
+		return 0;
+
+	int maxOffset = len - visibleRows;
+	if (offset > maxOffset) offset = maxOffset;
+	if (offset < 0)         offset = 0;
+
+	if (cursorRow >= 0)
+	{
+		if (cursorRow >= len)
+			cursorRow = len - 1;
+		if (cursorRow < offset)
+			offset = cursorRow;
+		else if (cursorRow >= offset + visibleRows)
+			offset = cursorRow - visibleRows + 1;
+	}
+	return offset;
 }

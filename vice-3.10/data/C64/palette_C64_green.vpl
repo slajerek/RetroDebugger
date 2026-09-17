@@ -1,0 +1,57 @@
+#
+# VICE Palette file: PALette_C64_green
+#
+# Syntax:
+# Red Green Blue
+#
+# TYPE:VICII
+# NAME:PALette Green P1/525nm (by Tobias)
+#
+
+# Black
+07 23 00
+
+# White
+37 FF 00
+
+# Red
+16 67 00
+
+# Cyan
+26 B0 00
+
+# Purple
+19 73 00
+
+# Green
+1F 91 00
+
+# Blue
+13 58 00
+
+# Yellow
+2B CB 00
+
+# Orange
+19 73 00
+
+# Brown
+13 58 00
+
+# Light Red
+1F 91 00
+
+# Dark Grey
+16 67 00
+
+# Medium Grey
+1D 89 00
+
+# Light Green
+2B CB 00
+
+# Light Blue
+1D 89 00
+
+# Light Grey
+26 B0 00

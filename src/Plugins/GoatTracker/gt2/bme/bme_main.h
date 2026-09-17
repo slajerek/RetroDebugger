@@ -1,5 +1,5 @@
 // BME main definitions header file
-#include <SDL.h>
+#include <SDL3/SDL.h>
 
 #define GFX_SCANLINES 1
 #define GFX_DOUBLESIZE 2
@@ -78,32 +78,32 @@ enum GoatTrackerKey
        KEY_F10 = 0x113,
        KEY_F11 = 0x114,
        KEY_F12 = 0x115,
-       KEY_A = SDLK_a,
-       KEY_N = SDLK_n,
-       KEY_B = SDLK_b, //  30
-       KEY_O = SDLK_o,
-       KEY_C = SDLK_c,
-       KEY_P = SDLK_p,
-       KEY_D = SDLK_d,
-       KEY_Q = SDLK_q,
-       KEY_E = SDLK_e,
-       KEY_R = SDLK_r,
-       KEY_F = SDLK_f,
-       KEY_S = SDLK_s,
-       KEY_G = SDLK_g, //  40
-       KEY_T = SDLK_t,
-       KEY_H = SDLK_h,
-       KEY_U = SDLK_u,
-       KEY_I = SDLK_i,
-       KEY_V = SDLK_v,
-       KEY_J = SDLK_j,
-       KEY_W = SDLK_w,
-       KEY_K = SDLK_k,
-       KEY_X = SDLK_x,
-       KEY_L = SDLK_l, //  50
-       KEY_Y = SDLK_y,
-       KEY_M = SDLK_m,
-       KEY_Z = SDLK_z,
+       KEY_A = SDLK_A,
+       KEY_N = SDLK_N,
+       KEY_B = SDLK_B, //  30
+       KEY_O = SDLK_O,
+       KEY_C = SDLK_C,
+       KEY_P = SDLK_P,
+       KEY_D = SDLK_D,
+       KEY_Q = SDLK_Q,
+       KEY_E = SDLK_E,
+       KEY_R = SDLK_R,
+       KEY_F = SDLK_F,
+       KEY_S = SDLK_S,
+       KEY_G = SDLK_G, //  40
+       KEY_T = SDLK_T,
+       KEY_H = SDLK_H,
+       KEY_U = SDLK_U,
+       KEY_I = SDLK_I,
+       KEY_V = SDLK_V,
+       KEY_J = SDLK_J,
+       KEY_W = SDLK_W,
+       KEY_K = SDLK_K,
+       KEY_X = SDLK_X,
+       KEY_L = SDLK_L, //  50
+       KEY_Y = SDLK_Y,
+       KEY_M = SDLK_M,
+       KEY_Z = SDLK_Z,
        KEY_1 = SDLK_1,
        KEY_2 = SDLK_2,
        KEY_3 = SDLK_3,
@@ -119,8 +119,8 @@ enum GoatTrackerKey
        KEY_BRACKETL = SDLK_LEFTBRACKET,
        KEY_BRACKETR = SDLK_RIGHTBRACKET,
        KEY_SEMICOLON = SDLK_SEMICOLON,
-       KEY_APOST1 = SDLK_QUOTE,
-       KEY_APOST2 = SDLK_BACKQUOTE, //  70
+       KEY_APOST1 = SDLK_APOSTROPHE,
+       KEY_APOST2 = SDLK_GRAVE, //  70
        KEY_COMMA = SDLK_COMMA,
        KEY_COLON = SDLK_PERIOD,
        KEY_PERIOD = SDLK_PERIOD,

@@ -44,6 +44,7 @@ extern "C" {
 #include "CSnapshotsManager.h"
 
 #include "C64KeyboardShortcuts.h"
+#include "MT_UiScale.h"
 
 
 // docs: http://codebase64.org/doku.php?id=base:vicii_memory_organizing
@@ -96,7 +97,7 @@ void CViewC64VicDisplay::Initialize(CDebugInterfaceC64 *debugInterface)
 	this->autoScrollMode = AUTOSCROLL_DISASSEMBLY_UNKNOWN;
 	
 	font = viewC64->fontDefaultCBMShifted;
-	fontScale = 0.8;
+	fontScale = MT_UiScaled(0.8f);
 	fontHeight = font->GetCharHeight('@', fontScale) + 2;
 	
 	// global position offset
@@ -3193,6 +3194,7 @@ bool CViewC64VicDisplay::KeyUp(u32 keyCode, bool isShift, bool isAlt, bool isCon
 		|| keyCode == MTKEY_ARROW_RIGHT)
 	{
 		arrowKeyDown = false;
+		return true;
 	}
 
 	return CGuiView::KeyUp(keyCode, isShift, isAlt, isControl, isSuper);

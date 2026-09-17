@@ -1,0 +1,107 @@
+/*
+ * tcbmrom.c
+ *
+ * Written by
+ *  Andreas Boose <viceteam@t-online.de>
+ *
+ * This file is part of VICE, the Versatile Commodore Emulator.
+ * See README for copyright notice.
+ *
+ *  This program is free software; you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation; either version 2 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program; if not, write to the Free Software
+ *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA
+ *  02111-1307  USA.
+ *
+ */
+
+#include "vice.h"
+
+#include <stdio.h>
+#include <string.h>
+
+#include "drive.h"
+#include "driverom.h"
+#include "drivetypes.h"
+#include "log.h"
+#include "resources.h"
+#include "sysfile.h"
+#include "tcbmrom.h"
+
+
+/* Logging goes here.  */
+static log_t tcbmrom_log;
+
+/* If nonzero, the ROM image is available  */
+static unsigned int rom1551_loaded = 0;
+
+/* test ROM for existence, size */
+int tcbmrom_load_1551(void)
+{
+    return driverom_test_load("DosName1551", &rom1551_loaded,
+            DRIVE_ROM1551_SIZE, DRIVE_ROM1551_SIZE, "1551",
+            DRIVE_TYPE_1551, NULL);
+}
+
+/* setup (=load) the ROM for a given disk unit */
+void tcbmrom_setup_image(diskunit_context_t *unit)
+{
+    unsigned int loaded = 0;
+    if (rom_loaded) {
+        if (unit->rom_type != unit->type) {
+            /* set this here to avoid recursion */
+            unit->rom_type = unit->type;
+
+            switch (unit->type) {
+                case DRIVE_TYPE_1551:
+                    driverom_load("DosName1551", unit->rom, &loaded,
+                            DRIVE_ROM1551_SIZE, DRIVE_ROM1551_SIZE, "1551",
+                            DRIVE_TYPE_1551, NULL);
+                    /* ROM was loaded to the lower part of the buffer */
+                    memcpy(&(unit->rom[DRIVE_ROM1551_SIZE]), unit->rom, DRIVE_ROM1551_SIZE);
+                    break;
+            }
+            /* if loading failed, set rom type to 0 */
+            if (!loaded) {
+                unit->rom_type = 0;
+            }
+        }
+    }
+}
+
+/* check if the drive ROM is available for a given drive type, returns -1 on error */
+int tcbmrom_check_loaded(unsigned int type)
+{
+    switch (type) {
+        case DRIVE_TYPE_NONE:
+            return 0;
+        case DRIVE_TYPE_1551:
+            if (rom1551_loaded < 1 && rom_loaded) {
+                return -1;
+            }
+            break;
+        case DRIVE_TYPE_ANY:
+            if ((!rom1551_loaded) && rom_loaded) {
+                return -1;
+            }
+            break;
+        default:
+            return -1;
+    }
+
+    return 0;
+}
+
+void tcbmrom_init(void)
+{
+    tcbmrom_log = log_open("TCBMDriveROM");
+}

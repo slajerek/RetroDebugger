@@ -86,8 +86,10 @@ public:
 				{
 					probeClient.Stop();
 					char msg[256];
-					snprintf(msg, sizeof(msg), "Skipped (device not reachable: %s)", result.detail.c_str());
-					TestCompleted(true, msg);
+					snprintf(msg, sizeof(msg),
+					         "C64U device not reachable (%s) -- the hardware connection "
+					         "was never exercised", result.detail.c_str());
+					TestSkipped(msg);
 					return;
 				}
 				break;

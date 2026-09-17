@@ -1,0 +1,25 @@
+# VICE hotkeys for datasettes
+#
+# Author:   Bas Wassink
+# Updated:  2023-09-03
+
+# Datasette #1 hotkeys
+!if !MACOS
+    tape-attach-1   <Alt>t
+    tape-detach-1   <Alt><Shift>t
+
+    # Datasette #2 hotkeys (xpet only)
+    !if PET
+        tape-attach-2   <Control><Alt>t
+        tape-detach-2   <Control><Alt><Shift>t
+    !endif
+!else
+    tape-attach-1   <Command>t
+    tape-detach-1   <Command><Shift>t
+
+    # Datasette #2 hotkeys (xpet only)
+    !if PET
+        tape-attach-2   <Control><Command>t
+        tape-detach-2   <Control><Command><Shift>t
+    !endif
+!endif

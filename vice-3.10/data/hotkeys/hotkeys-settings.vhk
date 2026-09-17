@@ -1,0 +1,24 @@
+# VICE hotkeys for settings
+#
+# Author:   Bas Wassink
+# Updated:  2023-09-04
+#
+# See src/arch/shared/uiactions.h for a list of action names.
+
+!if !MACOS
+    !if GTK3
+        settings-dialog     <Alt>o
+    !endif
+    settings-default    <Alt><Shift>o
+!else
+    !if GTK3
+        settings-dialog     <Command>o
+    !endif
+    settings-default    <Command><Shift>o
+!endif
+
+#settings-load
+#settings-load-from
+#settings-load-extra
+#settings-save
+#settings-save-as

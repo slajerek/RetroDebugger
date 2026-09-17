@@ -1,0 +1,102 @@
+{
+  "dependencies": [
+    {
+      "name": "JetBrains Mono (font)",
+      "licence": "Apache-2.0",
+      "version": "assets/fonts/JetBrainsMono-*.ttf (Regular, Medium, Bold, ExtraBold and their italics)",
+      "provenance": "SHIPPED ASSETS. Licence read from the fonts' own name table (nameID 13)",
+      "commercial_safe": true
+    },
+    {
+      "name": "Cousine (font)",
+      "licence": "Apache-2.0 (Cousine-Regular.ttf); OFL-1.1 (Cousine-Regular-cut.ttf)",
+      "version": "assets/fonts/Cousine-Regular.ttf, Cousine-Regular-cut.ttf; also embedded in src/Embedded/FontCousineRegular.h",
+      "provenance": "SHIPPED ASSETS and EMBEDDED. The two shipped files carry DIFFERENT licence strings in their own name tables -- the '-cut' build says OFL-1.1, the stock one Apache-2.0. Both permit commercial redistribution; the discrepancy is recorded rather than smoothed over",
+      "commercial_safe": true
+    },
+    {
+      "name": "ProFont IIx (font)",
+      "licence": "ProFont Distribution licence (freeware, SQ Software / Carl R. Osterwald 1997)",
+      "version": "assets/fonts/ProFontIIx.ttf; also embedded in src/Embedded/FontProFontIIx.h",
+      "provenance": "SHIPPED ASSET and EMBEDDED. NOT an OSI licence: redistribution is permitted for UNMODIFIED copies only, the ProFont Distribution package may not itself be sold, but it may be distributed free alongside a product that is sold. This copy is unmodified (261 glyphs, 4 Polish)",
+      "commercial_safe": true
+    },
+    {
+      "name": "ProFontWindows PL (font) -- MODIFIED ProFont, licence unresolved",
+      "licence": "ProFont Distribution licence (freeware) -- but see provenance",
+      "version": "assets/fonts/ProFontWindowsPL.ttf",
+      "provenance": "SHIPPED ASSET, and MARKED UNSAFE DELIBERATELY. The file names itself 'ProFontWindows 2.3' internally but carries 296 glyphs including all 18 Polish diacritics, against 261 and 4 in the stock ProFontIIx here -- i.e. it is a MODIFIED copy. ProFont's licence permits redistribution of UNMODIFIED copies only, so a commercial build has no grant for this file. Settle it (drop the file, obtain permission, or replace it with an OFL face) and flip this field; until then a store build aborts here on purpose",
+      "commercial_safe": false
+    },
+    {
+      "name": "IBM Plex Sans and Plex Mono (fonts)",
+      "licence": "OFL-1.1",
+      "version": "embedded",
+      "provenance": "EMBEDDED in src/Embedded/FontPlexSans.h and FontPlexMono.h. NOTE: both headers point at 'papers/ibm-plex-license.txt', which does not exist in this repository",
+      "commercial_safe": true
+    },
+    {
+      "name": "Liberation Sans (font)",
+      "licence": "OFL-1.1",
+      "version": "embedded (LiberationSans-Regular.ttf)",
+      "provenance": "EMBEDDED in src/Embedded/FontLiberationSans.h",
+      "commercial_safe": true
+    },
+    {
+      "name": "mononoki (font)",
+      "licence": "OFL-1.1",
+      "version": "embedded (mononoki-Regular.ttf)",
+      "provenance": "EMBEDDED in src/Embedded/FontMonoki.h -- the file is named Monoki but the font is mononoki by Matthias Tellen",
+      "commercial_safe": true
+    },
+    {
+      "name": "Karla (font)",
+      "licence": "OFL-1.1",
+      "version": "embedded (Karla-Regular.ttf)",
+      "provenance": "EMBEDDED in src/Embedded/FontKarlaRegular.h",
+      "commercial_safe": true
+    },
+    {
+      "name": "Exo (font)",
+      "licence": "OFL-1.1",
+      "version": "embedded (Exo-Medium.ttf)",
+      "provenance": "EMBEDDED in src/Embedded/FontExoMedium.h",
+      "commercial_safe": true
+    },
+    {
+      "name": "PT Mono (font)",
+      "licence": "OFL-1.1",
+      "version": "embedded",
+      "provenance": "EMBEDDED in src/Embedded/FontPTMono.h",
+      "commercial_safe": true
+    },
+    {
+      "name": "GNU Unifont (font)",
+      "licence": "OFL-1.1 or GPL-2.0-or-later with the GNU font embedding exception (dual)",
+      "version": "embedded",
+      "provenance": "EMBEDDED in src/Embedded/FontUnifont.h. The OFL branch of the dual licence is the one relied on here",
+      "commercial_safe": true
+    },
+    {
+      "name": "Droid Sans (font)",
+      "licence": "Apache-2.0",
+      "version": "embedded (DroidSans.ttf)",
+      "provenance": "EMBEDDED in src/Embedded/FontDroidSans.h",
+      "commercial_safe": true
+    },
+    {
+      "name": "Roboto Medium (font)",
+      "licence": "Apache-2.0",
+      "version": "embedded",
+      "provenance": "EMBEDDED in src/Embedded/FontRobotoMedium.h",
+      "commercial_safe": true
+    },
+    {
+      "name": "Sweet16mono (font)",
+      "licence": "BSL-1.0",
+      "version": "embedded (Sweet16mono.ttf)",
+      "provenance": "EMBEDDED in src/Embedded/FontSweet16mono.h -- kmar/Sweet16Font by Martin Sedlak, Boost Software License. NOT the unrelated 'Sweet Sixteen' font by Billy Argel, which is personal-use only",
+      "commercial_safe": true
+    }
+  ]
+}

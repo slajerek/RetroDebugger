@@ -26,6 +26,7 @@
 
 #include "CGuiMain.h"
 #include "SND_SoundEngine.h"
+#include "MT_UiScale.h"
 
 #define C64DEBUGGER_KEYBOARD_SHORTCUTS_VERSION 1
 
@@ -37,7 +38,7 @@ CViewKeyboardShortcuts::CViewKeyboardShortcuts(float posX, float posY, float pos
 	extKeyboardShortucts.push_back(new CSlrString("kbs"));
 
 	font = viewC64->fontDefaultCBMShifted;
-	fontScale = 2.7;
+	fontScale = MT_UiScaled(2.7f);
 	fontHeight = font->GetCharHeight('@', fontScale) + 3;
 
 	strHeader = new CSlrString("Keyboard Shortcuts");

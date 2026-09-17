@@ -1,0 +1,16 @@
+#
+# VICE Palette file
+#
+# Syntax:
+# Red Green Blue
+#
+# NAME:Amber
+# TYPE:Crtc
+
+# amber screens use P3 phosphor (602nm)
+
+# Background
+00 00 00
+
+# Foreground
+FF A8 00

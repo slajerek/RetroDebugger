@@ -1,0 +1,56 @@
+#
+# VICE Palette file
+#
+# Syntax:
+# Red Green Blue
+#
+# NAME:VDC b/w video output
+# TYPE:VDC
+
+# Black
+00 00 00
+
+# Medium Gray
+00 00 00
+
+# Blue
+A0 A0 A0
+
+# Light Blue
+FF FF FF
+
+# Green
+A0 A0 A0
+
+# Light Green
+FF FF FF
+
+# Dark Cyan
+A0 A0 A0
+
+# Light Cyan
+FF FF FF
+
+# Dark Red
+A0 A0 A0
+
+# Light Red
+FF FF FF
+
+# Dark Purple
+A0 A0 A0
+
+# Light Purple
+FF FF FF
+
+# Brown
+A0 A0 A0
+
+# Yellow
+FF FF FF
+
+# Light Gray
+A0 A0 A0
+
+# White
+FF FF FF

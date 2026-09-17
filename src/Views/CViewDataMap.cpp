@@ -26,6 +26,7 @@
 #include "imgui_internal.h"
 
 #include <math.h>
+#include "MT_UiScale.h"
 
 // Engine-wide shutdown flag (defined in MTEngineSDL/Render/VID_Main.cpp).
 // The data-map worker thread polls it so it stops dereferencing debugInterface
@@ -98,7 +99,7 @@ CViewDataMap::CViewDataMap(const char *name, float posX, float posY, float posZ,
 	this->shouldRebindImage = false;
 	
 	this->font = viewC64->fontDefaultCBMShifted;
-	this->fontScale = 0.11f;
+	this->fontScale = MT_UiScaled(0.11f);
 
 	// alloc with safe margin to avoid comparison in cells marking (it is quicker)
 	int numCells = ramSize + DATA_CELLS_PADDING_LENGTH;
@@ -1142,10 +1143,20 @@ void CViewDataMap::RenderImGui()
 			for (int ix = 0; ix < numCellsInWidth; ix++)
 			{
 				if (addr > ramSize)
+				{
+					addr++;
+					cx += cellSizeX;
 					continue;
+				}
 				
 				CDebugMemoryCell *cell = debugMemory->GetMemoryCell(addr);
-				
+				if (!cell)
+				{
+					addr++;
+					cx += cellSizeX;
+					continue;
+				}
+
 				float z = 1.0f - (cell->sr + cell->sg + cell->sb)/2.5f;
 				
 				float tcr = z; //1.0f - cell->sr;

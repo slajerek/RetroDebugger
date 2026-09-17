@@ -29,7 +29,7 @@ void CTestGT2SelectionOps::Run(ITestCallback *cb)
 	{
 		step++;
 		StepCompleted(step, true, "GT2 plugin/viewPatterns not available - skipped");
-		TestCompleted(true, "GT2 not available, skipped");
+		TestSkipped("GT2 plugin not available -- selection operations were never exercised");
 		return;
 	}
 	CViewGT2Patterns *vp = pluginGoatTracker->viewPatterns;

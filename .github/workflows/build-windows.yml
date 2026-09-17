@@ -1,28 +1,88 @@
 name: Windows build
 
+# `devel` is not an afterthought here: under the odd/even convention it is where
+# work LANDS, and `master` only ever receives a merge that devel has already
+# proved. CI that runs on master and not on devel therefore runs after the
+# question has been answered rather than while it is open -- which is how a
+# devel branch can be published green and untested, as v3.21.1 was.
 on:
   push:
-    branches: [ master, main ]
+    branches: [ master, main, devel ]
   pull_request:
-    branches: [ master, main ]
+    branches: [ master, main, devel ]
   workflow_dispatch:
+
+env:
+  # MTENGINE_REF holds a BRANCH by default (`origin/master`), and a branch is
+  # tracked rather than pinned -- CI clones it fresh every run, so it always
+  # matches and this flag is inert. The flag stays because it stops being inert
+  # the moment MTENGINE_REF is set to a SHA to freeze an engine for a release:
+  # then a checkout that does not match the pin must fail the run, not warn.
+  MTENGINE_PIN_STRICT: '1'
 
 jobs:
   build-windows:
     runs-on: windows-latest
+    # Both logging configurations on every push: the "off" leg compiles the
+    # shipping shape (MT_DEBUG_LOGS=0), which used to be discovered at release.
+    strategy:
+      fail-fast: false
+      matrix:
+        logs: ["on", "off"]
 
     steps:
       - name: Checkout RetroDebugger
         uses: actions/checkout@v6
 
+      - name: MSYS2 prerequisites for the codec builds
+        shell: pwsh
+        run: |
+          # FFmpeg is configured OUT OF TREE, and its configure then writes a
+          # one-line Makefile that includes the source Makefile by ABSOLUTE
+          # MSYS2 path (/c/Users/...). Only an MSYS2 make can read that: a
+          # native Windows make reads /c/Users as C:\c\Users and stops with
+          # "No rule to make target", naming FFmpeg's own Makefile -- which is
+          # how this runner failed on 2026-09-03 (run 33742482983), looking for
+          # all the world like a broken extraction. libvpx sails through the
+          # same shell because ITS generated Makefile says `include config.mk`,
+          # relative, which any make resolves.
+          #
+          # The engine's build-video_codecs.ps1 now names /usr/bin/make
+          # absolutely, so PATH order can no longer decide this. That leaves one
+          # requirement, and it is this step: MSYS2 must HAVE make. It is not
+          # part of a base MSYS2 install -- it is the documented
+          # `pacman -S --needed make` prerequisite -- and no runner image is
+          # contracted to carry it.
+          $msys2 = if ($env:MSYS2_ROOT) { $env:MSYS2_ROOT } else { 'C:\msys64' }
+          $bash  = Join-Path $msys2 'usr\bin\bash.exe'
+          $make  = Join-Path $msys2 'usr\bin\make.exe'
+          if (-not (Test-Path $bash)) { throw "MSYS2 not found at $msys2 (expected $bash). The codec builds need it." }
+          if (-not (Test-Path $make)) {
+            & (Join-Path $msys2 'usr\bin\pacman.exe') -Sy --needed --noconfirm make diffutils pkgconf
+          }
+          if (-not (Test-Path $make)) { throw "MSYS2's make is still missing at $make after pacman ran." }
+          # Printed, not assumed. These two lines say whether the make that
+          # PATH resolves to was the native one all along -- the question this
+          # run would otherwise leave open again. GNU make's SECOND line is the
+          # discriminator: "Built for x86_64-pc-msys" against "Built for
+          # Windows32". Reported from PowerShell rather than from an echo with
+          # embedded quotes, which Windows PowerShell mangles on its way to a
+          # native exe.
+          $msysMakeVer = (& $bash --noprofile --norc -c '/usr/bin/make --version') | Select-Object -First 2
+          $pathMake    = (& $bash --noprofile --norc -c 'command -v make || echo none') | Select-Object -First 1
+          $pathMakeVer = (& $bash --noprofile --norc -c 'make --version 2>/dev/null || true') | Select-Object -First 2
+          Write-Host "msys2 make : $($msysMakeVer -join ' / ')"
+          Write-Host "PATH  make : $pathMake -> $($pathMakeVer -join ' / ')"
+          $global:LASTEXITCODE = 0
+
       - name: Build and stage release (no zip; GitHub zips the artifact once)
         id: release
         shell: pwsh
-        run: ./tools/make-release/make-release-windows.ps1 -NoZip
+        run: ./tools/make-release/make-release-windows.ps1 -NoZip -Logs ${{ matrix.logs }}
 
       - name: Upload release artifact
         uses: actions/upload-artifact@v7
         with:
-          name: ${{ steps.release.outputs.artifact_name }}
+          name: ${{ steps.release.outputs.artifact_name }}-logs-${{ matrix.logs }}
           path: ${{ steps.release.outputs.release_dir }}
           if-no-files-found: error

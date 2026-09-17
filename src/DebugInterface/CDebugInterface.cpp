@@ -368,6 +368,24 @@ bool CDebugInterface::SaveDiskDataSnapshotSynced(CByteBuffer *byteBuffer)
 	return false;
 }
 
+bool CDebugInterface::LoadChipsSnapshotAtCpuBoundary(CByteBuffer *byteBuffer, u32 timeoutMs)
+{
+	if (snapshotsManager == NULL)
+		return false;
+
+	return snapshotsManager->PerformExternalSnapshotRequest(
+		CSnapshotsManager::EXTERNAL_SNAPSHOT_REQUEST_LOAD, byteBuffer, timeoutMs);
+}
+
+bool CDebugInterface::SaveChipsSnapshotAtCpuBoundary(CByteBuffer *byteBuffer, u32 timeoutMs)
+{
+	if (snapshotsManager == NULL)
+		return false;
+
+	return snapshotsManager->PerformExternalSnapshotRequest(
+		CSnapshotsManager::EXTERNAL_SNAPSHOT_REQUEST_SAVE, byteBuffer, timeoutMs);
+}
+
 bool CDebugInterface::IsDriveDirtyForSnapshot()
 {
 	LOGTODO("CDebugInterface::IsDriveDirtyForSnapshot");

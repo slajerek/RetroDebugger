@@ -432,6 +432,9 @@ namespace Nes
 			}
 
 			Memory()
+			: pages()  // zero-initialize: pages not set up by SwapBank (e.g. wrk pages 1-3
+			           // in base Board::Reset) would otherwise hold garbage ref values
+			           // >= NUM_SOURCES, causing out-of-bounds in GetBank -> crash.
 			{
 			}
 

@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=VICE (x64dtv)
+Comment=C64DTV emulator
+Exec=x64dtv
+Terminal=false
+Icon=vice-x64dtv
+Categories=Game;Emulator;

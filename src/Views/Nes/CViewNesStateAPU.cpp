@@ -24,6 +24,7 @@
 #include "CViewWaveform.h"
 #include "CWaveformData.h"
 #include "CLayoutParameter.h"
+#include "MT_UiScale.h"
 
 CViewNesStateAPU::CViewNesStateAPU(const char *name, float posX, float posY, float posZ, float sizeX, float sizeY, CDebugInterfaceNes *debugInterface)
 : CGuiView(name, posX, posY, posZ, sizeX, sizeY)
@@ -35,7 +36,7 @@ CViewNesStateAPU::CViewNesStateAPU(const char *name, float posX, float posY, flo
 
 	fontBytes = viewC64->fontDisassembly;
 	
-	fontSize = 7.0f;
+	fontSize = MT_UiScaled(7.0f);
 	hasManualFontSize = false;
 	AddLayoutParameter(new CLayoutParameterFloat("Font Size", &fontSize));
 

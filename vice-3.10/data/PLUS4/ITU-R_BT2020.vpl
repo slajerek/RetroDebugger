@@ -1,0 +1,143 @@
+#
+# VICE Palette file
+#
+# Syntax:
+# Red Green Blue
+#
+# NAME:ITU-R BT2020 (PAL)
+# TYPE:TED
+#
+# TED palette based on Wikipedia TED and YCbCr pages
+#
+# YCbCr values taken from https://en.wikipedia.org/wiki/MOS_Technology_TED
+#
+# provided by Mac Reiter, see #471
+
+00 00 00
+1f 1f 1f
+99 00 00
+00 47 71
+7d 00 b6
+00 51 00
+1f 0d f4
+1f 32 00
+7d 08 00
+52 1d 00
+00 44 00
+a3 00 1f
+00 52 1f
+00 36 b6
+52 00 e4
+00 56 00
+00 00 00
+3f 3f 3f
+b9 17 00
+00 67 91
+9c 0e d6
+00 71 00
+3f 2d ff
+3f 52 00
+9c 28 00
+72 3d 00
+0d 64 00
+c3 0c 3f
+00 72 3f
+00 56 d6
+72 1b ff
+00 76 00
+00 00 00
+5f 5f 5f
+d9 37 0e
+00 87 b0
+bc 2e f5
+02 90 00
+5f 4d ff
+5f 72 00
+bc 48 00
+92 5d 00
+2d 84 00
+e3 2c 5f
+00 92 5f
+02 76 f5
+92 3a ff
+00 95 0e
+00 00 00
+7f 7f 7f
+f9 57 2e
+05 a7 d0
+dc 4e ff
+22 b0 00
+7f 6c ff
+7f 92 00
+dc 68 00
+b1 7d 00
+4d a4 00
+ff 4c 7f
+00 b2 7f
+22 96 ff
+b1 5a ff
+05 b5 2e
+00 00 00
+9f 9f 9f
+ff 77 4e
+25 c7 f0
+fc 6e ff
+42 d0 09
+9f 8c ff
+9f b1 00
+fc 88 09
+d1 9d 00
+6c c4 00
+ff 6c 9f
+1b d2 9f
+42 b6 ff
+d1 7a ff
+25 d5 4e
+00 00 00
+bf bf bf
+ff 97 6d
+45 e7 ff
+ff 8d ff
+62 f0 28
+bf ac ff
+bf d1 00
+ff a8 28
+f1 bc 00
+8c e3 00
+ff 8c bf
+3b f2 bf
+62 d6 ff
+f1 9a ff
+45 f5 6d
+00 00 00
+df df df
+ff b7 8d
+65 ff ff
+ff ad ff
+81 ff 48
+df cc ff
+df f1 0a
+ff c8 48
+ff dc 1a
+ac ff 1a
+ff ac df
+5b ff df
+81 f6 ff
+ff ba ff
+65 ff 8d
+00 00 00
+ff ff ff
+ff d6 ad
+85 ff ff
+ff cd ff
+a1 ff 68
+ff ec ff
+ff ff 2a
+ff e8 68
+ff fc 3a
+cc ff 3a
+ff cb ff
+7b ff ff
+a1 ff ff
+ff da ff
+85 ff ad

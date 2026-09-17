@@ -1,0 +1,494 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<!--begin common header-->
+<!--note: the above comment can not appear first in the file, because that would
+          make IE switch into quirks mode and eventually render the page incorrectly.
+          see http://stackoverflow.com/questions/941100/can-html-comments-appear-before-the-doctype-declaration
+          to get an idea of the whole mess.
+-->
+<html lang="en">
+<head>
+    <meta name="robots" content="index,follow">
+    <meta name="description" content="Homepage of VICE - the Versatile Commodore Emulator">
+    <meta name="keywords" content="VICE Commodore Emulator C64 C-64 VIC20 VIC-20 PET PLUS4 DTV C16 CBM2 SCPU">
+    <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-15">
+    <title>VICE - the Versatile Commodore Emulator</title>
+    <style type="text/css">
+        @import 'vice.css';
+    </style>
+</head>
+
+<body>
+
+<div id="header">
+<h1><img SRC="images/vice-logo.svg" ALT="VICE"> - the Versatile Commodore Emulator</h1>
+</div>
+
+<div id="menu">
+<table><tr>
+<td width="9%"><a href="index.html#vice">About</a></td>
+<td width="9%"><a href="index.html#news">News</a></td>
+<td width="9%"><a href="vice_toc.html">User Manual</a></td>
+<td width="9%"><a href="index.html#download">Download</a></td>
+<td width="9%"><a href="https://sourceforge.net/p/vice-emu/bugs/">Bugtracker</a></td>
+<td width="9%"><a href="https://sourceforge.net/p/vice-emu/mailman/">Support</a></td>
+<td width="9%"><a href="https://vice-emu.pokefinder.org/index.php/Todo#Known_Issues">known BUGS</a></td>
+<td width="9%"><a href="https://vice-emu.pokefinder.org/index.php/Todo#New_Features">TODO</a></td>
+<td width="9%"><a href="index.html#Related Resources">Resources</a></td>
+<td width="9%"><a href="index.html#developers">Developers</a></td>
+<td width="9%"><a href="index.html#copyright">Copyright</a></td>
+</tr></table>
+</div>
+
+<!--end common header-->
+
+
+<h1><a NAME="vice"></a>What is VICE?</h1>
+
+<p>
+VICE is a program that runs on a Unix, MS-DOS, Win32, OS/2, BeOS,
+QNX 4.x, QNX 6.x, Amiga, Syllable or Mac OS X machine and executes
+programs intended for the old 8-bit computers. The current version emulates
+the C64, the C64DTV, the C128, the VIC20, practically all PET models, the
+PLUS4 and the CBM-II (aka C610/C510).
+An extra emulator is provided for C64 expanded with the CMD SuperCPU.
+</p>
+
+
+<h1><a NAME="news"></a>News</h1>
+<p>
+<img SRC="images/new.gif" ALT="[NEW]">
+(24 December 2025) Version 3.10 released<br>
+</p>
+
+<ul>
+
+<li>
+What is <a href="NEWS">NEW</a> in the latest release? (This is definitely worth reading <tt>:-)</tt>
+</li>
+
+<li>VICE has moved its source repository to public services provided by
+<a href="https://sf.net/">SourceForge</a>. You can find it at <a
+href="https://sf.net/projects/vice-emu">https://sf.net/projects/vice-emu</a>.
+We like to thank the SourceForge staff for that help.
+</li>
+</ul>
+
+<p>
+We always need more help to keep all things going, so here
+is the usual call for volunteers... <tt>;-)</tt> If you like to join our
+group, and help us in any way , please send a mail to
+<a href="mailto:vice-emu-mail@lists.sourceforge.net">vice-emu-mail@lists.sourceforge.net</a>
+or catch us in <a href="https://web.libera.chat/#vice-dev">#vice-dev</a> on Libera.Chat IRC.
+Anyone interested in helping development of VICE is welcome. Please contact
+<a href="mailto:vice-emu-mail@lists.sourceforge.net">us</a>
+to avoid doing something that someone else has done already. <tt>(-:</tt>
+(You might also want to have a look at our
+<a href="https://vice-emu.pokefinder.org/index.php/Todo#New_Features">TODO</a>
+list)
+</p>
+
+<p>
+There is also an official-inoffical <a href="https://discord.gg/EjRBhu8JyW">VICE Discord server</a>
+that some of us idle in, feel free to join and say hi.
+</p>
+
+<p>
+Before contacting us, have a look at the
+the VICE <a href="vice_toc.html">Manual</a> if your
+question is answered there. Keep in mind
+that we work on VICE in our spare-time, so the more time we don't need to answer
+the same questions over and over again, the more time we have to improve the
+emulation itself. On the other hand, that does not mean that you should not
+contact us, especially if you find bugs or have suggestions which might
+improve the emulation.
+The list of already known
+<a href="https://vice-emu.pokefinder.org/index.php/Todo#Known_Issues">BUGS</a>
+is also available.
+</p>
+
+<ul>
+<li><b>Bug reports, suggestions, support requests should be directed to the
+SourceForge trackers</b> at <a
+        href="https://sourceforge.net/p/vice-emu/bugs/">https://sourceforge.net/p/vice-emu/bugs/</a>.
+</br>
+This way, you, the users, and we, the developers, can track what has
+been reported and what has been already fixed.
+</li>
+
+</ul>
+
+<ul>
+<li>
+You may also sent the
+report to the mailing address of the Vice team at (<a
+        href="mailto:vice-emu-mail@lists.sourceforge.net">vice-emu-mail@lists.sourceforge.net</a>).
+</br>
+Please put the word <tt>VICE</tt> <i>in all capitals</i> in your subject
+line (e.g. <tt>VICE fails to run game XXX</tt>). This helps mail splitting
+and reduces chances that your message is unintentionally deleted, forgotten
+or lost.
+</p>
+</li>
+
+</ul>
+
+
+<h2><a NAME="download"></a>Download VICE</h2>
+
+<p>
+You can download the latest VICE distribution here.
+If you want to help improving the official ports and/or want to provide binaries, please get in touch with us.
+Occasionally we might upload unofficial test builds
+<a href="https://sourceforge.net/projects/vice-emu/files/experimental%20binaries/">here</a>.
+</p>
+
+<h3>Source distributions</h3>
+
+<ul>
+<li>
+Tarball:
+<a href="https://sourceforge.net/projects/vice-emu/files/releases/vice-3.10.tar.gz/download">vice-3.10.tar.gz</a>
+</li>
+</ul>
+
+<h3>Binary distributions</h3>
+
+<p>We recommend the GTK3 user interface over SDL2.</p>
+
+<h4>Windows</h4>
+<ul>
+  <li>Download latest <a href="https://github.com/VICE-Team/svn-mirror/releases">ad hoc build</a> (via github - use this when reporting bugs, please)</li>
+  <li>Download <a href="https://sourceforge.net/projects/vice-emu/files/releases/binaries/windows/GTK3VICE-3.10-win64.zip/download">VICE 3.10</a> (64bit GTK3)</li>
+  <li>Download <a href="https://sourceforge.net/projects/vice-emu/files/releases/binaries/windows/SDL2VICE-3.10-win64.zip/download">VICE 3.10</a> (64bit SDL2)</li>
+</ul>
+
+<ul>
+<li>
+<small>
+Older binaries for Windows systems can be found <a href="windows.html">here</a>.
+</small>
+</li>
+</ul>
+
+<h4>Apple Silicon Mac (macOS 12.0+)</h4>
+<ul>
+  <li>Download <a href="https://sourceforge.net/projects/vice-emu/files/releases/binaries/macosx/vice-arm64-gtk3-3.10.dmg/download">VICE 3.10 (GTK3)</a></li>
+  <li>Download <a href="https://sourceforge.net/projects/vice-emu/files/releases/binaries/macosx/vice-arm64-sdl2-3.10.dmg/download">VICE 3.10 (SDL2)</a></li>
+</ul>
+
+<h4>Intel Silicon Mac (macOS 12.0+)</h4>
+<ul>
+  <li>Download <a href="https://sourceforge.net/projects/vice-emu/files/releases/binaries/macosx/vice-x86-64-gtk3-3.10.dmg/download">VICE 3.10 (GTK3)</a></li>
+  <li>Download <a href="https://sourceforge.net/projects/vice-emu/files/releases/binaries/macosx/vice-x86-64-sdl2-3.10.dmg/download">VICE 3.10 (SDL2)</a></li>
+</ul>
+
+<ul>
+<li>
+<small>
+Older binaries for macOS systems can be found <a href="macosx.html">here</a>.
+</small>
+</li>
+</ul>
+
+<h3>Old binary distributions</h3>
+
+<ul>
+
+<li>
+Binaries for <b>Android</b> systems:
+Please visit the Android <a href="android.html">download page</a>.
+</li>
+
+<li>
+Binary for <b>Amiga</b> based or derived systems:
+Please visit the Amiga <a href="amigaos.html">download page</a>.
+</li>
+
+<li>
+Binary for <b>MS-DOS</b> (Pentium-optimized):
+<a href="https://sourceforge.net/projects/vice-emu/files/releases/binaries/dos/vice31.zip/download">vice31.zip</a>
+ Please use the '-d' option if you are using pkzip, to unpack the archive with the full directory tree.
+</li>
+
+<li>
+Binary for <b>BeOS</b> systems:
+Please visit the BeOS <a href="beos.html">download page</a>.
+</li>
+
+<li>
+Binary for <b>QNX</b> systems:
+Please visit the QNX <a href="qnx.html">download page</a>.
+</li>
+
+<li>
+Binary for <b>OS/2</b> systems:
+<a href="https://sourceforge.net/projects/vice-emu/files/releases/binaries/os2/Vice2-3.1.zip/download">Vice2-3.1.zip</a>.
+</li>
+
+<li>
+Binary for <b>Solaris / SunOS</b> systems:
+Please visit the Solaris / SunOS <a href="solaris.html">download page</a>.
+</li>
+
+<li>
+Binary for <b>SCO</b> based systems:
+Please visit the SCO <a href="sco.html">download page</a>.
+</li>
+
+<li>
+Binary for <b>Darwin</b> based systems:
+Please visit the darwin <a href="darwin.html">download page</a>.
+</li>
+
+<li>
+Binary for <b>NextStep / OpenStep / Rhapsody</b> based systems:
+Please visit the *Step <a href="nsosrh.html">download page</a>.
+</li>
+
+<li>
+Binary for <b>Sortix</b> based systems:
+Please visit the Sortix <a href="sortix.html">download page</a>.
+</li>
+
+<li>
+Binary for <b>Syllable</b> systems:
+<a href="https://sourceforge.net/projects/vice-emu/files/releases/binaries/syllable/SDLVICE-syllable-3.1.application/download">SDLVICE-syllable-3.1.application</a> (Not available yet)
+</li>
+
+<li>
+Binary for <b>Atari Mint</b> systems:
+<a href="https://sourceforge.net/projects/vice-emu/files/releases/binaries/mint/SDLVICE-3.1-mint.tgz/download">SDLVICE-3.1-mint.tgz</a> (not available yet)
+Unpack in /usr/local
+</li>
+
+<li>
+Binary for <b>Minix 3.x</b> systems:
+<a href="https://sourceforge.net/projects/vice-emu/files/releases/binaries/minix/vice-minix-3.1.tar.bz2/download">vice-minix-3.1.tar.bz2</a> (Not available yet)
+Unpack in /usr/local
+</li>
+
+<li>
+Binary for <b>GNU Hurd</b> systems:
+<a href="https://sourceforge.net/projects/vice-emu/files/releases/binaries/hurd/VICE-3.1-i386-hurd.tar.bz2/download">VICE-3.1-i386-hurd.tar.bz2</a> (Not available yet)
+Unpack in /usr/local
+</li>
+
+<li>
+Binary for <b>SkyOS</b> systems:
+<a href="https://sourceforge.net/projects/vice-emu/files/releases/binaries/skyos/SDLVICE-3.1-SkyOS.pkg/download">SDLVICE-3.1-SkyOS.pkg</a> (Not available yet)
+Unpack in /usr/local
+</li>
+
+<li>
+Binary for other <b>Unix</b> based systems:
+Please visit the Unix <a href="unix.html">download page</a>.
+</li>
+
+<li>
+<p>
+<small>
+Binaries of even older releases can be found on
+<a href="http://www.zimmers.net/anonftp/pub/cbm/crossplatform/emulators/VICE/">http://www.zimmers.net/anonftp/pub/cbm/crossplatform/emulators/VICE</a>.
+</small>
+</p>
+</li>
+
+</ul>
+
+<h1><a NAME="Related Resources"></a>Related resources</h1>
+
+<h2>General</h2>
+
+<ul>
+<li>
+VICE Printer Output to Postscript (VICEtoPS):
+<a href="https://www.pdbuchan.com/commodore/vicetops.html">Homepage</a>
+<li>
+VICE Printer Output to PNG (vmps801):
+<a href="http://vmps801.stock-consulting.com/">Homepage</a>
+</li>
+</ul>
+
+The binary monitor interface is stable now. Examples of projects using it:
+<ul>
+<li>
+<a href="https://github.com/GeorgRottensteiner/C64Studio">C64 Studio</a> is a IDE (Windows based)
+</li>
+<li>
+<a href="https://github.com/MihaMarkic/vice-bridge-net">vice bridge .net</a> is a .net library for implementing binary monitor support
+<br>
+<a href="https://github.com/MihaMarkic/modern-vice-pdb-monitor">Modern VICE PDB monitor</a> is based on the above
+</li>
+</li>
+<li>
+<a href="https://github.com/Sakrac/IceBroLite">IceBro Lite</a> is a debugger (uses a custom SDL interface)
+</li>
+<li>
+<a href="https://github.com/empathicqubit/vscode-cc65-debugger">vscode-cc65-debugger</a> is a debugger (based on VSCODE)
+</li>
+<li>
+<a href="https://github.com/rolandshacks/vs64">vs64</a> is a debugger</a> (based on VSCODE)
+</li>
+<li>
+<a href="https://github.com/martinpiper/ACME">VICE PDP Monitor</a> is a debugger that comes with a custom version of ACME
+</li>
+</ul>
+
+<h2>MS-Windows</h2>
+
+<ul>
+<li>
+CBM4Win driver and OpenCBM library:
+<a href="https://spiro.trikaliotis.net/opencbm">Homepage</a>
+</li>
+<li>
+Parallel port joystick driver for MS-Windows 2000/XP/98/Me:
+<a href="https://github.com/elitak/PPJoy">Github</a>
+</li>
+<li>
+Precompiled FFMPEG video/audio encoder for MS-Windows:
+<a href="https://github.com/BtbN/FFmpeg-Builds/releases">Download</a>
+</li>
+</ul>
+
+<h2>Linux</h2>
+
+<ul>
+<li>
+CBM4Linux kernel driver and OpenCBM library:
+<a href="https://sourceforge.net/projects/cbm4linux/">Homepage</a> (This has been
+integrated into OpenCBM)
+</li>
+<li>
+FFMPEG video/audio codec library:
+<a href="http://ffmpeg.org">Homepage</a>
+</li>
+</ul>
+
+
+<h1><a NAME="developers"></a>Developers</h1>
+
+<!--teamstart-->
+<p>
+Current VICE team members:
+Pottendo,
+Marco van den Heuvel,
+Fabrizio Gennari,
+Groepaz,
+Errol Smith,
+Ingo Korb,
+Olaf Seibert,
+Marcus Sutton,
+Kajtar Zsolt,
+AreaScout,
+Bas Wassink,
+Michael C. Martin,
+Christopher Phillips,
+David Hogan,
+Empathic Qubit,
+Roberto Muscedere,
+June Tate-Gans,
+Pablo Roldan.
+</p>
+
+<p>Of course our warm thanks go to everyone who has helped us in developing
+VICE during these past few years. For a more detailed list look in the
+<a href="vice_18.html">documentation</a>.
+
+
+<hr>
+
+<h1><a NAME="copyright"></a>Copyright</h1>
+
+<p>
+The VICE is copyrighted to:
+Pottendo,
+Marco van den Heuvel,
+Fabrizio Gennari,
+Groepaz,
+Errol Smith,
+Ingo Korb,
+Olaf Seibert,
+Marcus Sutton,
+Kajtar Zsolt,
+AreaScout,
+Bas Wassink,
+Michael C. Martin,
+Christopher Phillips,
+David Hogan,
+Empathic Qubit,
+Roberto Muscedere,
+June Tate-Gans,
+Pablo Roldan,
+Stefan Haubenthal,
+BSzili,
+Andreas Matthies,
+Daniel Kahlin,
+Benjamin 'BeRo' Rosseaux,
+Ulrich Schulz,
+Thomas Giesel,
+Antti S. Lankila,
+Christian Vogelgsang,
+Dag Lem,
+Spiro Trikaliotis,
+Hannu Nuotio,
+Andreas Boose,
+Tibor Biczo,
+M. Kiesel,
+Andreas Dehmel,
+David Hansel,
+Markus Brenner,
+Thomas Bretz,
+Daniel Sladic,
+Andre Fachat,
+Ettore Perazzoli,
+Teemu Rantanen,
+Jouko Valta,
+Jarkko Sonninen,
+Mikkel Holm Olsen,
+Manuel Antonio Rodriguez Bas,
+Paul Dube,
+Czirkos Zoltan,
+Karai Csaba,
+Andrea Musuruane,
+Jesse Lee,
+Jarek Sobolewski,
+Michael Litvinov,
+Peter Krefting,
+Emir Akaydin.
+<!--teamend-->
+</p><p>
+<b>VICE</b> is free software; you can redistribute it and/or modify it
+under the terms of the <a href="COPYING">GNU General Public License</a>
+as published by the Free Software Foundation; either version 2
+of the License, or (at your option) any later version.<br>
+</p><p>
+<b>VICE</b> is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.&nbsp; See the
+GNU General Public License for more details.<br>
+</p>
+
+
+<h1>Winner of the Innovation Prize 2008</h1>
+
+<table id="bottom">
+<tr><td>
+<img src="images/CIPS2008.png" width="200" height="200" ALT="Commodore User group: Innovation Price: Software 2008">
+</td><td>
+We are proud that VICE has been selected as the "best software
+innovation of the last few years" of the <a
+href="https://commodore.hcc.nl/">Dutch Commodore user
+group</a>. Fabrizio Gennari was able to attend the ceremony and took the
+medal in the name of the whole VICE team. We are very proud of it, as it
+tells us how much you, the users, value our work. Thank you very much!
+</td></tr>
+</table>
+
+<!--begin common footer-->
+
+</body>
+</html>
+
+<!--end common footer-->
+

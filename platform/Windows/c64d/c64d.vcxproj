@@ -6,17 +6,9 @@
       <Configuration>Debug</Configuration>
       <Platform>ARM64</Platform>
     </ProjectConfiguration>
-    <ProjectConfiguration Include="Debug|Win32">
-      <Configuration>Debug</Configuration>
-      <Platform>Win32</Platform>
-    </ProjectConfiguration>
     <ProjectConfiguration Include="Release|ARM64">
       <Configuration>Release</Configuration>
       <Platform>ARM64</Platform>
-    </ProjectConfiguration>
-    <ProjectConfiguration Include="Release|Win32">
-      <Configuration>Release</Configuration>
-      <Platform>Win32</Platform>
     </ProjectConfiguration>
     <ProjectConfiguration Include="Debug|x64">
       <Configuration>Debug</Configuration>
@@ -34,19 +26,6 @@
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
-    <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>ClangCL</PlatformToolset>
-    <CharacterSet>MultiByte</CharacterSet>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
-    <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>ClangCL</PlatformToolset>
-    <WholeProgramOptimization Condition="'$(PlatformToolset)'!='ClangCL'">true</WholeProgramOptimization>
-    <CharacterSet>MultiByte</CharacterSet>
-  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
@@ -78,12 +57,6 @@
   </ImportGroup>
   <ImportGroup Label="Shared">
   </ImportGroup>
-  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-  </ImportGroup>
-  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-  </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
@@ -97,38 +70,74 @@
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <OutDir>$(SolutionDir)bin\$(Platform)\$(Configuration)\</OutDir>
-    <LibraryPath>$(MTEngineSDLDir)platform\Windows\bin\$(Platform)\$(Configuration);$(MTEngineSDLDir)platform\Windows\libs\$(Platform)\$(Configuration);$(LibraryPath)</LibraryPath>
-    <IncludePath>$(MTEngineSDLDir)platform\Windows\include;$(IncludePath)</IncludePath>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <OutDir>$(SolutionDir)bin\$(Platform)\$(Configuration)\</OutDir>
-    <LibraryPath>$(MTEngineSDLDir)platform\Windows\bin\$(Platform)\$(Configuration);$(MTEngineSDLDir)platform\Windows\libs\$(Platform)\$(Configuration);$(LibraryPath)</LibraryPath>
-    <IncludePath>$(MTEngineSDLDir)platform\Windows\include;$(IncludePath)</IncludePath>
+  <!-- The debugger starts the app in the GIT ROOT, on every configuration: an
+       MTEngineSDL app resolves assets/ through the working directory and
+       nothing else. Tracked here; a stale .vcxproj.user (imported AFTER this
+       file) silently overrides it; delete it. See MTEngineSDL/docs/testing.md. -->
+  <PropertyGroup>
+    <LocalDebuggerWorkingDirectory>$(ProjectDir)..\..\..\</LocalDebuggerWorkingDirectory>
+    <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <OutDir>$(SolutionDir)bin\$(Platform)\$(Configuration)\</OutDir>
-    <LibraryPath>$(MTEngineSDLDir)platform\Windows\bin\$(Platform)\$(Configuration);$(MTEngineSDLDir)platform\Windows\libs\$(Platform)\$(Configuration);$(LibraryPath)</LibraryPath>
+    <OutDir>$(ProjectDir)..\bin\$(Platform)\$(Configuration)\</OutDir>
+    <OutDir Condition="'$(MTIdeBuild)' == 'true'">$(MTBuildRoot)bin\$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(ProjectDir)$(Platform)\$(Configuration)\</IntDir>
+    <!-- L12: app objects follow the engine's out of the checkout. The extra
+         project-name segment keeps them apart from the engine's obj under the
+         same MTBuildRoot; the later assignment wins when MTBuildRoot is set,
+         and an IDE build without a resolve keeps the explicit default above. -->
+    <IntDir Condition="'$(MTBuildRoot)' != ''">$(MTBuildRoot)obj\$(MSBuildProjectName)\$(Platform)\$(Configuration)\</IntDir>
+    <LibraryPath>$(MTCapsLibsDir);$(LibraryPath)</LibraryPath>
     <IncludePath>$(MTEngineSDLDir)platform\Windows\include;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">
-    <OutDir>$(SolutionDir)bin\$(Platform)\$(Configuration)\</OutDir>
-    <LibraryPath>$(MTEngineSDLDir)platform\Windows\bin\$(Platform)\$(Configuration);$(MTEngineSDLDir)platform\Windows\libs\$(Platform)\$(Configuration);$(LibraryPath)</LibraryPath>
+    <OutDir>$(ProjectDir)..\bin\$(Platform)\$(Configuration)\</OutDir>
+    <OutDir Condition="'$(MTIdeBuild)' == 'true'">$(MTBuildRoot)bin\$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(ProjectDir)$(Platform)\$(Configuration)\</IntDir>
+    <!-- L12: app objects follow the engine's out of the checkout. The extra
+         project-name segment keeps them apart from the engine's obj under the
+         same MTBuildRoot; the later assignment wins when MTBuildRoot is set,
+         and an IDE build without a resolve keeps the explicit default above. -->
+    <IntDir Condition="'$(MTBuildRoot)' != ''">$(MTBuildRoot)obj\$(MSBuildProjectName)\$(Platform)\$(Configuration)\</IntDir>
+    <LibraryPath>$(MTCapsLibsDir);$(LibraryPath)</LibraryPath>
     <IncludePath>$(MTEngineSDLDir)platform\Windows\include;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <OutDir>$(SolutionDir)bin\$(Platform)\$(Configuration)\</OutDir>
-    <LibraryPath>$(MTEngineSDLDir)platform\Windows\bin\$(Platform)\$(Configuration);$(MTEngineSDLDir)platform\Windows\libs\$(Platform)\$(Configuration);$(LibraryPath)</LibraryPath>
+    <OutDir>$(ProjectDir)..\bin\$(Platform)\$(Configuration)\</OutDir>
+    <OutDir Condition="'$(MTIdeBuild)' == 'true'">$(MTBuildRoot)bin\$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(ProjectDir)$(Platform)\$(Configuration)\</IntDir>
+    <!-- L12: app objects follow the engine's out of the checkout. The extra
+         project-name segment keeps them apart from the engine's obj under the
+         same MTBuildRoot; the later assignment wins when MTBuildRoot is set,
+         and an IDE build without a resolve keeps the explicit default above. -->
+    <IntDir Condition="'$(MTBuildRoot)' != ''">$(MTBuildRoot)obj\$(MSBuildProjectName)\$(Platform)\$(Configuration)\</IntDir>
+    <LibraryPath>$(MTCapsLibsDir);$(LibraryPath)</LibraryPath>
     <IncludePath>$(MTEngineSDLDir)platform\Windows\include;$(IncludePath)</IncludePath>
     <LinkIncremental>false</LinkIncremental>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'">
-    <OutDir>$(SolutionDir)bin\$(Platform)\$(Configuration)\</OutDir>
-    <LibraryPath>$(MTEngineSDLDir)platform\Windows\bin\$(Platform)\$(Configuration);$(MTEngineSDLDir)platform\Windows\libs\$(Platform)\$(Configuration);$(LibraryPath)</LibraryPath>
+    <OutDir>$(ProjectDir)..\bin\$(Platform)\$(Configuration)\</OutDir>
+    <OutDir Condition="'$(MTIdeBuild)' == 'true'">$(MTBuildRoot)bin\$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(ProjectDir)$(Platform)\$(Configuration)\</IntDir>
+    <!-- L12: app objects follow the engine's out of the checkout. The extra
+         project-name segment keeps them apart from the engine's obj under the
+         same MTBuildRoot; the later assignment wins when MTBuildRoot is set,
+         and an IDE build without a resolve keeps the explicit default above. -->
+    <IntDir Condition="'$(MTBuildRoot)' != ''">$(MTBuildRoot)obj\$(MSBuildProjectName)\$(Platform)\$(Configuration)\</IntDir>
+    <LibraryPath>$(MTCapsLibsDir);$(LibraryPath)</LibraryPath>
     <IncludePath>$(MTEngineSDLDir)platform\Windows\include;$(IncludePath)</IncludePath>
     <LinkIncremental>false</LinkIncremental>
   </PropertyGroup>
+  <!-- Embed Common Controls v6 manifest so COMCTL32.dll v6 is loaded at runtime.
+       Without this, Windows loads COMCTL32 v5.82 which lacks ordinal 345
+       (TaskDialogIndirect) used by SDL, causing an ordinal-not-found error.
+       Still required under SDL3 (2026-08-18): SDL3 uses the same API. -->
+  <ItemDefinitionGroup>
+    <Manifest>
+      <AdditionalManifestFiles>$(ProjectDir)..\src.Windows\c64d.exe.manifest %(AdditionalManifestFiles)</AdditionalManifestFiles>
+      <EmbedManifest>true</EmbedManifest>
+    </Manifest>
+  </ItemDefinitionGroup>
   <!-- ClangCL warning suppressions and optimizations (ignored when building with MSVC) -->
   <ItemDefinitionGroup Condition="'$(PlatformToolset)'=='ClangCL'">
     <ClCompile>
@@ -153,24 +162,6 @@
       <AdditionalOptions>/lldltocachepolicy:cache_size_bytes=512m %(AdditionalOptions)</AdditionalOptions>
     </Link>
   </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <ClCompile>
-      <WarningLevel>Level3</WarningLevel>
-      <Optimization>Disabled</Optimization>
-      <SDLCheck>false</SDLCheck>
-      <ConformanceMode>false</ConformanceMode>
-      <PreprocessorDefinitions>_MBCS;%(PreprocessorDefinitions);_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_DEPRECATE;WIN32;NOMINMAX;_WINSOCKAPI_;WINDOWS_COMPILE;LIBUS_NO_SSL;_HAS_STD_BYTE=0;</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\src\Plugins\Commando;$(ProjectDir)..\..\..\src\Plugins\DNDK;$(ProjectDir)..\..\..\src\Plugins\CrtMaker;$(ProjectDir)..\..\..\platform\Windows\src.Windows\hardsid;$(ProjectDir)..\..\..\platform\Windows\src.Windows\arch\wpcap;$(ProjectDir)..\..\..\platform\Windows\src.Windows\arch\wpcap\net;$(ProjectDir)..\..\..\platform\Windows\src.Windows\arch;$(ProjectDir)..\..\..\platform\Windows\src.Windows;$(ProjectDir)..\..\..\src;$(ProjectDir)..\..\..\src\Plugins;$(ProjectDir)..\..\..\src\DebugInterface;$(ProjectDir)..\..\..\src\DebugInterface\MenuItems;$(ProjectDir)..\..\..\src\DebugInterface\C64;$(ProjectDir)..\..\..\src\DebugInterface\Symbols;$(ProjectDir)..\..\..\src\Plugins\GoatTracker\gt2;$(ProjectDir)..\..\..\src\Plugins\GoatTracker\gt2\asm;$(ProjectDir)..\..\..\src\Plugins\GoatTracker\gt2\bme;$(ProjectDir)..\..\..\src\Plugins\GoatTracker;$(ProjectDir)..\..\..\src\Embedded;$(ProjectDir)..\..\..\src\Emulators;$(ProjectDir)..\..\..\src\Emulators\atari800;$(ProjectDir)..\..\..\src\Emulators\atari800\atari_ntsc;$(ProjectDir)..\..\..\src\Emulators\atari800\codecs;$(ProjectDir)..\..\..\src\Emulators\atari800\roms;$(ProjectDir)..\..\..\src\Emulators\atari800\AtariInterface;$(ProjectDir)..\..\..\src\Emulators\atari800\sdl;$(ProjectDir)..\..\..\src\Emulators\nestopiaue;$(ProjectDir)..\..\..\src\Emulators\nestopiaue\common;$(ProjectDir)..\..\..\src\Emulators\nestopiaue\core\vssystem;$(ProjectDir)..\..\..\src\Emulators\nestopiaue\core\input;$(ProjectDir)..\..\..\src\Emulators\nestopiaue\core\board;$(ProjectDir)..\..\..\src\Emulators\nestopiaue\core\api;$(ProjectDir)..\..\..\src\Emulators\nestopiaue\core;$(ProjectDir)..\..\..\src\Emulators\nestopiaue\nes_ntsc;$(ProjectDir)..\..\..\src\Emulators\nestopiaue\nes_ntsc\tests;$(ProjectDir)..\..\..\src\Emulators\nestopiaue\NestopiaInterface;$(ProjectDir)..\..\..\src\Emulators\nestopiaue\NestopiaInterface\DataAdapters;$(ProjectDir)..\..\..\src\Emulators\nestopiaue\sdl;$(ProjectDir)..\..\..\src\Emulators\c64u;$(ProjectDir)..\..\..\src\Emulators\c64u\Adapters;$(ProjectDir)..\..\..\src\Emulators\c64u\Audio;$(ProjectDir)..\..\..\src\Emulators\c64u\State;$(ProjectDir)..\..\..\src\Emulators\c64u\Trace;$(ProjectDir)..\..\..\src\Emulators\c64u\Transport;$(ProjectDir)..\..\..\src\Emulators\vice;$(ProjectDir)..\..\..\src\Emulators\vice\arch;$(ProjectDir)..\..\..\src\Emulators\vice\c64;$(ProjectDir)..\..\..\src\Emulators\vice\c64\cart;$(ProjectDir)..\..\..\src\Emulators\vice\core;$(ProjectDir)..\..\..\src\Emulators\vice\diag;$(ProjectDir)..\..\..\src\Emulators\vice\diskimage;$(ProjectDir)..\..\..\src\Emulators\vice\drive;$(ProjectDir)..\..\..\src\Emulators\vice\drive\iec;$(ProjectDir)..\..\..\src\Emulators\vice\drive\iec\c64exp;$(ProjectDir)..\..\..\src\Emulators\vice\drive\iecieee;$(ProjectDir)..\..\..\src\Emulators\vice\drive\ieee;$(ProjectDir)..\..\..\src\Emulators\vice\drive\tcbm;$(ProjectDir)..\..\..\src\Emulators\vice\fileio;$(ProjectDir)..\..\..\src\Emulators\vice\fsdevice;$(ProjectDir)..\..\..\src\Emulators\vice\gfxoutputdrv;$(ProjectDir)..\..\..\src\Emulators\vice\iecbus;$(ProjectDir)..\..\..\src\Emulators\vice\imagecontents;$(ProjectDir)..\..\..\src\Emulators\vice\joyport;$(ProjectDir)..\..\..\src\Emulators\vice\lib;$(ProjectDir)..\..\..\src\Emulators\vice\lib\p64;$(ProjectDir)..\..\..\src\Emulators\vice\monitor;$(ProjectDir)..\..\..\src\Emulators\vice\parallel;$(ProjectDir)..\..\..\src\Emulators\vice\platform;$(ProjectDir)..\..\..\src\Emulators\vice\printerdrv;$(ProjectDir)..\..\..\src\Emulators\vice\raster;$(ProjectDir)..\..\..\src\Emulators\vice\resid;$(ProjectDir)..\..\..\src\Emulators\vice\resid-fp;$(ProjectDir)..\..\..\src\Emulators\vice\root;$(ProjectDir)..\..\..\src\Emulators\vice\rs232drv;$(ProjectDir)..\..\..\src\Emulators\vice\rtc;$(ProjectDir)..\..\..\src\Emulators\vice\samplerdrv;$(ProjectDir)..\..\..\src\Emulators\vice\serial;$(ProjectDir)..\..\..\src\Emulators\vice\sid;$(ProjectDir)..\..\..\src\Emulators\vice\sounddrv;$(ProjectDir)..\..\..\src\Emulators\vice\tape;$(ProjectDir)..\..\..\src\Emulators\vice\tapeport;$(ProjectDir)..\..\..\src\Emulators\vice\userport;$(ProjectDir)..\..\..\src\Emulators\vice\vdrive;$(ProjectDir)..\..\..\src\Emulators\vice\ViceInterface;$(ProjectDir)..\..\..\src\Emulators\vice\ViceInterface\Adapters;$(ProjectDir)..\..\..\src\Emulators\vice\viciisc;$(ProjectDir)..\..\..\src\Emulators\vice\video;$(ProjectDir)..\..\..\src\Remote\WebSockets;$(ProjectDir)..\..\..\src\Remote\Pipe;$(ProjectDir)..\..\..\src\Remote\MCP;$(ProjectDir)..\..\..\src\Remote;$(ProjectDir)..\..\..\src\Screens;$(ProjectDir)..\..\..\src\Screens\VicEditor;$(ProjectDir)..\..\..\src\Tools;$(ProjectDir)..\..\..\src\Tools\64tass;$(ProjectDir)..\..\..\src\Tools\asap;$(ProjectDir)..\..\..\src\Tools\exomizer;$(ProjectDir)..\..\..\src\Tools\libpsid64;$(ProjectDir)..\..\..\src\Tools\sidplay;$(ProjectDir)..\..\..\src\Tools\sidplay\sidtune;$(ProjectDir)..\..\..\src\Tools\sidplay\utils;$(ProjectDir)..\..\..\src\Tools\stilview;$(ProjectDir)..\..\..\src\Tools\TextEditor;$(ProjectDir)..\..\..\src\Tools\Shaders;$(ProjectDir)..\..\..\src\Views;$(ProjectDir)..\..\..\src\Views\Atari800;$(ProjectDir)..\..\..\src\Views\C64;$(ProjectDir)..\..\..\src\Views\C64\AllGraphics;$(ProjectDir)..\..\..\src\Views\C64\VicDisplay;$(ProjectDir)..\..\..\src\Views\C64\VicEditor;$(ProjectDir)..\..\..\src\Views\C64\VicEditor\Layers;$(ProjectDir)..\..\..\src\Views\Nes;$(ProjectDir)..\..\..\src\Views\JoystickLayouts;$(ProjectDir)..\..\..\src\Views\JukeboxPlaylist;$(ProjectDir)..\..\..\src\Tests;$(ProjectDir)..\..\..\src\DebugInterface\API;$(ProjectDir)..\..\..\src\Emulators\c64u;$(ProjectDir)..\..\..\src\Emulators\c64u\Transport;$(ProjectDir)..\..\..\src\Emulators\c64u\Adapters;$(ProjectDir)..\..\..\src\Emulators\c64u\Audio;$(ProjectDir)..\..\..\src\Views\C64U;$(MTEngineSDLDir)src;$(MTEngineSDLDir)src\Embedded;$(MTEngineSDLDir)src\Engine;$(MTEngineSDLDir)src\Engine\Audio;$(MTEngineSDLDir)src\Engine\Audio\MIDI;$(MTEngineSDLDir)src\Engine\Audio\WAV;$(MTEngineSDLDir)src\Engine\Core;$(MTEngineSDLDir)src\Engine\Core\GamePads;$(MTEngineSDLDir)src\Engine\Core\Render;$(MTEngineSDLDir)src\Engine\Core\Net;$(MTEngineSDLDir)src\Engine\Core\Pool;$(MTEngineSDLDir)src\Engine\Funct;$(MTEngineSDLDir)src\Engine\Funct\ContinuousParam;$(MTEngineSDLDir)src\Engine\Funct\DataTable;$(MTEngineSDLDir)src\Engine\Funct\ImageProcessing;$(MTEngineSDLDir)src\Engine\Funct\ImageProcessing\resampler;$(MTEngineSDLDir)src\Engine\Funct\ImageProcessing\stb_image;$(MTEngineSDLDir)src\Engine\Tools;$(MTEngineSDLDir)src\Engine\Tests;$(MTEngineSDLDir)src\Engine\GUI;$(MTEngineSDLDir)src\Engine\GUI\Fonts;$(MTEngineSDLDir)src\Engine\GUI\AudioMixer;$(MTEngineSDLDir)src\Engine\GUI\Controls;$(MTEngineSDLDir)src\Engine\GUI\Waveform;$(MTEngineSDLDir)src\Engine\GUI\Layout;$(MTEngineSDLDir)src\Engine\GUI\Helpers;$(MTEngineSDLDir)src\Engine\GUI\Helpers\LoadingScreen;$(MTEngineSDLDir)src\Engine\GUI\Helpers\ResourceManager;$(MTEngineSDLDir)src\Engine\Libs;$(MTEngineSDLDir)src\Engine\Libs\ENet;$(MTEngineSDLDir)src\Engine\Libs\crow;$(MTEngineSDLDir)src\Engine\Libs\hjson;$(MTEngineSDLDir)src\Engine\Libs\stb;$(MTEngineSDLDir)src\Engine\Libs\imgui;$(MTEngineSDLDir)src\Engine\Libs\implot;$(MTEngineSDLDir)src\Engine\Libs\imguiext;$(MTEngineSDLDir)src\Engine\Libs\imgui-notify;$(MTEngineSDLDir)src\Engine\Libs\jpeg;$(MTEngineSDLDir)src\Engine\Libs\jpeg\jpeg-9a;$(MTEngineSDLDir)src\Engine\Libs\nlohmann;$(MTEngineSDLDir)src\Engine\Libs\libjson;$(MTEngineSDLDir)src\Engine\Libs\libjson\_internal;$(MTEngineSDLDir)src\Engine\Libs\libjson\_internal\Dependencies;$(MTEngineSDLDir)src\Engine\Libs\libjson\_internal\Dependencies\libbase64++;$(MTEngineSDLDir)src\Engine\Libs\libjson\_internal\Dependencies\mempool++;$(MTEngineSDLDir)src\Engine\Libs\libjson\_internal\Source;$(MTEngineSDLDir)src\Engine\Libs\libjson\_internal\Source\JSONDefs;$(MTEngineSDLDir)src\Engine\Libs\libpng;$(MTEngineSDLDir)src\Engine\Libs\httplib;$(MTEngineSDLDir)src\Engine\Libs\lodepng;$(MTEngineSDLDir)src\Engine\Libs\md5;$(MTEngineSDLDir)src\Engine\Libs\minizip;$(MTEngineSDLDir)src\Engine\Libs\mtrand;$(MTEngineSDLDir)src\Engine\Libs\nfd;$(MTEngineSDLDir)src\Engine\Libs\pugixml;$(MTEngineSDLDir)src\Engine\Libs\rtmidi;$(MTEngineSDLDir)src\Engine\Libs\tremor;$(MTEngineSDLDir)src\Engine\Libs\sgSHA256;$(MTEngineSDLDir)src\Engine\Libs\tremor\Ogg;$(MTEngineSDLDir)src\Engine\Libs\utf8;$(MTEngineSDLDir)src\Engine\Libs\uWebSockets;$(MTEngineSDLDir)src\Engine\Libs\zlib;$(MTEngineSDLDir)src\Engine\Libs\libtmt;$(MTEngineSDLDir)src\Engine\Libs\imgui_test_engine;$(MTEngineSDLDir)platform\Windows\src.Windows;(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
-      <ShowIncludes>false</ShowIncludes>
-      <LanguageStandard>stdcpp20</LanguageStandard>
-      <MultiProcessorCompilation>true</MultiProcessorCompilation>
-    </ClCompile>
-    <Link>
-      <SubSystem>Windows</SubSystem>
-      <AdditionalDependencies>MTEngineSDL.lib;SDL2.lib;SDL2main.lib;version.lib;imm32.lib;setupapi.lib;winmm.lib;wsock32.lib;ws2_32.lib;Iphlpapi.lib;userenv.lib;psapi.lib;uSockets.lib;libuv.lib;msvcrt.lib;dbghelp.lib;%(AdditionalDependencies)</AdditionalDependencies>
-    </Link>
-  </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
@@ -178,7 +169,6 @@
       <SDLCheck>false</SDLCheck>
       <ConformanceMode>false</ConformanceMode>
       <PreprocessorDefinitions>_MBCS;%(PreprocessorDefinitions);_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_DEPRECATE;WIN32;NOMINMAX;_WINSOCKAPI_;WINDOWS_COMPILE;LIBUS_NO_SSL;_HAS_STD_BYTE=0;</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\src\Plugins\Commando;$(ProjectDir)..\..\..\src\Plugins\DNDK;$(ProjectDir)..\..\..\src\Plugins\CrtMaker;$(ProjectDir)..\..\..\platform\Windows\src.Windows\hardsid;$(ProjectDir)..\..\..\platform\Windows\src.Windows\arch\wpcap;$(ProjectDir)..\..\..\platform\Windows\src.Windows\arch\wpcap\net;$(ProjectDir)..\..\..\platform\Windows\src.Windows\arch;$(ProjectDir)..\..\..\platform\Windows\src.Windows;$(ProjectDir)..\..\..\src;$(ProjectDir)..\..\..\src\Plugins;$(ProjectDir)..\..\..\src\DebugInterface;$(ProjectDir)..\..\..\src\DebugInterface\MenuItems;$(ProjectDir)..\..\..\src\DebugInterface\C64;$(ProjectDir)..\..\..\src\DebugInterface\Symbols;$(ProjectDir)..\..\..\src\Plugins\GoatTracker\gt2;$(ProjectDir)..\..\..\src\Plugins\GoatTracker\gt2\asm;$(ProjectDir)..\..\..\src\Plugins\GoatTracker\gt2\bme;$(ProjectDir)..\..\..\src\Plugins\GoatTracker;$(ProjectDir)..\..\..\src\Embedded;$(ProjectDir)..\..\..\src\Emulators;$(ProjectDir)..\..\..\src\Emulators\atari800;$(ProjectDir)..\..\..\src\Emulators\atari800\atari_ntsc;$(ProjectDir)..\..\..\src\Emulators\atari800\codecs;$(ProjectDir)..\..\..\src\Emulators\atari800\roms;$(ProjectDir)..\..\..\src\Emulators\atari800\AtariInterface;$(ProjectDir)..\..\..\src\Emulators\atari800\sdl;$(ProjectDir)..\..\..\src\Emulators\nestopiaue;$(ProjectDir)..\..\..\src\Emulators\nestopiaue\common;$(ProjectDir)..\..\..\src\Emulators\nestopiaue\core\vssystem;$(ProjectDir)..\..\..\src\Emulators\nestopiaue\core\input;$(ProjectDir)..\..\..\src\Emulators\nestopiaue\core\board;$(ProjectDir)..\..\..\src\Emulators\nestopiaue\core\api;$(ProjectDir)..\..\..\src\Emulators\nestopiaue\core;$(ProjectDir)..\..\..\src\Emulators\nestopiaue\nes_ntsc;$(ProjectDir)..\..\..\src\Emulators\nestopiaue\nes_ntsc\tests;$(ProjectDir)..\..\..\src\Emulators\nestopiaue\NestopiaInterface;$(ProjectDir)..\..\..\src\Emulators\nestopiaue\NestopiaInterface\DataAdapters;$(ProjectDir)..\..\..\src\Emulators\nestopiaue\sdl;$(ProjectDir)..\..\..\src\Emulators\c64u;$(ProjectDir)..\..\..\src\Emulators\c64u\Adapters;$(ProjectDir)..\..\..\src\Emulators\c64u\Audio;$(ProjectDir)..\..\..\src\Emulators\c64u\State;$(ProjectDir)..\..\..\src\Emulators\c64u\Trace;$(ProjectDir)..\..\..\src\Emulators\c64u\Transport;$(ProjectDir)..\..\..\src\Emulators\vice;$(ProjectDir)..\..\..\src\Emulators\vice\arch;$(ProjectDir)..\..\..\src\Emulators\vice\c64;$(ProjectDir)..\..\..\src\Emulators\vice\c64\cart;$(ProjectDir)..\..\..\src\Emulators\vice\core;$(ProjectDir)..\..\..\src\Emulators\vice\diag;$(ProjectDir)..\..\..\src\Emulators\vice\diskimage;$(ProjectDir)..\..\..\src\Emulators\vice\drive;$(ProjectDir)..\..\..\src\Emulators\vice\drive\iec;$(ProjectDir)..\..\..\src\Emulators\vice\drive\iec\c64exp;$(ProjectDir)..\..\..\src\Emulators\vice\drive\iecieee;$(ProjectDir)..\..\..\src\Emulators\vice\drive\ieee;$(ProjectDir)..\..\..\src\Emulators\vice\drive\tcbm;$(ProjectDir)..\..\..\src\Emulators\vice\fileio;$(ProjectDir)..\..\..\src\Emulators\vice\fsdevice;$(ProjectDir)..\..\..\src\Emulators\vice\gfxoutputdrv;$(ProjectDir)..\..\..\src\Emulators\vice\iecbus;$(ProjectDir)..\..\..\src\Emulators\vice\imagecontents;$(ProjectDir)..\..\..\src\Emulators\vice\joyport;$(ProjectDir)..\..\..\src\Emulators\vice\lib;$(ProjectDir)..\..\..\src\Emulators\vice\lib\p64;$(ProjectDir)..\..\..\src\Emulators\vice\monitor;$(ProjectDir)..\..\..\src\Emulators\vice\parallel;$(ProjectDir)..\..\..\src\Emulators\vice\platform;$(ProjectDir)..\..\..\src\Emulators\vice\printerdrv;$(ProjectDir)..\..\..\src\Emulators\vice\raster;$(ProjectDir)..\..\..\src\Emulators\vice\resid;$(ProjectDir)..\..\..\src\Emulators\vice\resid-fp;$(ProjectDir)..\..\..\src\Emulators\vice\root;$(ProjectDir)..\..\..\src\Emulators\vice\rs232drv;$(ProjectDir)..\..\..\src\Emulators\vice\rtc;$(ProjectDir)..\..\..\src\Emulators\vice\samplerdrv;$(ProjectDir)..\..\..\src\Emulators\vice\serial;$(ProjectDir)..\..\..\src\Emulators\vice\sid;$(ProjectDir)..\..\..\src\Emulators\vice\sounddrv;$(ProjectDir)..\..\..\src\Emulators\vice\tape;$(ProjectDir)..\..\..\src\Emulators\vice\tapeport;$(ProjectDir)..\..\..\src\Emulators\vice\userport;$(ProjectDir)..\..\..\src\Emulators\vice\vdrive;$(ProjectDir)..\..\..\src\Emulators\vice\ViceInterface;$(ProjectDir)..\..\..\src\Emulators\vice\ViceInterface\Adapters;$(ProjectDir)..\..\..\src\Emulators\vice\viciisc;$(ProjectDir)..\..\..\src\Emulators\vice\video;$(ProjectDir)..\..\..\src\Emulators\vice\datasette;$(ProjectDir)..\..\..\src\Emulators\vice\core\rtc;$(ProjectDir)..\..\..\src\Plugins\GoatTracker\libs;$(ProjectDir)..\..\..\src\Remote\WebSockets;$(ProjectDir)..\..\..\src\Remote\Pipe;$(ProjectDir)..\..\..\src\Remote\MCP;$(ProjectDir)..\..\..\src\Remote;$(ProjectDir)..\..\..\src\Screens;$(ProjectDir)..\..\..\src\Screens\VicEditor;$(ProjectDir)..\..\..\src\Tools;$(ProjectDir)..\..\..\src\Tools\64tass;$(ProjectDir)..\..\..\src\Tools\asap;$(ProjectDir)..\..\..\src\Tools\exomizer;$(ProjectDir)..\..\..\src\Tools\libpsid64;$(ProjectDir)..\..\..\src\Tools\sidplay;$(ProjectDir)..\..\..\src\Tools\sidplay\sidtune;$(ProjectDir)..\..\..\src\Tools\sidplay\utils;$(ProjectDir)..\..\..\src\Tools\stilview;$(ProjectDir)..\..\..\src\Tools\TextEditor;$(ProjectDir)..\..\..\src\Tools\Shaders;$(ProjectDir)..\..\..\src\Views;$(ProjectDir)..\..\..\src\Views\Atari800;$(ProjectDir)..\..\..\src\Views\C64;$(ProjectDir)..\..\..\src\Views\C64\AllGraphics;$(ProjectDir)..\..\..\src\Views\C64\VicDisplay;$(ProjectDir)..\..\..\src\Views\C64\VicEditor;$(ProjectDir)..\..\..\src\Views\C64\VicEditor\Layers;$(ProjectDir)..\..\..\src\Views\Nes;$(ProjectDir)..\..\..\src\Views\JoystickLayouts;$(ProjectDir)..\..\..\src\Views\JukeboxPlaylist;$(ProjectDir)..\..\..\src\Tests;$(ProjectDir)..\..\..\src\DebugInterface\API;$(ProjectDir)..\..\..\src\Emulators\c64u;$(ProjectDir)..\..\..\src\Emulators\c64u\Transport;$(ProjectDir)..\..\..\src\Emulators\c64u\Adapters;$(ProjectDir)..\..\..\src\Emulators\c64u\Audio;$(ProjectDir)..\..\..\src\Views\C64U;$(MTEngineSDLDir)src;$(MTEngineSDLDir)src\Embedded;$(MTEngineSDLDir)src\Engine;$(MTEngineSDLDir)src\Engine\Audio;$(MTEngineSDLDir)src\Engine\Audio\MIDI;$(MTEngineSDLDir)src\Engine\Audio\WAV;$(MTEngineSDLDir)src\Engine\Core;$(MTEngineSDLDir)src\Engine\Core\GamePads;$(MTEngineSDLDir)src\Engine\Core\Render;$(MTEngineSDLDir)src\Engine\Core\Net;$(MTEngineSDLDir)src\Engine\Core\Pool;$(MTEngineSDLDir)src\Engine\Funct;$(MTEngineSDLDir)src\Engine\Funct\ContinuousParam;$(MTEngineSDLDir)src\Engine\Funct\DataTable;$(MTEngineSDLDir)src\Engine\Funct\ImageProcessing;$(MTEngineSDLDir)src\Engine\Funct\ImageProcessing\resampler;$(MTEngineSDLDir)src\Engine\Funct\ImageProcessing\stb_image;$(MTEngineSDLDir)src\Engine\Tools;$(MTEngineSDLDir)src\Engine\Tests;$(MTEngineSDLDir)src\Engine\GUI;$(MTEngineSDLDir)src\Engine\GUI\Fonts;$(MTEngineSDLDir)src\Engine\GUI\AudioMixer;$(MTEngineSDLDir)src\Engine\GUI\Controls;$(MTEngineSDLDir)src\Engine\GUI\Waveform;$(MTEngineSDLDir)src\Engine\GUI\Layout;$(MTEngineSDLDir)src\Engine\GUI\Helpers;$(MTEngineSDLDir)src\Engine\GUI\Helpers\LoadingScreen;$(MTEngineSDLDir)src\Engine\GUI\Helpers\ResourceManager;$(MTEngineSDLDir)src\Engine\Libs;$(MTEngineSDLDir)src\Engine\Libs\ENet;$(MTEngineSDLDir)src\Engine\Libs\crow;$(MTEngineSDLDir)src\Engine\Libs\hjson;$(MTEngineSDLDir)src\Engine\Libs\stb;$(MTEngineSDLDir)src\Engine\Libs\imgui;$(MTEngineSDLDir)src\Engine\Libs\implot;$(MTEngineSDLDir)src\Engine\Libs\imguiext;$(MTEngineSDLDir)src\Engine\Libs\imgui-notify;$(MTEngineSDLDir)src\Engine\Libs\jpeg;$(MTEngineSDLDir)src\Engine\Libs\jpeg\jpeg-9a;$(MTEngineSDLDir)src\Engine\Libs\nlohmann;$(MTEngineSDLDir)src\Engine\Libs\libjson;$(MTEngineSDLDir)src\Engine\Libs\libjson\_internal;$(MTEngineSDLDir)src\Engine\Libs\libjson\_internal\Dependencies;$(MTEngineSDLDir)src\Engine\Libs\libjson\_internal\Dependencies\libbase64++;$(MTEngineSDLDir)src\Engine\Libs\libjson\_internal\Dependencies\mempool++;$(MTEngineSDLDir)src\Engine\Libs\libjson\_internal\Source;$(MTEngineSDLDir)src\Engine\Libs\libjson\_internal\Source\JSONDefs;$(MTEngineSDLDir)src\Engine\Libs\libpng;$(MTEngineSDLDir)src\Engine\Libs\httplib;$(MTEngineSDLDir)src\Engine\Libs\lodepng;$(MTEngineSDLDir)src\Engine\Libs\md5;$(MTEngineSDLDir)src\Engine\Libs\minizip;$(MTEngineSDLDir)src\Engine\Libs\mtrand;$(MTEngineSDLDir)src\Engine\Libs\nfd;$(MTEngineSDLDir)src\Engine\Libs\pugixml;$(MTEngineSDLDir)src\Engine\Libs\rtmidi;$(MTEngineSDLDir)src\Engine\Libs\tremor;$(MTEngineSDLDir)src\Engine\Libs\sgSHA256;$(MTEngineSDLDir)src\Engine\Libs\tremor\Ogg;$(MTEngineSDLDir)src\Engine\Libs\utf8;$(MTEngineSDLDir)src\Engine\Libs\uWebSockets;$(MTEngineSDLDir)src\Engine\Libs\zlib;$(MTEngineSDLDir)src\Engine\Libs\libtmt;$(MTEngineSDLDir)src\Engine\Libs\imgui_test_engine;$(MTEngineSDLDir)platform\Windows\src.Windows;(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <ShowIncludes>false</ShowIncludes>
       <LanguageStandard>stdcpp20</LanguageStandard>
@@ -186,7 +176,7 @@
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
-      <AdditionalDependencies>MTEngineSDL.lib;SDL2.lib;SDL2main.lib;version.lib;imm32.lib;setupapi.lib;winmm.lib;wsock32.lib;ws2_32.lib;Iphlpapi.lib;userenv.lib;psapi.lib;uSockets.lib;libuv.lib;msvcrt.lib;dbghelp.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>MTImageCodecs.lib;SDL3.lib;version.lib;imm32.lib;setupapi.lib;winmm.lib;wsock32.lib;ws2_32.lib;Iphlpapi.lib;userenv.lib;psapi.lib;uSockets.lib;libuv.lib;msvcrtd.lib;dbghelp.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">
@@ -196,7 +186,6 @@
       <SDLCheck>false</SDLCheck>
       <ConformanceMode>false</ConformanceMode>
       <PreprocessorDefinitions>_MBCS;%(PreprocessorDefinitions);_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_DEPRECATE;WIN32;NOMINMAX;_WINSOCKAPI_;WINDOWS_COMPILE;LIBUS_NO_SSL;_ARM64_;_HAS_STD_BYTE=0</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\src\Plugins\Commando;$(ProjectDir)..\..\..\src\Plugins\DNDK;$(ProjectDir)..\..\..\src\Plugins\CrtMaker;$(ProjectDir)..\..\..\platform\Windows\src.Windows\hardsid;$(ProjectDir)..\..\..\platform\Windows\src.Windows\arch\wpcap;$(ProjectDir)..\..\..\platform\Windows\src.Windows\arch\wpcap\net;$(ProjectDir)..\..\..\platform\Windows\src.Windows\arch;$(ProjectDir)..\..\..\platform\Windows\src.Windows;$(ProjectDir)..\..\..\src;$(ProjectDir)..\..\..\src\Plugins;$(ProjectDir)..\..\..\src\DebugInterface;$(ProjectDir)..\..\..\src\DebugInterface\MenuItems;$(ProjectDir)..\..\..\src\DebugInterface\C64;$(ProjectDir)..\..\..\src\DebugInterface\Symbols;$(ProjectDir)..\..\..\src\Plugins\GoatTracker\gt2;$(ProjectDir)..\..\..\src\Plugins\GoatTracker\gt2\asm;$(ProjectDir)..\..\..\src\Plugins\GoatTracker\gt2\bme;$(ProjectDir)..\..\..\src\Plugins\GoatTracker;$(ProjectDir)..\..\..\src\Embedded;$(ProjectDir)..\..\..\src\Emulators;$(ProjectDir)..\..\..\src\Emulators\atari800;$(ProjectDir)..\..\..\src\Emulators\atari800\atari_ntsc;$(ProjectDir)..\..\..\src\Emulators\atari800\codecs;$(ProjectDir)..\..\..\src\Emulators\atari800\roms;$(ProjectDir)..\..\..\src\Emulators\atari800\AtariInterface;$(ProjectDir)..\..\..\src\Emulators\atari800\sdl;$(ProjectDir)..\..\..\src\Emulators\nestopiaue;$(ProjectDir)..\..\..\src\Emulators\nestopiaue\common;$(ProjectDir)..\..\..\src\Emulators\nestopiaue\core\vssystem;$(ProjectDir)..\..\..\src\Emulators\nestopiaue\core\input;$(ProjectDir)..\..\..\src\Emulators\nestopiaue\core\board;$(ProjectDir)..\..\..\src\Emulators\nestopiaue\core\api;$(ProjectDir)..\..\..\src\Emulators\nestopiaue\core;$(ProjectDir)..\..\..\src\Emulators\nestopiaue\nes_ntsc;$(ProjectDir)..\..\..\src\Emulators\nestopiaue\nes_ntsc\tests;$(ProjectDir)..\..\..\src\Emulators\nestopiaue\NestopiaInterface;$(ProjectDir)..\..\..\src\Emulators\nestopiaue\NestopiaInterface\DataAdapters;$(ProjectDir)..\..\..\src\Emulators\nestopiaue\sdl;$(ProjectDir)..\..\..\src\Emulators\c64u;$(ProjectDir)..\..\..\src\Emulators\c64u\Adapters;$(ProjectDir)..\..\..\src\Emulators\c64u\Audio;$(ProjectDir)..\..\..\src\Emulators\c64u\State;$(ProjectDir)..\..\..\src\Emulators\c64u\Trace;$(ProjectDir)..\..\..\src\Emulators\c64u\Transport;$(ProjectDir)..\..\..\src\Emulators\vice;$(ProjectDir)..\..\..\src\Emulators\vice\arch;$(ProjectDir)..\..\..\src\Emulators\vice\c64;$(ProjectDir)..\..\..\src\Emulators\vice\c64\cart;$(ProjectDir)..\..\..\src\Emulators\vice\core;$(ProjectDir)..\..\..\src\Emulators\vice\diag;$(ProjectDir)..\..\..\src\Emulators\vice\diskimage;$(ProjectDir)..\..\..\src\Emulators\vice\drive;$(ProjectDir)..\..\..\src\Emulators\vice\drive\iec;$(ProjectDir)..\..\..\src\Emulators\vice\drive\iec\c64exp;$(ProjectDir)..\..\..\src\Emulators\vice\drive\iecieee;$(ProjectDir)..\..\..\src\Emulators\vice\drive\ieee;$(ProjectDir)..\..\..\src\Emulators\vice\drive\tcbm;$(ProjectDir)..\..\..\src\Emulators\vice\fileio;$(ProjectDir)..\..\..\src\Emulators\vice\fsdevice;$(ProjectDir)..\..\..\src\Emulators\vice\gfxoutputdrv;$(ProjectDir)..\..\..\src\Emulators\vice\iecbus;$(ProjectDir)..\..\..\src\Emulators\vice\imagecontents;$(ProjectDir)..\..\..\src\Emulators\vice\joyport;$(ProjectDir)..\..\..\src\Emulators\vice\lib;$(ProjectDir)..\..\..\src\Emulators\vice\lib\p64;$(ProjectDir)..\..\..\src\Emulators\vice\monitor;$(ProjectDir)..\..\..\src\Emulators\vice\parallel;$(ProjectDir)..\..\..\src\Emulators\vice\platform;$(ProjectDir)..\..\..\src\Emulators\vice\printerdrv;$(ProjectDir)..\..\..\src\Emulators\vice\raster;$(ProjectDir)..\..\..\src\Emulators\vice\resid;$(ProjectDir)..\..\..\src\Emulators\vice\resid-fp;$(ProjectDir)..\..\..\src\Emulators\vice\root;$(ProjectDir)..\..\..\src\Emulators\vice\rs232drv;$(ProjectDir)..\..\..\src\Emulators\vice\rtc;$(ProjectDir)..\..\..\src\Emulators\vice\samplerdrv;$(ProjectDir)..\..\..\src\Emulators\vice\serial;$(ProjectDir)..\..\..\src\Emulators\vice\sid;$(ProjectDir)..\..\..\src\Emulators\vice\sounddrv;$(ProjectDir)..\..\..\src\Emulators\vice\tape;$(ProjectDir)..\..\..\src\Emulators\vice\tapeport;$(ProjectDir)..\..\..\src\Emulators\vice\userport;$(ProjectDir)..\..\..\src\Emulators\vice\vdrive;$(ProjectDir)..\..\..\src\Emulators\vice\ViceInterface;$(ProjectDir)..\..\..\src\Emulators\vice\ViceInterface\Adapters;$(ProjectDir)..\..\..\src\Emulators\vice\viciisc;$(ProjectDir)..\..\..\src\Emulators\vice\video;$(ProjectDir)..\..\..\src\Emulators\vice\datasette;$(ProjectDir)..\..\..\src\Emulators\vice\core\rtc;$(ProjectDir)..\..\..\src\Plugins\GoatTracker\libs;$(ProjectDir)..\..\..\src\Remote\WebSockets;$(ProjectDir)..\..\..\src\Remote\Pipe;$(ProjectDir)..\..\..\src\Remote\MCP;$(ProjectDir)..\..\..\src\Remote;$(ProjectDir)..\..\..\src\Screens;$(ProjectDir)..\..\..\src\Screens\VicEditor;$(ProjectDir)..\..\..\src\Tools;$(ProjectDir)..\..\..\src\Tools\64tass;$(ProjectDir)..\..\..\src\Tools\asap;$(ProjectDir)..\..\..\src\Tools\exomizer;$(ProjectDir)..\..\..\src\Tools\libpsid64;$(ProjectDir)..\..\..\src\Tools\sidplay;$(ProjectDir)..\..\..\src\Tools\sidplay\sidtune;$(ProjectDir)..\..\..\src\Tools\sidplay\utils;$(ProjectDir)..\..\..\src\Tools\stilview;$(ProjectDir)..\..\..\src\Tools\TextEditor;$(ProjectDir)..\..\..\src\Tools\Shaders;$(ProjectDir)..\..\..\src\Views;$(ProjectDir)..\..\..\src\Views\Atari800;$(ProjectDir)..\..\..\src\Views\C64;$(ProjectDir)..\..\..\src\Views\C64\AllGraphics;$(ProjectDir)..\..\..\src\Views\C64\VicDisplay;$(ProjectDir)..\..\..\src\Views\C64\VicEditor;$(ProjectDir)..\..\..\src\Views\C64\VicEditor\Layers;$(ProjectDir)..\..\..\src\Views\Nes;$(ProjectDir)..\..\..\src\Views\JoystickLayouts;$(ProjectDir)..\..\..\src\Views\JukeboxPlaylist;$(ProjectDir)..\..\..\src\Tests;$(ProjectDir)..\..\..\src\DebugInterface\API;$(ProjectDir)..\..\..\src\Emulators\c64u;$(ProjectDir)..\..\..\src\Emulators\c64u\Transport;$(ProjectDir)..\..\..\src\Emulators\c64u\Adapters;$(ProjectDir)..\..\..\src\Emulators\c64u\Audio;$(ProjectDir)..\..\..\src\Views\C64U;$(MTEngineSDLDir)src;$(MTEngineSDLDir)src\Embedded;$(MTEngineSDLDir)src\Engine;$(MTEngineSDLDir)src\Engine\Audio;$(MTEngineSDLDir)src\Engine\Audio\MIDI;$(MTEngineSDLDir)src\Engine\Audio\WAV;$(MTEngineSDLDir)src\Engine\Core;$(MTEngineSDLDir)src\Engine\Core\GamePads;$(MTEngineSDLDir)src\Engine\Core\Render;$(MTEngineSDLDir)src\Engine\Core\Net;$(MTEngineSDLDir)src\Engine\Core\Pool;$(MTEngineSDLDir)src\Engine\Funct;$(MTEngineSDLDir)src\Engine\Funct\ContinuousParam;$(MTEngineSDLDir)src\Engine\Funct\DataTable;$(MTEngineSDLDir)src\Engine\Funct\ImageProcessing;$(MTEngineSDLDir)src\Engine\Funct\ImageProcessing\resampler;$(MTEngineSDLDir)src\Engine\Funct\ImageProcessing\stb_image;$(MTEngineSDLDir)src\Engine\Tools;$(MTEngineSDLDir)src\Engine\Tests;$(MTEngineSDLDir)src\Engine\GUI;$(MTEngineSDLDir)src\Engine\GUI\Fonts;$(MTEngineSDLDir)src\Engine\GUI\AudioMixer;$(MTEngineSDLDir)src\Engine\GUI\Controls;$(MTEngineSDLDir)src\Engine\GUI\Waveform;$(MTEngineSDLDir)src\Engine\GUI\Layout;$(MTEngineSDLDir)src\Engine\GUI\Helpers;$(MTEngineSDLDir)src\Engine\GUI\Helpers\LoadingScreen;$(MTEngineSDLDir)src\Engine\GUI\Helpers\ResourceManager;$(MTEngineSDLDir)src\Engine\Libs;$(MTEngineSDLDir)src\Engine\Libs\ENet;$(MTEngineSDLDir)src\Engine\Libs\crow;$(MTEngineSDLDir)src\Engine\Libs\hjson;$(MTEngineSDLDir)src\Engine\Libs\stb;$(MTEngineSDLDir)src\Engine\Libs\imgui;$(MTEngineSDLDir)src\Engine\Libs\implot;$(MTEngineSDLDir)src\Engine\Libs\imguiext;$(MTEngineSDLDir)src\Engine\Libs\imgui-notify;$(MTEngineSDLDir)src\Engine\Libs\jpeg;$(MTEngineSDLDir)src\Engine\Libs\jpeg\jpeg-9a;$(MTEngineSDLDir)src\Engine\Libs\nlohmann;$(MTEngineSDLDir)src\Engine\Libs\libjson;$(MTEngineSDLDir)src\Engine\Libs\libjson\_internal;$(MTEngineSDLDir)src\Engine\Libs\libjson\_internal\Dependencies;$(MTEngineSDLDir)src\Engine\Libs\libjson\_internal\Dependencies\libbase64++;$(MTEngineSDLDir)src\Engine\Libs\libjson\_internal\Dependencies\mempool++;$(MTEngineSDLDir)src\Engine\Libs\libjson\_internal\Source;$(MTEngineSDLDir)src\Engine\Libs\libjson\_internal\Source\JSONDefs;$(MTEngineSDLDir)src\Engine\Libs\libpng;$(MTEngineSDLDir)src\Engine\Libs\httplib;$(MTEngineSDLDir)src\Engine\Libs\lodepng;$(MTEngineSDLDir)src\Engine\Libs\md5;$(MTEngineSDLDir)src\Engine\Libs\minizip;$(MTEngineSDLDir)src\Engine\Libs\mtrand;$(MTEngineSDLDir)src\Engine\Libs\nfd;$(MTEngineSDLDir)src\Engine\Libs\pugixml;$(MTEngineSDLDir)src\Engine\Libs\rtmidi;$(MTEngineSDLDir)src\Engine\Libs\tremor;$(MTEngineSDLDir)src\Engine\Libs\sgSHA256;$(MTEngineSDLDir)src\Engine\Libs\tremor\Ogg;$(MTEngineSDLDir)src\Engine\Libs\utf8;$(MTEngineSDLDir)src\Engine\Libs\uWebSockets;$(MTEngineSDLDir)src\Engine\Libs\zlib;$(MTEngineSDLDir)src\Engine\Libs\libtmt;$(MTEngineSDLDir)src\Engine\Libs\imgui_test_engine;$(MTEngineSDLDir)platform\Windows\src.Windows;(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <ShowIncludes>false</ShowIncludes>
       <LanguageStandard>stdcpp20</LanguageStandard>
@@ -205,30 +194,7 @@
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
-      <AdditionalDependencies>MTEngineSDL.lib;SDL2.lib;SDL2main.lib;version.lib;imm32.lib;setupapi.lib;winmm.lib;wsock32.lib;ws2_32.lib;Iphlpapi.lib;userenv.lib;psapi.lib;uSockets.lib;libuv.lib;msvcrt.lib;dbghelp.lib;%(AdditionalDependencies)</AdditionalDependencies>
-    </Link>
-  </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <ClCompile>
-      <WarningLevel>Level3</WarningLevel>
-      <Optimization>MaxSpeed</Optimization>
-      <FunctionLevelLinking>true</FunctionLevelLinking>
-      <IntrinsicFunctions>true</IntrinsicFunctions>
-      <BufferSecurityCheck>false</BufferSecurityCheck>
-      <SDLCheck>false</SDLCheck>
-      <ConformanceMode>false</ConformanceMode>
-      <PreprocessorDefinitions>_MBCS;%(PreprocessorDefinitions);_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_DEPRECATE;WIN32;NOMINMAX;_WINSOCKAPI_;WINDOWS_COMPILE;LIBUS_NO_SSL;_HAS_STD_BYTE=0;</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\src\Plugins\Commando;$(ProjectDir)..\..\..\src\Plugins\DNDK;$(ProjectDir)..\..\..\src\Plugins\CrtMaker;$(ProjectDir)..\..\..\platform\Windows\src.Windows\hardsid;$(ProjectDir)..\..\..\platform\Windows\src.Windows\arch\wpcap;$(ProjectDir)..\..\..\platform\Windows\src.Windows\arch\wpcap\net;$(ProjectDir)..\..\..\platform\Windows\src.Windows\arch;$(ProjectDir)..\..\..\platform\Windows\src.Windows;$(ProjectDir)..\..\..\src;$(ProjectDir)..\..\..\src\Plugins;$(ProjectDir)..\..\..\src\DebugInterface;$(ProjectDir)..\..\..\src\DebugInterface\MenuItems;$(ProjectDir)..\..\..\src\DebugInterface\C64;$(ProjectDir)..\..\..\src\DebugInterface\Symbols;$(ProjectDir)..\..\..\src\Plugins\GoatTracker\gt2;$(ProjectDir)..\..\..\src\Plugins\GoatTracker\gt2\asm;$(ProjectDir)..\..\..\src\Plugins\GoatTracker\gt2\bme;$(ProjectDir)..\..\..\src\Plugins\GoatTracker;$(ProjectDir)..\..\..\src\Embedded;$(ProjectDir)..\..\..\src\Emulators;$(ProjectDir)..\..\..\src\Emulators\atari800;$(ProjectDir)..\..\..\src\Emulators\atari800\atari_ntsc;$(ProjectDir)..\..\..\src\Emulators\atari800\codecs;$(ProjectDir)..\..\..\src\Emulators\atari800\roms;$(ProjectDir)..\..\..\src\Emulators\atari800\AtariInterface;$(ProjectDir)..\..\..\src\Emulators\atari800\sdl;$(ProjectDir)..\..\..\src\Emulators\nestopiaue;$(ProjectDir)..\..\..\src\Emulators\nestopiaue\common;$(ProjectDir)..\..\..\src\Emulators\nestopiaue\core\vssystem;$(ProjectDir)..\..\..\src\Emulators\nestopiaue\core\input;$(ProjectDir)..\..\..\src\Emulators\nestopiaue\core\board;$(ProjectDir)..\..\..\src\Emulators\nestopiaue\core\api;$(ProjectDir)..\..\..\src\Emulators\nestopiaue\core;$(ProjectDir)..\..\..\src\Emulators\nestopiaue\nes_ntsc;$(ProjectDir)..\..\..\src\Emulators\nestopiaue\nes_ntsc\tests;$(ProjectDir)..\..\..\src\Emulators\nestopiaue\NestopiaInterface;$(ProjectDir)..\..\..\src\Emulators\nestopiaue\NestopiaInterface\DataAdapters;$(ProjectDir)..\..\..\src\Emulators\nestopiaue\sdl;$(ProjectDir)..\..\..\src\Emulators\c64u;$(ProjectDir)..\..\..\src\Emulators\c64u\Adapters;$(ProjectDir)..\..\..\src\Emulators\c64u\Audio;$(ProjectDir)..\..\..\src\Emulators\c64u\State;$(ProjectDir)..\..\..\src\Emulators\c64u\Trace;$(ProjectDir)..\..\..\src\Emulators\c64u\Transport;$(ProjectDir)..\..\..\src\Emulators\vice;$(ProjectDir)..\..\..\src\Emulators\vice\arch;$(ProjectDir)..\..\..\src\Emulators\vice\c64;$(ProjectDir)..\..\..\src\Emulators\vice\c64\cart;$(ProjectDir)..\..\..\src\Emulators\vice\core;$(ProjectDir)..\..\..\src\Emulators\vice\diag;$(ProjectDir)..\..\..\src\Emulators\vice\diskimage;$(ProjectDir)..\..\..\src\Emulators\vice\drive;$(ProjectDir)..\..\..\src\Emulators\vice\drive\iec;$(ProjectDir)..\..\..\src\Emulators\vice\drive\iec\c64exp;$(ProjectDir)..\..\..\src\Emulators\vice\drive\iecieee;$(ProjectDir)..\..\..\src\Emulators\vice\drive\ieee;$(ProjectDir)..\..\..\src\Emulators\vice\drive\tcbm;$(ProjectDir)..\..\..\src\Emulators\vice\fileio;$(ProjectDir)..\..\..\src\Emulators\vice\fsdevice;$(ProjectDir)..\..\..\src\Emulators\vice\gfxoutputdrv;$(ProjectDir)..\..\..\src\Emulators\vice\iecbus;$(ProjectDir)..\..\..\src\Emulators\vice\imagecontents;$(ProjectDir)..\..\..\src\Emulators\vice\joyport;$(ProjectDir)..\..\..\src\Emulators\vice\lib;$(ProjectDir)..\..\..\src\Emulators\vice\lib\p64;$(ProjectDir)..\..\..\src\Emulators\vice\monitor;$(ProjectDir)..\..\..\src\Emulators\vice\parallel;$(ProjectDir)..\..\..\src\Emulators\vice\platform;$(ProjectDir)..\..\..\src\Emulators\vice\printerdrv;$(ProjectDir)..\..\..\src\Emulators\vice\raster;$(ProjectDir)..\..\..\src\Emulators\vice\resid;$(ProjectDir)..\..\..\src\Emulators\vice\resid-fp;$(ProjectDir)..\..\..\src\Emulators\vice\root;$(ProjectDir)..\..\..\src\Emulators\vice\rs232drv;$(ProjectDir)..\..\..\src\Emulators\vice\rtc;$(ProjectDir)..\..\..\src\Emulators\vice\samplerdrv;$(ProjectDir)..\..\..\src\Emulators\vice\serial;$(ProjectDir)..\..\..\src\Emulators\vice\sid;$(ProjectDir)..\..\..\src\Emulators\vice\sounddrv;$(ProjectDir)..\..\..\src\Emulators\vice\tape;$(ProjectDir)..\..\..\src\Emulators\vice\tapeport;$(ProjectDir)..\..\..\src\Emulators\vice\userport;$(ProjectDir)..\..\..\src\Emulators\vice\vdrive;$(ProjectDir)..\..\..\src\Emulators\vice\ViceInterface;$(ProjectDir)..\..\..\src\Emulators\vice\ViceInterface\Adapters;$(ProjectDir)..\..\..\src\Emulators\vice\viciisc;$(ProjectDir)..\..\..\src\Emulators\vice\video;$(ProjectDir)..\..\..\src\Remote\WebSockets;$(ProjectDir)..\..\..\src\Remote\Pipe;$(ProjectDir)..\..\..\src\Remote\MCP;$(ProjectDir)..\..\..\src\Remote;$(ProjectDir)..\..\..\src\Screens;$(ProjectDir)..\..\..\src\Screens\VicEditor;$(ProjectDir)..\..\..\src\Tools;$(ProjectDir)..\..\..\src\Tools\64tass;$(ProjectDir)..\..\..\src\Tools\asap;$(ProjectDir)..\..\..\src\Tools\exomizer;$(ProjectDir)..\..\..\src\Tools\libpsid64;$(ProjectDir)..\..\..\src\Tools\sidplay;$(ProjectDir)..\..\..\src\Tools\sidplay\sidtune;$(ProjectDir)..\..\..\src\Tools\sidplay\utils;$(ProjectDir)..\..\..\src\Tools\stilview;$(ProjectDir)..\..\..\src\Tools\TextEditor;$(ProjectDir)..\..\..\src\Tools\Shaders;$(ProjectDir)..\..\..\src\Views;$(ProjectDir)..\..\..\src\Views\Atari800;$(ProjectDir)..\..\..\src\Views\C64;$(ProjectDir)..\..\..\src\Views\C64\AllGraphics;$(ProjectDir)..\..\..\src\Views\C64\VicDisplay;$(ProjectDir)..\..\..\src\Views\C64\VicEditor;$(ProjectDir)..\..\..\src\Views\C64\VicEditor\Layers;$(ProjectDir)..\..\..\src\Views\Nes;$(ProjectDir)..\..\..\src\Views\JoystickLayouts;$(ProjectDir)..\..\..\src\Views\JukeboxPlaylist;$(ProjectDir)..\..\..\src\Tests;$(ProjectDir)..\..\..\src\DebugInterface\API;$(ProjectDir)..\..\..\src\Emulators\c64u;$(ProjectDir)..\..\..\src\Emulators\c64u\Transport;$(ProjectDir)..\..\..\src\Emulators\c64u\Adapters;$(ProjectDir)..\..\..\src\Emulators\c64u\Audio;$(ProjectDir)..\..\..\src\Views\C64U;$(MTEngineSDLDir)src;$(MTEngineSDLDir)src\Embedded;$(MTEngineSDLDir)src\Engine;$(MTEngineSDLDir)src\Engine\Audio;$(MTEngineSDLDir)src\Engine\Audio\MIDI;$(MTEngineSDLDir)src\Engine\Audio\WAV;$(MTEngineSDLDir)src\Engine\Core;$(MTEngineSDLDir)src\Engine\Core\GamePads;$(MTEngineSDLDir)src\Engine\Core\Render;$(MTEngineSDLDir)src\Engine\Core\Net;$(MTEngineSDLDir)src\Engine\Core\Pool;$(MTEngineSDLDir)src\Engine\Funct;$(MTEngineSDLDir)src\Engine\Funct\ContinuousParam;$(MTEngineSDLDir)src\Engine\Funct\DataTable;$(MTEngineSDLDir)src\Engine\Funct\ImageProcessing;$(MTEngineSDLDir)src\Engine\Funct\ImageProcessing\resampler;$(MTEngineSDLDir)src\Engine\Funct\ImageProcessing\stb_image;$(MTEngineSDLDir)src\Engine\Tools;$(MTEngineSDLDir)src\Engine\Tests;$(MTEngineSDLDir)src\Engine\GUI;$(MTEngineSDLDir)src\Engine\GUI\Fonts;$(MTEngineSDLDir)src\Engine\GUI\AudioMixer;$(MTEngineSDLDir)src\Engine\GUI\Controls;$(MTEngineSDLDir)src\Engine\GUI\Waveform;$(MTEngineSDLDir)src\Engine\GUI\Layout;$(MTEngineSDLDir)src\Engine\GUI\Helpers;$(MTEngineSDLDir)src\Engine\GUI\Helpers\LoadingScreen;$(MTEngineSDLDir)src\Engine\GUI\Helpers\ResourceManager;$(MTEngineSDLDir)src\Engine\Libs;$(MTEngineSDLDir)src\Engine\Libs\ENet;$(MTEngineSDLDir)src\Engine\Libs\crow;$(MTEngineSDLDir)src\Engine\Libs\hjson;$(MTEngineSDLDir)src\Engine\Libs\stb;$(MTEngineSDLDir)src\Engine\Libs\imgui;$(MTEngineSDLDir)src\Engine\Libs\implot;$(MTEngineSDLDir)src\Engine\Libs\imguiext;$(MTEngineSDLDir)src\Engine\Libs\imgui-notify;$(MTEngineSDLDir)src\Engine\Libs\jpeg;$(MTEngineSDLDir)src\Engine\Libs\jpeg\jpeg-9a;$(MTEngineSDLDir)src\Engine\Libs\nlohmann;$(MTEngineSDLDir)src\Engine\Libs\libjson;$(MTEngineSDLDir)src\Engine\Libs\libjson\_internal;$(MTEngineSDLDir)src\Engine\Libs\libjson\_internal\Dependencies;$(MTEngineSDLDir)src\Engine\Libs\libjson\_internal\Dependencies\libbase64++;$(MTEngineSDLDir)src\Engine\Libs\libjson\_internal\Dependencies\mempool++;$(MTEngineSDLDir)src\Engine\Libs\libjson\_internal\Source;$(MTEngineSDLDir)src\Engine\Libs\libjson\_internal\Source\JSONDefs;$(MTEngineSDLDir)src\Engine\Libs\libpng;$(MTEngineSDLDir)src\Engine\Libs\httplib;$(MTEngineSDLDir)src\Engine\Libs\lodepng;$(MTEngineSDLDir)src\Engine\Libs\md5;$(MTEngineSDLDir)src\Engine\Libs\minizip;$(MTEngineSDLDir)src\Engine\Libs\mtrand;$(MTEngineSDLDir)src\Engine\Libs\nfd;$(MTEngineSDLDir)src\Engine\Libs\pugixml;$(MTEngineSDLDir)src\Engine\Libs\rtmidi;$(MTEngineSDLDir)src\Engine\Libs\tremor;$(MTEngineSDLDir)src\Engine\Libs\sgSHA256;$(MTEngineSDLDir)src\Engine\Libs\tremor\Ogg;$(MTEngineSDLDir)src\Engine\Libs\utf8;$(MTEngineSDLDir)src\Engine\Libs\uWebSockets;$(MTEngineSDLDir)src\Engine\Libs\zlib;$(MTEngineSDLDir)src\Engine\Libs\libtmt;$(MTEngineSDLDir)src\Engine\Libs\imgui_test_engine;$(MTEngineSDLDir)platform\Windows\src.Windows;(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
-      <ShowIncludes>false</ShowIncludes>
-      <LanguageStandard>stdcpp20</LanguageStandard>
-      <MultiProcessorCompilation>true</MultiProcessorCompilation>
-    </ClCompile>
-    <Link>
-      <SubSystem>Windows</SubSystem>
-      <EnableCOMDATFolding>true</EnableCOMDATFolding>
-      <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>MTEngineSDL.lib;SDL2.lib;SDL2main.lib;version.lib;imm32.lib;setupapi.lib;winmm.lib;wsock32.lib;ws2_32.lib;Iphlpapi.lib;userenv.lib;psapi.lib;uSockets.lib;libuv.lib;msvcrt.lib;dbghelp.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>MTImageCodecs.lib;SDL3.lib;version.lib;imm32.lib;setupapi.lib;winmm.lib;wsock32.lib;ws2_32.lib;Iphlpapi.lib;userenv.lib;psapi.lib;uSockets.lib;libuv.lib;msvcrtd.lib;dbghelp.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -241,7 +207,6 @@
       <SDLCheck>false</SDLCheck>
       <ConformanceMode>false</ConformanceMode>
       <PreprocessorDefinitions>_MBCS;%(PreprocessorDefinitions);_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_DEPRECATE;WIN32;NOMINMAX;_WINSOCKAPI_;WINDOWS_COMPILE;LIBUS_NO_SSL;_HAS_STD_BYTE=0;</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\src\Plugins\Commando;$(ProjectDir)..\..\..\src\Plugins\DNDK;$(ProjectDir)..\..\..\src\Plugins\CrtMaker;$(ProjectDir)..\..\..\platform\Windows\src.Windows\hardsid;$(ProjectDir)..\..\..\platform\Windows\src.Windows\arch\wpcap;$(ProjectDir)..\..\..\platform\Windows\src.Windows\arch\wpcap\net;$(ProjectDir)..\..\..\platform\Windows\src.Windows\arch;$(ProjectDir)..\..\..\platform\Windows\src.Windows;$(ProjectDir)..\..\..\src;$(ProjectDir)..\..\..\src\Plugins;$(ProjectDir)..\..\..\src\DebugInterface;$(ProjectDir)..\..\..\src\DebugInterface\MenuItems;$(ProjectDir)..\..\..\src\DebugInterface\C64;$(ProjectDir)..\..\..\src\DebugInterface\Symbols;$(ProjectDir)..\..\..\src\Plugins\GoatTracker\gt2;$(ProjectDir)..\..\..\src\Plugins\GoatTracker\gt2\asm;$(ProjectDir)..\..\..\src\Plugins\GoatTracker\gt2\bme;$(ProjectDir)..\..\..\src\Plugins\GoatTracker;$(ProjectDir)..\..\..\src\Embedded;$(ProjectDir)..\..\..\src\Emulators;$(ProjectDir)..\..\..\src\Emulators\atari800;$(ProjectDir)..\..\..\src\Emulators\atari800\atari_ntsc;$(ProjectDir)..\..\..\src\Emulators\atari800\codecs;$(ProjectDir)..\..\..\src\Emulators\atari800\roms;$(ProjectDir)..\..\..\src\Emulators\atari800\AtariInterface;$(ProjectDir)..\..\..\src\Emulators\atari800\sdl;$(ProjectDir)..\..\..\src\Emulators\nestopiaue;$(ProjectDir)..\..\..\src\Emulators\nestopiaue\common;$(ProjectDir)..\..\..\src\Emulators\nestopiaue\core\vssystem;$(ProjectDir)..\..\..\src\Emulators\nestopiaue\core\input;$(ProjectDir)..\..\..\src\Emulators\nestopiaue\core\board;$(ProjectDir)..\..\..\src\Emulators\nestopiaue\core\api;$(ProjectDir)..\..\..\src\Emulators\nestopiaue\core;$(ProjectDir)..\..\..\src\Emulators\nestopiaue\nes_ntsc;$(ProjectDir)..\..\..\src\Emulators\nestopiaue\nes_ntsc\tests;$(ProjectDir)..\..\..\src\Emulators\nestopiaue\NestopiaInterface;$(ProjectDir)..\..\..\src\Emulators\nestopiaue\NestopiaInterface\DataAdapters;$(ProjectDir)..\..\..\src\Emulators\nestopiaue\sdl;$(ProjectDir)..\..\..\src\Emulators\c64u;$(ProjectDir)..\..\..\src\Emulators\c64u\Adapters;$(ProjectDir)..\..\..\src\Emulators\c64u\Audio;$(ProjectDir)..\..\..\src\Emulators\c64u\State;$(ProjectDir)..\..\..\src\Emulators\c64u\Trace;$(ProjectDir)..\..\..\src\Emulators\c64u\Transport;$(ProjectDir)..\..\..\src\Emulators\vice;$(ProjectDir)..\..\..\src\Emulators\vice\arch;$(ProjectDir)..\..\..\src\Emulators\vice\c64;$(ProjectDir)..\..\..\src\Emulators\vice\c64\cart;$(ProjectDir)..\..\..\src\Emulators\vice\core;$(ProjectDir)..\..\..\src\Emulators\vice\diag;$(ProjectDir)..\..\..\src\Emulators\vice\diskimage;$(ProjectDir)..\..\..\src\Emulators\vice\drive;$(ProjectDir)..\..\..\src\Emulators\vice\drive\iec;$(ProjectDir)..\..\..\src\Emulators\vice\drive\iec\c64exp;$(ProjectDir)..\..\..\src\Emulators\vice\drive\iecieee;$(ProjectDir)..\..\..\src\Emulators\vice\drive\ieee;$(ProjectDir)..\..\..\src\Emulators\vice\drive\tcbm;$(ProjectDir)..\..\..\src\Emulators\vice\fileio;$(ProjectDir)..\..\..\src\Emulators\vice\fsdevice;$(ProjectDir)..\..\..\src\Emulators\vice\gfxoutputdrv;$(ProjectDir)..\..\..\src\Emulators\vice\iecbus;$(ProjectDir)..\..\..\src\Emulators\vice\imagecontents;$(ProjectDir)..\..\..\src\Emulators\vice\joyport;$(ProjectDir)..\..\..\src\Emulators\vice\lib;$(ProjectDir)..\..\..\src\Emulators\vice\lib\p64;$(ProjectDir)..\..\..\src\Emulators\vice\monitor;$(ProjectDir)..\..\..\src\Emulators\vice\parallel;$(ProjectDir)..\..\..\src\Emulators\vice\platform;$(ProjectDir)..\..\..\src\Emulators\vice\printerdrv;$(ProjectDir)..\..\..\src\Emulators\vice\raster;$(ProjectDir)..\..\..\src\Emulators\vice\resid;$(ProjectDir)..\..\..\src\Emulators\vice\resid-fp;$(ProjectDir)..\..\..\src\Emulators\vice\root;$(ProjectDir)..\..\..\src\Emulators\vice\rs232drv;$(ProjectDir)..\..\..\src\Emulators\vice\rtc;$(ProjectDir)..\..\..\src\Emulators\vice\samplerdrv;$(ProjectDir)..\..\..\src\Emulators\vice\serial;$(ProjectDir)..\..\..\src\Emulators\vice\sid;$(ProjectDir)..\..\..\src\Emulators\vice\sounddrv;$(ProjectDir)..\..\..\src\Emulators\vice\tape;$(ProjectDir)..\..\..\src\Emulators\vice\tapeport;$(ProjectDir)..\..\..\src\Emulators\vice\userport;$(ProjectDir)..\..\..\src\Emulators\vice\vdrive;$(ProjectDir)..\..\..\src\Emulators\vice\ViceInterface;$(ProjectDir)..\..\..\src\Emulators\vice\ViceInterface\Adapters;$(ProjectDir)..\..\..\src\Emulators\vice\viciisc;$(ProjectDir)..\..\..\src\Emulators\vice\video;$(ProjectDir)..\..\..\src\Emulators\vice\datasette;$(ProjectDir)..\..\..\src\Emulators\vice\core\rtc;$(ProjectDir)..\..\..\src\Plugins\GoatTracker\libs;$(ProjectDir)..\..\..\src\Remote\WebSockets;$(ProjectDir)..\..\..\src\Remote\Pipe;$(ProjectDir)..\..\..\src\Remote\MCP;$(ProjectDir)..\..\..\src\Remote;$(ProjectDir)..\..\..\src\Screens;$(ProjectDir)..\..\..\src\Screens\VicEditor;$(ProjectDir)..\..\..\src\Tools;$(ProjectDir)..\..\..\src\Tools\64tass;$(ProjectDir)..\..\..\src\Tools\asap;$(ProjectDir)..\..\..\src\Tools\exomizer;$(ProjectDir)..\..\..\src\Tools\libpsid64;$(ProjectDir)..\..\..\src\Tools\sidplay;$(ProjectDir)..\..\..\src\Tools\sidplay\sidtune;$(ProjectDir)..\..\..\src\Tools\sidplay\utils;$(ProjectDir)..\..\..\src\Tools\stilview;$(ProjectDir)..\..\..\src\Tools\TextEditor;$(ProjectDir)..\..\..\src\Tools\Shaders;$(ProjectDir)..\..\..\src\Views;$(ProjectDir)..\..\..\src\Views\Atari800;$(ProjectDir)..\..\..\src\Views\C64;$(ProjectDir)..\..\..\src\Views\C64\AllGraphics;$(ProjectDir)..\..\..\src\Views\C64\VicDisplay;$(ProjectDir)..\..\..\src\Views\C64\VicEditor;$(ProjectDir)..\..\..\src\Views\C64\VicEditor\Layers;$(ProjectDir)..\..\..\src\Views\Nes;$(ProjectDir)..\..\..\src\Views\JoystickLayouts;$(ProjectDir)..\..\..\src\Views\JukeboxPlaylist;$(ProjectDir)..\..\..\src\Tests;$(ProjectDir)..\..\..\src\DebugInterface\API;$(ProjectDir)..\..\..\src\Emulators\c64u;$(ProjectDir)..\..\..\src\Emulators\c64u\Transport;$(ProjectDir)..\..\..\src\Emulators\c64u\Adapters;$(ProjectDir)..\..\..\src\Emulators\c64u\Audio;$(ProjectDir)..\..\..\src\Views\C64U;$(MTEngineSDLDir)src;$(MTEngineSDLDir)src\Embedded;$(MTEngineSDLDir)src\Engine;$(MTEngineSDLDir)src\Engine\Audio;$(MTEngineSDLDir)src\Engine\Audio\MIDI;$(MTEngineSDLDir)src\Engine\Audio\WAV;$(MTEngineSDLDir)src\Engine\Core;$(MTEngineSDLDir)src\Engine\Core\GamePads;$(MTEngineSDLDir)src\Engine\Core\Render;$(MTEngineSDLDir)src\Engine\Core\Net;$(MTEngineSDLDir)src\Engine\Core\Pool;$(MTEngineSDLDir)src\Engine\Funct;$(MTEngineSDLDir)src\Engine\Funct\ContinuousParam;$(MTEngineSDLDir)src\Engine\Funct\DataTable;$(MTEngineSDLDir)src\Engine\Funct\ImageProcessing;$(MTEngineSDLDir)src\Engine\Funct\ImageProcessing\resampler;$(MTEngineSDLDir)src\Engine\Funct\ImageProcessing\stb_image;$(MTEngineSDLDir)src\Engine\Tools;$(MTEngineSDLDir)src\Engine\Tests;$(MTEngineSDLDir)src\Engine\GUI;$(MTEngineSDLDir)src\Engine\GUI\Fonts;$(MTEngineSDLDir)src\Engine\GUI\AudioMixer;$(MTEngineSDLDir)src\Engine\GUI\Controls;$(MTEngineSDLDir)src\Engine\GUI\Waveform;$(MTEngineSDLDir)src\Engine\GUI\Layout;$(MTEngineSDLDir)src\Engine\GUI\Helpers;$(MTEngineSDLDir)src\Engine\GUI\Helpers\LoadingScreen;$(MTEngineSDLDir)src\Engine\GUI\Helpers\ResourceManager;$(MTEngineSDLDir)src\Engine\Libs;$(MTEngineSDLDir)src\Engine\Libs\ENet;$(MTEngineSDLDir)src\Engine\Libs\crow;$(MTEngineSDLDir)src\Engine\Libs\hjson;$(MTEngineSDLDir)src\Engine\Libs\stb;$(MTEngineSDLDir)src\Engine\Libs\imgui;$(MTEngineSDLDir)src\Engine\Libs\implot;$(MTEngineSDLDir)src\Engine\Libs\imguiext;$(MTEngineSDLDir)src\Engine\Libs\imgui-notify;$(MTEngineSDLDir)src\Engine\Libs\jpeg;$(MTEngineSDLDir)src\Engine\Libs\jpeg\jpeg-9a;$(MTEngineSDLDir)src\Engine\Libs\nlohmann;$(MTEngineSDLDir)src\Engine\Libs\libjson;$(MTEngineSDLDir)src\Engine\Libs\libjson\_internal;$(MTEngineSDLDir)src\Engine\Libs\libjson\_internal\Dependencies;$(MTEngineSDLDir)src\Engine\Libs\libjson\_internal\Dependencies\libbase64++;$(MTEngineSDLDir)src\Engine\Libs\libjson\_internal\Dependencies\mempool++;$(MTEngineSDLDir)src\Engine\Libs\libjson\_internal\Source;$(MTEngineSDLDir)src\Engine\Libs\libjson\_internal\Source\JSONDefs;$(MTEngineSDLDir)src\Engine\Libs\libpng;$(MTEngineSDLDir)src\Engine\Libs\httplib;$(MTEngineSDLDir)src\Engine\Libs\lodepng;$(MTEngineSDLDir)src\Engine\Libs\md5;$(MTEngineSDLDir)src\Engine\Libs\minizip;$(MTEngineSDLDir)src\Engine\Libs\mtrand;$(MTEngineSDLDir)src\Engine\Libs\nfd;$(MTEngineSDLDir)src\Engine\Libs\pugixml;$(MTEngineSDLDir)src\Engine\Libs\rtmidi;$(MTEngineSDLDir)src\Engine\Libs\tremor;$(MTEngineSDLDir)src\Engine\Libs\sgSHA256;$(MTEngineSDLDir)src\Engine\Libs\tremor\Ogg;$(MTEngineSDLDir)src\Engine\Libs\utf8;$(MTEngineSDLDir)src\Engine\Libs\uWebSockets;$(MTEngineSDLDir)src\Engine\Libs\zlib;$(MTEngineSDLDir)src\Engine\Libs\libtmt;$(MTEngineSDLDir)src\Engine\Libs\imgui_test_engine;$(MTEngineSDLDir)platform\Windows\src.Windows;(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <ShowIncludes>false</ShowIncludes>
       <LanguageStandard>stdcpp20</LanguageStandard>
@@ -251,7 +216,7 @@
       <SubSystem>Windows</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>MTEngineSDL.lib;SDL2.lib;SDL2main.lib;version.lib;imm32.lib;setupapi.lib;winmm.lib;wsock32.lib;ws2_32.lib;Iphlpapi.lib;userenv.lib;psapi.lib;uSockets.lib;libuv.lib;msvcrt.lib;dbghelp.lib;mbedtls_bundle.lib;bcrypt.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>MTImageCodecs.lib;SDL3.lib;version.lib;imm32.lib;setupapi.lib;winmm.lib;wsock32.lib;ws2_32.lib;Iphlpapi.lib;userenv.lib;psapi.lib;uSockets.lib;libuv.lib;msvcrt.lib;dbghelp.lib;mbedtls_bundle.lib;bcrypt.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <LinkTimeCodeGeneration Condition="'$(PlatformToolset)'!='ClangCL'">UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
     </Link>
   </ItemDefinitionGroup>
@@ -265,7 +230,6 @@
       <SDLCheck>false</SDLCheck>
       <ConformanceMode>false</ConformanceMode>
       <PreprocessorDefinitions>_MBCS;%(PreprocessorDefinitions);_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_DEPRECATE;WIN32;NOMINMAX;_WINSOCKAPI_;WINDOWS_COMPILE;LIBUS_NO_SSL;_ARM64_;_HAS_STD_BYTE=0</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\src\Plugins\Commando;$(ProjectDir)..\..\..\src\Plugins\DNDK;$(ProjectDir)..\..\..\src\Plugins\CrtMaker;$(ProjectDir)..\..\..\platform\Windows\src.Windows\hardsid;$(ProjectDir)..\..\..\platform\Windows\src.Windows\arch\wpcap;$(ProjectDir)..\..\..\platform\Windows\src.Windows\arch\wpcap\net;$(ProjectDir)..\..\..\platform\Windows\src.Windows\arch;$(ProjectDir)..\..\..\platform\Windows\src.Windows;$(ProjectDir)..\..\..\src;$(ProjectDir)..\..\..\src\Plugins;$(ProjectDir)..\..\..\src\DebugInterface;$(ProjectDir)..\..\..\src\DebugInterface\MenuItems;$(ProjectDir)..\..\..\src\DebugInterface\C64;$(ProjectDir)..\..\..\src\DebugInterface\Symbols;$(ProjectDir)..\..\..\src\Plugins\GoatTracker\gt2;$(ProjectDir)..\..\..\src\Plugins\GoatTracker\gt2\asm;$(ProjectDir)..\..\..\src\Plugins\GoatTracker\gt2\bme;$(ProjectDir)..\..\..\src\Plugins\GoatTracker;$(ProjectDir)..\..\..\src\Embedded;$(ProjectDir)..\..\..\src\Emulators;$(ProjectDir)..\..\..\src\Emulators\atari800;$(ProjectDir)..\..\..\src\Emulators\atari800\atari_ntsc;$(ProjectDir)..\..\..\src\Emulators\atari800\codecs;$(ProjectDir)..\..\..\src\Emulators\atari800\roms;$(ProjectDir)..\..\..\src\Emulators\atari800\AtariInterface;$(ProjectDir)..\..\..\src\Emulators\atari800\sdl;$(ProjectDir)..\..\..\src\Emulators\nestopiaue;$(ProjectDir)..\..\..\src\Emulators\nestopiaue\common;$(ProjectDir)..\..\..\src\Emulators\nestopiaue\core\vssystem;$(ProjectDir)..\..\..\src\Emulators\nestopiaue\core\input;$(ProjectDir)..\..\..\src\Emulators\nestopiaue\core\board;$(ProjectDir)..\..\..\src\Emulators\nestopiaue\core\api;$(ProjectDir)..\..\..\src\Emulators\nestopiaue\core;$(ProjectDir)..\..\..\src\Emulators\nestopiaue\nes_ntsc;$(ProjectDir)..\..\..\src\Emulators\nestopiaue\nes_ntsc\tests;$(ProjectDir)..\..\..\src\Emulators\nestopiaue\NestopiaInterface;$(ProjectDir)..\..\..\src\Emulators\nestopiaue\NestopiaInterface\DataAdapters;$(ProjectDir)..\..\..\src\Emulators\nestopiaue\sdl;$(ProjectDir)..\..\..\src\Emulators\c64u;$(ProjectDir)..\..\..\src\Emulators\c64u\Adapters;$(ProjectDir)..\..\..\src\Emulators\c64u\Audio;$(ProjectDir)..\..\..\src\Emulators\c64u\State;$(ProjectDir)..\..\..\src\Emulators\c64u\Trace;$(ProjectDir)..\..\..\src\Emulators\c64u\Transport;$(ProjectDir)..\..\..\src\Emulators\vice;$(ProjectDir)..\..\..\src\Emulators\vice\arch;$(ProjectDir)..\..\..\src\Emulators\vice\c64;$(ProjectDir)..\..\..\src\Emulators\vice\c64\cart;$(ProjectDir)..\..\..\src\Emulators\vice\core;$(ProjectDir)..\..\..\src\Emulators\vice\diag;$(ProjectDir)..\..\..\src\Emulators\vice\diskimage;$(ProjectDir)..\..\..\src\Emulators\vice\drive;$(ProjectDir)..\..\..\src\Emulators\vice\drive\iec;$(ProjectDir)..\..\..\src\Emulators\vice\drive\iec\c64exp;$(ProjectDir)..\..\..\src\Emulators\vice\drive\iecieee;$(ProjectDir)..\..\..\src\Emulators\vice\drive\ieee;$(ProjectDir)..\..\..\src\Emulators\vice\drive\tcbm;$(ProjectDir)..\..\..\src\Emulators\vice\fileio;$(ProjectDir)..\..\..\src\Emulators\vice\fsdevice;$(ProjectDir)..\..\..\src\Emulators\vice\gfxoutputdrv;$(ProjectDir)..\..\..\src\Emulators\vice\iecbus;$(ProjectDir)..\..\..\src\Emulators\vice\imagecontents;$(ProjectDir)..\..\..\src\Emulators\vice\joyport;$(ProjectDir)..\..\..\src\Emulators\vice\lib;$(ProjectDir)..\..\..\src\Emulators\vice\lib\p64;$(ProjectDir)..\..\..\src\Emulators\vice\monitor;$(ProjectDir)..\..\..\src\Emulators\vice\parallel;$(ProjectDir)..\..\..\src\Emulators\vice\platform;$(ProjectDir)..\..\..\src\Emulators\vice\printerdrv;$(ProjectDir)..\..\..\src\Emulators\vice\raster;$(ProjectDir)..\..\..\src\Emulators\vice\resid;$(ProjectDir)..\..\..\src\Emulators\vice\resid-fp;$(ProjectDir)..\..\..\src\Emulators\vice\root;$(ProjectDir)..\..\..\src\Emulators\vice\rs232drv;$(ProjectDir)..\..\..\src\Emulators\vice\rtc;$(ProjectDir)..\..\..\src\Emulators\vice\samplerdrv;$(ProjectDir)..\..\..\src\Emulators\vice\serial;$(ProjectDir)..\..\..\src\Emulators\vice\sid;$(ProjectDir)..\..\..\src\Emulators\vice\sounddrv;$(ProjectDir)..\..\..\src\Emulators\vice\tape;$(ProjectDir)..\..\..\src\Emulators\vice\tapeport;$(ProjectDir)..\..\..\src\Emulators\vice\userport;$(ProjectDir)..\..\..\src\Emulators\vice\vdrive;$(ProjectDir)..\..\..\src\Emulators\vice\ViceInterface;$(ProjectDir)..\..\..\src\Emulators\vice\ViceInterface\Adapters;$(ProjectDir)..\..\..\src\Emulators\vice\viciisc;$(ProjectDir)..\..\..\src\Emulators\vice\video;$(ProjectDir)..\..\..\src\Emulators\vice\datasette;$(ProjectDir)..\..\..\src\Emulators\vice\core\rtc;$(ProjectDir)..\..\..\src\Plugins\GoatTracker\libs;$(ProjectDir)..\..\..\src\Remote\WebSockets;$(ProjectDir)..\..\..\src\Remote\Pipe;$(ProjectDir)..\..\..\src\Remote\MCP;$(ProjectDir)..\..\..\src\Remote;$(ProjectDir)..\..\..\src\Screens;$(ProjectDir)..\..\..\src\Screens\VicEditor;$(ProjectDir)..\..\..\src\Tools;$(ProjectDir)..\..\..\src\Tools\64tass;$(ProjectDir)..\..\..\src\Tools\asap;$(ProjectDir)..\..\..\src\Tools\exomizer;$(ProjectDir)..\..\..\src\Tools\libpsid64;$(ProjectDir)..\..\..\src\Tools\sidplay;$(ProjectDir)..\..\..\src\Tools\sidplay\sidtune;$(ProjectDir)..\..\..\src\Tools\sidplay\utils;$(ProjectDir)..\..\..\src\Tools\stilview;$(ProjectDir)..\..\..\src\Tools\TextEditor;$(ProjectDir)..\..\..\src\Tools\Shaders;$(ProjectDir)..\..\..\src\Views;$(ProjectDir)..\..\..\src\Views\Atari800;$(ProjectDir)..\..\..\src\Views\C64;$(ProjectDir)..\..\..\src\Views\C64\AllGraphics;$(ProjectDir)..\..\..\src\Views\C64\VicDisplay;$(ProjectDir)..\..\..\src\Views\C64\VicEditor;$(ProjectDir)..\..\..\src\Views\C64\VicEditor\Layers;$(ProjectDir)..\..\..\src\Views\Nes;$(ProjectDir)..\..\..\src\Views\JoystickLayouts;$(ProjectDir)..\..\..\src\Views\JukeboxPlaylist;$(ProjectDir)..\..\..\src\Tests;$(ProjectDir)..\..\..\src\DebugInterface\API;$(ProjectDir)..\..\..\src\Emulators\c64u;$(ProjectDir)..\..\..\src\Emulators\c64u\Transport;$(ProjectDir)..\..\..\src\Emulators\c64u\Adapters;$(ProjectDir)..\..\..\src\Emulators\c64u\Audio;$(ProjectDir)..\..\..\src\Views\C64U;$(MTEngineSDLDir)src;$(MTEngineSDLDir)src\Embedded;$(MTEngineSDLDir)src\Engine;$(MTEngineSDLDir)src\Engine\Audio;$(MTEngineSDLDir)src\Engine\Audio\MIDI;$(MTEngineSDLDir)src\Engine\Audio\WAV;$(MTEngineSDLDir)src\Engine\Core;$(MTEngineSDLDir)src\Engine\Core\GamePads;$(MTEngineSDLDir)src\Engine\Core\Render;$(MTEngineSDLDir)src\Engine\Core\Net;$(MTEngineSDLDir)src\Engine\Core\Pool;$(MTEngineSDLDir)src\Engine\Funct;$(MTEngineSDLDir)src\Engine\Funct\ContinuousParam;$(MTEngineSDLDir)src\Engine\Funct\DataTable;$(MTEngineSDLDir)src\Engine\Funct\ImageProcessing;$(MTEngineSDLDir)src\Engine\Funct\ImageProcessing\resampler;$(MTEngineSDLDir)src\Engine\Funct\ImageProcessing\stb_image;$(MTEngineSDLDir)src\Engine\Tools;$(MTEngineSDLDir)src\Engine\Tests;$(MTEngineSDLDir)src\Engine\GUI;$(MTEngineSDLDir)src\Engine\GUI\Fonts;$(MTEngineSDLDir)src\Engine\GUI\AudioMixer;$(MTEngineSDLDir)src\Engine\GUI\Controls;$(MTEngineSDLDir)src\Engine\GUI\Waveform;$(MTEngineSDLDir)src\Engine\GUI\Layout;$(MTEngineSDLDir)src\Engine\GUI\Helpers;$(MTEngineSDLDir)src\Engine\GUI\Helpers\LoadingScreen;$(MTEngineSDLDir)src\Engine\GUI\Helpers\ResourceManager;$(MTEngineSDLDir)src\Engine\Libs;$(MTEngineSDLDir)src\Engine\Libs\ENet;$(MTEngineSDLDir)src\Engine\Libs\crow;$(MTEngineSDLDir)src\Engine\Libs\hjson;$(MTEngineSDLDir)src\Engine\Libs\stb;$(MTEngineSDLDir)src\Engine\Libs\imgui;$(MTEngineSDLDir)src\Engine\Libs\implot;$(MTEngineSDLDir)src\Engine\Libs\imguiext;$(MTEngineSDLDir)src\Engine\Libs\imgui-notify;$(MTEngineSDLDir)src\Engine\Libs\jpeg;$(MTEngineSDLDir)src\Engine\Libs\jpeg\jpeg-9a;$(MTEngineSDLDir)src\Engine\Libs\nlohmann;$(MTEngineSDLDir)src\Engine\Libs\libjson;$(MTEngineSDLDir)src\Engine\Libs\libjson\_internal;$(MTEngineSDLDir)src\Engine\Libs\libjson\_internal\Dependencies;$(MTEngineSDLDir)src\Engine\Libs\libjson\_internal\Dependencies\libbase64++;$(MTEngineSDLDir)src\Engine\Libs\libjson\_internal\Dependencies\mempool++;$(MTEngineSDLDir)src\Engine\Libs\libjson\_internal\Source;$(MTEngineSDLDir)src\Engine\Libs\libjson\_internal\Source\JSONDefs;$(MTEngineSDLDir)src\Engine\Libs\libpng;$(MTEngineSDLDir)src\Engine\Libs\httplib;$(MTEngineSDLDir)src\Engine\Libs\lodepng;$(MTEngineSDLDir)src\Engine\Libs\md5;$(MTEngineSDLDir)src\Engine\Libs\minizip;$(MTEngineSDLDir)src\Engine\Libs\mtrand;$(MTEngineSDLDir)src\Engine\Libs\nfd;$(MTEngineSDLDir)src\Engine\Libs\pugixml;$(MTEngineSDLDir)src\Engine\Libs\rtmidi;$(MTEngineSDLDir)src\Engine\Libs\tremor;$(MTEngineSDLDir)src\Engine\Libs\sgSHA256;$(MTEngineSDLDir)src\Engine\Libs\tremor\Ogg;$(MTEngineSDLDir)src\Engine\Libs\utf8;$(MTEngineSDLDir)src\Engine\Libs\uWebSockets;$(MTEngineSDLDir)src\Engine\Libs\zlib;$(MTEngineSDLDir)src\Engine\Libs\libtmt;$(MTEngineSDLDir)src\Engine\Libs\imgui_test_engine;$(MTEngineSDLDir)platform\Windows\src.Windows;(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <ShowIncludes>false</ShowIncludes>
       <LanguageStandard>stdcpp20</LanguageStandard>
@@ -276,7 +240,7 @@
       <SubSystem>Windows</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>MTEngineSDL.lib;SDL2.lib;SDL2main.lib;version.lib;imm32.lib;setupapi.lib;winmm.lib;wsock32.lib;ws2_32.lib;Iphlpapi.lib;userenv.lib;psapi.lib;uSockets.lib;libuv.lib;msvcrt.lib;dbghelp.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>MTImageCodecs.lib;SDL3.lib;version.lib;imm32.lib;setupapi.lib;winmm.lib;wsock32.lib;ws2_32.lib;Iphlpapi.lib;userenv.lib;psapi.lib;uSockets.lib;libuv.lib;msvcrt.lib;dbghelp.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <LinkTimeCodeGeneration Condition="'$(PlatformToolset)'!='ClangCL'">UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
     </Link>
   </ItemDefinitionGroup>
@@ -1089,7 +1053,12 @@
     <ClCompile Include="..\..\..\src\Emulators\vice\monitor\mon_ui.c" />
     <ClCompile Include="..\..\..\src\Emulators\vice\monitor\mon_util.c" />
     <ClCompile Include="..\..\..\src\Emulators\vice\monitor\monitor.c" />
-    <!-- monitor_binary.c and mon_profile.c excluded: stubs in vice310_stubs.c -->
+    <!-- mon_profile.c excluded: stub in vice310_stubs.c.
+         monitor_binary.c is NO LONGER excluded (2026-09): with HAVE_NETWORK on,
+         mon_util.c/monitor.c/mon_breakpoint.c call monitor_binary_* symbols, so
+         it must be compiled on every platform. HAVE_MONITOR_BINARY in
+         vice-config.h retires the monitor_is_binary() stub. -->
+    <ClCompile Include="..\..\..\src\Emulators\vice\monitor\monitor_binary.c" />
     <ClCompile Include="..\..\..\src\Emulators\vice\monitor\asm65816.c" />
     <ClCompile Include="..\..\..\src\Emulators\vice\monitor\mon_assemble65816.c" />
     <ClCompile Include="..\..\..\src\Emulators\vice\monitor\monitor_network.c" />
@@ -1353,9 +1322,15 @@
     <ClCompile Include="..\..\..\src\Plugins\CrtMaker\C64DebuggerPluginCrtMaker.cpp" />
     <ClCompile Include="..\..\..\src\Plugins\CrtMaker\CViewC64CrtMaker.cpp" />
     <ClCompile Include="..\..\..\src\Plugins\DNDK\C64DebuggerPluginDNDK.cpp" />
+    <ClCompile Include="..\..\..\src\Plugins\MoonshineDragons\C64DebuggerPluginMoonshineDragons.cpp" />
     <ClCompile Include="..\..\..\src\Plugins\GoatTracker\C64DebuggerPluginGoatTracker.cpp" />
     <ClCompile Include="..\..\..\src\Plugins\GoatTracker\CAudioChannelGoatTracker.cpp" />
     <ClCompile Include="..\..\..\src\Plugins\GoatTracker\CViewGT2Oscilloscope.cpp" />
+    <ClCompile Include="..\..\..\src\Plugins\GoatTracker\CViewGT2StateSID.cpp" />
+    <ClCompile Include="..\..\..\src\Plugins\GoatTracker\CGT2SidRegisters.cpp" />
+    <ClCompile Include="..\..\..\src\Plugins\GoatTracker\CViewGT2InstrumentsBrowser.cpp" />
+    <ClCompile Include="..\..\..\src\Plugins\GoatTracker\CViewGT2InstrumentTableRow.cpp" />
+    <ClCompile Include="..\..\..\src\Plugins\GoatTracker\CViewGT2PatternRow.cpp" />
     <ClCompile Include="..\..\..\src\Plugins\GoatTracker\CGT2VoiceWaveforms.cpp" />
     <ClCompile Include="..\..\..\src\Plugins\GoatTracker\CViewC64GoatTracker.cpp" />
     <ClCompile Include="..\..\..\src\Plugins\GoatTracker\CGT2FontAtlas.cpp" />
@@ -1367,8 +1342,10 @@
     <ClCompile Include="..\..\..\src\Plugins\GoatTracker\CViewGT2Instrument.cpp" />
     <ClCompile Include="..\..\..\src\Plugins\GoatTracker\CViewGT2InstrumentList.cpp" />
     <ClCompile Include="..\..\..\src\Plugins\GoatTracker\CGT2Favorites.cpp" />
+    <ClCompile Include="..\..\..\src\Plugins\GoatTracker\CGT2UndoHistory.cpp" />
     <ClCompile Include="..\..\..\src\Plugins\GoatTracker\CViewGT2Tables.cpp" />
     <ClCompile Include="..\..\..\src\Plugins\GoatTracker\CViewGT2SongInfo.cpp" />
+    <ClCompile Include="..\..\..\src\Plugins\GoatTracker\CViewGT2SongSettings.cpp" />
     <ClCompile Include="..\..\..\src\Plugins\GoatTracker\CViewGT2Status.cpp" />
     <ClCompile Include="..\..\..\src\Plugins\GoatTracker\CViewGT2TitleBar.cpp" />
     <ClCompile Include="..\..\..\src\Plugins\GoatTracker\CGT2EffectBiquadFilter.cpp" />
@@ -1464,10 +1441,12 @@
     <ClCompile Include="..\..\..\src\Tools\asm6\asm6f.c" />
     <ClCompile Include="..\..\..\src\Tools\C64ColodoreScreen.cpp" />
     <ClCompile Include="..\..\..\src\Tools\C64CommandLine.cpp" />
+    <ClCompile Include="..\..\..\src\Tools\C64DShutdown.cpp" />
     <ClCompile Include="..\..\..\src\Tools\C64FileDataAdapter.cpp" />
     <ClCompile Include="..\..\..\src\Tools\C64KeyboardShortcuts.cpp" />
     <ClCompile Include="..\..\..\src\Tools\C64KeyMap.cpp" />
     <ClCompile Include="..\..\..\src\Tools\C64Palette.cpp" />
+    <ClCompile Include="..\..\..\src\Tools\C64DUiScale.cpp" />
     <ClCompile Include="..\..\..\src\Tools\C64SettingsStorage.cpp" />
     <ClCompile Include="..\..\..\src\Tools\C64SharedMemory.cpp" />
     <ClCompile Include="..\..\..\src\Tools\C64SIDDump.cpp" />
@@ -1499,6 +1478,10 @@
     <ClCompile Include="..\..\..\src\Tools\libpsid64\libpsid-sidid.cpp" />
     <ClCompile Include="..\..\..\src\Tools\libpsid64\libpsid-theme.cpp" />
     <ClCompile Include="..\..\..\src\Tools\Shaders\CRenderShaderCRTMonitorOpenGL4.cpp" />
+    <ClInclude Include="..\..\..\src\Tools\Shaders\Generated\C64DCRTMonitorMetallib.h" />
+    <ClInclude Include="..\..\..\src\Tools\Shaders\CRenderShaderCRTMonitorMetal.h" />
+    <ClCompile Include="..\..\..\src\Tools\Shaders\CRTMonitorShaderFactory.cpp" />
+    <ClInclude Include="..\..\..\src\Tools\Shaders\CRTMonitorShaderFactory.h" />
     <ClCompile Include="..\..\..\src\Tools\sidplay\sidtune\IconInfo.cpp" />
     <ClCompile Include="..\..\..\src\Tools\sidplay\sidtune\InfoFile.cpp" />
     <ClCompile Include="..\..\..\src\Tools\sidplay\sidtune\MUS.cpp" />
@@ -1511,8 +1494,6 @@
     <ClCompile Include="..\..\..\src\Tools\sidplay\utils\SidTuneMod.cpp" />
     <ClCompile Include="..\..\..\src\Tools\stilview\stil.cpp" />
     <ClCompile Include="..\..\..\src\Tools\stilview\stilcomm.cpp" />
-    <ClCompile Include="..\..\..\src\Tools\TextEditor\TestTextEditor.cpp" />
-    <ClCompile Include="..\..\..\src\Tools\TextEditor\TextEditor.cpp" />
     <ClCompile Include="..\..\..\src\Views\Atari800\CViewAtariScreen.cpp" />
     <ClCompile Include="..\..\..\src\Views\Atari800\CViewAtariStateANTIC.cpp" />
     <ClCompile Include="..\..\..\src\Views\Atari800\CViewAtariStateCPU.cpp" />
@@ -1531,6 +1512,7 @@
     <ClCompile Include="..\..\..\src\Views\C64\CViewC64ColorRamScreen.cpp" />
     <ClCompile Include="..\..\..\src\Views\C64\CViewC64Disassembly.cpp" />
     <ClCompile Include="..\..\..\src\Tests\CTestSuiteRetroDebugger.cpp" />
+    <ClCompile Include="..\..\..\src\Tests\CTestUiScale.cpp" />
     <ClCompile Include="..\..\..\src\Tests\CTestGoatTrackerExport.cpp" />
     <ClCompile Include="..\..\..\src\Tests\CTestC64UBackendRegistration.cpp" /><ClCompile Include="..\..\..\src\Tests\CTestAutoLayoutPreservation.cpp" />
     <ClCompile Include="..\..\..\src\Tests\CTestEmulatorStartup.cpp" />
@@ -1547,13 +1529,22 @@
     <ClCompile Include="..\..\..\src\Tests\CTestViceDrive1541.cpp" />
     <ClCompile Include="..\..\..\src\Tests\CTestViceEmbeddedRoms.cpp" />
     <ClCompile Include="..\..\..\src\Tests\CTestViceBreakpoints.cpp" />
+    <ClCompile Include="..\..\..\src\Tests\CTestIde64Settings.cpp" />
+    <ClCompile Include="..\..\..\src\Tests\CTestIde64UsbListener.cpp" />
+    <ClCompile Include="..\..\..\src\Tests\CTestViceCmdlinePassthrough.cpp" />
+    <ClCompile Include="..\..\..\src\Tests\CTestViceNetworkSocket.cpp" />
     <ClCompile Include="..\..\..\src\Tests\CTestViceSnapshot.cpp" />
+    <ClCompile Include="..\..\..\src\Tests\CTestSnapshotBoundary.cpp" />
     <ClCompile Include="..\..\..\src\Tests\CTestViceModelConfig.cpp" />
     <ClCompile Include="..\..\..\src\Tests\CTestVicePlatformAbstraction.cpp" />
     <ClCompile Include="..\..\..\src\Tests\CTestViceSoundIntegration.cpp" />
     <ClCompile Include="..\..\..\src\Tests\CTestSidStatusWaveform.cpp" />
     <ClCompile Include="..\..\..\src\Tests\CTestVicePeripherals.cpp" />
+    <ClCompile Include="..\..\..\src\Tests\CTestDiskDetach.cpp" />
+    <ClCompile Include="..\..\..\src\Tests\CTestKeyboardShortcuts.cpp" />
+    <ClCompile Include="..\..\..\src\Tests\CTestDetachCartridgePaused.cpp" />
     <ClCompile Include="..\..\..\src\Tests\CTestViceInstructionStepping.cpp" />
+    <ClCompile Include="..\..\..\src\Tests\CTestViceJumpWhilePaused.cpp" />
     <ClCompile Include="..\..\..\src\Tests\CTestViceInputReplay.cpp" />
     <ClCompile Include="..\..\..\src\Tests\CTestNesInputReplay.cpp" />
     <ClCompile Include="..\..\..\src\Tests\CTestAtariInputReplay.cpp" />
@@ -1563,16 +1554,34 @@
     <ClCompile Include="..\..\..\src\Tests\CTestGT2Tables.cpp" />
     <ClCompile Include="..\..\..\src\Tests\CTestGT2Instrument.cpp" />
     <ClCompile Include="..\..\..\src\Tests\CTestGT2SongInfo.cpp" />
+    <ClCompile Include="..\..\..\src\Tests\CTestGT2SongSettings.cpp" />
+    <ClCompile Include="..\..\..\src\Tests\CTestGT2SidRegisters.cpp" />
     <ClCompile Include="..\..\..\src\Tests\CTestGT2Status.cpp" />
     <ClCompile Include="..\..\..\src\Tests\CTestGT2TitleBar.cpp" />
     <ClCompile Include="..\..\..\src\Tests\CTestGT2InstrumentOps.cpp" />
+    <ClCompile Include="..\..\..\src\Tests\CTestGT2InstrumentsBrowser.cpp" />
     <ClCompile Include="..\..\..\src\Tests\CTestGT2TableEditor.cpp" />
     <ClCompile Include="..\..\..\src\Tests\CTestGT2SelectionOps.cpp" />
     <ClCompile Include="..\..\..\src\Tests\CTestArpCycling.cpp" />
+    <ClCompile Include="..\..\..\src\Tests\CTestGT2ArpGate.cpp" />
+    <ClCompile Include="..\..\..\src\Tests\CTestXPartyMpxIrqEmit.cpp" />
+    <ClCompile Include="..\..\..\src\Tests\CTestXPartyMpxRunning.cpp" />
+    <ClCompile Include="..\..\..\src\Tests\CTestXPartyScrollRunning.cpp" />
+    <ClCompile Include="..\..\..\src\Tests\CTestXPartyScrollScreenshot.cpp" />
+    <ClCompile Include="..\..\..\src\Tests\CTestXPartyIrqDiagnostic.cpp" />
+    <ClCompile Include="..\..\..\src\Tests\CTestXPartyMpxJitter.cpp" />
+    <ClCompile Include="..\..\..\src\Tests\CTestXPartyFrameTrace.cpp" />
+    <ClCompile Include="..\..\..\src\Tests\CTestXPartyImageSwap.cpp" />
+    <ClCompile Include="..\..\..\src\Tests\CTestXPartyStripeAnim.cpp" />
+    <ClCompile Include="..\..\..\src\Tests\CTestXPartyScrollFont.cpp" />
+    <ClCompile Include="..\..\..\src\Tests\CTestXPartyScrollEmit.cpp" />
     <ClCompile Include="..\..\..\src\Tests\CTestMonitorConsoleSelection.cpp" />
+    <ClCompile Include="..\..\..\src\Tests\CTestXPartyMirrorLUT.cpp" />
     <ClCompile Include="..\..\..\src\Plugins\CPluginTestRegistry.cpp" />
+    <ClCompile Include="..\..\..\src\Tests\CTestMoonshineDragons.cpp" />
     <ClCompile Include="..\..\..\src\Tests\CTestMCPProtocol.cpp" />
     <ClCompile Include="..\..\..\src\Tests\CTestMCPBridge.cpp" />
+    <ClCompile Include="..\..\..\src\Tests\CTestFramebufferMirrorSync.cpp" />
     <ClCompile Include="..\..\..\src\Tests\CTestArpParity.cpp" />
     <ClCompile Include="..\..\..\src\Tests\CTestAutoloadD64.cpp" />
     <ClCompile Include="..\..\..\src\Tests\CTestViceRewindWhileRunning.cpp" />
@@ -1641,6 +1650,7 @@
     <ClCompile Include="..\..\..\src\Views\CDataAddressEditBoxHex.cpp" />
     <ClCompile Include="..\..\..\src\Views\CMainMenuBar.cpp" />
     <ClCompile Include="..\..\..\src\Views\CViewBaseStateCPU.cpp" />
+    <ClCompile Include="..\..\..\src\Views\CViewBaseStateSID.cpp" />
     <ClCompile Include="..\..\..\src\Views\CViewBreakpoints.cpp" />
     <ClCompile Include="..\..\..\src\Views\CViewDataDump.cpp" />
     <ClCompile Include="..\..\..\src\Views\CViewDataMap.cpp" />
@@ -2845,9 +2855,15 @@
     <ClInclude Include="..\..\..\src\Plugins\CrtMaker\C64DebuggerPluginCrtMaker.h" />
     <ClInclude Include="..\..\..\src\Plugins\CrtMaker\CViewC64CrtMaker.h" />
     <ClInclude Include="..\..\..\src\Plugins\DNDK\C64DebuggerPluginDNDK.h" />
+    <ClInclude Include="..\..\..\src\Plugins\MoonshineDragons\C64DebuggerPluginMoonshineDragons.h" />
     <ClInclude Include="..\..\..\src\Plugins\GoatTracker\C64DebuggerPluginGoatTracker.h" />
     <ClInclude Include="..\..\..\src\Plugins\GoatTracker\CAudioChannelGoatTracker.h" />
     <ClInclude Include="..\..\..\src\Plugins\GoatTracker\CViewGT2Oscilloscope.h" />
+    <ClInclude Include="..\..\..\src\Plugins\GoatTracker\CViewGT2StateSID.h" />
+    <ClInclude Include="..\..\..\src\Plugins\GoatTracker\CGT2SidRegisters.h" />
+    <ClInclude Include="..\..\..\src\Plugins\GoatTracker\CViewGT2InstrumentsBrowser.h" />
+    <ClInclude Include="..\..\..\src\Plugins\GoatTracker\CViewGT2InstrumentTableRow.h" />
+    <ClInclude Include="..\..\..\src\Plugins\GoatTracker\CViewGT2PatternRow.h" />
     <ClInclude Include="..\..\..\src\Plugins\GoatTracker\CGT2VoiceWaveforms.h" />
     <ClInclude Include="..\..\..\src\Plugins\GoatTracker\CViewC64GoatTracker.h" />
     <ClInclude Include="..\..\..\src\Plugins\GoatTracker\CGT2FontAtlas.h" />
@@ -2860,8 +2876,10 @@
     <ClInclude Include="..\..\..\src\Plugins\GoatTracker\CViewGT2Instrument.h" />
     <ClInclude Include="..\..\..\src\Plugins\GoatTracker\CViewGT2InstrumentList.h" />
     <ClInclude Include="..\..\..\src\Plugins\GoatTracker\CGT2Favorites.h" />
+    <ClInclude Include="..\..\..\src\Plugins\GoatTracker\CGT2UndoHistory.h" />
     <ClInclude Include="..\..\..\src\Plugins\GoatTracker\CViewGT2Tables.h" />
     <ClInclude Include="..\..\..\src\Plugins\GoatTracker\CViewGT2SongInfo.h" />
+    <ClInclude Include="..\..\..\src\Plugins\GoatTracker\CViewGT2SongSettings.h" />
     <ClInclude Include="..\..\..\src\Plugins\GoatTracker\CViewGT2Status.h" />
     <ClInclude Include="..\..\..\src\Plugins\GoatTracker\CViewGT2TitleBar.h" />
     <ClInclude Include="..\..\..\src\Plugins\GoatTracker\IGT2AudioEffect.h" />
@@ -2957,11 +2975,13 @@
     <ClInclude Include="..\..\..\src\Tools\asap\AtariAsap.h" />
     <ClInclude Include="..\..\..\src\Tools\C64ColodoreScreen.h" />
     <ClInclude Include="..\..\..\src\Tools\C64CommandLine.h" />
+    <ClInclude Include="..\..\..\src\Tools\C64DShutdown.h" />
     <ClInclude Include="..\..\..\src\Tools\C64FileDataAdapter.h" />
     <ClInclude Include="..\..\..\src\Tools\C64KeyboardShortcuts.h" />
     <ClInclude Include="..\..\..\src\Tools\C64KeyMap.h" />
     <ClInclude Include="..\..\..\src\Tools\C64Opcodes.h" />
     <ClInclude Include="..\..\..\src\Tools\C64Palette.h" />
+    <ClInclude Include="..\..\..\src\Tools\C64DUiScale.h" />
     <ClInclude Include="..\..\..\src\Tools\C64SettingsStorage.h" />
     <ClInclude Include="..\..\..\src\Tools\C64SharedMemory.h" />
     <ClInclude Include="..\..\..\src\Tools\C64SIDDump.h" />
@@ -3019,7 +3039,6 @@
     <ClInclude Include="..\..\..\src\Tools\stilview\stil.h" />
     <ClInclude Include="..\..\..\src\Tools\stilview\stilcomm.h" />
     <ClInclude Include="..\..\..\src\Tools\stilview\stildefs.h" />
-    <ClInclude Include="..\..\..\src\Tools\TextEditor\TextEditor.h" />
     <ClInclude Include="..\..\..\src\Views\Atari800\CViewAtariScreen.h" />
     <ClInclude Include="..\..\..\src\Views\Atari800\CViewAtariStateANTIC.h" />
     <ClInclude Include="..\..\..\src\Views\Atari800\CViewAtariStateCPU.h" />
@@ -3039,6 +3058,7 @@
     <ClInclude Include="..\..\..\src\Views\C64\CViewC64ColorRamScreen.h" />
     <ClInclude Include="..\..\..\src\Views\C64\CViewC64Disassembly.h" />
     <ClInclude Include="..\..\..\src\Tests\CTestSuiteRetroDebugger.h" />
+    <ClInclude Include="..\..\..\src\Tests\CTestUiScale.h" />
     <ClInclude Include="..\..\..\src\Tests\CTestC64UBackendRegistration.h" />
     <ClInclude Include="..\..\..\src\Tests\CTestC64URomBypass.h" />
     <ClInclude Include="..\..\..\src\Tests\CTestC64UFtpProtocol.h" />
@@ -3058,13 +3078,22 @@
     <ClInclude Include="..\..\..\src\Tests\CTestViceDrive1541.h" />
     <ClInclude Include="..\..\..\src\Tests\CTestViceEmbeddedRoms.h" />
     <ClInclude Include="..\..\..\src\Tests\CTestViceBreakpoints.h" />
+    <ClInclude Include="..\..\..\src\Tests\CTestIde64Settings.h" />
+    <ClInclude Include="..\..\..\src\Tests\CTestIde64UsbListener.h" />
+    <ClInclude Include="..\..\..\src\Tests\CTestViceCmdlinePassthrough.h" />
+    <ClInclude Include="..\..\..\src\Tests\CTestViceNetworkSocket.h" />
     <ClInclude Include="..\..\..\src\Tests\CTestViceSnapshot.h" />
+    <ClInclude Include="..\..\..\src\Tests\CTestSnapshotBoundary.h" />
     <ClInclude Include="..\..\..\src\Tests\CTestViceModelConfig.h" />
     <ClInclude Include="..\..\..\src\Tests\CTestVicePlatformAbstraction.h" />
     <ClInclude Include="..\..\..\src\Tests\CTestViceSoundIntegration.h" />
     <ClInclude Include="..\..\..\src\Tests\CTestSidStatusWaveform.h" />
     <ClInclude Include="..\..\..\src\Tests\CTestVicePeripherals.h" />
+    <ClInclude Include="..\..\..\src\Tests\CTestDiskDetach.h" />
+    <ClInclude Include="..\..\..\src\Tests\CTestKeyboardShortcuts.h" />
+    <ClInclude Include="..\..\..\src\Tests\CTestDetachCartridgePaused.h" />
     <ClInclude Include="..\..\..\src\Tests\CTestViceInstructionStepping.h" />
+    <ClInclude Include="..\..\..\src\Tests\CTestViceJumpWhilePaused.h" />
     <ClInclude Include="..\..\..\src\Tests\CTestViceInputReplay.h" />
     <ClInclude Include="..\..\..\src\Tests\CTestNesInputReplay.h" />
     <ClInclude Include="..\..\..\src\Tests\CTestAtariInputReplay.h" />
@@ -3075,17 +3104,36 @@
     <ClInclude Include="..\..\..\src\Tests\CTestGT2Tables.h" />
     <ClInclude Include="..\..\..\src\Tests\CTestGT2Instrument.h" />
     <ClInclude Include="..\..\..\src\Tests\CTestGT2SongInfo.h" />
+    <ClInclude Include="..\..\..\src\Tests\CTestGT2SongSettings.h" />
+    <ClInclude Include="..\..\..\src\Tests\CTestGT2SidRegisters.h" />
     <ClInclude Include="..\..\..\src\Tests\CTestGT2Status.h" />
     <ClInclude Include="..\..\..\src\Tests\CTestGT2TitleBar.h" />
     <ClInclude Include="..\..\..\src\Tests\CTestGT2InstrumentOps.h" />
+    <ClInclude Include="..\..\..\src\Tests\CTestGT2InstrumentsBrowser.h" />
     <ClInclude Include="..\..\..\src\Tests\CTestGT2TableEditor.h" />
     <ClInclude Include="..\..\..\src\Tests\CTestGT2SelectionOps.h" />
+    <ClInclude Include="..\..\..\src\Tests\CTestXPartyMpxIrqEmit.h" />
+    <ClInclude Include="..\..\..\src\Tests\CTestXPartyMpxRunning.h" />
+    <ClInclude Include="..\..\..\src\Tests\CTestXPartyScrollRunning.h" />
+    <ClInclude Include="..\..\..\src\Tests\CTestXPartyScrollScreenshot.h" />
+    <ClInclude Include="..\..\..\src\Tests\CTestXPartyIrqDiagnostic.h" />
+    <ClInclude Include="..\..\..\src\Tests\CTestXPartyMpxJitter.h" />
+    <ClInclude Include="..\..\..\src\Tests\CTestXPartyFrameTrace.h" />
+    <ClInclude Include="..\..\..\src\Tests\CTestXPartyImageSwap.h" />
+    <ClInclude Include="..\..\..\src\Tests\CTestXPartyStripeAnim.h" />
+    <ClInclude Include="..\..\..\src\Tests\CTestXPartyScrollFont.h" />
+    <ClInclude Include="..\..\..\src\Tests\CTestXPartyScrollEmit.h" />
     <ClInclude Include="..\..\..\src\Tests\CTestMonitorConsoleSelection.h" />
+    <ClInclude Include="..\..\..\src\Tests\CTestXPartyMirrorLUT.h" />
+    <ClInclude Include="..\..\..\src\Tests\CTestXPartyMpxIrqAnalysis.h" />
     <ClInclude Include="..\..\..\src\Plugins\CPluginTestRegistry.h" />
+    <ClInclude Include="..\..\..\src\Tests\CTestMoonshineDragons.h" />
     <ClInclude Include="..\..\..\src\Tests\CTestDataDumpSelection.h" />
     <ClInclude Include="..\..\..\src\Tests\CTestDisassemblySelection.h" />
     <ClInclude Include="..\..\..\src\Tests\CTestDefaultWorkspaceSpecs.h" />
+    <ClInclude Include="..\..\..\src\Tests\CTestFramebufferMirrorSync.h" />
     <ClInclude Include="..\..\..\src\Tests\CTestArpParity.h" />
+    <ClInclude Include="..\..\..\src\Tests\CTestGT2ArpGate.h" />
     <ClInclude Include="..\..\..\src\Tests\CTestAutoloadD64.h" />
     <ClInclude Include="..\..\..\src\Tests\CTestViceRewindWhileRunning.h" />
     <ClInclude Include="..\..\..\src\Tests\CTestGT2ExportComan07.h" />
@@ -3147,6 +3195,7 @@
     <ClInclude Include="..\..\..\src\Views\CDataAddressEditBoxHex.h" />
     <ClInclude Include="..\..\..\src\Views\CMainMenuBar.h" />
     <ClInclude Include="..\..\..\src\Views\CViewBaseStateCPU.h" />
+    <ClInclude Include="..\..\..\src\Views\CViewBaseStateSID.h" />
     <ClInclude Include="..\..\..\src\Views\CViewBreakpoints.h" />
     <ClInclude Include="..\..\..\src\Views\CViewDataDump.h" />
     <ClInclude Include="..\..\..\src\Views\CViewDataMap.h" />
@@ -3220,6 +3269,31 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="$(MTEngineSDLDir)platform\Windows\MTEngineSDL\MTEngineSDL.vcxproj">
+      <!-- NOTHING IS FORWARDED, and that is the fix and not an omission.
+           AdditionalProperties become GLOBAL properties in the referenced
+           project, and the global property set is exactly what MSBuild uses to
+           IDENTIFY a project instance. An app solution lists
+           MTEngineSDL.vcxproj as a solution project as well as referencing it
+           here, so forwarding anything made those two the same project with
+           two different global sets: two instances, two builds, one IntDir,
+           and the tlog race MSB6003 reports. Dropping Build.0 from the
+           solution (2026-09-01) stopped the race by never building the engine
+           at all, which only moved the failure to Link, where the app asked
+           for an MTEngineSDL.lib nothing had produced.
+
+           Forwarding is not needed on either channel:
+             command line: build-windows.ps1 passes MTCapsApp, MTOutRoot,
+               MTCapsLibsDir and MTBuildRoot with /p:, and a project reference
+               inherits its parent's global properties;
+             IDE: none of them is set, and the engine's Directory.Build.targets
+               reads the app's name from $(SolutionDir)..\..\mtengine-app.conf.
+           Both instances therefore carry the same globals, MSBuild builds the
+           engine ONCE, and it lands where this project's link looks for it.
+
+           Passing MTBuildRoot was doubly wrong after HANDOVER item 19 gave
+           each app a static _ide\$(MSBuildProjectName)\ fallback: the app's
+           own IDE build root travelled to the engine, whose output then moved
+           under _ide\<App>\ where the solution never builds it. -->
       <Project>{e93d3b41-0438-4721-abfe-83f1f37490cf}</Project>
     </ProjectReference>
   </ItemGroup>

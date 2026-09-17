@@ -1,0 +1,68 @@
+# c64d (Retro Debugger) -- MTEngineSDL capability manifest
+#
+# Format and semantics: see MTEngineSDLDummyApp/mtengine.caps, the worked
+# example, or MTEngineSDL/docs/CAPABILITIES.md.
+#
+# c64d has the narrowest capability set of the four apps, which is why it is the
+# programme's proving ground: a clean clone of it must fetch none of mbedTLS,
+# llama.cpp or FTXUI -- 1.25 GB -- and still build on all three platforms.
+
+# --- networking -------------------------------------------------------------
+# Plain HTTP only, and this is a DELIBERATE flat 0 rather than a per-OS value.
+#
+# c64d's only httplib consumer is C64URestClient.cpp, whose own comment says the
+# Ultimate 64 uses plain HTTP on the local network, and which forced
+# MT_ENABLE_MBEDTLS to 0 in-file. The engine's macOS and Windows defaults had it
+# ON, so c64d was fetching and linking 542 MB of mbedTLS for a capability
+# nothing uses -- and the in-file #define against the engine's =1 was a live ODR
+# violation on those two platforms, since MT_ENABLE_MBEDTLS changes
+# httplib::Client's struct LAYOUT.
+#
+# Writing MT_CAP_HTTPS__MACOS=1 / __WINDOWS=1 would have frozen that accident.
+MT_CAP_HTTP=1
+MT_CAP_HTTPS=0
+MT_CAP_NET_TRANSPORT=1
+MT_CAP_NET_GAME=0
+MT_CAP_WEBSOCKETS=1
+
+# --- LLM --------------------------------------------------------------------
+# Off, and it MUST be written here rather than left to the default: MT_CAP_LLM
+# implies MT_CAP_HTTPS (every model URL is https://), so leaving LLM at its
+# default of 1 beside MT_CAP_HTTPS=0 is a configure-time conflict. The two keys
+# are inseparable and are set together.
+MT_CAP_LLM=0
+
+# --- imaging ----------------------------------------------------------------
+# A C64 debugger needs none of it. The whole RAW chain is written out because
+# COLOR_MANAGEMENT implies DEVELOP implies RAW: turning off only the leaf is a
+# conflict with the ancestors, which are on by default.
+MT_CAP_VIDEO_PLAYBACK=0
+MT_CAP_PHOTO_CODECS=0
+MT_CAP_COLOR_MANAGEMENT=0
+MT_CAP_DEVELOP=0
+MT_CAP_RAW=0
+MT_CAP_KTX2=0
+
+# --- input and UI -----------------------------------------------------------
+# Camera is load-bearing here: C64 Ultimate support needs it.
+MT_CAP_CAMERA=1
+MT_CAP_MIDI=1
+MT_CAP_GAMEPADS=1
+MT_CAP_TERMINAL=1
+MT_CAP_TEST_ENGINE=1
+
+MT_CAP_MUSIC_PLAYER=0
+MT_CAP_FTXUI=0
+MT_CAP_UNDO=0
+MT_CAP_CRASH_REPORTER=0
+
+MT_COMMERCIAL_BUILD=0
+
+# --- vision -----------------------------------------------------------------
+# Off, and written out although the engine default is already 0 -- the only two
+# capabilities of which that is true. This file is a deliberate-choices
+# document: a reader should not have to know which defaults are 1 and which are
+# 0 to see what this app links.
+MT_CAP_OPENCV=0
+MT_CAP_OPENCV_NONFREE=0
+MT_CAP_YOLO=0

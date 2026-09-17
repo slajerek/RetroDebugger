@@ -1,0 +1,16 @@
+#
+# VICE Palette file
+#
+# Syntax:
+# Red Green Blue
+#
+# NAME:2001-blueish
+# TYPE:Crtc
+
+# original blue-ish white screens use an unknown phosphor
+
+# Background
+00 00 00
+
+# Foreground (approximation)
+AA AA FF

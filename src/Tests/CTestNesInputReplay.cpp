@@ -7,6 +7,7 @@
 #include "SYS_Main.h"
 #include "CByteBuffer.h"
 #include <cstring>
+#include <string>
 #include <cstdio>
 #include "NesWrapper.h"
 
@@ -18,17 +19,10 @@ static const int NES_NUM_SAMPLES  = 256;
 
 static const char *findRomPath()
 {
-	static const char *paths[] = {
-		"tests/data/test_input_replay.nes",
-		"../tests/data/test_input_replay.nes",
-		"../../tests/data/test_input_replay.nes",
-		NULL
-	};
-	for (int i = 0; paths[i]; i++)
-	{
-		FILE *f = fopen(paths[i], "rb");
-		if (f) { fclose(f); return paths[i]; }
-	}
+	// Through the engine's resolver rather than a list of ../ prefixes.
+	static std::string path = CTest::ResolveProjectPath("tests/data/test_input_replay.nes");
+	FILE *f = fopen(path.c_str(), "rb");
+	if (f) { fclose(f); return path.c_str(); }
 	return NULL;
 }
 

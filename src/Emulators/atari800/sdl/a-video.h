@@ -1,3 +1,10 @@
+/* [C64D-REFERENCE-ONLY]
+ * Vendored from atari800 as REFERENCE, not as live code. Kept for features the
+ * original emulator has and RetroDebugger does not yet (printer / RS232, drive
+ * and cartridge menus, virtual keyboard). Its SDL calls are already commented
+ * out; RetroDebugger draws its own ImGui UI.
+ * DO NOT delete, and do not "port" it -- see src/Emulators/REFERENCE_FILES.md.
+ */
 #ifndef SDL_VIDEO_H_
 #define SDL_VIDEO_H_
 
@@ -6,7 +13,7 @@
 
 
 #include <stdio.h>
-#include <SDL.h>
+#include <SDL3/SDL.h>
 
 #include "atari-config.h"
 #include "videomode.h"

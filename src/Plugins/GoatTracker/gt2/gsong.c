@@ -8,6 +8,8 @@
 #include "log.h"
 
 extern void gt2ClearPatternUndoHistory(void);
+extern void gt2BeginTableUndoStep(void);
+extern void gt2CommitTableUndoStep(void);
 
 INSTR ginstr[MAX_INSTR];
 unsigned char ltable[MAX_TABLES][MAX_TABLELEN];
@@ -887,18 +889,35 @@ void loadinstrument(void)
   int c,d;
   int pulsestart = -1;
   int pulseend = -1;
-  int undoHistoryDirty = 0;
 
   handle = fopen(instrfilename, "rb");
   if (handle)
   {
-    stopsong();
+    /* Loading an instrument rewrites ginstr[einum], reshuffles the shared
+       ltable/rtable pool and renumbers table pointers inside pattern[][]
+       (deleteinstrtable -> deletetable). Those are exactly the four blocks
+       a table undo snapshot holds, so record the load as a normal undo step
+       rather than throwing the history away. Nested begins are collapsed by
+       CViewGT2Tables, and the commit pushes nothing when the file turned out
+       to be unreadable or of an unknown format. */
+    gt2BeginTableUndoStep();
+    /* Native GT2 stops the song before swapping an instrument in. The
+       instruments browser wants the opposite -- you audition an instrument to
+       hear the song carry on with it -- so the ImGui-side loaders set
+       gt2KeepPlayingOnInstrumentLoad and skip this. It defaults to 0, so text
+       mode is unchanged.
+
+       Skipping it also fixes the preview note: stopsong() only sets
+       songinit = PLAY_STOP, and the next playroutine() treats PLAY_STOP as an
+       init pass and clears cptr->newnote on every channel -- which silently
+       ate any playtestnote() issued right after the load. */
+    if (!gt2KeepPlayingOnInstrumentLoad)
+      stopsong();
     fread(ident, 4, 1, handle);
 
     if ((!memcmp(ident, "GTI3", 4)) || (!memcmp(ident, "GTI4", 4)) || (!memcmp(ident, "GTI5", 4)))
     {
       unsigned char optr[4];
-      undoHistoryDirty = 1;
 
       ginstr[einum].ad = fread8(handle);
       ginstr[einum].sr = fread8(handle);
@@ -962,7 +981,6 @@ void loadinstrument(void)
     if (!memcmp(ident, "GTI2", 4))
     {
       unsigned char optr[3];
-      undoHistoryDirty = 1;
 
       ginstr[einum].ad = fread8(handle);
       ginstr[einum].sr = fread8(handle);
@@ -1021,7 +1039,6 @@ void loadinstrument(void)
     // Goattracker 1.xx import
     if (!memcmp(ident, "GTI!", 4))
     {
-      undoHistoryDirty = 1;
 
       unsigned char pulse, pulseadd, pulselimitlow, pulselimithigh, wavelen;
       unsigned char filtertemp[4];
@@ -1263,8 +1280,7 @@ void loadinstrument(void)
       }
       if (!ginstr[einum].firstwave) ginstr[einum].gatetimer |= 0x40;
     }
-    if (undoHistoryDirty)
-      gt2ClearPatternUndoHistory();
+    gt2CommitTableUndoStep();
   }
 }
 

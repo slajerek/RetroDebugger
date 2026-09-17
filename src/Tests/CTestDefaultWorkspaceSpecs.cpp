@@ -1,3 +1,4 @@
+#include "DBG_Log.h"
 #include "CTestDefaultWorkspaceSpecs.h"
 #include "CDebugInterface.h"
 #include "CDebugInterfaceAtari.h"
@@ -91,7 +92,6 @@ static bool VerifyPreserveScanTabBarModeFlagPolicy()
 
 static bool VerifyDebugLogDefaultVisibilityPolicy()
 {
-#if !defined(GLOBAL_DEBUG_OFF)
 	CGuiViewDebugLog debugLog("Debug Log Unit Test", 50.0f, 50.0f, -1.0f, 200.0f, 200.0f);
 	if (debugLog.visible)
 	{
@@ -126,7 +126,6 @@ static bool VerifyDebugLogDefaultVisibilityPolicy()
 		snprintf(failureMsg, sizeof(failureMsg), "Debug Log visible=false should restore from normal view layout data");
 		return false;
 	}
-#endif
 
 	return true;
 }
@@ -815,7 +814,6 @@ static bool VerifyDefaultWorkspaceApplyC64DataDumpLayout()
 
 static bool VerifyDefaultWorkspaceHidesGlobalDebugLog()
 {
-#if !defined(GLOBAL_DEBUG_OFF)
 	if (viewC64 == NULL)
 	{
 		snprintf(failureMsg, sizeof(failureMsg), "Global viewC64 should exist before checking Debug Log default workspace behavior");
@@ -853,7 +851,6 @@ static bool VerifyDefaultWorkspaceHidesGlobalDebugLog()
 		snprintf(failureMsg, sizeof(failureMsg), "Default workspace generation should hide global Debug Log so it is not saved into generated layouts");
 		return false;
 	}
-#endif
 
 	return true;
 }

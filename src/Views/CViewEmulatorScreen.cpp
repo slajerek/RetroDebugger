@@ -9,10 +9,7 @@
 #include "CMainMenuBar.h"
 #include "C64Tools.h"
 
-// TODO: generalize CRenderBackendOpenGL4
-#include "CRenderBackendOpenGL4.h"
-#include "CRenderShaderCRTMonitorOpenGL4.h"
-#include "CRenderShaderOpenGL4ShaderToy.h"
+#include "CRTMonitorShaderFactory.h"
 
 CViewEmulatorScreen::CViewEmulatorScreen(const char *name, float posX, float posY, float posZ, float sizeX, float sizeY,
 										 CDebugInterface *debugInterface)
@@ -23,9 +20,24 @@ CViewEmulatorScreen::CViewEmulatorScreen(const char *name, float posX, float pos
 	imGuiNoWindowPadding = true;
 	imGuiNoScrollbar = true;
 	
-	CRenderBackendOpenGL4 *renderBackend = CRenderBackendOpenGL4::GetRenderBackendOpenGL4();
-	shaderCRT = new CRenderShaderCRTMonitorOpenGL4(renderBackend, "CRT Monitor", debugInterface->GetScreenSizeX(), debugInterface->GetScreenSizeY());
-//	shaderCRT = new CRenderShaderOpenGL4ShaderToy(renderBackend, "Shader Toy", (float)debugInterface->GetScreenSizeX(), (float)debugInterface->GetScreenSizeY());
+	// Built through the factory, so the CRT filter follows whichever backend is
+	// active instead of naming OpenGL. The previous guard existed only because
+	// GetRenderBackendOpenGL4() SYS_FatalExit()s on a non-GL backend and this
+	// runs during view construction, before any window exists -- so an unguarded
+	// call killed the app at launch under Metal. There is now a Metal port, so
+	// the guard is no longer the difference between a filter and no app.
+	//
+	// NULL is still handled: c64d without a CRT filter is fine, c64d with a
+	// blank screen is not.
+	shaderCRT = CreateCRTMonitorShader("CRT Monitor",
+									   debugInterface->GetScreenSizeX(),
+									   debugInterface->GetScreenSizeY());
+	if (shaderCRT == NULL)
+	{
+		LOGError("CViewEmulatorScreen: render backend '%s' has no CRT monitor shader; "
+				 "the emulator screen will draw unshaded", VID_GetCurrentRenderBackendName());
+	}
+//	shaderCRT = CreateShaderToyShader("Shader Toy", (float)debugInterface->GetScreenSizeX(), (float)debugInterface->GetScreenSizeY());
 
 	char *buf = SYS_GetCharBuf();
 	sprintf(buf, "%s##EnableShaderCRT", name);

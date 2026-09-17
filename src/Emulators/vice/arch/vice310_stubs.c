@@ -1,3 +1,10 @@
+/* [C64D-REFERENCE-ONLY]
+ * Vendored from VICE as REFERENCE, not as live code. Kept for features the
+ * original emulator has and RetroDebugger does not yet (printer / RS232, drive
+ * and cartridge menus, virtual keyboard). Its SDL calls are already commented
+ * out; RetroDebugger draws its own ImGui UI.
+ * DO NOT delete, and do not "port" it -- see src/Emulators/REFERENCE_FILES.md.
+ */
 /*
  * vice310_stubs.c - Stub implementations for VICE 3.10 features not yet
  *                  integrated into c64d (profiler, ui_pause, callstack, etc.)

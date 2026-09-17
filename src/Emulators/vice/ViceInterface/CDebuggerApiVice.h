@@ -86,7 +86,7 @@ public:
 	virtual u8 GetByteWithIo(int addr);
 	virtual u8 GetByteFromRam(int addr);
 	
-	void MakeJmp(int addr);
+	bool MakeJmp(int addr);
 	
 	// CIA
 	void SetCiaRegister(u8 ciaId, u8 registerNum, u8 value);
@@ -112,6 +112,7 @@ public:
 
 	//
 	void DetachEverything();
+	bool DetachDriveDisk(int deviceNumber);
 	void ClearRam(int startAddr, int endAddr, u8 value);
 	
 	//

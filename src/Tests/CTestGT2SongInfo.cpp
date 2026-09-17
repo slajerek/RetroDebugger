@@ -42,7 +42,7 @@ void CTestGT2SongInfo::Run(ITestCallback *cb)
 	{
 		step++;
 		StepCompleted(step, true, "GT2 not active (chardata==NULL) — skipped");
-		TestCompleted(true, "GT2 not active, skipped");
+		TestSkipped("GT2 plugin not active -- song-info parsing was never exercised");
 		return;
 	}
 

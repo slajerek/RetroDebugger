@@ -2924,6 +2924,15 @@ int assemble(struct membuf *source, struct membuf *dest)
     vec_free(asm_atoms, NULL);
     yycleanup();
     LOG_FREE;
+    // LOG_FREE (log_delete) already fclose()'d gt2_asm_error_stream -- it was
+    // registered into G_log_ctx's own output-stream list a few lines up, and
+    // log_delete closes every non-stdout/stderr stream it owns. The global
+    // must be nulled here too, or the NEXT assemble() call's guard at the top
+    // ("if (gt2_asm_error_stream) fclose(...)") closes the same already-freed
+    // FILE* a second time. Silent on macOS's allocator; a hard double-free
+    // abort under glibc (found running the suite on Linux for the first time,
+    // CTestGoatTrackerExport).
+    gt2_asm_error_stream = NULL;
 
     return val;
 }

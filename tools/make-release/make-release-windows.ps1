@@ -19,7 +19,9 @@
 #>
 [CmdletBinding()]
 param(
-    [switch]$NoZip
+    [switch]$NoZip,
+    [ValidateSet('on','off')]
+    [string]$Logs
 )
 
 $ErrorActionPreference = 'Stop'
@@ -34,21 +36,17 @@ $m = Select-String -Path $verFile -Pattern 'RETRODEBUGGER_VERSION_STRING\s*"([^"
 if (-not $m) { throw "Could not parse RETRODEBUGGER_VERSION_STRING from $verFile" }
 $Version = $m.Matches[0].Groups[1].Value
 
-# --- arch (uniform lowercase in names) ---
-$Platform = if ($env:PROCESSOR_ARCHITECTURE -eq 'ARM64') { 'ARM64' } else { 'x64' }
-$Arch = $Platform.ToLower()
-
-$ReleaseName  = "RetroDebugger-v$Version"
-$ArtifactName = "RetroDebugger-v$Version-windows-$Arch"
-$ZipName      = "$ArtifactName.zip"
-
 # --- ensure sibling deps exist (build-windows.ps1 assumes they do) ---
 $Parent = Split-Path -Parent $Root
 $MtDir = Join-Path $Parent 'MTEngineSDL'
 if (-not (Test-Path $MtDir)) {
     Write-Host "==> Cloning MTEngineSDL"
-    git clone --recursive https://github.com/slajerek/MTEngineSDL.git $MtDir
+    # NOT --recursive; the pin in MTENGINE_REF is what a release must reproduce.
+    $MtRef = (Get-Content (Join-Path $Root 'MTENGINE_REF') | Where-Object { $_ -notmatch '^\s*#' -and $_.Trim() -ne '' } | Select-Object -First 1).Trim()
+    git clone https://github.com/slajerek/MTEngineSDL.git $MtDir
     if ($LASTEXITCODE -ne 0) { throw "git clone MTEngineSDL failed" }
+    git -C $MtDir checkout --detach $MtRef
+    if ($LASTEXITCODE -ne 0) { throw "MTEngineSDL checkout $MtRef failed" }
 }
 $UsDir = Join-Path $Parent 'uSockets'
 if (-not (Test-Path $UsDir)) {
@@ -56,6 +54,21 @@ if (-not (Test-Path $UsDir)) {
     git clone https://github.com/uNetworking/uSockets.git $UsDir
     if ($LASTEXITCODE -ne 0) { throw "git clone uSockets failed" }
 }
+
+# --- arch (uniform lowercase in names) ---
+# After the clone, because the detection lives in the engine and the engine may
+# not have been on disk a moment ago. NOT $env:PROCESSOR_ARCHITECTURE: it
+# describes the PROCESS and is inherited, so an emulated x64 shell (Git Bash on
+# Windows-on-ARM) would have stamped an ARM64 release "windows-x64" AND told
+# build-windows.ps1 to cross-build for x64.
+. (Join-Path $MtDir 'platform\Windows\mt-build-common.ps1')
+$Platform = Get-MTHostArch
+$Arch = $Platform.ToLower()
+Write-Host "==> Release architecture: $Platform"
+
+$ReleaseName  = "RetroDebugger-v$Version"
+$ArtifactName = "RetroDebugger-v$Version-windows-$Arch"
+$ZipName      = "$ArtifactName.zip"
 
 Write-Host "==> [1/5] Staging $ReleaseName (windows-$Arch)"
 $Stage = Join-Path ([System.IO.Path]::GetTempPath()) ("rd-rel-" + [System.Guid]::NewGuid().ToString('N'))
@@ -76,8 +89,9 @@ Get-ChildItem $ToolsDir -Recurse -Directory -Filter node_modules -ErrorAction Si
     Remove-Item -Recurse -Force
 
 Write-Host "==> [2/5] Building RetroDebugger (clean)"
+[string[]]$logsArg = if ($Logs) { @('-Logs', $Logs) } else { @() }
 & (Join-Path $Root 'build-windows.ps1') -Platform $Platform -Configuration Release -Clean
-& (Join-Path $Root 'build-windows.ps1') -Platform $Platform -Configuration Release
+& (Join-Path $Root 'build-windows.ps1') -Platform $Platform -Configuration Release @logsArg
 if ($LASTEXITCODE -ne 0) { throw "build-windows.ps1 failed with exit code $LASTEXITCODE" }
 
 Write-Host "==> [3/5] Copying binary"

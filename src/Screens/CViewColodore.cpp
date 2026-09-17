@@ -19,6 +19,7 @@
 #include "CViewDataMap.h"
 
 #include "CGuiMain.h"
+#include "MT_UiScale.h"
 
 CViewColodore::CViewColodore(float posX, float posY, float posZ, float sizeX, float sizeY)
 : CGuiView(posX, posY, posZ, sizeX, sizeY)
@@ -26,7 +27,7 @@ CViewColodore::CViewColodore(float posX, float posY, float posZ, float sizeX, fl
 	this->name = "CViewColodore";
 	
 	font = viewC64->fontDefaultCBMShifted;
-	fontScale = 1.5;
+	fontScale = MT_UiScaled(1.5f);
 	fontHeight = font->GetCharHeight('@', fontScale) + 2;
 	
 	strHeader = new CSlrString("colodore v1 by pepto");
@@ -76,7 +77,7 @@ void CViewColodore::Render()
 	float px = scrx + gap;
 	float py = scry + gap;
 	
-	fontScale = 3.0f;
+	fontScale = MT_UiScaled(3.0f);
 	fontHeight = font->GetCharHeight('@', fontScale) + 1;
 
 	float htr = viewC64->colorsTheme->colorTextHeaderR;
@@ -94,7 +95,7 @@ void CViewColodore::Render()
 	py += lSizeY + gap + 4.0f;
 	
 	
-	fontScale = 2.0f;
+	fontScale = MT_UiScaled(2.0f);
 	fontHeight = font->GetCharHeight('@', fontScale) + 1;
 
 //	font->BlitTextColor("C64 Debugger is (C) Marcin Skoczylas, aka Slajerek/Samar", px, py, posZ, fontScale, tr, tg, tb, 1); py += fontHeight;

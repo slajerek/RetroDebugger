@@ -1,0 +1,21 @@
+#
+# VICE Palette file - for 1520 plotter.
+#
+# Syntax:
+# Red Green Blue
+#
+
+# Black
+00 00 00
+
+# White (paper)
+FF FF FF
+
+# Blue
+00 00 FF
+
+# Green
+00 FF 00
+
+# Red
+FF 00 00

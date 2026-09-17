@@ -4,11 +4,40 @@
 #include "CViewC64.h"
 #include "CDebugInterface.h"
 #include "CDebugInterfaceC64.h"
+#include "C64DShutdown.h"
 #include "SYS_Main.h"
 #include "SYS_Funct.h"
 #include <string>
+#include <vector>
 
 using namespace nlohmann;
+
+// --- server/shutdown test double -------------------------------------------
+
+static C64DShutdownRequest sRecordedShutdown;
+static int sRecordedShutdownCount = 0;
+
+static void RecordShutdown(const C64DShutdownRequest &request)
+{
+	sRecordedShutdown = request;
+	sRecordedShutdownCount++;
+}
+
+// Swaps in a recording executor so hitting server/shutdown for real does not
+// take the test runner down, and restores the real one on every exit path.
+struct CShutdownExecutorGuard
+{
+	CShutdownExecutorGuard()
+	{
+		sRecordedShutdownCount = 0;
+		sRecordedShutdown = C64DShutdownRequest();
+		C64DSetShutdownExecutor(RecordShutdown);
+	}
+	~CShutdownExecutorGuard()
+	{
+		C64DSetShutdownExecutor(NULL);
+	}
+};
 
 static bool WaitForServerRunning(CViewC64 *viewC64, int timeoutMs)
 {
@@ -37,6 +66,36 @@ static json CallEndpoint(CDebuggerServer *server, const char *fn)
 	delete result;
 
 	// Strip binary portion if present (null-byte separated)
+	auto nullPos = raw.find('\0');
+	if (nullPos != std::string::npos)
+		raw = raw.substr(0, nullPos);
+
+	try
+	{
+		return json::parse(raw);
+	}
+	catch (const json::exception &e)
+	{
+		return {
+			{"status", HTTP_INTERNAL_SERVER_ERROR},
+			{"error", "Malformed JSON response"},
+			{"details", e.what()}
+		};
+	}
+}
+
+// Helper: call an endpoint with params, parse JSON result
+static json CallEndpointWithParams(CDebuggerServer *server, const char *fn, const json &params)
+{
+	std::vector<char> *result = server->RunEndpointFunction(fn, "", params, nullptr, 0);
+	if (!result || result->empty())
+	{
+		delete result;
+		return json();
+	}
+	std::string raw(result->data(), result->size());
+	delete result;
+
 	auto nullPos = raw.find('\0');
 	if (nullPos != std::string::npos)
 		raw = raw.substr(0, nullPos);
@@ -377,7 +436,97 @@ void CTestRemoteProtocol::Run(ITestCallback *cb)
 		if (startedByTest) viewC64->StopEmulationThread(diC64);
 	}
 
-	FinishTest(true, "All remote protocol tests passed (6/6)");
+	// --- Test 7: server/shutdown is advertised as a server-level endpoint ---
+	{
+		json resp = CallEndpoint(server, "server/endpoints");
+		if (resp.empty() || !resp.contains("result"))
+		{
+			FinishTest(false, "Test 7 FAIL: server/endpoints returned empty");
+			return;
+		}
+
+		const json *shutdownDesc = FindJsonArrayObjectWithFields(resp["result"]["endpoints"],
+																 {{"fn", "server/shutdown"}});
+		if (shutdownDesc == NULL)
+		{
+			FinishTest(false, "Test 7 FAIL: server/shutdown missing from server/endpoints");
+			return;
+		}
+		if (shutdownDesc->value("category", std::string()) != "server")
+		{
+			FinishTest(false, "Test 7 FAIL: server/shutdown category is not 'server'");
+			return;
+		}
+		if (!shutdownDesc->contains("paramsSchema")
+			|| !(*shutdownDesc)["paramsSchema"]["properties"].contains("force"))
+		{
+			std::string detail = "Test 7 FAIL: server/shutdown params schema missing 'force': " + shutdownDesc->dump();
+			FinishTest(false, detail.c_str());
+			return;
+		}
+	}
+
+	// --- Test 8: server/shutdown replies before the application quits ---
+	{
+		CShutdownExecutorGuard shutdownGuard;
+
+		json params;
+		params["force"] = true;
+		params["graceMs"] = 0;
+		params["reason"] = "remote-protocol-test";
+
+		json resp = CallEndpointWithParams(server, "server/shutdown", params);
+		if (resp.empty() || !resp.contains("result"))
+		{
+			FinishTest(false, "Test 8 FAIL: server/shutdown returned empty");
+			return;
+		}
+		if (resp.value("status", 0) != HTTP_OK)
+		{
+			std::string detail = "Test 8 FAIL: server/shutdown status != 200: " + resp.dump();
+			FinishTest(false, detail.c_str());
+			return;
+		}
+		if (resp["result"].value("status", std::string()) != "shutting_down")
+		{
+			std::string detail = "Test 8 FAIL: unexpected result payload: " + resp["result"].dump();
+			FinishTest(false, detail.c_str());
+			return;
+		}
+		if (resp["result"].value("force", false) != true
+			|| resp["result"].value("timeoutMs", 0) != C64D_SHUTDOWN_TIMEOUT_FORCED_MS)
+		{
+			std::string detail = "Test 8 FAIL: reply does not describe the request: " + resp["result"].dump();
+			FinishTest(false, detail.c_str());
+			return;
+		}
+
+		// The reply came back first; the shutdown itself lands on its own thread.
+		bool executed = false;
+		for (int elapsed = 0; elapsed < 2000 && !executed; elapsed += 10)
+		{
+			executed = (sRecordedShutdownCount >= 1);
+			if (!executed)
+				SYS_Sleep(10);
+		}
+		if (!executed)
+		{
+			FinishTest(false, "Test 8 FAIL: server/shutdown never reached the shutdown executor");
+			return;
+		}
+		if (sRecordedShutdown.force != true
+			|| sRecordedShutdown.timeoutMs != C64D_SHUTDOWN_TIMEOUT_FORCED_MS
+			|| sRecordedShutdown.reason != "remote-protocol-test")
+		{
+			std::string detail = "Test 8 FAIL: executor got force=" + std::to_string((int)sRecordedShutdown.force)
+				+ " timeoutMs=" + std::to_string(sRecordedShutdown.timeoutMs)
+				+ " reason='" + sRecordedShutdown.reason + "'";
+			FinishTest(false, detail.c_str());
+			return;
+		}
+	}
+
+	FinishTest(true, "All remote protocol tests passed (8/8)");
 }
 
 void CTestRemoteProtocol::Cancel()

@@ -4,7 +4,7 @@
 #include "VID_ImageBinding.h"
 
 extern "C" {
-#include "SDL.h"
+#include <SDL3/SDL.h>
 #include "bme_gfx.h"
 extern unsigned char *chardata;
 }

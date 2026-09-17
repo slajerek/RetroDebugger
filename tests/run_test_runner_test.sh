@@ -3,6 +3,15 @@
 set -euo pipefail
 
 PROJECT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+
+# This test drives run_test.sh with FABRICATED binaries that write
+# tests/results/last_run.txt relative to their own working directory. Since
+# 2026-09-02 the runner otherwise launches from the release package under
+# platform/*/prod, because that is where a real app finds its assets -- which
+# on a machine that has built c64d to prod would send these fakes' output
+# somewhere this test does not look. Pin the behaviour these assertions were
+# written against.
+export MT_TEST_RUN_DIR="$PROJECT_DIR"
 TMP_DIR="$(mktemp -d)"
 DERIVED_DATA_DIR="$PROJECT_DIR/platform/MacOS/DerivedData"
 LOCAL_DECOY_DIR="$DERIVED_DATA_DIR/run-test-a-decoy/Build/Products/Debug/Retro Debugger.app/Contents/MacOS"

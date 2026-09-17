@@ -1,58 +1,29 @@
-#!/bin/bash
-set -e
+#!/usr/bin/env bash
+# THE APP STUB -- canonical template: MTEngineSDL/tools/appbuild/stubs/.
+#
+# An app owns two files: mtengine.caps (what to enable) and mtengine-app.conf
+# (what to build). The BUILD FLOW -- and even the MTENGINE_REF verification --
+# lives in the engine's app-build driver; this stub keeps ONLY the
+# chicken-and-egg job the driver cannot do for itself: clone the engine when
+# absent. The driver warns when this file drifts from the template.
+set -euo pipefail
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+MTENGINE_DIR="$SCRIPT_DIR/../MTEngineSDL"
 
-CURRENT_DIR=`pwd`
-
-# MTEngineSDL
-cd $CURRENT_DIR/../
-if [ ! -d "MTEngineSDL" ]; then
-	echo -e "\e[94mCloning \e[31mMTEngineSDL \e[94mlibrary repository\e[0m"
-	git clone --recursive https://github.com/slajerek/MTEngineSDL.git
-	echo -e ""
-else
-	cd MTEngineSDL
-	git submodule update --init --recursive
-	cd ..
+if [[ ! -d "$MTENGINE_DIR" ]]; then
+    REF="$(grep -v '^[[:space:]]*#' "$SCRIPT_DIR/MTENGINE_REF" | grep -v '^[[:space:]]*$' | head -n 1 | tr -d '[:space:]')"
+    echo "Cloning MTEngineSDL at ${REF:-origin/master}"
+    git clone https://github.com/slajerek/MTEngineSDL.git "$MTENGINE_DIR"
+    # A branch ref stays ON the branch; only a SHA/tag detaches. The driver
+    # verifies the ref on every build after this.
+    git -C "$MTENGINE_DIR" checkout "${REF#origin/}" 2>/dev/null \
+        || git -C "$MTENGINE_DIR" checkout --detach "$REF"
 fi
 
-echo -e "\e[94mCompiling \e[31mMTEngineSDL \e[94mlibrary\e[0m"
-mkdir -p $CURRENT_DIR/../MTEngineSDL/build
-cd $CURRENT_DIR/../MTEngineSDL/build
-
-# ggml/llama.cpp: on ARM the -mcpu=native dotprod auto-detection can emit `sdot`
-# instructions the assembler rejects ("selected processor does not support sdot").
-# Disable native CPU optimizations on ARM (baseline armv8-a); keep native on x86_64.
-GGML_ARCH_ARGS=""
-case "$(uname -m)" in
-	aarch64|arm64)
-		echo -e "\e[94mARM detected - building ggml without native CPU optimizations (MT_GGML_NATIVE=OFF)\e[0m"
-		GGML_ARCH_ARGS="-DMT_GGML_NATIVE=OFF"
-		;;
-esac
-
-# Always (re)run cmake so flag changes (e.g. MT_GGML_NATIVE) actually take effect
-# even when a build dir already exists. cmake is idempotent and cheap.
-cmake ../ -DMT_ENABLE_MBEDTLS=OFF ${GGML_ARCH_ARGS} ${CMAKE_EXTRA_ARGS}
-make -j$(nproc) MTEngineSDL
-
-# uSockets
-cd $CURRENT_DIR/../
-if [ ! -d "uSockets" ]; then
-	echo -e "\n\e[94mCloning \e[31muSockets \e[94mlibrary repository\e[0m"
-	git clone https://github.com/uNetworking/uSockets.git
+DRIVER="$MTENGINE_DIR/tools/appbuild/app-build-linux.sh"
+if [[ ! -f "$DRIVER" ]]; then
+    echo "ERROR: $DRIVER not found -- the engine checkout predates the app-build driver." >&2
+    echo "       Update it: git -C \"$MTENGINE_DIR\" pull" >&2
+    exit 1
 fi
-
-echo -e "\n\e[94mCompiling \e[31muSockets \e[94mlibrary\e[0m"
-cd uSockets
-make -j$(nproc)
-mkdir -p $CURRENT_DIR/../MTEngineSDL/platform/Linux/libs/
-cp -f uSockets.a $CURRENT_DIR/../MTEngineSDL/platform/Linux/libs/
-
-# RetroDebugger
-echo -e "\n\e[94mCompiling \e[31mRetroDebugger\e[0m"
-mkdir -p $CURRENT_DIR/build
-cd $CURRENT_DIR/build
-cmake ../
-make -j$(nproc) retrodebugger
-
-echo -e "\n\e[1;92mRetroDebugger compiled successfully. Binary is in ./build folder.\e[0m"
+exec bash "$DRIVER" --app-dir "$SCRIPT_DIR" "$@"

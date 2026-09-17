@@ -1,0 +1,58 @@
+#
+# VICE Palette file
+#
+# Syntax:
+# Red Green Blue
+#
+# TYPE:VICII
+# NAME:RGB (fully saturated)
+
+# this palette contains fully saturated RGB colors, mostly useful for testing
+
+# Black
+00 00 00
+
+# White
+FF FF FF
+
+# Red
+FF 00 00
+
+# Cyan
+00 FF FF
+
+# Purple
+FF 00 FF
+
+# Green
+00 FF 00
+
+# Blue
+00 00 FF
+
+# Yellow
+FF FF 00
+
+# Orange
+FF 80 00
+
+# Brown
+80 40 00
+
+# Light Red
+FF 80 80
+
+# Dark Gray
+40 40 40
+
+# Medium Gray
+80 80 80
+
+# Light Green
+80 FF 80
+
+# Light Blue
+80 80 FF
+
+# Light Gray
+C0 C0 C0

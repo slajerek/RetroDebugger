@@ -1,0 +1,27 @@
+#
+# VICE Palette file
+#
+# Syntax:
+# Red Green Blue
+#
+# VIC palette based on http://www.colodore.com/
+#
+# TYPE:VIC
+# NAME:Colodore (PAL)
+
+00 00 00
+ff ff ff
+6d 23 27
+a0 fe f8
+8e 3c 97
+7e da 75
+25 23 90
+ff ff 86
+a4 64 3b
+ff c8 a1
+f2 a7 ab
+db ff ff
+ff b4 ff
+d7 ff ce
+9d 9a ff
+ff ff c9

@@ -186,6 +186,18 @@ public:
 	// store CHIPS only snapshot, not including DISK DATA
 	virtual bool LoadChipsSnapshotSynced(CByteBuffer *byteBuffer);
 	virtual bool SaveChipsSnapshotSynced(CByteBuffer *byteBuffer);
+
+	// Thread-safe snapshot entry points for off-emulation-thread callers
+	// (remote/MCP server, tests). The operation is queued and executed by the
+	// emulation thread at the next CPU instruction boundary; the call blocks
+	// until it completed there or timeoutMs elapsed (emulator not running, or
+	// paused on Atari/NES, whose pause loops lack the boundary escape; a C64
+	// CPU parked mid-instruction by per-cycle stepping completes the current
+	// instruction to reach the boundary). Unlike Load/SaveChipsSnapshotSynced
+	// these are safe while running or paused.
+	virtual bool LoadChipsSnapshotAtCpuBoundary(CByteBuffer *byteBuffer, u32 timeoutMs);
+	virtual bool SaveChipsSnapshotAtCpuBoundary(CByteBuffer *byteBuffer, u32 timeoutMs);
+
 	// store DISK DATA only snapshot, without CHIPS
 	virtual bool LoadDiskDataSnapshotSynced(CByteBuffer *byteBuffer);
 	virtual bool SaveDiskDataSnapshotSynced(CByteBuffer *byteBuffer);

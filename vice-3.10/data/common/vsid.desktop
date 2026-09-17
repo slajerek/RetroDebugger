@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=VICE (vsid)
+Comment=SID Player
+Exec=vsid
+Terminal=false
+Icon=vice-vsid
+Categories=Audio;AudioVideo;Emulator;

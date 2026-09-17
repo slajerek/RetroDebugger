@@ -57,6 +57,10 @@ static const u8 testCode[] = {
 	0x4C, 0x11, 0x10,
 };
 
+extern "C" {
+	int atrd_is_async_command_pending(void);
+}
+
 static char failureMsg[512];
 
 void CTestStackAnnotation::Run(ITestCallback *cb)
@@ -280,6 +284,20 @@ bool CTestStackAnnotation::TestAtariStack()
 	// Set PC to $1000
 	di->MakeJmpNoReset(di->dataAdapter, 0x1000);
 
+	// The PC write must be complete, with nothing left queued for the emulation
+	// thread to repeat at the next frame boundary. A deferred duplicate jumps the
+	// CPU a second time, up to a frame after the user resumed, and re-runs whatever
+	// the first jump started -- see the note at ATRD_ASYNC_NO_COMMAND in
+	// AtariWrapper.cpp. Checked here rather than only through its effects below,
+	// because whether the duplicate lands somewhere observable is a race.
+	if (atrd_is_async_command_pending())
+	{
+		sprintf(failureMsg, "Atari: MakeJmpNoReset left a deferred command queued; "
+				"it will jump the CPU a second time at the next frame boundary");
+		StepCompleted(2, false, failureMsg);
+		return false;
+	}
+
 	// Run emulator
 	di->SetDebugMode(DEBUGGER_MODE_RUNNING);
 
@@ -326,11 +344,43 @@ bool CTestStackAnnotation::TestAtariStack()
 		return false;
 	}
 
+	// The program has reached its final state and is spinning at $1011. Nothing may
+	// move it from there.
+	//
+	// atrd_async_set_cpu_pc() used to write the PC on this thread AND queue the same
+	// write for the emulation thread to repeat at the next frame boundary, so the
+	// jump to $1000 landed a second time long after the program had finished, and
+	// the program ran again from the top. Everything above still passed when that
+	// happened -- the second run reaches $1011 too -- which is why the bug showed up
+	// only as a rare wrong SP when the single step below landed mid-program.
+	//
+	// Poke the PHA slot and let several frames pass: a re-run executes PHA again and
+	// puts $30 back, so this catches the re-jump every time rather than by luck.
+	di->dataAdapter->AdapterWriteByte(0x01FF, 0xAA);
+
+	di->SetDebugMode(DEBUGGER_MODE_RUNNING);
+	SYS_Sleep(200);					// ~10 PAL frames
+	di->PauseEmulationBlockedWait();
+
+	di->GetCpuRegs(&pc, &a, &x, &y, &flags, &sp, &irq);
+	di->dataAdapter->AdapterReadByte(0x01FF, &val);
+
+	if (val != 0xAA || pc != 0x1011 || sp != 0xFB)
+	{
+		sprintf(failureMsg,
+				"Atari: program re-ran after finishing -- [$01FF]=$%02X (expected $AA), "
+				"PC=$%04X (expected $1011), SP=$%02X (expected $FB). "
+				"A queued PC write fired after the program had already stopped.",
+				val, pc, sp);
+		StepCompleted(2, false, failureMsg);
+		return false;
+	}
+
 	// Stop emulator if we started it
 	if (!wasRunning)
 		viewC64->StopEmulationThread(di);
 
-	StepCompleted(2, true, "Atari: Stack annotations verified (PHA, PHP, JSR)");
+	StepCompleted(2, true, "Atari: Stack annotations verified (PHA, PHP, JSR); PC stable after program end");
 	return true;
 }
 

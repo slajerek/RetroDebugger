@@ -1,0 +1,512 @@
+VICE project coding guidelines
+==============================
+
+This document is intended to set some guidelines for people wanting to
+contribute code to the VICE project.
+
+There are two distinct parts to the VICE source code, the architecture code
+parts which are located in src/arch, and the common code parts which are
+located everywhere in src except in src/arch.
+
+The common code is used by all supported architectures and therefor needs to be
+as portable as possible.
+
+To achieve this portability, and to keep the codebase tidy and clean, some
+guidelines have to be followed.
+
+Project Folders Hierarchy Descriptions
+--------------------------------------
+
+Here are short descriptions of the project code folders and their functions:
+
+generally:
+
+- All code in the root of the tree is common code that contains no architecture
+  specific parts.
+
+- 3rd party libraries and headers which have been pulled into the sourcetree
+  live in src/lib/ . Files in this directory tree do not have to follow the
+  codestyle lined out here, as they could be replaced/updated at any time.
+
+- Architecture specific code lives in src/arch/shared.
+
+- Code that is specific to a (G)UI should live in src/arch/<gui>.
+
+in detail:
+
+build
+ beos
+ github-actions
+ macOS
+ mingw
+  docker
+  frankenvice
+
+data
+ C128
+ C64
+ C64DTV
+ CBM-II
+ common
+ DRIVES
+ GLSL
+ PET
+ PLUS4
+ PRINTER
+ SCPU64
+ VIC20
+
+doc
+ building
+ html
+  fonts
+  images
+ readmes
+ vim
+  ftdetect
+  syntax
+
+m4                          - m4 code used by the buildsystem
+
+src                         - common code
+ arch                       - architecture specific code for various platforms (win, unix, amigaos, etc)
+  gtk3                      - gtk3 ui
+   data
+    macos
+    unix
+    win32
+   joystickdrv              - gtk joystick handling
+   novte                    - gtk monitor console
+   Resources
+   widgets
+    base
+  headless                  - headless "ui"
+  sdl                       - sdl1 and sdl2 ui
+   Resources
+  shared
+   hwsiddrv                 - drivers for hardware SID cards, mostly using direct I/O and thus obsolete
+   iodrv
+   mididrv
+   samplerdrv
+   socketdrv
+   sounddrv                 - framework specific sound drivers
+  systemheaderoverride      - headers that override headers usually provided by system libraries
+   gtk
+
+ buildtools
+
+ c128                       - commodore 128 specific code
+ c64                        - c64 specific code
+  cart                      - c64 cartridge specific code
+ c64dtv                     - c64 direct tv specific code
+ cbm2                       - Commodore CBM-II computer emulator
+  cart
+ pet                        - pet computer specific emulation code
+ plus4                      - commodore plus4 specific code
+  cart
+ scpu64
+ vic20                      - commodore vic20 specific code
+  cart
+
+ core                       - various chip emulations (CIA, VIA and Cart specific chip emulations)
+  rtc                       - real time clock emulation used in some devices (fd2000/4000, ide64, etc..)
+ crtc                       - CRTC emulation
+ resid                      - cycle exact sid engine (made by dag lem)
+ resid-dtv
+ sid                        - SID chip interface and emulation for fallback sid engine (fastsid)
+ vdc                        - MOS8563/8568 VDC emulation
+ vicii                      - almost cycle exact VICII emulation code for x64, x128, xcbm2, and x64dtv
+ viciisc                    - more cycle exact then vicii code emulation used in x64sc and xscpu64
+
+ diag
+
+ diskimage                  - various file types support (.d64, .d81, etc..)
+ imagecontents              - disk and tape directory interface
+
+ iecbus                     - iec bus handling
+ parallel                   - ieee488 emulation code
+ serial                     - iec interface code and real iec access (for using real drives on usb with vice)
+
+ drive                      - various disk drive hardware emulations and bus systems used (iec or ieee)
+  iec
+   c64exp
+   plus4exp
+  iec128dcr
+  iecieee
+  ieee
+  tcbm
+ vdrive                     - virtual drives code, opposed to "true drive emulation" found in drive folder
+
+ fileio                     - for accessing prg files directly
+ fsdevice                   - for host filesystem as if an iec device is used
+
+ hvsc
+ joyport
+ monitor                    - code for built-in monitor
+ 
+ datasette
+ tape                       - tape drive specific emulation and T64 support
+ tapeport
+
+ userport                   - userport device emulation code
+
+ raster                     - raster-based video chip emulation
+ video                      - pixel framebuffer to physical screen interface code
+
+ lib                        - anything related to external libraries (ffmpeg codec, etc.. see above)
+  linenoise-ng
+  p64
+
+ tools
+  cartconv
+  petcat
+
+ gfxoutputdrv               - screen capture (image and video drivers)
+ printerdrv                 - specific printer type emulation and drivers
+ rs232drv                   - rs232 communication and modem code for interfacing with arch specific drivers
+
+
+Cosmetic guidelines for all code
+--------------------------------
+
+To keep the code tidy and easy to follow please read the following statements:
+
+
+- Don't use C++ style comments in C code (// comment), use C-style comments
+  instead (/* comment */). This goes for C99 code as well.
+
+  You may use the ./checkstyle.sh script to find dangling c++ comments:
+
+  $ ./checkstyle.sh comments
+
+- We strictly indent by 4 spaces. Don't use mixtures of tabs and spaces as
+  indentation, using 4 spaces per level will make the code look the same no
+  matter what editor you use.
+
+  You may use the checkstyle.sh script to find dangling tabs:
+
+  $ ./checkstyle.sh tabs
+
+- Avoid trailing whitespace. Many editors can show this and remove this.
+
+  You may use the checkstyle.sh script to find trailing whitespace:
+
+  $ ./checkstyle.sh whitespace
+
+- Refrain from using any non ASCII characters in source files, unless absolutely
+  necessary. Previously a common trap were copyright headers - make sure to
+  use latin letters only to write your name etc. or in other words: such chars
+  should not be used anywhere, except in a few selected (usually translation
+  related) files that contain tables of strings.
+  The reason for this is that various tools get confused or even choke on any-
+  thing that isnt the encoding they expect (and plain ascii always works). It
+  also ensures that all files can be edited by anyone at any time without intro-
+  ducing weird side effects.
+  On a *nix system you may use the "file" command to check the files you
+  changed, normally it should always say "ASCII text" (not ISO-8859, and
+  definately not UTF-8 Unicode).
+
+  current exceptions from this rule are:
+
+  src/infocontrib.h: ISO-8859 (generated file)
+
+  Keep in mind that editing the translation related files need special care,
+  make sure not to mess up the file by somehow converting the encoding!
+
+  You may use the findhacks.sh script in src/ to check all sourcefiles and find
+  any that contain non ascii characters:
+
+  $ ./findhacks.sh encoding
+
+- Use the types in <stdint.h> for fixed-width types, so `uint8_t` rather than
+  `BYTE`, `uint16_t` for `WORD` and `uint32_t` for `DWORD`.
+
+- Generally put the opening brace of a block at the end of the line ("cuddling"
+  braces style), except at the beginning of a function, ie:
+
+  void foo(int bar)
+  {
+      if (bar) {
+          /* ... */
+      }
+  }
+
+
+- No variable declarations after the first line of code, some compilers
+  just can't handle it.
+
+
+- One variable declaration per line, and especially don't mix plain types with
+  pointers.
+
+  Don't do this:
+
+    int foo, bar, *huppel;
+
+  Do this:
+    int foo;
+    int bar;
+    int *huppel;
+
+  Might look short and clever, but as soon as you want to change a single type,
+  you'll either screw them all up, or have to split them anyway. Just don't.
+
+
+  New block-level declarations are fine:
+
+    if (foo) {
+        int bar = 0;
+        /* code using bar */
+    }
+
+  Perfectly valid even in C89, if a compiler can't handle this, get a proper
+  compiler.
+
+- For 'if' and 'for' always use braces.
+  examples:
+
+    if (foo) {
+        ...
+    }
+
+    if (foo) {
+        ...
+    } else {
+        ...
+    }
+
+    for (i = 0; i < 255; i++) {
+        ...
+    }
+
+- A keyword should be followed by a space, so:
+    if (foo == 0) { ... }
+  not
+    if(foo == 0) { ... }
+
+  Exception: the sizeof operator, using sizeof as a "function" on a type should
+             not use spaces, ie: sizeof(int), however using sizeof on an object
+             should use spaces (ie: int *i; sizeof *i)
+
+- Binary operators: use spaces around binary operators:
+    int i = 1 + 2;
+    unsigned int i <<= 3;
+
+  But please don't use them with when accessing members of an object:
+    foo->bar, not foo -> bar.
+
+- Unary operators:
+  Don't use spaces when using unary operators:
+    ~0 is fine,
+    ~ 0 isn't.
+
+- Use boolean logic only when the context is clear and the thing tested can
+  actually be considered boolean:
+
+  Basically:
+    `if (!strcmp(a b))` is WRONG since strcmp() returns three different values,
+    0 when equal (which is what the ! tests against), < 0 when a < b, and
+    > 0 when b > a.
+    So please use `if (strcmp(a, b) == 0)`, a little more typing, but much more
+    clear.
+
+    We also seem to have a lot of functions returning either 0 on success, or
+    -1 on error. And a lot of code using boolean logic on the return value.
+    Please don't. Unfortunately this is so wide spread in the VICE code it's
+    hard to fix.
+
+- Use braces even when they are not really required, it makes expressions
+  easier to read and allows to use advanced highlighting in the editor, ie
+
+  if ((a + b) && (c != d)) {
+      /* ... */
+  }
+
+    instead of
+
+  if (a + b && c != d) {
+      /* ... */
+  }
+
+- No 'clever' while/do trickery, unless required for preprocessor code. The
+  following looks clever:
+
+    while (*s++ != '\0');
+
+  But this is clearer and will generate the same object code:
+
+    while (*s != '\0') {
+        s++;
+    }
+
+- To give the code a consistent look use specifiers named with prefixes
+  like in the following examples:
+
+    struct foobar_s {
+        ...
+    };
+
+    typedef ... foobar_t;
+
+    enum stuff_e {
+        ...
+    };
+
+    union many_u {
+        ...
+    };
+
+  Of course combinations may be used:
+
+    typedef struct foobar_s {
+        ...
+    } foobar_t;
+
+  Exceptions are basic type like BYTE, WORD, DWORD and code that follows a
+  coding style of a certain architecture, e.g. UI code.
+
+- Preprocessor macros which define constants or enumeration values should
+  be written in capital letters.
+
+   #define FORTYTWO 42
+
+   typedef numbers_e {
+       NUM_ZERO,
+       NUM_ONE
+   } numbers_t;
+
+- Properly document any fall through in switch/case constructs:
+
+    switch (foo) {
+        case 42:    /* fall through */
+        case 69:
+            hehe();
+            break;
+    }
+
+
+Symbols in ifdefs
+-----------------
+
+- If tests for a certain (G)UI are needed, they can use the following symbols.
+  No other symbols should be defined to "shortcut" certain combinations!
+
+  USE_SDLUI
+  USE_SDL2UI
+  USE_GTK3UI
+  USE_HEADLESSUI
+
+  Remember this kind of tests should ideally not occur anywhere in common code -
+  but if they can not be avoided, they should always come with a comment that
+  tells why this test exists.
+
+- For tests for a certain architecture/operating system the build system defines
+  some symbols. No other symbols should be used for this, in particular not the
+  various things defined by compilers or system libraries. Eg do not use
+  "_WIN32" when you need to check for "is this windows?", use "WINDOWS_COMPILE"
+  instead.
+
+  The architecture symbols are nested in a hierarchic way:
+
+  WINDOWS_COMPILE           - compiling for windows (32bit AND 64bit)
+    WIN64_COMPILE           - compiling for 64bit windows
+  UNIX_COMPILE              - any *nix system
+    LINUX_COMPILE
+    MACOS_COMPILE
+    BSD_COMPILE
+      FREEBSD_COMPILE
+      DRAGONFLYBSD_COMPILE
+      NETBSD_COMPILE
+      OPENBSD_COMPILE
+  BEOS_COMPILE
+    HAIKU_COMPILE
+
+  Remember this kind of tests should ideally not occur anywhere in common code -
+  but if they can not be avoided, they should always come with a comment that
+  tells why this test exists.
+
+- When using headers which are tested for in configure.proto don't assume they
+  exist, use the #ifdef HAVE_*_H instead.
+
+   #ifdef HAVE_SYS_TYPES_H
+   #include <sys/types.h>
+   #endif
+
+  you can look at src/config.h to see which symbols are available
+
+- When adding header files use VICE_*_H as shown in the following example:
+
+   #ifndef VICE_RS232_H
+   #define VICE_RS232_H
+
+   ...code...
+
+   #endif
+
+
+Common code guidelines
+----------------------
+
+Many different compilers may be used to compile the common code parts, although
+in practise this will be GCC, Clang or MSVC.
+
+- There should be no compiler specific hacks anywhere and no ifdefs checking
+  for specific compilers. The only exception to this rule is the global vice.h.
+  The same is true for CPU/Arch specific checks.
+
+  There are still some of these compiler specific hacks dangling around, all of
+  which are subject for removal. Do not add any new ones :)
+
+  You can find such things using ./src/findhacks.sh ccarchdep
+
+- Generally no arch specific hacks and ifdefs should be present in common code.
+  All arch specific code should be abstracted into functions which then live in
+  src/arch/shared. Code that is specific to a GUI should live in src/arch/<gui>.
+
+  When a platform specific ifdef can not be avoided in common code, it should
+  always come with a comment that explains why exactly that ifdef exists and
+  what the respective portion of code is supposed to do.
+
+  Since this rule did not exist in the past, there is still a lot of arch 
+  specific code around elsewhere that needs to be moved - this is no excuse for
+  ignoring the rule when writing new code however.
+
+  You can find such thing using: ./src/findhacks.sh archdep
+
+
+Documentation
+-------------
+
+Please add documentation to code you add or alter.
+
+We use Doxygen to document our code, add docblocks for each public function or
+data structure, at a minimum. Adding documentation is boring and the discipline
+to do that is even harder, but it'll help out your fellow (future) devs and
+probably even you after not working on a piece of code for some time. (Also
+see Doxygen-Howto.txt)
+
+This also applies to the user manual - when you are adding new features, please
+document it in vice.texi (see Documentation-Howto.txt)
+
+
+Adding new files to the svn repo
+--------------------------------
+
+When adding a *nix script file use the following svn properties:
+
+svn:eol-style   LF
+svn:mime-type   text/plain
+svn:executable  *
+
+When adding a windows/dos batch file use the following svn properties:
+
+svn:eol-style   CRLF
+svn:mime-type   text/plain
+svn:executable  *
+
+When adding a non-text file use only the correct mime-type.
+
+For all other files use the following svn properties:
+
+svn:eol-style   native
+svn:mime-type   text/plain

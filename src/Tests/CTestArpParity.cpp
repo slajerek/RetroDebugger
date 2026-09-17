@@ -1182,8 +1182,8 @@ void CTestArpParity::Run(ITestCallback *cb)
 		// songs; that's only OK for scenario 1).
 		int symChnArpLo    = gt2_get_arp_label_addr("mt_chnarplo");
 		int symChnArpPos   = gt2_get_arp_label_addr("mt_chnarppos");
-		int symArpPoolTblLo = gt2_get_arp_label_addr("mt_arppooltbllo");
-		int symArpPoolTblHi = gt2_get_arp_label_addr("mt_arppooltblhi");
+		int symArpPoolTblLo = gt2_get_arp_label_addr("mt_arppool_patt_lo");
+		int symArpPoolTblHi = gt2_get_arp_label_addr("mt_arppool_patt_hi");
 		int symArpEntry0   = gt2_get_arp_label_addr("mt_arpentry0");
 		int symFreqtbllo   = gt2_get_arp_label_addr("mt_freqtbllo");
 		int symChnfreqlo   = gt2_get_arp_label_addr("mt_chnfreqlo");
@@ -1268,7 +1268,7 @@ void CTestArpParity::Run(ITestCallback *cb)
 		char diag[512];
 		int diagOff = snprintf(diag, sizeof diag,
 			"labels: arplo=$%04X arppos=$%04X pooltbllo=$%04X pooltblhi=$%04X entry0=$%04X | "
-			"pooltbl[0]=$%02X%02X (expected $%02X%02X)",
+			"patt_lo/hi[0]=$%02X%02X (arp list of PRG pattern 0; entry0=$%02X%02X)",
 			(unsigned)symChnArpLo, (unsigned)symChnArpPos,
 			(unsigned)symArpPoolTblLo, (unsigned)symArpPoolTblHi,
 			(unsigned)symArpEntry0,
@@ -1475,21 +1475,13 @@ void CTestArpParity::Run(ITestCallback *cb)
 
 		int sc3_symChnArpPos = gt2_get_arp_label_addr("mt_chnarppos");
 
-		// Warmup: PARITY_6502_WARMUP_TICKS + 1 (= 7 total mt_play
-		// calls). The 6502 player skips arp cycling on tick-0
-		// frames (mt_normalnote's new-note path jumps to
-		// mt_loadregswaveonly, bypassing the cycle code in
-		// mt_loadregs). C's gplay.c cycles freq every tick. For a
-		// 2-note arp the 1-cycle deficit is invisible (the carry-
-		// over $D400 value from the last effects-tick happens to
-		// match what C would write next), but a 4-note arp (period
-		// > 2) makes the lag show. An extra warmup tick burns one
-		// more cycle in 6502 so its arppos catches up before
-		// capture starts. This is the simplest tick-level alignment
-		// for #7G; a structural fix (route tick-0 through
-		// mt_loadregs) was tried but introduces a wave-init phase
-		// mismatch that requires bigger surgery in mt_normalnote.
-		for (int w = 0; w < PARITY_6502_WARMUP_TICKS + 1; w++)
+		// Warmup: PARITY_6502_WARMUP_TICKS, same alignment as
+		// scenario 1. Both players advance the arp cycle on every
+		// tick including TICK0 (mt_newnoteinit ends in `jmp
+		// mt_loadregs`), so no extra tick is burned here — the old
+		// "+1" compensated for a tick-0 cycle skip that no longer
+		// exists and put the 6502 one position ahead of C.
+		for (int w = 0; w < PARITY_6502_WARMUP_TICKS; w++)
 		{
 			if (!parity_run_until_sentinel(di, PARITY_DRIVER_TICK_ENTRY, 1000))
 			{
@@ -1803,26 +1795,17 @@ void CTestArpParity::Run(ITestCallback *cb)
 		totalCases++;
 		passedCases++;
 
-		// ---- Scenario 9: HR suppress on new base under arp ----
+		// ---- Scenario 9: new base note under arp hard-restarts ----
 		// Row 0: C-3 + E-3 arp installs pool. Row 1: G-3 base
-		// while arp pool is still active. mt_normalnote's
-		// HRSUPPRESS check (player.s, `bne mt_rest` right after
-		// `sta mt_chnnewnote,x`) should skip the HR pulse. The
-		// HR pulse writes ADPARAM/SRPARAM to SIDBASE+$05/$06 in
-		// the BUFFEREDWRITES=0 case — but also writes to
-		// mt_chnad/sr in the GHOSTREGS path. Since we want a
-		// player-flow-independent check, observe via a side
-		// channel: gplay.c sets sidreg[$05/$06] to instrument's
-		// AD/SR during normal init. The 6502 instrument table
-		// holds same values. With HRSUPPRESS active, neither HR
-		// (ADPARAM) nor instrument-reload should happen at row
-		// transition. Easiest check: read mt_chnad/sr via VICE
-		// RAM at two points (row 0 settled, row 1 settled) —
-		// they should NOT change. (They were set to instr's AD/SR
-		// during row 0 init; HR would overwrite to ADPARAM/SRPARAM
-		// briefly. Without buffered writes the HR write goes
-		// straight to SID and mt_chnad/sr stays as instr's, so
-		// we instead probe mt_chngate which HR also resets.)
+		// while the arp pool is still active. The main track owns
+		// the gate: a new base note goes through mt_normalnote's
+		// normal gate-off (mt_skiphr writes $fe to mt_chngate; the
+		// fixture instrument is NOHR so no ADSR pulse) and
+		// mt_newnoteinit raises it again on TICK0. So the gate
+		// trace across the row transition must contain a $fe
+		// (2026-09-07: the earlier HRSUPPRESS block that skipped
+		// this was removed — it made ENTER-retriggers under arp
+		// silent and never released the envelope).
 		parity_reset_song();
 		parity_set_numarpcolumns(1);
 		parity_make_triangle_instr(1, 0x0a, 0xab);
@@ -1848,12 +1831,11 @@ void CTestArpParity::Run(ITestCallback *cb)
 			TestCompleted(false, err);
 			return;
 		}
-		// HR suppress functional check: read mt_chngate immediately
+		// Gate-off functional check: read mt_chngate immediately
 		// after warmup (row 0 has settled to gate=$ff). Step ticks
-		// across the row 1 transition. Without HRSUPPRESS, gate
-		// would drop to $fe (mt_skiphr writes #$fe to mt_chngate
-		// before HR fires). With HRSUPPRESS the bne mt_rest skips
-		// mt_skiphr entirely so gate stays $ff throughout.
+		// across the row 1 transition: the gate must drop to $fe
+		// (mt_skiphr) and come back to $ff (mt_newnoteinit), and
+		// nothing else may ever appear in it.
 		int sc9_symChnGate = gt2_get_arp_label_addr("mt_chngate");
 		int sc9_symChnArpLo2 = gt2_get_arp_label_addr("mt_chnarplo");
 		unsigned char sc9_gateTrace[14];
@@ -1872,27 +1854,23 @@ void CTestArpParity::Run(ITestCallback *cb)
 			sc9_arpLoTrace[t] = (sc9_symChnArpLo2 > 0) ?
 				di->GetByteFromRamC64((unsigned short)sc9_symChnArpLo2) : 0xee;
 		}
-		// HR suppress check: gate must stay sane during the row
-		// transition. Acceptable values are $ff (gate on, normal)
-		// and $fe (gate-off-pending, mirrors the standard
-		// mt_skiphr→mt_newnoteinit transient). Any OTHER value
-		// (especially $00 — the inc-wrap that breaks audio) is a
-		// regression. The C player keeps gate at $ff throughout
-		// (no transient) but mirroring that exactly would require
-		// changing mt_newnoteinit's `inc mt_chngate,x` to a
-		// direct `lda #$ff; sta` — out of scope for arp-only
-		// changes.
+		// Gate must only ever read $ff or $fe (anything else, e.g.
+		// $00 from an inc-wrap, breaks audio), it must pass through
+		// $fe at least once (the gate-off before the new base's
+		// TICK0), and it must end at $ff (G-3 sounding).
 		int sc9_failTick = -1;
+		bool sc9_sawGateOff = false;
 		for (int t = 0; t < 14; t++)
 		{
-			if (sc9_arpLoTrace[t] != 0 &&
-			    sc9_gateTrace[t] != 0xff &&
-			    sc9_gateTrace[t] != 0xfe)
+			if (sc9_gateTrace[t] == 0xfe) sc9_sawGateOff = true;
+			if (sc9_gateTrace[t] != 0xff && sc9_gateTrace[t] != 0xfe)
 			{
 				sc9_failTick = t;
 				break;
 			}
 		}
+		if (sc9_failTick < 0 && (!sc9_sawGateOff || sc9_gateTrace[13] != 0xff))
+			sc9_failTick = 13;
 		if (sc9_failTick >= 0)
 		{
 			if (audioWasPlaying && pluginGoatTracker->audioChannel)
@@ -1906,21 +1884,25 @@ void CTestArpParity::Run(ITestCallback *cb)
 			for (int t = 0; t < 14 && off < (int)sizeof gateStr - 8; t++)
 				off += snprintf(gateStr + off, sizeof gateStr - off, " %02X", sc9_arpLoTrace[t]);
 			snprintf(err, sizeof err,
-			         "scenario 9: mt_chngate=$%02X at tick %d with arp active (arplo=$%02X) — HRSUPPRESS broken? %s",
+			         "scenario 9: mt_chngate=$%02X at tick %d with arp active (arplo=$%02X) — new base under arp must gate off then on (saw $fe: %d) %s",
 			         sc9_gateTrace[sc9_failTick], sc9_failTick,
-			         sc9_arpLoTrace[sc9_failTick], gateStr);
+			         sc9_arpLoTrace[sc9_failTick], sc9_sawGateOff ? 1 : 0, gateStr);
 			TestCompleted(false, err);
 			return;
 		}
 		totalCases++;
 		passedCases++;
 
-		// ---- Scenario 7: KEYOFF base, sustaining arp ----
+		// ---- Scenario 7: KEYOFF base, arp keeps cycling in release ----
 		// Row 0: C-3 + E-3 arp. Row 1: KEYOFF base (E-3 stays in
-		// arp col → packer emits a 1-note sustaining pool). The
-		// mt_arp_trigger_silent hook should re-raise mt_chngate
-		// to $ff after KEYOFF dropped it to $fe, so the channel
-		// keeps sounding the E-3 alone instead of going silent.
+		// the arp col). The main track owns the gate: KEYOFF drops
+		// mt_chngate to $fe (ADSR release) and it STAYS there, while
+		// the arp cycle — base note included — keeps running through
+		// the release. So the packer emits no new pool at row 1 (the
+		// [24,28] chord is unchanged) and mt_chnfreqlo keeps
+		// alternating between C-3 and E-3 with the gate off.
+		// (2026-09-07: replaces the trigger-on-silent hook, which
+		// re-raised the gate and defeated hard restarts.)
 		parity_reset_song();
 		parity_set_numarpcolumns(1);
 		parity_make_triangle_instr(1, 0x0a, 0xab);
@@ -1929,8 +1911,8 @@ void CTestArpParity::Run(ITestCallback *cb)
 		parity_set_arp_note(0, 0, 0, 0, 0x60 + 28);  // E-3 col 0 (row 0)
 		parity_set_note(0, 1, 0xbe, 0, 0, 0);        // KEYOFF base
 		// Don't set arp_note for row 1 — it stays sticky at E-3.
-		// The packer treats this as active_count=1 (arp-only) and
-		// emits a 1-note pool [28, $FF, 0].
+		// The base note stays in the cycle too, so the packer sees
+		// the same [24,28] chord on both rows: one pool entry.
 		parity_set_orderlist(0, 0, 0xff, 0xff);
 
 		const unsigned char sc7_chordA_sig[] = { 24, 28, 0xff, 0x00 };
@@ -1939,7 +1921,7 @@ void CTestArpParity::Run(ITestCallback *cb)
 		        "scenario 7 (initial chord install)",
 		        PARITY_6502_WARMUP_TICKS, /*sample*/ 0,
 		        /*expected_notes*/ NULL, 0,
-		        /*arppoolcount*/2, /*noarppool*/0,
+		        /*arppoolcount*/1, /*noarppool*/0,
 		        sc7_chordA_sig, (int)sizeof sc7_chordA_sig,
 		        di, pluginGoatTracker,
 		        err, sizeof err))
@@ -1949,47 +1931,21 @@ void CTestArpParity::Run(ITestCallback *cb)
 			TestCompleted(false, err);
 			return;
 		}
-		// Verify the sustain-only pool entry is present in PRG.
-		{
-			CByteBuffer prg7;
-			char exportErr7[256] = {0};
-			if (pluginGoatTracker->ExportToBuffer(&prg7, exportErr7, sizeof exportErr7) != 0)
-			{
-				if (audioWasPlaying && pluginGoatTracker->audioChannel)
-					pluginGoatTracker->audioChannel->Start();
-				snprintf(err, sizeof err,
-				         "scenario 7 sustain-sig: ExportToBuffer failed: %s",
-				         exportErr7);
-				TestCompleted(false, err);
-				return;
-			}
-			bool found = false;
-			for (int i = 0; i + (int)sizeof sc7_sustain_sig <= prg7.length; i++)
-			{
-				if (memcmp(prg7.data + i, sc7_sustain_sig,
-				           sizeof sc7_sustain_sig) == 0)
-				{
-					found = true;
-					break;
-				}
-			}
-			if (!found)
-			{
-				if (audioWasPlaying && pluginGoatTracker->audioChannel)
-					pluginGoatTracker->audioChannel->Start();
-				snprintf(err, sizeof err,
-				         "scenario 7: sustain pool signature [28,$FF,0] not found in .prg");
-				TestCompleted(false, err);
-				return;
-			}
-		}
-		// Drive past row 1 (KEYOFF). After processing, mt_chngate
-		// should be $ff (re-triggered by trigger-on-silent hook),
-		// NOT $fe (would mean trigger didn't fire).
+		// The helper above already proved arppoolcount == 1: KEYOFF did
+		// not make the packer emit a sustain-only [28,$FF,0] entry. (A
+		// byte-signature search cannot prove that — [24,28,$FF,0]
+		// contains it as a substring.)
+		(void)sc7_sustain_sig;
+		// Drive past row 1 (KEYOFF). Once mt_chngate drops to $fe it
+		// must stay there, the pool must stay installed, and
+		// mt_chnfreqlo must keep alternating C-3/E-3 during release.
 		int sc7_symChnGate = gt2_get_arp_label_addr("mt_chngate");
 		int sc7_symChnArpLo = gt2_get_arp_label_addr("mt_chnarplo");
-		bool sc7_seen_sustain_pool = false;
-		bool sc7_gate_recovered = false;
+		int sc7_symChnFreqLo = gt2_get_arp_label_addr("mt_chnfreqlo");
+		bool sc7_sawRelease = false;
+		bool sc7_gateCameBack = false;
+		bool sc7_poolLost = false;
+		bool sc7_seenC3 = false, sc7_seenE3 = false;
 		unsigned char sc7_finalGate = 0xee, sc7_finalArpLo = 0xee, sc7_finalArpHi = 0xee;
 		for (int t = 0; t < 18; t++)
 		{
@@ -1997,47 +1953,45 @@ void CTestArpParity::Run(ITestCallback *cb)
 			{
 				if (audioWasPlaying && pluginGoatTracker->audioChannel)
 					pluginGoatTracker->audioChannel->Start();
-				TestCompleted(false, "scenario 7: tick timeout while waiting for KEYOFF+sustain");
+				TestCompleted(false, "scenario 7: tick timeout while waiting for KEYOFF release");
 				return;
 			}
 			sc7_finalArpLo = di->GetByteFromRamC64((unsigned short)sc7_symChnArpLo);
 			sc7_finalArpHi = di->GetByteFromRamC64((unsigned short)(sc7_symChnArpLo + 1));
 			sc7_finalGate = di->GetByteFromRamC64((unsigned short)sc7_symChnGate);
-			// Look for the sustain pool installing AND gate recovered.
-			if (sc7_finalArpLo != 0 || sc7_finalArpHi != 0)
+			if (sc7_finalGate == 0xfe) sc7_sawRelease = true;
+			if (sc7_sawRelease)
 			{
-				// If at any point we saw arp pool change (sustain
-				// pool installs at row 1), check that gate stays at
-				// $ff during/after.
+				if (sc7_finalGate == 0xff) sc7_gateCameBack = true;
+				if (sc7_finalArpLo == 0 && sc7_finalArpHi == 0) sc7_poolLost = true;
+				unsigned char f = di->GetByteFromRamC64((unsigned short)sc7_symChnFreqLo);
+				if (f == freqtbllo[24]) sc7_seenC3 = true;
+				if (f == freqtbllo[28]) sc7_seenE3 = true;
 			}
-			// Sustain pool: at any tick when mt_chnarp != 0 and
-			// gate is back to $ff, the trigger fired correctly.
-			if ((sc7_finalArpLo != 0 || sc7_finalArpHi != 0) &&
-			    sc7_finalGate == 0xff)
-				sc7_gate_recovered = true;
-			(void)sc7_seen_sustain_pool;
 		}
-		if (!sc7_gate_recovered)
+		if (!sc7_sawRelease || sc7_gateCameBack || sc7_poolLost || !sc7_seenC3 || !sc7_seenE3)
 		{
 			if (audioWasPlaying && pluginGoatTracker->audioChannel)
 				pluginGoatTracker->audioChannel->Start();
 			snprintf(err, sizeof err,
-			         "scenario 7: trigger-on-silent didn't fire — final gate=$%02X arplo=$%02X arphi=$%02X (expected gate=$FF with arp active)",
-			         sc7_finalGate, sc7_finalArpLo, sc7_finalArpHi);
+			         "scenario 7: KEYOFF under arp — release seen=%d, gate came back=%d, pool lost=%d, C-3 cycled=%d, E-3 cycled=%d (final gate=$%02X arp=$%02X%02X)",
+			         sc7_sawRelease ? 1 : 0, sc7_gateCameBack ? 1 : 0, sc7_poolLost ? 1 : 0,
+			         sc7_seenC3 ? 1 : 0, sc7_seenE3 ? 1 : 0,
+			         sc7_finalGate, sc7_finalArpHi, sc7_finalArpLo);
 			TestCompleted(false, err);
 			return;
 		}
 		totalCases++;
 		passedCases++;
 
-		// ---- Scenario 8: arp installed on silent channel ----
+		// ---- Scenario 8: arp installed on a silent channel ----
 		// Channel starts silent (gate=$fe from mt_initchn data
 		// init, no note played yet). Pattern row 0 has REST base
 		// + arp col → packer emits a 1-note arp pool, player's
-		// mt_rest reads the inline arp byte and mt_restsetarp
-		// fires. The trigger-on-silent hook should see gate=$fe
-		// and mt_chnnewnote=0, then load instr ADSR + waveptr and
-		// raise gate=$ff.
+		// mt_rest reads the inline arp byte and mt_arp_setpool
+		// installs it. Arp columns never touch the gate, so the
+		// channel stays silent (gate=$fe) until the main track
+		// plays a note or KEYON.
 		parity_reset_song();
 		parity_set_numarpcolumns(1);
 		parity_make_triangle_instr(1, 0x0a, 0xab);
@@ -2062,8 +2016,8 @@ void CTestArpParity::Run(ITestCallback *cb)
 			TestCompleted(false, err);
 			return;
 		}
-		// After warmup the trigger hook should have raised
-		// mt_chngate to $ff and installed the arp pool pointer.
+		// After warmup the arp pool pointer is installed and the
+		// gate is untouched.
 		int sc8_symChnGate = gt2_get_arp_label_addr("mt_chngate");
 		int sc8_symChnArpLo = gt2_get_arp_label_addr("mt_chnarplo");
 		unsigned char sc8_gate = di->GetByteFromRamC64((unsigned short)sc8_symChnGate);
@@ -2079,12 +2033,12 @@ void CTestArpParity::Run(ITestCallback *cb)
 			TestCompleted(false, err);
 			return;
 		}
-		if (sc8_gate != 0xff)
+		if (sc8_gate != 0xfe)
 		{
 			if (audioWasPlaying && pluginGoatTracker->audioChannel)
 				pluginGoatTracker->audioChannel->Start();
 			snprintf(err, sizeof err,
-			         "scenario 8: trigger-on-silent didn't raise gate to $FF (gate=$%02X with arp pool at $%02X%02X)",
+			         "scenario 8: arp column changed the gate on a silent channel (gate=$%02X, want $FE, arp pool at $%02X%02X)",
 			         sc8_gate, sc8_arpHi, sc8_arpLo);
 			TestCompleted(false, err);
 			return;

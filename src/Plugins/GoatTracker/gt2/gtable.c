@@ -384,7 +384,7 @@ void tablecommands(void)
     break;
 
     case KEY_DEL:
-#ifdef __MACOSX__
+#ifdef __APPLE__
     if (altpressed)
         inserttable(etnum, etpos, shiftpressed);
     else
@@ -1012,12 +1012,29 @@ void tabledown(void)
 
 void exectable(int num, int ptr)
 {
+  /* Remember how the walk got where it did, so a failure can name the row
+     that caused it. Without this the packer can only say which instrument
+     and which table, which is not enough to find a bad jump by hand. */
+  int lastjumprow = 0;
+  int lastjumptarget = 0;
+  /* Only while no error is pending: the callers clear tableerror once and
+     then make several exectable() calls, keeping the FIRST error of the
+     group -- the detail has to survive the same way. */
+  if (!tableerror)
+  {
+    tableerrorrow = 0;
+    tableerrortarget = 0;
+    tableerrorentry = ptr;
+  }
+
   // Jump error check
   if ((num != STBL) && (ptr) && (ptr <= MAX_TABLELEN))
   {
     if (ltable[num][ptr-1] == 0xff)
     {
       tableerror = TYPE_JUMP;
+      tableerrorrow = ptr;
+      tableerrortarget = rtable[num][ptr-1];
       return;
     }
   }
@@ -1030,6 +1047,8 @@ void exectable(int num, int ptr)
     if ((num != STBL) && (ptr > MAX_TABLELEN))
     {
       tableerror = TYPE_OVERFLOW;
+      tableerrorrow = lastjumprow;
+      tableerrortarget = lastjumptarget;
       break;
     }
     // If were already here, exit
@@ -1041,6 +1060,8 @@ void exectable(int num, int ptr)
     {
       if (ltable[num][ptr-1] == 0xff)
       {
+        lastjumprow = ptr;
+        lastjumptarget = rtable[num][ptr-1];
         ptr = rtable[num][ptr-1];
       }
       else ptr++;

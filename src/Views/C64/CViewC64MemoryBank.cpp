@@ -6,6 +6,7 @@
 #include "CDebugInterfaceC64.h"
 #include "CViewC64StateVIC.h"
 #include "CLayoutParameter.h"
+#include "MT_UiScale.h"
 
 // Memory region contents
 enum MemMapEntry
@@ -101,7 +102,7 @@ CViewC64MemoryBank::CViewC64MemoryBank(const char *name, float posX, float posY,
 
 	fontBytes = viewC64->fontDisassembly;
 
-	fontSize = 7.0f;
+	fontSize = MT_UiScaled(7.0f);
 	hasManualFontSize = false;
 	AddLayoutParameter(new CLayoutParameterFloat("Font Size", &fontSize));
 

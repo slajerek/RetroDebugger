@@ -20,14 +20,7 @@
 #include <string.h>
 
 #include "SidDatabase.h"
-// See SidTuneMod.cpp for why the MD5 header is included via a platform guard:
-// "MD5.h" clashes case-insensitively with the VICE stub src/Emulators/vice/root/md5.h
-// on Windows, so qualify via "md5/MD5.h" there. Linux/macOS keep the bare form.
-#ifdef _WIN32
-#include "md5/MD5.h"
-#else
 #include "MD5.h"
-#endif
 
 const char *SidDatabase::ERR_DATABASE_CORRUPT        = "SID DATABASE ERROR: Database seems to be corrupt.";
 const char *SidDatabase::ERR_NO_DATABASE_LOADED      = "SID DATABASE ERROR: Songlength database not loaded.";

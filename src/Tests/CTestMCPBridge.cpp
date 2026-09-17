@@ -467,10 +467,10 @@ void CTestMCPBridge::Run(ITestCallback *cb)
 			return;
 		}
 
-		// Should be 44: 42 debugger + 2 bridge-local
-		if (toolCount != 44)
+		// Should be 46: 43 debugger + 3 bridge-local
+		if (toolCount != 46)
 		{
-			sprintf(sFailMsg, "Test %d FAIL: expected 44 tools, got %d", testNum, toolCount);
+			sprintf(sFailMsg, "Test %d FAIL: expected 46 tools, got %d", testNum, toolCount);
 			bridge.Stop();
 			FinishTest(false, sFailMsg);
 			return;
@@ -524,10 +524,25 @@ void CTestMCPBridge::Run(ITestCallback *cb)
 			json response = server.HandleRequest(request);
 			json tools = response["result"]["tools"];
 			int toolCount = (int)tools.size();
-			if (toolCount != 2)
+			if (toolCount != 3)
 			{
-				sprintf(sFailMsg, "Test %d FAIL: after disconnect expected 2 bridge-local tools, got %d",
+				sprintf(sFailMsg, "Test %d FAIL: after disconnect expected 3 bridge-local tools, got %d",
 						testNum, toolCount);
+				FinishTest(false, sFailMsg);
+				return;
+			}
+
+			// retro_shutdown has to survive the disconnect: shutting down an
+			// orphaned bridge is exactly what it is for.
+			bool hasShutdown = false;
+			for (const auto &t : tools)
+			{
+				if (t.value("name", std::string()) == "retro_shutdown")
+					hasShutdown = true;
+			}
+			if (!hasShutdown)
+			{
+				sprintf(sFailMsg, "Test %d FAIL: retro_shutdown missing from disconnected tool list", testNum);
 				FinishTest(false, sFailMsg);
 				return;
 			}
@@ -556,9 +571,9 @@ void CTestMCPBridge::Run(ITestCallback *cb)
 			json response = server.HandleRequest(request);
 			json tools = response["result"]["tools"];
 			int toolCount = (int)tools.size();
-			if (toolCount != 44)
+			if (toolCount != 46)
 			{
-				sprintf(sFailMsg, "Test %d FAIL: after reconnect expected 44 tools, got %d",
+				sprintf(sFailMsg, "Test %d FAIL: after reconnect expected 46 tools, got %d",
 						testNum, toolCount);
 				bridge2.Stop();
 				FinishTest(false, sFailMsg);

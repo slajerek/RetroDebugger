@@ -34,6 +34,7 @@
 #include "CViewC64Screen.h"
 #include "CViewAtariScreen.h"
 #include "CViewNesScreen.h"
+#include "MT_UiScale.h"
 
 // ASCII -> C64 Screen Code mapping tables
 // 0xFF = unmapped key (ignored)
@@ -122,7 +123,7 @@ CViewDataDump::CViewDataDump(const char *name, float posX, float posY, float pos
 	RebuildCharsetCombo();
 	fontCharacters = fonts[0];
 
-	fontSize = 7.0f;
+	fontSize = MT_UiScaled(7.0f);
 	
 	fontBytes = viewC64->fontDisassembly;
 	
@@ -272,7 +273,7 @@ void CViewDataDump::RecalculateFontSizes()
 	// workaround for broken layout
 	if (fontSize < 0.01f)
 	{
-		fontSize = 5.0f;
+		fontSize = MT_UiScaled(5.0f);
 	}
 		
 //	fontBytesSize = 10.0f * fontScale;

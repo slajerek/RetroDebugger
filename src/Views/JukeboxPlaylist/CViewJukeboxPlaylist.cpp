@@ -11,6 +11,7 @@
 #include "CViewSnapshots.h"
 #include "C64SettingsStorage.h"
 #include "CViewC64Screen.h"
+#include "MT_UiScale.h"
 
 // JukeBox playlist is a tool for having fun. It was created for the first ever C64 emulator in VR created by slajerek
 // and ought to be a demo player for VR. never finished, but definitely that was first C64 VR attempt i.e. world first :)
@@ -24,7 +25,7 @@ CViewJukeboxPlaylist::CViewJukeboxPlaylist(float posX, float posY, float posZ, f
 
 	this->mutex = new CSlrMutex("CViewJukeboxPlaylist");
 	this->font = viewC64->fontDisassembly;
-	fontSize = 5.0f;
+	fontSize = MT_UiScaled(5.0f);
 
 	this->playlist = NULL;
 	this->currentEntry = NULL;

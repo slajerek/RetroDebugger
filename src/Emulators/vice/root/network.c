@@ -640,6 +640,9 @@ void network_event_record(unsigned int type, void *data, unsigned int size)
 
 void network_attach_image(unsigned int unit, const char *filename)
 {
+    /* TODO: drive 1? */
+    unsigned int drive = 0;
+
     unsigned int control = NETWORK_CONTROL_DEVC;
 
     if (network_get_mode() == NETWORK_CLIENT) {
@@ -650,7 +653,7 @@ void network_attach_image(unsigned int unit, const char *filename)
         return;
     }
 
-    event_record_attach_in_list(&(frame_event_list[current_frame]), unit, filename, 1);
+    event_record_attach_in_list(&(frame_event_list[current_frame]), unit, drive, filename, 1);
 }
 
 int network_get_mode(void)

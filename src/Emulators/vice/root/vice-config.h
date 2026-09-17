@@ -386,8 +386,18 @@
 /* Define to 1 if you have the <netinet/in.h> header file. */
 #define HAVE_NETINET_IN_H 1
 
-/* Enable netplay support */
-// change me? #define HAVE_NETWORK /**/
+/* Enable netplay support.
+   c64d: enabled 2026-09 for the IDE64 USB server (pc-link). It also switches
+   on the socket layer (root/socket.c) and the VICE monitor servers; those all
+   stay dormant behind their default-off resources (MonitorServer=0,
+   BinaryMonitorServer=0, IDE64USBServer=0). */
+#define HAVE_NETWORK /**/
+
+/* c64d: monitor_binary.c is compiled on all three platforms as of 2026-09,
+   so the monitor_is_binary() stub in arch/vice310_stubs.c must NOT be used.
+   Without this, Linux gets a duplicate symbol (monitor_binary.c defines it
+   both under HAVE_NETWORK and in its #else branch). */
+#define HAVE_MONITOR_BINARY /**/
 
 /* Support for real device access (OpenCBM) */
 /* #undef HAVE_REALDEVICE */

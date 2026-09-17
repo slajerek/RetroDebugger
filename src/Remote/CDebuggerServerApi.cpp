@@ -20,6 +20,10 @@
 using namespace std;
 using namespace nlohmann;
 
+// How long a remote snapshot save/load waits for the emulation thread to reach
+// a CPU instruction boundary before failing (covers paused-mode 16ms polling).
+static const u32 SNAPSHOT_BOUNDARY_TIMEOUT_MS = 5000;
+
 // PNG in-memory write helpers for screen/snapshot endpoint
 static void PngWriteCallback(png_structp png_ptr, png_bytep data, png_size_t length)
 {
@@ -99,6 +103,35 @@ void CDebuggerServerApi::RegisterEndpoints(CDebuggerServer *server)
 	{
 		debuggerApi->DetachEverything();
 		return server->PrepareResult(HTTP_OK, token, json(), NULL, 0);
+	});
+
+	sprintf(buf, "%s/detachDiskImage", plat);
+	RegisterEndpoint(server, buf, plat, "control", "Detach the disk image from one drive without resetting the machine",
+	[this, server](const string token, json params, unsigned char *binaryData, int binaryDataSize) -> vector<char>*
+	{
+		int device = debuggerApi->GetDefaultDiskDriveNumber();
+		if (params.contains("device"))
+		{
+			device = params.at("device").get<int>();
+		}
+		
+		json result;
+		result["platform"] = debugInterface->GetPlatformNameEndpointString();
+		result["device"] = device;
+		
+		if (!debuggerApi->DetachDriveDisk(device))
+		{
+			result["error"] = "disk detach is not supported by this platform, or the device number is out of range";
+			return server->PrepareResult(HTTP_BAD_REQUEST, token, result, NULL, 0);
+		}
+		
+		json ev;
+		ev["platform"] = debugInterface->GetPlatformNameEndpointString();
+		ev["device"] = device;
+		server->BroadcastEvent("media.detached", ev);
+		
+		result["status"] = "detached";
+		return server->PrepareResult(HTTP_OK, token, result, NULL, 0);
 	});
 
 	sprintf(buf, "%s/warp/set", plat);
@@ -181,8 +214,17 @@ void CDebuggerServerApi::RegisterEndpoints(CDebuggerServer *server)
 	[this, server](const string token, json params, unsigned char *binaryData, int binaryDataSize) -> vector<char>*
 	{
 		int address = params.at("address").get<int>();
-		debuggerApi->MakeJmp(address);
-		return server->PrepareResult(HTTP_OK, token, json(), NULL, 0);
+		bool applied = debuggerApi->MakeJmp(address);
+		json result;
+		result["address"] = address;
+		result["applied"] = applied;
+		if (!applied)
+		{
+			// The PC change is queued but has not reached the CPU yet, so a step
+			// issued now would still execute at the old PC.
+			result["pendingPc"] = address;
+		}
+		return server->PrepareResult(HTTP_OK, token, result, NULL, 0);
 	});
 	
 	sprintf(buf, "%s/cpu/counters/read", plat);
@@ -668,24 +710,22 @@ void CDebuggerServerApi::RegisterEndpoints(CDebuggerServer *server)
 	RegisterEndpoint(server, buf, plat, "snapshot", "Save emulator snapshot as binary blob",
 	[this, server](const string token, json params, unsigned char *binaryData, int binaryDataSize) -> vector<char>*
 	{
+		CByteBuffer *byteBuffer = new CByteBuffer();
+		bool success = debugInterface->SaveChipsSnapshotAtCpuBoundary(byteBuffer, SNAPSHOT_BOUNDARY_TIMEOUT_MS);
+
+		if (success && byteBuffer->length > 0)
 		{
-			CDebugInterfaceMutexGuard lock(debugInterface);
-
-			CByteBuffer *byteBuffer = new CByteBuffer();
-			bool success = debugInterface->SaveChipsSnapshotSynced(byteBuffer);
-
-			if (success && byteBuffer->length > 0)
-			{
-				json result;
-				result["size"] = byteBuffer->length;
-				vector<char> *resp = server->PrepareResult(HTTP_OK, token, result, byteBuffer->data, byteBuffer->length);
-				delete byteBuffer;
-				return resp;
-			}
-
+			json result;
+			result["size"] = byteBuffer->length;
+			vector<char> *resp = server->PrepareResult(HTTP_OK, token, result, byteBuffer->data, byteBuffer->length);
 			delete byteBuffer;
-			return server->PrepareResult(HTTP_INTERNAL_SERVER_ERROR, token, json(), NULL, 0);
+			return resp;
 		}
+
+		delete byteBuffer;
+		json err;
+		err["error"] = "snapshot save did not complete at a CPU instruction boundary (emulator not running, or paused on Atari/NES?)";
+		return server->PrepareResult(HTTP_INTERNAL_SERVER_ERROR, token, err, NULL, 0);
 	}, false, true);
 
 	// Snapshot load — accepts snapshot binary blob
@@ -698,21 +738,18 @@ void CDebuggerServerApi::RegisterEndpoints(CDebuggerServer *server)
 			return server->PrepareResult(HTTP_BAD_REQUEST, token, json(), NULL, 0);
 		}
 
-		bool success;
-		{
-			CDebugInterfaceMutexGuard lock(debugInterface);
-
-			CByteBuffer *byteBuffer = new CByteBuffer(binaryData, binaryDataSize);
-			success = debugInterface->LoadChipsSnapshotSynced(byteBuffer);
-			delete byteBuffer;
-		}
+		CByteBuffer *byteBuffer = new CByteBuffer(binaryData, binaryDataSize);
+		bool success = debugInterface->LoadChipsSnapshotAtCpuBoundary(byteBuffer, SNAPSHOT_BOUNDARY_TIMEOUT_MS);
+		delete byteBuffer;
 
 		if (success)
 			return server->PrepareResult(HTTP_OK, token, json(), NULL, 0);
-		return server->PrepareResult(HTTP_INTERNAL_SERVER_ERROR, token, json(), NULL, 0);
+		json err;
+		err["error"] = "snapshot load did not complete at a CPU instruction boundary (emulator not running, or paused on Atari/NES?)";
+		return server->PrepareResult(HTTP_INTERNAL_SERVER_ERROR, token, err, NULL, 0);
 	}, true);
 
-	// Snapshot save to file — uses SaveChipsSnapshotSynced (synchronous) then writes to file
+	// Snapshot save to file — uses SaveChipsSnapshotAtCpuBoundary (CPU-boundary-synced) then writes to file
 	sprintf(buf, "%s/snapshot/saveFile", plat);
 	RegisterEndpoint(server, buf, plat, "snapshot", "Save emulator snapshot to a file path",
 	[this, server](const string token, json params, unsigned char *binaryData, int binaryDataSize) -> vector<char>*
@@ -720,12 +757,14 @@ void CDebuggerServerApi::RegisterEndpoints(CDebuggerServer *server)
 		string path = params.at("path").get<string>();
 
 		CByteBuffer *byteBuffer = new CByteBuffer();
-		bool success = debugInterface->SaveChipsSnapshotSynced(byteBuffer);
+		bool success = debugInterface->SaveChipsSnapshotAtCpuBoundary(byteBuffer, SNAPSHOT_BOUNDARY_TIMEOUT_MS);
 
 		if (!success || byteBuffer->length == 0)
 		{
 			delete byteBuffer;
-			return server->PrepareResult(HTTP_INTERNAL_SERVER_ERROR, token, json(), NULL, 0);
+			json err;
+			err["error"] = "snapshot save did not complete at a CPU instruction boundary (emulator not running, or paused on Atari/NES?)";
+			return server->PrepareResult(HTTP_INTERNAL_SERVER_ERROR, token, err, NULL, 0);
 		}
 
 		FILE *f = fopen(path.c_str(), "wb");
@@ -744,7 +783,7 @@ void CDebuggerServerApi::RegisterEndpoints(CDebuggerServer *server)
 		return server->PrepareResult(HTTP_OK, token, result, NULL, 0);
 	});
 
-	// Snapshot load from file — reads file then uses LoadChipsSnapshotSynced (synchronous)
+	// Snapshot load from file — reads file then uses LoadChipsSnapshotAtCpuBoundary (CPU-boundary-synced)
 	sprintf(buf, "%s/snapshot/loadFile", plat);
 	RegisterEndpoint(server, buf, plat, "snapshot", "Load emulator snapshot from a file path",
 	[this, server](const string token, json params, unsigned char *binaryData, int binaryDataSize) -> vector<char>*
@@ -771,7 +810,7 @@ void CDebuggerServerApi::RegisterEndpoints(CDebuggerServer *server)
 
 		// CByteBuffer takes ownership of 'data' and frees it in its destructor
 		CByteBuffer *byteBuffer = new CByteBuffer(data, (int)fileSize);
-		bool success = debugInterface->LoadChipsSnapshotSynced(byteBuffer);
+		bool success = debugInterface->LoadChipsSnapshotAtCpuBoundary(byteBuffer, SNAPSHOT_BOUNDARY_TIMEOUT_MS);
 		delete byteBuffer; // also frees 'data'
 
 		if (success)
@@ -781,7 +820,9 @@ void CDebuggerServerApi::RegisterEndpoints(CDebuggerServer *server)
 			result["size"] = (long)fileSize;
 			return server->PrepareResult(HTTP_OK, token, result, NULL, 0);
 		}
-		return server->PrepareResult(HTTP_INTERNAL_SERVER_ERROR, token, json(), NULL, 0);
+		json err;
+		err["error"] = "snapshot load did not complete at a CPU instruction boundary (emulator not running, or paused on Atari/NES?)";
+		return server->PrepareResult(HTTP_INTERNAL_SERVER_ERROR, token, err, NULL, 0);
 	});
 
 	// Quick snapshot save — saves to the standard quick-slot file (slot is 1-indexed, matching RetroDebugger UI)
@@ -810,12 +851,14 @@ void CDebuggerServerApi::RegisterEndpoints(CDebuggerServer *server)
 		path += fname;
 
 		CByteBuffer *byteBuffer = new CByteBuffer();
-		bool success = debugInterface->SaveChipsSnapshotSynced(byteBuffer);
+		bool success = debugInterface->SaveChipsSnapshotAtCpuBoundary(byteBuffer, SNAPSHOT_BOUNDARY_TIMEOUT_MS);
 
 		if (!success || byteBuffer->length == 0)
 		{
 			delete byteBuffer;
-			return server->PrepareResult(HTTP_INTERNAL_SERVER_ERROR, token, json(), NULL, 0);
+			json err;
+			err["error"] = "snapshot save did not complete at a CPU instruction boundary (emulator not running, or paused on Atari/NES?)";
+			return server->PrepareResult(HTTP_INTERNAL_SERVER_ERROR, token, err, NULL, 0);
 		}
 
 		FILE *f = fopen(path.c_str(), "wb");
@@ -879,7 +922,7 @@ void CDebuggerServerApi::RegisterEndpoints(CDebuggerServer *server)
 		fclose(f);
 
 		CByteBuffer *byteBuffer = new CByteBuffer(data, (int)fileSize);
-		bool success = debugInterface->LoadChipsSnapshotSynced(byteBuffer);
+		bool success = debugInterface->LoadChipsSnapshotAtCpuBoundary(byteBuffer, SNAPSHOT_BOUNDARY_TIMEOUT_MS);
 		delete byteBuffer;
 
 		if (success)
@@ -890,7 +933,9 @@ void CDebuggerServerApi::RegisterEndpoints(CDebuggerServer *server)
 			result["size"] = (long)fileSize;
 			return server->PrepareResult(HTTP_OK, token, result, NULL, 0);
 		}
-		return server->PrepareResult(HTTP_INTERNAL_SERVER_ERROR, token, json(), NULL, 0);
+		json err;
+		err["error"] = "snapshot load did not complete at a CPU instruction boundary (emulator not running, or paused on Atari/NES?)";
+		return server->PrepareResult(HTTP_INTERNAL_SERVER_ERROR, token, err, NULL, 0);
 	});
 
 	// --- Input injection ---

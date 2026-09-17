@@ -89,6 +89,12 @@ C64DebuggerPluginCrtMaker::C64DebuggerPluginCrtMaker()
 	pluginCrtMaker = this;
 }
 
+C64DebuggerPluginCrtMaker::~C64DebuggerPluginCrtMaker()
+{
+	if (pluginCrtMaker == this)
+		pluginCrtMaker = NULL;
+}
+
 void C64DebuggerPluginCrtMaker::Init()
 {
 	LOGD("C64DebuggerPluginCrtMaker::Init");

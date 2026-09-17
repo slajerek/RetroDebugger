@@ -80,25 +80,63 @@ void CTestArpCycling::Run(ITestCallback *cb)
 		return;
 	}
 
-	// --- Test 4: Base OFF, arp columns remain → arpcount=2 ---
+	// --- Test 4a: KEYOFF (gate off) keeps the base in the cycle ---
+	// The gate belongs to the main track and the arp cycle ignores it:
+	// after a KEYOFF the chord keeps cycling through the release.
 	testchn.gate = 0xfe; // gate off
 	testchn.note = 24;
 	testchn.newnote = 0;
 	rebuildarp(&testchn);
 
-	if (testchn.arpcount != 2)
+	if (testchn.arpcount != 3 || !testchn.arpbase)
 	{
-		sprintf(failureMsg, "Test 4 FAIL: expected arpcount=2, got %d", testchn.arpcount);
+		sprintf(failureMsg, "Test 4a FAIL: expected arpcount=3 arpbase=1 with gate off, got %d/%d",
+				testchn.arpcount, testchn.arpbase);
+		TestCompleted(false, failureMsg);
+		return;
+	}
+	if (testchn.arpnotes[0] != 24 || testchn.arpnotes[1] != 28 || testchn.arpnotes[2] != 31)
+	{
+		sprintf(failureMsg, "Test 4a FAIL: notes [%d,%d,%d] expected [24,28,31]",
+				testchn.arpnotes[0], testchn.arpnotes[1], testchn.arpnotes[2]);
+		TestCompleted(false, failureMsg);
+		return;
+	}
+
+	// --- Test 4b: No base note at all, arp columns remain → arpcount=2 ---
+	testchn.note = 0;
+	testchn.newnote = 0;
+	rebuildarp(&testchn);
+
+	if (testchn.arpcount != 2 || testchn.arpbase)
+	{
+		sprintf(failureMsg, "Test 4b FAIL: expected arpcount=2 arpbase=0, got %d/%d",
+				testchn.arpcount, testchn.arpbase);
 		TestCompleted(false, failureMsg);
 		return;
 	}
 	if (testchn.arpnotes[0] != 28 || testchn.arpnotes[1] != 31)
 	{
-		sprintf(failureMsg, "Test 4 FAIL: notes [%d,%d] expected [28,31]",
+		sprintf(failureMsg, "Test 4b FAIL: notes [%d,%d] expected [28,31]",
 				testchn.arpnotes[0], testchn.arpnotes[1]);
 		TestCompleted(false, failureMsg);
 		return;
 	}
+
+	// --- Test 4c: pending newnote replaces the base immediately ---
+	testchn.note = 24;
+	testchn.newnote = FIRSTNOTE + 36;
+	rebuildarp(&testchn);
+	if (testchn.arpcount != 3 || testchn.arpnotes[0] != 36)
+	{
+		sprintf(failureMsg, "Test 4c FAIL: expected [36,28,31], got count=%d first=%d",
+				testchn.arpcount, testchn.arpnotes[0]);
+		TestCompleted(false, failureMsg);
+		return;
+	}
+	testchn.note = 0;
+	testchn.newnote = 0;
+	rebuildarp(&testchn);
 
 	// --- Test 5: Cycling position wraps ---
 	testchn.arppos = 0;
@@ -134,7 +172,7 @@ void CTestArpCycling::Run(ITestCallback *cb)
 	}
 
 	numarpcolumns = savedArpCols;  // Restore
-	TestCompleted(true, "All arp cycling tests passed (6/6)");
+	TestCompleted(true, "All arp cycling tests passed (8/8)");
 }
 
 void CTestArpCycling::Cancel()

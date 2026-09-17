@@ -76,7 +76,6 @@ void joinpattern(void);
 // Edit mode constant (from goattrk2.h)
 #define EDIT_PATTERN 0
 
-static const size_t kGT2PatternUndoLimit = 32;
 
 #ifndef WAVECMD
 #define WAVECMD 0xf0
@@ -114,23 +113,6 @@ int gt2EchoRowStep     = 2;      // row spacing between echoes (>=1)
 // order; if the source channel is in the mask the cycle starts there,
 // otherwise at the next selected channel after the source.
 int gt2EchoChannelMask = 0;
-
-CViewGT2Patterns::PatternUndoSnapshot::PatternUndoSnapshot()
-: cursorRow(0)
-, cursorView(0)
-, cursorColumn(0)
-, cursorChannel(0)
-, cursorArpColumn(-1)
-, selectionActive(false)
-, selectionStartTrack(0)
-, selectionStartRow(0)
-, selectionEndTrack(0)
-, selectionEndRow(0)
-, selectionStartFineField(0)
-, selectionEndFineField(0)
-, selectionFineMode(false)
-{
-}
 
 CViewGT2Patterns::CViewGT2Patterns(const char *name, float posX, float posY, float posZ,
 									float sizeX, float sizeY, CGT2FontAtlas *fontAtlas)
@@ -387,74 +369,30 @@ bool CViewGT2Patterns::HasPatternSelection() const
 	return patternSelectionActive;
 }
 
+// Capture / restore / compare are the shared history's -- pattern edits, table
+// edits and instrument loads all record the same snapshot type on the same
+// stack, so Ctrl+Z takes back the last change whatever kind it was.
 CViewGT2Patterns::PatternUndoSnapshot CViewGT2Patterns::CapturePatternUndoSnapshot() const
 {
-	PatternUndoSnapshot snapshot;
-	const u8 *patternBegin = &pattern[0][0];
-	const u8 *arpBegin = &arpdata[0][0][0][0];
-	snapshot.patternData.assign(patternBegin, patternBegin + sizeof(pattern));
-	snapshot.arpData.assign(arpBegin, arpBegin + sizeof(arpdata));
-	for (int c = 0; c < MAX_CHN; c++)
-		for (int a = 0; a < MAX_ARP_COLS; a++)
-			snapshot.arpColumnNotes.push_back(chn[c].arpcolnotes[a]);
-	snapshot.patternLengths.assign(pattlen, pattlen + MAX_PATT);
-	snapshot.patternNumbers.assign(epnum, epnum + MAX_CHN);
-	const u8 *songOrderBegin = &songorder[0][0][0];
-	snapshot.songOrderData.assign(songOrderBegin, songOrderBegin + sizeof(songorder));
-	snapshot.songLengths.assign(&songlen[0][0], &songlen[0][0] + MAX_SONGS * MAX_CHN);
-	const u8 *leftTableBegin = &ltable[0][0];
-	const u8 *rightTableBegin = &rtable[0][0];
-	snapshot.leftTableData.assign(leftTableBegin, leftTableBegin + sizeof(ltable));
-	snapshot.rightTableData.assign(rightTableBegin, rightTableBegin + sizeof(rtable));
-	const u8 *instrBegin = (const u8 *)&ginstr[0];
-	snapshot.instrumentData.assign(instrBegin, instrBegin + sizeof(ginstr));
-	snapshot.cursorRow = eppos;
-	snapshot.cursorView = epview;
-	snapshot.cursorColumn = epcolumn;
-	snapshot.cursorChannel = epchn;
-	snapshot.cursorArpColumn = eparpcol;
-	snapshot.selectionActive = patternSelectionActive;
-	snapshot.selectionStartTrack = patternSelectionStartTrack;
-	snapshot.selectionStartRow = patternSelectionStartRow;
-	snapshot.selectionEndTrack = patternSelectionEndTrack;
-	snapshot.selectionEndRow = patternSelectionEndRow;
-	snapshot.selectionStartFineField = patternSelectionStartFineField;
-	snapshot.selectionEndFineField = patternSelectionEndFineField;
-	snapshot.selectionFineMode = patternSelectionFineMode;
-	return snapshot;
+	return GT2UndoHistory()->Capture();
 }
 
-void CViewGT2Patterns::RestorePatternUndoSnapshot(const PatternUndoSnapshot &snapshot)
+void CViewGT2Patterns::CaptureUndoViewState(CGT2UndoSnapshot *snapshot) const
 {
-	if (snapshot.patternData.size() == sizeof(pattern))
-		memcpy(&pattern[0][0], snapshot.patternData.data(), sizeof(pattern));
-	if (snapshot.arpData.size() == sizeof(arpdata))
-		memcpy(&arpdata[0][0][0][0], snapshot.arpData.data(), sizeof(arpdata));
-	if (snapshot.arpColumnNotes.size() == MAX_CHN * MAX_ARP_COLS)
-	{
-		int noteIndex = 0;
-		for (int c = 0; c < MAX_CHN; c++)
-			for (int a = 0; a < MAX_ARP_COLS; a++)
-				chn[c].arpcolnotes[a] = snapshot.arpColumnNotes[noteIndex++];
-	}
-	if (snapshot.patternLengths.size() == MAX_PATT)
-		memcpy(pattlen, snapshot.patternLengths.data(), sizeof(int) * MAX_PATT);
-	if (snapshot.patternNumbers.size() == MAX_CHN)
-		memcpy(epnum, snapshot.patternNumbers.data(), sizeof(int) * MAX_CHN);
-	if (snapshot.songOrderData.size() == sizeof(songorder))
-		memcpy(&songorder[0][0][0], snapshot.songOrderData.data(), sizeof(songorder));
-	if (snapshot.songLengths.size() == MAX_SONGS * MAX_CHN)
-		memcpy(&songlen[0][0], snapshot.songLengths.data(), sizeof(int) * MAX_SONGS * MAX_CHN);
-	if (snapshot.leftTableData.size() == sizeof(ltable))
-		memcpy(&ltable[0][0], snapshot.leftTableData.data(), sizeof(ltable));
-	if (snapshot.rightTableData.size() == sizeof(rtable))
-		memcpy(&rtable[0][0], snapshot.rightTableData.data(), sizeof(rtable));
-	if (snapshot.instrumentData.size() == sizeof(ginstr))
-		memcpy(&ginstr[0], snapshot.instrumentData.data(), sizeof(ginstr));
-	eppos = snapshot.cursorRow;
-	epview = snapshot.cursorView;
-	epcolumn = snapshot.cursorColumn;
-	epchn = snapshot.cursorChannel;
+	if (snapshot == NULL) return;
+	snapshot->cursorArpColumn = eparpcol;
+	snapshot->selectionActive = patternSelectionActive;
+	snapshot->selectionStartTrack = patternSelectionStartTrack;
+	snapshot->selectionStartRow = patternSelectionStartRow;
+	snapshot->selectionEndTrack = patternSelectionEndTrack;
+	snapshot->selectionEndRow = patternSelectionEndRow;
+	snapshot->selectionStartFineField = patternSelectionStartFineField;
+	snapshot->selectionEndFineField = patternSelectionEndFineField;
+	snapshot->selectionFineMode = patternSelectionFineMode;
+}
+
+void CViewGT2Patterns::RestoreUndoViewState(const CGT2UndoSnapshot &snapshot)
+{
 	eparpcol = snapshot.cursorArpColumn;
 	patternSelectionActive = snapshot.selectionActive;
 	patternSelectionStartTrack = snapshot.selectionStartTrack;
@@ -466,41 +404,20 @@ void CViewGT2Patterns::RestorePatternUndoSnapshot(const PatternUndoSnapshot &sna
 	patternSelectionFineMode = snapshot.selectionFineMode;
 }
 
-bool CViewGT2Patterns::PatternUndoSnapshotsHaveSameData(const PatternUndoSnapshot &a, const PatternUndoSnapshot &b) const
+void CViewGT2Patterns::OnUndoHistoryRestored()
 {
-	// Cursor and live arp-cache fields are restored with data snapshots, but do
-	// not create history entries by themselves; navigation/cache-only changes
-	// should not become undoable pattern edits.
-	return a.patternData == b.patternData
-		&& a.arpData == b.arpData
-		&& a.patternLengths == b.patternLengths
-		&& a.patternNumbers == b.patternNumbers
-		&& a.songOrderData == b.songOrderData
-		&& a.songLengths == b.songLengths
-		&& a.leftTableData == b.leftTableData
-		&& a.rightTableData == b.rightTableData
-		&& a.instrumentData == b.instrumentData;
-}
-
-void CViewGT2Patterns::PushPatternUndoSnapshot(const PatternUndoSnapshot &snapshot)
-{
-	patternUndoStack.push_back(snapshot);
-	if (patternUndoStack.size() > kGT2PatternUndoLimit)
-		patternUndoStack.erase(patternUndoStack.begin());
-	patternRedoStack.clear();
+	ClearAllChannelRowSpill();
 }
 
 bool CViewGT2Patterns::CommitPatternUndoSnapshotIfChanged(const PatternUndoSnapshot &before)
 {
 	// Value mode: drop any speed-table entry this edit left unreferenced, so
-	// the table stays compact. The sweep is part of the same undo step.
+	// the table stays compact. The sweep is part of the same undo step, and it
+	// is a pattern-editor concern -- table edits and instrument loads commit
+	// straight to the history without it.
 	SweepUnusedSpeedtableEntries();
-	PatternUndoSnapshot after = CapturePatternUndoSnapshot();
-	if (PatternUndoSnapshotsHaveSameData(before, after))
+	if (!GT2UndoHistory()->CommitIfChanged(before))
 		return false;
-	PushPatternUndoSnapshot(before);
-	if (pluginGoatTracker && pluginGoatTracker->viewTables)
-		pluginGoatTracker->viewTables->ClearTableUndoHistory();
 	// Any pattern edit other than Insert/Remove Row invalidates the spill
 	// stash; those two suppress this so a contiguous run can round-trip.
 	if (!preservingRowSpill)
@@ -510,48 +427,33 @@ bool CViewGT2Patterns::CommitPatternUndoSnapshotIfChanged(const PatternUndoSnaps
 
 bool CViewGT2Patterns::CanUndoPatternEdit() const
 {
-	return !patternUndoStack.empty();
+	return GT2UndoHistory()->CanUndo();
 }
 
 bool CViewGT2Patterns::CanRedoPatternEdit() const
 {
-	return !patternRedoStack.empty();
+	return GT2UndoHistory()->CanRedo();
 }
 
 bool CViewGT2Patterns::UndoPatternEdit()
 {
-	if (patternUndoStack.empty())
+	if (!GT2UndoHistory()->Undo())
 		return false;
-	PatternUndoSnapshot current = CapturePatternUndoSnapshot();
-	PatternUndoSnapshot previous = patternUndoStack.back();
-	patternUndoStack.pop_back();
-	patternRedoStack.push_back(current);
-	if (patternRedoStack.size() > kGT2PatternUndoLimit)
-		patternRedoStack.erase(patternRedoStack.begin());
-	RestorePatternUndoSnapshot(previous);
-	ClearAllChannelRowSpill();
+	OnUndoHistoryRestored();
 	return true;
 }
 
 bool CViewGT2Patterns::RedoPatternEdit()
 {
-	if (patternRedoStack.empty())
+	if (!GT2UndoHistory()->Redo())
 		return false;
-	PatternUndoSnapshot current = CapturePatternUndoSnapshot();
-	PatternUndoSnapshot next = patternRedoStack.back();
-	patternRedoStack.pop_back();
-	patternUndoStack.push_back(current);
-	if (patternUndoStack.size() > kGT2PatternUndoLimit)
-		patternUndoStack.erase(patternUndoStack.begin());
-	RestorePatternUndoSnapshot(next);
-	ClearAllChannelRowSpill();
+	OnUndoHistoryRestored();
 	return true;
 }
 
 void CViewGT2Patterns::ClearPatternUndoHistory()
 {
-	patternUndoStack.clear();
-	patternRedoStack.clear();
+	GT2UndoHistory()->Clear();
 	pendingPatternUndoSnapshotActive = false;
 	ClearAllChannelRowSpill();
 }
@@ -1708,7 +1610,7 @@ bool CViewGT2Patterns::ExpandPhrase()
 
 bool CViewGT2Patterns::HandlePatternSelectionShortcut(u32 keyCode, bool isShift)
 {
-	if (isShift && (keyCode == 'v' || keyCode == 'V' || keyCode == SDLK_v))
+	if (isShift && (keyCode == 'v' || keyCode == 'V' || keyCode == SDLK_V))
 	{
 		if (patternClipboard.empty() || patternClipboardWidth <= 0 || patternClipboardHeight <= 0)
 			return false;
@@ -1721,12 +1623,12 @@ bool CViewGT2Patterns::HandlePatternSelectionShortcut(u32 keyCode, bool isShift)
 		return false;
 	if (isShift)
 	{
-		if (keyCode == 'c' || keyCode == 'C' || keyCode == SDLK_c) { CopyPatternSelection(); return true; }
-		if (keyCode == 'x' || keyCode == 'X' || keyCode == SDLK_x) { CutPatternSelection(); return true; }
-		if (keyCode == 'q' || keyCode == 'Q' || keyCode == SDLK_q) { TransposePatternSelection(12); return true; }
-		if (keyCode == 'a' || keyCode == 'A' || keyCode == SDLK_a) { TransposePatternSelection(-12); return true; }
-		if (keyCode == 'w' || keyCode == 'W' || keyCode == SDLK_w) { TransposePatternSelection(1); return true; }
-		if (keyCode == 's' || keyCode == 'S' || keyCode == SDLK_s) { TransposePatternSelection(-1); return true; }
+		if (keyCode == 'c' || keyCode == 'C' || keyCode == SDLK_C) { CopyPatternSelection(); return true; }
+		if (keyCode == 'x' || keyCode == 'X' || keyCode == SDLK_X) { CutPatternSelection(); return true; }
+		if (keyCode == 'q' || keyCode == 'Q' || keyCode == SDLK_Q) { TransposePatternSelection(12); return true; }
+		if (keyCode == 'a' || keyCode == 'A' || keyCode == SDLK_A) { TransposePatternSelection(-12); return true; }
+		if (keyCode == 'w' || keyCode == 'W' || keyCode == SDLK_W) { TransposePatternSelection(1); return true; }
+		if (keyCode == 's' || keyCode == 'S' || keyCode == SDLK_S) { TransposePatternSelection(-1); return true; }
 	}
 	bool isDeleteKey = (keyCode == MTKEY_DELETE || keyCode == SDLK_DELETE);
 	bool isBackspaceKey = (keyCode == MTKEY_BACKSPACE || keyCode == SDLK_BACKSPACE);
@@ -2969,8 +2871,8 @@ bool CViewGT2Patterns::HandleCommandValueKey(u32 keyCode, bool isShift, bool isA
 
 	// Undo / redo: cancel the in-progress edit, then let the undo run.
 	if (ctrlLike && !isAlt
-		&& (keyCode == 'z' || keyCode == 'Z' || keyCode == SDLK_z
-			|| keyCode == 'y' || keyCode == 'Y' || keyCode == SDLK_y))
+		&& (keyCode == 'z' || keyCode == 'Z' || keyCode == SDLK_Z
+			|| keyCode == 'y' || keyCode == 'Y' || keyCode == SDLK_Y))
 	{
 		CancelPendingCommandValueEdit();
 		return false;
@@ -3681,11 +3583,20 @@ void CViewGT2Patterns::RenderContextMenu()
 	if (ImGui::IsKeyPressed(ImGuiKey_Escape))
 		ImGui::CloseCurrentPopup();
 
-	if (contextMenuOnCommand)
-	{
-		RenderPatternCommandEditor();
-		ImGui::Separator();
-	}
+	// The Edit Effect block that used to open this menu now lives in its own
+	// view -- GoatTracker -> GT2 Pattern Row -- which renders this exact call
+	// and follows the cursor instead of a click target. Two copies of it on
+	// screen is one too many, so the menu keeps only the actions below.
+	//
+	// Deliberately kept, not deleted: this is the other half of the shared-
+	// renderer arrangement described in the pattern-row notes,
+	// and uncommenting the block is how the menu gets it back.
+	//
+	//   if (contextMenuOnCommand)
+	//   {
+	//       RenderPatternCommandEditor();
+	//       ImGui::Separator();
+	//   }
 
 	bool hasSelection = patternSelectionActive;
 	bool canPasteSelection = !patternClipboard.empty() && patternClipboardWidth > 0 && patternClipboardHeight > 0;
@@ -4250,6 +4161,64 @@ bool CViewGT2Patterns::HandleMainTrackNoteEntry(u32 keyCode, bool isShift, bool 
 	return true;
 }
 
+bool CViewGT2Patterns::HandlePatternHexEntry(u32 keyCode, bool isShift, bool isAlt, bool isControl, bool isSuper)
+{
+	// gpattern.c:1209 writes a typed hex digit into the instrument byte
+	// (epcolumn 1/2) or the command byte and its argument (3/4/5). Under
+	// KEY_RENOISE that code is unreachable: the pattern view's fall-through
+	// is GT2_ForwardKeyDown(), which returns without queueing anything for
+	// the Renoise layout, so the digit was simply dropped. Note entry kept
+	// working because HandleMainTrackNoteEntry() had already been moved here.
+	if (isShift || isAlt || isControl || isSuper) return false;
+	if (editmode != EDIT_PATTERN) return false;
+	if (eamode || menu) return false;
+	if (eparpcol >= 0) return false;      // arp columns are HandleArpKey's
+	if (epInSustain) return false;        // sustain has its own handler
+	if (!recordmode) return false;        // native edits only in record mode
+	if (epcolumn < 1 || epcolumn > 5) return false;
+
+	// Command Value Mode owns the command area and deliberately treats some
+	// of it as a no-op; it runs before this and must keep those columns.
+	if (gt2CommandValueMode && epcolumn >= 3) return false;
+
+	int hex = GT2_HexFromKey(keyCode);
+	if (hex < 0) return false;
+
+	int pn = epnum[epchn];
+	if (eppos >= 0 && eppos < pattlen[pn])
+	{
+		PatternUndoSnapshot before = CapturePatternUndoSnapshot();
+		unsigned char *cell = &pattern[pn][eppos * 4];
+		switch (epcolumn)
+		{
+			case 1:
+				cell[1] = (unsigned char)(((cell[1] & 0x0f) | (hex << 4)) & (MAX_INSTR - 1));
+				break;
+			case 2:
+				cell[1] = (unsigned char)(((cell[1] & 0xf0) | hex) & (MAX_INSTR - 1));
+				break;
+			case 3:
+				cell[2] = (unsigned char)hex;
+				// Clearing the command clears its argument with it.
+				if (cell[2] == 0) cell[3] = 0;
+				break;
+			case 4:
+				cell[3] = (unsigned char)((cell[3] & 0x0f) | (hex << 4));
+				if (cell[2] == 0) cell[3] = 0;
+				break;
+			case 5:
+				cell[3] = (unsigned char)((cell[3] & 0xf0) | hex);
+				if (cell[2] == 0) cell[3] = 0;
+				break;
+		}
+		CommitPatternUndoSnapshotIfChanged(before);
+	}
+
+	// Native advances even when the row was out of range, so do the same.
+	AdvanceCommandValueCursor();
+	return true;
+}
+
 bool CViewGT2Patterns::HandlePatternEnterKey(u32 keyCode, bool isShift, bool isAlt, bool isControl, bool isSuper)
 {
 	if (keyCode != MTKEY_ENTER) return false;
@@ -4645,17 +4614,22 @@ bool CViewGT2Patterns::KeyDown(u32 keyCode, bool isShift, bool isAlt, bool isCon
 	// Sustain column edit — only fires when the cursor is parked on it.
 	if (HandleSustainColumnKey(keyCode, isShift, isAlt, isControl, isSuper))
 		return true;
+	// Hex digits on the instrument / command columns. Runs before the
+	// modifier blocks below, but claims bare keys only, so Shift+1..3 (mute)
+	// and the Ctrl/Shift shortcuts still reach them.
+	if (HandlePatternHexEntry(keyCode, isShift, isAlt, isControl, isSuper))
+		return true;
 
 	if (!isShift && !isAlt && (isControl || isSuper))
 	{
-		if (keyCode == 'a' || keyCode == 'A' || keyCode == SDLK_a)
+		if (keyCode == 'a' || keyCode == 'A' || keyCode == SDLK_A)
 			return SelectWholePattern();
-		if (keyCode == 'z' || keyCode == 'Z' || keyCode == SDLK_z)
+		if (keyCode == 'z' || keyCode == 'Z' || keyCode == SDLK_Z)
 		{
 			UndoPatternEdit();
 			return true;
 		}
-		if (keyCode == 'y' || keyCode == 'Y' || keyCode == SDLK_y)
+		if (keyCode == 'y' || keyCode == 'Y' || keyCode == SDLK_Y)
 		{
 			RedoPatternEdit();
 			return true;
@@ -4664,57 +4638,57 @@ bool CViewGT2Patterns::KeyDown(u32 keyCode, bool isShift, bool isAlt, bool isCon
 
 	if (isShift && !isAlt && !isControl && !isSuper)
 	{
-		if (keyCode == 'l' || keyCode == 'L' || keyCode == SDLK_l)
+		if (keyCode == 'l' || keyCode == 'L' || keyCode == SDLK_L)
 			return SelectWholePattern();
-		if (keyCode == 'e' || keyCode == 'E' || keyCode == SDLK_e)
+		if (keyCode == 'e' || keyCode == 'E' || keyCode == SDLK_E)
 			return CopyEffectsAtCursorOrSelection();
-		if (keyCode == 'r' || keyCode == 'R' || keyCode == SDLK_r)
+		if (keyCode == 'r' || keyCode == 'R' || keyCode == SDLK_R)
 			return PasteEffectsAtCursor();
-		if (keyCode == 'h' || keyCode == 'H' || keyCode == SDLK_h)
+		if (keyCode == 'h' || keyCode == 'H' || keyCode == SDLK_H)
 			return MakeHiFiVibratoPortaSpeed();
-		if (keyCode == 'i' || keyCode == 'I' || keyCode == SDLK_i)
+		if (keyCode == 'i' || keyCode == 'I' || keyCode == SDLK_I)
 			return InvertSelectionOrPattern();
-		if (keyCode == 'j' || keyCode == 'J' || keyCode == SDLK_j)
+		if (keyCode == 'j' || keyCode == 'J' || keyCode == SDLK_J)
 			return JoinPatternAtCursor();
-		if (keyCode == 'k' || keyCode == 'K' || keyCode == SDLK_k)
+		if (keyCode == 'k' || keyCode == 'K' || keyCode == SDLK_K)
 			return SplitPatternAtCursor();
-		if (keyCode == 'm' || keyCode == 'M' || keyCode == SDLK_m)
+		if (keyCode == 'm' || keyCode == 'M' || keyCode == SDLK_M)
 			return AdjustHighlightStep(1);
-		if (keyCode == 'n' || keyCode == 'N' || keyCode == SDLK_n)
+		if (keyCode == 'n' || keyCode == 'N' || keyCode == SDLK_N)
 			return AdjustHighlightStep(-1);
-		if (keyCode == 'o' || keyCode == 'O' || keyCode == SDLK_o)
+		if (keyCode == 'o' || keyCode == 'O' || keyCode == SDLK_O)
 			return ShrinkSelectionOrPattern();
-		if (keyCode == 'p' || keyCode == 'P' || keyCode == SDLK_p)
+		if (keyCode == 'p' || keyCode == 'P' || keyCode == SDLK_P)
 			return ExpandSelectionOrPattern();
-		if (keyCode == 'z' || keyCode == 'Z' || keyCode == SDLK_z)
+		if (keyCode == 'z' || keyCode == 'Z' || keyCode == SDLK_Z)
 			return CycleAutoadvanceMode();
-		if (keyCode == 'c' || keyCode == 'C' || keyCode == SDLK_c)
+		if (keyCode == 'c' || keyCode == 'C' || keyCode == SDLK_C)
 			return patternSelectionActive ? CopyPatternSelection() : CopyPhrase();
-		if (keyCode == 'x' || keyCode == 'X' || keyCode == SDLK_x)
+		if (keyCode == 'x' || keyCode == 'X' || keyCode == SDLK_X)
 			return patternSelectionActive ? CutPatternSelection() : CutPhrase();
-		if (keyCode == 'v' || keyCode == 'V' || keyCode == SDLK_v)
+		if (keyCode == 'v' || keyCode == 'V' || keyCode == SDLK_V)
 			return patternSelectionActive ? PasteAtCursor() : PastePhrase();
 		// Shift+Q/A/W/S: transpose. Without an active selection they used
 		// to fall through to native GT2 which transposes the marked OR whole
 		// pattern silently — destructive. TransposeAtCursor already prefers
 		// the selection when active and falls back to the cursor cell.
-		if (keyCode == 'q' || keyCode == 'Q' || keyCode == SDLK_q)
+		if (keyCode == 'q' || keyCode == 'Q' || keyCode == SDLK_Q)
 			return TransposeAtCursor(12);
-		if (keyCode == 'a' || keyCode == 'A' || keyCode == SDLK_a)
+		if (keyCode == 'a' || keyCode == 'A' || keyCode == SDLK_A)
 			return TransposeAtCursor(-12);
-		if (keyCode == 'w' || keyCode == 'W' || keyCode == SDLK_w)
+		if (keyCode == 'w' || keyCode == 'W' || keyCode == SDLK_W)
 			return TransposeAtCursor(1);
-		if (keyCode == 's' || keyCode == 'S' || keyCode == SDLK_s)
+		if (keyCode == 's' || keyCode == 'S' || keyCode == SDLK_S)
 			return TransposeAtCursor(-1);
 	}
 
 	if (!isAlt && !isShift && (isControl || isSuper))
 	{
-		if (keyCode == 'c' || keyCode == 'C' || keyCode == SDLK_c)
+		if (keyCode == 'c' || keyCode == 'C' || keyCode == SDLK_C)
 			return CopyAtCursor();
-		if (keyCode == 'x' || keyCode == 'X' || keyCode == SDLK_x)
+		if (keyCode == 'x' || keyCode == 'X' || keyCode == SDLK_X)
 			return CutAtCursor();
-		if (keyCode == 'v' || keyCode == 'V' || keyCode == SDLK_v)
+		if (keyCode == 'v' || keyCode == 'V' || keyCode == SDLK_V)
 			return PasteAtCursor();
 	}
 

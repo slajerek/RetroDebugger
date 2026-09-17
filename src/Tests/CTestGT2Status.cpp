@@ -55,7 +55,7 @@ void CTestGT2Status::Run(ITestCallback *cb)
 	{
 		step++;
 		StepCompleted(step, true, "GT2 not active (chardata NULL) — skipping status bar tests");
-		TestCompleted(true, "GT2Status skipped: plugin not active");
+		TestSkipped("GT2 plugin not active -- the status view was never exercised");
 		return;
 	}
 
@@ -64,7 +64,7 @@ void CTestGT2Status::Run(ITestCallback *cb)
 	{
 		step++;
 		StepCompleted(step, true, "GT2 plugin not initialized — skipping status bar tests");
-		TestCompleted(true, "GT2Status skipped: plugin not initialized");
+		TestSkipped("GT2 plugin not initialized -- the status view was never exercised");
 		return;
 	}
 

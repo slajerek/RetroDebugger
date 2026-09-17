@@ -42,7 +42,7 @@ void onlinehelp(int standalone,int context)
     "TAB Cycle between editing modes",
     "INS Insert row (Press on endmark to",
     "DEL Delete row change patt. length)",
-#ifdef __MACOSX__    
+#ifdef __APPLE__    
     "ALT+DEL emulates INS on Mac OS X",
 #endif    
     "SHIFT+ESC Clear/optimize all musicdata",

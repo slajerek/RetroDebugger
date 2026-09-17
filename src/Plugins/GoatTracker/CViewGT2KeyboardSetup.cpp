@@ -66,8 +66,8 @@ const char *CViewGT2KeyboardSetup::KeyName(unsigned char keyCode)
 		case SDLK_RIGHTBRACKET: return "]";
 		case SDLK_MINUS:     return "-";
 		case SDLK_EQUALS:    return "=";
-		case SDLK_BACKQUOTE: return "`";
-		case SDLK_QUOTE:     return "'";
+		case SDLK_GRAVE: return "`";
+		case SDLK_APOSTROPHE:     return "'";
 		default:
 			sprintf(buf, "0x%02X", keyCode);
 			return buf;

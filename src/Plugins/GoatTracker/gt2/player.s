@@ -905,21 +905,23 @@ mt_skipfilt:
               .ENDIF
               .ENDIF
 
+                jsr mt_freq_catchup             ;Write the new note's freq
+                                                ;now (gplay.c does the same
+                                                ;at note init) instead of
+                                                ;leaving the previous note's
+                                                ;freq in SID until the
+                                                ;wavetable's first "play
+                                                ;note" row next tick.
+
               .IF (NOEFFECTS == 0)
                 lda mt_chnnewparam,x            ;Execute tick 0 FX after
 mt_tick0jump1:                                  ;newnote init
                 jsr mt_tick0_0
               .ENDIF
-                jmp mt_loadregs                 ;Phase 2b C-parity:
-                                                ;route through mt_loadregs
-                                                ;(was mt_loadregswaveonly
-                                                ;for BUFFEREDWRITES=0) so
-                                                ;mt_freq_catchup writes the
-                                                ;new note's freq into SID
-                                                ;on TICK0. The waveonly
-                                                ;target only touched wave/
-                                                ;gate, leaving freq from
-                                                ;the previous note.
+                jmp mt_loadregs                 ;Through mt_loadregs (not
+                                                ;mt_loadregswaveonly) so the
+                                                ;arp cycle also advances on
+                                                ;TICK0, as in gplay.c.
 
               .IF (NOWAVECMD == 0)
 mt_wavecmd:
@@ -1310,17 +1312,6 @@ mt_normalnote:
                 adc mt_chntrans,x
               .ENDIF
                 sta mt_chnnewnote,x
-              .IF (NOARPCHANNELS == 0)
-                lda mt_chnarphi,x           ;Arp active? Skip hard restart so
-                ora mt_chnarplo,x           ;the new base note slides in
-                beq mt_normalnote_nosuppress  ;without ADSR reset.
-                lda #$fe                    ;Mirror mt_skiphr's gate write
-                sta mt_chngate,x            ;so mt_newnoteinit's `inc` lands
-                                            ;on $fe→$ff (NOFIRSTWAVECMD=1
-                                            ;path) instead of $ff→$00 wrap.
-                jmp mt_rest                 ;Skip HR/skiphr blocks below.
-mt_normalnote_nosuppress:
-              .ENDIF
               .IF (NOTONEPORTA == 0)
                 lda mt_chnnewfx,x           ;If toneportamento, no gateoff
                 cmp #TONEPORTA
@@ -1445,19 +1436,6 @@ mt_arpplaynote:
 
 mt_arpskip:
               .ENDIF
-                jsr mt_freq_catchup             ;Phase 2b C-parity:
-                                                ;write freq from
-                                                ;mt_chnnote when arp pool
-                                                ;is not cycling, so a
-                                                ;new note's freq lands on
-                                                ;TICK0 instead of waiting
-                                                ;for the wavetable's
-                                                ;first "play current
-                                                ;note" instruction
-                                                ;(audible glitch at note
-                                                ;attack otherwise — see
-                                                ;gplay.c arpcount==1
-                                                ;override).
               .IF (BUFFEREDWRITES == 0)
                 lda mt_chnfreqlo,x
                 sta SIDBASE+$00,x
@@ -1954,61 +1932,6 @@ ghostfilttype   = ghostregs+24
 
               .IF (NOARPCHANNELS == 0)
 
-        ;Trigger-on-silent hook — called from mt_restsetarp via JSR
-        ;so the conditional logic doesn't bloat mt_restsetarp's
-        ;inline footprint (which would push existing branches like
-        ;`beq mt_rest` at line ~1251 out of ±127 range). Mirrors
-        ;gplay.c:1011-1026 narrowly: load instrument's AD/SR +
-        ;waveptr so the freshly-installed arp can sound on a
-        ;previously-silent channel (KEYOFF-with-sustaining-arp or
-        ;arp-on-silent-channel).
-        ;
-        ;Skip when mt_chnnewnote != 0: the mt_skiphr → mt_newnoteinit
-        ;path will set gate/ADSR/wave on the next tick-0. Without
-        ;this guard the hook clobbers wave-init timing (was the
-        ;scenario-2 regression in an earlier inline attempt).
-        ;
-        ;Skip when gate is already $ff: channel already sounding.
-        ;
-        ;mt_chnwave is intentionally NOT touched — wavetable
-        ;execution sets it on the next tick.
-        ;
-        ;X holds the channel offset (0/7/14). Y gets clobbered.
-mt_arp_trigger_silent:
-                lda mt_chnnewnote,x
-                bne mt_arp_trigger_done
-                lda mt_chngate,x
-                cmp #$ff
-                beq mt_arp_trigger_done
-                lda #$ff
-                sta mt_chngate,x
-                lda mt_chninstr,x
-                tay                             ;Workaround for Magnus
-                                                ;Lind asm rejecting
-                                                ;ldy abs,X.
-              .IF (BUFFEREDWRITES == 0)
-                lda mt_insad-1,y
-                sta SIDBASE+$05,x
-                lda mt_inssr-1,y
-                sta SIDBASE+$06,x
-              .ELSE
-              .IF (GHOSTREGS == 0)
-                lda mt_insad-1,y
-                sta mt_chnad,x
-                lda mt_inssr-1,y
-                sta mt_chnsr,x
-              .ELSE
-                lda mt_insad-1,y
-                sta <ghostad,x
-                lda mt_inssr-1,y
-                sta <ghostsr,x
-              .ENDIF
-              .ENDIF
-                lda mt_inswaveptr-1,y
-                sta mt_chnwaveptr,x
-mt_arp_trigger_done:
-                rts
-
         ;mt_arp_setpool — full hybrid arp pool install for the channel.
         ;
         ;On entry:
@@ -2017,7 +1940,9 @@ mt_arp_trigger_done:
         ;
         ;Effect: writes mt_chnarp{lo,hi,pos} for X to point at the pool
         ;entry that pattern mt_chnpattnum,x's arp list slot (A-1) refers
-        ;to, then calls mt_arp_trigger_silent.
+        ;to. It never touches the gate, ADSR or wave: the main track owns
+        ;those (mt_normalnote / mt_newnoteinit / KEYOFF), arp columns only
+        ;add pitches to the cycle.
         ;
         ;Self-modifies the two LDA absolute,Y instructions below so no
         ;zero-page scratch is needed (zpbase is at the $e5 ceiling in
@@ -2050,7 +1975,6 @@ mt_arpsmc2:     lda $0000,y                     ;pool entry hi (patched)
                 sta mt_chnarphi,x
                 lda #$00
                 sta mt_chnarppos,x              ;Restart arp cycle
-                jsr mt_arp_trigger_silent       ;Re-trigger if silent.
                 ldy mt_arptmpy                  ;Restore pattern offset (Y)
                 rts
 
@@ -2068,20 +1992,22 @@ mt_chnarppos:   .BYTE (0)
 mt_arptmpy:     .BYTE (0)
               .ENDIF
 
-        ;mt_freq_catchup — write the channel's freq from mt_chnnote when
-        ;arp pool isn't cycling. Matches the gplay.c arpcount==1 override
-        ;so SID gets the correct freq on a new note's TICK0 instead of
-        ;lagging one frame waiting for the wavetable.
+        ;mt_freq_catchup — write the channel's freq from mt_chnnote.
+        ;Called ONLY from mt_newnoteinit (TICK0 of a new note), matching
+        ;gplay.c's note-init freq write. It must not run every tick:
+        ;doing so overwrote the wavetable's relative/absolute notes and
+        ;the vibrato/portamento effects on every frame.
         ;
         ;Skip when an arp pool is active (mt_chnarp{lo,hi} != 0): the
-        ;cycling code above mt_arpskip just wrote freq, don't clobber it.
+        ;cycling block in mt_loadregs owns the freq then.
         ;Skip when mt_chnnote == 0: channel hasn't played a note yet.
-        ;X holds the channel offset (0/7/14). Y is clobbered.
+        ;X holds the channel offset (0/7/14). Y is preserved.
         ;
         ;Lives OUTSIDE the .IF (NOARPCHANNELS == 0) block: non-arp songs
-        ;still need the freq fix. The inner .IF guards the arp pool check
-        ;because mt_chnarp{lo,hi} are only emitted for arp songs.
+        ;get the same TICK0 freq write. The inner .IF guards the arp pool
+        ;check because mt_chnarp{lo,hi} are only emitted for arp songs.
 mt_freq_catchup:
+                sty mt_fctmpy
               .IF (NOARPCHANNELS == 0)
                 lda mt_chnarphi,x
                 ora mt_chnarplo,x
@@ -2106,7 +2032,9 @@ mt_freq_catchup:
                 sta <ghostfreqhi,x
               .ENDIF
 mt_freq_catchup_done:
+                ldy mt_fctmpy
                 rts
+mt_fctmpy:      .BYTE (0)
 
         ;Songdata & frequencytable will be inserted by the relocator here
 

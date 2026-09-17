@@ -12,7 +12,7 @@ extern int epmarkchn;
 extern int epmarkstart;
 extern int epmarkend;
 
-//#ifdef __MACOSX__
+//#ifdef __APPLE__
 extern int virtualkeycode;
 //#endif
 

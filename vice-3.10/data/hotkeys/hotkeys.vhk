@@ -1,0 +1,142 @@
+# VICE main hotkeys file for all emulators and UIs
+#
+# Author:   Bas Wassink
+# Updated:  2023-09-03
+#
+# Since the hotkeys don't differ too much between emulators and are based on
+# the availability of certain hardware features we can handle the differences
+# with a few conditionals now. VSID is very different and should keep using a
+# separate VSID-specific vhk file.
+
+
+# Disable debugging
+!debug off
+
+# Clear all hotkeys
+!clear
+
+
+# Hotkeys rougly in the order they appear in the menu
+
+# File - Generic items
+!if !MACOS
+    smart-attach            <Alt>a
+    monitor-open            <Alt>h
+    machine-reset-cpu       <Alt>F9
+    machine-power-cycle     <Alt>F12
+    quit                    <Alt>q
+!else
+    smart-attach            <Command>a
+    monitor-open            <Command>Escape
+    machine-reset-cpu       <Command>F9
+    machine-power-cycle     <Command>F12
+    quit                    <Command>q
+!endif
+
+# File - Drive items
+!include hotkeys-drive.vhk
+!include hotkeys-fliplist.vhk
+
+# File - Tapeport items
+!if !(C64DTV || SCPU64)
+    !include hotkeys-datasette.vhk
+!endif
+
+# File - Cartridge items
+!if !(C64DTV || CBM5X0 || PET)
+    !include hotkeys-cartridge.vhk
+!endif
+
+# File - Printer items
+!if !MACOS
+    printer-formfeed-4          <Alt>4
+    printer-formfeed-5          <Alt>5
+    printer-formfeed-6          <Alt>6
+    !if !(C64DTV || CBM5X0)
+        printer-formfeed-userport   <Alt>3
+    !endif
+!else
+    printer-formfeed-4          <Command>4
+    printer-formfeed-5          <Command>5
+    printer-formfeed-6          <Command>6
+    !if !(C64DTV || CBM5X0)
+        printer-formfeed-userport   <Command>3
+    !endif
+!endif
+
+# Edit - Copy and Paste
+# SDL 1.x doesn't support clipboard operations
+!if !SDL1
+    !if !MACOS
+        edit-copy   <Alt>Delete
+        edit-paste  <Alt>Insert
+    !else
+        edit-copy   <Alt>Delete
+        edit-paste  <Alt>Insert
+    !endif
+!endif
+
+# Snapshot - snapshots, event record, media recording
+!include hotkeys-snapshot.vhk
+
+# Preferences - Host display
+!if !MACOS
+    fullscreen-toggle               <Alt>d
+    restore-display                 <Alt>r
+    !if GTK3
+        fullscreen-decorations-toggle   <Alt>b
+    !endif
+!else
+    fullscreen-toggle               <Command>d
+    restore-display                 <Command>r
+    !if GTK3
+        fullscreen-decorations-toggle   <Command>b
+    !endif
+!endif
+
+# Preferences - Run control
+!if !MACOS
+    warp-mode-toggle    <Alt>w
+    pause-toggle        <Alt>p
+    advance-frame       <Alt><Shift>p
+!else
+    warp-mode-toggle    <Command>w
+    pause-toggle        <Command>p
+    advance-frame       <Command><Shift>p
+!endif
+
+# Preferences - Joystick and mouse
+!if !MACOS
+    mouse-grab-toggle       <Alt>m
+    !if !(VIC20 || CBM6X0 || PET)
+        swap-controlport-toggle     <Alt>j
+    !endif
+    keyset-joystick-toggle  <Alt><Shift>j
+!else
+    mouse-grab-toggle       <Command>m
+    !if !(VIC20 || CBM6X0 || PET)
+        swap-controlport-toggle     <Command>j
+    !endif
+    keyset-joystick-toggle  <Command><Shift>j
+!endif
+
+# Preferences - Settings dialog, load/save/reset settings
+!include hotkeys-settings.vhk
+
+# Debug menu items (only available with --enable-debug)
+!if HAVE_DEBUG
+    !include hotkeys-debug.vhk
+!endif
+
+# Help - About dialog, hotkeys editor, manual, etc
+!include hotkeys-help.vhk
+
+# SCPU-specific hotkeys
+# No hotkey for the JiffyDOS switch, Alt+J is mapped to "Swap joysticks" :(
+!if SCPU64
+    !if !MACOS
+        scpu-speed-switch-toggle    <Alt>t
+    !else
+        scpu-speed-switch-toggle    <Command>t
+    !endif
+!endif

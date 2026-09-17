@@ -846,10 +846,10 @@ bool CViewGT2PatternList::KeyDown(u32 keyCode, bool isShift, bool isAlt, bool is
 	}
 	if (ctrlOnly)
 	{
-		if (keyCode == 'x' || keyCode == 'X' || keyCode == SDLK_x) { CutSelection();       return true; }
-		if (keyCode == 'c' || keyCode == 'C' || keyCode == SDLK_c) { CopySelection();      return true; }
-		if (keyCode == 'v' || keyCode == 'V' || keyCode == SDLK_v) { PasteRows();          return true; }
-		if (keyCode == 'd' || keyCode == 'D' || keyCode == SDLK_d) { DuplicateSelection(); return true; }
+		if (keyCode == 'x' || keyCode == 'X' || keyCode == SDLK_X) { CutSelection();       return true; }
+		if (keyCode == 'c' || keyCode == 'C' || keyCode == SDLK_C) { CopySelection();      return true; }
+		if (keyCode == 'v' || keyCode == 'V' || keyCode == SDLK_V) { PasteRows();          return true; }
+		if (keyCode == 'd' || keyCode == 'D' || keyCode == SDLK_D) { DuplicateSelection(); return true; }
 		// Ctrl+Left/Right step the block index (each step shifts every
 		// channel's pattern by numChannels).
 		if (keyCode == MTKEY_ARROW_LEFT)  { AdjustBlock(-1);        return true; }

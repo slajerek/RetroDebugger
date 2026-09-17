@@ -46,11 +46,11 @@ Note that you can right-click now on some of the views to display context menu.
 # How to compile
 
 Code is based on MTEngineSDL.
-Engine compiles SDL2 with ImGui and this app as a static binary.
+Engine compiles SDL3 with ImGui and this app as a static binary.
 You need to compile the MTEngineSDL first.
 
 MTEngineSDL: https://github.com/slajerek/MTEngineSDL
-SDL2: https://github.com/libsdl-org/SDL
+SDL3: https://github.com/libsdl-org/SDL
 ImGui: https://github.com/imgui
 
 ## macOS
@@ -63,13 +63,16 @@ library.
 ## Windows
 
 Check VS2019 project in `./platform/Windows`. This should work when put into
-`C:\develop\c64d`. Note, the SDL2 library was built static.
+`C:\develop\c64d`. Note, the SDL3 library was built static.
 
 ## Linux
 
-You need SDL2 and GLEW installed:
-`sudo apt install libsdl2-dev`
+You need GLEW installed:
 `sudo apt install libglew-dev`
+
+SDL is **not** a system dependency. `build-linux.sh` builds a static SDL3 from
+MTEngineSDL's vendored source tree; a distro `libsdl2-dev`/`libsdl3-dev` is
+neither used nor consulted.
 
 Put MTEngineSDL and RetroDebugger folders into the same folder and then compile.
 
@@ -78,7 +81,7 @@ cd RetroDebugger
 ./build-linux.sh
 ```
 
-Remember that MTEngineSDL library will be cloned to `./../MTEngineSDL` folder.
+Remember to have MTEngineSDL library in `./../../MTEngineSDL` folder.
 
 # Thanks
 
@@ -93,7 +96,7 @@ And C64 65XE NES Debugger testers: Scan/House, Dr.J/Delysid, Mr Wegi/Elysium,
 ElfKaa/Avatar, Ruben Aparicio, 64 bites, Stein Pedersen, 
 Mads Nielsen (Slammer/Camelot), Roy C Riggs (furroy)
 
-Also, the famous SDL2 and ImGui team!
+Also, the famous SDL3 and ImGui team!
 
 *Plus everyone who made a donation, you know who you are and you are awesome!*
 
@@ -138,7 +141,7 @@ GoatTracker 2 is (C) Lasse Öörni and GoatTracker 2 team.
 ASAP library is (C) Piotr Fusik et al.
 
 This product uses 1-Writer font: http://home-2002.code-cop.org/c64/font_01.html
-UI assets licenses are provided by the ImGui, SDL2 and all referenced licenses.
+UI assets licenses are provided by the ImGui, SDL3 and all referenced licenses.
 
 Roboto-Medium.ttf, by Christian Robetson 
 Apache License 2.0 

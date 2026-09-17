@@ -1,0 +1,16 @@
+
+Dla POKEY świat ATARI dostał niedawno tablice "poprawnych" dzielników (8-bit) dla 64kHz i 15kHz.
+Załączam dla ciekawości taką tabelę. Była też podobna w Atari Fan #1 sprzed kilku miesięcy, w Empiku też było.
+Ja oczywiście nie ogarnąłem i nie kupiłem za 40 zeta na Lost Party, więc potem w Empiku musiałem oddać 50.
+Z takich tabel korzystałem przy okazji tych wcześniej podesłanych muzyczek w formacie .XEX (nie wszystkich, bo muza do gry musiała być na "stockowym" playerze).
+
+Uważam, że 16-bitowy (ale i ten 8-bitowy) synth basu od POKEY'a ma coś w sobie. Mała próbka (surowa, bez miksu) w załączniku.
+
+I taka ciekawostka, plik projektu "2021-09-29 POKEY BASS PLAY.xrns" zajmuje 8,911 KB, a jego "render", czyli "2021-09-29 POKEY BASS PLAY.wav" zajmuje tylko 6,924 KB (48kHz, 16-bit).
+Skłoniło mnie to do zwiększenia wolumenu danych dla renderu, bo "aż głupio". Teraz "2021-09-29 POKEY BASS PLAY.wav" zajmuje 10,385 KB.
+
+Poniekąd to kwestia tego, że instrument mam na 3-4 oktawy, a tutaj użyty jest 1 dźwięk w 1-szym patternie i 3 dźwięki w 2-gim.
+Nieważne, to tylko "test".
+Instrument mają próbki mojego autorstwa samplingu brzmień POKEY oraz MIKEY.
+Kilka tygodni roboty, choć faktycznie to dłużej trwało by zebrać te brzmienia do "kupy" i w odpowiedniej cyfrowej jakości.
+Nie obyło się bez pomocy i wiedzy osób związanych z demosceną, praktykujących POKEY nieco dłużej ode mnie.

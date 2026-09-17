@@ -1,0 +1,62 @@
+
+*****************************************************************************
+* THESE INSTRUCTIONS ARE NOW OBSOLETE - Refer to CMake-Howto.txt to see how *
+* an Xcode project can be generated for the configuration of your choice.   *
+*****************************************************************************
+
+-----------------------------------
+Building and Debugging using Xcode.
+-----------------------------------
+
+Whilst we don't have proper Xcode project files that can directly build Vice,
+it's easy enough to create an 'External Build System' Xcode project that can
+build, launch and debug an emulator. Here's one way to do it:
+
+1. If you want to debug the GTK3 version, consider first installing debug
+versions of GLib and GTK via https://github.com/dqh-github/homebrew-debug. This
+will allow you to step into and set breakpoints in GLib, GTK, GDK etc.
+
+2. Follow either macOS-Howto.txt to configure, build and install a build and
+make sure you follow the step to symlink in /usr/local/lib.
+
+3. Create a make wrapper in your build folder that gets pdftex in the path. This
+allows the docs to build when make is invoked by Xcode:
+
+# Run inside your build folder:
+echo -e '#!/bin/bash\nsource /etc/profile\n/usr/bin/make "$@"' > make
+chmod +x make
+
+4. Open Xcode, Menubar: File -> New -> Project...
+
+5. Choose the 'Cross-platform' tab, 'External Build System', click Next
+
+6. Choose a product, org name, etc. Put the full path to your custom 'make'
+shell script (in your build folder) as the build tool. Click Next
+
+7. Change 'Arguments' to '-j' and set 'Directory' to your build folder.
+
+8. Menubar: Product -> Scheme -> Edit Scheme...
+
+9. Select 'Run' in the left column and click on the Executable drop down on the
+right, chose 'Other', then point it at one of the emulator binaries (x64sc, vsid
+etc.) in the src folder within your build folder.
+
+10. Menubar: View -> Navigators -> Show Project Navigator
+
+11. Select the root of the project and then Menubar: File -> Add files to
+"<project name>"...
+
+12. Navigate to the vice src folder, make sure 'Copy items if needed' is not
+ticked, 'Create folder references' is selected and that 'Add to targets' has a
+ticked target (should only be one). Click Add. You can now browse the vice
+source and set some breakpoints.
+
+13. Using a terminal, run make clean in your build folder.
+
+14. Menubar: Product -> Run (or click the play icon in the top left)
+
+At this point Vice should build with debug symbols and the emulator you chose
+will launch in the debugger. You can edit files, rebuild and run to test the
+result. If you want to add new source files you will of course still need to
+make the relevant autotools changes.
+

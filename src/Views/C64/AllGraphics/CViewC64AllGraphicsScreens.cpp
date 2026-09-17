@@ -15,6 +15,7 @@
 #include "CSlrString.h"
 #include "CViewC64StateVIC.h"
 #include "CViewC64.h"
+#include "MT_UiScale.h"
 
 CViewC64AllGraphicsScreens::CViewC64AllGraphicsScreens(const char *name, float posX, float posY, float posZ, float sizeX, float sizeY, CDebugInterfaceC64 *debugInterface, CViewC64AllGraphicsScreensControl *viewControl)
 : CGuiViewMovingPane(name, posX, posY, posZ, sizeX, sizeY,
@@ -59,7 +60,7 @@ CViewC64AllGraphicsScreens::CViewC64AllGraphicsScreens(const char *name, float p
 	
 	//
 	font = viewC64->fontDefaultCBMShifted;
-	fontScale = 0.8;
+	fontScale = MT_UiScaled(0.8f);
 	fontHeight = font->GetCharHeight('@', fontScale) + 2;
 	fontSize = fontHeight;
 	

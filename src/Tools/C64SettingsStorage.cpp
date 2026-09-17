@@ -128,6 +128,28 @@ bool c64SettingsDatasetteResetWithCPU = false;
 bool c64SettingsReuEnabled = false;
 int c64SettingsReuSize = 16384;
 
+//
+// IDE64. Everything here is restored in the POSTLAUNCH block: PRELAUNCH runs
+// before InitViceC64() has created debugInterfaceC64 and before VICE exists.
+//
+CSlrString *c64SettingsIDE64RomPath = NULL;
+CSlrString *c64SettingsIDE64Image[4] = { NULL, NULL, NULL, NULL };
+int c64SettingsIDE64Version = 1;			// V4.1, VICE's own default
+bool c64SettingsIDE64UsbServerEnabled = false;
+CSlrString *c64SettingsIDE64UsbServerAddress = NULL;
+bool c64SettingsIDE64RtcSave = false;
+bool c64SettingsIDE64AutodetectSize[4] = { true, true, true, true };
+
+// The command line wins over stored settings. VICE parses argv inside
+// InitViceC64(), which runs BEFORE the POSTLAUNCH restore, so without these
+// flags a stored value would silently overwrite -IDE64USB / -IDE64USBAddress
+// / -IDE64version / -IDE64image<n> / an attached cartridge.
+bool c64SettingsIDE64CliOverrideUsbServer = false;
+bool c64SettingsIDE64CliOverrideUsbAddress = false;
+bool c64SettingsIDE64CliOverrideVersion = false;
+bool c64SettingsIDE64CliOverrideImage[4] = { false, false, false, false };
+bool c64SettingsIDE64CliOverrideRom = false;
+
 bool c64SettingsMuteSIDOnPause = false;
 
 int c64SettingsViceAudioVolume = 100;				// percentage
@@ -592,6 +614,28 @@ void C64DebuggerStoreSettings()
 	
 	storeSettingBool(byteBuffer, "ReuEnabled", c64SettingsReuEnabled);
 	storeSettingI32(byteBuffer, "ReuSize", c64SettingsReuSize);
+
+	// IDE64 -- POSTLAUNCH on purpose, see the note at the globals
+	if (c64SettingsIDE64RomPath != NULL)
+		storeSettingString(byteBuffer, "IDE64RomPath", c64SettingsIDE64RomPath);
+	for (int i = 0; i < 4; i++)
+	{
+		if (c64SettingsIDE64Image[i] != NULL)
+		{
+			char settingName[24];
+			sprintf(settingName, "IDE64Image%d", i + 1);
+			storeSettingString(byteBuffer, settingName, c64SettingsIDE64Image[i]);
+		}
+
+		char autodetectName[32];
+		sprintf(autodetectName, "IDE64AutodetectSize%d", i + 1);
+		storeSettingBool(byteBuffer, autodetectName, c64SettingsIDE64AutodetectSize[i]);
+	}
+	storeSettingI32(byteBuffer, "IDE64Version", c64SettingsIDE64Version);
+	storeSettingBool(byteBuffer, "IDE64USBServer", c64SettingsIDE64UsbServerEnabled);
+	if (c64SettingsIDE64UsbServerAddress != NULL)
+		storeSettingString(byteBuffer, "IDE64USBServerAddress", c64SettingsIDE64UsbServerAddress);
+	storeSettingBool(byteBuffer, "IDE64RTCSave", c64SettingsIDE64RtcSave);
 #endif
 	
 #if defined(RUN_ATARI)
@@ -799,6 +843,10 @@ void C64DebuggerRestoreSettings(uint8 settingsBlockType)
 		c64SettingsC64UPassword = new CSlrString("");
 	if (c64SettingsC64ULocalIP == NULL)
 		c64SettingsC64ULocalIP = new CSlrString("");
+
+	// IDE64: VICE's own default address for the USB server (pc-link)
+	if (c64SettingsIDE64UsbServerAddress == NULL)
+		c64SettingsIDE64UsbServerAddress = new CSlrString("ip4://127.0.0.1:64245");
 }
 
 void C64DebuggerReadSettingsValues(CByteBuffer *byteBuffer, uint8 settingsBlockType)
@@ -1676,6 +1724,104 @@ void C64DebuggerSetSetting(const char *name, void *value)
 			int v = *((int*)value);
 			c64SettingsReuSize = v;
 			viewC64->debugInterfaceC64->SetReuSize(v);
+			return;
+		}
+		//
+		// IDE64. Each handler updates the global unconditionally so the menu
+		// shows the stored state, but skips the apply when the same thing was
+		// given on the command line -- VICE already applied that, and this
+		// restore runs afterwards.
+		//
+		else if (!strcmp(name, "IDE64RomPath"))
+		{
+			if (c64SettingsIDE64RomPath != NULL)
+				delete c64SettingsIDE64RomPath;
+			c64SettingsIDE64RomPath = new CSlrString((CSlrString*)value);
+
+			if (!c64SettingsIDE64CliOverrideRom)
+				viewC64->debugInterfaceC64->AttachIde64Cartridge(c64SettingsIDE64RomPath);
+			else
+				LOGD("IDE64RomPath: command line takes precedence, not attaching stored ROM");
+			return;
+		}
+		else if (!strncmp(name, "IDE64Image", 10) && strlen(name) == 11)
+		{
+			int deviceIndex = name[10] - '1';
+			if (deviceIndex < 0 || deviceIndex > 3)
+				return;
+
+			if (c64SettingsIDE64Image[deviceIndex] != NULL)
+				delete c64SettingsIDE64Image[deviceIndex];
+			c64SettingsIDE64Image[deviceIndex] = new CSlrString((CSlrString*)value);
+
+			if (!c64SettingsIDE64CliOverrideImage[deviceIndex])
+			{
+				char *asciiPath = c64SettingsIDE64Image[deviceIndex]->GetStdASCII();
+				viewC64->debugInterfaceC64->SetIde64Image(deviceIndex + 1, asciiPath);
+				delete [] asciiPath;
+			}
+			else
+			{
+				LOGD("%s: command line takes precedence, not applying stored value", name);
+			}
+			return;
+		}
+		else if (!strcmp(name, "IDE64Version"))
+		{
+			int v = *((int*)value);
+			c64SettingsIDE64Version = v;
+
+			if (!c64SettingsIDE64CliOverrideVersion)
+				viewC64->debugInterfaceC64->SetIde64Version(v);
+			else
+				LOGD("IDE64Version: command line takes precedence, not applying stored value");
+			return;
+		}
+		else if (!strcmp(name, "IDE64USBServer"))
+		{
+			bool v = *((bool*)value);
+			c64SettingsIDE64UsbServerEnabled = v;
+
+			if (!c64SettingsIDE64CliOverrideUsbServer)
+				viewC64->debugInterfaceC64->SetIde64UsbServerEnabled(v);
+			else
+				LOGD("IDE64USBServer: command line takes precedence, not applying stored value");
+			return;
+		}
+		else if (!strcmp(name, "IDE64USBServerAddress"))
+		{
+			if (c64SettingsIDE64UsbServerAddress != NULL)
+				delete c64SettingsIDE64UsbServerAddress;
+			c64SettingsIDE64UsbServerAddress = new CSlrString((CSlrString*)value);
+
+			if (!c64SettingsIDE64CliOverrideUsbAddress)
+			{
+				char *asciiAddress = c64SettingsIDE64UsbServerAddress->GetStdASCII();
+				viewC64->debugInterfaceC64->SetIde64UsbServerAddress(asciiAddress);
+				delete [] asciiAddress;
+			}
+			else
+			{
+				LOGD("IDE64USBServerAddress: command line takes precedence, not applying stored value");
+			}
+			return;
+		}
+		else if (!strcmp(name, "IDE64RTCSave"))
+		{
+			bool v = *((bool*)value);
+			c64SettingsIDE64RtcSave = v;
+			viewC64->debugInterfaceC64->SetIde64RtcSave(v);
+			return;
+		}
+		else if (!strncmp(name, "IDE64AutodetectSize", 19) && strlen(name) == 20)
+		{
+			int deviceIndex = name[19] - '1';
+			if (deviceIndex < 0 || deviceIndex > 3)
+				return;
+
+			bool v = *((bool*)value);
+			c64SettingsIDE64AutodetectSize[deviceIndex] = v;
+			viewC64->debugInterfaceC64->SetIde64AutodetectSize(deviceIndex + 1, v);
 			return;
 		}
 		else if (!strcmp(name, "C64ProfilerOutputPath"))

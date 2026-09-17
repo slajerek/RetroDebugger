@@ -1,0 +1,28 @@
+{
+  "configurations": [
+    {
+      "name": "Mac",
+      "compileCommands": "${workspaceFolder}/compile_commands.json",
+
+      // IntelliSense fallback — gdy compile_commands.json nie zawiera nowych plików
+      "includePath": [
+        "${workspaceFolder}/**",
+        "${workspaceFolder}/../../MTEngineSDL/src"
+      ],
+
+      // Opcjonalnie: możesz dodać więcej ścieżek jeśli masz np. include/ lub headers/
+      // "${workspaceFolder}/../../MTEngineSDL/include",
+
+      // Dodatkowe ustawienia IntelliSense
+      "defines": [
+        "__APPLE__",
+        "DEBUG"
+      ],
+      "compilerPath": "/usr/bin/clang++",
+      "cStandard": "c17",
+      "cppStandard": "c++17",
+      "intelliSenseMode": "macos-clang-x64"
+    }
+  ],
+  "version": 4
+}

@@ -1,64 +1,29 @@
 #!/usr/bin/env bash
-# Build RetroDebugger for macOS.
-# Produces "Retro Debugger.app" under ./build-macos/Build/Products/Release/.
+# THE APP STUB -- canonical template: MTEngineSDL/tools/appbuild/stubs/.
 #
-# Code signing is disabled here (CODE_SIGNING_ALLOWED=NO); the release script
-# (tools/make-release/make-release-macos.sh) signs the bundle afterwards
-# (ad-hoc by default, Developer ID + notarization when signing secrets exist).
+# An app owns two files: mtengine.caps (what to enable) and mtengine-app.conf
+# (what to build). The BUILD FLOW -- and even the MTENGINE_REF verification --
+# lives in the engine's app-build driver; this stub keeps ONLY the
+# chicken-and-egg job the driver cannot do for itself: clone the engine when
+# absent. The driver warns when this file drifts from the template.
 set -euo pipefail
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+MTENGINE_DIR="$SCRIPT_DIR/../MTEngineSDL"
 
-CURRENT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-
-# --- sibling dependencies (mirror build-linux.sh) ---
-cd "$CURRENT_DIR/.."
-if [ ! -d "MTEngineSDL" ]; then
-	echo "Cloning MTEngineSDL library repository"
-	git clone --recursive https://github.com/slajerek/MTEngineSDL.git
-else
-	( cd MTEngineSDL && git submodule update --init --recursive )
-fi
-if [ ! -d "uSockets" ]; then
-	echo "Cloning uSockets library repository"
-	git clone https://github.com/uNetworking/uSockets.git
+if [[ ! -d "$MTENGINE_DIR" ]]; then
+    REF="$(grep -v '^[[:space:]]*#' "$SCRIPT_DIR/MTENGINE_REF" | grep -v '^[[:space:]]*$' | head -n 1 | tr -d '[:space:]')"
+    echo "Cloning MTEngineSDL at ${REF:-origin/master}"
+    git clone https://github.com/slajerek/MTEngineSDL.git "$MTENGINE_DIR"
+    # A branch ref stays ON the branch; only a SHA/tag detaches. The driver
+    # verifies the ref on every build after this.
+    git -C "$MTENGINE_DIR" checkout "${REF#origin/}" 2>/dev/null \
+        || git -C "$MTENGINE_DIR" checkout --detach "$REF"
 fi
 
-# uSockets: the macOS MTEngineSDL Xcode project links a prebuilt
-# platform/MacOS/libs/uSockets.a (mirrors build-linux.sh, which builds it into
-# platform/Linux/libs/). Build it and stage the archive.
-echo "Building uSockets and staging uSockets.a for MTEngineSDL (macOS)"
-( cd "$CURRENT_DIR/../uSockets" && make -j"$(sysctl -n hw.ncpu)" )
-mkdir -p "$CURRENT_DIR/../MTEngineSDL/platform/MacOS/libs/"
-cp -f "$CURRENT_DIR/../uSockets/uSockets.a" "$CURRENT_DIR/../MTEngineSDL/platform/MacOS/libs/"
-
-# --- build RetroDebugger via Xcode ---
-cd "$CURRENT_DIR"
-DERIVED="$CURRENT_DIR/build-macos"
-rm -rf "$DERIVED"
-
-# The MTEngineSDL macOS project links libSDL2.a via LIBRARY_SEARCH_PATHS that
-# points at /usr/local/lib (Intel Homebrew). On Apple Silicon Homebrew lives at
-# /opt/homebrew, and GitHub's macos-latest runners are Apple Silicon too. Add the
-# active Homebrew lib dir so libtool can locate SDL2 regardless of host arch.
-XCODE_EXTRA=()
-if command -v brew >/dev/null 2>&1; then
-	XCODE_EXTRA+=("OTHER_LIBTOOLFLAGS=-L$(brew --prefix)/lib")
+DRIVER="$MTENGINE_DIR/tools/appbuild/app-build-macos.sh"
+if [[ ! -f "$DRIVER" ]]; then
+    echo "ERROR: $DRIVER not found -- the engine checkout predates the app-build driver." >&2
+    echo "       Update it: git -C \"$MTENGINE_DIR\" pull" >&2
+    exit 1
 fi
-
-echo "Building RetroDebugger (Release) via xcodebuild..."
-xcodebuild \
-	-project platform/MacOS/c64d.xcodeproj \
-	-scheme "Retro Debugger" \
-	-configuration Release \
-	-derivedDataPath "$DERIVED" \
-	CODE_SIGN_IDENTITY="-" \
-	CODE_SIGNING_REQUIRED=NO \
-	CODE_SIGNING_ALLOWED=NO \
-	"${XCODE_EXTRA[@]}" \
-	build
-
-APP="$DERIVED/Build/Products/Release/Retro Debugger.app"
-if [ ! -d "$APP" ]; then
-	echo "ERROR: build did not produce $APP" >&2
-	exit 1
-fi
-echo "RetroDebugger built: $APP"
+exec bash "$DRIVER" --app-dir "$SCRIPT_DIR" "$@"

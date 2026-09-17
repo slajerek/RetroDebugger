@@ -8,7 +8,7 @@
 #include "SYS_Threading.h"
 #include "CImageData.h"
 #include "CDebuggerApi.h"
-#include "CDebugInterfaceNes.h"
+#include "CDebugInterfaceAtari.h"
 
 class CGuiView;
 
@@ -17,7 +17,7 @@ class CDebuggerApiAtari : public CDebuggerApi
 public:
 	CDebuggerApiAtari(CDebugInterface *debugInterface);
 	virtual ~CDebuggerApiAtari();
-	CDebugInterfaceNes *debugInterfaceAtari;
+	CDebugInterfaceAtari *debugInterfaceAtari;
 	CImageData *cachedScreenImage;
 	
 	virtual void CreateNewPicture(u8 mode, u8 backgroundColor);
@@ -51,10 +51,12 @@ public:
 	virtual void SetByteWithIo(int addr, u8 v);
 	virtual void SetByteToRam(int addr, u8 v);
 	virtual void SetWord(int addr, u16 v);
-	virtual void MakeJmp(int addr);
+	virtual bool MakeJmp(int addr);
 
 	//
 	virtual void DetachEverything();
+	virtual bool DetachDriveDisk(int deviceNumber);
+	virtual int GetDefaultDiskDriveNumber();
 	
 	//
 	virtual int Assemble(int addr, char *assembleText);

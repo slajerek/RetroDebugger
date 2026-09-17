@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project>
+  <!-- ===================================================================
+       THE APP-SIDE IDE CHANNEL - a two-line stub over engine-owned logic.
+
+       Everything this used to hold (MTCapsResolveForIDE, the Link and
+       PostBuildEvent targets that run late enough to see $(MTCapsLibsDir))
+       lives in the engine at platform\Windows\MTEngineApp.targets and is
+       parameterized on $(MTCapsApp), which this repo's Directory.Build.props
+       declares. Before L13 this file was 146 lines copied into four app
+       repos, differing only in the app name.
+
+       Canonical template: MTEngineSDL/tools/appbuild/stubs/. The Windows
+       driver warns when this file drifts from it. App-specific MSBuild goes
+       BELOW the Import, never inside the engine's file.
+       =================================================================== -->
+
+  <PropertyGroup>
+    <MTEngineAppTargets>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\..\..\MTEngineSDL\platform\Windows\MTEngineApp.targets'))</MTEngineAppTargets>
+  </PropertyGroup>
+
+  <!-- Not an Error when missing: MT_STANDALONE and the command-line driver
+       both work without this channel, and a hard failure here would break a
+       checkout whose engine sibling is simply absent. The IDE build is the
+       only path that needs it, and it fails loudly on its own. -->
+  <Import Project="$(MTEngineAppTargets)" Condition="Exists('$(MTEngineAppTargets)')" />
+
+</Project>

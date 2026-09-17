@@ -28,6 +28,7 @@ extern "C" {
 #include "driverom.h"
 #include "ui.h"
 #include "resources.h"
+#include "cartridge.h"
 #include "ViceWrapper.h"
 }
 
@@ -1565,8 +1566,23 @@ void CDebugInterfaceVice::InsertD64(CSlrString *path)
 
 void CDebugInterfaceVice::DetachDriveDisk()
 {
-	file_system_detach_disk(8, 0);
-	((CDataAdapterViceDrive1541DiskContents*)debugInterfaceVice->dataAdapterDrive1541DiskContents)->DiskDetached();
+	DetachDriveDisk(8);
+}
+
+void CDebugInterfaceVice::DetachDriveDisk(int deviceNumber)
+{
+	// NOTE: this does NOT reset the machine, unlike DetachEverything()
+	LockIoMutex();
+
+	file_system_detach_disk(deviceNumber, 0);
+
+	// only unit 8 is mirrored by the disk contents data adapter
+	if (deviceNumber == 8)
+	{
+		((CDataAdapterViceDrive1541DiskContents*)dataAdapterDrive1541DiskContents)->DiskDetached();
+	}
+
+	UnlockIoMutex();
 }
 
 // REU
@@ -1576,6 +1592,97 @@ extern "C" {
 	int set_reu_filename(const char *name, void *param);
 	int reu_bin_save(const char *filename);
 };
+
+//
+// IDE64. All of these write VICE resources; the usbserver ones open/close
+// sockets that the emulation thread's usb_alarm polls, so they take the same
+// snapshotsManager lock SetReuEnabled() takes for the same class of reason.
+// Setting them before an IDE64 cartridge is attached is safe: the resource
+// value is stored and usbserver_activate() runs when the cart registers.
+//
+void CDebugInterfaceVice::AttachIde64Cartridge(CSlrString *filePath)
+{
+	char *asciiPath = filePath->GetStdASCII();
+	SYS_FixFileNameSlashes(asciiPath);
+
+	// .crt files carry a header and must go through the generic CRT path
+	// (type 0 = CARTRIDGE_CRT, which self-identifies as IDE64 via crt_getid);
+	// CARTRIDGE_IDE64 expects a RAW 64KiB/128KiB/512KiB ROM dump and would
+	// mis-attach a .crt. See c64cart.c and c64carthooks.c ("-cartide64" is
+	// documented as raw).
+	int type = CARTRIDGE_IDE64;
+	size_t len = strlen(asciiPath);
+	if (len > 4 && !strcasecmp(asciiPath + len - 4, ".crt"))
+	{
+		type = CARTRIDGE_CRT;
+	}
+
+	LOGD("CDebugInterfaceVice::AttachIde64Cartridge: type=%d path='%s'", type, asciiPath);
+
+	snapshotsManager->LockMutex();
+	cartridge_attach_image(type, asciiPath);
+	snapshotsManager->UnlockMutex();
+
+	delete [] asciiPath;
+}
+
+void CDebugInterfaceVice::DetachIde64Cartridge()
+{
+	LOGD("CDebugInterfaceVice::DetachIde64Cartridge");
+	snapshotsManager->LockMutex();
+	cartridge_detach_image(CARTRIDGE_IDE64);
+	snapshotsManager->UnlockMutex();
+}
+
+void CDebugInterfaceVice::SetIde64Image(int deviceNum, const char *path)
+{
+	char resourceName[24];
+	sprintf(resourceName, "IDE64Image%d", deviceNum);
+
+	snapshotsManager->LockMutex();
+	resources_set_string(resourceName, path);
+	snapshotsManager->UnlockMutex();
+}
+
+void CDebugInterfaceVice::SetIde64Version(int version)
+{
+	snapshotsManager->LockMutex();
+	resources_set_int("IDE64Version", version);
+	snapshotsManager->UnlockMutex();
+}
+
+void CDebugInterfaceVice::SetIde64UsbServerEnabled(bool enabled)
+{
+	LOGD("CDebugInterfaceVice::SetIde64UsbServerEnabled: %s", STRBOOL(enabled));
+	snapshotsManager->LockMutex();
+	resources_set_int("IDE64USBServer", enabled ? 1 : 0);
+	snapshotsManager->UnlockMutex();
+}
+
+void CDebugInterfaceVice::SetIde64UsbServerAddress(const char *address)
+{
+	LOGD("CDebugInterfaceVice::SetIde64UsbServerAddress: '%s'", address);
+	snapshotsManager->LockMutex();
+	resources_set_string("IDE64USBServerAddress", address);
+	snapshotsManager->UnlockMutex();
+}
+
+void CDebugInterfaceVice::SetIde64RtcSave(bool enabled)
+{
+	snapshotsManager->LockMutex();
+	resources_set_int("IDE64RTCSave", enabled ? 1 : 0);
+	snapshotsManager->UnlockMutex();
+}
+
+void CDebugInterfaceVice::SetIde64AutodetectSize(int deviceNum, bool enabled)
+{
+	char resourceName[32];
+	sprintf(resourceName, "IDE64AutodetectSize%d", deviceNum);
+
+	snapshotsManager->LockMutex();
+	resources_set_int(resourceName, enabled ? 1 : 0);
+	snapshotsManager->UnlockMutex();
+}
 
 void CDebugInterfaceVice::SetReuEnabled(bool isEnabled)
 {
@@ -2302,19 +2409,70 @@ u8 CDebugInterfaceVice::GetViaRegister(uint8 driveId, uint8 viaId, uint8 registe
 
 
 
-void CDebugInterfaceVice::MakeJmpC64(uint16 addr)
+// How long MakeJmpC64 waits for a jump requested while paused to be committed to
+// the CPU's working register set by the emulation thread. The commit normally
+// happens on the first wake-up of the pause loop, i.e. well under a millisecond;
+// the bound only exists so that a stopped or wedged emulation thread degrades to
+// "queued" instead of hanging the caller.
+#define C64D_MAKE_JMP_COMMIT_TIMEOUT_MS		250
+
+bool CDebugInterfaceVice::MakeJmpC64(uint16 addr)
 {
 	LOGD("CDebugInterfaceVice::MakeJmpC64: %04x", addr);
 	
-	if (c64d_debug_mode.load(std::memory_order_acquire) == DEBUGGER_MODE_PAUSED)
+	bool wasPaused = (c64d_debug_mode.load(std::memory_order_acquire) == DEBUGGER_MODE_PAUSED);
+	
+	c64d_set_c64_pc(addr);
+	
+	if (wasPaused)
 	{
-		c64d_set_c64_pc(addr);
+		// Preserve the paused state, then wake the pause loop: while paused the
+		// emulation thread dispatches no traps, so the PC change would otherwise not
+		// reach the CPU before the next single step. The pause loop applies it via
+		// c64d_apply_pending_debugger_pc().
 		c64d_set_debug_mode(DEBUGGER_MODE_PAUSED);
+		NotifyPauseChanged();
 	}
-	else
+	
+	if (!isRunning)
 	{
-		c64d_set_c64_pc(addr);
+		// Nothing is going to dispatch the change; report it as queued rather than
+		// pretending the CPU has moved.
+		LOGWarning("CDebugInterfaceVice::MakeJmpC64: %04x queued, emulation thread is not running", addr);
+		return false;
 	}
+	
+	if (!wasPaused)
+	{
+		// Running: the queued trap is dispatched at the top of the next main loop
+		// iteration, which the CPU reaches on its own within one instruction.
+		return true;
+	}
+	
+	if (!c64d_is_cpu_parked_in_pause_loop())
+	{
+		// The CPU has not reached a pause point yet. It commits the change on its own
+		// before it fetches its next opcode — at the trap dispatch, at the pause loop
+		// wake-up, or at the pause loop exit — so the contract still holds. Do not
+		// wait here: the emulation thread may need a debugger lock that this caller
+		// is holding to get there.
+		return true;
+	}
+	
+	unsigned long startTime = SYS_GetCurrentTimeInMillis();
+	while (c64d_is_pc_change_pending())
+	{
+		if ((SYS_GetCurrentTimeInMillis() - startTime) > (unsigned long)C64D_MAKE_JMP_COMMIT_TIMEOUT_MS)
+		{
+			LOGWarning("CDebugInterfaceVice::MakeJmpC64: %04x still queued after %dms, emulation thread parked but not servicing the pause loop",
+					   addr, C64D_MAKE_JMP_COMMIT_TIMEOUT_MS);
+			return false;
+		}
+		
+		SYS_Sleep(1);
+	}
+	
+	return true;
 }
 
 void CDebugInterfaceVice::MakeJmpNoResetC64(uint16 addr)
@@ -2648,7 +2806,19 @@ void CDebugInterfaceVice::AttachTape(CSlrString *filePath)
 
 void CDebugInterfaceVice::DetachTape()
 {
-	interrupt_maincpu_trigger_trap(tape_detach_trap, NULL);
+	// See DetachCartridge() below for why the trap cannot be the only route.
+	if (isRunning && GetDebugMode() == DEBUGGER_MODE_RUNNING)
+	{
+		interrupt_maincpu_trigger_trap(tape_detach_trap, NULL);
+		return;
+	}
+
+	DetachTapeSynced();
+}
+
+void CDebugInterfaceVice::DetachTapeSynced()
+{
+	tape_detach_trap(0, NULL);
 }
 
 void CDebugInterfaceVice::DatasettePlay()
@@ -2763,7 +2933,29 @@ void CDebugInterfaceVice::AttachCartridge(CSlrString *filePath)
 
 void CDebugInterfaceVice::DetachCartridge()
 {
-	interrupt_maincpu_trigger_trap(cartridge_detach_trap, NULL);
+	// A maincpu trap only runs when the CPU executes an instruction. Paused in
+	// the debugger -- or with the emulation thread stopped -- the trap sits in
+	// the queue forever, so the cartridge stays attached while the menu still
+	// reports "Cartridge detached". That is why Detach Cartridge looked dead
+	// while Detach Everything worked: CMainMenuBar::DetachEverything() follows
+	// its trap with SetDebugMode(DEBUGGER_MODE_RUNNING), which drains the queue;
+	// DetachCartridge() has nothing of the sort.
+	//
+	// Same shape as ResetHard(): trap while the CPU is running, do the work here
+	// when it is not. Staying paused is deliberate -- ResetHardSynced() documents
+	// that a paused user wants to keep debugging from where they are.
+	if (isRunning && GetDebugMode() == DEBUGGER_MODE_RUNNING)
+	{
+		interrupt_maincpu_trigger_trap(cartridge_detach_trap, NULL);
+		return;
+	}
+
+	DetachCartridgeSynced();
+}
+
+void CDebugInterfaceVice::DetachCartridgeSynced()
+{
+	cartridge_detach_trap(0, NULL);
 }
 
 void CDebugInterfaceVice::CartridgeFreezeButtonPressed()
@@ -3075,6 +3267,8 @@ bool CDebugInterfaceVice::LoadChipsSnapshotSynced(CByteBuffer *byteBuffer)
 //											 unsigned char *snapshot_data, int snapshot_size);
 
 	LOGD("LoadChipsSnapshotSynced");
+	// Same reason as the save path -- see SaveFullSnapshotSynced().
+	CSnapshotsManager::CSnapshotOperationScope snapshotScope(snapshotsManager);
 	debugInterfaceVice->LockMutex();
 	gSoundEngine->LockMutex("LoadChipsSnapshotSynced");
 
@@ -3142,6 +3336,13 @@ bool CDebugInterfaceVice::SaveFullSnapshotSynced(CByteBuffer *byteBuffer,
 //	LOGD("SaveFullSnapshotSynced: saveDisks=%d data=%x", saveDisks, byteBuffer->data);
 	int snapshotSize = 0;
 	u8 *snapshotData = NULL;
+
+	// c64_snapshot_write_in_memory() runs the drive CPUs forward, and they
+	// park in c64d_debug_pause_check(0) while the debugger is PAUSED. Whoever
+	// is calling us would then be waiting for an unpause only it could
+	// deliver. Raising this lets those pause checks unwind to the instruction
+	// boundary instead. See CSnapshotsManager::IsSnapshotOperationInProgress.
+	CSnapshotsManager::CSnapshotOperationScope snapshotScope(snapshotsManager);
 
 	debugInterfaceVice->LockMutex();
 	gSoundEngine->LockMutex("SaveFullSnapshotSynced");

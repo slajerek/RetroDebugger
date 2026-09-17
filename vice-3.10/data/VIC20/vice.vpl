@@ -1,0 +1,56 @@
+#
+# VICE Palette file
+#
+# Syntax:
+# Red Green Blue
+#
+# TYPE:VIC
+# NAME:original VICE palette
+
+# Black
+00 00 00
+
+# White
+FF FF FF
+
+# Red
+F0 00 00
+
+# Cyan
+00 F0 F0
+
+# Purple
+60 00 60
+
+# Green
+00 A0 00
+
+# Blue
+00 00 F0
+
+# Yellow
+D0 D0 00
+
+# Orange
+C0 A0 00
+
+# Light Orange
+FF A0 00
+
+# Pink
+F0 80 80
+
+# Light Cyan
+00 FF FF
+
+# Light Purple
+FF 00 FF
+
+# Light Green
+00 FF 00
+
+# Light Blue
+00 A0 FF
+
+# Light Yellow
+FF FF 00

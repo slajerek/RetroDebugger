@@ -1,0 +1,38 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project>
+  <!-- ===================================================================
+       THE APP-SIDE MSBuild PROPERTIES - a stub over engine-owned logic.
+
+       Everything this used to hold (MTCacheRoot, MTIdeKey, MTIdeBuild,
+       MTBuildRoot, the capability-fragment import and the /utf-8 default)
+       lives in the engine at platform\Windows\MTEngineApp.props. Before that
+       it was ~70 lines copied into four app repos, differing only in the app
+       name - the same shape L13 removed from Directory.Build.targets, left
+       behind in this file.
+
+       $(MTCapsApp) is this app's identity and stays HERE, because it is the
+       one thing the engine cannot know. NOT $(MSBuildProjectName): that is
+       evaluated PER PROJECT, so inside MTEngineSDL.vcxproj it is literally
+       "MTEngineSDL" and every app would import the same fragment.
+
+       Canonical template: MTEngineSDL/tools/appbuild/stubs/. The Windows
+       driver warns when this file drifts from it, comparing with the app
+       name substituted. App-specific MSBuild goes BELOW the Import, never
+       inside the engine's file.
+       =================================================================== -->
+
+  <PropertyGroup>
+    <MTCapsApp>c64d</MTCapsApp>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <MTEngineAppProps>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\..\..\MTEngineSDL\platform\Windows\MTEngineApp.props'))</MTEngineAppProps>
+  </PropertyGroup>
+
+  <!-- Not an Error when missing, for the same reason as the targets stub:
+       MT_STANDALONE and the command-line driver both work without this
+       channel, and a hard failure here would break a checkout whose engine
+       sibling is simply absent. -->
+  <Import Project="$(MTEngineAppProps)" Condition="Exists('$(MTEngineAppProps)')" />
+
+</Project>

@@ -15,6 +15,7 @@
 #include "CViewC64StateVIC.h"
 #include "CViewC64.h"
 #include "CViewC64AllGraphicsSpritesControl.h"
+#include "MT_UiScale.h"
 
 CViewC64AllGraphicsSprites::CViewC64AllGraphicsSprites(const char *name, float posX, float posY, float posZ, float sizeX, float sizeY, CDebugInterfaceC64 *debugInterface)
 : CGuiViewMovingPane(name, posX, posY, posZ, sizeX, sizeY,
@@ -51,7 +52,7 @@ CViewC64AllGraphicsSprites::CViewC64AllGraphicsSprites(const char *name, float p
 
 	//
 	font = viewC64->fontDefaultCBMShifted;
-	fontScale = 0.8;
+	fontScale = MT_UiScaled(0.8f);
 	fontHeight = font->GetCharHeight('@', fontScale) + 2;
 	fontSize = fontHeight;
 

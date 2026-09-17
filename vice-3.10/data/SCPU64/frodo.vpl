@@ -1,0 +1,56 @@
+#
+# VICE Palette file
+#
+# Syntax:
+# Red Green Blue
+#
+# TYPE:VICII
+# NAME:Frodo
+
+# Black
+00 00 00
+
+# White
+FF FF FF
+
+# Red
+CC 00 00
+
+# Cyan
+00 FF CC
+
+# Purple
+FF 00 FF
+
+# Green
+00 CC 00
+
+# Blue
+00 00 CC
+
+# Yellow
+FF FF 00
+
+# Orange
+FF 88 00
+
+# Brown
+88 44 00
+
+# Light Red
+FF 88 88
+
+# Dark Gray
+44 44 44
+
+# Medium Gray
+88 88 88
+
+# Light Green
+88 FF 88
+
+# Light Blue
+88 88 FF
+
+# Light Gray
+CC CC CC

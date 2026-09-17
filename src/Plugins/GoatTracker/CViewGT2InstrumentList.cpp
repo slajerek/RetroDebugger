@@ -4,7 +4,11 @@
 #include "CGT2FontAtlas.h"
 #include "C64DebuggerPluginGoatTracker.h"
 #include "CGT2Favorites.h"
+#include "CViewGT2InstrumentsBrowser.h"
+#include "CGuiMain.h"
+#include "SYS_FileSystem.h"
 #include "imgui.h"
+#include "imgui_internal.h"   // BeginDragDropTargetCustom -- the rows are drawn by hand
 #include <cstdio>
 #include <cstring>
 
@@ -61,6 +65,9 @@ CViewGT2InstrumentList::CViewGT2InstrumentList(const char *name, float posX, flo
 	this->renaming = false;
 	this->renameFocusPending = false;
 	this->renameBuffer[0] = 0;
+	this->lastRenderOriginX = 0.0f;
+	this->lastRenderOriginY = 0.0f;
+	this->lastScrolledToInstrument = -1;
 }
 
 CViewGT2InstrumentList::~CViewGT2InstrumentList() {}
@@ -117,7 +124,12 @@ void CViewGT2InstrumentList::RenderImGui()
 	ImGui::PushStyleVar(ImGuiStyleVar_ItemInnerSpacing, itemInnerSpacing);
 
 	ImDrawList *dl = ImGui::GetWindowDrawList();
+	// Visible height, before anything is drawn -- used for the scrolling below.
+	float visibleHeight = ImGui::GetContentRegionAvail().y;
+
 	ImVec2 origin = ImGui::GetCursorScreenPos();
+	lastRenderOriginX = origin.x;
+	lastRenderOriginY = origin.y;
 	char textbuffer[64];
 	GT2InstrumentListRect frameRect = GetInstrumentListFrameRect(origin.x, origin.y);
 	dl->AddRectFilled(
@@ -188,6 +200,37 @@ void CViewGT2InstrumentList::RenderImGui()
 		}
 	}
 
+	// The rows are drawn by hand, so the drop targets are registered as
+	// explicit rectangles rather than riding on a widget's item rect. Only
+	// the row under the cursor is registered -- ImGui needs one target, and
+	// this keeps the highlight on the slot that will actually receive the
+	// instrument.
+	if (ImGui::IsDragDropActive())
+	{
+		int hoverRow = GT2PixelToRow(guiMain->mousePosY - origin.y);
+		if (hoverRow >= 0 && hoverRow < GT2_LAST_INSTR)
+		{
+			GT2InstrumentListRect rowRect = GetInstrumentRowBackgroundRect(origin.x, origin.y, hoverRow);
+			ImRect dropRect(ImVec2(rowRect.x1, rowRect.y1), ImVec2(rowRect.x2, rowRect.y2));
+			ImGuiID dropId = ImGui::GetCurrentWindow()->GetID("##gt2InstrDrop");
+			if (ImGui::BeginDragDropTargetCustom(dropRect, dropId))
+			{
+				const ImGuiPayload *payload = ImGui::AcceptDragDropPayload(GT2_INSTRUMENT_FILE_PAYLOAD);
+				if (payload != NULL && payload->Data != NULL)
+				{
+					const char *droppedPath = (const char *)payload->Data;
+					if (pluginGoatTracker != NULL)
+						pluginGoatTracker->LoadInstrumentFromFile(droppedPath, hoverRow + 1,
+							pluginGoatTracker->viewInstrumentsBrowser != NULL
+								? pluginGoatTracker->viewInstrumentsBrowser->previewOnClick : false);
+				}
+				ImGui::EndDragDropTarget();
+			}
+			dl->AddRect(ImVec2(rowRect.x1, rowRect.y1), ImVec2(rowRect.x2, rowRect.y2),
+				IM_COL32(255, 210, 90, 220), 2.0f * uiScale, 0, 1.5f * uiScale);
+		}
+	}
+
 	// Left click selects the current instrument.
 	if (ImGui::IsWindowHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Left))
 	{
@@ -205,6 +248,34 @@ void CViewGT2InstrumentList::RenderImGui()
 		if (gridRow >= 0 && gridRow < GT2_LAST_INSTR) SelectInstrument(gridRow + 1);
 		ImGui::OpenPopup("gt2InstrCtx");
 	}
+	// Tell ImGui how tall the hand-drawn content actually is. Everything above
+	// goes straight to the draw list, so without this the window believes it
+	// holds nothing: no scrollbar, and the mouse wheel does nothing at all --
+	// while the list is 62 instruments tall and does not fit any sane window.
+	// GetCursorScreenPos() at the top already carries the scroll offset, so the
+	// drawing and the click hit-tests follow it for free.
+	ImGui::SetCursorScreenPos(origin);
+	ImGui::Dummy(ImVec2(frameRect.x2 - frameRect.x1, frameRect.y2 - frameRect.y1));
+
+	// Follow a selection made from outside the list (keyboard, the pattern
+	// editor) into view. Only when it actually changed, so scrolling the wheel
+	// to look elsewhere is not yanked back on the next frame -- the same rule
+	// CViewGT2Tables uses for its cursor.
+	if (einum != lastScrolledToInstrument)
+	{
+		lastScrolledToInstrument = einum;
+		if (einum >= 1 && einum <= GT2_LAST_INSTR && visibleHeight > 0.0f)
+		{
+			float rowTop = GT2RowToPixel(GetInstrumentGridRow(einum));
+			float rowBottom = rowTop + GT2CellH();
+			float scroll = ImGui::GetScrollY();
+			if (rowTop < scroll)
+				ImGui::SetScrollY(rowTop);
+			else if (rowBottom > scroll + visibleHeight)
+				ImGui::SetScrollY(rowBottom - visibleHeight);
+		}
+	}
+
 	ImGui::PopStyleVar(3);
 
 	// Context-menu popups intentionally keep the app-wide ImGui scale.
@@ -217,24 +288,24 @@ bool CViewGT2InstrumentList::KeyDown(u32 keyCode, bool isShift, bool isAlt, bool
 {
 	if (!isAlt && !isShift && (isControl || isSuper))
 	{
-		if (keyCode == 'x' || keyCode == 'X' || keyCode == SDLK_x)
+		if (keyCode == 'x' || keyCode == 'X' || keyCode == SDLK_X)
 		{
 			instrpackage_capture(einum, &gInstrListClipboard);
 			freeinstrtable_partial(einum);
 			clearinstr(einum);
 			return true;
 		}
-		if (keyCode == 'c' || keyCode == 'C' || keyCode == SDLK_c)
+		if (keyCode == 'c' || keyCode == 'C' || keyCode == SDLK_C)
 		{
 			instrpackage_capture(einum, &gInstrListClipboard);
 			return true;
 		}
-		if (keyCode == 'v' || keyCode == 'V' || keyCode == SDLK_v)
+		if (keyCode == 'v' || keyCode == 'V' || keyCode == SDLK_V)
 		{
 			if (gInstrListClipboard.valid) instrpackage_apply(einum, &gInstrListClipboard);
 			return true;
 		}
-		if (keyCode == 'r' || keyCode == 'R' || keyCode == SDLK_r)
+		if (keyCode == 'r' || keyCode == 'R' || keyCode == SDLK_R)
 		{
 			BeginRename();
 			return true;
@@ -243,6 +314,22 @@ bool CViewGT2InstrumentList::KeyDown(u32 keyCode, bool isShift, bool isAlt, bool
 	// Instrument-name rename / native ginstr.c selection flows need raw
 	// keys at native side. Forward unconditionally.
 	return GT2_HandleRenoiseOrForwardKeyDownToNative(keyCode, isShift, isAlt, isControl, isSuper);
+}
+
+bool CViewGT2InstrumentList::DoDropFile(char *filePath)
+{
+	if (filePath == NULL) return false;
+	if (!CViewGT2InstrumentsBrowser::IsInstrumentFile(filePath)) return false;
+	if (pluginGoatTracker == NULL) return false;
+
+	// The drop carries no coordinates of its own; guiMain kept the cursor
+	// position it used to pick this view.
+	int gridRow = GT2PixelToRow(guiMain->mousePosY - lastRenderOriginY);
+	if (gridRow < 0 || gridRow >= GT2_LAST_INSTR) return false;
+
+	bool preview = pluginGoatTracker->viewInstrumentsBrowser != NULL
+		? pluginGoatTracker->viewInstrumentsBrowser->previewOnClick : false;
+	return pluginGoatTracker->LoadInstrumentFromFile(filePath, gridRow + 1, preview);
 }
 
 bool CViewGT2InstrumentList::KeyUp(u32 keyCode, bool isShift, bool isAlt, bool isControl, bool isSuper)

@@ -282,12 +282,12 @@ bool CViewC64GoatTracker::KeyDown(u32 keyCode, bool isShift, bool isAlt, bool is
 	// Global undo / redo — one shared GT2 history.
 	if ((isControl || isSuper) && !isAlt && pluginGoatTracker && pluginGoatTracker->viewPatterns)
 	{
-		if (!isShift && (keyCode == 'z' || keyCode == 'Z' || keyCode == SDLK_z))
+		if (!isShift && (keyCode == 'z' || keyCode == 'Z' || keyCode == SDLK_Z))
 		{
 			pluginGoatTracker->viewPatterns->UndoPatternEdit();
 			return true;
 		}
-		if (keyCode == 'y' || keyCode == 'Y' || keyCode == SDLK_y)
+		if (keyCode == 'y' || keyCode == 'Y' || keyCode == SDLK_Y)
 		{
 			pluginGoatTracker->viewPatterns->RedoPatternEdit();
 			return true;
@@ -418,7 +418,7 @@ void CViewC64GoatTracker::ForwardEvents()
 	// GT2_ForwardKeyDown / GT2_ForwardKeyUp — which fire only when a
 	// GT2 view has focus AT THE EXACT TIME of the SDL key event. If
 	// the user releases Shift mid-drag (Shift+drag-docking an instrument
-	// onto patterns is the canonical reproducer), the SDL_KEYUP is
+	// onto patterns is the canonical reproducer), the SDL_EVENT_KEY_UP is
 	// either consumed by the drag handover or delivered while focus
 	// is not on any GT2 view, so win_keystate[KEY_LEFTSHIFT] stays at
 	// 1 forever. Subsequent 'Q' is then interpreted as Shift+Q (Renoise
@@ -426,6 +426,10 @@ void CViewC64GoatTracker::ForwardEvents()
 	// hex digit, etc. — exactly the chaos the user reported. Mirroring
 	// the live modifier state every frame recovers from any missed
 	// modifier KEYUP on the very next ForwardEvents tick.
+	// The GT2 thread calls this; guiMain is gone once the app is tearing down.
+	if (guiMain == NULL)
+		return;
+
 	win_keystate[KEY_LEFTSHIFT]  = guiMain->isShiftPressed   ? 1 : 0;
 	win_keystate[KEY_RIGHTSHIFT] = guiMain->isShiftPressed   ? 1 : 0;
 	win_keystate[KEY_CTRL]       = guiMain->isControlPressed ? 1 : 0;
@@ -540,15 +544,15 @@ void CViewC64GoatTracker::ForwardEvents()
 			 GUI_EVENT_MOUSE_MID_BUTTON_DOWN,
 			 GUI_EVENT_MOUSE_MID_BUTTON_UP,
 			 
-	case SDL_JOYBUTTONDOWN:
+	case SDL_EVENT_JOYSTICK_BUTTON_DOWN:
 	joybuttons[event.jbutton.which] |= 1 << event.jbutton.button;
 	break;
 
-	case SDL_JOYBUTTONUP:
+	case SDL_EVENT_JOYSTICK_BUTTON_UP:
 	joybuttons[event.jbutton.which] &= ~(1 << event.jbutton.button);
 	break;
 
-	case SDL_JOYAXISMOTION:
+	case SDL_EVENT_JOYSTICK_AXIS_MOTION:
 	switch (event.jaxis.axis)
 	{
 		case 0:
@@ -562,7 +566,7 @@ void CViewC64GoatTracker::ForwardEvents()
 	break;
 
 
-	case SDL_MOUSEBUTTONDOWN:
+	case SDL_EVENT_MOUSE_BUTTON_DOWN:
 	switch(event.button.button)
 	{
 		case SDL_BUTTON_MIDDLE:
@@ -575,7 +579,7 @@ void CViewC64GoatTracker::ForwardEvents()
 	}
 	break;
 
-	case SDL_MOUSEBUTTONUP:
+	case SDL_EVENT_MOUSE_BUTTON_UP:
 	switch(event.button.button)
 	{
 		case SDL_BUTTON_MIDDLE:
@@ -588,11 +592,11 @@ void CViewC64GoatTracker::ForwardEvents()
 	}
 	break;
 
-	case SDL_QUIT:
+	case SDL_EVENT_QUIT:
 	win_quitted = 1;
 	break;
 
-	case SDL_KEYDOWN:
+	case SDL_EVENT_KEY_DOWN:
    // win_virtualkey = event.key.keysym.sym;
 	win_asciikey = event.key.keysym.unicode;
 	keynum = event.key.keysym.sym;
@@ -608,7 +612,7 @@ void CViewC64GoatTracker::ForwardEvents()
 	}
 	break;
 
-	case SDL_KEYUP:
+	case SDL_EVENT_KEY_UP:
 	keynum = event.key.keysym.sym;
 	if (keynum < MAX_KEYS)
 	{

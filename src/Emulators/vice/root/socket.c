@@ -1057,6 +1057,37 @@ int vice_network_select_poll_one(vice_network_socket_t * readsockfd)
     return select( readsockfd->sockfd + 1, &fdsockset, NULL, NULL, &timeout);
 }
 
+/*! \brief Check if a set of sockets has incoming data
+
+  \param readsockfd
+     NULL-terminated array of connected sockets to test for data
+
+  \return
+     1 if any of the specified sockets has data; 0 if none contains
+     any data, and -1 in case of an error.
+*/
+int vice_network_select_multiple(vice_network_socket_t ** readsockfd)
+{
+    fd_set fdsockset;
+    SOCKET max_sockfd = INVALID_SOCKET;
+    TIMEVAL time = {0, 250000};
+
+    FD_ZERO(&fdsockset);
+    while(*readsockfd != NULL) {
+        FD_SET((*readsockfd)->sockfd, &fdsockset);
+        if((*readsockfd)->sockfd > max_sockfd) {
+            max_sockfd = (*readsockfd)->sockfd;
+        }
+        readsockfd++;
+    }
+
+    if(max_sockfd == INVALID_SOCKET) {
+        return -1;
+    }
+
+    return select(max_sockfd + 1, &fdsockset, NULL, NULL, &time);
+}
+
 /*! \brief Get the error of the last socket operation
 
   This function determines the error code for the last

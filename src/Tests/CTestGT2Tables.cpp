@@ -29,7 +29,7 @@ void CTestGT2Tables::Run(ITestCallback *cb)
 	// Check if GT2 plugin is active by verifying chardata is initialized.
 	if (chardata == NULL)
 	{
-		TestCompleted(true, "Skipped (GT2 not active)");
+		TestSkipped("GT2 plugin not active -- table handling was never exercised");
 		return;
 	}
 

@@ -816,6 +816,15 @@ bool nesd_store_nesd_state_to_bytebuffer(CByteBuffer *byteBuffer)
 	debugInterfaceNes->LockMutex();
 	gSoundEngine->LockMutex("nesd_store_nesd_state_to_bytebuffer");
 
+	// NST_ASSERT inside Machine::SaveState is compiled out in Release; guard here
+	// so we never call SaveState without a loaded, powered game.
+	if (!machine->Is(Nes::Api::Machine::GAME) || !machine->Is(Nes::Api::Machine::ON))
+	{
+		gSoundEngine->UnlockMutex("nesd_store_nesd_state_to_bytebuffer");
+		debugInterfaceNes->UnlockMutex();
+		return false;
+	}
+
 	byteBuffer->Rewind();
 
 	std::stringstream ss;

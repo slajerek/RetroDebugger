@@ -5,6 +5,9 @@ extern "C" {
 #include "goattrk2.h"
 #include "gconsole.h"
 #include "greloc.h"
+#include "gplay.h"
+#include "ginstr.h"
+#include "ginstrops.h"
 #include "gt2/asm/gt-membuf.h"
 }
 #include "CByteBuffer.h"
@@ -33,21 +36,26 @@ extern "C" {
 #include "CViewGT2InstrumentList.h"
 #include "CViewGT2Tables.h"
 #include "CViewGT2SongInfo.h"
+#include "CViewGT2SongSettings.h"
 #include "CViewGT2Status.h"
 #include "CViewGT2TitleBar.h"
 #include "CViewGT2Mixer.h"
 #include "CViewGT2Toolbar.h"
 #include "CViewGT2Oscilloscope.h"
+#include "CViewGT2StateSID.h"
 #include "CGT2VoiceWaveforms.h"
 #include "CDebugInterfaceMenuItemFolder.h"
 #include "CGT2Favorites.h"
+#include "CViewGT2InstrumentsBrowser.h"
+#include "CViewGT2InstrumentTableRow.h"
+#include "CViewGT2PatternRow.h"
 #include "GT2RenderHelper.h"
 
 #include "imgui.h"
 #include "CPluginsManager.h"
 #include "SYS_KeyCodes.h"
 
-#include <SDL.h>
+#include <SDL3/SDL.h>
 #include <math.h>
 #include <map>
 #include <list>
@@ -59,6 +67,10 @@ extern "C" {
 
 //#define  100
 //#define  37
+
+// Defined in RetroDebuggerAppInit.cpp: true for any run driven by a test
+// switch. There is no shared header for it, so it is declared where used.
+bool C64D_IsAutomatedRunCommandLine();
 
 C64DebuggerPluginGoatTracker *pluginGoatTracker = NULL;
 
@@ -218,6 +230,7 @@ void GT2_SaveSubViewVisibility()
 	bool loopCurrentPattern = gt2LoopCurrentPattern != 0;
 	cfg->SetBool("GT2LoopCurrentPattern", &loopCurrentPattern);
 	cfg->SetBool("GT2MetronomeEnabled", &gt2MetronomeEnabled);
+	cfg->SetBool("GT2KeepPlayingOnStop", &gt2KeepPlayingOnStop);
 
 	int patternDispMode = (int)patterndispmode;
 	cfg->SetInt("GT2PatternDispMode", &patternDispMode);
@@ -230,6 +243,14 @@ void GT2_SaveSubViewVisibility()
 
 	extern int gt2PatternCursorCentered;
 	cfg->SetInt("GT2PatternCursorCentered", &gt2PatternCursorCentered);
+
+	if (pluginGoatTracker != NULL && pluginGoatTracker->viewInstrumentsBrowser != NULL)
+		cfg->SetBool("GT2InstrumentsBrowserPreview",
+					 &pluginGoatTracker->viewInstrumentsBrowser->previewOnClick);
+
+	if (pluginGoatTracker != NULL)
+		cfg->SetBool("GT2FixInstrumentGatetimerOnLoad",
+					 &pluginGoatTracker->fixInstrumentGatetimerOnLoad);
 
 	extern int gt2EchoSustainStep;
 	extern int gt2EchoRowStep;
@@ -251,12 +272,14 @@ void GT2_SaveSubViewVisibility()
 	v = pluginGoatTracker->viewInstrumentList && pluginGoatTracker->viewInstrumentList->visible; cfg->SetBool("GT2ViewInstrumentList", &v);
 	v = pluginGoatTracker->viewTables     && pluginGoatTracker->viewTables->visible;     cfg->SetBool("GT2ViewTables", &v);
 	v = pluginGoatTracker->viewSongInfo   && pluginGoatTracker->viewSongInfo->visible;   cfg->SetBool("GT2ViewSongInfo", &v);
+	v = pluginGoatTracker->viewSongSettings && pluginGoatTracker->viewSongSettings->visible; cfg->SetBool("GT2ViewSongSettings", &v);
 	v = pluginGoatTracker->viewStatus     && pluginGoatTracker->viewStatus->visible;     cfg->SetBool("GT2ViewStatus", &v);
 	v = pluginGoatTracker->viewTitleBar   && pluginGoatTracker->viewTitleBar->visible;   cfg->SetBool("GT2ViewTitleBar", &v);
 	v = pluginGoatTracker->viewMixer      && pluginGoatTracker->viewMixer->visible;      cfg->SetBool("GT2ViewMixer", &v);
 	v = pluginGoatTracker->viewToolbar    && pluginGoatTracker->viewToolbar->visible;    cfg->SetBool("GT2ViewToolbar", &v);
 	v = pluginGoatTracker->viewKeyboard   && pluginGoatTracker->viewKeyboard->visible;   cfg->SetBool("GT2ViewKeyboard", &v);
 	v = pluginGoatTracker->viewOscilloscope && pluginGoatTracker->viewOscilloscope->visible; cfg->SetBool("GT2ViewOscilloscope", &v);
+	v = pluginGoatTracker->viewStateSID   && pluginGoatTracker->viewStateSID->visible;   cfg->SetBool("GT2ViewStateSID", &v);
 
 	bool autoload = pluginGoatTracker->autoloadSongOnStart;
 	cfg->SetBool("GT2AutoloadSong", &autoload);
@@ -321,6 +344,14 @@ void GT2_RestoreSubViewVisibility()
 	extern int gt2PatternCursorCentered;
 	cfg->GetInt("GT2PatternCursorCentered", &gt2PatternCursorCentered, 0);
 
+	if (pluginGoatTracker != NULL && pluginGoatTracker->viewInstrumentsBrowser != NULL)
+		cfg->GetBool("GT2InstrumentsBrowserPreview",
+					 &pluginGoatTracker->viewInstrumentsBrowser->previewOnClick, false);
+
+	if (pluginGoatTracker != NULL)
+		cfg->GetBool("GT2FixInstrumentGatetimerOnLoad",
+					 &pluginGoatTracker->fixInstrumentGatetimerOnLoad, true);
+
 	extern int gt2EchoSustainStep;
 	extern int gt2EchoRowStep;
 	extern int gt2EchoChannelMask;
@@ -341,6 +372,7 @@ void GT2_RestoreSubViewVisibility()
 	cfg->GetBool("GT2LoopCurrentPattern", &loopCurrentPattern, false);
 	gt2LoopCurrentPattern = loopCurrentPattern ? 1 : 0;
 	cfg->GetBool("GT2MetronomeEnabled", &gt2MetronomeEnabled, false);
+	cfg->GetBool("GT2KeepPlayingOnStop", &gt2KeepPlayingOnStop, false);
 
 	if (pluginGoatTracker == NULL) return;
 
@@ -351,12 +383,14 @@ void GT2_RestoreSubViewVisibility()
 	if (pluginGoatTracker->viewInstrumentList) pluginGoatTracker->viewInstrumentList->visible = cfg->GetBool("GT2ViewInstrumentList", false);
 	if (pluginGoatTracker->viewTables)     pluginGoatTracker->viewTables->visible     = cfg->GetBool("GT2ViewTables", false);
 	if (pluginGoatTracker->viewSongInfo)   pluginGoatTracker->viewSongInfo->visible   = cfg->GetBool("GT2ViewSongInfo", false);
+	if (pluginGoatTracker->viewSongSettings) pluginGoatTracker->viewSongSettings->visible = cfg->GetBool("GT2ViewSongSettings", false);
 	if (pluginGoatTracker->viewStatus)     pluginGoatTracker->viewStatus->visible     = cfg->GetBool("GT2ViewStatus", false);
 	if (pluginGoatTracker->viewTitleBar)   pluginGoatTracker->viewTitleBar->visible   = cfg->GetBool("GT2ViewTitleBar", false);
 	if (pluginGoatTracker->viewMixer)      pluginGoatTracker->viewMixer->visible      = cfg->GetBool("GT2ViewMixer", false);
 	if (pluginGoatTracker->viewToolbar)    pluginGoatTracker->viewToolbar->visible    = cfg->GetBool("GT2ViewToolbar", false);
 	if (pluginGoatTracker->viewKeyboard)   pluginGoatTracker->viewKeyboard->visible   = cfg->GetBool("GT2ViewKeyboard", false);
 	if (pluginGoatTracker->viewOscilloscope) pluginGoatTracker->viewOscilloscope->visible = cfg->GetBool("GT2ViewOscilloscope", false);
+	if (pluginGoatTracker->viewStateSID)   pluginGoatTracker->viewStateSID->visible   = cfg->GetBool("GT2ViewStateSID", false);
 
 	pluginGoatTracker->autoloadSongOnStart = cfg->GetBool("GT2AutoloadSong", false);
 
@@ -421,12 +455,16 @@ void PLUGIN_GoatTrackerSetVisible(bool isVisible)
 			if (pluginGoatTracker->viewInstrumentList) pluginGoatTracker->viewInstrumentList->visible = false;
 			if (pluginGoatTracker->viewTables)     pluginGoatTracker->viewTables->visible = false;
 			if (pluginGoatTracker->viewSongInfo)   pluginGoatTracker->viewSongInfo->visible = false;
+			// Not in the "show all" block below on purpose: a settings panel
+			// is opened when it is wanted, not every time GT2 comes up.
+			if (pluginGoatTracker->viewSongSettings) pluginGoatTracker->viewSongSettings->visible = false;
 			if (pluginGoatTracker->viewStatus)     pluginGoatTracker->viewStatus->visible = false;
 			if (pluginGoatTracker->viewTitleBar)   pluginGoatTracker->viewTitleBar->visible = false;
 			if (pluginGoatTracker->viewMixer)      pluginGoatTracker->viewMixer->visible = false;
 			if (pluginGoatTracker->viewToolbar)    pluginGoatTracker->viewToolbar->visible = false;
 			if (pluginGoatTracker->viewKeyboard)   pluginGoatTracker->viewKeyboard->visible = false;
 			if (pluginGoatTracker->viewOscilloscope) pluginGoatTracker->viewOscilloscope->visible = false;
+			if (pluginGoatTracker->viewStateSID)   pluginGoatTracker->viewStateSID->visible = false;
 		}
 		else
 		{
@@ -457,8 +495,19 @@ void PLUGIN_GoatTrackerSetVisible(bool isVisible)
 
 
 extern "C" {
+	// These three are called from the GT2 thread's own main loop (gtmain ->
+	// getkey -> win_getspeed -> win_checkmessages), which keeps running while
+	// the app tears the plugin down and which a test can outlive. They
+	// dereferenced pluginGoatTracker->view->imageDataScreen with no checks at
+	// all; a SIGSEGV on a small fault address was seen coming out of
+	// win_getspeed on 2026-09-08 (see src/TODO.txt). Nothing here can
+	// meaningfully continue without those objects, so bail instead.
 	unsigned char *gtGetRgbaPixelsBuffer()
 	{
+		if (pluginGoatTracker == NULL || pluginGoatTracker->view == NULL
+			|| pluginGoatTracker->view->imageDataScreen == NULL)
+			return NULL;
+
 		LOGD("pluginGoatTracker->imageDataScreen=%x pluginGoatTracker->imageDataScreen->resultData=%x",
 			 pluginGoatTracker->view->imageDataScreen, pluginGoatTracker->view->imageDataScreen->resultData);
 		return pluginGoatTracker->view->imageDataScreen->resultData;
@@ -466,12 +515,58 @@ extern "C" {
 
 	unsigned int gtGetGfxPitch()
 	{
+		if (pluginGoatTracker == NULL || pluginGoatTracker->view == NULL
+			|| pluginGoatTracker->view->imageDataScreen == NULL)
+			return 0;
 		return pluginGoatTracker->view->imageDataScreen->width * 4;
 	}
 	
 	void gtForwardEvents()
 	{
+		// Also stop pumping once shutdown has been asked for: ForwardEvents()
+		// reads guiMain and the view's event queue, and neither is ours to
+		// touch any more at that point.
+		if (pluginGoatTracker == NULL || pluginGoatTracker->view == NULL
+			|| pluginGoatTracker->shutdownRequested)
+			return;
 		pluginGoatTracker->view->ForwardEvents();
+	}
+
+	// Where GT2's own goattrk2.cfg lives.
+	//
+	// gtmain() reads and writes that file directly with fopen(), and it used to
+	// build the path itself: on macOS ~/Library/Preferences/org.c64.covertbitops.*,
+	// on Linux ~/.goattrk/, on Windows next to the executable. Three problems
+	// with that, all of them real:
+	//
+	//   1. The save path used the ORIGINAL GoatTracker 2 filenames, so running
+	//      RetroDebugger overwrote the config of a real GT2 install.
+	//   2. The load path had already been renamed to *-c64d, so the settings
+	//      never round-tripped: every launch read whatever GT2 left behind and
+	//      every exit clobbered GT2's file.
+	//   3. None of it went through gPathToSettings, so it ignored
+	//      MT_SETTINGS_DIR -- meaning a headless test run wrote into the
+	//      developer's real home directory, which the isolation added in
+	//      bcead24b exists to prevent.
+	//
+	// It now goes where the rest of GT2's own state goes: the gt2/ subfolder of
+	// RetroDebugger's settings folder, next to gt2-settings.hjson and the
+	// favourites. Same trailing-slash handling as CGT2Favorites::Save().
+	void gt2GetConfigFilePath(char *outPath, int maxLen)
+	{
+		if (outPath == NULL || maxLen <= 0)
+			return;
+		outPath[0] = 0;
+
+		std::string base = gPathToSettings ? gPathToSettings : "";
+		if (!base.empty() && base.back() != '/' && base.back() != '\\')
+			base += "/";
+
+		std::string dir = base + "gt2";
+		SYS_CreateFolder(dir.c_str());
+
+		std::string path = dir + "/goattrk2.cfg";
+		snprintf(outPath, maxLen, "%s", path.c_str());
 	}
 
 	void gt2BeginPatternUndoStep()
@@ -528,6 +623,11 @@ C64DebuggerPluginGoatTracker::C64DebuggerPluginGoatTracker()
 	viewToolbar = NULL;
 	viewKeyboard = NULL;
 	viewOscilloscope = NULL;
+	viewStateSID = NULL;
+	viewSongSettings = NULL;
+	viewInstrumentsBrowser = NULL;
+	viewInstrumentTableRow = NULL;
+	viewPatternRow = NULL;
 	viewInstrumentList = NULL;
 	viewPatternList = NULL;
 
@@ -541,9 +641,11 @@ C64DebuggerPluginGoatTracker::C64DebuggerPluginGoatTracker()
 	for (int i = 0; i < 7; i++)
 		exportPlayerOptions[i] = false;
 	exportPlayerOptions[0] = true; // Buffered SID-writes
+	fixInstrumentGatetimerOnLoad = true;
 	autoloadSongOnStart = false;
 	autoloadPending = false;
 	instrumentDialogMode = 0;
+	recentlyOpenedSongs = NULL;
 	songFileExtensions.push_back(new CSlrString("sng"));
 }
 
@@ -596,6 +698,10 @@ void C64DebuggerPluginGoatTracker::Init()
 	gt2Config->ReadConfig();
 	GT2_MigrateAllSettings();
 
+	// Recently opened songs list. Own settings key so it stays separate
+	// from the File/Recents list kept by CViewC64.
+	recentlyOpenedSongs = new CRecentlyOpenedFiles(new CSlrString("recents-gt2songs"), this);
+
 	gt2Favorites = new CGT2Favorites();
 	gt2Favorites->Load();
 
@@ -623,6 +729,10 @@ void C64DebuggerPluginGoatTracker::Init()
 	viewInstrumentList = new CViewGT2InstrumentList("GT2 Instruments", 780, 150, posZ, 250, 400, fontAtlas);
 	viewTables     = new CViewGT2Tables    ("GT2 Tables",     420, 310, posZ, 350, 250, fontAtlas);
 	viewSongInfo   = new CViewGT2SongInfo  ("GT2 Song Info",  420, 570, posZ, 350,  60, fontAtlas);
+	// Every song-level knob GT2 has, in one place. Wider than the text-mode
+	// views because it is plain ImGui with labelled fields, not a 40x3 grid.
+	viewSongSettings = new CViewGT2SongSettings("GT2 Song Settings",
+												250, 120, posZ, 520, 620, this);
 	viewStatus     = new CViewGT2Status    ("GT2 Status",      10, 550, posZ, 400,  40, fontAtlas);
 	viewTitleBar   = new CViewGT2TitleBar  ("GT2 Title Bar",   10,  10, posZ, 760,  20, fontAtlas);
 	viewMixer      = new CViewGT2Mixer     ("GT2 Mixer",       10, 600, posZ, 760, 200, audioMixer);
@@ -633,6 +743,18 @@ void C64DebuggerPluginGoatTracker::Init()
 	// buffers GT2's audio loop fills directly (CGT2VoiceWaveforms).
 	viewOscilloscope = new CViewGT2Oscilloscope("GT2 Oscilloscope",
 												610, 810, posZ, 360, 150);
+	// The same SID state view the C64 emulator uses, bound to GT2's own SID.
+	viewStateSID   = new CViewGT2StateSID  ("GT2 SID",         610, 150, posZ, 250, 270);
+	viewInstrumentsBrowser = new CViewGT2InstrumentsBrowser("GT2 Instruments Browser",
+															1040, 150, posZ, 320, 420, fontAtlas);
+	// Wide by default: the help block is a fixed-width reference table that
+	// does not reflow, so a narrow window would only scroll it.
+	viewInstrumentTableRow = new CViewGT2InstrumentTableRow("GT2 Instrument Table Row",
+															1040, 590, posZ, 560, 340, fontAtlas);
+	// Same reasoning about width: the command picker is a fixed 4-column grid
+	// of chips and the argument editors are rows of nibble buttons.
+	viewPatternRow = new CViewGT2PatternRow("GT2 Pattern Row",
+											600, 220, posZ, 560, 420, fontAtlas);
 
 	renoiseInput = new CGT2RenoiseInput(this);
 
@@ -647,6 +769,7 @@ void C64DebuggerPluginGoatTracker::Init()
 	guiMain->AddViewSkippingLayout(viewInstrumentList);
 	guiMain->AddViewSkippingLayout(viewTables);
 	guiMain->AddViewSkippingLayout(viewSongInfo);
+	guiMain->AddViewSkippingLayout(viewSongSettings);
 	guiMain->AddViewSkippingLayout(viewStatus);
 	guiMain->AddViewSkippingLayout(viewTitleBar);
 	guiMain->AddViewSkippingLayout(viewMixer);
@@ -654,6 +777,10 @@ void C64DebuggerPluginGoatTracker::Init()
 	guiMain->AddViewSkippingLayout(viewKeyboardSetup);
 	guiMain->AddViewSkippingLayout(viewKeyboard);
 	guiMain->AddViewSkippingLayout(viewOscilloscope);
+	guiMain->AddViewSkippingLayout(viewStateSID);
+	guiMain->AddViewSkippingLayout(viewInstrumentsBrowser);
+	guiMain->AddViewSkippingLayout(viewInstrumentTableRow);
+	guiMain->AddViewSkippingLayout(viewPatternRow);
 	// Also register with layout system so visibility persists across sessions
 	guiMain->AddViewToLayout(viewPatterns);
 	guiMain->AddViewToLayout(viewOrderList);
@@ -662,6 +789,7 @@ void C64DebuggerPluginGoatTracker::Init()
 	guiMain->AddViewToLayout(viewInstrumentList);
 	guiMain->AddViewToLayout(viewTables);
 	guiMain->AddViewToLayout(viewSongInfo);
+	guiMain->AddViewToLayout(viewSongSettings);
 	guiMain->AddViewToLayout(viewStatus);
 	guiMain->AddViewToLayout(viewTitleBar);
 	guiMain->AddViewToLayout(viewMixer);
@@ -669,6 +797,10 @@ void C64DebuggerPluginGoatTracker::Init()
 	guiMain->AddViewToLayout(viewKeyboardSetup);
 	guiMain->AddViewToLayout(viewKeyboard);
 	guiMain->AddViewToLayout(viewOscilloscope);
+	guiMain->AddViewToLayout(viewStateSID);
+	guiMain->AddViewToLayout(viewInstrumentsBrowser);
+	guiMain->AddViewToLayout(viewInstrumentTableRow);
+	guiMain->AddViewToLayout(viewPatternRow);
 	guiMain->AddGlobalLayoutCallback(this);
 	guiMain->UnlockMutex();
 
@@ -680,6 +812,7 @@ void C64DebuggerPluginGoatTracker::Init()
 	viewInstrumentList->visible = false;
 	viewTables->visible     = false;
 	viewSongInfo->visible   = false;
+	viewSongSettings->visible = false;
 	viewStatus->visible     = false;
 	viewTitleBar->visible   = false;
 	viewMixer->visible      = false;
@@ -687,6 +820,10 @@ void C64DebuggerPluginGoatTracker::Init()
 	viewKeyboardSetup->visible = false;
 	viewKeyboard->visible   = false;
 	viewOscilloscope->visible = false;
+	viewStateSID->visible = false;
+	viewInstrumentsBrowser->visible = false;
+	viewInstrumentTableRow->visible = false;
+	viewPatternRow->visible = false;
 
 	//
 	api->StartThread(this);
@@ -728,6 +865,30 @@ void C64DebuggerPluginGoatTracker::DoFrame()
 	// buffers and recompute trigger positions. Cheap; no-op until
 	// gsid.cpp has actually pushed samples.
 	GT2_VoiceWaveforms_UpdatePerFrame();
+
+	// The player refuses to start a song whose instrument has a gatetimer
+	// longer than the tick interval, and stock GT2 stops without a word: play
+	// parks on row 0, silent, and it reads as a hang. Say what happened, once
+	// per occurrence. The audio thread only sets the values; this is the main
+	// thread.
+	if (gt2GatetimerStopPending)
+	{
+		int gatetimer = gt2GatetimerStopGatetimer;
+		int tick = gt2GatetimerStopTick;
+		int instr = gt2GatetimerStopInstr;
+		gt2GatetimerStopPending = 0;
+
+		const char *instrName = (instr >= 0 && instr < MAX_INSTR) ? ginstr[instr].name : "";
+		LOGError("GT2: song stopped -- instrument %02X '%s' gatetimer=%d exceeds tick=%d",
+				 instr, instrName, gatetimer, tick);
+		if (viewC64 != NULL)
+		{
+			viewC64->ShowMessage("GoatTracker: song stopped. Instrument %02X gatetimer %d "
+								 "is longer than the tick (%d). Lower the instrument's "
+								 "gatetimer or raise the song tempo.",
+								 instr, gatetimer, tick);
+		}
+	}
 
 	// Autoload song: wait for GT2 engine to be ready, then load
 	if (autoloadPending && gt2_engine_ready)
@@ -854,6 +1015,8 @@ void C64DebuggerPluginGoatTracker::LoadSongFromFile(const char *filePath)
 	if (gt2Config) gt2Config->SetString("GoatTrackerSongFolder", (const char **)&cFolder);
 	delete[] cFolder;
 	delete folder;
+
+	if (recentlyOpenedSongs) recentlyOpenedSongs->Add(slrPath);
 	delete slrPath;
 }
 
@@ -876,9 +1039,7 @@ void C64DebuggerPluginGoatTracker::SystemDialogFileOpenSelected(CSlrString *path
 	if (instrumentDialogMode == 1)
 	{
 		instrumentDialogMode = 0;
-		strncpy(instrfilename, cPath, MAX_FILENAME - 1);
-		instrfilename[MAX_FILENAME - 1] = 0;
-		loadinstrument();
+		LoadInstrumentFromFile(cPath, einum, false);
 	}
 	else
 	{
@@ -890,6 +1051,13 @@ void C64DebuggerPluginGoatTracker::SystemDialogFileOpenSelected(CSlrString *path
 void C64DebuggerPluginGoatTracker::SystemDialogFileOpenCancelled()
 {
 	instrumentDialogMode = 0;
+}
+
+void C64DebuggerPluginGoatTracker::RecentlyOpenedFilesCallbackSelectedMenuItem(CSlrString *filePath)
+{
+	char *cPath = filePath->GetStdASCII();
+	LoadSongFromFile(cPath);
+	delete[] cPath;
 }
 
 void C64DebuggerPluginGoatTracker::SaveSongToFile(const char *filePath)
@@ -909,6 +1077,8 @@ void C64DebuggerPluginGoatTracker::SaveSongToFile(const char *filePath)
 	if (gt2Config) gt2Config->SetString("GoatTrackerSongFolder", (const char **)&cFolder);
 	delete[] cFolder;
 	delete folder;
+
+	if (recentlyOpenedSongs) recentlyOpenedSongs->Add(slrPath);
 	delete slrPath;
 }
 
@@ -962,6 +1132,7 @@ void C64DebuggerPluginGoatTracker::SystemDialogFileSaveSelected(CSlrString *path
 		strncpy(instrfilename, cPath, MAX_FILENAME - 1);
 		instrfilename[MAX_FILENAME - 1] = 0;
 		saveinstrument();
+		RememberInstrumentFolderOf(cPath);
 	}
 	else if (exportWaitingForSaveDialog)
 	{
@@ -981,14 +1152,208 @@ void C64DebuggerPluginGoatTracker::SystemDialogFileSaveCancelled()
 	instrumentDialogMode = 0;
 }
 
+std::string C64DebuggerPluginGoatTracker::GetInstrumentFolder()
+{
+	const char *folder = NULL;
+	if (gt2Config) gt2Config->GetString("GoatTrackerInstrumentFolder", &folder, "");
+	if (folder && folder[0]) return std::string(folder);
+
+	// Not set yet: fall back to the song folder, then to Documents. Both are
+	// somewhere the user already keeps GT2 material.
+	if (gt2Config) gt2Config->GetString("GoatTrackerSongFolder", &folder, "");
+	if (folder && folder[0]) return std::string(folder);
+
+	return gCPathToDocuments ? std::string(gCPathToDocuments) : std::string();
+}
+
+void C64DebuggerPluginGoatTracker::RememberInstrumentFolderOf(const char *filePath)
+{
+	if (gt2Config == NULL || filePath == NULL || filePath[0] == 0) return;
+
+	CSlrString *slrPath = new CSlrString(filePath);
+	CSlrString *folder = slrPath->GetFilePathWithoutFileNameComponentFromPath();
+	char *cFolder = folder->GetStdASCII();
+	if (cFolder && cFolder[0])
+		gt2Config->SetString("GoatTrackerInstrumentFolder", (const char **)&cFolder);
+	delete[] cFolder;
+	delete folder;
+	delete slrPath;
+}
+
+bool C64DebuggerPluginGoatTracker::LoadInstrumentFromFile(const char *filePath, int instrumentNum, bool preview)
+{
+	if (filePath == NULL || filePath[0] == 0) return false;
+
+	// Instrument 0 is GT2's "no instrument" slot and the last one is the
+	// reserved tempo-override slot, so neither is a valid target.
+	if (instrumentNum < 1 || instrumentNum > GT2_LAST_INSTR) return false;
+
+	FILE *probe = SYS_OpenFile(filePath, "rb");
+	if (probe == NULL) return false;
+	fclose(probe);
+
+	// Select first, so the instrument and table views follow the load and so
+	// loadinstrument() -- which always writes to einum -- targets this slot.
+	einum = instrumentNum;
+	showinstrtable();
+
+	strncpy(instrfilename, filePath, MAX_FILENAME - 1);
+	instrfilename[MAX_FILENAME - 1] = 0;
+
+	// Audition without cutting the song off: the point of clicking through
+	// instruments is to hear the song carry on with each one. Native GT2 stops
+	// the song here; the flag is ours and defaults to 0, so text mode keeps its
+	// own behaviour. It also has to be off again straight away, including on
+	// the paths that return early.
+	// One undo step around the load AND the gatetimer clamp below, so undo
+	// takes back both together and redo puts back what was actually applied.
+	// loadinstrument() opens a nested step of its own; only this outer commit
+	// records an entry (CViewGT2Tables' depth counter).
+	if (viewTables) viewTables->BeginTableUndoStep();
+
+	gt2KeepPlayingOnInstrumentLoad = 1;
+	loadinstrument();
+	gt2KeepPlayingOnInstrumentLoad = 0;
+
+	// A .ins holds only the instrument's own slice of each table, plus the
+	// absolute pointer it had in the song it was saved from. gsong.c rebases
+	// the slice's jump targets on load -- target - optr + start + 1 -- and if
+	// the target sat OUTSIDE the slice (GT2 lets instruments share table rows,
+	// so a jump into a neighbour's rows is legal in a song) the subtraction
+	// goes negative and wraps in the unsigned char into a random high row.
+	// The rows it names were never in the file, so the jump cannot be
+	// recovered; what it can do is stop the packer from walking off the end of
+	// the table ("TABLE EXECUTION OVERFLOWS"). End the table instead.
+	// The repairs are collected rather than announced one at a time: an
+	// instrument can carry a bad jump in more than one table, and three
+	// stacked notifications for one click read as three separate faults.
+	char repairReport[1024];
+	repairReport[0] = 0;
+	int repairedJumps = 0;
+
+	for (int t = 0; t < MAX_TABLES; t++)
+	{
+		if (t == STBL) continue;                 // speedtable rows are atomic
+		int ptr = ginstr[einum].ptr[t];
+		if (ptr <= 0) continue;
+
+		int start = ptr - 1;
+		int len = gettablepartlen(t, start);
+		for (int row = start; row < start + len && row < MAX_TABLELEN; row++)
+		{
+			if (ltable[t][row] != 0xff) continue;
+			int target = rtable[t][row];
+			if (target == 0) continue;           // 0 is "stop", always fine
+			if (target >= start + 1 && target <= start + len) continue;
+
+			const char *tableName = (t == WTBL) ? "wave" : (t == PTBL ? "pulse" : "filter");
+
+			rtable[t][row] = 0;
+			repairedJumps++;
+			LOGError("GT2: instrument %02X %s table row %02X jumped to row %02X, "
+					 "outside the instrument's own rows %02X-%02X -- ended the table instead",
+					 einum, tableName, row + 1, target, start + 1, start + len);
+
+			char line[192];
+			snprintf(line, sizeof(line),
+					 "  %s table, row $%02X:  jump to row $%02X  (this instrument owns $%02X-$%02X)\n",
+					 tableName, row + 1, target, start + 1, start + len);
+			strncat(repairReport, line, sizeof(repairReport) - strlen(repairReport) - 1);
+		}
+	}
+
+	if (repairedJumps > 0)
+	{
+		// A dialog, not a passing notification: the loaded instrument no longer
+		// matches the file on disk, and that is worth stopping for. Without the
+		// repair the song simply refuses to export ("TABLE EXECUTION
+		// OVERFLOWS"), so silently fixing it would trade one puzzle for another.
+		char message[1600];
+		snprintf(message, sizeof(message),
+				 "Instrument %02X was loaded with %d table jump%s repaired.\n"
+				 "\n"
+				 "%s"
+				 "\n"
+				 "A .ins file stores only the instrument's own table rows plus the\n"
+				 "pointer it had in the song it was saved from. The jump%s above\n"
+				 "left that range, so the rows %s named were never in the file and\n"
+				 "cannot be recovered.\n"
+				 "\n"
+				 "The table%s now end%s there instead. Left alone, the packer walks\n"
+				 "off the end of the table and the song refuses to export with\n"
+				 "\"TABLE EXECUTION OVERFLOWS\".\n"
+				 "\n"
+				 "Undo (%s+Z) takes the whole load back if you would rather keep\n"
+				 "the instrument that was there before.",
+				 einum, repairedJumps, repairedJumps == 1 ? "" : "s",
+				 repairReport,
+				 repairedJumps == 1 ? "" : "s",
+				 repairedJumps == 1 ? "it" : "they",
+				 repairedJumps == 1 ? "" : "s",
+				 repairedJumps == 1 ? "s" : "",
+				 GT2_CmdKey());
+
+		// Not during an automated run: a dialog nobody can dismiss would sit
+		// on top of every later UI test in the same process, and the fixtures
+		// deliberately include a file that triggers this.
+		if (guiMain != NULL && !C64D_IsAutomatedRunCommandLine())
+			guiMain->ShowMessageBox("GoatTracker: instrument table repaired", message);
+	}
+
+	// A gatetimer longer than the song's tick makes playroutine() refuse to
+	// play the song at all -- see the guard in gplay.c and #7a of the
+	// instruments-browser notes. Files exported by other
+	// tools do carry such values. Clamp it to what the guard will accept,
+	// keeping the flag bits (0x80 no-hard-restart, 0x40 legato) intact.
+	if (fixInstrumentGatetimerOnLoad)
+	{
+		int maxSafe = gt2MaxSafeGatetimer();
+		int flags = ginstr[einum].gatetimer & 0xc0;
+		int timer = ginstr[einum].gatetimer & 0x3f;
+		if (maxSafe > 0 && timer > maxSafe)
+		{
+			ginstr[einum].gatetimer = (unsigned char)(flags | (maxSafe & 0x3f));
+			LOGM("GT2: instrument %02X gatetimer %d -> %d (song tick allows at most %d)",
+				 einum, timer, maxSafe, maxSafe);
+			if (viewC64 != NULL)
+			{
+				viewC64->ShowMessage("GoatTracker: instrument %02X gatetimer %d was too high "
+									 "for this song and was lowered to %d, or the song would "
+									 "not play.", einum, timer, maxSafe);
+			}
+		}
+	}
+
+	if (viewTables) viewTables->CommitTableUndoStep();
+
+	RememberInstrumentFolderOf(filePath);
+
+	if (preview)
+	{
+		// A virtual re-trigger: the note the user last auditioned, on the
+		// channel they last auditioned it on. Nothing needs to be under the
+		// pattern cursor -- and if nothing has ever been played this session,
+		// C-5 (notename[] starts at C-1 == FIRSTNOTE, so C-5 is +4 octaves).
+		int note = gt2LastPreviewNote;
+		if (note < FIRSTNOTE || note > LASTNOTE)
+			note = FIRSTNOTE + 4 * 12;
+
+		int channel = gt2LastPreviewChannel;
+		if (channel < 0 || channel >= MAX_CHN)
+			channel = epchn;
+
+		playtestnote(note, einum, channel);
+	}
+	return true;
+}
+
 void C64DebuggerPluginGoatTracker::OpenLoadInstrumentDialog()
 {
 	std::list<CSlrString *> extensions;
 	extensions.push_back(new CSlrString("ins"));
 
-	const char *lastFolder = NULL;
-	if (gt2Config) gt2Config->GetString("GoatTrackerSongFolder", &lastFolder, "");
-	CSlrString *defaultFolder = (lastFolder && lastFolder[0]) ? new CSlrString(lastFolder) : NULL;
+	std::string lastFolder = GetInstrumentFolder();
+	CSlrString *defaultFolder = lastFolder.empty() ? NULL : new CSlrString(lastFolder.c_str());
 
 	CSlrString *windowTitle = new CSlrString("Load GoatTracker Instrument");
 	instrumentDialogMode = 1;
@@ -1004,9 +1369,8 @@ void C64DebuggerPluginGoatTracker::OpenSaveInstrumentDialog()
 	std::list<CSlrString *> extensions;
 	extensions.push_back(new CSlrString("ins"));
 
-	const char *lastFolder = NULL;
-	if (gt2Config) gt2Config->GetString("GoatTrackerSongFolder", &lastFolder, "");
-	CSlrString *defaultFolder = (lastFolder && lastFolder[0]) ? new CSlrString(lastFolder) : NULL;
+	std::string lastFolder = GetInstrumentFolder();
+	CSlrString *defaultFolder = lastFolder.empty() ? NULL : new CSlrString(lastFolder.c_str());
 
 	// Default filename from current instrument name
 	CSlrString *defaultFileName = NULL;
@@ -1054,7 +1418,8 @@ static std::string GT2_ShortcutText(u32 keyCode, bool isShift, bool isAlt, bool 
 
 // The command-modifier word — "Cmd" on macOS, "Ctrl" elsewhere — taken from
 // the engine formatter (the prefix of a known command shortcut), not hardcoded.
-static const char *GT2_CmdKey()
+// Non-static: GT2 views outside this file label their shortcuts with it too.
+const char *GT2_CmdKey()
 {
 	static std::string cmdName;
 	if (cmdName.empty())
@@ -1105,6 +1470,8 @@ void C64DebuggerPluginGoatTracker::RenderMainMenuImGui()
 
 	if (ImGui::MenuItem("Load Song...", renoise ? scOpen.c_str() : NULL))
 		OpenLoadSongDialog();
+	if (recentlyOpenedSongs)
+		recentlyOpenedSongs->RenderImGuiMenu("Open Recent##GoatTracker");
 	if (ImGui::MenuItem("Save Song", renoise ? scSave.c_str() : NULL))
 	{
 		// Quick save to the loaded file; fall back to a dialog if none.
@@ -1146,6 +1513,8 @@ void C64DebuggerPluginGoatTracker::RenderMainMenuImGui()
 		viewTables->visible = !viewTables->visible;
 	if (viewSongInfo && ImGui::MenuItem("GT2 Song Info", "", viewSongInfo->visible))
 		viewSongInfo->visible = !viewSongInfo->visible;
+	if (viewSongSettings && ImGui::MenuItem("GT2 Song Settings", "", viewSongSettings->visible))
+		viewSongSettings->visible = !viewSongSettings->visible;
 	if (viewStatus && ImGui::MenuItem("GT2 Status", "", viewStatus->visible))
 		viewStatus->visible = !viewStatus->visible;
 	if (viewMixer && ImGui::MenuItem("GT2 Mixer", "", viewMixer->visible))
@@ -1156,6 +1525,14 @@ void C64DebuggerPluginGoatTracker::RenderMainMenuImGui()
 		viewKeyboard->visible = !viewKeyboard->visible;
 	if (viewOscilloscope && ImGui::MenuItem("GT2 Oscilloscope", "", viewOscilloscope->visible))
 		viewOscilloscope->visible = !viewOscilloscope->visible;
+	if (viewStateSID && ImGui::MenuItem("GT2 SID", "", viewStateSID->visible))
+		viewStateSID->visible = !viewStateSID->visible;
+	if (viewInstrumentsBrowser && ImGui::MenuItem("GT2 Instruments Browser", "", viewInstrumentsBrowser->visible))
+		viewInstrumentsBrowser->visible = !viewInstrumentsBrowser->visible;
+	if (viewInstrumentTableRow && ImGui::MenuItem("GT2 Instrument Table Row", "", viewInstrumentTableRow->visible))
+		viewInstrumentTableRow->visible = !viewInstrumentTableRow->visible;
+	if (viewPatternRow && ImGui::MenuItem("GT2 Pattern Row", "", viewPatternRow->visible))
+		viewPatternRow->visible = !viewPatternRow->visible;
 
 	ImGui::Separator();
 
@@ -1231,6 +1608,38 @@ void C64DebuggerPluginGoatTracker::RenderMainMenuImGui()
 	{
 		autoloadSongOnStart = !autoloadSongOnStart;
 		PLUGIN_GoatTrackerSaveSettings();
+	}
+
+	if (ImGui::MenuItem("Keep Playing on Stop", "", gt2KeepPlayingOnStop))
+	{
+		gt2KeepPlayingOnStop = !gt2KeepPlayingOnStop;
+		PLUGIN_GoatTrackerSaveSettings();
+	}
+	if (ImGui::IsItemHovered())
+	{
+		ImGui::SetTooltip("Off (default): stopping playback cuts the sound immediately, as\n"
+						  "stock GT2 does -- every channel's waveform and wavetable are\n"
+						  "cleared the moment you press Space.\n"
+						  "\n"
+						  "On: stopping only stops the sequencer. Whatever is sounding rings\n"
+						  "out and decays naturally, the same way a row triggered with Enter\n"
+						  "does. Applies to Space and to the toolbar's Pause button; the\n"
+						  "toolbar's Stop button always resets the player.");
+	}
+
+	if (ImGui::MenuItem("Fix Instrument Gatetimer on Load", "", fixInstrumentGatetimerOnLoad))
+	{
+		fixInstrumentGatetimerOnLoad = !fixInstrumentGatetimerOnLoad;
+		PLUGIN_GoatTrackerSaveSettings();
+	}
+	if (ImGui::IsItemHovered())
+	{
+		ImGui::SetTooltip("An instrument whose gatetimer is longer than the song's tick makes\n"
+						  "the player refuse to start the song at all (it jumps to row 0 and\n"
+						  "stays silent). With this on, a loaded instrument's gatetimer is\n"
+						  "lowered to the highest value this song's tempo allows (now: %d).\n"
+						  "Undo takes the load and the correction back together.",
+						  gt2MaxSafeGatetimer());
 	}
 
 	if (ImGui::BeginMenu("Keyboard Layout"))

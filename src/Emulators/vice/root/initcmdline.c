@@ -311,8 +311,12 @@ int initcmdline_check_args(int argc, char **argv)
     }
     DBG(("initcmdline_check_args 1 (argc:%d)\n", argc));
 
-    /* The last orphan option is the same as `-autostart'.  */
-    if ((argc > 1) && (autostart_string == NULL)) {
+    /* The last orphan option is the same as `-autostart'.
+       c64d: retained non-VICE options (see cmdline_parse) can be left in argv
+       here -- never treat a token starting with '-'/'+' as an autostart file. */
+    if ((argc > 1) && (autostart_string == NULL)
+        && (argv[1] != NULL)
+        && (argv[1][0] != '-') && (argv[1][0] != '+')) {
         autostart_string = lib_strdup(argv[1]);
         autostart_mode = AUTOSTART_MODE_RUN;
         argc--, argv++;

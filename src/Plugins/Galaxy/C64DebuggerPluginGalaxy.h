@@ -12,7 +12,8 @@ class C64DebuggerPluginGalaxy : public C64DebuggerPluginCrtMaker
 {
 public:
 	C64DebuggerPluginGalaxy();
-	
+	virtual ~C64DebuggerPluginGalaxy();
+
 	virtual void Init();
 	virtual void ThreadRun(void *data);
 

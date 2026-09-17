@@ -1,0 +1,54 @@
+# VICE Palette file
+#
+# Palette file by Kim Lemon of lemon64.com, to be used for screenshots.
+#
+# TYPE:VICII
+# NAME:Lemon64
+
+# Black
+00 00 00
+
+# White
+ff ff ff
+
+# Red
+8b 3e 42
+
+# Cyan
+7c d3 cd
+
+# Purple
+97 46 a0
+
+# Green
+5c b2 54
+
+# Blue
+3c 39 a9
+
+# Yellow
+e3 e7 6e
+
+# Orange
+94 57 31
+
+# Brown
+59 3c 07
+
+# Light Red
+cd 77 7c
+
+# Dark Gray
+50 50 50
+
+# Medium Gray
+83 83 83
+
+# Light Green
+af f8 a6
+
+# Light Blue
+7f 7d f4
+
+# Light Gray
+ba ba ba

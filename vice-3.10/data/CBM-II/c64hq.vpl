@@ -1,0 +1,56 @@
+#
+# VICE Palette file
+#
+# Syntax:
+# Red Green Blue
+#
+# TYPE:VICII
+# NAME:C64HQ
+
+# Black
+0A 0A 0A
+
+# White
+FF F8 FF
+
+# Red
+85 1F 02
+
+# Cyan
+65 CD A8
+
+# Purple
+A7 3B 9F
+
+# Green
+4D AB 19
+
+# Blue
+1A 0C 92
+
+# Yellow
+EB E3 53
+
+# Orange
+A9 4B 02
+
+# Brown
+44 1E 00
+
+# Light Red
+D2 80 74
+
+# Dark Gray
+46 46 46
+
+# Medium Gray
+8B 8B 8B
+
+# Light Green
+8E F6 8E
+
+# Light Blue
+4D 91 D1
+
+# Light Gray
+BA BA BA

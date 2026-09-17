@@ -18,18 +18,7 @@
 #include "sidendian.h"
 #include "vice-config.h"
 #include "SidTuneMod.h"
-// SIDPlay MD5 wrapper from MTEngineSDL (../MTEngineSDL/src/Engine/Libs/md5/MD5.h).
-// On Linux/macOS the md5 directory is itself an include root, so the bare
-// "MD5.h" form resolves there (see claude/architecture/sidplay-tools.md).
-// On Windows the filesystem is case-insensitive and the VICE 3.10 stub
-// src/Emulators/vice/root/md5.h sits earlier in the search order, so "MD5.h"
-// would wrongly match that empty stub. Engine/Libs is also an include root on
-// Windows, so qualify via "md5/MD5.h" there to reach the real header.
-#ifdef _WIN32
-#include "md5/MD5.h"
-#else
 #include "MD5.h"
-#endif
 
 const char *SidTuneMod::createMD5(char *md5)
 {

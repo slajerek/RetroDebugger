@@ -1,0 +1,143 @@
+#
+# VICE Palette file
+#
+# Syntax:
+# Red Green Blue
+#
+# NAME:ITU-R BT709 HDTV (PAL)
+# TYPE:TED
+#
+# TED palette based on Wikipedia TED and YCbCr pages
+#
+# YCbCr values taken from https://en.wikipedia.org/wiki/MOS_Technology_TED
+#
+# provided by Mac Reiter, see #471
+
+00 00 00
+1f 1f 1f
+a1 01 00
+00 3e 70
+83 00 b4
+00 4c 00
+1f 0a f1
+1f 35 00
+83 11 00
+55 23 00
+00 43 00
+ac 00 1f
+00 49 1f
+00 2e b4
+55 00 e1
+00 4e 00
+00 00 00
+3f 3f 3f
+c1 21 00
+00 5e 8f
+a3 13 d3
+00 6c 00
+3f 2a ff
+3f 54 00
+a3 31 00
+75 43 00
+09 63 00
+cc 15 3f
+00 69 3f
+00 4e d3
+75 1c ff
+00 6e 00
+00 00 00
+5f 5f 5f
+e1 41 0f
+00 7e af
+c3 33 f3
+00 8c 00
+5f 4a ff
+5f 74 00
+c3 51 00
+95 63 00
+29 83 00
+ec 35 5f
+00 89 5f
+00 6e f3
+95 3c ff
+00 8e 0f
+00 00 00
+7f 7f 7f
+ff 60 2f
+00 9e cf
+e3 52 ff
+1b ac 00
+7f 6a ff
+7f 94 00
+e3 70 00
+b5 83 00
+49 a3 00
+ff 55 7f
+00 a9 7f
+1b 8e ff
+b5 5b ff
+00 ae 2f
+00 00 00
+9f 9f 9f
+ff 80 4f
+1d bd ef
+ff 72 ff
+3b cb 0b
+9f 8a ff
+9f b4 00
+ff 90 0b
+d5 a2 00
+69 c2 00
+ff 75 9f
+12 c9 9f
+3b ad ff
+d5 7b ff
+1d ce 4f
+00 00 00
+bf bf bf
+ff a0 6f
+3d dd ff
+ff 92 ff
+5b eb 2b
+bf aa ff
+bf d4 00
+ff b0 2b
+f5 c2 00
+89 e2 00
+ff 95 bf
+32 e9 bf
+5b cd ff
+f5 9b ff
+3d ed 6f
+00 00 00
+df df df
+ff c0 8e
+5d fd ff
+ff b2 ff
+7b ff 4a
+df c9 ff
+df f4 0d
+ff d0 4a
+ff e2 1d
+a9 ff 1d
+ff b5 df
+52 ff df
+7b ed ff
+ff bb ff
+5d ff 8e
+00 00 00
+ff ff ff
+ff e0 ae
+7c ff ff
+ff d2 ff
+9b ff 6a
+ff e9 ff
+ff ff 2d
+ff f0 6a
+ff ff 3d
+c9 ff 3d
+ff d5 ff
+72 ff ff
+9b ff ff
+ff db ff
+7c ff ae

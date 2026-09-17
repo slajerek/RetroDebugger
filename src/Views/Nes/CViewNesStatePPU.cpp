@@ -24,6 +24,7 @@
 #include "VID_ImageBinding.h"
 #include "C64SIDFrequencies.h"
 #include "CLayoutParameter.h"
+#include "MT_UiScale.h"
 
 extern Nes::Api::Emulator nesEmulator;
 
@@ -32,7 +33,7 @@ CViewNesStatePPU::CViewNesStatePPU(const char *name, float posX, float posY, flo
 {
 	this->debugInterface = debugInterface;
 	
-	fontSize = 7.0f;
+	fontSize = MT_UiScaled(7.0f);
 	hasManualFontSize = false;
 	AddLayoutParameter(new CLayoutParameterFloat("Font Size", &fontSize));
 

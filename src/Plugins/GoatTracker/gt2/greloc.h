@@ -38,6 +38,13 @@ extern unsigned char pattmap[MAX_PATT];
 extern unsigned char instrmap[MAX_INSTR];
 extern unsigned char tablemap[MAX_TABLES][MAX_TABLELEN+1];
 extern int tableerror;
+/* Where the failing table walk went wrong, so the error can name it rather
+   than only the instrument: the 1-based row holding the last jump taken, the
+   target it jumped to, and the row the walk entered at. 0 = no jump was
+   taken (the table simply has no $FF and runs off the end). */
+extern int tableerrorrow;
+extern int tableerrortarget;
+extern int tableerrorentry;
 #endif
 
 void relocator(void);

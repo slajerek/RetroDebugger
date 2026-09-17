@@ -1,0 +1,129 @@
+# VICE keyboard mapping file
+
+# use business (uk) as base
+!INCLUDE gtk3_buuk_pos.vkm
+
+# this is a PET business (uk) keyboard mapping (positional)
+# for 1:1 keyboard mapping with a German PC keyboard
+
+# 2001, 3032 and 4032 use graphics keyboard
+# 4032B, 8032 and up use business keyboard
+#
+# http://www.6502.org/users/andre/petindex/keyboards.html
+
+# Business (UK) keyboard matrix:
+#
+# Keys starting with 'KP' are on the number pad.
+#
+#       0        1        2        3        4        5        6        7
+#   +--------+--------+--------+--------+--------+--------+--------+--------+
+# 0 |   2 "  |   5 %  |   8 (  |   - =  |  KP8   |crsr rgt|  ^N    |--------|
+#   +--------+--------+--------+--------+--------+--------+--------+--------+
+# 1 |   1 !  |   4 $  |   7 '  |   0    |  KP7   |   ^    |--------|  KP9   |
+#   +--------+--------+--------+--------+--------+--------+--------+--------+
+# 2 | escape |   s    |   f    |   h    |   ]    |   k    |   ; +  |  KP5   |
+#   +--------+--------+--------+--------+--------+--------+--------+--------+
+# 3 |   a    |   d    |   g    |   j    | return |   l    |   @    |  KP6   |
+#   +--------+--------+--------+--------+--------+--------+--------+--------+
+# 4 |  tab   |   w    |   r    |   y    |   \    |   i    |   p    |  del   |
+#   +--------+--------+--------+--------+--------+--------+--------+--------+
+# 5 |   q    |   e    |   t    |   u    |crsr dwn|   o    |   [    |  KP4   |
+#   +--------+--------+--------+--------+--------+--------+--------+--------+
+# 6 |l shift |   c    |   b    |   . >  |  KP.   |  ^Y    |r shift |  KP3   |
+#   +--------+--------+--------+--------+--------+--------+--------+--------+
+# 7 |   z    |   v    |   n    |   , <  |  KP0   |  ^O    | repeat |  KP2   |
+#   +--------+--------+--------+--------+--------+--------+--------+--------+
+# 8 |  RVS   |   x    | space  |   m    | home   |  ^U    |   / ?  |  KP1   |
+#   +--------+--------+--------+--------+--------+--------+--------+--------+
+# 9 |  <--   |   3 #  |   6 &  |   9 )  |runstop |   : *  |--------|  ^V    |
+#   +--------+--------+--------+--------+--------+--------+--------+--------+
+#
+#   ^N = both shifts + 2
+#   ^Y = left shift + TAB + I
+#   ^O = Z + A + L
+#   ^U = RVS + A + L
+#   ^V = TAB + <- + DEL
+#
+# Business (US) matrix (differences to UK)
+#   +--------+--------+--------+--------+--------+--------+--------+--------+
+# 2 |        |        |        |        |   ; +  |        |   \    |        |
+#   +--------+--------+--------+--------+--------+--------+--------+--------+
+# 3 |        |        |        |        |        |        |   [    |        |
+#   +--------+--------+--------+--------+--------+--------+--------+--------+
+# 4 |        |        |        |        |   @    |        |        |        |
+#   +--------+--------+--------+--------+--------+--------+--------+--------+
+# 5 |        |        |        |        |        |        |   ]    |        |
+#   +--------+--------+--------+--------+--------+--------+--------+--------+
+#
+#   uk  ->  us
+#   ]       ;
+#   [       ]
+#   \       @
+#   ;       \
+#   @       [
+#
+#   uk business layout:
+#
+#   aleft   1!  2"  3#  4$  5%  6&  7'  8(  9)  0   :*  -=  ^   l/r r/s     7   8   9
+#       tab   q   w   e   r   t   y   u   i   o   p   [   \   u/d del       4   5   6
+#   esc SL      a   s   d   f   g   h   j   k   l   ;+  @   ]   return      1   2   3
+#   rvs LS        z   x   c   v   b   n   m   ,<  .>  /?  RS rpt  clr       0       .
+#
+#   us business layout:
+#
+#   aleft   1!  2"  3#  4$  5%  6&  7'  8(  9)  0   :*  -=  ^   l/r r/s     7   8   9
+#       tab   q   w   e   r   t   y   u   i   o   p   ]   @   u/d del       4   5   6
+#   esc SL      a   s   d   f   g   h   j   k   l   \   [   ;+  return      1   2   3
+#   rvs LS        z   x   c   v   b   n   m   ,<  .>  /?  RS rpt  clr       0       .
+
+#
+# Changes to US mapping
+#
+ssharp          1 5 0
+
+odiaeresis      2 6 0
+Odiaeresis      2 6 1
+adiaeresis      3 6 0
+Adiaeresis      3 6 1
+numbersign      2 4 0
+apostrophe      2 4 1
+
+udiaeresis      5 6 0
+Udiaeresis      5 6 1
+plus            4 4 0
+asterisk        4 4 1
+
+semicolon       7 3 1
+colon           6 3 1
+minus           8 6 0
+underscore      8 6 1
+
+quotedbl        0 0 8
+slash           1 2 8
+parenleft       0 2 8
+parenright      9 3 8
+section         9 1 8
+dead_circumflex 9 0 8
+degree          9 0 8
+asciicircum     9 0 8
+
+ssharp          9 5 0
+question        9 5 8
+
+acute           0 3 0
+grave           0 3 8
+dead_acute      0 3 0
+dead_grave      0 3 8
+
+0               1 3 0
+equal           1 3 8
+
+ampersand       9 2 8
+
+z               4 3 0
+Z               4 3 8
+y               7 0 0
+Y               7 0 8
+
+less            8 0 8
+greater         8 0 8

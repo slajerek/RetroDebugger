@@ -16,6 +16,7 @@ extern "C" {
 #include "C64SIDDump.h"
 #include "SYS_DefaultConfig.h"
 #include <vector>
+#include "MT_UiScale.h"
 
 // Engine-wide shutdown flag (defined in MTEngineSDL/Render/VID_Main.cpp).
 // Polled by the history-playback worker thread so it stops once the app
@@ -58,7 +59,7 @@ CViewC64SidTrackerHistory::CViewC64SidTrackerHistory(const char *name, float pos
 	this->numVisibleTrackLines = 1;
 	
 	this->font = viewC64->fontDisassembly;
-	fontSize = 9;
+	fontSize = MT_UiScaled(9.0f);
 	AddLayoutParameter(new CLayoutParameterFloat("Font Size", &fontSize));
 
 	CSlrFont *fontButton = viewC64->fontDefaultCBMShifted;

@@ -13,6 +13,7 @@
 #include "CSlrString.h"
 #include "CViewC64StateVIC.h"
 #include "CViewC64.h"
+#include "MT_UiScale.h"
 
 // TODO: colour leds are just rectangles with hitbox and lot of copy pasted code, replace them to proper buttons!
 
@@ -79,7 +80,7 @@ CViewC64AllGraphics::CViewC64AllGraphics(const char *name, float posX, float pos
 	
 	//
 	font = viewC64->fontDefaultCBMShifted;
-	fontScale = 0.8;
+	fontScale = MT_UiScaled(0.8f);
 	fontHeight = font->GetCharHeight('@', fontScale) + 2;
 	fontSize = fontHeight;
 

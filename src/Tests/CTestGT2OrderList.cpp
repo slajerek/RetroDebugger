@@ -23,7 +23,7 @@ void CTestGT2OrderList::Run(ITestCallback *cb)
 	// Check if GT2 plugin is active by verifying chardata is initialized.
 	if (chardata == NULL)
 	{
-		TestCompleted(true, "Skipped (GT2 not active)");
+		TestSkipped("GT2 plugin not active -- order-list handling was never exercised");
 		return;
 	}
 

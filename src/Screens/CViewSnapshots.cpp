@@ -29,6 +29,7 @@ extern "C" {
 
 #include "CDebugInterface.h"
 #include "CDebugInterfaceC64.h"
+#include "MT_UiScale.h"
 
 #define C64SNAPSHOT_MAGIC1		'S'
 
@@ -43,7 +44,7 @@ CViewSnapshots::CViewSnapshots(float posX, float posY, float posZ, float sizeX, 
 	prevView = viewC64;
 
 	font = viewC64->fontDefaultCBMShifted;
-	fontScale = 3;
+	fontScale = MT_UiScaled(3.0f);
 	fontHeight = font->GetCharHeight('@', fontScale) + 2;
 
 	snapshotExtensions.push_back(new CSlrString("snap"));

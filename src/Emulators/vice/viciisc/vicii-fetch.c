@@ -280,7 +280,9 @@ uint8_t vicii_fetch_sprite_pointer(int i)
     vicii.sprite[i].pointer = fetch_phi1(v_fetch_addr(0x3f8 + i));
 
     // --- Temporary trace for CTestRemapperPixelMap sprite-4-row-18 debug
-    // (claude/2026-04-24-remapper-sprite4-row18-analysis.md).
+    // (sprite-4 row-18 analysis notes -- the prepare-then-commit
+    // mechanism above is why copying at the wrong half of the line shows
+    // one line behind).
     // Logs every sprite P-access on rasters 120..150 with sprite index,
     // raster line + cycle, fetched pointer value, and current MC (which
     // byte is about to be read via this pointer). Gate via env var to

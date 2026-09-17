@@ -135,7 +135,10 @@ public:
 	
 	// preferences
 	virtual void InsertD64(CSlrString *path);
+	// detaches the disk from the default drive (unit 8)
 	virtual void DetachDriveDisk();
+	// detaches the disk from the given unit (8..11). Does not reset the machine.
+	virtual void DetachDriveDisk(int deviceNumber);
 	
 	virtual bool GetSettingIsWarpSpeed();
 	virtual void SetSettingIsWarpSpeed(bool isWarpSpeed);
@@ -189,7 +192,10 @@ public:
 
 	// make jmp and reset CPU
 	virtual void MakeJmpAndReset(uint16 addr);
-	virtual void MakeJmpC64(uint16 addr);
+	// Sets the C64 CPU program counter. Returns true when the new PC has been
+	// committed to the CPU, false when the request is still queued (see
+	// CDebugInterfaceVice::MakeJmpC64).
+	virtual bool MakeJmpC64(uint16 addr);
 	
 	// make jmp without resetting CPU
 	virtual void MakeJmpNoResetC64(uint16 addr);
@@ -285,6 +291,16 @@ public:
 	virtual void SetReuSize(int reuSize);
 	virtual bool LoadReu(char *filePath);
 	virtual bool SaveReu(char *filePath);
+
+	// IDE64 (deviceNum is 1..4)
+	virtual void AttachIde64Cartridge(CSlrString *filePath);
+	virtual void DetachIde64Cartridge();
+	virtual void SetIde64Image(int deviceNum, const char *path);	// "" detaches
+	virtual void SetIde64Version(int version);						// 0=V3, 1=V4.1, 2=V4.2
+	virtual void SetIde64UsbServerEnabled(bool enabled);
+	virtual void SetIde64UsbServerAddress(const char *address);
+	virtual void SetIde64RtcSave(bool enabled);
+	virtual void SetIde64AutodetectSize(int deviceNum, bool enabled);
 
 	// snapshots
 	virtual bool LoadFullSnapshot(CByteBuffer *snapshotBuffer);

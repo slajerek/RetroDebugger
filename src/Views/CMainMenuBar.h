@@ -40,6 +40,11 @@ enum SystemDialogOperation : u8
 	SystemDialogOperationImportBreakpoints,
 	SystemDialogOperationSaveREU,
 	SystemDialogOperationLoadREU,
+	SystemDialogOperationAttachIDE64Rom,
+	SystemDialogOperationAttachIDE64Image1,
+	SystemDialogOperationAttachIDE64Image2,
+	SystemDialogOperationAttachIDE64Image3,
+	SystemDialogOperationAttachIDE64Image4,
 	SystemDialogOperationDumpC64Memory,
 	SystemDialogOperationDumpC64MemoryMarkers,
 	SystemDialogOperationDumpDrive1541Memory,
@@ -65,6 +70,8 @@ public:
 	std::list<CSlrString *> extensionsWatches;
 	std::list<CSlrString *> extensionsBreakpoints;
 	std::list<CSlrString *> extensionsREU;
+	std::list<CSlrString *> extensionsIDE64Rom;
+	std::list<CSlrString *> extensionsIDE64Image;
 	std::list<CSlrString *> extensionsMemory;
 	std::list<CSlrString *> extensionsCSV;
 	std::list<CSlrString *> extensionsProfiler;
@@ -256,6 +263,10 @@ public:
 	void DetachEverything(bool showMessage, bool storeSettings);
 	void DetachCartridge(bool showMessage);
 	void DetachDiskImage(bool showMessage);
+	// per-platform variants of DetachDiskImage, used by the debugger API (WebSockets/MCP)
+	// to detach a single drive without touching the other platforms. These never reset the machine.
+	void DetachDiskImageC64(int deviceNumber, bool storeSettings);
+	void DetachDiskImageAtari(int driveNumber, bool storeSettings);
 	void DetachTape(bool showMessage);
 	void DetachC64PRG(bool showMessage);
 	void DetachAtariXEX(bool showMessage);

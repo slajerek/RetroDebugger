@@ -4,7 +4,7 @@
 
 #define GFILE_C
 
-#ifdef __WIN32__
+#ifdef _WIN32
 #include <windows.h>
 #endif
 
@@ -48,7 +48,7 @@ int fileselector(char *name, char *path, char *filter, char *title, int filemode
   DIR *dir;
   struct dirent *de;
   struct stat st;
-  #ifdef __WIN32__
+  #ifdef _WIN32
   char drivestr[] = "A:\\";
   char driveexists[26];
   #endif
@@ -61,7 +61,7 @@ int fileselector(char *name, char *path, char *filter, char *title, int filemode
   if (strlen(path)) chdir(path);
 
   // Scan for all existing drives
-  #ifdef __WIN32__
+  #ifdef _WIN32
   for (c = 0; c < 26; c++)
   {
     drivestr[0] = 'A'+c;
@@ -83,7 +83,7 @@ int fileselector(char *name, char *path, char *filter, char *title, int filemode
       direntry[c].name = NULL;
     }
   }
-  #ifdef __WIN32__
+  #ifdef _WIN32
   // Create drive letters
   for (c = 0; c < 26; c++)
   {

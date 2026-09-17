@@ -46,6 +46,12 @@ C64DebuggerPluginGalaxy::C64DebuggerPluginGalaxy()
 	assembleTextBuf = new char[1024];
 }
 
+C64DebuggerPluginGalaxy::~C64DebuggerPluginGalaxy()
+{
+	if (pluginGalaxy == this)
+		pluginGalaxy = NULL;
+}
+
 void C64DebuggerPluginGalaxy::Init()
 {
 	C64DebuggerPluginCrtMaker::Init();

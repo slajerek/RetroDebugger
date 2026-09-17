@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=VICE (xcbm5x0)
+Comment=Commodore CBM-II (500/P) emulator
+Exec=xcbm5x0
+Terminal=false
+Icon=vice-xcbm2
+Categories=Game;Emulator;

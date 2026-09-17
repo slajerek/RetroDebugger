@@ -160,15 +160,26 @@ extern "C" {
 	int atrd_check_maincpu_cycle();
 }
 
+// The async queue defers work to the emulation thread, which drains it once per
+// frame in atrd_async_check(). Only the snapshot commands use it.
+//
+// The CPU register setters used to queue as well AND write the register straight
+// away, which meant every debugger register write landed TWICE: once on the
+// calling thread, and again at the next frame boundary. For a PC write that is a
+// second jump the user never asked for -- set the PC while paused, resume, and one
+// frame later the CPU is yanked back to the same address and re-runs whatever the
+// first jump started. That is what made CTestStackAnnotation flaky: its Atari
+// program had reached its final state at $1011 when the queued copy fired and
+// re-ran it from $1000, so a single step landed mid-program with the wrong SP.
+// (Instrumented 2026-08-27: "queued ATRD_ASYNC_SET_PC firing: PC was 1011,
+// forcing 1000".)
+//
+// The queue was also the wrong half to keep: it holds ONE command, so setting
+// several registers in a row -- exactly what CViewAtariStateCPU does -- silently
+// overwrote and leaked all but the last. The setters now write once, directly.
 #define ATRD_ASYNC_NO_COMMAND		0
 #define ATRD_ASYNC_LOAD_SNAPSHOT	1
 #define ATRD_ASYNC_SAVE_SNAPSHOT	2
-#define ATRD_ASYNC_SET_PC			3
-#define ATRD_ASYNC_SET_REG_A		4
-#define ATRD_ASYNC_SET_REG_X		5
-#define ATRD_ASYNC_SET_REG_Y		6
-#define ATRD_ASYNC_SET_REG_P		7
-#define ATRD_ASYNC_SET_REG_S		8
 
 int atrd_async_command = ATRD_ASYNC_NO_COMMAND;
 void *atrd_async_data;
@@ -339,42 +350,6 @@ void atrd_async_check()
 		atrd_sync_save_snapshot(fileName);
 		free(fileName);
 	}
-	else if (atrd_async_command == ATRD_ASYNC_SET_PC)
-	{
-		int *newPC = (int *)atrd_async_data;
-		atrd_atari_set_cpu_pc(*newPC);
-		free(newPC);
-	}
-	else if (atrd_async_command == ATRD_ASYNC_SET_REG_A)
-	{
-		int *newRegValue = (int *)atrd_async_data;
-		atrd_atari_set_cpu_reg_a(*newRegValue);
-		free(newRegValue);
-	}
-	else if (atrd_async_command == ATRD_ASYNC_SET_REG_X)
-	{
-		int *newRegValue = (int *)atrd_async_data;
-		atrd_atari_set_cpu_reg_x(*newRegValue);
-		free(newRegValue);
-	}
-	else if (atrd_async_command == ATRD_ASYNC_SET_REG_Y)
-	{
-		int *newRegValue = (int *)atrd_async_data;
-		atrd_atari_set_cpu_reg_y(*newRegValue);
-		free(newRegValue);
-	}
-	else if (atrd_async_command == ATRD_ASYNC_SET_REG_P)
-	{
-		int *newRegValue = (int *)atrd_async_data;
-		atrd_atari_set_cpu_reg_p(*newRegValue);
-		free(newRegValue);
-	}
-	else if (atrd_async_command == ATRD_ASYNC_SET_REG_S)
-	{
-		int *newRegValue = (int *)atrd_async_data;
-		atrd_atari_set_cpu_reg_s(*newRegValue);
-		free(newRegValue);
-	}
 
 	atrd_async_data = NULL;
 	atrd_async_command = ATRD_ASYNC_NO_COMMAND;
@@ -396,71 +371,48 @@ void atrd_async_save_snapshot(char *filePath)
 	atrd_async_command = ATRD_ASYNC_SAVE_SNAPSHOT;
 }
 
+// 1 while a command is queued for the emulation thread to run at the next frame
+// boundary. Exists so a test can assert that a debugger write left NOTHING
+// deferred behind it: a deferred duplicate of a register write is invisible until
+// it fires, up to a frame later, and by then it looks like the emulator moved on
+// its own. See CTestStackAnnotation.
+int atrd_is_async_command_pending(void)
+{
+	return atrd_async_command != ATRD_ASYNC_NO_COMMAND;
+}
+
+// The CPU register setters below write the register ONCE, here on the calling
+// thread. See the note at ATRD_ASYNC_NO_COMMAND for why they no longer also queue
+// the same write for the emulation thread to repeat a frame later.
 void atrd_async_set_cpu_pc(int newPC)
 {
-	int *pc = (int *)malloc(1 * sizeof(int));
-	*pc = newPC;
-	atrd_async_data = (void*)pc;
-	atrd_async_command = ATRD_ASYNC_SET_PC;
-	
-	// if code is paused/going to be, then pc should be set immediately
 	atrd_atari_set_cpu_pc(newPC);
 }
 
 void atrd_async_set_reg_a(int newRegValue)
 {
-	int *regValue = (int *)malloc(1 * sizeof(int));
-	*regValue = newRegValue;
-	atrd_async_data = (void*)regValue;
-	atrd_async_command = ATRD_ASYNC_SET_REG_A;
-	
-	// if code is paused/going to be, then pc should be set now
-	atrd_atari_set_cpu_reg_a(*regValue);
+	atrd_atari_set_cpu_reg_a(newRegValue);
 }
 
 void atrd_async_set_reg_x(int newRegValue)
 {
-	int *regValue = (int *)malloc(1 * sizeof(int));
-	*regValue = newRegValue;
-	atrd_async_data = (void*)regValue;
-	atrd_async_command = ATRD_ASYNC_SET_REG_X;
-	
-	// if code is paused/going to be, then pc should be set now
-	atrd_atari_set_cpu_reg_x(*regValue);
+	atrd_atari_set_cpu_reg_x(newRegValue);
 }
 
 void atrd_async_set_reg_y(int newRegValue)
 {
-	int *regValue = (int *)malloc(1 * sizeof(int));
-	*regValue = newRegValue;
-	atrd_async_data = (void*)regValue;
-	atrd_async_command = ATRD_ASYNC_SET_REG_Y;
-	
-	// if code is paused/going to be, then pc should be set now
-	atrd_atari_set_cpu_reg_y(*regValue);
+	atrd_atari_set_cpu_reg_y(newRegValue);
 }
 
 void atrd_async_set_reg_p(int newRegValue)
 {
-	int *regValue = (int *)malloc(1 * sizeof(int));
-	*regValue = newRegValue;
-	atrd_async_data = (void*)regValue;
-	atrd_async_command = ATRD_ASYNC_SET_REG_P;
-	
-	// if code is paused/going to be, then pc should be set now
-	atrd_atari_set_cpu_reg_p(*regValue);
+	atrd_atari_set_cpu_reg_p(newRegValue);
 }
 
 
 void atrd_async_set_reg_s(int newRegValue)
 {
-	int *regValue = (int *)malloc(1 * sizeof(int));
-	*regValue = newRegValue;
-	atrd_async_data = (void*)regValue;
-	atrd_async_command = ATRD_ASYNC_SET_REG_S;
-	
-	// if code is paused/going to be, then pc should be set now
-	atrd_atari_set_cpu_reg_s(*regValue);
+	atrd_atari_set_cpu_reg_s(newRegValue);
 }
 
 

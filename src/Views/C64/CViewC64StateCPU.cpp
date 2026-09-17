@@ -118,7 +118,12 @@ void CViewC64StateCPU::SetRegisterValue(StateCPURegister reg, int value)
 		case STATE_CPU_REGISTER_PC:
 			viewC64->currentViciiState.pc = value;
 			viewC64->currentViciiState.lastValidPC = value;
-			return ((CDebugInterfaceC64*)debugInterface)->MakeJmpC64(value);
+			// Unlock first: MakeJmpC64 may wait for the emulation thread to commit the
+			// new PC, and the emulation thread takes this mutex on its way to the pause
+			// point (see c64d_c64_check_pc_breakpoint).
+			debugInterface->UnlockMutex();
+			((CDebugInterfaceC64*)debugInterface)->MakeJmpC64(value);
+			return;
 		case STATE_CPU_REGISTER_A:
 			a = value;
 			((CDebugInterfaceC64*)debugInterface)->SetRegisterAC64(value);
@@ -145,6 +150,7 @@ void CViewC64StateCPU::SetRegisterValue(StateCPURegister reg, int value)
 			break;
 		case STATE_CPU_REGISTER_NONE:
 		default:
+			debugInterface->UnlockMutex();
 			return;
 	}
 	

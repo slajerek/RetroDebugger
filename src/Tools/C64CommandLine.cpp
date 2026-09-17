@@ -112,6 +112,8 @@ void c64PrintCommandLineHelp()
 	printHelp("     load/save layouts from specified file path\n");
 	printHelp("-symbols <file>\n");
 	printHelp("     load symbols (code labels)\n");
+	printHelp("-segment <name>  (alias: -seg)\n");
+	printHelp("     select the segment to activate after symbols are loaded\n");
 	printHelp("-watch <file>\n");
 	printHelp("     load watches\n");
 	printHelp("-debuginfo <file>\n");
@@ -472,10 +474,59 @@ void C64DebuggerParseCommandLine0()
 	}
 }
 
+//
+// Note which IDE64 options the user gave on the command line, so the stored
+// settings do not overwrite them later. VICE parses argv inside InitViceC64(),
+// which runs BEFORE the POSTLAUNCH settings restore -- without this, a saved
+// "USB server off" would silently undo -IDE64USB. Recognize-and-flag only:
+// VICE has already applied these, and c64d's own parser ignores what it does
+// not know.
+//
+static void C64DebuggerScanIDE64CommandLineOverrides()
+{
+	for (std::vector<const char *>::iterator it = sysCommandLineArguments.begin();
+		 it != sysCommandLineArguments.end(); it++)
+	{
+		const char *arg = *it;
+		if (arg == NULL || (arg[0] != '-' && arg[0] != '+'))
+			continue;
+
+		const char *opt = arg + 1;
+		if (opt[0] == '-')
+			opt++;
+
+		if (!strcasecmp(opt, "IDE64USB"))
+			c64SettingsIDE64CliOverrideUsbServer = true;
+		else if (!strcasecmp(opt, "IDE64USBAddress"))
+			c64SettingsIDE64CliOverrideUsbAddress = true;
+		else if (!strcasecmp(opt, "IDE64version"))
+			c64SettingsIDE64CliOverrideVersion = true;
+		else if (!strcasecmp(opt, "cartide64") || !strcasecmp(opt, "cartcrt"))
+			c64SettingsIDE64CliOverrideRom = true;
+		else if (strlen(opt) == 11)
+		{
+			// "-IDE64image<n>". strncasecmp is not available on MSVC (the
+			// engine only provides strcasecmp), so compare a bounded copy.
+			char prefix[11];
+			strncpy(prefix, opt, 10);
+			prefix[10] = '\0';
+
+			if (!strcasecmp(prefix, "IDE64image"))
+			{
+				int deviceIndex = opt[10] - '1';
+				if (deviceIndex >= 0 && deviceIndex <= 3)
+					c64SettingsIDE64CliOverrideImage[deviceIndex] = true;
+			}
+		}
+	}
+}
+
 void C64DebuggerParseCommandLine1()
 {
 	if (sysCommandLineArguments.empty())
 		return;
+
+	C64DebuggerScanIDE64CommandLineOverrides();
 
 	c64cmdIt = sysCommandLineArguments.begin();
 

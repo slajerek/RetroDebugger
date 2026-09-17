@@ -16,6 +16,7 @@ extern "C" {
 #include "CGuiEditHex.h"
 #include "VID_ImageBinding.h"
 #include "CSnapshotsManager.h"
+#include "MT_UiScale.h"
 
 
 CViewInputEvents::CViewInputEvents(const char *name, float posX, float posY, float posZ, float sizeX, float sizeY,
@@ -27,7 +28,7 @@ CViewInputEvents::CViewInputEvents(const char *name, float posX, float posY, flo
 	imGuiNoWindowPadding = true;
 	imGuiNoScrollbar = true;
 
-	fontSize = 7.0f;
+	fontSize = MT_UiScaled(7.0f);
 	fontBytes = viewC64->fontDisassembly;
 	
 	this->SetPosition(posX, posY, posZ, sizeX, sizeY);

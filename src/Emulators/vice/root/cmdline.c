@@ -178,6 +178,7 @@ static cmdline_option_ram_t *lookup(const char *name, int *is_ambiguous)
 int cmdline_parse(int *argc, char **argv)
 {
     int i = 1;
+    int keep = 1;   /* c64d: write index for retained non-VICE tokens */
     unsigned j;
 
     DBG(("cmdline_parse (argc:%d)\n", *argc));
@@ -206,8 +207,28 @@ int cmdline_parse(int *argc, char **argv)
 
             p = lookup(argv[i], &is_ambiguous);
             if (p == NULL) {
-				LOGError("VICE: Unknown option '%s'.\n", argv[i]);
-                return -1;
+                /* c64d: not a VICE option -- most likely a RetroDebugger
+                   option (-c64, -prg, -wait, ...) parsed from the same argv
+                   by C64CommandLine.cpp, or an option for another embedded
+                   emulator that parses argv after VICE. RETAIN it (getopt-
+                   style permutation to the front) instead of aborting, so
+                   VICE and non-VICE options can be interleaved AND the
+                   skipped tokens survive the compaction below for later
+                   parsers. If the next token does not look like an option,
+                   treat it as this option's argument and retain it too
+                   (covers "-prg foo.prg", "-wait 2500"); otherwise a bare
+                   token would end parsing at the "else break" below and
+                   drop the rest of the line. keep <= i always holds (keep
+                   advances only here, i also advances on every parsed VICE
+                   option), so writing argv[keep] never clobbers an
+                   unprocessed slot. */
+                LOGD("VICE: skipping non-VICE option '%s'", argv[i]);
+                argv[keep++] = argv[i++];
+                if ((i < *argc) && (argv[i] != NULL)
+                    && (argv[i][0] != '-') && (argv[i][0] != '+')) {
+                    argv[keep++] = argv[i++];
+                }
+                continue;
             }
 
             if (is_ambiguous) {
@@ -253,9 +274,11 @@ int cmdline_parse(int *argc, char **argv)
         }
     }
 
-    /* Remove all of the parsed options. */
-    DBG(("i:%d argc:%d\n", i, *argc));
-    j = 1;
+    /* Remove all of the parsed options.
+       c64d: start at `keep`, not 1 -- argv[1..keep-1] holds the non-VICE
+       options retained above, which the later parsers still need. */
+    DBG(("i:%d argc:%d keep:%d\n", i, *argc, keep));
+    j = (unsigned)keep;
     while (1) {
         argv[j] = argv[i];
         if ((argv[i] == NULL) || (i >= *argc)) {

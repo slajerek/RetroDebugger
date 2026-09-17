@@ -1564,6 +1564,28 @@ void c64d_c64_check_irqnmi_breakpoint()
 	}
 }
 
+// Set while the emulation thread is parked in the pause loop below, i.e. while it
+// holds no debugger locks and can service a debugger request (such as a deferred PC
+// change) on the next wake-up. MakeJmpC64 uses this to decide whether it may wait
+// for the request to be committed: when the CPU is NOT parked it is still on its way
+// to a pause point and may need a lock the calling thread is holding, so waiting
+// there could stall the caller for no reason.
+static std::atomic<int> c64d_cpu_parked_in_pause_loop(0);
+
+int c64d_is_cpu_parked_in_pause_loop(void)
+{
+	return c64d_cpu_parked_in_pause_loop.load(std::memory_order_acquire);
+}
+
+// Clears the parked flag on every exit path out of the pause loop, including the
+// early return taken while a snapshot restore is in progress.
+class CParkedInPauseLoopGuard
+{
+public:
+	CParkedInPauseLoopGuard()  { c64d_cpu_parked_in_pause_loop.store(1, std::memory_order_release); }
+	~CParkedInPauseLoopGuard() { c64d_cpu_parked_in_pause_loop.store(0, std::memory_order_release); }
+};
+
 void c64d_debug_pause_check(int allowRestore)
 {
 	if (allowRestore)
@@ -1579,7 +1601,8 @@ void c64d_debug_pause_check(int allowRestore)
 	}
 	else
 	{
-		if (c64d_is_performing_snapshot_restore())
+		if (c64d_is_performing_snapshot_restore() || c64d_is_external_snapshot_request_active()
+			|| c64d_is_snapshot_operation_in_progress())
 			return;
 	}
 
@@ -1624,17 +1647,34 @@ void c64d_debug_pause_check(int allowRestore)
 		}
 
 		{
+			CParkedInPauseLoopGuard parkedGuard;
 			std::unique_lock<std::mutex> lock(debugInterfaceVice->pauseMutex);
 			while (c64d_debug_mode.load(std::memory_order_acquire) == DEBUGGER_MODE_PAUSED)
 			{
-				// Use 16ms timeout (~60fps) to keep audio processing frequent while paused
+				// Use 16ms timeout (~60fps) to keep audio processing frequent while paused.
+				// The predicate also wakes on a debugger PC change requested while paused
+				// (MakeJmpC64) so it commits here, on the emulation thread, instead of only
+				// at the pause exit — this is what lets MakeJmpC64 report a committed jump.
 				bool signaled = debugInterfaceVice->pauseCV.wait_for(lock, std::chrono::milliseconds(16),
-					[]{ return c64d_debug_mode.load(std::memory_order_acquire) != DEBUGGER_MODE_PAUSED; });
+					[]{ return c64d_debug_mode.load(std::memory_order_acquire) != DEBUGGER_MODE_PAUSED
+							|| c64d_is_pc_change_pending(); });
+
+				if (signaled && c64d_debug_mode.load(std::memory_order_acquire) == DEBUGGER_MODE_PAUSED)
+				{
+					// Woken only to apply a pending debugger PC change; stay paused.
+					lock.unlock();
+					c64d_apply_pending_debugger_pc();
+					lock.lock();
+					continue;
+				}
 
 				if (!signaled)
 				{
 					// Timeout: process audio and handle snapshot/SID restore while paused
 					lock.unlock();
+
+					// Backstop in case the notify above was missed
+					c64d_apply_pending_debugger_pc();
 
 					if (allowRestore)
 					{
@@ -1642,7 +1682,8 @@ void c64d_debug_pause_check(int allowRestore)
 					}
 					else
 					{
-						if (c64d_is_performing_snapshot_restore())
+						if (c64d_is_performing_snapshot_restore() || c64d_is_external_snapshot_request_active()
+			|| c64d_is_snapshot_operation_in_progress())
 						{
 							if (debugInterfaceVice->ShouldProcessPausedVSync())
 							{
@@ -1687,6 +1728,20 @@ int c64d_is_performing_snapshot_restore()
 		return 1;
 	}
 	return 0;
+}
+
+int c64d_is_external_snapshot_request_active()
+{
+	return debugInterfaceVice->snapshotsManager->IsExternalSnapshotRequestActive() ? 1 : 0;
+}
+
+// True while a snapshot is being written or read by anyone -- not only through
+// PerformExternalSnapshotRequest(). The drive CPUs are run forward as part of
+// writing one and must unwind out of the pause loop rather than park, or the
+// thread doing the snapshot waits for an unpause only it could deliver.
+int c64d_is_snapshot_operation_in_progress()
+{
+	return debugInterfaceVice->snapshotsManager->IsSnapshotOperationInProgress() ? 1 : 0;
 }
 		
 // Fast C-level flag for the CPU hot loop — avoids C++ pointer dereferences per cycle.

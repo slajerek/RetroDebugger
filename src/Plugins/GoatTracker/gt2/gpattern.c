@@ -87,7 +87,7 @@ void patterncommands(void)
   }
   {
     int newnote = -1;
-#ifdef __MACOSX__
+#ifdef __APPLE__
     int midinote = -1;
 
 	// Use actual physical keycodes, to make sure the virtual tracker keyboard is
@@ -250,7 +250,7 @@ void patterncommands(void)
 #endif
 	  
 	  
-#ifdef __MACOSX__
+#ifdef __APPLE__
     midinote = GetMidiNote();
 	if (midinote != -1 && (!epcolumn) && (!shiftpressed))
 		newnote = midinote;
@@ -961,7 +961,7 @@ void patterncommands(void)
     break;
 
     case KEY_DEL:
-#ifdef __MACOSX__
+#ifdef __APPLE__
 	if (altpressed)
 	{
 		if (epmarkchn == epchn) epmarkchn = -1;

@@ -5,6 +5,42 @@
    <BuildAction
       parallelizeBuildables = "YES"
       buildImplicitDependencies = "YES">
+      <PreActions>
+         <ExecutionAction
+            ActionType = "Xcode.IDEStandardExecutionActionsCore.ExecutionActionType.ShellScriptAction">
+            <ActionContent
+               title = "Resolve MTEngineSDL capabilities"
+               scriptText = "# Makes an IDE Build or Archive honour mtengine.caps instead of the&#10;# engine&apos;s defaults. Without it, Archive can ship libraries the&#10;# manifest turns off.&#10;#&#10;# Writes an xcconfig OUTSIDE every checkout, which the tracked&#10;# xcconfigs pick up with #include?. A pre-action&apos;s write takes&#10;# effect in the SAME build (measured).&#10;&quot;$PROJECT_DIR&quot;/../../../MTEngineSDL/tools/mtcaps/xcode-preaction.sh &quot;$PROJECT_DIR/../..&quot; &quot;c64d&quot;&#10;">
+               <EnvironmentBuildable>
+                  <BuildableReference
+                     BuildableIdentifier = "primary"
+                     BlueprintIdentifier = "41C84A1823C61751007C0889"
+                     BuildableName = "Retro Debugger.app"
+                     BlueprintName = "Retro Debugger"
+                     ReferencedContainer = "container:c64d.xcodeproj">
+                  </BuildableReference>
+               </EnvironmentBuildable>
+            </ActionContent>
+         </ExecutionAction>
+      </PreActions>
+      <PostActions>
+         <ExecutionAction
+            ActionType = "Xcode.IDEStandardExecutionActionsCore.ExecutionActionType.ShellScriptAction">
+            <ActionContent
+               title = "Release MTEngineSDL build lock"
+               scriptText = "# Releases the build lock the pre-action took. Without this the lock is&#10;# held until a liveness probe frees it, and the shared engine xcconfig&#10;# is never cleaned up -- which breaks a standalone engine build.&#10;&quot;$PROJECT_DIR&quot;/../../../MTEngineSDL/tools/mtcaps/xcode-postaction.sh &quot;c64d&quot;&#10;">
+               <EnvironmentBuildable>
+                  <BuildableReference
+                     BuildableIdentifier = "primary"
+                     BlueprintIdentifier = "41C84A1823C61751007C0889"
+                     BuildableName = "Retro Debugger.app"
+                     BlueprintName = "Retro Debugger"
+                     ReferencedContainer = "container:c64d.xcodeproj">
+                  </BuildableReference>
+               </EnvironmentBuildable>
+            </ActionContent>
+         </ExecutionAction>
+      </PostActions>
       <BuildActionEntries>
          <BuildActionEntry
             buildForTesting = "YES"
@@ -37,7 +73,8 @@
       enableASanStackUseAfterReturn = "YES"
       enableUBSanitizer = "YES"
       launchStyle = "0"
-      useCustomWorkingDirectory = "NO"
+      useCustomWorkingDirectory = "YES"
+      customWorkingDirectory = "$(SRCROOT)/../.."
       ignoresPersistentStateOnLaunch = "NO"
       debugDocumentVersioning = "YES"
       debugServiceExtension = "internal"
@@ -64,7 +101,8 @@
       buildConfiguration = "Release"
       shouldUseLaunchSchemeArgsEnv = "YES"
       savedToolIdentifier = ""
-      useCustomWorkingDirectory = "NO"
+      useCustomWorkingDirectory = "YES"
+      customWorkingDirectory = "$(SRCROOT)/../.."
       debugDocumentVersioning = "YES">
       <BuildableProductRunnable
          runnableDebuggingMode = "0">

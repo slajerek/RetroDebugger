@@ -231,6 +231,19 @@ void c64d_c64_check_irqcia_breakpoint(int ciaNum);
 void c64d_c64_check_irqnmi_breakpoint();
 void c64d_debug_pause_check(int allowRestore);
 
+// c64d: deferred PC change requested by the debugger (CDebugInterfaceVice::MakeJmpC64).
+// c64d_set_c64_pc() queues a VICE trap to write the CPU's PC, but that trap is only
+// dispatched at the top of the main CPU loop, which is ABOVE the pause point a CPU
+// breakpoint parks on. c64d_apply_pending_debugger_pc() writes the working register
+// set directly and MUST only be called from the emulation thread with the CPU between
+// instructions (from the pause loop, or at the pause-loop exit in maincpu_mainloop).
+// It returns 1 if a pending change was applied.
+int c64d_is_pc_change_pending(void);
+int c64d_apply_pending_debugger_pc(void);
+
+// 1 while the emulation thread is parked in the pause loop holding no debugger locks.
+int c64d_is_cpu_parked_in_pause_loop(void);
+
 void c64d_show_message(char *message);
 
 // SID
@@ -321,6 +334,9 @@ unsigned int c64d_get_frame_num();
 void c64d_reset_counters();
 
 int c64d_is_performing_snapshot_restore();
+int c64d_is_external_snapshot_request_active();
+// True while a snapshot save/load is running, whoever started it.
+int c64d_is_snapshot_operation_in_progress();
 int c64d_check_cpu_snapshot_manager_restore();
 void c64d_check_cpu_snapshot_manager_store();
 void c64d_check_snapshot_interval();

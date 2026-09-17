@@ -43,6 +43,7 @@
 #include "c64model.h"
 
 #include "CGuiMain.h"
+#include "MT_UiScale.h"
 
 #define VIEWC64SETTINGS_OPEN_NONE	0
 #define VIEWC64SETTINGS_OPEN_FILE	1
@@ -66,7 +67,7 @@ CMainMenuHelper::CMainMenuHelper(float posX, float posY, float posZ, float sizeX
 	openDialogFileIsKeyboardShortcut = false;
 
 	font = viewC64->fontDefaultCBMShifted;
-	fontScale = 3;
+	fontScale = MT_UiScaled(3.0f);
 	fontHeight = font->GetCharHeight('@', fontScale) + 2;
 
 	// TODO: make generic

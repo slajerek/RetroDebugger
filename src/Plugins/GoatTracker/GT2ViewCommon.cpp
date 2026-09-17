@@ -15,9 +15,47 @@ extern "C" {
 #include "gcommon.h"
 #include "gconsole.h"
 #include "goattrk2.h"
+#include "gplay.h"
+#include "gsong.h"
 }
 
 CViewC64GoatTracker *gt2MainView = NULL;
+
+bool gt2KeepPlayingOnStop = false;
+
+bool GT2_IsTransportActive()
+{
+	return songinit != PLAY_STOPPED && songinit != PLAY_STOP;
+}
+
+void GT2_StopSong()
+{
+	if (!gt2KeepPlayingOnStop)
+	{
+		stopsong();
+		return;
+	}
+
+	if (songinit == PLAY_STOPPED)
+		return;
+
+	// Deliberately not stopsong(). That sets songinit = PLAY_STOP, and
+	// playroutine()'s init pass then walks every channel zeroing wave and
+	// ptr[WTBL] -- which is precisely what silences the song.
+	//
+	// Going straight to PLAY_STOPPED skips that pass, so the channel state
+	// survives and the wavetable, pulse program and ADSR all carry on to
+	// their natural end. Nothing keeps playing the song, because every path
+	// that reads it is already gated on this flag: the pattern fetch
+	// (gplay.c:1059 and 1110) and the order-list advance (gplay.c:1197).
+	// incrementtime() stops the clock for the same reason.
+	songinit = PLAY_STOPPED;
+
+	// What the init pass would have set on its way through PLAY_STOP, so
+	// everything downstream sees the same state it would after a hard stop.
+	lastsonginit = PLAY_STOP;
+	followplay = 0;
+}
 
 int GT2_NumChannels()
 {
@@ -72,12 +110,12 @@ bool GT2_HandleRenoiseOrForwardKeyDown(u32 keyCode, bool isShift, bool isAlt, bo
 	// regardless of the keyboard preset.
 	if ((isControl || isSuper) && !isAlt && pluginGoatTracker && pluginGoatTracker->viewPatterns)
 	{
-		if (!isShift && (keyCode == 'z' || keyCode == 'Z' || keyCode == SDLK_z))
+		if (!isShift && (keyCode == 'z' || keyCode == 'Z' || keyCode == SDLK_Z))
 		{
 			pluginGoatTracker->viewPatterns->UndoPatternEdit();
 			return true;
 		}
-		if (keyCode == 'y' || keyCode == 'Y' || keyCode == SDLK_y)
+		if (keyCode == 'y' || keyCode == 'Y' || keyCode == SDLK_Y)
 		{
 			pluginGoatTracker->viewPatterns->RedoPatternEdit();
 			return true;
@@ -133,12 +171,12 @@ bool GT2_HandleRenoiseOrForwardKeyDownToNative(u32 keyCode, bool isShift, bool i
 	// minus the final GT2_ForwardKeyDown gate.
 	if ((isControl || isSuper) && !isAlt && pluginGoatTracker && pluginGoatTracker->viewPatterns)
 	{
-		if (!isShift && (keyCode == 'z' || keyCode == 'Z' || keyCode == SDLK_z))
+		if (!isShift && (keyCode == 'z' || keyCode == 'Z' || keyCode == SDLK_Z))
 		{
 			pluginGoatTracker->viewPatterns->UndoPatternEdit();
 			return true;
 		}
-		if (keyCode == 'y' || keyCode == 'Y' || keyCode == SDLK_y)
+		if (keyCode == 'y' || keyCode == 'Y' || keyCode == SDLK_Y)
 		{
 			pluginGoatTracker->viewPatterns->RedoPatternEdit();
 			return true;
@@ -200,4 +238,39 @@ void GT2_PropagateChildWindowFocus(CGuiView *view)
 	{
 		guiMain->SetInternalViewFocus(view);
 	}
+}
+
+int GT2_GetSongTempo()
+{
+	// GT2 has no tempo field in the song header. The song's default tempo lives
+	// in the RESERVED instrument slot MAX_INSTR-1 (63) -- the one
+	// GT2_LAST_INSTR keeps out of the instrument editor -- in its `ad` byte, on
+	// the same scale as the F (Set Tempo) command: the player runs at ad-1.
+	// It counts only while that slot carries no wavetable pointer, which is the
+	// flag GT2 uses to tell "tempo override" from "a real instrument".
+	// gplay.c reads it at PLAY_BEGINNING and greloc.c exports it as
+	// DEFAULTTEMPO; both spell the condition exactly this way.
+	if (ginstr[MAX_INSTR-1].ad >= 2 && !ginstr[MAX_INSTR-1].ptr[WTBL])
+		return ginstr[MAX_INSTR-1].ad;
+
+	// No override: initchannels() starts every channel at 6, or 6*multiplier
+	// when the player was started at a multiple of the frame rate.
+	return multiplier ? (int)(6 * multiplier) : 6;
+}
+
+void GT2_SetSongTempo(int tempo)
+{
+	if (tempo < GT2_SONG_TEMPO_MIN) tempo = GT2_SONG_TEMPO_MIN;
+	if (tempo > GT2_SONG_TEMPO_MAX) tempo = GT2_SONG_TEMPO_MAX;
+	ginstr[MAX_INSTR-1].ad = (unsigned char)tempo;
+
+	// The slot is only read when playback starts, so on its own this would not
+	// be heard until the next restart. Push the value into the live channels
+	// too -- the same thing the F command's all-channels branch does -- so the
+	// field behaves like a tempo control rather than a preference. A pattern
+	// carrying its own F command still wins on the next row that has one.
+	unsigned char live = (unsigned char)tempo;
+	if (live >= 3) live--;
+	for (int c = 0; c < MAX_CHN; c++)
+		chn[c].tempo = live;
 }

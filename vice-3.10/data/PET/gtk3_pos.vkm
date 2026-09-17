@@ -1,0 +1,11 @@
+# VICE keyboard mapping file
+
+# 2001, 3032 and 4032 use graphics keyboard
+# 4032B, 8032 and up use business keyboard
+
+# this file is a fallback that will be used when no other keymap exists. due to
+# the different types of keyboards that exist for the PET family, this will not
+# work for all of them (only the "big" machines).
+
+# use PET business mapping as base
+!INCLUDE gtk3_buuk_pos.vkm

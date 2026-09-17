@@ -29,7 +29,7 @@ extern "C" {
 #include "ginstr.h"
 #include "gtable.h"
 
-#ifdef __MACOSX__
+#ifdef __APPLE__
 #include "mac_midi.h"
 #endif
 

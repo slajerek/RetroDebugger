@@ -66,7 +66,8 @@ class C64DebuggerPluginCrtMaker : public CDebuggerEmulatorPluginVice, CSlrThread
 {
 public:
 	C64DebuggerPluginCrtMaker();
-	
+	virtual ~C64DebuggerPluginCrtMaker();
+
 	virtual void Init();
 	virtual void ThreadRun(void *data);
 

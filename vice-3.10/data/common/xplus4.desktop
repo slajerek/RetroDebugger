@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=VICE (xplus4)
+Comment=Commodore Plus/4 emulator
+Exec=xplus4
+Terminal=false
+Icon=vice-xplus4
+Categories=Game;Emulator;

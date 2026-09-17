@@ -1,0 +1,56 @@
+#
+# VICE Palette file
+#
+# Syntax:
+# Red Green Blue
+#
+# TYPE:VICII
+# NAME:Deekay/Crest
+
+# Black
+00 00 00
+
+# White
+FF FF FF
+
+# Red
+88 20 00
+
+# Cyan
+68 D0 A8
+
+# Purple
+A8 38 A0
+
+# Green
+50 B8 18
+
+# Blue
+18 10 90
+
+# Yellow
+F0 E8 58
+
+# Orange
+A0 48 00
+
+# Brown
+47 2B 1B
+
+# Light Red
+C8 78 70
+
+# Dark Gray
+48 48 48
+
+# Medium Gray
+80 80 80
+
+# Light Green
+98 FF 98
+
+# Light Blue
+50 90 D0
+
+# Light Gray
+B8 B8 B8

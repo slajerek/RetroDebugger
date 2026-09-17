@@ -36,6 +36,11 @@ public:
 	bool HandleSongPositionShortcut(int delta);
 	// Step the current pattern number (Ctrl+Left / Ctrl+Right). Public for tests.
 	bool HandleOrderListPatternNumberShortcut(int delta);
+	// Space (playFromCursor=false) and Shift+Space (true). Public because the
+	// toolbar's Play/Pause button routes through it: that button is tooltipped
+	// as Space, so it has to BE Space rather than a second implementation that
+	// drifts from it.
+	bool HandlePlayStop(bool playFromCursor);
 
 private:
 	C64DebuggerPluginGoatTracker *plugin;
@@ -45,7 +50,6 @@ private:
 	bool HandleTab(bool isShift);
 	bool HandleEnterTriggerRow();
 	bool HandleWriteModeToggle();
-	bool HandlePlayStop(bool playFromCursor);
 	bool HandleOctaveShortcut(int delta);
 	bool HandleNoteOffShortcut();
 	bool HandleDeleteClearNote();

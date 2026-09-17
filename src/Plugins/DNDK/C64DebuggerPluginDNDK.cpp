@@ -11,7 +11,7 @@ C64DebuggerPluginDNDK *pluginDDNK = NULL;
 C64DebuggerPluginDNDK::C64DebuggerPluginDNDK(float posX, float posY, float posZ, float sizeX, float sizeY)
 : CGuiView(posX, posY, posZ, sizeX, sizeY)
 {
-	InitImGuiView("NES Dungeons and Doomknights plugin");
+	InitImGuiView("NES Dungeons and Doomknights trainer");
 	
 //	InitConfig("PluginDNDK");
 }

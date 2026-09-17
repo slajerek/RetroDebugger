@@ -200,6 +200,7 @@ extern "C"{
 #include "CDebugInterfaceMenuItemView.h"
 
 #include "C64D_InitPlugins.h"
+#include "MT_UiScale.h"
 #include "C64DebuggerPluginGoatTracker.h"
 #include "CPluginsManager.h"
 #include "CViewC64GoatTracker.h"
@@ -268,8 +269,6 @@ unsigned long c64dStartupTime = 0;
 #define COLOR_ADDR	0xD800
 
 // remove me:
-void TEST_Editor();
-void TEST_Editor_Render();
 
 const ImGuiInputTextFlags defaultHexInputFlags = ImGuiInputTextFlags_CharsHexadecimal | ImGuiInputTextFlags_CharsUppercase;
 
@@ -551,11 +550,11 @@ CViewC64::CViewC64(float posX, float posY, float posZ, float sizeX, float sizeY)
 	
 	// open/save file dialogs replacement
 	viewSelectFile = new CGuiViewSelectFile(100, 100, -3.0, 400, 300, false, this);
-	viewSelectFile->SetFont(fontDefaultCBMShifted, 2.0f);
+	viewSelectFile->SetFont(fontDefaultCBMShifted, MT_UiScaled(2.0f));
 //	guiMain->AddGuiElement(viewSelectFile);
 
 	viewSaveFile = new CGuiViewSaveFile(100, 100, -3.0, 400, 300, this);
-	viewSaveFile->SetFont(fontDefaultCBMShifted, 2.0f);
+	viewSaveFile->SetFont(fontDefaultCBMShifted, MT_UiScaled(2.0f));
 //	guiMain->AddGuiElement(viewSaveFile);
 		
 	SYS_AddApplicationPauseResumeListener(this);

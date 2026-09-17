@@ -8,6 +8,7 @@
 #include "CViewDisassembly.h"
 #include "CLayoutParameter.h"
 #include "VID_Main.h"
+#include "MT_UiScale.h"
 
 static const char *entryTypeNames[] = {
 	"???",       // STACK_ENTRY_UNKNOWN
@@ -59,7 +60,7 @@ CViewStack::CViewStack(const char *name, float posX, float posY, float posZ, flo
 
 	fontBytes = viewC64->fontDisassembly;
 
-	fontSize = 7.0f;
+	fontSize = MT_UiScaled(7.0f);
 	hasManualFontSize = false;
 	AddLayoutParameter(new CLayoutParameterFloat("Font Size", &fontSize));
 

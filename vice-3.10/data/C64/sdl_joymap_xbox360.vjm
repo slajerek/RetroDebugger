@@ -1,0 +1,63 @@
+# Controller (Cyborg Rumble Pad - PC/Xbox 360)
+
+# Left analog stick - right
+0 0 0 1 8
+# Left analog stick - left
+0 0 1 1 4
+
+# Left analog stick - down
+0 0 2 1 2
+# Left analog stick - up
+0 0 3 1 1
+
+# Right analog stick - right
+0 0 4 0
+# Right analog stick - left
+0 0 5 0
+
+# Right analog stick - down
+0 0 6 0
+# Right analog stick - up
+0 0 7 0
+
+# Left analog trigger - pressed
+0 0 8 0
+# Left analog trigger - released
+0 0 9 0
+
+# Right analog trigger - pressed
+0 0 10 0
+# Right analog trigger - released
+0 0 11 0
+
+# A
+0 1 0 1 16
+# B
+0 1 1 1 32
+# X
+0 1 2 1 64
+# Y
+0 1 3 0
+# LB
+0 1 4 0
+# RB
+0 1 5 0
+# Back
+0 1 6 0
+# Start
+0 1 7 0
+# LSB
+0 1 8 0
+# RSB
+0 1 9 0
+# Guide
+0 1 10 0
+
+# DPAD up
+0 2 0 1 1
+# DPAD down
+0 2 1 1 2
+# DPAD left
+0 2 2 1 4
+# DPAD right
+0 2 3 1 8

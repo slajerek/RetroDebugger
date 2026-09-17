@@ -1,0 +1,417 @@
+# VICE keyboard mapping file
+#
+# A Keyboard map is read in as patch to the current map.
+#
+# File format:
+# - comment lines start with '#'
+# - keyword lines start with '!keyword'
+# - normal lines have 'keysym/scancode row column shiftflag'
+#
+# Keywords and their lines are:
+# '!CLEAR'               clear whole table
+# '!INCLUDE filename'    read file as mapping file
+# '!LSHIFT row col'      left shift keyboard row/column
+# '!RSHIFT row col'      right shift keyboard row/column
+# '!VSHIFT shiftkey'     virtual shift key (RSHIFT or LSHIFT)
+# '!SHIFTL shiftkey'     shift lock key (RSHIFT or LSHIFT)
+#  for emulated keyboards that have only one shift key, set both LSHIFT
+#  and RSHIFT to the same row/col and use RSHIFT for VSHIFT and SHIFTL.
+# '!LCTRL row col'       left control keyboard row/column
+# '!VCTRL ctrlkey'       virtual control key (LCTRL)
+# '!LCBM row col'        left CBM keyboard row/column
+# '!VCBM cbmkey'         virtual CBM key (LCBM)
+# '!UNDEF keysym'        remove keysym from table
+#
+# Shiftflag can have these values, flags can be ORed to combine them:
+# 0x0000      0  key is not shifted for this keysym/scancode
+# 0x0001      1  key is combined with shift for this keysym/scancode
+# 0x0002      2  key is left shift on emulated machine
+# 0x0004      4  key is right shift on emulated machine (use only this 
+#                one
+#                for emulated keyboards that have only one shift key)
+# 0x0008      8  key can be shifted or not with this keysym/scancode
+# 0x0010     16  deshift key for this keysym/scancode
+# 0x0020     32  another definition for this keysym/scancode follows
+# 0x0040     64  key is shift-lock on emulated machine
+# 0x0080    128  shift modifier required on host
+# 0x0100    256  key is used for an alternative keyboard mapping, e.g. 
+#                C64 mode in x128
+# 0x0200    512  alt-r (alt-gr) modifier required on host
+# 0x0400   1024  ctrl modifier required on host
+# 0x0800   2048  key is combined with cbm for this keysym/scancode
+# 0x1000   4096  key is combined with ctrl for this keysym/scancode
+# 0x2000   8192  key is (left) cbm on emulated machine
+# 0x4000  16384  key is (left) ctrl on emulated machine
+#
+# Negative row values:
+# 'keysym -1 n' joystick keymap A, direction n
+# 'keysym -2 n' joystick keymap B, direction n
+# 'keysym -3 0' first RESTORE key
+# 'keysym -3 1' second RESTORE key
+# 'keysym -4 0' 40/80 column key (x128)
+# 'keysym -4 1' CAPS (ASCII/CC) key (x128)
+# 'keysym -5 n' joyport keypad, key n (not supported in x128)
+#
+# Joystick direction values:
+# 0      Fire
+# 1      South/West
+# 2      South
+# 3      South/East
+# 4      West
+# 5      East
+# 6      North/West
+# 7      North
+# 8      North/East
+#
+# Joyport keypad key layout:
+# --------------------------
+# |  0 |  1 |  2 |  3 |  4 |
+# --------------------------
+# |  5 |  6 |  7 |  8 |  9 |
+# --------------------------
+# | 10 | 11 | 12 | 13 | 14 |
+# --------------------------
+# | 15 | 16 | 17 | 18 | 19 |
+# --------------------------
+#
+# When a bigger spaced key is used,
+# it uses the upper left most key value.
+
+# Positional Mapping, Swedish Layout, C128, GTK
+
+# C128 Keyboard matrix
+#
+#       +-----+-----+-----+-----+-----+-----+-----+-----+
+#       |Bit 0|Bit 1|Bit 2|Bit 3|Bit 4|Bit 5|Bit 6|Bit 7|
+# +-----+-----+-----+-----+-----+-----+-----+-----+-----+
+# |Bit 0| DEL |Retrn|C_L/R|  F7 |  F1 |  F3 |  F5 |C_U/D|
+# +-----+-----+-----+-----+-----+-----+-----+-----+-----+
+# |Bit 1| 3 # |  W  |  A  | 4 $ |  Z  |  S  |  E  | S_L |
+# +-----+-----+-----+-----+-----+-----+-----+-----+-----+
+# |Bit 2| 5 % |  R  |  D  | 6 & |  C  |  F  |  T  |  X  |
+# +-----+-----+-----+-----+-----+-----+-----+-----+-----+
+# |Bit 3| 7 ' |  Y  |  G  | 8 ( |  B  |  H  |  U  |  V  |
+# +-----+-----+-----+-----+-----+-----+-----+-----+-----+
+# |Bit 4| 9 ) |  I  |  J  |  0  |  M  |  K  |  O  |  N  |
+# +-----+-----+-----+-----+-----+-----+-----+-----+-----+
+# |Bit 5|  +  |  P  |  L  |  -  | . > | : [ |  @  | , < |
+# +-----+-----+-----+-----+-----+-----+-----+-----+-----+
+# |Bit 6|POUND|  *  | ; ] | HOME| S_R |  =  | A_UP| / ? |
+# +-----+-----+-----+-----+-----+-----+-----+-----+-----+
+# |Bit 7| 1 ! |A_LFT| CTRL| 2 " |SPACE|  C= |  Q  | R/S |
+# +-----+-----+-----+-----+-----+-----+-----+-----+-----+
+#
+#        +-----+-----+-----+-----+-----+-----+-----+-----+
+#        |Bit 0|Bit 1|Bit 2|Bit 3|Bit 4|Bit 5|Bit 6|Bit 7|
+# +------+-----+-----+-----+-----+-----+-----+-----+-----+
+# |Bit 8 |HELP | KP 8| KP 5| TAB | KP 2| KP 4| KP 7| KP 1|
+# +------+-----+-----+-----+-----+-----+-----+-----+-----+
+# |Bit 9 | ESC | KP +| KP -| LF  |KP CR| KP 6| KP 9| KP 3|
+# +------+-----+-----+-----+-----+-----+-----+-----+-----+
+# |Bit 10| ALT | KP 0| KP .|A.UP |A.DWN|A.LFT|A.RGT|NOSCR|
+# +------+-----+-----+-----+-----+-----+-----+-----+-----+
+
+# C128 Keyboard layout:
+#
+#   ESC TAB ALT CAPS       HELP L/F 40/80 NOSCRL     up down left right  F1/2 F3/4 F5/6 F7/8
+#
+#   arrow 1!  2"  3#  4$  5%  6&  7'  8(  9)  0   +   -   pound clr del     7   8   9   +
+#    ctrl   q   w   e   r   t   y   u   i   o   p   @   *   ^   restore     4   5   6   -
+#   r/s SL    a   s   d   f   g   h   j   k   l   :[  ;]  =   return        1   2   3   enter
+#   CBM LSHFT   z   x   c   v   b   n   m   ,<  .>  /?  RSHFT   u/d l/r     0       .
+#                               SPACE
+
+!CLEAR
+!LSHIFT 1 7
+!RSHIFT 6 4
+!VSHIFT RSHIFT
+!SHIFTL LSHIFT
+!LCBM 7 5
+!VCBM LCBM
+!LCTRL 7 2
+!VCTRL LCTRL
+
+# Emulated keys that can't be mapped positionally are:
+# (row0) pound (-> insert), clr/home (-> home)
+# (row1) arrow up (-> page down), restore (-> page up)
+# (row2) run/stop (-> escape)
+# (row3) commodore (-> control)
+
+# Emulated keys that are mapped more than once:
+# (row0)
+# INST/DEL (-> Backspace AND Delete AND Insert)
+
+
+#####################
+# |Bit 0| DEL | Return | C_L/R | C_U/D |
+
+# inst/del
+BackSpace        0 0 8
+# return
+Return           0 1 8
+# cursor r/l
+Right            0 2 8
+Left             0 2 1
+# cursor u/d
+Up               0 7 1
+Down             0 7 8
+
+#####################
+# |Bit 1| 3 # |  W  |  A  | 4 $ |  Z  |  S  |  E  | S_L |
+
+# shift+3
+numbersign       1 0 8
+# shift+4
+EuroSign         1 3 8  # Mac
+currency         1 3 8  # PC
+# left shift
+# key is left shift
+Shift_L          1 7 2
+# shift lock
+# key is (left) shift-lock
+Caps_Lock        1 7 64
+
+#####################
+# |Bit 2| 5 % |  R  |  D  | 6 & |  C  |  F  |  T  |  X  |
+
+# shift+5
+percent          2 0 8
+# shift+6
+ampersand        2 3 8
+
+#####################
+# |Bit 3| 7 ' |  Y  |  G  | 8 ( |  B  |  H  |  U  |  V  |
+
+# shift+7
+slash            3 0 8
+# shift+8
+parenleft        3 3 8
+
+#####################
+# |Bit 4| 9 ) | I | J | 0 | M | K | O | N |
+
+# shift+9
+parenright       4 0 8
+
+#####################
+# |Bit 5| + | P | L | - | . > | : [ | @ | , < |
+
+# plus
+plus             5 0 8
+question         5 0 8
+# minus
+acute            5 3 8
+grave            5 3 8
+# dot
+period           5 4 8
+colon            5 4 1
+# colon
+odiaeresis       5 5 8
+Odiaeresis       5 5 1
+# @-key
+aring            5 6 8
+Aring            5 6 1
+# comma
+comma            5 7 8
+semicolon        5 7 1
+
+#####################
+# |Bit 6| POUND | * | ; ] | HOME | S_R | A_UP | / ? | = |
+
+# Pound
+less             6 0 8
+greater          6 0 1
+bar              6 0 8
+brokenbar        6 0 8
+Page_Down        6 0 8
+# semicolon
+adiaeresis       6 2 8
+Adiaeresis       6 2 1
+# clr/home
+Home             6 3 8
+# right shift
+# key is right shift
+Shift_R          6 4 4
+# =
+apostrophe       6 5 8
+asterisk         6 5 8
+# arrow up / pi
+End              6 6 8
+# / ?
+minus            6 7 8
+underscore       6 7 1
+
+#####################
+# |Bit 7| 1 ! | A_LFT | CTRL | 2 " |SPACE|  C= | Q | R/S |
+
+# shift+1
+exclam           7 0 8
+# left arrow
+section          7 1 8
+degree           7 1 8
+# ctrl
+#Tab             7 2 8+16384  key is CTRL
+Tab              7 2 16392
+#ISO_Left_Tab    7 2 16384+8  key is CTRL
+ISO_Left_Tab     7 2 16392
+# shift+2
+quotedbl         7 3 8
+# space
+space            7 4 8
+# cbm
+#Control_L       7 5 8+8192  key is CBM
+Control_L        7 5 8200
+# run/stop
+Escape           7 7 8
+# Tab = CTRL
+Tab              7 2 16384
+# Shift + Tab = CTRL
+ISO_Left_Tab     7 2 16384
+# Control_L = CBM
+Control_L        7 5 8192
+
+# F1,F3,F5,F7
+# help - linefeed - (40/80) - no scroll
+# esc - tab - alt - (caps lock)
+
+# F1 / F3 / F5 / F7
+F1 0 4 8
+F2 0 5 8
+F3 0 6 8
+F4 0 3 8
+
+# help
+F5  8 0 8
+# line feed
+F6  9 3 8
+# 40/80 column key
+F7 -4 0
+# no scroll
+F8 10 7 8
+
+# esc
+F9  9 0 8
+# tab
+F10 8 3 8
+# alt
+F11 10 0 8
+# CAPS LOCK (ASCII/DIN) key
+F12 -4 1
+
+# Up in c64 mode mapped to Shift_R + CRSR U/D
+Up 0            7 257
+# Up in c128 mode mapped to A.UP
+Up              10 3 8
+# Left in c64 mode mapped to Shift_R + CRSR L/R
+Left             0 2 257
+# Left in c128 mode mapped to A.LEFT
+Left             10 5 8
+# Right in c64 mode mapped to CRSR L/R
+Right            0 2 264
+# Right in c128 mode mapped to A.RIGHT
+Right            10 6 8
+# Down in c64 mode mapped to CRSR U/D
+Down             0 7 264
+# Down in c128 mode mapped to A.DOWN
+Down             10 4 8
+
+# Restore key mappings
+Page_Up          -3 0
+
+
+#####################
+# Numbers, letters
+
+0 4 3 8
+1 7 0 8
+2 7 3 8
+3 1 0 8
+4 1 3 8
+5 2 0 8
+6 2 3 8
+7 3 0 8
+8 3 3 8
+9 4 0 8
+
+A 1 2 8
+B 3 4 8
+C 2 4 8
+D 2 2 8
+E 1 6 8
+F 2 5 8
+G 3 2 8
+H 3 5 8
+I 4 1 8
+J 4 2 8
+K 4 5 8
+L 5 2 8
+M 4 4 8
+N 4 7 8
+O 4 6 8
+P 5 1 8
+Q 7 6 8
+R 2 1 8
+S 1 5 8
+T 2 6 8
+U 3 6 8
+V 3 7 8
+W 1 1 8
+X 2 7 8
+Y 3 1 8
+Z 1 4 8
+
+a 1 2 8
+b 3 4 8
+c 2 4 8
+d 2 2 8
+e 1 6 8
+f 2 5 8
+g 3 2 8
+h 3 5 8
+i 4 1 8
+j 4 2 8
+k 4 5 8
+l 5 2 8
+m 4 4 8
+n 4 7 8
+o 4 6 8
+p 5 1 8
+q 7 6 8
+r 2 1 8
+s 1 5 8
+t 2 6 8
+u 3 6 8
+v 3 7 8
+w 1 1 8
+x 2 7 8
+y 3 1 8
+z 1 4 8
+
+# Numeric keypad
+KP_0 10 1 8
+KP_1 8 7 8
+KP_2 8 4 8
+KP_3 9 7 8
+KP_4 8 5 8
+KP_5 8 2 8
+KP_6 9 5 8
+KP_7 8 6 8
+KP_8 8 1 8
+KP_9 9 6 8
+# If you got here because you think the keypad enter mapping is wrongly
+# pressing normal keyboard return key in the emulated machine, then you
+# have hit an upstream GTK3 Windows bug.
+# The mapping below is correct, GTK3 behaviour on Windows is wrong.
+# See https://vice-emu.pokefinder.org/index.php/Upstream_bugs
+KP_Enter         9 4 8
+KP_Subtract      9 1 8
+KP_Separator     10 2 8
+KP_Decimal       10 2 8
+KP_Add           9 2 8
+
+# Dead keys support
+dead_acute      5 3 8  # ' -> minus
+dead_grave      5 3 8  # ` -> shift+minus
+dead_diaeresis  6 1 8  # ¨ -> asterisk
+dead_circumflex 6 1 8  # ^ -> shift+asterisk
+

@@ -32,6 +32,10 @@ void atrd_check_snapshot_interval();
 
 void atrd_async_load_snapshot(char *filePath);
 void atrd_async_save_snapshot(char *filePath);
+// 1 while a command is queued for the emulation thread to run at the next frame
+// boundary. The CPU register setters below deliberately queue nothing.
+int atrd_is_async_command_pending(void);
+
 void atrd_async_set_cpu_pc(int newPC);
 void atrd_async_set_reg_a(int newRegValue);
 void atrd_async_set_reg_x(int newRegValue);

@@ -29,13 +29,21 @@ Use this skill when working with the RetroDebugger MCP server to debug 8-bit pro
 - `retro_step_instruction` — step one CPU instruction
 - `retro_step_cycle` — step one CPU clock cycle
 - `retro_step_subroutine` — step over a JSR (runs until the subroutine returns)
-- `retro_cpu_jump` — force PC to a specific address
+- `retro_cpu_jump` — force PC to a specific address. Returns `{"status":"jumped","applied":true}`
+  once the new PC has been committed to the CPU, so a following `retro_step_instruction`
+  executes at the target. `{"status":"queued","applied":false}` means the change did not
+  reach the CPU (emulation thread not running, or an unsupported backend) — do not chain a
+  step onto a queued jump.
 - `retro_cpu_counters` — read cycle, instruction, and frame counters
 - `retro_warp` — enable/disable warp speed (run as fast as possible)
-- `retro_media_detach` — detach all cartridges, disks, and tapes
+- `retro_media_detach` — detach all cartridges, disks, and tapes. **Power-cycles the C64** (RAM and CPU state are lost) — do not use it just to remove a disk
+- `retro_disk_detach` — detach the disk from one drive **without resetting** (`platform`, optional `device`: C64 8-11 default 8, Atari 1-8 default 1). Use this when swapping or ejecting a disk mid-session
 - `retro_segment_read` — get current debug symbol segment name
 - `retro_segment_write` — set active debug symbol segment by name
-- `retro_load` — load a program file (PRG, XEX, NES ROM)
+- `retro_load` — load a program file (PRG, XEX, NES ROM, D64, CRT). The path is opened by the
+  Retro Debugger process, so it must be valid on the machine running the debugger — a Windows
+  build needs `C:\data\game.d64`, not `/data/game.d64`. A path the debugger cannot see comes
+  back as an MCP error (`retro_load failed: File not found: ...`), not as a silent no-op
 
 ### Memory & Breakpoints (changes emulator state)
 - `retro_memory_write` — write base64-encoded data to memory
@@ -48,6 +56,10 @@ Use this skill when working with the RetroDebugger MCP server to debug 8-bit pro
 - `retro_watch_add` — add data watch at address
 - `retro_watch_remove` — remove data watch
 - `retro_snapshot_load` — restore emulator state from base64 snapshot
+
+### Session control (ends the session)
+- `retro_shutdown` — quit RetroDebugger through its normal File > Quit path.
+  Settings, layouts, symbols and plugin state are saved.
 
 ### Platform-Specific Endpoints (via WebSocket API)
 
@@ -87,6 +99,31 @@ These are available as WebSocket endpoints, not yet wrapped as MCP tools:
 4. **Use platform parameter** on every tool call. Don't assume which emulator is active.
 5. **Prefer read-only tools** when exploring. Use mutation tools only when you have a clear goal.
 6. **Save snapshot before patching.** Use `retro_snapshot_save` before writing memory, so you can restore with `retro_snapshot_load` if something goes wrong.
+7. **Trust the error flag.** Command tools surface endpoint failures as MCP
+   errors (`<tool> failed: <reason>`), so a call that returns without an error
+   really did reach the emulator. In live/bridge mode the debugger tools
+   disappear from the roster entirely while no desktop app is attached, and a
+   call that loses the connection mid-flight fails with `desktop_unavailable`.
+8. **Never call `retro_shutdown` on your own initiative.** It ends the session —
+   the app quits and every later tool call fails. Call it only when the user
+   explicitly asked to close RetroDebugger. It is not a way to recover from a
+   stuck emulator: use `retro_reset`, `retro_continue` or `retro_snapshot_load`
+   for that.
+
+### Using `retro_shutdown`
+
+- `force: false` (default) gives the graceful path an 8 second watchdog;
+  `force: true` shortens it to 1.5 seconds. **Force does not skip saving** —
+  layouts, settings and plugin state are written either way. Use it only when a
+  normal shutdown has already proven slow.
+- `timeoutMs` overrides the watchdog deadline directly.
+- `exitBridge` (default `true`, live/bridge mode only) also exits the local
+  bridge process once the desktop app is gone, so nothing is left running.
+  Set it to `false` to keep the bridge alive and reconnect to a later instance.
+- The reply arrives *before* the app quits, so a normal result means the
+  shutdown was accepted, not that it has already finished.
+- If the desktop app is already gone, the tool still reports
+  `desktop_unavailable_bridge_exiting` and cleans up the orphaned bridge.
 
 ## Platform Selection
 

@@ -18,7 +18,7 @@
 
 #define GOATTRK2_C
 
-#ifdef __WIN32__
+#ifdef _WIN32
 #include <windows.h>
 #endif
 
@@ -30,6 +30,7 @@ extern void gt2BeginPatternUndoStep(void);
 extern void gt2CommitPatternUndoStep(void);
 extern void gt2BeginTableUndoStep(void);
 extern void gt2CommitTableUndoStep(void);
+extern void gt2GetConfigFilePath(char *outPath, int maxLen);
 extern void gt2ClearPatternUndoHistory(void);
 extern void gt2ClearPatternUndoHistoryIfSongChanged(int cs, int cp, int ci, int ct, int cn);
 
@@ -147,26 +148,15 @@ int gtmain(int argc, const char **argv)
   // Open datafile
   io_openlinkeddatafile(datafile);
 
-//#ifdef __MACOSX__
+//#ifdef __APPLE__
 //    InitializeMacMidi();
 //#endif
 	
-  // Load configuration
-  #ifdef __WIN32__
-  GetModuleFileName(NULL, filename, MAX_PATHNAME);
-  filename[strlen(filename)-3] = 'c';
-  filename[strlen(filename)-2] = 'f';
-  filename[strlen(filename)-1] = 'g';
-  #elif __amigaos__
-  strcpy(filename, "PROGDIR:goattrk2.cfg");
-  #else
-  strcpy(filename, getenv("HOME"));
-    #ifdef __MACOSX__
-  strcat(filename, "/Library/Preferences/org.c64.covertbitops.goattrk-c64d.cfg");
-    #else
-  strcat(filename, "/.goattrk/goattrk2-c64d.cfg");
-    #endif
-  #endif
+  // Load configuration.
+  // RetroDebugger's settings folder, NOT GoatTracker 2's own locations -- see
+  // gt2GetConfigFilePath() in C64DebuggerPluginGoatTracker.cpp for why. One
+  // path on every platform, so load and save cannot drift apart again.
+  gt2GetConfigFilePath(filename, MAX_PATHNAME);
 	
 	LOGD("open config filename=%s\n", filename);
 	
@@ -186,8 +176,9 @@ int gtmain(int argc, const char **argv)
       // c64d: keypreset is owned by c64d's hjson config (key "GT2KeyboardLayout"),
       // restored via GT2_RestoreSubViewVisibility(). gtmain runs on a worker
       // thread and used to clobber whatever we'd already restored. Also note
-      // that GT2's own save target (goattrk.cfg) differs from its load target
-      // (goattrk-c64d.cfg), so this load was reading stale data anyway. Read
+      // that GT2's save target used to differ from its load target, so this
+      // load was reading stale data anyway -- both now go through
+      // gt2GetConfigFilePath() and cannot drift apart again. Read
       // into a dummy to keep file position intact.
       unsigned dummy_keypreset;
       getparam(configfile, &dummy_keypreset);
@@ -230,7 +221,7 @@ int gtmain(int argc, const char **argv)
   // Scan command line
   for (c = 1; c < argc; c++)
   {
-    #ifdef __WIN32__
+    #ifdef _WIN32
     if ((argv[c][0] == '-') || (argv[c][0] == '/'))
     #else
     if (argv[c][0] == '-')
@@ -475,21 +466,12 @@ int gtmain(int argc, const char **argv)
   // Shutdown sound output now
   gtsound_uninit();
 
-  // Save configuration
-  #ifndef __WIN32__
-    #ifdef __amigaos__
-  strcpy(filename, "PROGDIR:goattrk2.cfg");
-    #else
-  strcpy(filename, getenv("HOME"));
-      #ifdef __MACOSX__
-  strcat(filename, "/Library/Preferences/org.c64.covertbitops.goattrk.cfg");
-      #else
-  strcat(filename, "/.goattrk");
-  mkdir(filename, S_IRUSR | S_IWUSR | S_IXUSR);
-  strcat(filename, "/goattrk2.cfg");
-      #endif
-    #endif
-  #endif
+  // Save configuration -- same path the load above used.
+  // This block used to be wrapped in #ifndef _WIN32, which meant that on
+  // Windows `filename` was never set here at all and the config was written
+  // over whatever this shared buffer happened to hold from an earlier song or
+  // instrument operation.
+  gt2GetConfigFilePath(filename, MAX_PATHNAME);
 	
 	LOGD("save config filename=%s", filename);
   configfile = fopen(filename, "wt");
@@ -607,7 +589,7 @@ void waitkeymouse(void)
     if ((rawkey) || (key)) break;
     if (win_quitted) break;
     if (mouseb) break;
-#ifdef __MACOSX__
+#ifdef __APPLE__
     if (MidiEventPending() != 0) break;
 #endif
   }
@@ -668,23 +650,16 @@ void converthex()
 void docommand(void)
 {
   int patternUndoStep = (editmode == EDIT_PATTERN);
-  int tableUndoStep = (editmode == EDIT_TABLES);
-  int instrumentInvalidationStep = (editmode == EDIT_INSTRUMENT);
-  static unsigned char beforeInstrumentData[sizeof(ginstr)];
-  static unsigned char beforeLeftTableData[sizeof(ltable)];
-  static unsigned char beforeRightTableData[sizeof(rtable)];
-  static unsigned char beforePatternData[sizeof(pattern)];
+  // The instrument editor touches ginstr[], the shared ltable/rtable pool and
+  // the table pointers inside pattern[][] -- the exact four blocks a table
+  // undo snapshot holds. So an instrument command records an undo step on the
+  // table stack instead of invalidating the history, which is what it used to
+  // do. gt2CommitTableUndoStep() pushes nothing when nothing changed.
+  int tableUndoStep = (editmode == EDIT_TABLES) || (editmode == EDIT_INSTRUMENT);
 
   // "GUI" operation :)
   if (patternUndoStep) gt2BeginPatternUndoStep();
   if (tableUndoStep) gt2BeginTableUndoStep();
-  if (instrumentInvalidationStep)
-  {
-    memcpy(beforeInstrumentData, ginstr, sizeof(ginstr));
-    memcpy(beforeLeftTableData, ltable, sizeof(ltable));
-    memcpy(beforeRightTableData, rtable, sizeof(rtable));
-    memcpy(beforePatternData, pattern, sizeof(pattern));
-  }
   mousecommands();
 
   // Mode-specific commands
@@ -713,14 +688,6 @@ void docommand(void)
 
   if (patternUndoStep) gt2CommitPatternUndoStep();
   if (tableUndoStep) gt2CommitTableUndoStep();
-  if (instrumentInvalidationStep)
-  {
-    if (memcmp(beforeInstrumentData, ginstr, sizeof(ginstr))
-        || memcmp(beforeLeftTableData, ltable, sizeof(ltable))
-        || memcmp(beforeRightTableData, rtable, sizeof(rtable))
-        || memcmp(beforePatternData, pattern, sizeof(pattern)))
-      gt2ClearPatternUndoHistory();
-  }
 
   // General commands
   generalcommands();

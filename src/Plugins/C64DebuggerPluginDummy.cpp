@@ -58,7 +58,7 @@ void C64DebuggerPluginDummy::ThreadRun(void *data)
 	
 	api->ClearScreen();
 
-	api->SetReferenceImageLayerVisible(true);
+//	api->SetReferenceImageLayerVisible(true);
 
 	api->SetupVicEditorForScreenOnly();
 	

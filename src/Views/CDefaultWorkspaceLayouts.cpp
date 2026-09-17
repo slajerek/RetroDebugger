@@ -1,3 +1,4 @@
+#include "DBG_Log.h"
 #include "CDefaultWorkspaceLayouts.h"
 #include "CDebugInterface.h"
 #include "CDebugInterfaceAtari.h"
@@ -485,12 +486,10 @@ static void HideDefaultWorkspacePlatformViews(CViewC64 *viewC64)
 	HideDebugInterfaceViews(viewC64->debugInterfaceC64);
 	HideDebugInterfaceViews(viewC64->debugInterfaceAtari);
 	HideDebugInterfaceViews(viewC64->debugInterfaceNes);
-#if !defined(GLOBAL_DEBUG_OFF)
 	if (guiViewDebugLog != NULL)
 	{
 		guiViewDebugLog->SetVisible(false);
 	}
-#endif
 }
 
 static void UndockHiddenDebugInterfaceViews(CDebugInterface *debugInterface)
@@ -516,12 +515,10 @@ static void UndockHiddenDefaultWorkspacePlatformViews(CViewC64 *viewC64)
 	UndockHiddenDebugInterfaceViews(viewC64->debugInterfaceC64);
 	UndockHiddenDebugInterfaceViews(viewC64->debugInterfaceAtari);
 	UndockHiddenDebugInterfaceViews(viewC64->debugInterfaceNes);
-#if !defined(GLOBAL_DEBUG_OFF)
 	if (guiViewDebugLog != NULL && !guiViewDebugLog->visible && guiViewDebugLog->imGuiWindow != NULL)
 	{
 		guiViewDebugLog->imGuiWindow->DockId = 0;
 	}
-#endif
 }
 
 static void SetLayoutString(char **target, const char *value)

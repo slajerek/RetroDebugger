@@ -1,0 +1,57 @@
+#
+# VICE Palette file
+#
+# Syntax:
+# Red Green Blue
+#
+# TYPE:VIC
+# NAME:Mike (NTSC)
+
+#
+00 00 00
+
+#
+FF FF FF
+
+#
+F9 11 37
+
+#
+35 F9 F6
+
+#
+FF 3C C6
+
+#
+3C ED A9
+
+#
+0F 57 F7
+
+#
+FE E9 63
+
+#
+FB 62 44
+
+#
+FB BF DE
+
+#
+F3 AC E5
+
+#
+A8 EA DD
+
+#
+E6 B8 F7
+
+#
+AB DD A4
+
+#
+6A B3 E7
+
+#
+F7 DA A5
+

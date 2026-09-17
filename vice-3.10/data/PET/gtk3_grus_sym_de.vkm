@@ -1,0 +1,80 @@
+# VICE keyboard mapping file
+
+# use PET graphics mapping as base
+!INCLUDE gtk3_grus_sym.vkm
+
+# this is a PET graphics keyboard mapping (symbolic)
+# for 1:1 keyboard mapping with a German PC keyboard
+
+# 2001, 3032 and 4032 use graphics keyboard
+# 4032B, 8032 and up use business keyboard
+#
+# http://www.6502.org/users/andre/petindex/keyboards.html
+
+# Graphics keyboard matrix:
+#
+#       0        1        2        3        4        5        6        7
+#   +--------+--------+--------+--------+--------+--------+--------+--------+
+# 0 |   !    |   #    |   %    |   &    |   (    |  <--   |  home  |crsr rgt|
+#   +--------+--------+--------+--------+--------+--------+--------+--------+
+# 1 |   "    |   $    |   '    |   \    |   )    |--------|crsr dwn|  del   |
+#   +--------+--------+--------+--------+--------+--------+--------+--------+
+# 2 |   q    |   e    |   t    |   u    |   o    |   ^    |   7    |   9    |
+#   +--------+--------+--------+--------+--------+--------+--------+--------+
+# 3 |   w    |   r    |   y    |   i    |   p    |--------|   8    |   /    |
+#   +--------+--------+--------+--------+--------+--------+--------+--------+
+# 4 |   a    |   d    |   g    |   j    |   l    |--------|   4    |   6    |
+#   +--------+--------+--------+--------+--------+--------+--------+--------+
+# 5 |   s    |   f    |   h    |   k    |   :    |--------|   5    |   *    |
+#   +--------+--------+--------+--------+--------+--------+--------+--------+
+# 6 |   z    |   c    |   b    |   m    |   ;    | return |   1    |   3    |
+#   +--------+--------+--------+--------+--------+--------+--------+--------+
+# 7 |   x    |   v    |   n    |   ,    |   ?    |--------|   2    |   +    |
+#   +--------+--------+--------+--------+--------+--------+--------+--------+
+# 8 |l shift |   @    |   ]    |--------|   >    |r shift |   0    |   -    |
+#   +--------+--------+--------+--------+--------+--------+--------+--------+
+# 9 | rvs on |   [    | space  |   <    |  stop  |--------|   .    |   =    |
+#   +--------+--------+--------+--------+--------+--------+--------+--------+
+#
+# The original gfx keyboard reflects the matrix perfectly:
+#
+#         @ !  "  #  $  %  '  &  \  (  )  <- [  ]    clr  u/d  l/r  ins/del
+#       RVS  q  w  e  r  t  y  u  i  o  p  ^  <  >    7    8    9    /
+#         SL  a  s  d  f  g  h  j  k  l  : r/s ret    4    5    6    *
+#          LS  z  x  c  v  b  n  m  ,  ;  ?  RS       1    2    3    +
+#                 SPACE                               0    .    -    =
+#
+# Chiclet Keyboard:
+#
+#       !  "  #  $  %  '  &  \  (  )  <-    clr  u/d  l/r  ins/del
+#       q  w  e  r  t  y  u  i  o  p  ^     7    8    9    /
+#       a  s  d  f  g  h  j  k  l  :  ret   4    5    6    *
+#       z  x  c  v  b  n  m  ,  ;  ?  ret   1    2    3    +
+#      SL RVS @  [  ]  space <  > r/s SR    0    .    -    =
+#
+# http://www.6502.org/users/andre/petindex/keyboards.html
+
+numbersign      0 1 16
+section         0 1 16
+apostrophe      1 2 16
+semicolon       6 4 16
+slash           3 7 16
+equal           9 7 16
+degree          2 5 8
+bracketright    8 2 512
+bracketleft     9 1 512
+ssharp          0 5 8   /* arrow left */
+asciitilde      0 5 8   /* arrow left */
+
+udiaeresis      8 1 8   /* @ */
+Udiaeresis      8 1 8
+odiaeresis      9 1 8   /* [ */
+Odiaeresis      9 1 8
+adiaeresis      8 2 8   /* ] */
+Adiaeresis      8 2 8
+
+dead_circumflex 2 5 16
+
+# unmapped
+acute   8 3 8
+grave   8 3 8

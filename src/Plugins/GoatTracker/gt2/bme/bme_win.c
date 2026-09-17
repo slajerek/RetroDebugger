@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "SDL.h"
+#include <SDL3/SDL.h>
 #include "bme_main.h"
 #include "bme_gfx.h"
 #include "bme_mou.h"
@@ -47,8 +47,14 @@ unsigned char win_keystate[MAX_KEYS] = {0};
 
 // Static variables
 
-static int win_lasttime = 0;
-static int win_currenttime = 0;
+// SDL3 widened SDL_GetTicks() from Uint32 to Uint64. These held the result in
+// an int, which truncates -- and an int overflows at 2^31 ms (~24.8 days of
+// uptime) and goes NEGATIVE, at which point (win_currenttime - win_lasttime)
+// becomes a huge value and the frame counter below jumps wildly. Widened to
+// match what SDL_GetTicks() actually returns. The DELTA stays comfortably
+// small, so the arithmetic that consumes it is unaffected.
+static Uint64 win_lasttime = 0;
+static Uint64 win_currenttime = 0;
 static int win_framecounter = 0;
 static int win_activateclick = 0;
 
@@ -106,7 +112,7 @@ int win_getspeed(int framerate)
         win_lasttime = win_currenttime;
         win_currenttime = SDL_GetTicks();
 
-        win_framecounter += (win_currenttime - win_lasttime)*10;
+        win_framecounter += (int)(win_currenttime - win_lasttime)*10;
         frames = win_framecounter / frametime;
         win_framecounter -= frames * frametime;
 
@@ -144,15 +150,15 @@ void win_checkmessages(void)
     {
         switch (event.type)
         {
-            case SDL_JOYBUTTONDOWN:
+            case SDL_EVENT_JOYSTICK_BUTTON_DOWN:
             joybuttons[event.jbutton.which] |= 1 << event.jbutton.button;
             break;
 
-            case SDL_JOYBUTTONUP:
+            case SDL_EVENT_JOYSTICK_BUTTON_UP:
             joybuttons[event.jbutton.which] &= ~(1 << event.jbutton.button);
             break;
 
-            case SDL_JOYAXISMOTION:
+            case SDL_EVENT_JOYSTICK_AXIS_MOTION:
             switch (event.jaxis.axis)
             {
                 case 0:
@@ -165,14 +171,14 @@ void win_checkmessages(void)
             }
             break;
 
-            case SDL_MOUSEMOTION:
+            case SDL_EVENT_MOUSE_MOTION:
 				win_mousexpos = event.motion.x;
 				win_mouseypos = event.motion.y;
 				win_mousexrel += event.motion.xrel;
 				win_mouseyrel += event.motion.yrel;
 				break;
 
-            case SDL_MOUSEBUTTONDOWN:
+            case SDL_EVENT_MOUSE_BUTTON_DOWN:
             switch(event.button.button)
             {
                 case SDL_BUTTON_LEFT:
@@ -189,7 +195,7 @@ void win_checkmessages(void)
             }
             break;
 
-            case SDL_MOUSEBUTTONUP:
+            case SDL_EVENT_MOUSE_BUTTON_UP:
             switch(event.button.button)
             {
                 case SDL_BUTTON_LEFT:
@@ -206,11 +212,11 @@ void win_checkmessages(void)
             }
             break;
 
-            case SDL_QUIT:
+            case SDL_EVENT_QUIT:
             win_quitted = 1;
             break;
 
-            case SDL_KEYDOWN:
+            case SDL_EVENT_KEY_DOWN:
            // win_virtualkey = event.key.keysym.sym;
             win_asciikey = event.key.keysym.unicode;
             keynum = event.key.keysym.sym;
@@ -226,7 +232,7 @@ void win_checkmessages(void)
             }
             break;
 
-            case SDL_KEYUP:
+            case SDL_EVENT_KEY_UP:
             keynum = event.key.keysym.sym;
             if (keynum < MAX_KEYS)
             {

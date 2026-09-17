@@ -66,6 +66,11 @@ public:
 	void RegisterPrompts();
 	void RegisterBridgeLocalTools();
 
+	// retro_shutdown. Registered as a debugger tool outside bridge mode, and as
+	// a bridge-local tool inside it -- a bridge whose desktop app already died
+	// still has to be able to shut itself down.
+	void RegisterShutdownTool(CDebuggerServer *server);
+
 	// The debugger server is published before its endpoint registry is ready.
 	// MCP callers may only use the pointer returned by GetReadyDebuggerServer().
 	void SetDebuggerServer(CDebuggerServer *server);
@@ -78,6 +83,12 @@ public:
 	CMCPBridgeClient *bridgeClient;
 	bool isBridgeMode;
 	bool debuggerToolsRegistered;
+	// True while a debugger server has been published through
+	// SetDebuggerServer() and not reset. The tools/call readiness gate only
+	// applies when this is set: tools bound by tests to an explicit server
+	// never go through the published pointer, and bridge-local tools fall
+	// back to the local process by design.
+	bool debuggerServerPublished;
 
 	bool isRunning;
 

@@ -3,6 +3,7 @@
 
 #include "SYS_Defs.h"
 #include "CGuiView.h"
+#include "CGT2UndoHistory.h"
 #include "imgui.h"
 #include <vector>
 
@@ -12,6 +13,17 @@ class CViewGT2Patterns : public CGuiView
 {
 	friend class CTestGT2Patterns;   // regression tests reach internal helpers
 public:
+	// The "Edit Effect" block: pick a command, then dial in its argument (AD
+	// nibbles, waveform mix bits, filter passband + resonance + routing,
+	// cutoff value, ...) with clickable / nudge widgets. Each write goes
+	// through one pattern undo step, so every action is reversible.
+	//
+	// It opens at the top of the pattern context menu when the right-click
+	// lands on a command column, and it IS the whole of CViewGT2PatternRow --
+	// hence public, so the menu and that view cannot drift apart. Reads the
+	// live cursor (epchn / eppos) and refuses a row it cannot edit.
+	void RenderPatternCommandEditor();
+
 	CViewGT2Patterns(const char *name, float posX, float posY, float posZ,
 					  float sizeX, float sizeY, CGT2FontAtlas *fontAtlas);
 	virtual ~CViewGT2Patterns();
@@ -33,6 +45,11 @@ public:
 	// native GT2's gconsole loop. Returns true iff the key resolved to a
 	// note (or REST/KEYOFF) and was consumed for the main note column.
 	bool HandleMainTrackNoteEntry(u32 keyCode, bool isShift, bool isAlt, bool isControl, bool isSuper);
+	// Hex entry on the instrument and command columns -- mirrors
+	// gpattern.c:1209's hexnybble branch. It has to live here because
+	// GT2_ForwardKeyDown() is a deliberate no-op under KEY_RENOISE, so under
+	// the Renoise layout the native handler never saw the key at all.
+	bool HandlePatternHexEntry(u32 keyCode, bool isShift, bool isAlt, bool isControl, bool isSuper);
 	// Main-track cursor navigation — arrow keys / Home / End / Shift+Left|Right.
 	// Replaces what gpattern.c used to do via the now-removed native key
 	// forward for KEY_RENOISE: epcolumn ± with channel wrap, eppos ± with
@@ -145,6 +162,12 @@ public:
 	void BeginPatternUndoStep();
 	bool CommitPatternUndoStep();
 	void CancelPatternUndoStep();
+	// Called by the shared history (CGT2UndoHistory): the arp column and the
+	// pattern selection live here, not in GT2's globals, and the row-spill
+	// stash is only meaningful for the edit that filled it.
+	void CaptureUndoViewState(CGT2UndoSnapshot *snapshot) const;
+	void RestoreUndoViewState(const CGT2UndoSnapshot &snapshot);
+	void OnUndoHistoryRestored();
 
 	CGT2FontAtlas *fontAtlas;
 	int eparpcol;  // -1 = cursor in normal columns, 0+ = arp column index
@@ -191,34 +214,9 @@ private:
 		int arpCols;
 		std::vector<PatternClipboardCell> cells;   // index 0 = main, 1.. = arp
 	};
-	struct PatternUndoSnapshot
-	{
-		PatternUndoSnapshot();
-
-		std::vector<u8> patternData;
-		std::vector<u8> arpData;
-		std::vector<u8> arpColumnNotes;
-		std::vector<int> patternLengths;
-		std::vector<int> patternNumbers;
-		std::vector<u8> songOrderData;
-		std::vector<int> songLengths;
-		std::vector<u8> leftTableData;    // ltable[][] — global wave/pulse/filter/speed tables
-		std::vector<u8> rightTableData;   // rtable[][]
-		std::vector<u8> instrumentData;   // ginstr[] — instrument definitions
-		int cursorRow;
-		int cursorView;
-		int cursorColumn;
-		int cursorChannel;
-		int cursorArpColumn;
-		bool selectionActive;
-		int selectionStartTrack;
-		int selectionStartRow;
-		int selectionEndTrack;
-		int selectionEndRow;
-		int selectionStartFineField;
-		int selectionEndFineField;
-		bool selectionFineMode;
-	};
+	// The undo snapshot is shared with the table editor and the instrument
+	// loader -- one timeline, one snapshot type. See CGT2UndoHistory.h.
+	typedef CGT2UndoSnapshot PatternUndoSnapshot;
 
 	bool GetPatternTrackInfo(int track, int *channel, int *arpColumn) const;
 	void GetPatternSelectionBounds(int *trackMin, int *trackMax, int *rowMin, int *rowMax) const;
@@ -233,13 +231,6 @@ private:
 	std::vector<int> GetCurrentChannelTracks() const;
 	bool ReverseRowsInTracks(const std::vector<int> &tracks, int rowMin, int rowMax);
 	void RenderContextMenu();
-	// Inline command editor that opens at the top of the pattern context
-	// menu when the user right-clicks on the command column — pick a
-	// command, then dial in its argument (AD nibbles, waveform mix bits,
-	// filter passband + resonance + routing, cutoff value, …) with
-	// clickable / nudge widgets. Writes go through one pattern undo step
-	// each so the action is reversible.
-	void RenderPatternCommandEditor();
 	static void FormatMainTrackNoteNameForDisplay(u8 note, char out[4]);
 	// Maps an in-channel display column to the keyboard cursor sub-column,
 	// setting eparpcol + epcolumn. Shared by left-click and right-click.
@@ -272,9 +263,6 @@ private:
 	void ClearAllChannelRowSpill();
 	void SetCursorFromPatternTrack(int track, int row);
 	PatternUndoSnapshot CapturePatternUndoSnapshot() const;
-	void RestorePatternUndoSnapshot(const PatternUndoSnapshot &snapshot);
-	bool PatternUndoSnapshotsHaveSameData(const PatternUndoSnapshot &a, const PatternUndoSnapshot &b) const;
-	void PushPatternUndoSnapshot(const PatternUndoSnapshot &snapshot);
 	bool CommitPatternUndoSnapshotIfChanged(const PatternUndoSnapshot &before);
 
 	bool patternSelectionActive;
@@ -316,8 +304,6 @@ private:
 	// so a later Remove Row can restore them. Index = channel.
 	std::vector<std::vector<ChannelRowSpillEntry>> channelRowSpill;
 	bool preservingRowSpill;
-	std::vector<PatternUndoSnapshot> patternUndoStack;
-	std::vector<PatternUndoSnapshot> patternRedoStack;
 	PatternUndoSnapshot pendingPatternUndoSnapshot;
 	bool pendingPatternUndoSnapshotActive;
 	// True when the context menu was opened on a command/effect column, so

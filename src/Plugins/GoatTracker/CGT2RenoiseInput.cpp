@@ -1,11 +1,12 @@
 #include "CGT2RenoiseInput.h"
+#include "GT2ViewCommon.h"
 #include "C64DebuggerPluginGoatTracker.h"
 #include "CGT2AudioMixer.h"
 #include "CViewGT2Patterns.h"
 #include "CViewGT2Tables.h"
 #include "CViewC64.h"
 #include "SYS_KeyCodes.h"
-#include <SDL.h>
+#include <SDL3/SDL.h>
 #include <cstring>
 
 extern "C" {
@@ -39,6 +40,7 @@ extern bool gt2RenoiseBulkPatternNumberChange;
 // reason CViewGT2Patterns.cpp redeclares them locally.
 #define EDIT_PATTERN  0
 #define EDIT_ORDERLIST 1
+#define EDIT_INSTRUMENT 2
 #define EDIT_TABLES   3
 #define KEY_RENOISE   4
 #define VISIBLEPATTROWS 31
@@ -51,12 +53,12 @@ static bool GT2_HasModifier(bool isShift, bool isAlt, bool isControl, bool isSup
 {
 	if (isShift || isAlt || isControl || isSuper) return true;
 	SDL_Keymod mods = SDL_GetModState();
-	return (mods & (KMOD_SHIFT | KMOD_ALT | KMOD_CTRL | KMOD_GUI)) != 0;
+	return (mods & (SDL_KMOD_SHIFT | SDL_KMOD_ALT | SDL_KMOD_CTRL | SDL_KMOD_GUI)) != 0;
 }
 
 static bool GT2_IsCapsLockOn()
 {
-	return (SDL_GetModState() & KMOD_CAPS) != 0;
+	return (SDL_GetModState() & SDL_KMOD_CAPS) != 0;
 }
 
 CGT2RenoiseInput::CGT2RenoiseInput(C64DebuggerPluginGoatTracker *plugin)
@@ -75,39 +77,39 @@ bool CGT2RenoiseInput::HandleKey(u32 keyCode, bool isShift, bool isAlt, bool isC
 	{
 		return true;
 	}
-	if ((keyCode == 'z' || keyCode == 'Z' || keyCode == SDLK_z)
+	if ((keyCode == 'z' || keyCode == 'Z' || keyCode == SDLK_Z)
 		&& !isShift && !isAlt && (isControl || isSuper))
 	{
 		HandleUndoRedoShortcut(false);
 		return true;
 	}
-	if ((keyCode == 'y' || keyCode == 'Y' || keyCode == SDLK_y)
+	if ((keyCode == 'y' || keyCode == 'Y' || keyCode == SDLK_Y)
 		&& !isShift && !isAlt && (isControl || isSuper))
 	{
 		HandleUndoRedoShortcut(true);
 		return true;
 	}
-	if ((keyCode == 'n' || keyCode == 'N' || keyCode == SDLK_n)
+	if ((keyCode == 'n' || keyCode == 'N' || keyCode == SDLK_N)
 		&& !isShift && !isAlt && (isControl || isSuper))
 	{
 		return HandleNewSong();
 	}
-	if ((keyCode == 'o' || keyCode == 'O' || keyCode == SDLK_o)
+	if ((keyCode == 'o' || keyCode == 'O' || keyCode == SDLK_O)
 		&& !isShift && !isAlt && (isControl || isSuper))
 	{
 		return HandleOpenSong();
 	}
-	if ((keyCode == 's' || keyCode == 'S' || keyCode == SDLK_s)
+	if ((keyCode == 's' || keyCode == 'S' || keyCode == SDLK_S)
 		&& isShift && !isAlt && (isControl || isSuper))
 	{
 		return HandleSaveSongAs();
 	}
-	if ((keyCode == 's' || keyCode == 'S' || keyCode == SDLK_s)
+	if ((keyCode == 's' || keyCode == 'S' || keyCode == SDLK_S)
 		&& !isShift && !isAlt && (isControl || isSuper))
 	{
 		return HandleSaveSong();
 	}
-	if ((keyCode == 'k' || keyCode == 'K' || keyCode == SDLK_k)
+	if ((keyCode == 'k' || keyCode == 'K' || keyCode == SDLK_K)
 		&& !isShift && !isAlt && (isControl || isSuper))
 	{
 		return HandleDuplicatePattern();
@@ -381,7 +383,7 @@ bool CGT2RenoiseInput::TriggerPlayFromCursor()
 bool CGT2RenoiseInput::HandleEditStepShortcut(u32 keyCode, bool isShift, bool isAlt, bool isControl, bool isSuper)
 {
 	bool command = isControl || isSuper;
-	bool isBackquoteKey = keyCode == SDLK_BACKQUOTE || keyCode == '`' || keyCode == '~';
+	bool isBackquoteKey = keyCode == SDLK_GRAVE || keyCode == '`' || keyCode == '~';
 	if (!command && !isAlt && isBackquoteKey)
 	{
 		if (isShift)
@@ -886,9 +888,11 @@ bool CGT2RenoiseInput::HandlePlayStop(bool playFromCursor)
 	// looking at (the original Space-toggles-recordmode bug).
 	if (eamode || menu) return false;
 
-	if (!playFromCursor && isplaying())
+	if (!playFromCursor && GT2_IsTransportActive())
 	{
-		stopsong();
+		// Honours gt2KeepPlayingOnStop: off (default) cuts the sound as stock
+		// GT2 does, on lets whatever is sounding ring out.
+		GT2_StopSong();
 		return true;
 	}
 
@@ -1117,14 +1121,12 @@ bool CGT2RenoiseInput::HandleClearWholeRow()
 bool CGT2RenoiseInput::HandleUndoRedoShortcut(bool redo)
 {
 	if (!plugin) return false;
-	if (editmode == EDIT_TABLES && plugin->viewTables)
-	{
-		if (redo)
-			plugin->viewTables->RedoTableEdit();
-		else
-			plugin->viewTables->UndoTableEdit();
-		return true;
-	}
+	// One timeline for the whole editor, so the shortcut does NOT pick a
+	// history by editmode any more. It used to, and that is what made an
+	// instrument load unreachable from the pattern editor: the load was
+	// recorded while the tables were current, Ctrl+Z in the pattern editor
+	// looked at the other history, and there was nothing there. See
+	// CGT2UndoHistory.h.
 	if (!plugin->viewPatterns) return false;
 	if (redo)
 		plugin->viewPatterns->RedoPatternEdit();

@@ -23,7 +23,10 @@ static void TBScrGetString(char *out, int col, int row, int len)
 	}
 	for (int i = 0; i < len; i++)
 	{
-		unsigned char ch = (unsigned char)(scrbuffer[col + row * MAX_COLUMNS] & 0xff);
+		// `+ i`: without it every character read back is the one at `col`, so
+		// "FV" came back as "FF" and "25Hz" as "2222" and steps 4-6 could never
+		// pass. printstatus() was rendering correctly the whole time.
+		unsigned char ch = (unsigned char)(scrbuffer[col + i + row * MAX_COLUMNS] & 0xff);
 		out[i] = (ch >= 0x20) ? (char)ch : ' ';
 	}
 	out[len] = '\0';
@@ -47,7 +50,7 @@ void CTestGT2TitleBar::Run(ITestCallback *cb)
 	{
 		step++;
 		StepCompleted(step, true, "GT2 not active (chardata NULL) — skipping title bar tests");
-		TestCompleted(true, "GT2TitleBar skipped: plugin not active");
+		TestSkipped("GT2 plugin not active -- the title bar was never exercised");
 		return;
 	}
 
@@ -55,7 +58,7 @@ void CTestGT2TitleBar::Run(ITestCallback *cb)
 	{
 		step++;
 		StepCompleted(step, true, "GT2 plugin not initialized — skipping title bar tests");
-		TestCompleted(true, "GT2TitleBar skipped: plugin not initialized");
+		TestSkipped("GT2 plugin not initialized -- the title bar was never exercised");
 		return;
 	}
 

@@ -1,0 +1,84 @@
+GTK3-VICE NetBSD install instructions
+=====================================
+
+Some notes:
+
+* Most packages are called the same as on Linux, but there are no -dev/-devel
+  packages, the packages such as 'gtk3' will install their headers as well.
+
+* Also very important is to use `gmake` and not BSD's `make`.
+
+* Do the package installation as root.
+
+first of all make sure you have pkgin installed and it is up to date:
+
+# pkgin update
+
+second, check out the svn:
+
+if you dont have svn, install it first
+# pkgin install subversion
+
+# mkdir myworkdir
+# cd myworkdir
+# svn checkout https://svn.code.sf.net/p/vice-emu/code/trunk trunk
+
+now ... you will need some packages:
+# pkgin install pkg-config
+# pkgin install gmake
+# pkgin install autoconf
+# pkgin install automake
+# pkgin install bison
+# pkgin install flex
+# pkgin install xa65             # needed to build the vsid driver
+# pkgin install gtk3+
+# pkgin install glib2-tools
+# pkgin install gtexinfo
+# pkgin install tex-pdftex       # for vice.pdf
+# pkgin install tex-epsf
+# pkgin install dos2unix         # only used when doing `make dist`
+# pkgin install glew             # for OpenGL hardware scaling support
+
+(libpng-dev is required but is a hard dependency of libgtk-3-dev)
+
+The following are optional but recommended (not required for a basic build):
+
+# pkgin install giflib           # GIF screenshot support
+# pkgin install libpcap          # Ethernet support
+
+
+If you have those installed, do run autogen.sh inside the vice dir:
+# cd trunk/vice/
+# ./autogen.sh
+that should complete without error (and generate the actual configure scripts)
+
+try configuring now:
+# ./configure --enable-gtk3ui --without-alsa --without-pulse
+it should complete without error
+
+lets try compiling it... we'll reconfigure again later and enable the options
+you are missing :)
+# gmake
+
+try running x64sc
+# ./src/x64sc
+
+
+Note: VICE expects ROM images at $PREFIX/share/vice, if you've not installed
+      VICE before, these won't be present and x64sc will fail.
+      In that case, tell x64sc where to find the ROM's:
+      # ./src/x64sc -kernal data/C64/kernal \
+                    -basic data/C64/basic \
+                    -chargen data/C64/chargen
+      Once you've succesfully run `gmake install`, the ROMs will be present at
+      $PREFIX/share/vice/$EMU and the above command won't be necessary anymore.
+
+      Another way to test VICE before installing is creating a data dir with
+      the required files (the stuff below assumes x64sc):
+
+      # mkdir ~/alldata-c64
+      # cp src/data/{C64,DRIVES,common}/* ~/alldata-d64/
+
+
+Finally, once one is satisfied with the compiler options etc:
+# gmake install

@@ -48,6 +48,9 @@ int pattsize[MAX_PATT];
 int songoffset[MAX_SONGS][MAX_CHN];
 int songsize[MAX_SONGS][MAX_CHN];
 int tableerror;
+int tableerrorrow;
+int tableerrortarget;
+int tableerrorentry;
 int channels;
 
 // Multi-arp packer diagnostics — see usage in scanpatternarp end-of-
@@ -233,7 +236,7 @@ FILE *gt2_asm_error_stream = NULL;
 static struct membuf *gt2_nb_outbuf = NULL;
 
 #ifdef GT2RELOC
-#ifdef __WIN32__
+#ifdef _WIN32
 extern FILE *STDOUT, *STDERR;
 #else
 #define STDOUT stdout
@@ -260,6 +263,11 @@ void relocator(void)
   int tableerrorcause = CAUSE_NONE;
   int tableerrorsource1 = 0;
   int tableerrorsource2 = 0;
+  /* Snapshotted with the error itself: exectable() keeps writing these for
+     every later walk, but only the FIRST error is reported. */
+  int tableerrorjumprow = 0;
+  int tableerrorjumpto = 0;
+  int tableerrorentryrow = 0;
   int patterns = 0;
   int songs = 0;
   int instruments = 0;
@@ -519,6 +527,9 @@ void relocator(void)
         if ((tableerror) && (!tableerrortype))
         {
           tableerrortype = tableerror;
+          tableerrorjumprow = tableerrorrow;
+          tableerrorjumpto = tableerrortarget;
+          tableerrorentryrow = tableerrorentry;
           tableerrorcause = CAUSE_PATTERN;
           tableerrorsource1 = c;
           tableerrorsource2 = d;
@@ -567,6 +578,9 @@ void relocator(void)
         if ((tableerror) && (!tableerrortype))
         {
           tableerrortype = tableerror;
+          tableerrorjumprow = tableerrorrow;
+          tableerrorjumpto = tableerrortarget;
+          tableerrorentryrow = tableerrorentry;
           tableerrorcause = CAUSE_INSTRUMENT;
           tableerrorsource1 = c;
           tableerrorsource2 = d;
@@ -621,6 +635,9 @@ void relocator(void)
         if ((tableerror) && (!tableerrortype))
         {
           tableerrortype = tableerror;
+          tableerrorjumprow = tableerrorrow;
+          tableerrorjumpto = tableerrortarget;
+          tableerrorentryrow = tableerrorentry;
           tableerrorcause = CAUSE_WAVECMD;
           tableerrorsource1 = c+1;
           tableerrorsource2 = d;
@@ -686,6 +703,19 @@ void relocator(void)
       }
       strcat(textbuffer, ")");
       break;
+    }
+    /* Name the row, not just the table: "OVERFLOWS (INSTRUMENT 01, FILTER)"
+       leaves the user hunting through the table by hand for the jump that
+       leaves it. tableerrorrow is the last jump the failing walk took. */
+    if (tableerrorjumprow)
+    {
+      sprintf(textbuffer + strlen(textbuffer), " JUMP AT ROW %02X GOES TO ROW %02X",
+              tableerrorjumprow, tableerrorjumpto);
+    }
+    else if (tableerrortype == TYPE_OVERFLOW)
+    {
+      sprintf(textbuffer + strlen(textbuffer), " NO $FF END FROM ROW %02X",
+              tableerrorentryrow);
     }
     printtextc(MAX_ROWS/2, 15, textbuffer);
 
@@ -1540,6 +1570,20 @@ void relocator(void)
           break;
 
           // In filtertable, modify passband bits
+          //
+          // NOTE (2026-09-09, observed, deliberately NOT changed): the test is
+          // `> 0x80`, not `>= 0x80`, so the value $80 alone skips the
+          // transformation and is emitted verbatim. Today that is harmless and
+          // the two paths agree: $80 passed through, the 6502 player's
+          // mt_setfilt does `asl` -> $00 -> filter off, and gplay.c computes
+          // $80 & 0x70 = $00 -> filter off as well. Every other value >= $80
+          // goes through ((v & 0x70) >> 1) | 0x80, which the same `asl` undoes.
+          //
+          // It is recorded here because the equivalence is a coincidence of
+          // this encoding, not a property of it: change how the packer encodes
+          // the passband and $80 will quietly take a different path from
+          // $90..$FE. Whoever touches this line should make the boundary
+          // deliberate rather than rediscover it.
           case FTBL:
           if ((ltable[c][d] != 0xff) && (ltable[c][d] > 0x80))
             insertbyte(((ltable[c][d] & 0x70) >> 1) | 0x80);
@@ -1761,7 +1805,17 @@ void relocator(void)
   {
     gt2_post_output_hook = NULL;
     if (gt2_nb_export) {
-      snprintf(gt2_nb_error, sizeof(gt2_nb_error), "Assembly failed");
+      /* Surface the assembler's own diagnostic, the way the two exit()-caught
+         paths below already do. Without it this returns a bare "Assembly
+         failed" with nothing to act on -- which is exactly what a suite run
+         reported, leaving no way to tell a bad song from a bad player source. */
+      if (gt2_asm_error_stream) {
+        fflush(gt2_asm_error_stream);
+        fclose(gt2_asm_error_stream);
+        gt2_asm_error_stream = NULL;
+      }
+      snprintf(gt2_nb_error, sizeof(gt2_nb_error), "Assembly failed: %s",
+               gt2_asm_error_buf[0] ? gt2_asm_error_buf : "(no diagnostic)");
       gt2_nb_result = -3;
       goto PRCLEANUP;
     }
@@ -2255,7 +2309,6 @@ static int scanpatternarp(int pattnum)
   int rows = pattlen[pattnum];
   int arpch;
   int row, col;
-  unsigned char gate_on;
   unsigned char base_note;     // 0-based, 0 = no base note
   unsigned char arpcolnotes[MAX_ARP_COLS];
   int prev_arp_index;          // -1 = "arp cleared / unknown", 1..254 = pool slot
@@ -2268,7 +2321,6 @@ static int scanpatternarp(int pattnum)
   arpch = find_arp_channel_for_pattern(pattnum);
   if (arpch < 0) return 0;     // No arp data for this pattern
 
-  gate_on = 0;
   base_note = 0;
   memset(arpcolnotes, 0, sizeof arpcolnotes);
   prev_arp_index = -1;
@@ -2280,20 +2332,12 @@ static int scanpatternarp(int pattnum)
     int active_count = 0;
     int cur_arp_index;
 
-    // Apply base column to simulated gate/base_note.
-    if (basecol == KEYOFF)
-    {
-      gate_on = 0;
-    }
-    else if (basecol == KEYON)
-    {
-      gate_on = 1;
-    }
-    else if (basecol >= FIRSTNOTE && basecol <= LASTNOTE)
-    {
-      gate_on = 1;
+    // Apply base column to the simulated base_note. KEYOFF/KEYON only
+    // move the gate, which the arp cycle ignores: after a KEYOFF the
+    // chord keeps cycling (base note included) through the release,
+    // exactly like gplay.c's rebuildarp().
+    if (basecol >= FIRSTNOTE && basecol <= LASTNOTE)
       base_note = basecol - FIRSTNOTE;       // 0-based
-    }
 
     // Apply arp columns to simulated arpcolnotes[].
     for (col = 0; col < numarpcolumns; col++)
@@ -2310,7 +2354,7 @@ static int scanpatternarp(int pattnum)
       // else: 0 / out-of-range bytes leave the column unchanged (sticky)
     }
 
-    // Build the active note set in C-player order: base first if active,
+    // Build the active note set in C-player order: base first if set,
     // then arp columns in column order. This must match gplay.c
     // rebuildarp() so the pool entries align with what the C preview
     // would have produced.
@@ -2324,7 +2368,7 @@ static int scanpatternarp(int pattnum)
     // table $60 entries past where it actually lives in RAM and read
     // garbage — which is what the t=$25/$13 scenario-2 SID trace was
     // showing before this fix.
-    if (gate_on && base_note != 0)
+    if (base_note != 0)
       active_notes[active_count++] = base_note;
     for (col = 0; col < numarpcolumns; col++)
     {
@@ -2346,12 +2390,13 @@ static int scanpatternarp(int pattnum)
       }
       // else: arpbyterow[row] stays 0.
     }
-    else if (active_count == 1 && gate_on && base_note != 0 &&
+    else if (active_count == 1 && base_note != 0 &&
              active_notes[0] == base_note)
     {
       // The only active note IS the base note (no arp columns). Skip the
       // pool — the normal freq path will play the base note through the
-      // wavetable/tick0 pipeline. Clear arp if it was previously set.
+      // wavetable/tick0 pipeline (gplay.c: arpcount==1 && arpbase → no
+      // override). Clear arp if it was previously set.
       if (prev_arp_index != -1)
       {
         arpbyterow[row] = 0xff;
@@ -2361,9 +2406,10 @@ static int scanpatternarp(int pattnum)
     }
     else
     {
-      // 2+ notes, or 1 arp-only note (e.g. base KEYOFF but arp continues).
-      // Both go through the pool — the 6502 cycling code handles size=1
-      // by reading the single note every tick.
+      // 2+ notes, or 1 arp-only note on a channel that never had a base
+      // note. Both go through the pool — the 6502 cycling code handles
+      // size=1 by reading the single note every tick. Whether anything
+      // is audible is the main track's business (gate).
       cur_arp_index = findOrAddArpPoolEntry(pattnum, active_notes, active_count);
       if (cur_arp_index == 0)
       {

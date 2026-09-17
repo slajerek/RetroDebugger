@@ -4,7 +4,7 @@
 
 #define GSOUND_C
 
-#ifdef __WIN32__
+#ifdef _WIN32
 #include <windows.h>
 #endif
 
@@ -51,7 +51,7 @@ int dll_initialized = FALSE;
 // Cycle-exact HardSID support
 int cycleexacthardsid = FALSE;
 SDL_Thread* playerthread = NULL;
-SDL_mutex* flushmutex = NULL;
+SDL_Mutex* flushmutex = NULL;
 volatile int runplayerthread = FALSE;
 volatile int flushplayerthread = FALSE;
 volatile int suspendplayroutine = FALSE;
@@ -79,7 +79,7 @@ int gtsound_init(unsigned b, unsigned mr, unsigned writer, unsigned hardsid, uns
 	
   int c;
 
-//  #ifdef __WIN32__
+//  #ifdef _WIN32
 //  if (!flushmutex)
 //      flushmutex = SDL_CreateMutex();
 //  #endif
@@ -116,7 +116,7 @@ int gtsound_init(unsigned b, unsigned mr, unsigned writer, unsigned hardsid, uns
 	/*
   if (hardsid)
   {
-    #ifdef __WIN32__
+    #ifdef _WIN32
     InitHardDLL();
     if (dll_initialized)
     {
@@ -177,7 +177,7 @@ int gtsound_init(unsigned b, unsigned mr, unsigned writer, unsigned hardsid, uns
 
   if (catweasel)
   {
-    #ifdef __WIN32__
+    #ifdef _WIN32
     catweaselhandle = CreateFile("\\\\.\\SID6581_1", GENERIC_READ, FILE_SHARE_WRITE|FILE_SHARE_READ, 0L,
       OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0L);
     if (catweaselhandle == INVALID_HANDLE_VALUE)
@@ -247,7 +247,7 @@ void gtsound_uninit(void)
 
 //  if (usehardsid || usecatweasel)
 //  {
-//    #ifdef __WIN32__
+//    #ifdef _WIN32
 //    if (!playerthread)
 //    {
 //      SDL_SetTimer(0, NULL);
@@ -283,7 +283,7 @@ void gtsound_uninit(void)
 	/*
   if (usehardsid)
   {
-    #ifdef __WIN32__
+    #ifdef _WIN32
     for (c = 0; c < NUMSIDREGS; c++)
     {
         if (cycleexacthardsid) {
@@ -310,7 +310,7 @@ void gtsound_uninit(void)
 
   if (usecatweasel)
   {
-    #ifdef __WIN32__
+    #ifdef _WIN32
     DWORD w;
     unsigned char buf[NUMSIDREGS * 2];
     for (w = 0; w < NUMSIDREGS; w++)

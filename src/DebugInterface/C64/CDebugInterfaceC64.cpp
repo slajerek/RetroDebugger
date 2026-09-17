@@ -325,6 +325,11 @@ void CDebugInterfaceC64::InsertD64(CSlrString *path)
 
 void CDebugInterfaceC64::DetachDriveDisk()
 {
+	DetachDriveDisk(8);
+}
+
+void CDebugInterfaceC64::DetachDriveDisk(int deviceNumber)
+{
 	LOGTODO("CDebugInterfaceC64::DetachDriveDisk");
 }
 
@@ -489,9 +494,10 @@ void CDebugInterfaceC64::MakeJmpAndReset(uint16 addr)
 	this->MakeJmpC64(addr);
 }
 
-void CDebugInterfaceC64::MakeJmpC64(uint16 addr)
+bool CDebugInterfaceC64::MakeJmpC64(uint16 addr)
 {
 	LOGTODO("CDebugInterfaceC64::MakeJmpC64");
+	return false;
 }
 
 void CDebugInterfaceC64::MakeJmpNoResetC64(uint16 addr)
@@ -905,6 +911,47 @@ void CDebugInterfaceC64::CartridgeFreezeButtonPressed()
 void CDebugInterfaceC64::GetC64CartridgeState(C64StateCartridge *cartridgeState)
 {
 	LOGTODO("CDebugInterfaceC64::GetC64CartridgeState");
+}
+
+// IDE64
+void CDebugInterfaceC64::AttachIde64Cartridge(CSlrString *filePath)
+{
+	LOGTODO("CDebugInterfaceC64::AttachIde64Cartridge");
+}
+
+void CDebugInterfaceC64::DetachIde64Cartridge()
+{
+	LOGTODO("CDebugInterfaceC64::DetachIde64Cartridge");
+}
+
+void CDebugInterfaceC64::SetIde64Image(int deviceNum, const char *path)
+{
+	LOGTODO("CDebugInterfaceC64::SetIde64Image");
+}
+
+void CDebugInterfaceC64::SetIde64Version(int version)
+{
+	LOGTODO("CDebugInterfaceC64::SetIde64Version");
+}
+
+void CDebugInterfaceC64::SetIde64UsbServerEnabled(bool enabled)
+{
+	LOGTODO("CDebugInterfaceC64::SetIde64UsbServerEnabled");
+}
+
+void CDebugInterfaceC64::SetIde64UsbServerAddress(const char *address)
+{
+	LOGTODO("CDebugInterfaceC64::SetIde64UsbServerAddress");
+}
+
+void CDebugInterfaceC64::SetIde64RtcSave(bool enabled)
+{
+	LOGTODO("CDebugInterfaceC64::SetIde64RtcSave");
+}
+
+void CDebugInterfaceC64::SetIde64AutodetectSize(int deviceNum, bool enabled)
+{
+	LOGTODO("CDebugInterfaceC64::SetIde64AutodetectSize");
 }
 
 // REU

@@ -215,9 +215,10 @@ void CDebuggerApi::ResetMachine(bool isHardReset)
 	}
 }
 
-void CDebuggerApi::MakeJmp(int addr)
+bool CDebuggerApi::MakeJmp(int addr)
 {
 	SYS_FatalExit("CDebuggerApi::MakeJMP: not implemented");
+	return false;
 }
 
 CDataAdapter *CDebuggerApi::GetDataAdapterMemoryWithIO()
@@ -284,6 +285,17 @@ void CDebuggerApi::SetWord(int addr, u16 v)
 void CDebuggerApi::DetachEverything()
 {
 	SYS_FatalExit("CDebuggerApi::DetachEverything: not implemented");
+}
+
+bool CDebuggerApi::DetachDriveDisk(int deviceNumber)
+{
+	LOGError("CDebuggerApi::DetachDriveDisk: not supported by this platform");
+	return false;
+}
+
+int CDebuggerApi::GetDefaultDiskDriveNumber()
+{
+	return 8;
 }
 
 void CDebuggerApi::ClearRam(int startAddr, int endAddr, u8 value)

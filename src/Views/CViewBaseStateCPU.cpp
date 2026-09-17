@@ -6,6 +6,7 @@
 #include "CDebugInterface.h"
 #include "CGuiEditHex.h"
 #include "CLayoutParameter.h"
+#include "MT_UiScale.h"
 
 CViewBaseStateCPU::CViewBaseStateCPU(const char *name, float posX, float posY, float posZ, float sizeX, float sizeY, CDebugInterface *debugInterface)
 : CGuiView(name, posX, posY, posZ, sizeX, sizeY)
@@ -16,7 +17,7 @@ CViewBaseStateCPU::CViewBaseStateCPU(const char *name, float posX, float posY, f
 	imGuiNoScrollbar = true;
 
 	this->font = viewC64->fontDisassembly;
-	fontSize = 7.0f;
+	fontSize = MT_UiScaled(7.0f);
 	numCharacterColumns = 51.0f;
 	hasManualFontSize = false;
 

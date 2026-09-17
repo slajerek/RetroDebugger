@@ -1,0 +1,82 @@
+--------------------------------------------------------------------------------
+macOS builds require that Xcode command line tools be installed
+--------------------------------------------------------------------------------
+
+First install Xcode from the app store (or an older version, 10 is a good choice
+if you want to make binary distributions later), and make sure Xcode CLI tools
+are installed and licenses agreed.
+
+$ xcode-select --install
+$ sudo xcodebuild -license accept
+
+--------------------------------------------------------------------------------
+Install the build tools and dependencies
+--------------------------------------------------------------------------------
+
+Using either MacPorts or Homebrew to fetch dependencies is supported. If both
+are installed, MacPorts (/opt/local) will win over Homebrew (x86_64: /usr/local,
+or arm64: /opt/homebrew).
+
+You only need one of Gtk3 or SDL2 (actually neither if you are just building the
+headless port), but of course you can install both and you'll be able to do both
+SDL2 and Gtk3 builds. You probably want a Gtk3 build.
+
+---------
+MacPorts:
+---------
+
+$ sudo port install autoconf automake pkgconfig xa lame texinfo texlive-basic dos2unix libomp
+
+Gtk3:
+
+$ sudo port install gtk3 +quartz
+$ sudo port install librsvg adwaita-icon-theme glew
+
+SDL2:
+
+$ sudo port install libsdl2 libsdl2_image libpng
+
+---------
+Homebrew:
+---------
+
+$ brew install autoconf automake pkg-config xa lame texinfo dos2unix libomp
+$ brew install basictex
+
+Gtk3:
+
+$ brew install gtk+3 librsvg adwaita-icon-theme glew
+
+SDL2:
+
+$ brew install sdl2 sdl2_image libpng
+
+--------------------------------------------------------------------------------
+Configure the source and build:
+--------------------------------------------------------------------------------
+
+If you're going to be doing lots of building or various configurations (SDL2,
+Gtk3 etc) then you'll probably want to create a separate build directory for each
+configuration.
+
+$ BUILD_LOCATION="<BUILD LOCATION>"
+$ mkdir -p "$BUILD_LOCATION"
+$ cd "$BUILD_LOCATION"
+$ VICE_PATH="<VICE SOURCE PATH>"
+$ (cd "$VICE_PATH" && ./autogen.sh)
+
+Gtk3:
+
+$ "$VICE_PATH"/configure --enable-gtk3ui
+$ make -j
+$ sudo make install
+
+SDL2:
+
+$ "$VICE_PATH"/configure --enable-sdl2ui
+$ make -j
+$ sudo make install
+
+Once you have installed once, you can run newly built binaries directly:
+
+$ ./src/x64sc

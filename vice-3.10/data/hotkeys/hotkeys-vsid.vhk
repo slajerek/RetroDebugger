@@ -1,0 +1,130 @@
+# VICE hotkeys for vsid
+#
+# Author:   Bas Wassink
+# Updated:  2023-09-04
+#
+# See doc/gtk3-hotkeys.md for documentation on the syntax of hotkeys files.
+# See src/arch/shared/uiactions.h for a list of action names.
+
+# Enable debugging
+!debug off
+
+# Clear hotkeys
+!clear
+
+!if !MACOS
+    psid-load               <Alt>l
+    media-record            <Shift><Alt>r
+    media-stop              <Shift><Alt>s
+    monitor-open            <Alt>h
+    machine-reset-cpu       <Alt>F9
+    machine-power-cycle     <Alt>F12
+    quit                    <Alt>q
+
+    psid-override-toggle    <Alt>x
+    !if GTK3
+        settings-dialog         <Alt>o
+    !endif
+    settings-default        <Shift><Alt>o
+
+    # (Sub)tune controls
+    psid-play               r       # r for Run?
+    psid-pause              h       # h for Halt? Space cannot be used
+    psid-stop               s
+    psid-ffwd               f
+    psid-subtune-next       n
+    psid-subtune-previous   p
+    !if GTK3
+        psid-loop-toggle        l
+    !endif
+
+    # Subtune selection
+    psid-subtune-1          1
+    psid-subtune-2          2
+    psid-subtune-3          3
+    psid-subtune-4          4
+    psid-subtune-5          5
+    psid-subtune-6          6
+    psid-subtune-7          7
+    psid-subtune-8          8
+    psid-subtune-9          9
+    psid-subtune-10         0
+    psid-subtune-11         <Control>1
+    psid-subtune-12         <Control>2
+    psid-subtune-13         <Control>3
+    psid-subtune-14         <Control>4
+    psid-subtune-15         <Control>5
+    psid-subtune-16         <Control>6
+    psid-subtune-17         <Control>7
+    psid-subtune-18         <Control>8
+    psid-subtune-19         <Control>9
+    psid-subtune-20         <Control>0
+    psid-subtune-21         <Alt>1
+    psid-subtune-22         <Alt>2
+    psid-subtune-23         <Alt>3
+    psid-subtune-24         <Alt>4
+    psid-subtune-25         <Alt>5
+    psid-subtune-26         <Alt>6
+    psid-subtune-27         <Alt>7
+    psid-subtune-28         <Alt>8
+    psid-subtune-29         <Alt>9
+    psid-subtune-30         <Alt>0
+
+    # TODO: add playlist hotkeys (Gtk3) ?
+
+!else
+    psid-load               <Command>l
+    media-record            <Shift><Command>r
+    media-stop              <Shift><Command>s
+    monitor-open            <Command>Escape
+    machine-reset-cpu       <Command>F9
+    machine-power-cycle     <Command>F12
+    quit                    <Command>q
+
+    psid-override-toggle    <Command>x
+    !if GTK3
+        settings-dialog         <Command>o
+    !endif
+    settings-default        <Shift><Command>o
+
+    # (Sub)tune controls
+    psid-play               r       # r for Run?
+    psid-pause              h       # h for Halt? Space cannot be used
+    psid-stop               s
+    psid-ffwd               f
+    psid-subtune-next       n
+    psid-subtune-previous   p
+    !if GTK3
+        psid-loop-toggle        l
+    !endif
+    psid-subtune-1          1
+    psid-subtune-2          2
+    psid-subtune-3          3
+    psid-subtune-4          4
+    psid-subtune-5          5
+    psid-subtune-6          6
+    psid-subtune-7          7
+    psid-subtune-8          8
+    psid-subtune-9          9
+    psid-subtune-10         0
+    psid-subtune-11         <Control>1
+    psid-subtune-12         <Control>2
+    psid-subtune-13         <Control>3
+    psid-subtune-14         <Control>4
+    psid-subtune-15         <Control>5
+    psid-subtune-16         <Control>6
+    psid-subtune-17         <Control>7
+    psid-subtune-18         <Control>8
+    psid-subtune-19         <Control>9
+    psid-subtune-20         <Control>0
+    psid-subtune-21         <Command>1
+    psid-subtune-22         <Command>2
+    psid-subtune-23         <Command>3
+    psid-subtune-24         <Command>4
+    psid-subtune-25         <Command>5
+    psid-subtune-26         <Command>6
+    psid-subtune-27         <Command>7
+    psid-subtune-28         <Command>8
+    psid-subtune-29         <Command>9
+    psid-subtune-30         <Command>0
+!endif

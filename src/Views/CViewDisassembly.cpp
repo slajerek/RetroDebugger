@@ -32,6 +32,7 @@
 #include "CViewC64Screen.h"
 #include "CViewAtariScreen.h"
 #include "CViewNesScreen.h"
+#include "MT_UiScale.h"
 
 #define byte unsigned char
 
@@ -74,7 +75,7 @@ CViewDisassembly::CViewDisassembly(const char *name, float posX, float posY, flo
 	this->changedByUser = false;
 	this->cursorAddress = -1;
 	this->currentPC = -1;
-	this->fontSize = 7;
+	this->fontSize = MT_UiScaled(7.0f);
 	this->numberOfLinesBack = 31;
 	this->numberOfLinesBack3 = this->numberOfLinesBack * NUM_MULTIPLY_LINES_FOR_DISASSEMBLY;
 

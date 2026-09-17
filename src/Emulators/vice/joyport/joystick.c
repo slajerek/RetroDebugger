@@ -4288,8 +4288,6 @@ void joystick_device_close(joystick_device_t *joydev)
 }
 
 /* c64d: joystick key input for debugger */
-void c64d_lock_mutex();
-void c64d_unlock_mutex();
 
 void c64d_joystick_key_up(int key, unsigned int joyport)
 {
@@ -4297,7 +4295,6 @@ void c64d_joystick_key_up(int key, unsigned int joyport)
     int value;
     int column = 0;
 
-    c64d_lock_mutex();
 
     if (key == JOYPAD_N) column = JOYSTICK_KEYSET_N;
     else if (key == JOYPAD_S) column = JOYSTICK_KEYSET_S;
@@ -4318,7 +4315,6 @@ void c64d_joystick_key_up(int key, unsigned int joyport)
     }
 
     joystick_set_value_absolute(joyport, (uint8_t)value);
-    c64d_unlock_mutex();
 }
 
 void c64d_joystick_key_down(int key, unsigned int joyport)
@@ -4327,7 +4323,6 @@ void c64d_joystick_key_down(int key, unsigned int joyport)
     int value;
     int column = 0;
 
-    c64d_lock_mutex();
 
     if (key == JOYPAD_N) column = JOYSTICK_KEYSET_N;
     else if (key == JOYPAD_S) column = JOYSTICK_KEYSET_S;
@@ -4348,5 +4343,4 @@ void c64d_joystick_key_down(int key, unsigned int joyport)
     }
 
     joystick_set_value_absolute(joyport, (uint8_t)value);
-    c64d_unlock_mutex();
 }

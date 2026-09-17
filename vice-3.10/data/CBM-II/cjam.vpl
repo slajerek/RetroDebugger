@@ -1,0 +1,58 @@
+#
+# VICE Palette file
+#
+# Syntax:
+# Red Green Blue
+#
+# taken from http://jamontoads.net/p/lumachroma.html
+#
+# TYPE:VICII
+# NAME:Christopher Jam
+
+# Black
+00 00 00
+
+# White
+FF FF FF
+
+# Red
+7d 20 2c
+
+# Cyan
+4f b3 a5
+
+# Purple
+84 25 8c
+
+# Green
+33 98 40
+
+# Blue
+2a 1b 9d
+
+# Yellow
+bf d0 4a
+
+# Orange
+7f 41 0d
+
+# Brown
+4c 2e 00
+
+# Light Red
+b4 4f 5c
+
+# Dark Gray
+3c 3c 3c
+
+# Medium Gray
+64 64 64
+
+# Light Green
+7c e5 87
+
+# Light Blue
+63 51 db
+
+# Light Gray
+93 93 93

@@ -3,7 +3,7 @@
 
 #ifdef GSOUND_C
 
-#ifdef __WIN32__
+#ifdef _WIN32
 #include <winioctl.h>
 #else
 #include <sys/stat.h>

@@ -1,0 +1,367 @@
+# VICE keyboard mapping file
+#
+# A Keyboard map is read in as patch to the current map.
+#
+# File format:
+# - comment lines start with '#'
+# - keyword lines start with '!keyword'
+# - normal lines have 'keysym/scancode row column shiftflag'
+#
+# Keywords and their lines are:
+# '!CLEAR'               clear whole table
+# '!INCLUDE filename'    read file as mapping file
+# '!LSHIFT row col'      left shift keyboard row/column
+# '!RSHIFT row col'      right shift keyboard row/column
+# '!VSHIFT shiftkey'     virtual shift key (RSHIFT or LSHIFT)
+# '!SHIFTL shiftkey'     shift lock key (RSHIFT or LSHIFT)
+#  for emulated keyboards that have only one shift key, set both LSHIFT
+#  and RSHIFT to the same row/col and use RSHIFT for VSHIFT and SHIFTL.
+# '!LCTRL row col'       left control keyboard row/column
+# '!VCTRL ctrlkey'       virtual control key (LCTRL)
+# '!LCBM row col'        left CBM keyboard row/column
+# '!VCBM cbmkey'         virtual CBM key (LCBM)
+# '!UNDEF keysym'        remove keysym from table
+#
+# Shiftflag can have these values, flags can be ORed to combine them:
+# 0x0000      0  key is not shifted for this keysym/scancode
+# 0x0001      1  key is combined with shift for this keysym/scancode
+# 0x0002      2  key is left shift on emulated machine
+# 0x0004      4  key is right shift on emulated machine (use only this one
+#                for emulated keyboards that have only one shift key)
+# 0x0008      8  key can be shifted or not with this keysym/scancode
+# 0x0010     16  deshift key for this keysym/scancode
+# 0x0020     32  another definition for this keysym/scancode follows
+# 0x0040     64  key is shift-lock on emulated machine
+# 0x0080    128  shift modifier required on host
+# 0x0100    256  key is used for an alternative keyboard mapping, e.g. C64 mode in x128
+# 0x0200    512  alt-r (alt-gr) modifier required on host
+# 0x0400   1024  ctrl modifier required on host
+# 0x0800   2048  key is combined with cbm for this keysym/scancode
+# 0x1000   4096  key is combined with ctrl for this keysym/scancode
+# 0x2000   8192  key is (left) cbm on emulated machine
+# 0x4000  16384  key is (left) ctrl on emulated machine
+#
+# Negative row values:
+# 'keysym -1 n' joystick keymap A, direction n
+# 'keysym -2 n' joystick keymap B, direction n
+# 'keysym -3 0' first RESTORE key
+# 'keysym -3 1' second RESTORE key
+# 'keysym -4 0' 40/80 column key (x128)
+# 'keysym -4 1' CAPS (ASCII/DIN) key (x128)
+# 'keysym -5 n' joyport keypad, key n (not supported in x128)
+#
+# Joystick direction values:
+# 0      Fire
+# 1      South/West
+# 2      South
+# 3      South/East
+# 4      West
+# 5      East
+# 6      North/West
+# 7      North
+# 8      North/East
+#
+# Joyport keypad key layout:
+# --------------------------
+# |  0 |  1 |  2 |  3 |  4 |
+# --------------------------
+# |  5 |  6 |  7 |  8 |  9 |
+# --------------------------
+# | 10 | 11 | 12 | 13 | 14 |
+# --------------------------
+# | 15 | 16 | 17 | 18 | 19 |
+# --------------------------
+#
+# When a bigger spaced key is used,
+# it uses the upper left most key value.
+
+# Commodore cbm2 keyboard matrix:
+#
+# references:
+#  http://www.zimmers.net/anonftp/pub/cbm/b/documents/de/keyboard-matrix.gif
+#  http://www.zimmers.net/anonftp/pub/cbm/b/documents/keymap-us.gif
+#  http://www.zimmers.net/anonftp/pub/cbm/schematics/computers/b/p500-keyboard.txt
+#  http://www.floodgap.com/retrobits/ckb/secret/cbm-610-keyboard.jpg
+#
+# Keys starting with 'KP' are on the number pad. Both shifts and shift lock
+# are in parallel at one point in matrix.
+#
+#       0        1        2        3        4        5
+#   +--------+--------+--------+--------+--------+--------+
+# 0 |   F9   |  9  (  |   O    |   L    |  ;  :  |  /  ?  |
+#   +--------+--------+--------+--------+--------+--------+
+# 1 |  F10   |  0  )  |   -    |   P    |   [    |  '  "  |
+#   +--------+--------+--------+--------+--------+--------+
+# 2 | c.down |  =  +  |<- pound|   ]    | return |  pi    |
+#   +--------+--------+--------+--------+--------+--------+
+# 3 | c.up   | c.left | c.right|del ins | CBM    |########|
+#   +--------+--------+--------+--------+--------+--------+
+# 4 |home/clr|KP ?    |KP 7    |KP 4    |KP 1    |KP 0    |
+#   +--------+--------+--------+--------+--------+--------+
+# 5 |rvs/off |KP CE   |KP 8    |KP 5    |KP 2    |KP .    |
+#   +--------+--------+--------+--------+--------+--------+
+# 6 | graph  |KP *    |KP 9    |KP 6    |KP 3    |KP 00   |
+#   +--------+--------+--------+--------+--------+--------+
+# 7 |run/stop|KP /    |KP -    |KP +    |KP enter|########|
+#   +--------+--------+--------+--------+--------+--------+
+# 8 |   F1   | escape |  TAB   |########| Shift  | CTRL   |
+#   +--------+--------+--------+--------+--------+--------+
+# 9 |   F2   |  1  !  |   Q    |   A    |   Z    |########|
+#   +--------+--------+--------+--------+--------+--------+
+#10 |   F3   |  2  @  |   W    |   S    |   X    |   C    |
+#   +--------+--------+--------+--------+--------+--------+
+#11 |   F4   |  3  #  |   E    |   D    |   F    |   V    |
+#   +--------+--------+--------+--------+--------+--------+
+#12 |   F5   |  4  $  |   R    |   T    |   G    |   B    |
+#   +--------+--------+--------+--------+--------+--------+
+#13 |   F6   |  5  %  |  6  ^  |   Y    |   H    |   N    |
+#   +--------+--------+--------+--------+--------+--------+
+#14 |   F7   |  7  &  |   U    |   J    |   M    | space  |
+#   +--------+--------+--------+--------+--------+--------+
+#15 |   F8   |  8  *  |   I    |   K    |  ,  <  |  .  >  |
+#   +--------+--------+--------+--------+--------+--------+
+
+#   CBM2 Keyboard layout:
+#
+#   F1 F2 F3 F4 F5 F6 F7 F8 F9 F10 down up left right clr rvs graph r/s
+#
+#   ESC 1!  2@  3#  4$  5%  6^  7&  8*  9(  0)  -   =+  arrow/pound del     ?   CE  *   /
+#    TAB q   w   e   r   t   y   u   i   o   p   [   ]   return             7   8   9   -
+#     SL  a   s   d   f   g   h   j   k   l   ;:  '"  pi                    4   5   6   +
+#      LS  z   x   c   v   b   n   m   ,<  .>  /?  RS   CBM                 1   2   3
+#       CTRL    SPACE                                                       0   .   00  enter
+
+
+!CLEAR
+!LSHIFT 8 4
+!RSHIFT 8 4
+!VSHIFT RSHIFT
+!SHIFTL RSHIFT
+!LCBM 3 4
+!VCBM LCBM
+!LCTRL 8 5
+!VCTRL LCTRL
+
+# 0 |   F9   |  9  (  |   O    |   L    |  ;  :  |  /  ?  |
+
+F9              0 0 8         /*           F9 -> F9           */
+parenleft       0 1 1         /*            ( -> (            */
+semicolon       0 4 16        /*            ; -> ;            */
+colon           0 4 1         /*            : -> :            */
+#period          0 4 16        /*            . -> .            */
+slash           0 5 0x10      /*            / -> /            */
+question        0 5 1         /*            ? -> ?            */
+ssharp          4 1 0x1400    /*            ? -> KP? + ctrl   */
+
+# 1 |  F10   |  0  )  |   -    |   P    |   [    |  '  "  |
+
+F10             1 0 8         /*          F10 -> F10          */
+parenright      1 1 1         /*            ) -> )            */
+minus           1 2 8         /*        Minus -> Minus        */
+bracketleft     1 4 8         /*            [ -> [            */
+odiaeresis      1 4 8         /*            [ -> [            */
+Odiaeresis      1 4 8         /*            [ -> [ +shift     */
+apostrophe      1 5 16        /*            ' -> '            */
+quotedbl        1 5 8         /*            " -> "            */
+
+# 2 | c.down |  =  +  |<- pound|   ]    | return |  pi    |
+
+Down            2 0 8         /*         Down -> CRSR DOWN    */
+equal           2 1 16        /*        Equal -> Equal        */
+plus            2 1 1         /*            + -> +            */
+acute           2 2 8         /*            ´ -> Pound        */
+grave           2 2 8         /*            ` -> Pound+shift  */
+bracketright    2 3 8         /*            ] -> ]            */
+adiaeresis      2 3 8         /*            ] -> ]            */
+Adiaeresis      2 3 8         /*            ] -> ] +shift     */
+Return          2 4 0         /*       Return -> Return       */
+#F12             2 5 8         /*          F12 -> Pi           */
+asciicircum     13 2 0x21         /*            ^ -> ^ (6+shift)  */
+asciicircum     2 5 0x1400         /*    ^ + ctrl -> Pi + ctrl           */
+
+# 3 | c.up   | c.left | c.right|del ins | CBM    |########|
+
+Up              3 0 8         /*           Up -> CRSR UP      */
+Left            3 1 8         /*         Left -> CRSR LEFT    */
+Right           3 2 8         /*        Right -> CRSR RIGHT   */
+BackSpace       3 3 8         /*    Backspace -> Del          */
+#Delete          3 3 8         /*       Delete -> Del          */
+#Insert          3 3 1         /*       Insert -> Del +Shift   */
+#Alt_R           3 4 8         /*    Right Alt -> C=           */
+
+# 4 |home/clr|KP ?    |KP 7    |KP 4    |KP 1    |KP 0    |
+
+Home            4 0 8         /*         Home -> CLR/HOME     */
+#?               4 1 8         /*              -> KP ?         */
+KP_7            4 2 8         /*         KP 7 -> KP 7         */
+KP_Home         4 2 1         /*         KP 7 -> KP 7 + Shift */
+KP_4            4 3 8         /*         KP 4 -> KP 4         */
+KP_Left         4 3 1         /*         KP 4 -> KP 4 + Shift */
+KP_1            4 4 8         /*         KP 1 -> KP 1         */
+KP_End          4 4 1         /*         KP 1 -> KP 1 + Shift */
+KP_0            4 5 8         /*         KP 0 -> KP 0         */
+KP_Insert       4 5 1         /*         KP 0 -> KP 0 + Shift */
+
+# 5 |rvs/off |KP CE   |KP 8    |KP 5    |KP 2    |KP .    |
+
+End             5 0 8         /*          End -> rvs/off      */
+#Page_Up         5 1 8         /*         PgUp -> CE           */
+Delete          5 1 0       /* delete -> kp CE */
+KP_8            5 2 8         /*         KP 8 -> KP 8         */
+KP_Up           5 2 8         /*         KP 8 -> KP 8 + Shift */
+KP_5            5 3 8         /*         KP 5 -> KP 5         */
+KP_Begin        5 3 1         /*         KP 5 -> KP 5 + Shift */
+KP_2            5 4 8         /*         KP 2 -> KP 2         */
+KP_Down         5 4 1         /*         KP 2 -> KP 2 + Shift */
+KP_Decimal      5 5 8         /*         KP , -> KP ,         */
+KP_Separator    5 5 8         /*         KP , -> KP ,         */
+KP_Delete       5 5 1         /*         KP , -> KP , + Shift     */
+
+# 6 | graph  |KP *    |KP 9    |KP 6    |KP 3    |KP 00   |
+
+Page_Down       6 0 8         /*       PgDown -> Norm/Graph   */
+KP_Multiply     6 1 8         /*         KP * -> KP *         */
+KP_9            6 2 8         /*         KP 9 -> KP 9         */
+KP_Page_Up      6 2 8         /*         KP 9 -> KP 9 + Shift */
+KP_6            6 3 8         /*         KP 6 -> KP 6         */
+KP_Right        6 3 1         /*         KP 6 -> KP 6 + Shift */
+KP_3            6 4 0         /*         KP 3 -> KP 3         */
+KP_Next         6 4 1         /*         KP 3 -> KP 3 + Shift */
+Insert          6 5 8       /* insert -> kp 00 */
+
+# 7 |run/stop|KP /    |KP -    |KP +    |KP retrn|########|
+
+#Escape          7 0 8         /*       Escape -> Run/Stop     */
+Page_Up          7 0 8         /*       Page up -> Run/Stop     */
+F12          7 0 8         /*       F12 -> Run/Stop     */
+KP_Divide       7 1 8         /*         KP / -> KP /         */
+KP_Subtract     7 2 8         /*         KP - -> KP -         */
+KP_Add          7 3 8         /*         KP + -> KP +         */
+KP_Enter        7 4 8         /*     KP Enter -> KP Enter     */
+
+# 8 |   F1   | escape |  TAB   |########| Shift  | CTRL   |
+
+F1              8 0 8         /*           F1 -> F1           */
+Escape          8 1 8         /*          ESC -> ESC          */
+#Page_Up         8 1 8         /*      Page up -> ESC          */
+#F12             8 1 8         /*          F12 -> ESC          */
+Tab             8 2 8         /*          TAB -> TAB          */
+Shift_R         8 4 4         /*  Right Shift -> Right Shift  */
+Shift_L         8 4 4         /*   Left Shift -> Left Shift   */
+Caps_Lock       8 4 64        /*    Caps Lock -> Shift-Lock   */
+Control_L       8 5 16384     /*    Left Ctrl -> CTRL         */
+Control_R       3 4 8192      /*   Right Ctrl -> CBM         */
+
+# 9 |   F2   |  1  !  |   Q    |   A    |   Z    |########|
+
+F2              9 0 8         /*           F2 -> F2           */
+exclam          9 1 1         /*            ! -> !            */
+
+#10 |   F3   |  2  @  |   W    |   S    |   X    |   C    |
+
+F3              10 0 8        /*           F3 -> F3           */
+at              10 1 1        /*            @ -> @            */
+udiaeresis      10 1 1        /*            ü -> @            */
+Udiaeresis      10 1 1        /*            ü -> @            */
+
+#11 |   F4   |  3  #  |   E    |   D    |   F    |   V    |
+
+F4              11 0 8        /*           F4 -> F4           */
+numbersign      11 1 0x21     /*            # -> #            */
+section         11 1 1        /*      shift+3 -> #            */
+numbersign       1 5 0x1400   /*     ctrl + # -> ' + ctrl     */
+
+#12 |   F5   |  4  $  |   R    |   T    |   G    |   B    |
+
+F5              12 0 8        /*           F5 -> F5           */
+dollar          12 1 1        /*            $ -> $            */
+
+#13 |   F6   |  5  %  |  6  ^  |   Y    |   H    |   N    |
+
+F6              13 0 8        /*           F6 -> F6           */
+percent         13 1 1        /*            % -> %            */
+#asciicircum     13 2 1        /*            ^ -> ^            */
+degree           2 5 16       /*            ° -> pi           */
+dead_circumflex  2 5 16       /*            ° -> pi           */
+
+#14 |   F7   |  7  &  |   U    |   J    |   M    | space  |
+
+F7              14 0 8        /*           F7 -> F7           */
+ampersand       14 1 1        /*            & -> &            */
+space           14 5 8        /*        Space -> Space        */
+
+#15 |   F8   |  8  *  |   I    |   K    |  ,  <  |  .  >  |
+
+F8              15 0 8        /*           F8 -> F8           */
+asterisk        15 1 8        /*            * -> *            */
+comma           15 4 0        /*            , -> ,            */
+less            15 4 1        /*            < -> <            */
+period          15 5 0x20     /*            . -> .            */
+#period          15 5 1        /*            . -> . + shift    */
+period           0 4 0x1400   /*            . -> : + ctrl     */
+greater         15 5 1        /*            > -> >            */
+
+1  9 1 0        /*            1 -> 1            */
+2 10 1 0        /*            2 -> 2            */
+3 11 1 0        /*            3 -> 3            */
+4 12 1 0        /*            4 -> 4            */
+5 13 1 0        /*            5 -> 5            */
+6 13 2 0        /*            6 -> 6            */
+7 14 1 0        /*            7 -> 7            */
+8 15 1 0        /*            8 -> 8            */
+9  0 1 0        /*            9 -> 9            */
+0  1 1 0        /*            0 -> 0            */
+
+A  9 3 8        /*            A -> A            */
+B 12 5 8        /*            B -> B            */
+C 10 5 8        /*            C -> C            */
+D 11 3 8        /*            D -> D            */
+E 11 2 8        /*            E -> E            */
+F 11 4 8        /*            F -> F            */
+G 12 4 8        /*            G -> G            */
+H 13 4 8        /*            H -> H            */
+I 15 2 8        /*            I -> I            */
+J 14 3 8        /*            J -> J            */
+K 15 3 8        /*            K -> K            */
+L  0 3 8        /*            L -> L            */
+M 14 4 8        /*            M -> M            */
+N 13 5 8        /*            N -> N            */
+O  0 2 8        /*            O -> O            */
+P  1 3 8        /*            P -> P            */
+Q  9 2 8        /*            Q -> Q            */
+R 12 2 8        /*            R -> R            */
+S 10 3 8        /*            S -> S            */
+T 12 3 8        /*            T -> T            */
+U 14 2 8        /*            U -> U            */
+V 11 5 8        /*            V -> V            */
+W 10 2 8        /*            W -> W            */
+Y 13 3 8        /*            Y -> Y            */
+Z  9 4 8        /*            Z -> Z            */
+X 10 4 8        /*            X -> X            */
+
+a  9 3 0        /*            A -> A            */
+b 12 5 0        /*            B -> B            */
+c 10 5 0        /*            C -> C            */
+d 11 3 0        /*            D -> D            */
+e 11 2 0        /*            E -> E            */
+f 11 4 0        /*            F -> F            */
+g 12 4 0        /*            G -> G            */
+h 13 4 0        /*            H -> H            */
+i 15 2 0        /*            I -> I            */
+j 14 3 0        /*            J -> J            */
+k 15 3 0        /*            K -> K            */
+l  0 3 0        /*            L -> L            */
+m 14 4 0        /*            M -> M            */
+n 13 5 0        /*            N -> N            */
+o  0 2 0        /*            O -> O            */
+p  1 3 0        /*            P -> P            */
+q  9 2 0        /*            Q -> Q            */
+r 12 2 0        /*            R -> R            */
+s 10 3 0        /*            S -> S            */
+t 12 3 0        /*            T -> T            */
+u 14 2 0        /*            U -> U            */
+v 11 5 0        /*            V -> V            */
+w 10 2 0        /*            W -> W            */
+x 10 4 0        /*            X -> X            */
+y 13 3 0        /*            Y -> Y            */
+z  9 4 0        /*            Z -> Z            */

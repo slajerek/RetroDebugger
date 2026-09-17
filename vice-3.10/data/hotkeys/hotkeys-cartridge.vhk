@@ -1,0 +1,18 @@
+# VICE hotkeys for cartridges
+#
+# Author:   Bas Wassink
+# Updated:  2023-09-03
+
+!if !MACOS
+    cart-attach     <Alt>c
+    cart-detach     <Alt><Shift>c
+    !if C64 || C64SC || SCPU64 || C128 || VIC20 || PLUS4
+        cart-freeze     <Alt>z
+    !endif
+!else
+    cart-attach     <Command>c
+    cart-detach     <Command><Shift>c
+    !if C64 || C64SC || SCPU64 || C128 || VIC20 || PLUS4
+        cart-freeze     <Command>z
+    !endif
+!endif

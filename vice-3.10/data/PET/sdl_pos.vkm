@@ -1,0 +1,18 @@
+# VICE keyboard mapping file
+
+# note: For some reason SDL does not get keyboard events for "dead keys" at all,
+#       so a "nodeadkeys" layout must be used. CAUTION: apparently SDL generates
+#       some tables internally at startup - switching the host layout while
+#       the emulator is running produces unpredictable results (broken keycodes)
+
+# 2001, 3032 and 4032 use graphics keyboard
+# 4032B, 8032 and up use business keyboard
+#
+# http://www.6502.org/users/andre/petindex/keyboards.html
+#
+# this file is a fallback that will be used when no other keymap exists. due to
+# the different types of keyboards that exist for the PET family, this will not
+# work for all of them (only the "big" machines).
+
+# use PET business mapping as base
+!INCLUDE sdl_buuk_pos.vkm

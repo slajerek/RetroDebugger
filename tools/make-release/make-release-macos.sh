@@ -37,7 +37,11 @@ rd_copy_common "$ROOT" "$RELEASE_DIR"   # no icons folder on macOS
 
 echo "==> [2/5] Building RetroDebugger (clean)"
 chmod +x "$ROOT/build-macos.sh"
-( cd "$ROOT" && ./build-macos.sh )
+# --clean: the stub+driver default is INCREMENTAL now (Phase 4); a release
+# keeps the from-scratch guarantee explicitly.
+# --clean cleans and EXITS (app-build-macos.sh); the build is the second call.
+# MT_LOGS on|off reaches the driver as --logs; CI sets it per matrix leg.
+( cd "$ROOT" && ./build-macos.sh --clean && ./build-macos.sh ${MT_LOGS:+--logs "$MT_LOGS"} )
 
 echo "==> [3/5] Copying app bundle"
 APP="$ROOT/build-macos/Build/Products/Release/Retro Debugger.app"

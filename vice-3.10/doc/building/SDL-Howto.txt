@@ -1,0 +1,237 @@
+Building the SDL port of VICE
+-----------------------------
+
+VICE can link against either SDL1 or SDL2 depending on how it is
+configured. Despite being different versions of the "same library",
+they are neither API nor binary compatible and connot be
+simultaneously linked. You will need to pick one to use.
+
+Generally speaking, if SDL2 is available on your target system, that
+is the build you want -- SDL2 provides more efficient use of modern OS
+facilities with fewer external dependencies required. SDL1 is really
+useful only if:
+
+- You are building for a system without graphical acceleration of any
+  kind or for a system with graphical acceleration but which is
+  difficult or finicky to use (like the default Raspberry Pi setup).
+- SDL2 isn't available on your system at all (BeOS, RISC OS,
+  etc). OpenGL will be available if the platform supports it.
+
+
+Building in *nix compile enviroments
+------------------------------------
+
+If you have checked out the unstable svn version of VICE you need to generate
+the configure script first by doing:
+./autogen.sh
+
+The stable tarball already has the configure script, so continue with:
+
+./configure --enable-sdl2ui
+make
+make install
+
+You'll need the SDL2 libs and headers. Movie recording needs the
+FFMPEG libraries and headers.
+
+== TODO: list proper deps ==
+
+libsdl2-dev
+libsdl2-image-dev
+
+
+
+To build SDL1, pass --enable-sdl1ui to configure instead of --enable-sdl2ui,
+and you will need OpenGL headers and libraries as well if you want free-scaling.
+
+
+
+Steps to set up the needed external SDL libs for building using with minGW
+--------------------------------------------------------------------------
+
+(For instructions on using MSYS2 and SDL2 on Windows, see further down this
+ document: "Building on Windows with MSYS2")
+
+1. You will need to download the current version of SDL headers and libs for minGW. 
+   They can be found here https://www.libsdl.org/release/SDL-devel-1.2.15-mingw32.tar.gz
+2. Locate your minGW install include directory (ex. C:\MinGW\include), and
+   create a directory called SDL there (ex. C:\MinGW\include\SDL). Inside this
+   directory, copy all your SDL header (.h) files extracted in the SDL 'include' 
+   directory from step #1
+3. Locate your minGW library directory (ex. C:\MinGW\lib). Inside this directory, 
+   copy all your SDL libs (.a) files extracted into the SDL 'lib' directory from step #1
+4. Follow the standard build instructions for *nix environment now
+5. After making, type 'make bindist' to create the binary distribution files. They 
+   will appear in a newly created SDLVICE directory. 
+
+NOTE: The default SDL build does not statically link the mingw and sdl runtime libs, 
+so you will need to locate and copy the SDL.dll from found in step #1 and the minGW 
+libstdc++.dll & libgcc.dll files from the minGW (ex. C:\MinGW\bin) directory to a global
+windows path (ex. \WINDOWS\system32) or you can just drop them in the local SDLVICE 
+binary dir so they can be found during runtime.
+
+
+
+Building on macOS
+-----------------
+
+See macOS-Howto.txt
+
+
+Building on Windows with MSYS2
+==============================
+
+To build the SDL version on Windows, we use the MinGW toolchain as provided by
+the MSYS2 project: https://www.msys2.org/
+
+We'll be using the x86_64 version in this guide, and we'll install it into
+C:\opt\msys64. So download and install the lastest x86_64 installer and follow
+the instructions on the msys2 website.
+MSYS2 shell commands will be indicated with '$' from now on.
+
+Make sure to have at least 3-4 GB free, preferably a few more, msys2 takes up
+quite a bit of space (2GB+) and VICE's trunk is also nothing to sneeze at.
+
+
+Install development packages
+----------------------------
+
+After installing the msys2 base system we need a "few" more packages, so:
+
+$ pacboy sync base-devel: pkg-config gcc ntldd zip: subversion: SDL2 libpng \
+  SDL2_image
+
+Select 'all' for the base-devel group, then proceed to install a few packages,
+perhaps grab a beer, have some coffee or tea while msys2 does its magic.
+
+Now we need the xa assembler to build the VSID driver, which isn't in the MSYS2
+repo, so we'll build it ourselves:
+
+$ wget https://www.floodgap.com/retrotech/xa/dists/xa-2.3.11.tar.gz
+$ tar -xvzf xa-2.3.11.tar.gz
+$ cd xa-2.3.11
+$ make
+$ make install
+$ cd ~
+
+
+Check out VICE via SVN and create a minimal SDL2 build
+------------------------------------------------------
+
+$ svn checkout https://svn.code.sf.net/p/vice-emu/code/trunk vice-trunk
+
+(If you need write access to SVN, you'll need to install openssh and check out
+ trunk with the svn+ssh protocol)
+
+Change to the vice dir and see if we can build the SDL2 VICE UI:
+
+$ cd vice-trunk/vice
+# Generate the required build system files, such as configure:
+$ ./autogen.sh
+
+Now let's try to configure a minimal working SDL2 build:
+
+$ ./configure --enable-sdl2ui
+(This will take a while on Windows, be patient)
+
+Once this passes succesfully, we can try to actually build SDL2-VICE:
+
+$ make
+(Or, to collect any warnings during building: make 2>&1 | tee build.log)
+
+Once this succesfully finishes, we can try to run x64sc:
+
+# Create a temorary dir with the files needed for x64sc (ROMs, keymaps, palette
+# files, etc):
+$ mkdir ~/alldata-c64
+$ cp data/C64/* ~/alldata-c64
+$ cp data/DRIVES/* ~/alldata-c64
+
+Now run x64sc using this directory for the data files:
+$ src/x64sc -directory ~/alldata-c64
+
+If that works, building SDL2-VICE worked!
+
+
+Creating a proper install
+-------------------------
+
+Now we can create a proper directory with all required files:
+$ make bindist
+
+If you see a warning about binaries being optimized for your system: if you
+won't redistribute your bindist then all is fine, if you do plan to
+redistribute, than you should pass --enable-arch=no to ./configure. (In that
+case you'll have to do a make clean first to make sure the new configure switch
+is properly used to rebuild all object files)
+
+Now start cmd.exe and cd into the bindist dir:
+
+$ cd \opt\msys64\home\compyx\vice-trunk\vice\SDL2VICE-3.5-win64-r40371
+# (Obviously alter the above to match your path)
+$ x64sc
+# Maybe test a few others, for example xpet:
+$ xpet
+
+If this works you can copy the SDL2VICE-3.* dir to where you want it and rename
+it if required. For example copy/movce it to C:\opt\vice-sdl2 and update your
+Windows' $PATH to contain 'C:\opt\vice-sdl2'
+
+
+Creating a SDL(1.2) Version Instead of SDL2
+-----------------------------------------
+
+Almost identical to above except for following:
+
+Installing Dependencies:
+$ pacboy sync base-devel: pkg-config gcc ntldd zip: subversion: SDL libpng \
+  SDL_image
+
+Configure:
+$ ./configure --enable-sdl1ui
+
+The bindist folder will be named SDLVICE-3.*
+
+
+Adding features (TODO)
+----------------------
+
+* building documentation (set up and use MikTeX)
+* network support (pcap)
+* screenshot support (jpeg, gif)
+
+-- Compyx, 2020-01-19
+
+
+
+Building the SDL2 port from trunk on Debian and Debian-derived distros
+======================================================================
+
+Install prerequisites
+---------------------
+
+$ sudo apt install autoconf automake build-essential byacc flex texinfo \
+                   texlive-binaries subversion dos2unix xa65
+
+# Install SDL2 libs/headers:
+$ sudo apt install libsdl2-dev libsdl2-image-dev
+
+# Download VICE trunk:
+$ svn checkout https://svn.code.sf.net/p/vice-emu/code/trunk vice-trunk
+
+# Run autogen.sh to generate the build system:
+$ cd vice-trunk/vice
+$ ./autogen.sh
+
+# Run configure with a minimal set of switches:
+$ ./configure --enable-sdl2ui --with-sdlsound --without-png
+
+If that passes, it's time to build VICE:
+(The redirection of stdout and stderr to a file means we can inspect any errors)
+$ make -j 2>&1 | tee build.log
+
+If that succeeds without errors, it's time to install:
+$ sudo make install
+
+
+Now just enter `x64sc` in a terminal and VICE will run.

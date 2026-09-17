@@ -1,0 +1,37 @@
+# VICE hotkeys for snapshots, events and media recording
+#
+# Author:   Bas Wassink
+# Updated:  2023-09-03
+#
+# See src/arch/shared/uiactions.h for a list of action names.
+
+!if !MACOS
+# Snapshots
+    snapshot-load           <Alt>l
+    snapshot-save           <Alt>s
+    snapshot-quickload      <Alt>F10
+    snapshot-quicksave      <Alt>F11
+
+    # History
+    history-milestone-set   <Alt>e
+    history-milestone-reset <Alt>u
+
+    # Audio, video recording, screenshots
+    media-record            <Alt><Shift>r
+    media-stop              <Alt><Shift>s
+    screenshot-quicksave    Pause
+!else
+    snapshot-load           <Command>l
+    snapshot-save           <Command>s
+    snapshot-quickload      <Command>F10
+    snapshot-quicksave      <Command>F11
+
+    # History
+    history-milestone-set   <Command>e
+    history-milestone-reset <Command>u
+
+    # Audio, video recording, screenshots
+    media-record            <Command><Shift>r
+    media-stop              <Command><Shift>s
+    screenshot-quicksave    Pause
+!endif

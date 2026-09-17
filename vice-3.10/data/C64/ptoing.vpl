@@ -1,0 +1,56 @@
+#
+# VICE Palette file
+#
+# Syntax:
+# Red Green Blue
+#
+# TYPE:VICII
+# NAME:Ptoing
+
+# Black
+00 00 00
+
+# White
+FF FF FF
+
+# Red
+8C 3E 34
+
+# Cyan
+7A BF C7
+
+# Purple
+8D 47 B3
+
+# Green
+68 A9 41
+
+# Blue
+3E 31 A2
+
+# Yellow
+D0 DC 71
+
+# Orange
+90 5F 25
+
+# Brown
+57 42 00
+
+# Light Red
+BB 77 6D
+
+# Dark Gray
+54 54 54
+
+# Medium Gray
+80 80 80
+
+# Light Green
+AC EA 88
+
+# Light Blue
+7C 70 DA
+
+# Light Gray
+AB AB AB

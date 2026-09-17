@@ -1,0 +1,43 @@
+#
+# VICE Palette file
+#
+# Syntax:
+# Red Green Blue
+#
+# VIC-II default palette taken from the pixcen editor
+#
+# TYPE:VICII
+# NAME:PixCen
+
+# Black
+00 00 00
+# White
+FF FF FF
+# Red
+89 40 36
+# Cyan
+7a bf c7
+# Purple
+8a 46 ae
+# Green
+68 a9 41
+# Blue
+3e 31 a2
+# Yellow
+d0 dc 71
+# Orange
+90 5f 25
+# Brown
+5c 47 00
+# Light Red
+bb 77 6d
+# Dark Gray
+55 55 55
+# Medium Gray
+80 80 80
+# Light Green
+ac ea 88
+# Light Blue
+7c 70 da
+# Light Gray
+ab ab ab

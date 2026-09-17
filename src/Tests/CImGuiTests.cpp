@@ -1,4 +1,4 @@
-#ifdef ENABLE_IMGUI_TEST_ENGINE
+#if MT_ENABLE_IMGUI_TEST_ENGINE
 
 #include "imgui.h"
 #include "imgui_internal.h"
@@ -28,11 +28,20 @@
 #include "../Plugins/GoatTracker/C64DebuggerPluginGoatTracker.h"
 #include "../Plugins/GoatTracker/CViewGT2Patterns.h"
 #include "../Plugins/GoatTracker/CViewGT2Instrument.h"
+#include "../Plugins/GoatTracker/CViewGT2InstrumentsBrowser.h"
+#include "../Plugins/GoatTracker/CViewGT2InstrumentTableRow.h"
+#include "../Plugins/GoatTracker/CViewGT2PatternRow.h"
+#include "../Plugins/GoatTracker/CViewGT2InstrumentList.h"
 #include "../Plugins/GoatTracker/CViewC64GoatTracker.h"
 #include "SYS_Funct.h"
 #include <cmath>
 #include <cstring>
 #include <string>
+#include "CTest.h"     // CTest::ResolveProjectPath for fixture folders
+#include "IconsFontAwesome_c.h"
+#include "MT_CaptureHelpers.h"
+#include "CImageData.h"
+#include <vector>
 #include <vector>
 
 // GT2 native globals — only resolved when GoatTracker plugin is linked + active.
@@ -49,6 +58,21 @@ extern "C" {
 	extern int einum, eipos, eicolumn;
 	extern unsigned keypreset;
 }
+// C++ linkage: it is a plain global in CViewGT2Patterns.cpp, not a GT2 C global.
+extern int gt2CommandValueMode;
+// windows.h -- reached through SYS_Defs.h, which nearly every header here pulls
+// in -- defines Yield() as an EMPTY function-like macro for 16-bit source
+// compatibility (winbase.h). That turns every ImGuiTestContext::Yield() call in
+// this file into a syntax error: bare Yield() expands to nothing, and
+// Yield(10) is "too many arguments provided to function-like macro invocation".
+//
+// The collision is not new; it had simply never been compiled on Windows,
+// because MT_ENABLE_IMGUI_TEST_ENGINE only started being defined here when the
+// capability manifest turned MT_CAP_TEST_ENGINE on for this app.
+#if defined(Yield)
+#undef Yield
+#endif
+
 
 namespace
 {
@@ -587,10 +611,87 @@ void RegisterRetroDebuggerTests(ImGuiTestEngine *engine)
 			IM_CHECK(ToggleEmulatorViaFileMenu(ctx, diC64, wasC64Running, "default-workspaces-tab-bars-restore-c64"));
 	};
 
+	// ---------------------------------------------------------------
+	// Every ICON_FA_* the app draws exists in the merged icon font.
+	// ---------------------------------------------------------------
+	// The engine merges FontAwesome 5 FREE SOLID (imgui-notify's fa_solid_900,
+	// 967 glyphs in the FA range), while the ICON_FA_* macros come from
+	// IconsFontAwesome_c.h, which is FontAwesome 4. Most codepoints coincide,
+	// but not all: level-up (U+f148), file-o (U+f016) and bell-o (U+f0a2) are
+	// FA4/Pro glyphs the free solid font does not carry. ImGui silently
+	// substitutes the fallback character, so the button ships showing "?" and
+	// nothing catches it -- that is how the metronome button and the first cut
+	// of the instruments browser got there.
+	//
+	// So assert it: decode each icon's UTF-8 to a codepoint and require a real
+	// glyph. Add every new icon here; a missing one is a test failure, not a
+	// surprise in the UI.
+	ImGuiTest *tIcons = IM_REGISTER_TEST(engine, "ui", "icon_font_glyphs_present");
+	tIcons->TestFunc = [](ImGuiTestContext *ctx)
+	{
+		struct IconUnderTest { const char *name; const char *utf8; };
+		static const IconUnderTest kIcons[] = {
+			// GT2 toolbar
+			{ "ICON_FA_PLAY",           ICON_FA_PLAY },
+			{ "ICON_FA_PAUSE",          ICON_FA_PAUSE },
+			{ "ICON_FA_STOP",           ICON_FA_STOP },
+			{ "ICON_FA_REPEAT",         ICON_FA_REPEAT },
+			{ "ICON_FA_LOCATION_ARROW", ICON_FA_LOCATION_ARROW },
+			{ "ICON_FA_BELL",           ICON_FA_BELL },
+			{ "ICON_FA_UNDO",           ICON_FA_UNDO },
+			{ "ICON_FA_SHARE",          ICON_FA_SHARE },
+			// GT2 instruments browser
+			{ "ICON_FA_ARROW_UP",       ICON_FA_ARROW_UP },
+			{ "ICON_FA_REFRESH",        ICON_FA_REFRESH },
+			{ "ICON_FA_FOLDER",         ICON_FA_FOLDER },
+			{ "ICON_FA_FILE",           ICON_FA_FILE },
+			{ "ICON_FA_SEARCH",         ICON_FA_SEARCH },
+			// GT2 instruments browser context menu
+			{ "ICON_FA_FOLDER_OPEN",    ICON_FA_FOLDER_OPEN },
+			{ "ICON_FA_STAR",           ICON_FA_STAR },
+			{ "ICON_FA_TIMES",          ICON_FA_TIMES },
+		};
+
+		// IsGlyphInFont() asks the source data, not a baked size, so it does
+		// not depend on which size happens to be bound right now.
+		ImFont *font = ImGui::GetFont();
+		IM_CHECK(font != NULL);
+
+		std::string missing;
+		for (const IconUnderTest &icon : kIcons)
+		{
+			unsigned int codepoint = 0;
+			ImTextCharFromUtf8(&codepoint, icon.utf8, icon.utf8 + strlen(icon.utf8));
+			if (codepoint == 0 || !font->IsGlyphInFont((ImWchar)codepoint))
+			{
+				char buf[128];
+				snprintf(buf, sizeof(buf), "%s (U+%04x) ", icon.name, codepoint);
+				missing += buf;
+			}
+		}
+		if (!missing.empty())
+			ctx->LogError("icons missing from the merged font: %s", missing.c_str());
+		IM_CHECK(missing.empty());
+	};
+
 	// Test: Open all views from all emulators to catch rendering crashes
 	ImGuiTest *t2 = IM_REGISTER_TEST(engine, "ui", "open_all_views");
 	t2->TestFunc = [](ImGuiTestContext *ctx)
 	{
+		// Starting an emulator from here used to hang the whole suite: this
+		// function runs on the test-engine coroutine, the main thread
+		// dispatches it from inside ImGui::EndFrame() while holding guiMain's
+		// mutex, and StartEmulationThread() locks that mutex (CViewC64.cpp,
+		// e.g. StartC64UEmulationThread) -- so it parked on a lock only the
+		// blocked main thread could release. Fixed in the engine: the
+		// coroutine bridge in CImGuiTestEngine.cpp hands that lock back for
+		// the duration of each dispatch. See MTEngineSDL/docs/testing.md #4a.
+		//
+		// So the direct call is correct again, and it is what this test wants:
+		// getting the emulators running is a precondition, not the thing under
+		// test, and driving the File menu for it depends on whatever layout
+		// happens to be loaded.
+
 		// 1. Save initial emulator running states
 		std::vector<bool> wasRunning;
 		for (auto *di : viewC64->debugInterfaces)
@@ -1200,6 +1301,9 @@ void RegisterRetroDebuggerTests(ImGuiTestEngine *engine)
 
 		// User instruction: stop C64 while GT2 is active so the SID and
 		// chardata pointers are not racing with the VICE thread.
+		// Safe from the coroutine since the engine's coroutine bridge hands
+		// guiMain's lock back for the dispatch -- see the note in
+		// "open_all_views" and MTEngineSDL/docs/testing.md #4a.
 		bool wasC64Running = (viewC64->debugInterfaceC64 != NULL
 		                      && viewC64->debugInterfaceC64->isRunning);
 		if (wasC64Running)
@@ -1410,6 +1514,654 @@ void RegisterRetroDebuggerTests(ImGuiTestEngine *engine)
 
 		restoreC64();
 	};
+
+	// ---------------------------------------------------------------
+	// GT2 Instruments list scrolls.
+	// ---------------------------------------------------------------
+	// The list draws its 62 rows straight to the draw list, so ImGui only
+	// knows the content is taller than the window if the view says so. When it
+	// did not, the window had no scrollbar and the mouse wheel did nothing --
+	// which is invisible to every other check, hence this one.
+	ImGuiTest *tGT2InstrScroll = IM_REGISTER_TEST(engine, "gt2", "instrument_list_scrolls");
+	tGT2InstrScroll->TestFunc = [](ImGuiTestContext *ctx)
+	{
+		if (pluginGoatTracker == NULL || pluginGoatTracker->viewInstrumentList == NULL)
+		{
+			ctx->LogInfo("GT2 plugin not initialised - skipped");
+			return;
+		}
+
+		CViewGT2InstrumentList *view = pluginGoatTracker->viewInstrumentList;
+		bool savedVisible = view->visible;
+		int savedEinum = einum;
+
+		view->SetVisible(true);
+		ctx->Yield(10);
+		if (view->imGuiWindow == NULL)
+		{
+			ctx->LogError("GT2 Instruments did not materialise an ImGui window");
+			IM_CHECK(false);
+			return;
+		}
+
+		// Force it smaller than the list so there is something to scroll,
+		// whatever the loaded layout says.
+		ImVec2 savedSize = view->imGuiWindow->Size;
+		ImGui::SetWindowSize(view->imGuiWindow, ImVec2(300.0f, 200.0f));
+		ctx->Yield(6);
+
+		float scrollMax = view->imGuiWindow->ScrollMax.y;
+		if (scrollMax <= 0.0f)
+			ctx->LogError("instrument list reports no scrollable content (ScrollMax.y=%.1f)", scrollMax);
+
+		// Scrolling has to move what is drawn, not merely exist.
+		std::vector<unsigned int> top, bottom;
+		int w = 0, h = 0, w2 = 0, h2 = 0;
+		ImGui::SetScrollY(view->imGuiWindow, 0.0f);
+		ctx->Yield(4);
+		bool capturedTop = MT_CaptureWindowRGBA(ctx, view->imGuiWindow->Name, &top, &w, &h);
+		ImGui::SetScrollY(view->imGuiWindow, scrollMax);
+		ctx->Yield(4);
+		bool capturedBottom = MT_CaptureWindowRGBA(ctx, view->imGuiWindow->Name, &bottom, &w2, &h2);
+
+		int firstDiff = -1;
+		bool rowsMoved = capturedTop && capturedBottom && w == w2 && h == h2
+			&& !MT_CapturesMatch(top, bottom, 8, &firstDiff);
+		if (!rowsMoved)
+			ctx->LogError("scrolling the instrument list did not change what is drawn");
+
+		// A selection made elsewhere is brought into view.
+		ImGui::SetScrollY(view->imGuiWindow, 0.0f);
+		ctx->Yield(4);
+		einum = MAX_INSTR - 2;   // GT2_LAST_INSTR; the tempo slot is MAX_INSTR-1
+		ctx->Yield(6);
+		float followScroll = view->imGuiWindow->Scroll.y;
+		if (followScroll <= 0.0f)
+			ctx->LogError("selecting the last instrument did not scroll it into view (Scroll.y=%.1f)", followScroll);
+
+		einum = savedEinum;
+		ImGui::SetWindowSize(view->imGuiWindow, savedSize);
+		view->SetVisible(savedVisible);
+		ctx->Yield(4);
+
+		IM_CHECK(scrollMax > 0.0f);
+		IM_CHECK(rowsMoved);
+		IM_CHECK(followScroll > 0.0f);
+	};
+
+	// ---------------------------------------------------------------
+	// GT2 Instrument Table Row: renders, and follows the cursor.
+	// ---------------------------------------------------------------
+	// RenderTableRowHelp() is now shown only here -- the instrument view's
+	// context menu keeps its Insert/Delete actions and the call to it is
+	// commented out, so this view is the only thing that draws it. Walk the
+	// cursor across all four tables and make sure each one draws.
+	ImGuiTest *tGT2TableRow = IM_REGISTER_TEST(engine, "gt2", "instrument_table_row_renders");
+	tGT2TableRow->TestFunc = [](ImGuiTestContext *ctx)
+	{
+		if (pluginGoatTracker == NULL || pluginGoatTracker->viewInstrumentTableRow == NULL
+			|| pluginGoatTracker->viewInstrument == NULL)
+		{
+			ctx->LogInfo("GT2 plugin not initialised - skipped");
+			return;
+		}
+
+		CViewGT2InstrumentTableRow *view = pluginGoatTracker->viewInstrumentTableRow;
+		bool savedVisible = view->visible;
+		int savedEtnum = etnum;
+		int savedEtpos = etpos;
+
+		view->SetVisible(true);
+		ctx->Yield(10);
+
+		bool materialised = (view->imGuiWindow != NULL);
+		if (!materialised)
+			ctx->LogError("GT2 Instrument Table Row did not materialise an ImGui window");
+
+		std::vector<unsigned int> pixels;
+		int capW = 0, capH = 0;
+		int distinctColors = 0;
+		float painted = 0.0f;
+		bool captured = false;
+
+		// Every table, including the speedtable (read-only here) and an
+		// out-of-range cursor, which must draw the hint instead of crashing.
+		for (int t = 0; t < MAX_TABLES; t++)
+		{
+			etnum = t;
+			etpos = 0;
+			ctx->Yield(4);
+		}
+		etnum = -1;
+		ctx->Yield(4);
+
+		// The left / right highlight: same row, both columns, captured
+		// separately so the two can be compared by eye.
+		//
+		// It only shows when the cursor is on a REAL row of the edited
+		// instrument's slice -- with nothing being edited there is deliberately
+		// nothing to single out. So give instrument einum a two-row wavetable
+		// (one content row plus the $FF terminator) at the top of the pool.
+		int savedEtcolumn = etcolumn;
+		int savedEinum = einum;
+		unsigned char savedL0 = ltable[WTBL][0], savedL1 = ltable[WTBL][1];
+		unsigned char savedR0 = rtable[WTBL][0], savedR1 = rtable[WTBL][1];
+		unsigned char savedPtr = ginstr[1].ptr[WTBL];
+
+		einum = 1;
+		ltable[WTBL][0] = 0x11; rtable[WTBL][0] = 0x00;
+		ltable[WTBL][1] = 0xff; rtable[WTBL][1] = 0x00;
+		ginstr[1].ptr[WTBL] = 1;          // 1-based, so the slice starts at row 0
+		etnum = WTBL;
+		etpos = 0;
+
+		auto capture = [&](const char *path) -> bool
+		{
+			ctx->Yield(6);
+			std::vector<unsigned int> px;
+			int w = 0, h = 0;
+			if (!materialised || !MT_CaptureWindowRGBA(ctx, view->imGuiWindow->Name, &px, &w, &h))
+				return false;
+			CImageData img(w, h, IMG_TYPE_RGBA);
+			img.AllocResultImage();
+			for (int y = 0; y < h; y++)
+				for (int x = 0; x < w; x++)
+				{
+					unsigned int p = px[(size_t)y * w + x];
+					img.SetPixel(x, y, (u8)(p & 0xFF), (u8)((p >> 8) & 0xFF),
+								 (u8)((p >> 16) & 0xFF), (u8)((p >> 24) & 0xFF));
+				}
+			img.Save(path);
+			// Raw copy too: the PNG is for eyes, this is for the comparison.
+			std::string raw(path);
+			size_t dot = raw.rfind('.');
+			if (dot != std::string::npos) raw = raw.substr(0, dot);
+			raw += ".raw";
+			MT_WriteCaptureArtifact(raw.c_str(), px, w, h);
+			pixels = px; capW = w; capH = h;
+			return true;
+		};
+
+		etcolumn = 0;   // left byte
+		bool capturedLeft = capture("/tmp/gt2-tablerow-left.png");
+		etcolumn = 2;   // right byte
+		bool capturedRight = capture("/tmp/gt2-tablerow-right.png");
+		etcolumn = savedEtcolumn;
+
+		// The highlight has to be a real difference on screen, not just a
+		// changed caption: the same window, same row, two columns, must not
+		// come back byte-identical.
+		bool highlightDiffers = false;
+		{
+			std::vector<unsigned int> a, b;
+			int aw = 0, ah = 0, bw = 0, bh = 0;
+			if (MT_ReadCaptureArtifact("/tmp/gt2-tablerow-left.raw", &a, &aw, &ah)
+				&& MT_ReadCaptureArtifact("/tmp/gt2-tablerow-right.raw", &b, &bw, &bh))
+			{
+				int firstDiff = -1;
+				highlightDiffers = (aw == bw && ah == bh)
+					&& !MT_CapturesMatch(a, b, 8, &firstDiff);
+			}
+		}
+
+		// The highlight is value-driven, not just column-driven: the lines in
+		// the ranges table name LEFT-byte ranges, so a pulsetable row holding
+		// $85 must light "$80-$FE" alone. Before that, every left line lit at
+		// once and the table said nothing about the row -- and since all three
+		// lit either way, two different values drew identical pixels.
+		unsigned char savedPL0 = ltable[PTBL][0], savedPL1 = ltable[PTBL][1];
+		unsigned char savedPR0 = rtable[PTBL][0], savedPR1 = rtable[PTBL][1];
+		unsigned char savedPtrP = ginstr[1].ptr[PTBL];
+
+		ltable[PTBL][0] = 0x85; rtable[PTBL][0] = 0x00;
+		ltable[PTBL][1] = 0xff; rtable[PTBL][1] = 0x00;
+		ginstr[1].ptr[PTBL] = 1;          // 1-based, so the slice starts at row 0
+		etnum = PTBL;
+		etpos = 0;
+		etcolumn = 0;
+
+		bool capturedPtblHi = capture("/tmp/gt2-tablerow-ptbl-85.png");
+		ltable[PTBL][0] = 0x40;           // now in the $01-$7F range instead
+		bool capturedPtblLo = capture("/tmp/gt2-tablerow-ptbl-40.png");
+
+		bool valueHighlightDiffers = false;
+		{
+			std::vector<unsigned int> a, b;
+			int aw = 0, ah = 0, bw = 0, bh = 0;
+			if (MT_ReadCaptureArtifact("/tmp/gt2-tablerow-ptbl-85.raw", &a, &aw, &ah)
+				&& MT_ReadCaptureArtifact("/tmp/gt2-tablerow-ptbl-40.raw", &b, &bw, &bh))
+			{
+				int firstDiff = -1;
+				valueHighlightDiffers = (aw == bw && ah == bh)
+					&& !MT_CapturesMatch(a, b, 8, &firstDiff);
+			}
+		}
+		if (!(capturedPtblHi && capturedPtblLo))
+			ctx->LogError("could not capture the pulsetable rows - the value check proved nothing");
+		else if (!valueHighlightDiffers)
+			ctx->LogError("a pulsetable row of $85 and one of $40 drew the same pixels");
+
+		// The selected passband has to READ as selected. It used to be green
+		// text on ImGui's default grey selection bar, which at a glance looks
+		// like no selection at all -- the complaint that produced this check.
+		// It is now a filled green chip, so the test is not "is there green"
+		// (glyph strokes are green too) but "is there a green RUN as wide as a
+		// chip": a filled chip gives ~80 consecutive pixels, text strokes give
+		// two or three, and the resonance chip below is ~14 wide.
+		int ftblGreenRun = 0;
+		int ftblJumpGreenRun = 0;
+		bool capturedFtbl = false;
+		bool capturedFtblLowNibble = false;
+		bool lowNibbleIgnored = false;
+		{
+			unsigned char sFL0 = ltable[FTBL][0], sFL1 = ltable[FTBL][1];
+			unsigned char sFR0 = rtable[FTBL][0], sFR1 = rtable[FTBL][1];
+			unsigned char sFPtr = ginstr[1].ptr[FTBL];
+			ImVec2 sizeBeforeFtbl = materialised ? view->imGuiWindow->Size : ImVec2(0, 0);
+			ImVec2 posBeforeFtbl = materialised ? view->imGuiWindow->Pos : ImVec2(0, 0);
+
+			// $B0 = LP+BP passband, right $F1 = resonance $F routed to ch1.
+			ltable[FTBL][0] = 0xB0; rtable[FTBL][0] = 0xF1;
+			ltable[FTBL][1] = 0xff; rtable[FTBL][1] = 0x00;
+			ginstr[1].ptr[FTBL] = 1;
+			etnum = FTBL; etpos = 0; etcolumn = 0;
+
+			// Tall enough for the whole passband grid, and on screen: the
+			// capture clips to the app window.
+			if (materialised)
+			{
+				ImGui::SetWindowPos(view->imGuiWindow, ImVec2(10.0f, 10.0f));
+				ImGui::SetWindowSize(view->imGuiWindow, ImVec2(620.0f, 900.0f));
+			}
+			capturedFtbl = capture("/tmp/gt2-tablerow-ftbl-B0.png");
+
+			if (capturedFtbl)
+			{
+				std::vector<unsigned int> f;
+				int fw = 0, fh = 0;
+				if (MT_ReadCaptureArtifact("/tmp/gt2-tablerow-ftbl-B0.raw", &f, &fw, &fh))
+				{
+					for (int y = 0; y < fh; y++)
+					{
+						int run = 0;
+						for (int x = 0; x < fw; x++)
+						{
+							unsigned int c = f[(size_t)y * fw + x];
+							int r = (int)(c & 0xFF);
+							int g = (int)((c >> 8) & 0xFF);
+							int b = (int)((c >> 16) & 0xFF);
+							bool greenish = (g > 110) && (g - r > 30) && (g - b > 30);
+							run = greenish ? run + 1 : 0;
+							if (run > ftblGreenRun) ftblGreenRun = run;
+						}
+					}
+				}
+			}
+			if (!capturedFtbl)
+				ctx->LogError("could not capture the filter table - the passband check proved nothing");
+			else if (ftblGreenRun < 30)
+				ctx->LogError("the selected passband is not a filled green chip (longest green run %d px)",
+							  ftblGreenRun);
+
+			// The player reads only bits 4-6 of a filter row's left byte
+			// (gplay.c: filtertype = value & 0x70), so $B5 IS an LP+BP row and
+			// has to select exactly what $B0 selects. Nothing else on screen
+			// depends on the low nibble, so the two renders must be identical.
+			ltable[FTBL][0] = 0xB5;
+			capturedFtblLowNibble = capture("/tmp/gt2-tablerow-ftbl-B5.png");
+			{
+				std::vector<unsigned int> a, b;
+				int aw = 0, ah = 0, bw = 0, bh = 0;
+				if (MT_ReadCaptureArtifact("/tmp/gt2-tablerow-ftbl-B0.raw", &a, &aw, &ah)
+					&& MT_ReadCaptureArtifact("/tmp/gt2-tablerow-ftbl-B5.raw", &b, &bw, &bh))
+				{
+					int firstDiff = -1;
+					lowNibbleIgnored = (aw == bw && ah == bh)
+						&& MT_CapturesMatch(a, b, 8, &firstDiff);
+				}
+			}
+			if (!lowNibbleIgnored)
+				ctx->LogError("a filter row of $B5 did not render like $B0 - the low nibble is not ignored");
+
+			// $FF is the jump, checked before the >= $80 test, so it must NOT
+			// look like a passband however high its value is.
+			ltable[FTBL][0] = 0xff; rtable[FTBL][0] = 0x00;
+			ltable[FTBL][1] = 0x00; rtable[FTBL][1] = 0x00;
+			if (capture("/tmp/gt2-tablerow-ftbl-FF.png"))
+			{
+				std::vector<unsigned int> f;
+				int fw = 0, fh = 0;
+				if (MT_ReadCaptureArtifact("/tmp/gt2-tablerow-ftbl-FF.raw", &f, &fw, &fh))
+				{
+					int run = 0;
+					for (int y = 0; y < fh; y++)
+					{
+						run = 0;
+						for (int x = 0; x < fw; x++)
+						{
+							unsigned int c = f[(size_t)y * fw + x];
+							int r = (int)(c & 0xFF);
+							int g = (int)((c >> 8) & 0xFF);
+							int b = (int)((c >> 16) & 0xFF);
+							run = ((g > 110) && (g - r > 30) && (g - b > 30)) ? run + 1 : 0;
+							if (run > ftblJumpGreenRun) ftblJumpGreenRun = run;
+						}
+					}
+				}
+			}
+			if (ftblJumpGreenRun >= 30)
+				ctx->LogError("a filter jump row ($FF) drew a selected passband chip (green run %d px)",
+							  ftblJumpGreenRun);
+
+			if (materialised)
+			{
+				ImGui::SetWindowPos(view->imGuiWindow, posBeforeFtbl);
+				ImGui::SetWindowSize(view->imGuiWindow, sizeBeforeFtbl);
+			}
+			ginstr[1].ptr[FTBL] = sFPtr;
+			ltable[FTBL][0] = sFL0; ltable[FTBL][1] = sFL1;
+			rtable[FTBL][0] = sFR0; rtable[FTBL][1] = sFR1;
+		}
+
+		ginstr[1].ptr[PTBL] = savedPtrP;
+		ltable[PTBL][0] = savedPL0; ltable[PTBL][1] = savedPL1;
+		rtable[PTBL][0] = savedPR0; rtable[PTBL][1] = savedPR1;
+		etcolumn = savedEtcolumn;
+
+		ginstr[1].ptr[WTBL] = savedPtr;
+		ltable[WTBL][0] = savedL0; ltable[WTBL][1] = savedL1;
+		rtable[WTBL][0] = savedR0; rtable[WTBL][1] = savedR1;
+		einum = savedEinum;
+
+		captured = capturedLeft && capturedRight;
+		if (captured)
+		{
+			painted = MT_NonBackgroundFraction(pixels, 0x00000000u, 8, &distinctColors);
+			ctx->LogInfo("table row capture %dx%d painted=%.3f distinctColors=%d -> /tmp/gt2-instrument-table-row-{left,right}.png",
+						 capW, capH, painted, distinctColors);
+		}
+
+		etnum = savedEtnum;
+		etpos = savedEtpos;
+		view->SetVisible(savedVisible);
+		ctx->Yield(4);
+
+		IM_CHECK(materialised);
+		IM_CHECK(captured);
+		IM_CHECK(painted > 0.02f);
+		IM_CHECK(distinctColors > 4);
+		if (!highlightDiffers)
+			ctx->LogError("left and right columns rendered identically -- the active-column highlight did nothing");
+		IM_CHECK(highlightDiffers);
+		IM_CHECK(capturedPtblHi);
+		IM_CHECK(capturedPtblLo);
+		IM_CHECK(valueHighlightDiffers);
+		IM_CHECK(capturedFtbl);
+		IM_CHECK(ftblGreenRun >= 30);
+		IM_CHECK(capturedFtblLowNibble);
+		IM_CHECK(lowNibbleIgnored);
+		IM_CHECK(ftblJumpGreenRun < 30);
+	};
+
+	// ---------------------------------------------------------------
+	// GT2 Instruments Browser: the view actually renders.
+	// ---------------------------------------------------------------
+	// The CTest suite drives the browser's model (navigation, load, undo,
+	// search) headlessly, but nothing there executes RenderImGui(). This one
+	// makes the window materialise and yields through the flat listing, a
+	// search result set and an empty folder, so a crash or an unbalanced
+	// ImGui stack in the draw path is caught.
+	//
+	// Skip rules match the dock test above: without an initialised GT2 plugin
+	// there is nothing to draw, and activating it from the test thread races
+	// the C64 thread.
+	// ---------------------------------------------------------------
+	// GT2 Pattern Row: renders the Edit Effect block, follows the cursor.
+	// ---------------------------------------------------------------
+	ImGuiTest *tGT2PatRow = IM_REGISTER_TEST(engine, "gt2", "pattern_row_renders");
+	tGT2PatRow->TestFunc = [](ImGuiTestContext *ctx)
+	{
+		if (pluginGoatTracker == NULL || pluginGoatTracker->viewPatternRow == NULL)
+		{
+			ctx->LogInfo("GT2 plugin not initialised - skipped");
+			return;
+		}
+
+		CViewGT2PatternRow *view = pluginGoatTracker->viewPatternRow;
+		bool savedVisible = view->visible;
+		int savedChn = epchn, savedPos = eppos, savedCol = epcolumn;
+		int savedEditmode = editmode;
+
+		editmode = EDIT_PATTERN;
+		epchn = 0;
+		epcolumn = 3;
+		int pn = epnum[epchn];
+		if (pattlen[pn] < 2)
+		{
+			ctx->LogError("pattern %d has fewer than two rows - nothing to compare", pn);
+			IM_CHECK(pattlen[pn] >= 2);
+			return;
+		}
+
+		unsigned char savedCells[8];
+		memcpy(savedCells, &pattern[pn][0], 8);
+		// Two different commands, so the two captures cannot match by accident:
+		// $4 vibrato with argument $12, and $C cutoff with argument $80.
+		pattern[pn][0 * 4 + 2] = 0x04; pattern[pn][0 * 4 + 3] = 0x12;
+		pattern[pn][1 * 4 + 2] = 0x0C; pattern[pn][1 * 4 + 3] = 0x80;
+
+		eppos = 0;
+		view->SetVisible(true);
+		ctx->Yield(10);
+
+		bool materialised = (view->imGuiWindow != NULL);
+		if (!materialised)
+			ctx->LogError("GT2 Pattern Row did not materialise an ImGui window");
+
+		// Pin it to the top-left at a known size. The capture tool clips to
+		// what is actually on screen, so a window sitting near the bottom edge
+		// captures as a 23px title bar and every comparison below would pass
+		// trivially by comparing two title bars.
+		ImVec2 savedPos2, savedSize;
+		if (materialised)
+		{
+			savedPos2 = view->imGuiWindow->Pos;
+			savedSize = view->imGuiWindow->Size;
+			ImGui::SetWindowPos(view->imGuiWindow, ImVec2(20.0f, 20.0f));
+			ImGui::SetWindowSize(view->imGuiWindow, ImVec2(560.0f, 420.0f));
+			ctx->Yield(6);
+		}
+
+		std::vector<unsigned int> rowA, rowB;
+		int wA = 0, hA = 0, wB = 0, hB = 0;
+		bool capturedA = materialised
+			&& MT_CaptureWindowRGBA(ctx, view->imGuiWindow->Name, &rowA, &wA, &hA);
+
+		int distinctColors = 0;
+		float painted = 0.0f;
+		if (capturedA)
+		{
+			painted = MT_NonBackgroundFraction(rowA, 0x00000000u, 8, &distinctColors);
+
+			CImageData img(wA, hA, IMG_TYPE_RGBA);
+			img.AllocResultImage();
+			for (int y = 0; y < hA; y++)
+				for (int x = 0; x < wA; x++)
+				{
+					unsigned int px = rowA[(size_t)y * wA + x];
+					img.SetPixel(x, y, (u8)(px & 0xFF), (u8)((px >> 8) & 0xFF),
+								 (u8)((px >> 16) & 0xFF), (u8)((px >> 24) & 0xFF));
+				}
+			img.Save("/tmp/gt2-pattern-row.png");
+			ctx->LogInfo("pattern row capture %dx%d painted=%.3f distinctColors=%d -> /tmp/gt2-pattern-row.png",
+						 wA, hA, painted, distinctColors);
+		}
+		else if (materialised)
+		{
+			ctx->LogError("GT2 Pattern Row window could not be captured");
+		}
+
+		// Move to the other row: a different command must draw differently,
+		// or the view is not following the cursor at all.
+		eppos = 1;
+		ctx->Yield(6);
+		bool capturedB = materialised
+			&& MT_CaptureWindowRGBA(ctx, view->imGuiWindow->Name, &rowB, &wB, &hB);
+		int firstDiff = -1;
+		bool followsCursor = capturedA && capturedB && wA == wB && hA == hB
+			&& !MT_CapturesMatch(rowA, rowB, 8, &firstDiff);
+		if (capturedA && capturedB && !followsCursor)
+			ctx->LogError("the view drew the same pixels for command $4 and command $C");
+
+		// The ENDPATT row is not editable, and the view has to say so rather
+		// than offer an editor for a cell that cannot take a write.
+		eppos = pattlen[pn];
+		ctx->Yield(4);
+		bool endRowRefused = !CViewGT2PatternRow::CursorRowIsEditable();
+		if (!endRowRefused)
+			ctx->LogError("the row past the pattern end reported itself editable");
+
+		memcpy(&pattern[pn][0], savedCells, 8);
+		epchn = savedChn; eppos = savedPos; epcolumn = savedCol;
+		editmode = savedEditmode;
+		if (materialised)
+		{
+			ImGui::SetWindowPos(view->imGuiWindow, savedPos2);
+			ImGui::SetWindowSize(view->imGuiWindow, savedSize);
+		}
+		view->SetVisible(savedVisible);
+		ctx->Yield(4);
+
+		IM_CHECK(materialised);
+		IM_CHECK(capturedA);
+		IM_CHECK(capturedB);
+		// Guards the trap above: a clipped capture is a title bar, ~23px tall.
+		IM_CHECK(hA > 100);
+		// A command picker of sixteen chips plus an argument editor paints far
+		// past a blank window, in far more than one colour.
+		IM_CHECK(painted > 0.05f);
+		IM_CHECK(distinctColors > 8);
+		IM_CHECK(followsCursor);
+		IM_CHECK(endRowRefused);
+	};
+
+	// ---------------------------------------------------------------
+	// GT2 pattern: hex entry on the instrument and command columns.
+	// ---------------------------------------------------------------
+	// Under KEY_RENOISE the pattern view's fall-through, GT2_ForwardKeyDown(),
+	// is a no-op by design -- so a typed hex digit for the instrument or the
+	// command never reached gpattern.c and was silently dropped, while note
+	// entry (handled in the view) kept working.
+	ImGuiTest *tGT2PatHex = IM_REGISTER_TEST(engine, "gt2", "pattern_hex_entry");
+	tGT2PatHex->TestFunc = [](ImGuiTestContext *ctx)
+	{
+		if (pluginGoatTracker == NULL || pluginGoatTracker->viewPatterns == NULL)
+		{
+			ctx->LogInfo("GT2 plugin not initialised - skipped");
+			return;
+		}
+
+		CViewGT2Patterns *pv = pluginGoatTracker->viewPatterns;
+
+		int savedPreset = keypreset;
+		int savedRecord = recordmode;
+		int savedEditmode = editmode;
+		int savedChn = epchn, savedPos = eppos, savedCol = epcolumn;
+		int savedArp = pv->eparpcol;
+		int savedValueMode = gt2CommandValueMode;
+
+		editmode = EDIT_PATTERN;
+		recordmode = 1;
+		epchn = 0;
+		pv->eparpcol = -1;
+		gt2CommandValueMode = 0;   // the default; value mode owns cols 3-5
+
+		int pn = epnum[epchn];
+		if (pattlen[pn] < 1)
+		{
+			ctx->LogError("pattern %d has no editable row - nothing to type into", pn);
+			IM_CHECK(pattlen[pn] >= 1);
+			return;
+		}
+		unsigned char savedCell[4];
+		for (int i = 0; i < 4; i++) savedCell[i] = pattern[pn][i];
+
+		// Both keyboard layouts have to write the same bytes. Renoise is the
+		// one that was broken; Tracker is checked so the view's own handler
+		// keeps matching gpattern.c's semantics for the preset that used to
+		// rely on it. (KeyDown() is called directly here, so native GT2's
+		// event queue is not drained -- what this measures is the view.)
+		struct Layout { const char *name; int preset; };
+		const Layout layouts[] = { { "renoise", KEY_RENOISE }, { "tracker", KEY_TRACKER } };
+
+		bool instrOk[2] = { false, false };
+		bool cmdOk[2] = { false, false };
+		unsigned char gotInstr[2] = { 0, 0 };
+		unsigned char gotCmd[2] = { 0, 0 }, gotArg[2] = { 0, 0 };
+
+		for (int L = 0; L < 2; L++)
+		{
+			keypreset = layouts[L].preset;
+
+			// Instrument byte: high nybble then low nybble -> $12.
+			pattern[pn][1] = 0;
+			eppos = 0; epcolumn = 1;
+			pv->KeyDown('1', false, false, false, false);
+			eppos = 0; epcolumn = 2;
+			pv->KeyDown('2', false, false, false, false);
+			ctx->Yield();
+			gotInstr[L] = pattern[pn][1];
+			instrOk[L] = (gotInstr[L] == (0x12 & (MAX_INSTR - 1)));
+
+			// Command nybble $4, then its argument $AB.
+			pattern[pn][2] = 0;
+			pattern[pn][3] = 0;
+			eppos = 0; epcolumn = 3;
+			pv->KeyDown('4', false, false, false, false);
+			eppos = 0; epcolumn = 4;
+			pv->KeyDown('a', false, false, false, false);
+			eppos = 0; epcolumn = 5;
+			pv->KeyDown('b', false, false, false, false);
+			ctx->Yield();
+			gotCmd[L] = pattern[pn][2];
+			gotArg[L] = pattern[pn][3];
+			cmdOk[L] = (gotCmd[L] == 0x04 && gotArg[L] == 0xAB);
+		}
+
+		// Out of record mode nothing is written -- the cursor is just moving.
+		recordmode = 0;
+		pattern[pn][1] = 0;
+		eppos = 0; epcolumn = 1;
+		pv->KeyDown('7', false, false, false, false);
+		ctx->Yield();
+		bool respectsRecordMode = (pattern[pn][1] == 0);
+
+		for (int i = 0; i < 4; i++) pattern[pn][i] = savedCell[i];
+		keypreset = savedPreset;
+		recordmode = savedRecord;
+		editmode = savedEditmode;
+		epchn = savedChn; eppos = savedPos; epcolumn = savedCol; pv->eparpcol = savedArp;
+		gt2CommandValueMode = savedValueMode;
+		ctx->Yield();
+
+		for (int L = 0; L < 2; L++)
+		{
+			if (!instrOk[L])
+				ctx->LogError("%s: instrument hex wrote $%02X, expected $12", layouts[L].name, gotInstr[L]);
+			if (!cmdOk[L])
+				ctx->LogError("%s: command hex wrote $%02X $%02X, expected $04 $AB",
+							  layouts[L].name, gotCmd[L], gotArg[L]);
+		}
+		if (!respectsRecordMode)
+			ctx->LogError("hex was written with record mode off");
+
+		IM_CHECK(instrOk[0]);
+		IM_CHECK(cmdOk[0]);
+		IM_CHECK(instrOk[1]);
+		IM_CHECK(cmdOk[1]);
+		IM_CHECK(respectsRecordMode);
+	};
+
 }
 
-#endif // ENABLE_IMGUI_TEST_ENGINE
+#endif // MT_ENABLE_IMGUI_TEST_ENGINE

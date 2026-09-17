@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=VICE (x64sc)
+Comment=Commodore 64 emulator
+Exec=x64sc
+Terminal=false
+Icon=vice-x64
+Categories=Game;Emulator;

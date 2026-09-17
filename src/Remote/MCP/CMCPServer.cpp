@@ -5,6 +5,7 @@
 #include "CViewC64.h"
 #include "CDebugInterface.h"
 #include "CDebuggerServerApi.h"
+#include "C64DShutdown.h"
 #include "DBG_Log.h"
 
 #include <iostream>
@@ -14,7 +15,7 @@
 #include <csignal>
 
 #include "SYS_Main.h"
-#include <SDL.h>
+#include <SDL3/SDL.h>
 
 using namespace std;
 using namespace nlohmann;
@@ -84,6 +85,7 @@ CMCPServer::CMCPServer()
 	debuggerServer.store(NULL, std::memory_order_release);
 	bridgeClient = NULL;
 	isBridgeMode = false;
+	debuggerServerPublished = false;
 }
 
 CMCPServer::~CMCPServer()
@@ -108,6 +110,7 @@ void CMCPServer::Stop()
 void CMCPServer::SetDebuggerServer(CDebuggerServer *server)
 {
 	debuggerServer.store(server, std::memory_order_release);
+	debuggerServerPublished = (server != NULL);
 }
 
 CDebuggerServer *CMCPServer::GetReadyDebuggerServer()
@@ -471,6 +474,7 @@ json CMCPServer::HandleToolsList()
 			// Only show bridge-local tools (retro_transport_diagnostics, retro_reconnect, retro_list_platforms)
 			if (tool.name != "retro_transport_diagnostics" &&
 				tool.name != "retro_reconnect" &&
+				tool.name != "retro_shutdown" &&
 				tool.name != "retro_list_platforms")
 				continue;
 		}
@@ -499,7 +503,15 @@ json CMCPServer::HandleToolsCall(const json &params)
 {
 	EnsureToolsRegistered();
 
-	if (!isBridgeMode && !GetReadyDebuggerServer())
+	string toolName = params.value("name", "");
+
+	// The readiness gate (PR #130, carried): without a ready debugger server
+	// nothing may dispatch into it. The shutdown tool is deliberately
+	// exempt -- it is the session-ender, must reach the desktop (or the
+	// bridge fallback path) even when no ready server exists, and its own
+	// handler never touches the gated pointer.
+	if (!isBridgeMode && debuggerServerPublished && !GetReadyDebuggerServer()
+		&& toolName != "retro_shutdown")
 	{
 		json result;
 		json content = json::array();
@@ -512,7 +524,6 @@ json CMCPServer::HandleToolsCall(const json &params)
 		return result;
 	}
 
-	string toolName = params.value("name", "");
 	json toolArgs = params.value("arguments", json::object());
 
 	// Snapshot tools under lock to avoid data race with bridge callback thread
@@ -657,9 +668,85 @@ void CMCPServer::RegisterPrompt(const MCPPromptDescriptor &prompt)
 	prompts.push_back(prompt);
 }
 
+// Consume the buffer returned by CDebuggerServer::RunEndpointFunction and fail
+// loudly when the endpoint did not succeed.
+//
+// Endpoint results are the JSON envelope built by PrepareResult:
+//     {"status": <http code>, "token": ..., "result": {...}}
+// while the bridge client answers with a flat
+//     {"status": <http code>, "error": ..., "message": ...}
+// when no desktop instance is attached.
+//
+// Command tools used to throw this buffer away and report a hardcoded success
+// ("loaded", "paused", ...), so a load of a path that does not exist from the
+// Retro Debugger process' point of view -- a Linux-style path handed to a
+// Windows build, say -- answered {"status":"loaded"} while the drive reported
+// error 21. Throwing here turns the endpoint failure into an MCP isError
+// response instead.
+//
+// Takes ownership of the buffer and returns the envelope's "result" object.
+// Only for endpoints without binary output: a binary payload follows the JSON
+// after a 0 byte and would not parse.
+static json ConsumeEndpointResult(vector<char> *result, const char *toolName)
+{
+	string action = toolName;
+
+	if (!result || result->empty())
+	{
+		delete result;
+		throw runtime_error(action + " failed: endpoint returned no data");
+	}
+
+	string raw(result->data(), result->size());
+	delete result;
+
+	json parsed;
+	try
+	{
+		parsed = json::parse(raw);
+	}
+	catch (const exception &e)
+	{
+		throw runtime_error(action + " failed: malformed endpoint response: " + e.what());
+	}
+
+	int status = parsed.value("status", 0);
+	if (status != HTTP_OK)
+	{
+		// Endpoint errors live under "result", bridge transport errors at the top level
+		string message;
+		if (parsed.contains("result") && parsed["result"].is_object())
+			message = parsed["result"].value("error", string());
+		if (message.empty())
+		{
+			string code = parsed.value("error", string());
+			string detail = parsed.value("message", string());
+			if (!code.empty() && !detail.empty())
+				message = code + ": " + detail;
+			else
+				message = code.empty() ? detail : code;
+		}
+		if (message.empty())
+			message = "endpoint returned status " + to_string(status);
+
+		throw runtime_error(action + " failed: " + message);
+	}
+
+	return parsed.value("result", json::object());
+}
+
 // Register all debugger endpoints as MCP tools
 void CMCPServer::RegisterDebuggerTools(CDebuggerServer *server)
 {
+	// In bridge mode retro_shutdown is registered as a bridge-local tool
+	// instead, so it survives ClearDebuggerTools() and stays callable while
+	// the desktop app is gone -- which is exactly when an orphaned bridge
+	// needs shutting down.
+	if (!isBridgeMode)
+	{
+		RegisterShutdownTool(server);
+	}
+
 	// Platform listing
 	{
 		MCPToolDescriptor tool;
@@ -731,7 +818,11 @@ void CMCPServer::RegisterDebuggerTools(CDebuggerServer *server)
 	{
 		MCPToolDescriptor tool;
 		tool.name = "retro_cpu_jump";
-		tool.description = "Force the CPU program counter to jump to an address";
+		tool.description = "Force the CPU program counter to jump to an address. "
+						   "Returns status \"jumped\" with applied=true once the new PC has been "
+						   "committed to the CPU, so a following step executes at the target. "
+						   "Returns status \"queued\" with applied=false if the change could not be "
+						   "committed (emulation thread not running, or backend unsupported).";
 		tool.inputSchema = {
 			{"type", "object"},
 			{"properties", {
@@ -745,9 +836,13 @@ void CMCPServer::RegisterDebuggerTools(CDebuggerServer *server)
 			string platform = params.value("platform", "c64");
 			json ep;
 			ep["address"] = params.at("address");
-			vector<char> *result = server->RunEndpointFunction(platform + "/cpu/makejmp", "", ep, nullptr, 0);
-			delete result;
-			return {{"status", "jumped"}, {"address", params.at("address")}};
+			json res = ConsumeEndpointResult(server->RunEndpointFunction(platform + "/cpu/makejmp", "", ep, nullptr, 0), "retro_cpu_jump");
+			bool applied = res.value("applied", false);
+			if (!applied)
+			{
+				return {{"status", "queued"}, {"requestedPc", params.at("address")}, {"applied", false}};
+			}
+			return {{"status", "jumped"}, {"address", params.at("address")}, {"applied", true}};
 		};
 		RegisterTool(tool);
 	}
@@ -880,8 +975,7 @@ void CMCPServer::RegisterDebuggerTools(CDebuggerServer *server)
 		{
 			string platform = params.value("platform", "c64");
 			string fn = platform + "/pause";
-			vector<char> *result = server->RunEndpointFunction(fn, "", json(), nullptr, 0);
-			delete result;
+			ConsumeEndpointResult(server->RunEndpointFunction(fn, "", json(), nullptr, 0), "retro_pause");
 			return {{"status", "paused"}};
 		};
 		RegisterTool(tool);
@@ -903,8 +997,7 @@ void CMCPServer::RegisterDebuggerTools(CDebuggerServer *server)
 		{
 			string platform = params.value("platform", "c64");
 			string fn = platform + "/continue";
-			vector<char> *result = server->RunEndpointFunction(fn, "", json(), nullptr, 0);
-			delete result;
+			ConsumeEndpointResult(server->RunEndpointFunction(fn, "", json(), nullptr, 0), "retro_continue");
 			return {{"status", "running"}};
 		};
 		RegisterTool(tool);
@@ -928,8 +1021,7 @@ void CMCPServer::RegisterDebuggerTools(CDebuggerServer *server)
 			string platform = params.value("platform", "c64");
 			bool hard = params.value("hard", true);
 			string fn = platform + (hard ? "/reset/hard" : "/reset/soft");
-			vector<char> *result = server->RunEndpointFunction(fn, "", json(), nullptr, 0);
-			delete result;
+			ConsumeEndpointResult(server->RunEndpointFunction(fn, "", json(), nullptr, 0), "retro_reset");
 			return {{"status", "reset"}, {"hard", hard}};
 		};
 		RegisterTool(tool);
@@ -953,8 +1045,7 @@ void CMCPServer::RegisterDebuggerTools(CDebuggerServer *server)
 			string platform = params.value("platform", "c64");
 			json ep;
 			ep["warp"] = params.at("enabled").get<bool>();
-			vector<char> *result = server->RunEndpointFunction(platform + "/warp/set", "", ep, nullptr, 0);
-			delete result;
+			ConsumeEndpointResult(server->RunEndpointFunction(platform + "/warp/set", "", ep, nullptr, 0), "retro_warp");
 			return {{"status", "ok"}, {"warp", params.at("enabled")}};
 		};
 		RegisterTool(tool);
@@ -973,9 +1064,34 @@ void CMCPServer::RegisterDebuggerTools(CDebuggerServer *server)
 		tool.handler = [server](const json &params) -> json
 		{
 			string platform = params.value("platform", "c64");
-			vector<char> *result = server->RunEndpointFunction(platform + "/detachEverything", "", json(), nullptr, 0);
-			delete result;
+			ConsumeEndpointResult(server->RunEndpointFunction(platform + "/detachEverything", "", json(), nullptr, 0), "retro_media_detach");
 			return {{"status", "detached"}};
+		};
+		RegisterTool(tool);
+	}
+
+	// Detach disk image only (no reset)
+	{
+		MCPToolDescriptor tool;
+		tool.name = "retro_disk_detach";
+		tool.description = "Detach the disk image from one drive WITHOUT resetting the machine (the GUI 'Detach Disk Image' action). RAM, registers and execution state are preserved. Use this - not retro_media_detach - when swapping or removing a disk mid-session: retro_media_detach power-cycles the C64.";
+		tool.inputSchema = {
+			{"type", "object"},
+			{"properties", {
+				{"platform", {{"type", "string"}, {"description", "Platform name (c64, atari800)"}}},
+				{"device", {{"type", "integer"}, {"description", "Drive/device number: C64 8-11 (default 8), Atari 1-8 (default 1)"}}}
+			}},
+			{"required", json::array({"platform"})}
+		};
+		tool.handler = [server](const json &params) -> json
+		{
+			string platform = params.value("platform", "c64");
+			json ep;
+			if (params.contains("device"))
+			{
+				ep["device"] = params.at("device");
+			}
+			return ConsumeEndpointResult(server->RunEndpointFunction(platform + "/detachDiskImage", "", ep, nullptr, 0), "retro_disk_detach");
 		};
 		RegisterTool(tool);
 	}
@@ -1051,8 +1167,7 @@ void CMCPServer::RegisterDebuggerTools(CDebuggerServer *server)
 			string fn = platform + "/cpu/breakpoint/add";
 			json ep;
 			ep["addr"] = params.at("address");
-			vector<char> *result = server->RunEndpointFunction(fn, "", ep, nullptr, 0);
-			delete result;
+			ConsumeEndpointResult(server->RunEndpointFunction(fn, "", ep, nullptr, 0), "retro_breakpoint_add");
 			return {{"status", "breakpoint_added"}, {"address", params.at("address")}};
 		};
 		RegisterTool(tool);
@@ -1077,8 +1192,7 @@ void CMCPServer::RegisterDebuggerTools(CDebuggerServer *server)
 			string fn = platform + "/cpu/breakpoint/remove";
 			json ep;
 			ep["addr"] = params.at("address");
-			vector<char> *result = server->RunEndpointFunction(fn, "", ep, nullptr, 0);
-			delete result;
+			ConsumeEndpointResult(server->RunEndpointFunction(fn, "", ep, nullptr, 0), "retro_breakpoint_remove");
 			return {{"status", "breakpoint_removed"}, {"address", params.at("address")}};
 		};
 		RegisterTool(tool);
@@ -1142,8 +1256,7 @@ void CMCPServer::RegisterDebuggerTools(CDebuggerServer *server)
 			string fn = platform + "/cpu/memory/breakpoint/remove";
 			json ep;
 			ep["addr"] = params.at("address");
-			vector<char> *result = server->RunEndpointFunction(fn, "", ep, nullptr, 0);
-			delete result;
+			ConsumeEndpointResult(server->RunEndpointFunction(fn, "", ep, nullptr, 0), "retro_memory_breakpoint_remove");
 			return {{"status", "memory_breakpoint_removed"}, {"address", params.at("address")}};
 		};
 		RegisterTool(tool);
@@ -1235,8 +1348,7 @@ void CMCPServer::RegisterDebuggerTools(CDebuggerServer *server)
 		{
 			string platform = params.value("platform", "c64");
 			string fn = platform + "/step/instruction";
-			vector<char> *result = server->RunEndpointFunction(fn, "", json(), nullptr, 0);
-			delete result;
+			ConsumeEndpointResult(server->RunEndpointFunction(fn, "", json(), nullptr, 0), "retro_step_instruction");
 			return {{"status", "stepped"}};
 		};
 		RegisterTool(tool);
@@ -1255,8 +1367,7 @@ void CMCPServer::RegisterDebuggerTools(CDebuggerServer *server)
 		tool.handler = [server](const json &params) -> json
 		{
 			string platform = params.value("platform", "c64");
-			vector<char> *result = server->RunEndpointFunction(platform + "/step/cycle", "", json(), nullptr, 0);
-			delete result;
+			ConsumeEndpointResult(server->RunEndpointFunction(platform + "/step/cycle", "", json(), nullptr, 0), "retro_step_cycle");
 			return {{"status", "stepped_cycle"}};
 		};
 		RegisterTool(tool);
@@ -1275,8 +1386,7 @@ void CMCPServer::RegisterDebuggerTools(CDebuggerServer *server)
 		tool.handler = [server](const json &params) -> json
 		{
 			string platform = params.value("platform", "c64");
-			vector<char> *result = server->RunEndpointFunction(platform + "/step/subroutine", "", json(), nullptr, 0);
-			delete result;
+			ConsumeEndpointResult(server->RunEndpointFunction(platform + "/step/subroutine", "", json(), nullptr, 0), "retro_step_subroutine");
 			return {{"status", "stepped_subroutine"}};
 		};
 		RegisterTool(tool);
@@ -1286,7 +1396,7 @@ void CMCPServer::RegisterDebuggerTools(CDebuggerServer *server)
 	{
 		MCPToolDescriptor tool;
 		tool.name = "retro_load";
-		tool.description = "Load a program file (PRG, XEX, NES ROM, etc.)";
+		tool.description = "Load a program file (PRG, XEX, NES ROM, D64, CRT, etc.). The path is opened by the Retro Debugger process, so it must be valid on the machine running the debugger (on Windows that means a local path such as C:\\data\\game.d64), not on the MCP client's filesystem. Returns an error if the file does not exist there.";
 		tool.inputSchema = {
 			{"type", "object"},
 			{"properties", {
@@ -1298,8 +1408,7 @@ void CMCPServer::RegisterDebuggerTools(CDebuggerServer *server)
 		{
 			json ep;
 			ep["path"] = params.at("path");
-			vector<char> *result = server->RunEndpointFunction("load", "", ep, nullptr, 0);
-			delete result;
+			ConsumeEndpointResult(server->RunEndpointFunction("load", "", ep, nullptr, 0), "retro_load");
 			return {{"status", "loaded"}, {"path", params.at("path")}};
 		};
 		RegisterTool(tool);
@@ -1349,8 +1458,7 @@ void CMCPServer::RegisterDebuggerTools(CDebuggerServer *server)
 			json ep;
 			ep["address"] = params.at("address");
 			if (params.contains("name")) ep["name"] = params["name"];
-			vector<char> *result = server->RunEndpointFunction(fn, "", ep, nullptr, 0);
-			delete result;
+			ConsumeEndpointResult(server->RunEndpointFunction(fn, "", ep, nullptr, 0), "retro_watch_add");
 			return {{"status", "watch_added"}, {"address", params.at("address")}};
 		};
 		RegisterTool(tool);
@@ -1375,8 +1483,7 @@ void CMCPServer::RegisterDebuggerTools(CDebuggerServer *server)
 			string fn = platform + "/watch/remove";
 			json ep;
 			ep["address"] = params.at("address");
-			vector<char> *result = server->RunEndpointFunction(fn, "", ep, nullptr, 0);
-			delete result;
+			ConsumeEndpointResult(server->RunEndpointFunction(fn, "", ep, nullptr, 0), "retro_watch_remove");
 			return {{"status", "watch_removed"}, {"address", params.at("address")}};
 		};
 		RegisterTool(tool);
@@ -1422,8 +1529,7 @@ void CMCPServer::RegisterDebuggerTools(CDebuggerServer *server)
 			string platform = params.value("platform", "c64");
 			json ep;
 			ep["segment"] = params.at("segment").get<string>();
-			vector<char> *result = server->RunEndpointFunction(platform + "/segment/write", "", ep, nullptr, 0);
-			delete result;
+			ConsumeEndpointResult(server->RunEndpointFunction(platform + "/segment/write", "", ep, nullptr, 0), "retro_segment_write");
 			return {{"status", "ok"}, {"segment", params.at("segment")}};
 		};
 		RegisterTool(tool);
@@ -2479,7 +2585,8 @@ void CMCPServer::ClearDebuggerTools()
 	for (const auto &tool : tools)
 	{
 		if (tool.name == "retro_transport_diagnostics" ||
-			tool.name == "retro_reconnect")
+			tool.name == "retro_reconnect" ||
+			tool.name == "retro_shutdown")
 		{
 			bridgeLocalTools.push_back(tool);
 		}
@@ -2487,8 +2594,124 @@ void CMCPServer::ClearDebuggerTools()
 	tools = bridgeLocalTools;
 }
 
+void CMCPServer::RegisterShutdownTool(CDebuggerServer *server)
+{
+	MCPToolDescriptor tool;
+	tool.name = "retro_shutdown";
+	tool.description =
+		"Shut down RetroDebugger. Quits through the normal File > Quit path, so settings, "
+		"window layouts, symbols and plugin state are saved. This ends the session: no further "
+		"tool call will succeed afterwards. Only call it when the user asked to close RetroDebugger.";
+	tool.inputSchema = {
+		{"type", "object"},
+		{"properties", {
+			{"force", {{"type", "boolean"}, {"description", "Use a shorter watchdog deadline (1500ms instead of 8000ms). Still runs the full graceful path and still saves state. Default false."}}},
+			{"timeoutMs", {{"type", "integer"}, {"description", "Watchdog deadline in ms before the process is forced to exit. Overrides the deadline implied by force."}}},
+			{"exitBridge", {{"type", "boolean"}, {"description", "In bridge mode (--mcp-live), also exit this local bridge process after the desktop app quits, leaving nothing behind. Default true. Ignored outside bridge mode."}}},
+			{"reason", {{"type", "string"}, {"description", "Free-form reason, recorded in the RetroDebugger log"}}}
+		}}
+	};
+	tool.handler = [this, server](const json &params) -> json
+	{
+		C64DShutdownRequest request = C64DParseShutdownParams(params, "mcp:retro_shutdown");
+
+		bool exitBridge = true;
+		if (params.contains("exitBridge") && params["exitBridge"].is_boolean())
+			exitBridge = params["exitBridge"].get<bool>();
+
+		json endpointParams;
+		endpointParams["force"] = request.force;
+		endpointParams["timeoutMs"] = request.timeoutMs;
+		endpointParams["graceMs"] = request.graceMs;
+		endpointParams["reason"] = request.reason;
+
+		// Ask the application that owns the emulator to quit. Outside bridge
+		// mode that is this very process; in bridge mode the call travels over
+		// the websocket to the desktop instance.
+		//
+		// In bridge mode resolve the client at call time rather than trusting
+		// the pointer captured at registration: SetBridgeMode() can swap in a
+		// new CMCPBridgeClient on reconnect, and this tool outlives that swap
+		// because it survives ClearDebuggerTools(). The other bridge-local
+		// tools read this->bridgeClient for the same reason.
+		CDebuggerServer *target = isBridgeMode ? (CDebuggerServer *)bridgeClient : server;
+
+		json remote;
+		bool remoteReachable = false;
+		if (target != NULL)
+		{
+			vector<char> *raw = target->RunEndpointFunction("server/shutdown", "", endpointParams, NULL, 0);
+			if (raw != NULL && !raw->empty())
+			{
+				string rawStr(raw->data(), raw->size());
+				// Strip any binary payload separator before parsing.
+				size_t nullPos = rawStr.find('\0');
+				if (nullPos != string::npos)
+					rawStr = rawStr.substr(0, nullPos);
+				try
+				{
+					remote = json::parse(rawStr);
+					remoteReachable = (remote.value("status", 0) == HTTP_OK);
+				}
+				catch (const exception &e)
+				{
+					remote = {{"error", "malformed_response"}, {"details", e.what()}};
+				}
+			}
+			delete raw;
+		}
+
+		json result;
+		result["status"] = "shutting_down";
+		// A second request against an app that is already quitting is still a
+		// success -- it asked for the app to stop and the app is stopping --
+		// but say so rather than implying this call is what started it.
+		if (remoteReachable && remote.contains("result")
+			&& remote["result"].value("status", string()) == "already_shutting_down")
+		{
+			result["status"] = "already_shutting_down";
+		}
+		result["force"] = request.force;
+		result["timeoutMs"] = request.timeoutMs;
+		result["target"] = isBridgeMode ? "desktop" : "application";
+		result["remoteReachable"] = remoteReachable;
+		if (!remote.is_null())
+			result["remote"] = remote;
+
+		bool bridgeExiting = false;
+		if (isBridgeMode && exitBridge)
+		{
+			// Take the bridge down too, so one call leaves no process behind.
+			// Deferred like everything else here, so this tool's JSON-RPC
+			// response still gets written to stdout before we exit under it.
+			// Note this runs even when the desktop was unreachable -- cleaning
+			// up an orphaned bridge is precisely that case.
+			C64DShutdownRequest bridgeRequest;
+			bridgeRequest.force = request.force;
+			bridgeRequest.reason = "bridge:retro_shutdown";
+			bridgeExiting = C64DRequestShutdown(bridgeRequest);
+			if (!bridgeExiting)
+			{
+				// Already scheduled by an earlier call; it is still exiting.
+				bridgeExiting = C64DIsShutdownPending();
+			}
+		}
+		result["bridgeExiting"] = bridgeExiting;
+
+		if (isBridgeMode && !remoteReachable)
+		{
+			result["status"] = bridgeExiting ? "desktop_unavailable_bridge_exiting" : "desktop_unavailable";
+		}
+
+		return result;
+	};
+	RegisterTool(tool);
+}
+
 void CMCPServer::RegisterBridgeLocalTools()
 {
+	RegisterShutdownTool(bridgeClient);
+
 	// Transport diagnostics — always available
 	{
 		MCPToolDescriptor tool;

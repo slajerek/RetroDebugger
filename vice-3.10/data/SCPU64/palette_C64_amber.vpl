@@ -1,0 +1,57 @@
+#
+# VICE Palette file: PALette_C64_amber
+#
+# Syntax:
+# Red Green Blue
+#
+# TYPE:VICII
+# NAME:PALette Amber P3/602nm (by Tobias)
+#
+
+# Black
+22 16 00
+
+# White
+FF A9 00
+
+# Red
+65 43 00
+
+# Cyan
+AF 74 00
+
+# Purple
+72 4B 00
+
+# Green
+90 60 00
+
+# Blue
+56 39 00
+
+# Yellow
+CB 86 00
+
+# Orange
+72 4B 00
+
+# Brown
+56 39 00
+
+# Light Red
+90 60 00
+
+# Dark Grey
+65 43 00
+
+# Medium Grey
+88 5A 00
+
+# Light Green
+CB 86 00
+
+# Light Blue
+88 5A 00
+
+# Light Grey
+AF 74 00

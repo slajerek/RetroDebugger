@@ -18,6 +18,7 @@ extern "C" {
 #include "CGuiEditHex.h"
 #include "VID_ImageBinding.h"
 #include "CLayoutParameter.h"
+#include "MT_UiScale.h"
 
 CViewC64StateREU::CViewC64StateREU(const char *name, float posX, float posY, float posZ, float sizeX, float sizeY, CDebugInterfaceC64 *debugInterface)
 : CGuiView(name, posX, posY, posZ, sizeX, sizeY)
@@ -29,7 +30,7 @@ CViewC64StateREU::CViewC64StateREU(const char *name, float posX, float posY, flo
 
 	fontBytes = viewC64->fontDisassembly;
 	
-	fontSize = 7.0f;
+	fontSize = MT_UiScaled(7.0f);
 	hasManualFontSize = false;
 	AddLayoutParameter(new CLayoutParameterFloat("Font Size", &fontSize));
 

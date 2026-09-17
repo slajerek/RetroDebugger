@@ -1,0 +1,43 @@
+#
+# VICE Palette file
+#
+# Syntax:
+# Red Green Blue
+#
+# VIC-II palette for THEC64
+#
+# NAME:THEC64
+# TYPE:VICII
+
+# Black
+00 00 00
+# White
+FF FF FF
+# Red
+96 28 2e
+# Cyan
+5b d6 ce
+# Purple
+9f 2d ad
+# Green
+41 b9 36
+# Blue
+27 24 c4
+# Yellow
+ef f3 47
+# Orange
+9f 48 15
+# Brown
+5e 35 00
+# Light Red
+da 5f 66
+# Dark Gray
+47 47 47
+# Medium Gray
+78 78 78
+# Light Green
+91 ff 84
+# Light Blue
+68 64 ff
+# Light Gray
+ae ae ae

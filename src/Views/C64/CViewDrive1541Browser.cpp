@@ -20,6 +20,7 @@
 
 #include "CDiskImageD64.h"
 #include "CLayoutParameter.h"
+#include "MT_UiScale.h"
 
 extern "C" {
 struct disk_image_s;
@@ -42,7 +43,7 @@ CViewDrive1541Browser::CViewDrive1541Browser(const char *name, float posX, float
 	imGuiNoScrollbar = true;
 
 	font = viewC64->fontDefaultCBMShifted;
-	fontScale = 3;
+	fontScale = MT_UiScaled(3.0f);
 	fontHeight = font->GetCharHeight('@', fontScale);
 	hasManualFontScale = false;
 	AddLayoutParameter(new CLayoutParameterFloat("Font Scale", &fontScale));
