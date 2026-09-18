@@ -543,6 +543,73 @@ if [ "$TIMED_OUT" = false ]; then
     wait "$APP_PID" 2>/dev/null || APP_STATUS=$?
 fi
 
+# On an abnormal exit, the newest macOS crash report is the fastest route to
+# the faulting frame: the CI runners have no human at the console, so without
+# this a sigsegv only ever shows up as an exit code. Print the faulting
+# frames from the JSON body (first line is the report header) and, for
+# frames that belong to the app's own image, symbolicate them against the
+# binary that just ran (the runner keeps symbols in the release build).
+if [ "$APP_STATUS" != "0" ] && [ "$TIMED_OUT" = false ] && uname -s | grep -q Darwin; then
+    CRASH_FILE=$(ls -t "$HOME"/Library/Logs/DiagnosticReports/Retro\ Debugger-*.ips 2>/dev/null | head -1)
+    if [ -n "$CRASH_FILE" ]; then
+        echo "=== Crash report found: $CRASH_FILE (app exit status $APP_STATUS) ==="
+        python3 - "$CRASH_FILE" "$APP_BINARY" <<'PY_REPORT'
+import json, subprocess, sys
+
+path, binary = sys.argv[1], sys.argv[2]
+with open(path, "rb") as f:
+    raw = f.read()
+nl = raw.find(b"\n")
+meta = json.loads(raw[nl+1:])
+used = meta.get("usedImages", [])
+threads = meta.get("threads", [])
+fi = meta.get("faultingThread", 0)
+th = threads[fi] if isinstance(fi, int) and fi < len(threads) else threads[0]
+
+print("    exceptionType:", json.dumps(meta.get("exception", {})))
+term = meta.get("termination") or {}
+print("    terminationReason:", json.dumps(term.get("details", term)))
+
+app_img = None
+for img in used:
+    if img.get("name") == "Retro Debugger" or img.get("path", "").endswith("/Retro Debugger"):
+        app_img = img
+        break
+
+addrs = []
+for fr in th.get("frames", [])[:25]:
+    i = fr.get("imageIndex", -1)
+    img = used[i] if 0 <= i < len(used) else {}
+    name = img.get("name", "?")
+    base = img.get("base") or 0
+    off = fr.get("imageOffset", 0)
+    addr = base + off
+    print("      %-26s 0x%x" % (name, addr))
+    if app_img is not None and img is app_img:
+        addrs.append("0x%x" % addr)
+
+if app_img is not None and addrs and binary:
+    base = app_img.get("base") or 0
+    try:
+        r = subprocess.run(
+            ["atos", "-o", binary, "-arch", "arm64", "-l", "0x%x" % base] + addrs,
+            text=True, capture_output=True, timeout=30,
+        )
+        print("    symbolicated (app image, load 0x%x):" % base)
+        for line in (r.stdout or "").splitlines():
+            print("      ->", line)
+        if r.stderr:
+            print("    atos stderr:", r.stderr.strip())
+    except Exception as e:
+        print("    atos failed:", e)
+else:
+    print("    (no app-image frame or binary to symbolicate)")
+PY_REPORT
+    else
+        echo "(no crash report found for the failed run; exit status $APP_STATUS)"
+    fi
+fi
+
 # Step 6: Check results
 if [ ! -f "$RESULTS_FILE" ]; then
     if [ "$TIMED_OUT" = true ]; then
