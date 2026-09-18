@@ -203,6 +203,15 @@ void CTestDetachCartridgePaused::Run(ITestCallback *cb)
 		di->SetDebugMode(DEBUGGER_MODE_RUNNING);
 		SYS_Sleep(500);
 
+		// The resume must actually resume: verify the cycle counter moves
+		// and keep the observed state for the failure message, because the
+		// CI leg runs with logging off and a bare "FAIL" cannot tell a
+		// paused machine from a broken attach.
+		u64 cyclesBefore = di->GetMainCpuCycleCounter();
+		SYS_Sleep(300);
+		u64 cyclesAfter = di->GetMainCpuCycleCounter();
+		int debugModeAtProbe = di->GetDebugMode();
+
 		CSlrString *path = new CSlrString(TEST_CRT_PATH);
 		di->AttachCartridge(path);
 		delete path;
@@ -216,8 +225,16 @@ void CTestDetachCartridgePaused::Run(ITestCallback *cb)
 
 		if (!attached)
 		{
+			u64 cyclesNow = di->GetMainCpuCycleCounter();
+			C64StateCartridge state;
+			state.exrom = 1;
+			state.game = 1;
+			di->GetC64CartridgeState(&state);
 			allPassed = false;
-			sprintf(failureMsg, "Step 5 FAIL: cartridge could not be re-attached for the running-machine case");
+			sprintf(failureMsg, "Step 5 FAIL: cartridge could not be re-attached for the running-machine case (debugMode=%d probe=%d, cycles %llu->%llu now %llu, exrom=%d game=%d)",
+					debugModeAtProbe, di->GetDebugMode(),
+					(unsigned long long)cyclesBefore, (unsigned long long)cyclesAfter, (unsigned long long)cyclesNow,
+					(int)state.exrom, (int)state.game);
 			StepCompleted(5, false, failureMsg);
 		}
 		else
