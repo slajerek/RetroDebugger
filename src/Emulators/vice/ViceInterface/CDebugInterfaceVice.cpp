@@ -1609,6 +1609,25 @@ extern "C" {
 // Setting values before an IDE64 cartridge is attached is safe: the resource
 // value is stored and usbserver_activate() runs when the cart registers.
 //
+void CDebugInterfaceVice::WaitCpuDebugInterruptTasksApplied()
+{
+	// Callers model a synchronous contract: after the set, the applied state
+	// must be readable from this thread. If we just queued work for the CPU
+	// thread, wait -- bounded -- for ExecuteDebugInterruptTasks() to empty
+	// the queue. While running, that happens within an instruction; it only
+	// stretches if the debugger paused in the meantime, and a paused machine
+	// must not leave this call spinning, so bail out of the wait on the first
+	// sign of a pause (the task still applies once the queue drains).
+	int waitMs = 0;
+	while (this->hasPendingCpuDebugInterruptTasks.load(std::memory_order_acquire)
+		&& GetDebugMode() == DEBUGGER_MODE_RUNNING
+		&& waitMs < 2000)
+	{
+		SYS_Sleep(1);
+		waitMs++;
+	}
+}
+
 void CDebugInterfaceVice::AttachIde64Cartridge(CSlrString *filePath)
 {
 	char *asciiPath = filePath->GetStdASCII();
@@ -1636,6 +1655,7 @@ void CDebugInterfaceVice::AttachIde64Cartridge(CSlrString *filePath)
 		CDebugInterfaceViceTaskAttachCartridge *task = new CDebugInterfaceViceTaskAttachCartridge(this, type, asciiPathCopy);
 		AddCpuDebugInterruptTask(task);
 		c64d_vice_input_tasks_flag = 1;
+		this->WaitCpuDebugInterruptTasksApplied();
 
 		delete [] asciiPath;
 		return;
@@ -1657,6 +1677,7 @@ void CDebugInterfaceVice::DetachIde64Cartridge()
 		CDebugInterfaceViceTaskCartridgeDetach *task = new CDebugInterfaceViceTaskCartridgeDetach(this, CARTRIDGE_IDE64);
 		AddCpuDebugInterruptTask(task);
 		c64d_vice_input_tasks_flag = 1;
+		this->WaitCpuDebugInterruptTasksApplied();
 		return;
 	}
 
@@ -1674,6 +1695,7 @@ void CDebugInterfaceVice::SetIde64Image(int deviceNum, const char *path)
 		CDebugInterfaceViceTaskResourceSetString *task = new CDebugInterfaceViceTaskResourceSetString(this, resourceName, path);
 		AddCpuDebugInterruptTask(task);
 		c64d_vice_input_tasks_flag = 1;
+		this->WaitCpuDebugInterruptTasksApplied();
 		return;
 	}
 
@@ -1694,6 +1716,7 @@ void CDebugInterfaceVice::SetIde64Version(int version)
 		CDebugInterfaceViceTaskResourceSetInt *task = new CDebugInterfaceViceTaskResourceSetInt(this, "IDE64Version", version);
 		AddCpuDebugInterruptTask(task);
 		c64d_vice_input_tasks_flag = 1;
+		this->WaitCpuDebugInterruptTasksApplied();
 		return;
 	}
 
@@ -1713,6 +1736,7 @@ void CDebugInterfaceVice::SetIde64UsbServerEnabled(bool enabled)
 		CDebugInterfaceViceTaskResourceSetInt *task = new CDebugInterfaceViceTaskResourceSetInt(this, "IDE64USBServer", enabled ? 1 : 0);
 		AddCpuDebugInterruptTask(task);
 		c64d_vice_input_tasks_flag = 1;
+		this->WaitCpuDebugInterruptTasksApplied();
 		return;
 	}
 
@@ -1732,6 +1756,7 @@ void CDebugInterfaceVice::SetIde64UsbServerAddress(const char *address)
 		CDebugInterfaceViceTaskResourceSetString *task = new CDebugInterfaceViceTaskResourceSetString(this, "IDE64USBServerAddress", address);
 		AddCpuDebugInterruptTask(task);
 		c64d_vice_input_tasks_flag = 1;
+		this->WaitCpuDebugInterruptTasksApplied();
 		return;
 	}
 
