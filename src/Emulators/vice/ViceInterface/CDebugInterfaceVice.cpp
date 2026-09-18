@@ -2880,16 +2880,6 @@ extern "C" {
 	void cartridge_trigger_freeze(void);
 }
 
-static void cartridge_attach_trap(uint16_t addr, void *v)
-{
-	char *filePath = (char*)v;
-	cartridge_attach_image(0, filePath);
-	
-	SYS_ReleaseCharBuf(filePath);
-
-	debugInterfaceVice->ResetEmulationFrameCounter();
-}
-
 static void cartridge_detach_trap(uint16_t addr, void *v)
 {
 	// -1 means all slots
@@ -2899,34 +2889,38 @@ static void cartridge_detach_trap(uint16_t addr, void *v)
 	c64d_maincpu_clk = 6;
 }
 
+// available via root/maincpu.h, which is not included here
+extern "C"
+{
+	void maincpu_reset(void);
+}
+
 void CDebugInterfaceVice::AttachCartridge(CSlrString *filePath)
 {
 	char *asciiPath = filePath->GetStdASCII();
 	
 	SYS_FixFileNameSlashes(asciiPath);
 
-//	this->SetDebugMode(C64_DEBUG_RUN_ONE_INSTRUCTION);
-//	SYS_Sleep(5000);
-	
-//	gSoundEngine->LockMutex("CDebugInterfaceVice::CartridgeAttach");
-//	debugInterfaceVice->LockMutex();
-//	guiMain->LockMutex();
-
-	
-	cartridge_attach_image(0, asciiPath);
-
-	
-//	guiMain->UnlockMutex();
-//	debugInterfaceVice->UnlockMutex();
-//	gSoundEngine->UnlockMutex("CDebugInterfaceVice::CartridgeAttach");
-
-
-//	char *buf = SYS_GetCharBuf();
-//	strcpy(buf, filePath);
-//	interrupt_maincpu_trigger_trap(cartridge_attach_trap, buf);
-	
-//	SYS_Sleep(1000);
-//	this->SetDebugMode(C64_DEBUG_RUNNING);
+	if (isRunning && GetDebugMode() == DEBUGGER_MODE_RUNNING)
+	{
+		// CPU is executing: the power cycle cartridge_attach_image() queues
+		// via cart_power_off() fires on the next interrupt check inside the
+		// CPU loop, which maps the cartridge while the machine keeps running.
+		cartridge_attach_image(0, asciiPath);
+	}
+	else
+	{
+		// Paused (or the emulation thread stopped): the queued reset is
+		// pending IK_RESET that only the executing CPU loop processes, so
+		// it would never run and the cart config from machine_reset()
+		// -- EXROM/GAME included -- would stay untouched: the attach
+		// reported success but nothing was mapped. maincpu_reset() is
+		// exactly the body that the CPU loop runs on IK_RESET; run it
+		// here. The machine stays paused at the reset entry, which is
+		// what the user asked for by having it paused.
+		cartridge_attach_image(0, asciiPath);
+		maincpu_reset();
+	}
 	
 	debugInterfaceVice->ResetEmulationFrameCounter();
 }
