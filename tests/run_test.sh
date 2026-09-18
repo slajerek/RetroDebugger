@@ -550,7 +550,7 @@ fi
 # frames that belong to the app's own image, symbolicate them against the
 # binary that just ran (the runner keeps symbols in the release build).
 if [ "$APP_STATUS" != "0" ] && [ "$TIMED_OUT" = false ] && uname -s | grep -q Darwin; then
-    CRASH_FILE=$(ls -t "$HOME"/Library/Logs/DiagnosticReports/Retro\ Debugger-*.ips 2>/dev/null | head -1)
+    CRASH_FILE=$( { ls -t "$HOME"/Library/Logs/DiagnosticReports/Retro\ Debugger-*.ips 2>/dev/null || true; } | head -1 )
     if [ -n "$CRASH_FILE" ]; then
         echo "=== Crash report found: $CRASH_FILE (app exit status $APP_STATUS) ==="
         python3 - "$CRASH_FILE" "$APP_BINARY" <<'PY_REPORT'
