@@ -76,8 +76,12 @@ jobs:
       - name: Run tests (both suites)
         run: |
           # Chunk 0.6. See the Linux job -- these workflows ran no tests at all.
+          # MT_TEST_LLDB asks the runner (see tests/run_test.sh) to launch the
+          # app under lldb: the Ide64UsbListener cleanup segfaults on this
+          # image's off-logs leg and macOS keeps no .ips there, so the batch
+          # 'bt all' is the only way to see the faulting frame.
           chmod +x ./tests/run_test.sh
-          ./tests/run_test.sh --skip-build
+          MT_TEST_LLDB=1 ./tests/run_test.sh --skip-build
 
       - name: Upload release artifact
         uses: actions/upload-artifact@v7

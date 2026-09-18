@@ -519,7 +519,18 @@ else
     export C64D_IN_SUITE=1
 fi
 
-"$APP_BINARY" "${APP_ARGS[@]}" &
+# Launch UNDER lldb when asked: a segfault that reproduces only on the CI
+# runners must produce a backtrace there, not just an exit code. `bt all`
+# prints every thread's frames when the process stops on the signal; without
+# symbols in the objects this is still enough to locate the faulting
+# translation unit. Local and leg runs keep the plain launcher (unset the
+# variable), so nothing changes for the majority of the runs.
+if [ "${MT_TEST_LLDB:-0}" = "1" ]; then
+    echo "(running under lldb: MT_TEST_LLDB=1)"
+    lldb -b -o run -o "bt all" -o quit -- "$APP_BINARY" "${APP_ARGS[@]}" &
+else
+    "$APP_BINARY" "${APP_ARGS[@]}" &
+fi
 
 APP_PID=$!
 
