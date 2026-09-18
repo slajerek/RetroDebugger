@@ -6,6 +6,7 @@
 #include <string>
 #include <cctype>
 #include "CSlrString.h"
+#include "SYS_FileSystem.h"
 
 using namespace ImGui;
 

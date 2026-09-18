@@ -240,23 +240,23 @@ static void show_text(const char *text)
                     case '`':
                         string[x + z] = '\'';
                         break;
-                    case 'ä':
+                    case '\344':
                         string[x + z] = 'a';
                         break;
                     case '~':
                         string[x + z] = '-';
                         break;
-                    case 'é':
-                    case 'è':
+                    case '\351':
+                    case '\350':
                         string[x + z] = 'e';
                         break;
-                    case 'Ö':
+                    case '\326':
                         string[x + z] = 'O';
                         break;
-                    case 'ö':
+                    case '\366':
                         string[x + z] = 'o';
                         break;
-                    case 'å':
+                    case '\345':
                         string[x + z] = 'a';
                         break;
                     case '\t':
