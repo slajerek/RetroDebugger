@@ -550,6 +550,30 @@ static int set_autodetect_size(int autodetect_size, void *param)
 }
 
 #ifdef HAVE_NETWORK
+
+/* The USB server lifecycle and the FT245 buffers are touched from two threads
+ * in the embedded build: the resource-setting (main) thread runs usbserver_activate(),
+ * while the emulation thread reaches the same state incrementally from
+ * usb_receive()/usb_send() via the alarm callback and the FT245 I/O hooks.
+ * Upstream VICE assumes both sides run on one thread; tearing the listener
+ * down from the main thread while the CPU thread is inside usb_send()
+ * (select + accept on the same handle) segfaults when the underlying handle
+ * disappears between the two calls. One non-recursive lock around the
+ * affected functions serialises them; the FT245 I/O hooks only call the
+ * private helpers and never take the lock themselves, so there is no
+ * re-entrancy. */
+#if defined(_WIN32)
+#  include <synchapi.h>
+static SRWLOCK usb_server_mutex = SRWLOCK_INIT;
+static void usb_server_lock(void)   { AcquireSRWLockExclusive(&usb_server_mutex); }
+static void usb_server_unlock(void) { ReleaseSRWLockExclusive(&usb_server_mutex); }
+#else
+#  include <pthread.h>
+static pthread_mutex_t usb_server_mutex = PTHREAD_MUTEX_INITIALIZER;
+static void usb_server_lock(void)   { pthread_mutex_lock(&usb_server_mutex); }
+static void usb_server_unlock(void) { pthread_mutex_unlock(&usb_server_mutex); }
+#endif
+
 static void usbserver_activate(int);
 #endif
 
@@ -1099,28 +1123,6 @@ static void ide64_io_store(uint16_t addr, uint8_t value)
 }
 
 #ifdef HAVE_NETWORK
-
-/* The USB server lifecycle and the FT245 buffers are touched from two
- * threads in the embedded build: the resource-setting (main) thread runs
- * usbserver_activate(), while the emulation thread reaches the same state
- * incrementally from usb_receive()/usb_send() (via the alarm callback and
- * the FT245 I/O hooks). Upstream VICE assumes both sides run on one thread;
- * stopping the machine to tear the listener down would otherwise leave the
- * alarm-side use in an arbitrary state. One non-recursive lock around the
- * whole three functions serialises them; the FT245 I/O hooks run only the
- * two private helpers and never take the lock themselves, so there is no
- * re-entrancy. */
-#if defined(_WIN32)
-#  include <synchapi.h>
-static SRWLOCK usb_server_mutex = SRWLOCK_INIT;
-static void usb_server_lock(void)   { AcquireSRWLockExclusive(&usb_server_mutex); }
-static void usb_server_unlock(void) { ReleaseSRWLockExclusive(&usb_server_mutex); }
-#else
-#  include <pthread.h>
-static pthread_mutex_t usb_server_mutex = PTHREAD_MUTEX_INITIALIZER;
-static void usb_server_lock(void)   { pthread_mutex_lock(&usb_server_mutex); }
-static void usb_server_unlock(void) { pthread_mutex_unlock(&usb_server_mutex); }
-#endif
 
 static void usb_receive(void)
 {
