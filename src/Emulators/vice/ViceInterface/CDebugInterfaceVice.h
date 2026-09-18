@@ -321,6 +321,11 @@ public:
 	virtual bool LoadReu(char *filePath);
 	virtual bool SaveReu(char *filePath);
 
+	// Wait until the CPU thread has drained the queued interrupt tasks (for
+	// the running-machine paths that queue one): the setters model a
+	// synchronous contract, so callers may read the applied state right back.
+	virtual void WaitCpuDebugInterruptTasksApplied();
+
 	//
 	virtual void SetVicRegister(uint8 registerNum, uint8 value);
 	virtual u8 GetVicRegister(uint8 registerNum);

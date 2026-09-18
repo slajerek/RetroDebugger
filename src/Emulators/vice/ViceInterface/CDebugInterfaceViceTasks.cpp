@@ -4,6 +4,8 @@
 #include "CByteBuffer.h"
 #include "DebuggerDefs.h"
 #include "SYS_Main.h"
+#include <cstring>
+#include <cstdlib>
 
 extern "C" {
 	void c64d_joystick_key_down(int key, unsigned int joyport);
@@ -11,6 +13,8 @@ extern "C" {
 	int keyboard_key_pressed(signed long key);
 	int keyboard_key_released(signed long key);
 	int cartridge_attach_image(int type, const char *filename);
+	void cartridge_detach_image(int type);
+#include "resources.h"
 }
 
 CDebugInterfaceViceTaskJoystickEvent::CDebugInterfaceViceTaskJoystickEvent(
@@ -129,9 +133,10 @@ void CDebugInterfaceViceTaskReset::ExecuteTask()
 	}
 }
 
-CDebugInterfaceViceTaskAttachCartridge::CDebugInterfaceViceTaskAttachCartridge(CDebugInterfaceVice *debugInterface, char *absolutePath)
+CDebugInterfaceViceTaskAttachCartridge::CDebugInterfaceViceTaskAttachCartridge(CDebugInterfaceVice *debugInterface, int cartridgeType, char *absolutePath)
 {
 	this->debugInterface = debugInterface;
+	this->cartridgeType = cartridgeType;
 	this->absolutePath = absolutePath;
 }
 
@@ -142,7 +147,58 @@ void CDebugInterfaceViceTaskAttachCartridge::ExecuteTask()
 	// applies on the next interrupt check of the very same execution loop,
 	// so the freshly zeroed RAM from mem_powerup() is never observed by an
 	// executing CPU.
-	cartridge_attach_image(0, this->absolutePath);
+	cartridge_attach_image(this->cartridgeType, this->absolutePath);
 	this->debugInterface->ResetEmulationFrameCounter();
 	delete[] this->absolutePath;
+}
+
+CDebugInterfaceViceTaskCartridgeDetach::CDebugInterfaceViceTaskCartridgeDetach(CDebugInterfaceVice *debugInterface, int cartridgeType)
+{
+	this->debugInterface = debugInterface;
+	this->cartridgeType = cartridgeType;
+}
+
+void CDebugInterfaceViceTaskCartridgeDetach::ExecuteTask()
+{
+	// Same reasoning as the attach task: cartridge_detach_image() tears down
+	// the cart's io-device registrations (and, through the clean-up hooks,
+	// anything else the executing CPU may still be dereferencing) and so has
+	// to happen while no other thread is inside the execution loop.
+	cartridge_detach_image(this->cartridgeType);
+}
+
+CDebugInterfaceViceTaskResourceSetInt::CDebugInterfaceViceTaskResourceSetInt(CDebugInterfaceVice *debugInterface, const char *resourceName, int value)
+{
+	this->debugInterface = debugInterface;
+	size_t nameLen = strlen(resourceName) + 1;
+	this->resourceName = new char[nameLen];
+	strcpy(this->resourceName, resourceName);
+	this->value = value;
+}
+
+void CDebugInterfaceViceTaskResourceSetInt::ExecuteTask()
+{
+	// The resource setter runs on this thread, so anything its setter hooks do
+	// (usbserver_activate()'s alarm create/destroy and socket close are the
+	// known ones) cannot race the execution loop's own alarm-queue walk.
+	resources_set_int(this->resourceName, this->value);
+	delete[] this->resourceName;
+}
+
+CDebugInterfaceViceTaskResourceSetString::CDebugInterfaceViceTaskResourceSetString(CDebugInterfaceVice *debugInterface, const char *resourceName, const char *value)
+{
+	this->debugInterface = debugInterface;
+	size_t nameLen = strlen(resourceName) + 1;
+	this->resourceName = new char[nameLen];
+	strcpy(this->resourceName, resourceName);
+	size_t valueLen = strlen(value) + 1;
+	this->value = new char[valueLen];
+	strcpy(this->value, value);
+}
+
+void CDebugInterfaceViceTaskResourceSetString::ExecuteTask()
+{
+	resources_set_string(this->resourceName, this->value);
+	delete[] this->resourceName;
+	delete[] this->value;
 }
