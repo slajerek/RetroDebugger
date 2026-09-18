@@ -80,7 +80,14 @@ jobs:
           # app under lldb: the Ide64UsbListener cleanup segfaults on this
           # image's off-logs leg and macOS keeps no .ips there, so the batch
           # 'bt all' is the only way to see the faulting frame.
+          #
+          # DIAGNOSTIC PHASE: run the detach-family tests standalone first --
+          # 72/72 passed single-machine on runs whose only difference is
+          # whether the suite context was there, so an isolated run for the
+          # same test says where the state leaks in. Each takes seconds.
           chmod +x ./tests/run_test.sh
+          ./tests/run_test.sh --skip-build DetachCartridgePaused
+          ./tests/run_test.sh --skip-build Ide64UsbListener
           MT_TEST_LLDB=1 ./tests/run_test.sh --skip-build
 
       - name: Upload release artifact
