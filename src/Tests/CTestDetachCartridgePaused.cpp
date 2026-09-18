@@ -93,9 +93,21 @@ void CTestDetachCartridgePaused::Run(ITestCallback *cb)
 		CSlrString *path = new CSlrString(TEST_CRT_PATH);
 		di->AttachCartridge(path);
 		delete path;
-		SYS_Sleep(500);
 
-		if (!IsCartridgeMapped(di))
+		// Poll rather than trust one fixed sleep: the attach runs on the
+		// emulation thread and a loaded runner (library load + power cycle)
+		// can easily exceed 500ms, which is how the CI arm64 leg failed here.
+		// Deadline is generous; a passing attach maps EXROM/GAME almost
+		// immediately, so the poll exits early.
+		bool attached = IsCartridgeMapped(di);
+		for (int i = 0; i < 50 && !attached; i++)
+		{
+			SYS_Sleep(100);
+			attached = IsCartridgeMapped(di);
+		}
+		
+
+		if (!attached)
 		{
 			allPassed = false;
 			sprintf(failureMsg, "Step 1 FAIL: EXROM/GAME still inactive after AttachCartridge(%s)", TEST_CRT_PATH);
