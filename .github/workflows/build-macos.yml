@@ -75,20 +75,12 @@ jobs:
 
       - name: Run tests (both suites)
         run: |
-          # Chunk 0.6. See the Linux job -- these workflows ran no tests at all.
-          # MT_TEST_LLDB asks the runner (see tests/run_test.sh) to launch the
-          # app under lldb: the Ide64UsbListener cleanup segfaults on this
-          # image's off-logs leg and macOS keeps no .ips there, so the batch
-          # 'bt all' is the only way to see the faulting frame.
-          #
-          # DIAGNOSTIC PHASE: run the detach-family tests standalone first --
-          # 72/72 passed single-machine on runs whose only difference is
-          # whether the suite context was there, so an isolated run for the
-          # same test says where the state leaks in. Each takes seconds.
+          # Chunk 0.6. See the Linux job. The Ide64UsbListener teardown
+          # segfault was fixed in ide64.c (USB-server spinlock), so the app
+          # needs no lldb wrapper anymore; tests/run_test.sh still auto-prints
+          # a macOS crash report if the app dies abnormally.
           chmod +x ./tests/run_test.sh
-          ./tests/run_test.sh --skip-build DetachCartridgePaused
-          ./tests/run_test.sh --skip-build Ide64UsbListener
-          MT_TEST_LLDB=1 ./tests/run_test.sh --skip-build
+          ./tests/run_test.sh --skip-build
 
       - name: Upload release artifact
         uses: actions/upload-artifact@v7
