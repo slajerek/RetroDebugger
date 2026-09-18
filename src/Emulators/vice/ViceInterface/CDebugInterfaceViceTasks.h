@@ -39,4 +39,14 @@ public:
 	bool isHardReset;
 };
 
+class CDebugInterfaceViceTaskAttachCartridge : public CDebugInterfaceTask
+{
+public:
+	CDebugInterfaceViceTaskAttachCartridge(CDebugInterfaceVice *debugInterface, char *absolutePath);
+	virtual void ExecuteTask();
+
+	CDebugInterfaceVice *debugInterface;
+	char *absolutePath;
+};
+
 #endif

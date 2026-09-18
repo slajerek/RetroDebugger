@@ -10,6 +10,7 @@ extern "C" {
 	void c64d_joystick_key_up(int key, unsigned int joyport);
 	int keyboard_key_pressed(signed long key);
 	int keyboard_key_released(signed long key);
+	int cartridge_attach_image(int type, const char *filename);
 }
 
 CDebugInterfaceViceTaskJoystickEvent::CDebugInterfaceViceTaskJoystickEvent(
@@ -126,4 +127,22 @@ void CDebugInterfaceViceTaskReset::ExecuteTask()
 	{
 		debugInterface->ResetSoftSynced();
 	}
+}
+
+CDebugInterfaceViceTaskAttachCartridge::CDebugInterfaceViceTaskAttachCartridge(CDebugInterfaceVice *debugInterface, char *absolutePath)
+{
+	this->debugInterface = debugInterface;
+	this->absolutePath = absolutePath;
+}
+
+void CDebugInterfaceViceTaskAttachCartridge::ExecuteTask()
+{
+	// cartridge_attach_image() runs cart_power_off()'s power-cycle reset
+	// from this (CPU) thread and the machine_reset() triggered behind it
+	// applies on the next interrupt check of the very same execution loop,
+	// so the freshly zeroed RAM from mem_powerup() is never observed by an
+	// executing CPU.
+	cartridge_attach_image(0, this->absolutePath);
+	this->debugInterface->ResetEmulationFrameCounter();
+	delete[] this->absolutePath;
 }

@@ -2903,10 +2903,24 @@ void CDebugInterfaceVice::AttachCartridge(CSlrString *filePath)
 
 	if (isRunning && GetDebugMode() == DEBUGGER_MODE_RUNNING)
 	{
-		// CPU is executing: the power cycle cartridge_attach_image() queues
-		// via cart_power_off() fires on the next interrupt check inside the
-		// CPU loop, which maps the cartridge while the machine keeps running.
-		cartridge_attach_image(0, asciiPath);
+		// CPU is executing. cartridge_attach_image() runs machine_powerup()
+		// -- mem_powerup() clears all of RAM on the caller's thread -- and
+		// only queues the power-cycle reset behind it. Doing that from the
+		// caller's thread while the emulation thread executes races the CPU
+		// into fetching the freshly zeroed memory as BRK opcodes, and the
+		// debugger auto-pauses on BRK before that queued reset is ever
+		// processed: the cart then never maps and the machine stays paused
+		// (the detach test's flapping "probe=128, frozen cycle counter").
+		// Reset/input already funnel through the CPU-thread task queue for
+		// exactly this reason; the attach does too now, so the power cycle
+		// triggers inside the CPU thread at a safe boundary and applies on
+		// the next interrupt check of the same loop.
+		u32 asciiLen = strlen(asciiPath);
+		char *asciiPathCopy = new char[asciiLen + 1];
+		strcpy(asciiPathCopy, asciiPath);
+		CDebugInterfaceViceTaskAttachCartridge *task = new CDebugInterfaceViceTaskAttachCartridge(this, asciiPathCopy);
+		AddCpuDebugInterruptTask(task);
+		c64d_vice_input_tasks_flag = 1;
 	}
 	else
 	{
@@ -2922,6 +2936,7 @@ void CDebugInterfaceVice::AttachCartridge(CSlrString *filePath)
 		maincpu_reset();
 	}
 	
+	delete[] asciiPath;
 	debugInterfaceVice->ResetEmulationFrameCounter();
 }
 
