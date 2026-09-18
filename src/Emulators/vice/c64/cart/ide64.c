@@ -604,6 +604,8 @@ static void usbserver_activate(int mode)
 {
     vice_network_socket_address_t * server_addr = NULL;
 
+    usb_server_lock();
+
     ft245_rxp = ft245_rxl = ft245_txp = 0;
 
     if (settings_version < IDE64_VERSION_4_1) {
@@ -625,27 +627,33 @@ static void usbserver_activate(int mode)
             alarm_destroy(usb_alarm);
             usb_alarm = NULL;
         }
+        usb_server_unlock();
         return;
     }
 
     if (!usb_alarm) {
         usb_alarm = alarm_new(maincpu_alarm_context, "IDE64USBAlarm", usb_alarm_handler, NULL);
         if (!usb_alarm) {
+            usb_server_unlock();
             return;
         }
     }
 
     if (!settings_usbserver_address) {
+        usb_server_unlock();
         return;
     }
 
     server_addr = vice_network_address_generate(settings_usbserver_address, 0);
     if (!server_addr) {
+        usb_server_unlock();
         return;
     }
 
     usbserver_socket = vice_network_server(server_addr);
     vice_network_address_close(server_addr);
+
+    usb_server_unlock();
 }
 
 static int set_usbserver(int value, void *param)
@@ -1091,8 +1099,33 @@ static void ide64_io_store(uint16_t addr, uint8_t value)
 }
 
 #ifdef HAVE_NETWORK
+
+/* The USB server lifecycle and the FT245 buffers are touched from two
+ * threads in the embedded build: the resource-setting (main) thread runs
+ * usbserver_activate(), while the emulation thread reaches the same state
+ * incrementally from usb_receive()/usb_send() (via the alarm callback and
+ * the FT245 I/O hooks). Upstream VICE assumes both sides run on one thread;
+ * stopping the machine to tear the listener down would otherwise leave the
+ * alarm-side use in an arbitrary state. One non-recursive lock around the
+ * whole three functions serialises them; the FT245 I/O hooks run only the
+ * two private helpers and never take the lock themselves, so there is no
+ * re-entrancy. */
+#if defined(_WIN32)
+#  include <synchapi.h>
+static SRWLOCK usb_server_mutex = SRWLOCK_INIT;
+static void usb_server_lock(void)   { AcquireSRWLockExclusive(&usb_server_mutex); }
+static void usb_server_unlock(void) { ReleaseSRWLockExclusive(&usb_server_mutex); }
+#else
+#  include <pthread.h>
+static pthread_mutex_t usb_server_mutex = PTHREAD_MUTEX_INITIALIZER;
+static void usb_server_lock(void)   { pthread_mutex_lock(&usb_server_mutex); }
+static void usb_server_unlock(void) { pthread_mutex_unlock(&usb_server_mutex); }
+#endif
+
 static void usb_receive(void)
 {
+    usb_server_lock();
+
     if (ft245_rxp >= ft245_rxl && usbserver_socket) {
         int reconnect = 2;
         if (!usbserver_asocket && vice_network_select_poll_one(usbserver_socket)) {
@@ -1118,10 +1151,14 @@ static void usb_receive(void)
             }
         }
     }
+
+    usb_server_unlock();
 }
 
 static void usb_send(void)
 {
+    usb_server_lock();
+
     if (ft245_txp && usbserver_socket) {
         int reconnect = 2;
         if (!usbserver_asocket && vice_network_select_poll_one(usbserver_socket)) {
@@ -1157,6 +1194,8 @@ static void usb_send(void)
     } else {
         alarm_unset(usb_alarm);
     }
+
+    usb_server_unlock();
 }
 #endif
 
@@ -1232,10 +1271,12 @@ static void ide64_ft245_store(uint16_t addr, uint8_t value)
             case 0:
 #ifdef HAVE_NETWORK
                 if (ft245_txp < sizeof(ft245_tx)) {
+                    usb_server_lock();
                     if (!ft245_txp && usb_alarm) {
                         alarm_set(usb_alarm, maincpu_clk + LATENCY_TIMER);
                     }
                     ft245_tx[ft245_txp++] = value;
+                    usb_server_unlock();
                 }
                 if (ft245_txp >= sizeof(ft245_tx)) {
                     usb_send();
