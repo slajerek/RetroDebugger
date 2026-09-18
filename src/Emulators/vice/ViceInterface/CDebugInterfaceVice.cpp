@@ -1594,10 +1594,19 @@ extern "C" {
 };
 
 //
-// IDE64. All of these write VICE resources; the usbserver ones open/close
-// sockets that the emulation thread's usb_alarm polls, so they take the same
-// snapshotsManager lock SetReuEnabled() takes for the same class of reason.
-// Setting them before an IDE64 cartridge is attached is safe: the resource
+// IDE64. When the emulation thread is executing, none of these may be done
+// from here: the attach/detach hooks power-cycle the cart and rebuild the
+// io-device table the executing CPU dereferences, and the usbserver setters
+// reach ide64.c's usbserver_activate(), which closes/creates sockets and
+// creates/destroys usb_alarm on maincpu_alarm_context -- a queue the emulation
+// thread walks at every clock. That is the same main-thread/running-machine
+// race class the DetachCartridgePaused repro pinned down, so these funnel
+// through the CPU-thread task queue like ResetHard()/AttachCartridge do:
+// contexts/alarm lists can then only mutate from the thread that walks them.
+// With the interface paused (or the emulation thread stopped) the queued work
+// would never drain, so the calls run inline here as before, guarded by the
+// snapshotsManager lock just like SetReuEnabled().
+// Setting values before an IDE64 cartridge is attached is safe: the resource
 // value is stored and usbserver_activate() runs when the cart registers.
 //
 void CDebugInterfaceVice::AttachIde64Cartridge(CSlrString *filePath)
@@ -1619,6 +1628,19 @@ void CDebugInterfaceVice::AttachIde64Cartridge(CSlrString *filePath)
 
 	LOGD("CDebugInterfaceVice::AttachIde64Cartridge: type=%d path='%s'", type, asciiPath);
 
+	if (isRunning && GetDebugMode() == DEBUGGER_MODE_RUNNING)
+	{
+		u32 asciiLen = strlen(asciiPath);
+		char *asciiPathCopy = new char[asciiLen + 1];
+		strcpy(asciiPathCopy, asciiPath);
+		CDebugInterfaceViceTaskAttachCartridge *task = new CDebugInterfaceViceTaskAttachCartridge(this, type, asciiPathCopy);
+		AddCpuDebugInterruptTask(task);
+		c64d_vice_input_tasks_flag = 1;
+
+		delete [] asciiPath;
+		return;
+	}
+
 	snapshotsManager->LockMutex();
 	cartridge_attach_image(type, asciiPath);
 	snapshotsManager->UnlockMutex();
@@ -1629,6 +1651,15 @@ void CDebugInterfaceVice::AttachIde64Cartridge(CSlrString *filePath)
 void CDebugInterfaceVice::DetachIde64Cartridge()
 {
 	LOGD("CDebugInterfaceVice::DetachIde64Cartridge");
+
+	if (isRunning && GetDebugMode() == DEBUGGER_MODE_RUNNING)
+	{
+		CDebugInterfaceViceTaskCartridgeDetach *task = new CDebugInterfaceViceTaskCartridgeDetach(this, CARTRIDGE_IDE64);
+		AddCpuDebugInterruptTask(task);
+		c64d_vice_input_tasks_flag = 1;
+		return;
+	}
+
 	snapshotsManager->LockMutex();
 	cartridge_detach_image(CARTRIDGE_IDE64);
 	snapshotsManager->UnlockMutex();
@@ -1636,6 +1667,16 @@ void CDebugInterfaceVice::DetachIde64Cartridge()
 
 void CDebugInterfaceVice::SetIde64Image(int deviceNum, const char *path)
 {
+	if (isRunning && GetDebugMode() == DEBUGGER_MODE_RUNNING)
+	{
+		char resourceName[24];
+		sprintf(resourceName, "IDE64Image%d", deviceNum);
+		CDebugInterfaceViceTaskResourceSetString *task = new CDebugInterfaceViceTaskResourceSetString(this, resourceName, path);
+		AddCpuDebugInterruptTask(task);
+		c64d_vice_input_tasks_flag = 1;
+		return;
+	}
+
 	char resourceName[24];
 	sprintf(resourceName, "IDE64Image%d", deviceNum);
 
@@ -1646,6 +1687,16 @@ void CDebugInterfaceVice::SetIde64Image(int deviceNum, const char *path)
 
 void CDebugInterfaceVice::SetIde64Version(int version)
 {
+	if (isRunning && GetDebugMode() == DEBUGGER_MODE_RUNNING)
+	{
+		// set_version() re-registers the cart, re-activates the usbserver and
+		// triggers a POWER_CYCLE reset; all of that with the CPU running.
+		CDebugInterfaceViceTaskResourceSetInt *task = new CDebugInterfaceViceTaskResourceSetInt(this, "IDE64Version", version);
+		AddCpuDebugInterruptTask(task);
+		c64d_vice_input_tasks_flag = 1;
+		return;
+	}
+
 	snapshotsManager->LockMutex();
 	resources_set_int("IDE64Version", version);
 	snapshotsManager->UnlockMutex();
@@ -1654,6 +1705,17 @@ void CDebugInterfaceVice::SetIde64Version(int version)
 void CDebugInterfaceVice::SetIde64UsbServerEnabled(bool enabled)
 {
 	LOGD("CDebugInterfaceVice::SetIde64UsbServerEnabled: %s", STRBOOL(enabled));
+
+	if (isRunning && GetDebugMode() == DEBUGGER_MODE_RUNNING)
+	{
+		// set_usbserver() -> usbserver_activate() manipulates the listener
+		// socket pair and the usb_alarm; run it on the emulation thread.
+		CDebugInterfaceViceTaskResourceSetInt *task = new CDebugInterfaceViceTaskResourceSetInt(this, "IDE64USBServer", enabled ? 1 : 0);
+		AddCpuDebugInterruptTask(task);
+		c64d_vice_input_tasks_flag = 1;
+		return;
+	}
+
 	snapshotsManager->LockMutex();
 	resources_set_int("IDE64USBServer", enabled ? 1 : 0);
 	snapshotsManager->UnlockMutex();
@@ -1662,6 +1724,17 @@ void CDebugInterfaceVice::SetIde64UsbServerEnabled(bool enabled)
 void CDebugInterfaceVice::SetIde64UsbServerAddress(const char *address)
 {
 	LOGD("CDebugInterfaceVice::SetIde64UsbServerAddress: '%s'", address);
+
+	if (isRunning && GetDebugMode() == DEBUGGER_MODE_RUNNING)
+	{
+		// set_usbserver_address() re-activates the usbserver while a listener
+		// socket is live; same CPU-thread requirement as the enable/disable.
+		CDebugInterfaceViceTaskResourceSetString *task = new CDebugInterfaceViceTaskResourceSetString(this, "IDE64USBServerAddress", address);
+		AddCpuDebugInterruptTask(task);
+		c64d_vice_input_tasks_flag = 1;
+		return;
+	}
+
 	snapshotsManager->LockMutex();
 	resources_set_string("IDE64USBServerAddress", address);
 	snapshotsManager->UnlockMutex();
@@ -2918,7 +2991,7 @@ void CDebugInterfaceVice::AttachCartridge(CSlrString *filePath)
 		u32 asciiLen = strlen(asciiPath);
 		char *asciiPathCopy = new char[asciiLen + 1];
 		strcpy(asciiPathCopy, asciiPath);
-		CDebugInterfaceViceTaskAttachCartridge *task = new CDebugInterfaceViceTaskAttachCartridge(this, asciiPathCopy);
+		CDebugInterfaceViceTaskAttachCartridge *task = new CDebugInterfaceViceTaskAttachCartridge(this, CARTRIDGE_CRT, asciiPathCopy);
 		AddCpuDebugInterruptTask(task);
 		c64d_vice_input_tasks_flag = 1;
 	}

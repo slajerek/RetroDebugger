@@ -42,11 +42,46 @@ public:
 class CDebugInterfaceViceTaskAttachCartridge : public CDebugInterfaceTask
 {
 public:
-	CDebugInterfaceViceTaskAttachCartridge(CDebugInterfaceVice *debugInterface, char *absolutePath);
+	CDebugInterfaceViceTaskAttachCartridge(CDebugInterfaceVice *debugInterface, int cartridgeType, char *absolutePath);
 	virtual void ExecuteTask();
 
 	CDebugInterfaceVice *debugInterface;
+	int cartridgeType;
 	char *absolutePath;
+};
+
+class CDebugInterfaceViceTaskCartridgeDetach : public CDebugInterfaceTask
+{
+public:
+	CDebugInterfaceViceTaskCartridgeDetach(CDebugInterfaceVice *debugInterface, int cartridgeType);
+	virtual void ExecuteTask();
+
+	CDebugInterfaceVice *debugInterface;
+	int cartridgeType;
+};
+
+class CDebugInterfaceViceTaskResourceSetInt : public CDebugInterfaceTask
+{
+public:
+	// resourceName/value are copied and owned by the task; ExecuteTask frees them
+	CDebugInterfaceViceTaskResourceSetInt(CDebugInterfaceVice *debugInterface, const char *resourceName, int value);
+	virtual void ExecuteTask();
+
+	CDebugInterfaceVice *debugInterface;
+	char *resourceName;
+	int value;
+};
+
+class CDebugInterfaceViceTaskResourceSetString : public CDebugInterfaceTask
+{
+public:
+	// resourceName/value are copied and owned by the task; ExecuteTask frees them
+	CDebugInterfaceViceTaskResourceSetString(CDebugInterfaceVice *debugInterface, const char *resourceName, const char *value);
+	virtual void ExecuteTask();
+
+	CDebugInterfaceVice *debugInterface;
+	char *resourceName;
+	char *value;
 };
 
 #endif
