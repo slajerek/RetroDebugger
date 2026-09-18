@@ -561,7 +561,14 @@ fi
 # frames that belong to the app's own image, symbolicate them against the
 # binary that just ran (the runner keeps symbols in the release build).
 if [ "$APP_STATUS" != "0" ] && [ "$TIMED_OUT" = false ] && uname -s | grep -q Darwin; then
-    CRASH_FILE=$( { ls -t "$HOME"/Library/Logs/DiagnosticReports/Retro\ Debugger-*.ips 2>/dev/null || true; } | head -1 )
+    # The crash reporter on macOS converts a .ips some seconds after the
+    # process dies, so poll briefly instead of checking once.
+    CRASH_FILE=""
+    for _ in 1 2 3 4 5 6 7 8 9 10; do
+        CRASH_FILE=$( { ls -t "$HOME"/Library/Logs/DiagnosticReports/Retro\ Debugger-*.ips 2>/dev/null || true; } | head -1 )
+        [ -n "$CRASH_FILE" ] && break
+        sleep 1
+    done
     if [ -n "$CRASH_FILE" ]; then
         echo "=== Crash report found: $CRASH_FILE (app exit status $APP_STATUS) ==="
         python3 - "$CRASH_FILE" "$APP_BINARY" <<'PY_REPORT'
