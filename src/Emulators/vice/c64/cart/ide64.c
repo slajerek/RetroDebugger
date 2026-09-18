@@ -561,18 +561,27 @@ static int set_autodetect_size(int autodetect_size, void *param)
  * disappears between the two calls. One non-recursive lock around the
  * affected functions serialises them; the FT245 I/O hooks only call the
  * private helpers and never take the lock themselves, so there is no
- * re-entrancy. */
-#if defined(_WIN32)
-#  include <synchapi.h>
-static SRWLOCK usb_server_mutex = SRWLOCK_INIT;
-static void usb_server_lock(void)   { AcquireSRWLockExclusive(&usb_server_mutex); }
-static void usb_server_unlock(void) { ReleaseSRWLockExclusive(&usb_server_mutex); }
-#else
-#  include <pthread.h>
-static pthread_mutex_t usb_server_mutex = PTHREAD_MUTEX_INITIALIZER;
-static void usb_server_lock(void)   { pthread_mutex_lock(&usb_server_mutex); }
-static void usb_server_unlock(void) { pthread_mutex_unlock(&usb_server_mutex); }
-#endif
+ * re-entrancy.
+ *
+ * Implemented as a GCC/Clang test-and-set spinlock: contention is two threads
+ * and the critical sections are short, while every toolchain that builds this
+ * window (GCC on Linux, Apple clang, and clang-cl on Windows) implements the
+ * builtin. Including the Windows synchronization headers from a vendored VICE
+ * file is NOT an alternative: the app's compiles see a different preprocessor
+ * setup than a normal Windows program and winnt.h refuses the empty target
+ * architecture. */
+static volatile long usb_server_lock_word = 0;
+static void usb_server_lock(void)
+{
+    while (__sync_lock_test_and_set(&usb_server_lock_word, 1)) {
+        while (usb_server_lock_word) {
+        }
+    }
+}
+static void usb_server_unlock(void)
+{
+    __sync_lock_release(&usb_server_lock_word);
+}
 
 static void usbserver_activate(int);
 #endif
