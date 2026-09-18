@@ -150,9 +150,18 @@ void CTestDetachCartridgePaused::Run(ITestCallback *cb)
 	if (allPassed)
 	{
 		di->DetachCartridge();
-		SYS_Sleep(500);
 
-		if (IsCartridgeMapped(di))
+		// Poll for the detach like step 1 polls for the attach: the trap
+		// runs on the emulation thread and one fixed sleep raced it on the
+		// CI runners.
+		bool detached = !IsCartridgeMapped(di);
+		for (int i = 0; i < 50 && !detached; i++)
+		{
+			SYS_Sleep(100);
+			detached = !IsCartridgeMapped(di);
+		}
+
+		if (!detached)
 		{
 			C64StateCartridge state;
 			state.exrom = 1;
@@ -197,9 +206,15 @@ void CTestDetachCartridgePaused::Run(ITestCallback *cb)
 		CSlrString *path = new CSlrString(TEST_CRT_PATH);
 		di->AttachCartridge(path);
 		delete path;
-		SYS_Sleep(500);
 
-		if (!IsCartridgeMapped(di))
+		bool attached = IsCartridgeMapped(di);
+		for (int i = 0; i < 50 && !attached; i++)
+		{
+			SYS_Sleep(100);
+			attached = IsCartridgeMapped(di);
+		}
+
+		if (!attached)
 		{
 			allPassed = false;
 			sprintf(failureMsg, "Step 5 FAIL: cartridge could not be re-attached for the running-machine case");
@@ -208,9 +223,15 @@ void CTestDetachCartridgePaused::Run(ITestCallback *cb)
 		else
 		{
 			di->DetachCartridge();
-			SYS_Sleep(1000);
 
-			if (IsCartridgeMapped(di))
+			bool detachedWhileRunning = !IsCartridgeMapped(di);
+			for (int i = 0; i < 50 && !detachedWhileRunning; i++)
+			{
+				SYS_Sleep(100);
+				detachedWhileRunning = !IsCartridgeMapped(di);
+			}
+
+			if (!detachedWhileRunning)
 			{
 				allPassed = false;
 				sprintf(failureMsg, "Step 5 FAIL: cartridge still mapped after DetachCartridge() while running");
