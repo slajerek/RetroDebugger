@@ -20,7 +20,14 @@
 #include <string.h>
 
 #include "SidDatabase.h"
+// Same case-insensitive Windows collision as SidTuneMod.cpp: the VICE 3.10
+// stub src/Emulators/vice/root/md5.h shadows the bare "MD5.h" there, so the
+// real wrapper is reached via the md5/ include-root spelling.
+#ifdef _WIN32
+#include "md5/MD5.h"
+#else
 #include "MD5.h"
+#endif
 
 const char *SidDatabase::ERR_DATABASE_CORRUPT        = "SID DATABASE ERROR: Database seems to be corrupt.";
 const char *SidDatabase::ERR_NO_DATABASE_LOADED      = "SID DATABASE ERROR: Songlength database not loaded.";
