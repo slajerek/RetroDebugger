@@ -113,12 +113,30 @@ void archdep_network_shutdown(void)
     WSACleanup();
 }
 
+static BOOL CALLBACK archdep_init_stdio_once(PINIT_ONCE once, PVOID parameter, PVOID *context)
+{
+    (void)once;
+    (void)parameter;
+    (void)context;
+
+    _setmode(_fileno(stdin), O_BINARY);
+    _setmode(_fileno(stdout), O_BINARY);
+    return TRUE;
+}
+
+void archdep_init_stdio(void)
+{
+    static INIT_ONCE once = INIT_ONCE_STATIC_INIT;
+
+    /* Repeating _setmode can block behind an active MCP stdin read. */
+    InitOnceExecuteOnce(&once, archdep_init_stdio_once, NULL, NULL);
+}
+
 int archdep_init(int *argc, char **argv)
 {
     _fmode = O_BINARY;
 
-    _setmode(_fileno(stdin), O_BINARY);
-    _setmode(_fileno(stdout), O_BINARY);
+    archdep_init_stdio();
 
     argv0 = lib_stralloc(argv[0]);
 
