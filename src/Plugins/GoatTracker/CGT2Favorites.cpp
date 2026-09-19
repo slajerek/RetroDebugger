@@ -151,8 +151,9 @@ void CGT2Favorites::Load()
 		memset(&e.package, 0, sizeof(INSTRPACKAGE));
 
 		// displayName
-		if (entry["name"].type() == Hjson::Type::String)
-			e.displayName = (std::string)entry["name"];
+		Hjson::Value displayNameValue = entry["name"];
+		if (displayNameValue.type() == Hjson::Type::String)
+			e.displayName = static_cast<const std::string&>(displayNameValue);
 
 		// INSTR fields
 		if (entry["ad"].defined())        e.package.instr.ad        = (unsigned char)(int)entry["ad"];
@@ -161,9 +162,10 @@ void CGT2Favorites::Load()
 		if (entry["gatetimer"].defined()) e.package.instr.gatetimer = (unsigned char)(int)entry["gatetimer"];
 		if (entry["firstwave"].defined()) e.package.instr.firstwave = (unsigned char)(int)entry["firstwave"];
 
-		if (entry["instrname"].type() == Hjson::Type::String)
+		Hjson::Value instrumentNameValue = entry["instrname"];
+		if (instrumentNameValue.type() == Hjson::Type::String)
 		{
-			std::string n = (std::string)entry["instrname"];
+			std::string n = static_cast<const std::string&>(instrumentNameValue);
 			strncpy(e.package.instr.name, n.c_str(), MAX_INSTRNAMELEN - 1);
 			e.package.instr.name[MAX_INSTRNAMELEN - 1] = '\0';
 		}

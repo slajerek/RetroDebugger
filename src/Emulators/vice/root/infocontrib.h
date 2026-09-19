@@ -286,7 +286,7 @@ const char info_contrib_text[] =
 "  Started the work on hardware-level 1541 emulation and wrote the\n"
 "  new monitor introduced with VICE 0.15.\n"
 "\n"
-"  André Fachat <fachat@physik.tu-chemnitz.de>\n"
+"  Andr\351 Fachat <fachat@physik.tu-chemnitz.de>\n"
 "  Copyright (C) 1996-2001\n"
 "  Wrote the PET and CBM-II emulators, the CIA and VIA emulation,\n"
 "  the IEEE488 interface, implemented the IEC serial bus in `xvic'\n"
@@ -336,7 +336,7 @@ const char info_contrib_text[] =
 "  Copyright (C) 2011-2017\n"
 "  Provided the Spanish user interface translations.\n"
 "\n"
-"  Paul Dubé \n"
+"  Paul Dub\351 \n"
 "  Copyright (C) 2004-2017\n"
 "  Provided the French user interface translations.\n"
 "\n"
@@ -437,7 +437,7 @@ const char info_contrib_text[] =
 "  Implemented the SDL UI slider control and fixed some\n"
 "  GP2X/Dingoo SDL UI issues.\n"
 "\n"
-"  István Fábián\n"
+"  Istv\341n F\341bi\341n\n"
 "  Contributed a initial patch with the more correct 1541 bus\n"
 "  timing code and which gave us hints for to improving the 1541\n"
 "  emulation.\n"
@@ -525,7 +525,7 @@ const char info_contrib_text[] =
 "  driver, basic support for the OPENCBM library and some\n"
 "  other patches.\n"
 "\n"
-"  Frank König <frank_koenig@t-online.de>\n"
+"  Frank K\366nig <frank_koenig@t-online.de>\n"
 "  Contributed the Win32 joystick autofire feature.\n"
 "\n"
 "  Bernd Kortz <bernd.korz@yellowtab.com>\n"
@@ -564,7 +564,7 @@ const char info_contrib_text[] =
 "  lvd <lvd.mhm@gmail.com>\n"
 "  Provided some monitor fixes.\n"
 "\n"
-"  Marko Mäkelä <msmakela@gmail.com>\n"
+"  Marko M\344kel\344 <msmakela@gmail.com>\n"
 "  Wrote lots of CPU documentation. Wrote the VIC Flash Plugin\n"
 "  cartridge emulation in xvic. Wrote the Ultimem cartridge\n"
 "  emulation in xvic.\n"
@@ -615,7 +615,7 @@ const char info_contrib_text[] =
 "  Per Olofsson <MagerValp@Goth.Org>\n"
 "  Digitalized the C64 colors used in the (old) default palette.\n"
 "\n"
-"  Lasse Öörni <loorni@mail.student.oulu.fi>\n"
+"  Lasse \326\366rni <loorni@mail.student.oulu.fi>\n"
 "  Contributed the Windows Multimedia sound driver\n"
 "\n"
 "  Stein Pedersen <galfodo@users.sourceforge.net>\n"
@@ -648,7 +648,7 @@ const char info_contrib_text[] =
 "  David Roden\n"
 "  Fixed various issues related to ffmpeg settings.\n"
 "\n"
-"  Pablo Roldán <pdroldan@yahoo.com>\n"
+"  Pablo Rold\341n <pdroldan@yahoo.com>\n"
 "  Contributed initial patch for VIC-II PAL-N model selection.\n"
 "\n"
 "  Mathias Roslund <vice.emu@amidog.se>\n"
@@ -792,7 +792,7 @@ const char info_contrib_text[] =
 "\n"
 "  Last but not least, a very special thank to Andreas Arens, Lutz\n"
 "  Sammer, Edgar Tornig, Christian Bauer, Wolfgang Lorenz, Miha\n"
-"  Peternel, Per Håkan Sundell and David Horrocks for writing\n"
+"  Peternel, Per H\345kan Sundell and David Horrocks for writing\n"
 "  cool emulators to compete with.  :-)\n"
 "\n"
 "\n";
@@ -833,7 +833,7 @@ vice_team_t ex_team[] = {
     { "2000-2004", "Markus Brenner", "Markus Brenner <markus@brenner.de>" },
     { "1999-2004", "Thomas Bretz", "Thomas Bretz <tbretz@ph.tum.de>" },
     { "1997-2001", "Daniel Sladic", "Daniel Sladic <sladic@eecg.toronto.edu>" },
-    { "1996-2001", "André Fachat", "André Fachat <fachat@physik.tu-chemnitz.de>" },
+    { "1996-2001", "Andr\351 Fachat", "Andr\351 Fachat <fachat@physik.tu-chemnitz.de>" },
     { "1996-1999", "Ettore Perazzoli", "Ettore Perazzoli <ettore@comm2000.it>" },
     { "1993-1994, 1997-1999", "Teemu Rantanen", "Teemu Rantanen <tvr@cs.hut.fi>" },
     { "1993-1996", "Jouko Valta", "Jouko Valta <jopi@stekt.oulu.fi>" },
@@ -854,7 +854,7 @@ vice_trans_t trans_team[] = {
     { "2009-2017", "Mikkel Holm Olsen", "Danish", "Mikkel Holm Olsen <vice-dk@symlink.dk>" },
     { "2000-2017", "Martin Pottendorfer", "German", "Martin Pottendorfer <pottendo@gmx.net>" },
     { "2011-2017", "Manuel Antonio Rodriguez Bas", "Spanish", "Manuel Antonio Rodriguez Bas <formater@winuaespanol.com>" },
-    { "2004-2017", "Paul Dubé", "French", "Paul Dubé " },
+    { "2004-2017", "Paul Dub\351", "French", "Paul Dub\351 " },
     { "2006-2017", "Czirkos Zoltan", "Hungarian", "Czirkos Zoltan <cirix@fw.hu>" },
     { "2006-2017", "Karai Csaba", "Hungarian", "Karai Csaba <cskarai@freemail.hu>" },
     { "2001-2017", "Andrea Musuruane", "Italian", "Andrea Musuruane <musuruan@bmm.it>" },

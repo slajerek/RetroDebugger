@@ -178,7 +178,7 @@
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
-      <AdditionalDependencies>MTImageCodecs.lib;SDL3.lib;version.lib;imm32.lib;setupapi.lib;winmm.lib;wsock32.lib;ws2_32.lib;Iphlpapi.lib;userenv.lib;psapi.lib;uSockets.lib;libuv.lib;msvcrtd.lib;dbghelp.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>MTImageCodecs.lib;SDL3.lib;version.lib;imm32.lib;setupapi.lib;winmm.lib;wsock32.lib;ws2_32.lib;Iphlpapi.lib;userenv.lib;psapi.lib;uSockets.lib;libuv.lib;dbghelp.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">
@@ -198,7 +198,7 @@
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
-      <AdditionalDependencies>MTImageCodecs.lib;SDL3.lib;version.lib;imm32.lib;setupapi.lib;winmm.lib;wsock32.lib;ws2_32.lib;Iphlpapi.lib;userenv.lib;psapi.lib;uSockets.lib;libuv.lib;msvcrtd.lib;dbghelp.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>MTImageCodecs.lib;SDL3.lib;version.lib;imm32.lib;setupapi.lib;winmm.lib;wsock32.lib;ws2_32.lib;Iphlpapi.lib;userenv.lib;psapi.lib;uSockets.lib;libuv.lib;dbghelp.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -222,7 +222,7 @@
       <SubSystem>Windows</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>MTImageCodecs.lib;SDL3.lib;version.lib;imm32.lib;setupapi.lib;winmm.lib;wsock32.lib;ws2_32.lib;Iphlpapi.lib;userenv.lib;psapi.lib;uSockets.lib;libuv.lib;msvcrt.lib;dbghelp.lib;mbedtls_bundle.lib;bcrypt.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>MTImageCodecs.lib;SDL3.lib;version.lib;imm32.lib;setupapi.lib;winmm.lib;wsock32.lib;ws2_32.lib;Iphlpapi.lib;userenv.lib;psapi.lib;uSockets.lib;libuv.lib;dbghelp.lib;mbedtls_bundle.lib;bcrypt.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <LinkTimeCodeGeneration Condition="'$(PlatformToolset)'!='ClangCL'">UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
     </Link>
   </ItemDefinitionGroup>
@@ -248,7 +248,7 @@
       <SubSystem>Windows</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>MTImageCodecs.lib;SDL3.lib;version.lib;imm32.lib;setupapi.lib;winmm.lib;wsock32.lib;ws2_32.lib;Iphlpapi.lib;userenv.lib;psapi.lib;uSockets.lib;libuv.lib;msvcrt.lib;dbghelp.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>MTImageCodecs.lib;SDL3.lib;version.lib;imm32.lib;setupapi.lib;winmm.lib;wsock32.lib;ws2_32.lib;Iphlpapi.lib;userenv.lib;psapi.lib;uSockets.lib;libuv.lib;dbghelp.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <LinkTimeCodeGeneration Condition="'$(PlatformToolset)'!='ClangCL'">UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
     </Link>
   </ItemDefinitionGroup>

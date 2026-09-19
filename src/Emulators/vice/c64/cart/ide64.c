@@ -42,6 +42,10 @@
 #include <string.h>
 #include <time.h>
 
+#if defined(_MSC_VER) && !defined(__clang__)
+#include <intrin.h>
+#endif
+
 #include "alarm.h"
 #include "archdep.h"
 #include "ata.h"
@@ -563,24 +567,31 @@ static int set_autodetect_size(int autodetect_size, void *param)
  * private helpers and never take the lock themselves, so there is no
  * re-entrancy.
  *
- * Implemented as a GCC/Clang test-and-set spinlock: contention is two threads
- * and the critical sections are short, while every toolchain that builds this
- * window (GCC on Linux, Apple clang, and clang-cl on Windows) implements the
- * builtin. Including the Windows synchronization headers from a vendored VICE
+ * Implemented as a test-and-set spinlock: contention is two threads and the
+ * critical sections are short. MSVC uses _InterlockedExchange; GCC and Clang
+ * use the __sync builtins. Including Windows synchronization headers from a vendored VICE
  * file is NOT an alternative: the app's compiles see a different preprocessor
  * setup than a normal Windows program and winnt.h refuses the empty target
  * architecture. */
 static volatile long usb_server_lock_word = 0;
 static void usb_server_lock(void)
 {
+#if defined(_MSC_VER) && !defined(__clang__)
+    while (_InterlockedExchange(&usb_server_lock_word, 1)) {
+#else
     while (__sync_lock_test_and_set(&usb_server_lock_word, 1)) {
+#endif
         while (usb_server_lock_word) {
         }
     }
 }
 static void usb_server_unlock(void)
 {
+#if defined(_MSC_VER) && !defined(__clang__)
+    _InterlockedExchange(&usb_server_lock_word, 0);
+#else
     __sync_lock_release(&usb_server_lock_word);
+#endif
 }
 
 static void usbserver_activate(int);
