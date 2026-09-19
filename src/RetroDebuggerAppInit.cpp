@@ -24,6 +24,10 @@
 extern "C" void RD_HideDockIcon();
 #endif
 
+#ifdef WIN32
+extern "C" void archdep_init_stdio(void);
+#endif
+
 #if MT_ENABLE_IMGUI_TEST_ENGINE
 #include "CImGuiTestEngine.h"
 #include "imgui_te_engine.h"
@@ -226,6 +230,11 @@ bool C64D_IsAutomatedRunCommandLine()
 
 void MT_PreInit()
 {
+#ifdef WIN32
+	// Configure stdio before MCP can block reading stdin; VICE reuses this setup.
+	archdep_init_stdio();
+#endif
+
 	if (C64D_IsAutomatedRunCommandLine())
 		// SDL3: SDL_setenv is gone. SDL_setenv_unsafe is the direct
 		// replacement and keeps the overwrite=0 semantics we rely on.
