@@ -1,5 +1,11 @@
 # Agent notes
 
+Project guidance lives in [CLAUDE.md](CLAUDE.md). This file records the running
+CI state and debugging procedures; it is the only other AI-related file tracked
+on purpose.
+
+# Agent notes
+
 ## CI: always check all three platforms
 
 Every build-relevant change must be verified on ALL THREE platforms before

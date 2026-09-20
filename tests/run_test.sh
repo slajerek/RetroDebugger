@@ -14,7 +14,7 @@
 #   --visible       Run without --headless
 #   --imgui         Run all ImGui UI tests (alias: --imgui-tests)
 #   --imgui-test FILTER  Run ImGui UI tests matching FILTER
-#   --timeout N     Set timeout in seconds (default: 60)
+#   --timeout N     Set timeout in seconds (default: 900)
 #   --log-dir DIR   Set log output directory (default: /tmp)
 #   --layouts-fixture FILE  Copy layout fixture to /tmp and pass via --layouts-file
 #
