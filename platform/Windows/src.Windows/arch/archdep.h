@@ -123,6 +123,7 @@ extern void archdep_workaround_nop(const char *otto);
 
 #define ARCHDEP_SOUND_OUTPUT_MODE SOUND_OUTPUT_SYSTEM
 
+void archdep_init_stdio(void);
 const char *archdep_home_path(void);
 
 #endif
