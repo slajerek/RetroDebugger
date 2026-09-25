@@ -13,6 +13,9 @@
 extern "C"
 {
 #include "ViceWrapper.h"
+#ifdef HAVE_USBSID
+#include "usbsid.h"
+#endif
 };
 
 // Test program that continuously writes to SID ($D400-$D418):
@@ -291,14 +294,28 @@ void CTestViceSidHooks::Run(ITestCallback *cb)
 			StepCompleted(5, false, failureMsg);
 		}
 #else
-		// On macOS/Linux: expect exactly 15 types (no HardSID — Windows-only).
+		// On macOS/Linux: expect 15 emulated types (no HardSID, Windows-only) plus
+		// USBSID-Pico appended last when built with HAVE_USBSID and a board was
+		// attached when the list was built (usbsid_detect()).
 		// If this count changes, either new SID engines were added (update expected
 		// count) or the HardSID #if defined(WIN32) guard was accidentally removed.
-		if (numTypes != 15)
+#if defined(HAVE_USBSID)
+		const int expectedTypes = (usbsid_detect() > 0) ? 16 : 15;
+#else
+		const int expectedTypes = 15;
+#endif
+		if (numTypes != expectedTypes)
 		{
-			sprintf(failureMsg, "Unexpected SID type count: %d (expected 15 on non-Windows)", numTypes);
+			sprintf(failureMsg, "Unexpected SID type count: %d (expected %d on non-Windows)", numTypes, expectedTypes);
 			allPassed = false;
 		}
+#if defined(HAVE_USBSID)
+		if (allPassed && numTypes == 16 && strstr(sidTypes[numTypes - 1], "USBSID") == NULL)
+		{
+			sprintf(failureMsg, "USBSID-Pico is not the last SID type: '%s'", sidTypes[numTypes - 1]);
+			allPassed = false;
+		}
+#endif
 
 		if (allPassed)
 		{

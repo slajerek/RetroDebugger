@@ -50,6 +50,7 @@ jobs:
             libgl1-mesa-dev \
             libglu1-mesa-dev \
             libasound2-dev \
+            libusb-1.0-0-dev \
             libpulse-dev \
             libx11-dev \
             libxext-dev \

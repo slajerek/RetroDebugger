@@ -147,6 +147,12 @@ static UI_MENU_CALLBACK(custom_SidModel_callback)
       custom_SidModel_callback,          \
       (ui_callback_data_t)SID_HARDSID },
 
+#define VICE_SDL_SID_USBSID_MODELS       \
+    { "USBSID-Pico",                     \
+      MENU_ENTRY_RESOURCE_RADIO,         \
+      custom_SidModel_callback,          \
+      (ui_callback_data_t)SID_USBSID },
+
 #define VICE_SDL_SID_PARSID_MODELS            \
     { "ParSID Port 1",                        \
       MENU_ENTRY_RESOURCE_RADIO,              \
@@ -169,7 +175,7 @@ static const ui_menu_entry_t sid_model_menu[] = {
 #ifdef HAVE_RESID_FP
     VICE_SDL_SID_RESIDFP_MODELS
 #endif
-#if defined(HAVE_CATWEASELMKIII) || defined(HAVE_HARDSID) || defined(HAVE_PARSID)
+#if defined(HAVE_CATWEASELMKIII) || defined(HAVE_HARDSID) || defined(HAVE_PARSID) || defined(HAVE_USBSID)
     SDL_MENU_ITEM_SEPARATOR,
     SDL_MENU_ITEM_TITLE("Hardware"),
 #ifdef HAVE_CATWEASELMKIII
@@ -180,6 +186,9 @@ static const ui_menu_entry_t sid_model_menu[] = {
 #endif
 #ifdef HAVE_PARSID
     VICE_SDL_SID_PARSID_MODELS
+#endif
+#ifdef HAVE_USBSID
+    VICE_SDL_SID_USBSID_MODELS
 #endif
 #endif
     SDL_MENU_LIST_END
@@ -198,7 +207,7 @@ static const ui_menu_entry_t sid_dtv_model_menu[] = {
 #ifdef HAVE_RESID_FP
     VICE_SDL_SID_RESIDFP_MODELS
 #endif
-#if defined(HAVE_CATWEASELMKIII) || defined(HAVE_HARDSID) || defined(HAVE_PARSID)
+#if defined(HAVE_CATWEASELMKIII) || defined(HAVE_HARDSID) || defined(HAVE_PARSID) || defined(HAVE_USBSID)
     SDL_MENU_ITEM_SEPARATOR,
     SDL_MENU_ITEM_TITLE("Hardware"),
 #ifdef HAVE_CATWEASELMKIII
@@ -209,6 +218,9 @@ static const ui_menu_entry_t sid_dtv_model_menu[] = {
 #endif
 #ifdef HAVE_PARSID
     VICE_SDL_SID_PARSID_MODELS
+#endif
+#ifdef HAVE_USBSID
+    VICE_SDL_SID_USBSID_MODELS
 #endif
 #endif
     SDL_MENU_LIST_END

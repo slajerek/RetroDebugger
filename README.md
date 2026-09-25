@@ -74,6 +74,10 @@ SDL is **not** a system dependency. `build-linux.sh` builds a static SDL3 from
 MTEngineSDL's vendored source tree; a distro `libsdl2-dev`/`libsdl3-dev` is
 neither used nor consulted.
 
+Optional, for the USBSID-Pico SID engine (enabled automatically when found, disable with
+`cmake -DUSBSID_SUPPORT=OFF`):
+`sudo apt install libusb-1.0-0-dev`
+
 Put MTEngineSDL and RetroDebugger folders into the same folder and then compile.
 
 ```

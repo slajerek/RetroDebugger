@@ -146,6 +146,8 @@ public:
 	virtual void GetSidTypes(std::vector<CSlrString *> *sidTypes);
 	virtual void GetSidTypes(std::vector<const char *> *sidTypes);
 	virtual void SetSidType(int sidType);
+	virtual void SetUSBSIDSettings();
+	virtual bool GetUSBSIDInfo(int *numSids, int *pcbVersion);
 	
 	// samplingMethod: Fast=0, Interpolating=1, Resampling=2, Fast Resampling=3
 	virtual void SetSidSamplingMethod(int samplingMethod);

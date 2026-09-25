@@ -21,6 +21,9 @@ extern "C" {
 #include "c64.h"
 #include "sid.h"
 #include "sid-resources.h"
+#ifdef HAVE_USBSID
+#include "usbsid.h"
+#endif
 #include "drive.h"
 #include "datasette.h"
 #include "c64mem.h"
@@ -385,6 +388,7 @@ void CDebugInterfaceVice::RunEmulationThread()
 	}
 	
 	// update sid type
+	SetUSBSIDSettingsAsync();
 	SetSidTypeAsync(c64SettingsSIDEngineModel);
 	
 //	audioChannel->Start();
@@ -1843,59 +1847,82 @@ void CDebugInterfaceVice::SetSettingIsWarpSpeed(bool isWarpSpeed)
 
 ///
 
-void CDebugInterfaceVice::GetSidTypes(std::vector<CSlrString *> *sidTypes)
+// Single list used by GetSidTypes and SetSidTypeAsync. The index is persisted in the settings,
+// new engines are appended at the end.
+struct CViceSidTypeEntry
 {
-	// 0-2
-	sidTypes->push_back(new CSlrString("6581 (ReSID)"));
-	sidTypes->push_back(new CSlrString("8580 (ReSID)"));
-	sidTypes->push_back(new CSlrString("8580 + digi boost (ReSID)"));
+	const char *name;
+	int engine;
+	int model;
+};
 
-	// 3-4
-	sidTypes->push_back(new CSlrString("6581 (FastSID)"));
-	sidTypes->push_back(new CSlrString("8580 (FastSID)"));
+static std::vector<CViceSidTypeEntry> BuildViceSidTypeTable()
+{
+	std::vector<CViceSidTypeEntry> table = {
+		// 0-2
+		{ "6581 (ReSID)", SID_ENGINE_RESID, SID_MODEL_6581 },
+		{ "8580 (ReSID)", SID_ENGINE_RESID, SID_MODEL_8580 },
+		{ "8580 + digi boost (ReSID)", SID_ENGINE_RESID, SID_MODEL_8580D },
+		// 3-4
+		{ "6581 (FastSID)", SID_ENGINE_FASTSID, SID_MODEL_6581 },
+		{ "8580 (FastSID)", SID_ENGINE_FASTSID, SID_MODEL_8580 },
+		// 5-14
+		{ "6581R3 4885 (ReSID-fp)", SID_ENGINE_RESID_FP, SID_MODEL_6581R3_4885 },
+		{ "6581R3 0486S (ReSID-fp)", SID_ENGINE_RESID_FP, SID_MODEL_6581R3_0486S },
+		{ "6581R3 3984 (ReSID-fp)", SID_ENGINE_RESID_FP, SID_MODEL_6581R3_3984 },
+		{ "6581R4AR 3789 (ReSID-fp)", SID_ENGINE_RESID_FP, SID_MODEL_6581R4AR_3789 },
+		{ "6581R3 4485 (ReSID-fp)", SID_ENGINE_RESID_FP, SID_MODEL_6581R3_4485 },
+		{ "6581R4 1986S (ReSID-fp)", SID_ENGINE_RESID_FP, SID_MODEL_6581R4_1986S },
+		{ "8580R5 3691 (ReSID-fp)", SID_ENGINE_RESID_FP, SID_MODEL_8580R5_3691 },
+		{ "8580R5 3691 + digi (ReSID-fp)", SID_ENGINE_RESID_FP, SID_MODEL_8580R5_3691D },
+		{ "8580R5 1489 (ReSID-fp)", SID_ENGINE_RESID_FP, SID_MODEL_8580R5_1489 },
+		{ "8580R5 1489 + digi (ReSID-fp)", SID_ENGINE_RESID_FP, SID_MODEL_8580R5_1489D },
+#if defined(WIN32)
+		// 15
+		{ "HardSID", SID_ENGINE_HARDSID, SID_MODEL_DEFAULT },
+#endif
+	};
 
-	// 5-14
-	sidTypes->push_back(new CSlrString("6581R3 4885 (ReSID-fp)"));
-	sidTypes->push_back(new CSlrString("6581R3 0486S (ReSID-fp)"));
-	sidTypes->push_back(new CSlrString("6581R3 3984 (ReSID-fp)"));
-	sidTypes->push_back(new CSlrString("6581R4AR 3789 (ReSID-fp)"));
-	sidTypes->push_back(new CSlrString("6581R3 4485 (ReSID-fp)"));
-	sidTypes->push_back(new CSlrString("6581R4 1986S (ReSID-fp)"));
-	sidTypes->push_back(new CSlrString("8580R5 3691 (ReSID-fp)"));
-	sidTypes->push_back(new CSlrString("8580R5 3691 + digi (ReSID-fp)"));
-	sidTypes->push_back(new CSlrString("8580R5 1489 (ReSID-fp)"));
-	sidTypes->push_back(new CSlrString("8580R5 1489 + digi (ReSID-fp)"));
+#if defined(HAVE_USBSID)
+	// 15 (16 on Windows), listed only when a board is attached at startup, as VICE does.
+	// usbsid_detect() enumerates without opening, the board stays free for other programs
+	// until the engine is selected.
+	int numBoards = usbsid_detect();
+	if (numBoards > 0)
+	{
+		LOGM("USBSID-Pico: %d board(s) attached, SID engine listed", numBoards);
+		table.push_back({ "USBSID-Pico", SID_ENGINE_USBSID, SID_MODEL_DEFAULT });
+	}
+	else
+	{
+		LOGM("USBSID-Pico: no board attached, SID engine not listed");
+	}
+#endif
+
+	return table;
 }
 
+// Built once on first use (menu creation or emulation start), thread safe static init.
+static const std::vector<CViceSidTypeEntry> &GetViceSidTypeTable()
+{
+	static const std::vector<CViceSidTypeEntry> table = BuildViceSidTypeTable();
+	return table;
+}
+
+void CDebugInterfaceVice::GetSidTypes(std::vector<CSlrString *> *sidTypes)
+{
+	for (const CViceSidTypeEntry &entry : GetViceSidTypeTable())
+	{
+		sidTypes->push_back(new CSlrString(entry.name));
+	}
+}
 
 void CDebugInterfaceVice::GetSidTypes(std::vector<const char *> *sidTypes)
 {
-	// 0-2
-	sidTypes->push_back("6581 (ReSID)");
-	sidTypes->push_back("8580 (ReSID)");
-	sidTypes->push_back("8580 + digi boost (ReSID)");
-	
-	// 3-4
-	sidTypes->push_back("6581 (FastSID)");
-	sidTypes->push_back("8580 (FastSID)");
-	
-	// 5-14
-	sidTypes->push_back("6581R3 4885 (ReSID-fp)");
-	sidTypes->push_back("6581R3 0486S (ReSID-fp)");
-	sidTypes->push_back("6581R3 3984 (ReSID-fp)");
-	sidTypes->push_back("6581R4AR 3789 (ReSID-fp)");
-	sidTypes->push_back("6581R3 4485 (ReSID-fp)");
-	sidTypes->push_back("6581R4 1986S (ReSID-fp)");
-	sidTypes->push_back("8580R5 3691 (ReSID-fp)");
-	sidTypes->push_back("8580R5 3691 + digi (ReSID-fp)");
-	sidTypes->push_back("8580R5 1489 (ReSID-fp)");
-	sidTypes->push_back("8580R5 1489 + digi (ReSID-fp)");
-	
-#if defined(WIN32)
-	// 15 hardsid
-	sidTypes->push_back("HardSID");
-#endif
-	
+	for (const CViceSidTypeEntry &entry : GetViceSidTypeTable())
+	{
+		sidTypes->push_back(entry.name);
+	}
 }
 
 int c64_change_sid_type_value_to_set = 0;
@@ -1921,62 +1948,84 @@ void CDebugInterfaceVice::SetSidTypeAsync(int sidType)
 {
 	LOGD("CDebugInterfaceVice::SetSidTypeAsync: sidType=%d", sidType);
 	
+	const std::vector<CViceSidTypeEntry> &table = GetViceSidTypeTable();
+	
+	// out of range (settings from another OS or build, or the USBSID-Pico entry while no board
+	// was attached at startup) falls back to the first entry. c64SettingsSIDEngineModel is kept,
+	// the stored choice comes back when the engine is listed again on a later start.
+	int index = 0;
+	if (sidType >= 0 && sidType < (int)table.size())
+	{
+		index = sidType;
+	}
+	else
+	{
+		LOGError("CDebugInterfaceVice::SetSidTypeAsync: SID type %d not available, using %s", sidType, table[0].name);
+	}
+	
 	snapshotsManager->LockMutex();
 	
-	switch(sidType)
+	sid_set_engine_model(table[index].engine, table[index].model);
+	
+	// sid_set_engine_model() ignores a failed engine open, verify the active engine
+	int activeEngine = -1;
+	resources_get_int("SidEngine", &activeEngine);
+	if (activeEngine != table[index].engine)
 	{
-		default:
-		case 0:
-			sid_set_engine_model(SID_ENGINE_RESID, SID_MODEL_6581);
-			break;
-		case 1:
-			sid_set_engine_model(SID_ENGINE_RESID, SID_MODEL_8580);
-			break;
-		case 2:
-			sid_set_engine_model(SID_ENGINE_RESID, SID_MODEL_8580D);
-			break;
-		case 3:
-			sid_set_engine_model(SID_ENGINE_FASTSID, SID_MODEL_6581);
-			break;
-		case 4:
-			sid_set_engine_model(SID_ENGINE_FASTSID, SID_MODEL_8580);
-			break;
-		case 5:
-			sid_set_engine_model(SID_ENGINE_RESID_FP, SID_MODEL_6581R3_4885);
-			break;
-		case 6:
-			sid_set_engine_model(SID_ENGINE_RESID_FP, SID_MODEL_6581R3_0486S);
-			break;
-		case 7:
-			sid_set_engine_model(SID_ENGINE_RESID_FP, SID_MODEL_6581R3_3984);
-			break;
-		case 8:
-			sid_set_engine_model(SID_ENGINE_RESID_FP, SID_MODEL_6581R4AR_3789);
-			break;
-		case 9:
-			sid_set_engine_model(SID_ENGINE_RESID_FP, SID_MODEL_6581R3_4485);
-			break;
-		case 10:
-			sid_set_engine_model(SID_ENGINE_RESID_FP, SID_MODEL_6581R4_1986S);
-			break;
-		case 11:
-			sid_set_engine_model(SID_ENGINE_RESID_FP, SID_MODEL_8580R5_3691);
-			break;
-		case 12:
-			sid_set_engine_model(SID_ENGINE_RESID_FP, SID_MODEL_8580R5_3691D);
-			break;
-		case 13:
-			sid_set_engine_model(SID_ENGINE_RESID_FP, SID_MODEL_8580R5_1489);
-			break;
-		case 14:
-			sid_set_engine_model(SID_ENGINE_RESID_FP, SID_MODEL_8580R5_1489D);
-			break;
-		case 15:
-			sid_set_engine_model(SID_ENGINE_HARDSID, SID_MODEL_DEFAULT);
-			break;
-			
+		LOGError("CDebugInterfaceVice::SetSidTypeAsync: engine %d not available, fall back to %s",
+				 table[index].engine, table[0].name);
+		
+		sid_set_engine_model(table[0].engine, table[0].model);
+		c64SettingsSIDEngineModel = 0;
+		
+		viewC64->ShowMessageError("%s is not available, using %s", table[index].name, table[0].name);
 	}
+	
 	snapshotsManager->UnlockMutex();
+}
+
+// apply USBSID settings to the engine, must run in the emulation thread context
+void CDebugInterfaceVice::SetUSBSIDSettingsAsync()
+{
+#ifdef HAVE_USBSID
+	resources_set_int("SidUSBSIDReadMode", c64SettingsUSBSIDReadMode);
+	resources_set_int("SidUSBSIDAudioMode", c64SettingsUSBSIDAudioMode);
+	resources_set_int("SidUSBSIDBufferSize", c64SettingsUSBSIDBufferSize);
+	resources_set_int("SidUSBSIDDiffSize", c64SettingsUSBSIDDiffSize);
+	usbsid_set_mute_on_pause(c64SettingsUSBSIDMuteOnPause ? 1 : 0);
+#endif
+}
+
+static void c64_change_usbsid_settings_trap(uint16_t addr, void *v)
+{
+	debugInterfaceVice->SetUSBSIDSettingsAsync();
+}
+
+void CDebugInterfaceVice::SetUSBSIDSettings()
+{
+#ifdef HAVE_USBSID
+	if (!isRunning)
+	{
+		// applied when the emulation thread starts
+		return;
+	}
+	interrupt_maincpu_trigger_trap(c64_change_usbsid_settings_trap, NULL);
+#endif
+}
+
+bool CDebugInterfaceVice::GetUSBSIDInfo(int *numSids, int *pcbVersion)
+{
+	*numSids = 0;
+	*pcbVersion = 0;
+#ifdef HAVE_USBSID
+	if (usbsid_is_connected())
+	{
+		*numSids = usbsid_get_numsids();
+		*pcbVersion = usbsid_get_pcbversion();
+		return true;
+	}
+#endif
+	return false;
 }
 
 //
@@ -2221,6 +2270,9 @@ int CDebugInterfaceVice::GetC64ModelType()
 void CDebugInterfaceVice::SetEmulationMaximumSpeed(int maximumSpeed)
 {
 	resources_set_int("Speed", maximumSpeed);
+#ifdef HAVE_USBSID
+	usbsid_set_overspeed(maximumSpeed > 100 ? 1 : 0);
+#endif
 	
 	if (maximumSpeed < 20)
 	{
@@ -3253,6 +3305,7 @@ static void load_snapshot_trap(uint16_t addr, void *v)
 	
 	c64d_update_c64_model();
 	
+	debugInterfaceVice->SetUSBSIDSettingsAsync();
 	debugInterfaceVice->SetSidTypeAsync(c64SettingsSIDEngineModel);
 	debugInterfaceVice->SetSidSamplingMethod(c64SettingsRESIDSamplingMethod);
 	debugInterfaceVice->SetSidEmulateFilters(c64SettingsRESIDEmulateFilters);

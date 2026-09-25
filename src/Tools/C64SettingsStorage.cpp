@@ -113,6 +113,12 @@ bool c64SettingsRESIDEmulateFilters = true;
 int c64SettingsRESIDPassBand = 90;
 int c64SettingsRESIDFilterBias = 500;
 
+int c64SettingsUSBSIDReadMode = 0;
+int c64SettingsUSBSIDAudioMode = 0;
+int c64SettingsUSBSIDBufferSize = 8192;
+int c64SettingsUSBSIDDiffSize = 64;
+bool c64SettingsUSBSIDMuteOnPause = true;
+
 uint8 c64SettingsSIDStereo = 0;					// "SidStereo" 0=none, 1=stereo, 2=triple
 uint16 c64SettingsSIDStereoAddress = 0xD420;	// "SidStereoAddressStart"
 uint16 c64SettingsSIDTripleAddress = 0xDF00;	// "SidTripleAddressStart"
@@ -576,6 +582,11 @@ void C64DebuggerStoreSettings()
 	storeSettingI32(byteBuffer, "RESIDFilterBias", c64SettingsRESIDFilterBias);
 	
 	storeSettingU8(byteBuffer, "SIDEngineModel", c64SettingsSIDEngineModel);
+	storeSettingI32(byteBuffer, "USBSIDReadMode", c64SettingsUSBSIDReadMode);
+	storeSettingI32(byteBuffer, "USBSIDAudioMode", c64SettingsUSBSIDAudioMode);
+	storeSettingI32(byteBuffer, "USBSIDBufferSize", c64SettingsUSBSIDBufferSize);
+	storeSettingI32(byteBuffer, "USBSIDDiffSize", c64SettingsUSBSIDDiffSize);
+	storeSettingBool(byteBuffer, "USBSIDMuteOnPause", c64SettingsUSBSIDMuteOnPause);
 
 	storeSettingBool(byteBuffer, "MuteSIDOnPause", c64SettingsMuteSIDOnPause);
 	storeSettingBool(byteBuffer, "RunSIDWhenWarp", c64SettingsRunSIDWhenInWarp);
@@ -1378,6 +1389,41 @@ void C64DebuggerSetSetting(const char *name, void *value)
 			if (viewC64->debugInterfaceC64)
 			{
 				viewC64->debugInterfaceC64->SetSidType(c64SettingsSIDEngineModel);
+			}
+			return;
+		}
+		else if (!strcmp(name, "USBSIDReadMode")
+				 || !strcmp(name, "USBSIDAudioMode")
+				 || !strcmp(name, "USBSIDBufferSize")
+				 || !strcmp(name, "USBSIDDiffSize")
+				 || !strcmp(name, "USBSIDMuteOnPause"))
+		{
+			if (!strcmp(name, "USBSIDReadMode"))
+			{
+				c64SettingsUSBSIDReadMode = (*((int*)value)) ? 1 : 0;
+			}
+			else if (!strcmp(name, "USBSIDAudioMode"))
+			{
+				c64SettingsUSBSIDAudioMode = (*((int*)value)) ? 1 : 0;
+			}
+			else if (!strcmp(name, "USBSIDBufferSize"))
+			{
+				int v = *((int*)value);
+				c64SettingsUSBSIDBufferSize = (v < 256) ? 256 : v;
+			}
+			else if (!strcmp(name, "USBSIDDiffSize"))
+			{
+				int v = *((int*)value);
+				c64SettingsUSBSIDDiffSize = (v < 16) ? 16 : v;
+			}
+			else
+			{
+				c64SettingsUSBSIDMuteOnPause = *((bool*)value);
+			}
+
+			if (viewC64->debugInterfaceC64)
+			{
+				viewC64->debugInterfaceC64->SetUSBSIDSettings();
 			}
 			return;
 		}

@@ -135,6 +135,24 @@ link_directories(${GTK3_LIBRARY_DIRS})
 add_definitions(${GTK3_CFLAGS_OTHER})
 find_package(ALSA REQUIRED)
 
+# USBSID-Pico SID engine (needs libusb-1.0). ON when libusb is found, OFF otherwise.
+pkg_check_modules(LIBUSB libusb-1.0)
+if(LIBUSB_FOUND)
+    option(USBSID_SUPPORT "Enable USBSID-Pico SID engine" ON)
+else()
+    option(USBSID_SUPPORT "Enable USBSID-Pico SID engine" OFF)
+    message(STATUS "libusb-1.0 not found, USBSID-Pico support disabled")
+endif()
+if(USBSID_SUPPORT AND NOT LIBUSB_FOUND)
+    message(FATAL_ERROR "USBSID_SUPPORT requires libusb-1.0 (install libusb-1.0-0-dev)")
+endif()
+if(USBSID_SUPPORT)
+    message(STATUS "USBSID-Pico support enabled")
+    add_definitions(-DHAVE_USBSID)
+    include_directories(${LIBUSB_INCLUDE_DIRS})
+    link_directories(${LIBUSB_LIBRARY_DIRS})
+endif()
+
 # The bundled libpng (1.5.2, in MTEngineSDL) is what actually gets linked into the
 # binary. pkg-config for gtk+-3.0 drags in -I/usr/include/libpng16, which lands in the
 # include path BEFORE the bundled one, so png.h resolves to the system 1.6.x header.
@@ -279,6 +297,7 @@ include_directories(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Emulators/vice/raster"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Emulators/vice/iecbus"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Emulators/vice/imagecontents"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Emulators/vice/lib/libusbsiddrv"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Emulators/vice/lib/p64"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Emulators/vice/monitor"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Emulators/vice/parallel"
@@ -1492,6 +1511,24 @@ add_library(EmulatorVice STATIC
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Emulators/vice/joyport/waasoft_dongle.c"
 )
 
+if(USBSID_SUPPORT)
+    set(USBSID_C_SOURCES
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/Emulators/vice/sid/usbsid.c"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/Emulators/vice/arch/hwsiddrv/usbsid-unixwin-drv.c"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/Emulators/vice/arch/hwsiddrv/us-unixwin-device.c"
+    )
+    target_sources(EmulatorVice PRIVATE
+        ${USBSID_C_SOURCES}
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/Emulators/vice/lib/libusbsiddrv/USBSID.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/Emulators/vice/lib/libusbsiddrv/USBSIDInterface.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/Emulators/vice/lib/libusbsiddrv/USBSID_Manager.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/Emulators/vice/lib/libusbsiddrv/USBSIDManagerInterface.cpp"
+    )
+    # Global -Wno-implicit-function-declaration hides wrong prototypes, keep it an error.
+    set_source_files_properties(${USBSID_C_SOURCES} PROPERTIES
+        COMPILE_OPTIONS "-Werror=implicit-function-declaration")
+endif()
+
 add_executable(retrodebugger
     "${CMAKE_CURRENT_SOURCE_DIR}/src/RetroDebuggerAppInit.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Embedded/RetroDebuggerEmbeddedData.cpp"
@@ -1873,3 +1910,7 @@ target_link_libraries(retrodebugger
     ${MT_SDL3_LIB}
     ${ALSA_LIBRARIES}
 )
+
+if(USBSID_SUPPORT)
+    target_link_libraries(retrodebugger ${LIBUSB_LIBRARIES})
+endif()

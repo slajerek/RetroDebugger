@@ -124,6 +124,13 @@ typedef struct sid_parsid_snapshot_state_s {
     uint8_t parsid_ctrport;
 } sid_parsid_snapshot_state_t;
 
+typedef struct sid_us_snapshot_state_s {
+    uint8_t regs[0x20 * 4];
+    CLOCK usid_main_clk;
+    CLOCK usid_alarm_clk;
+    uint8_t lastaccess_chipno;
+} sid_us_snapshot_state_t;
+
 typedef struct sid_ssi2001_snapshot_state_s {
     uint8_t regs[32];
 } sid_ssi2001_snapshot_state_t;
