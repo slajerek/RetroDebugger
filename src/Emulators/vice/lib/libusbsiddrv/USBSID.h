@@ -30,6 +30,13 @@
 
 #ifdef __APPLE__
 #undef HAVE_ALIGNED_ALLOC
+/**
+ * For better compatibilty MacOs uses
+ * the Vendor ITF instead of the CDC
+ * ITF. From firmware v0.8.0+ both
+ * interfaces handle incoming data
+ * the same way.
+ */
 #define USE_VENDOR_ITF
 #define LIBUSB_TIMEOUT   1000
 #else
@@ -124,6 +131,11 @@ namespace USBSID_NS
     ACM_CTRL_DTR   = 0x01,
     ACM_CTRL_RTS   = 0x02,
 #ifndef USE_VENDOR_ITF /* By default the driver uses the CDC port */
+    /**
+     * From firmware version v0.8.0+ the
+     * Vendor ITF calls in firmware are
+     * handled in exactly the same way
+     * as the CDC calls */
     EP_OUT_ADDR    = 0x02,
     EP_IN_ADDR     = 0x82,
 #else
@@ -380,18 +392,20 @@ namespace USBSID_NS
       int USBSID_IsRunning(void);
 
       /* Ringbuffer */
-      void USBSID_InitRingBuffer(int buffer_size, int differ_size);
-      void USBSID_InitRingBuffer(void);
-      void USBSID_DeInitRingBuffer(void);
-      bool USBSID_IsHigher(void);
-      int USBSID_RingDiff(void);
-      void USBSID_RingPut(uint8_t item);
-      uint8_t USBSID_RingGet(void);
-      void USBSID_FlushBuffer(void);
+      void USBSID_InitRingBuffer(int buffer_size, int differ_size);  /* Player thread */
+      void USBSID_InitRingBuffer(void);    /* Player thread */
+      void USBSID_DeInitRingBuffer(void);  /* Player thread */
+      bool USBSID_IsHigher(void);          /* Driver thread only */
+      int USBSID_RingDiff(void);           /* Driver thread only */
+      void USBSID_RingPut(uint8_t item);   /* Player thread */
+      uint8_t USBSID_RingGet(void);        /* Driver thread only */
+      void USBSID_FlushBuffer(void);       /* Driver thread only */
+      void USBSID_SendThreadBuffer(void);  /* Driver thread only, us_mutex held */
+      void USBSID_WaitTransferOut(void);   /* Driver thread only, us_mutex held */
 
       /* Ringbuffer reads & writes*/
-      void USBSID_RingPopCycled(void);  /* Threaded writer with cycles */
-      void USBSID_RingPop(void);        /* Threaded writer */
+      void USBSID_RingPopCycled(void);     /* Driver thread writer with cycles */
+      void USBSID_RingPop(void);           /* Driver thread writer */
 
     public:
 
@@ -464,7 +478,7 @@ namespace USBSID_NS
 
       /* Ringbuffer */
       void USBSID_SetFlush(void);                                              /* Set flush buffer flag to 1 */
-      void USBSID_Flush(void);                                                 /* Set flush buffer flag to 1 and flushes the buffer */
+      void USBSID_Flush(void);                                                 /* Same as USBSID_SetFlush, only the driver thread now sends the buffer */
       void USBSID_SetBufferSize(int size);                                     /* Set the buffer size for storing writes */
       void USBSID_SetDiffSize(int size);                                       /* Set the minimum size difference between head & tail */
       void USBSID_ResetRingBuffer(void);                                       /* Resets the ringbuffer to default state */

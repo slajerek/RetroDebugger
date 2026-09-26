@@ -254,7 +254,7 @@ void USBSID_Class::USBSID_ClearBus(void)
 void USBSID_Class::USBSID_SetClockRate(long clockrate_cycles, bool suspend_sids)
 {
   if (!us_PortIsOpen) return;
-  for (uint8_t i = 0; i < 4; i++) {
+  for (uint8_t i = 0; i < (sizeof(clockSpeed) / sizeof(clockSpeed[0])); i++) {
     if (clockSpeed[i] == clockrate_cycles) {
       cycles_per_sec = clockSpeed[i];
       cycles_per_frame = refreshRate[i];
@@ -793,7 +793,8 @@ void* USBSID_Class::USBSID_Thread(void)
     if (flush_buffer == 1) {
       USBSID_FlushBuffer();
     }
-    while ((us_ringbuffer.ring_read != us_ringbuffer.ring_write)
+    while ((run_thread == 1)
+           && (us_ringbuffer.ring_read != us_ringbuffer.ring_write)
            && (USBSID_RingDiff() > diff_size)) {
       if (withcycles) {
         USBSID_RingPopCycled();
@@ -807,7 +808,9 @@ void* USBSID_Class::USBSID_Thread(void)
      * data is put into the ring instead of constantly polling the ringbuffer
      * and causing cpu->thread hike with multiple boards connected.
      * The timeout is just a safety net incase of a missed wakeup and not
-     * the real wake mechanism, so its exact value is not latency-critical. */
+     * the real wake mechanism, so its exact value is not latency-critical.
+     * USBSID_SendThreadBuffer() releases us_mutex during USB I/O, a
+     * producer never waits on a transfer. */
     if (run_thread == 1
         && !((us_ringbuffer.ring_read != us_ringbuffer.ring_write)
              && (USBSID_RingDiff() > diff_size))) {
@@ -1037,10 +1040,9 @@ uint8_t USBSID_Class::USBSID_RingGet()
 }
 
 void USBSID_Class::USBSID_Flush(void)
-{
+{ /* Signal only, USBSID_FlushBuffer() runs on the driver thread */
   if (!us_PortIsOpen) return;
   USBSID_SetFlush();
-  USBSID_FlushBuffer();
   return;
 }
 
@@ -1088,13 +1090,8 @@ void USBSID_Class::USBSID_FlushBuffer(void)
     thread_buffer[0] = (withcycles == 1)
       ? (uint8_t)(CYCLED_WRITE << 6 | (buffer_pos - 1))
       : (uint8_t)(WRITE << 6 | (buffer_pos - 1));
-    memcpy(out_buffer, thread_buffer, buffer_pos);
-    buffer_pos = 1;
     flush_buffer = 0;
-    libusb_submit_transfer(transfer_out);
-    libusb_handle_events_completed(ctx, NULL);
-    memset(thread_buffer, 0, 64);
-    memset(out_buffer, 0, len_out_buffer);
+    USBSID_SendThreadBuffer();
   } else {
     flush_buffer = 0;
   }
@@ -1155,10 +1152,10 @@ void USBSID_Class::USBSID_WriteRingCycledN(const uint8_t *items, int count)
 
 void USBSID_Class::USBSID_RingPopCycled(void)
 {
-#ifdef USE_VENDOR_ITF /* This can break play for tunes like Fanta in Space */
-  if (transfer_out_pending)
+  if (transfer_out_pending) {
+    USBSID_WaitTransferOut();
     return;
-#endif
+  }
   thread_buffer[buffer_pos++] = USBSID_RingGet();  /* register */
   thread_buffer[buffer_pos++] = USBSID_RingGet();  /* value */
   thread_buffer[buffer_pos++] = USBSID_RingGet();  /* n cycles high */
@@ -1169,25 +1166,17 @@ void USBSID_Class::USBSID_RingPopCycled(void)
       || flush_buffer == 1) {
     flush_buffer = 0;
     thread_buffer[0] = (uint8_t)((CYCLED_WRITE << 6) | (buffer_pos - 1));
-    memcpy(out_buffer, thread_buffer, buffer_pos);
-    buffer_pos = 1;
-    transfer_out_pending = true;
-    libusb_submit_transfer(transfer_out);
-    libusb_handle_events_completed(ctx, NULL);
-#ifdef USE_VENDOR_ITF /* This can break play for tunes like Fanta in Space */
-    struct timeval tv = {0, 500};  // 0.5 ms
-    libusb_handle_events_timeout_completed(ctx, &tv, NULL);
-#endif
-    memset(thread_buffer, 0, 64);
-    memset(out_buffer, 0, len_out_buffer);
+    USBSID_SendThreadBuffer();
   }
   return;
 }
 
 void USBSID_Class::USBSID_RingPop(void)
 {
-  if (transfer_out_pending)
-        return;
+  if (transfer_out_pending) {
+    USBSID_WaitTransferOut();
+    return;
+  }
   write_completed = 0;
 
   /* Ex: 0xD418 */
@@ -1198,13 +1187,48 @@ void USBSID_Class::USBSID_RingPop(void)
     || flush_buffer == 1) {
     flush_buffer = 0;
     thread_buffer[0] = (uint8_t)((WRITE << 6) | (buffer_pos - 1));
-    memcpy(out_buffer, thread_buffer, buffer_pos);
-    buffer_pos = 1;
-    libusb_submit_transfer(transfer_out);
-    libusb_handle_events_completed(ctx, NULL);
-    memset(thread_buffer, 0, 64);
-    memset(out_buffer, 0, len_out_buffer);
+    USBSID_SendThreadBuffer();
   }
+  return;
+}
+
+void USBSID_Class::USBSID_SendThreadBuffer(void)
+{ /* Driver thread only, us_mutex held on entry and on return. Release
+   * us_mutex during USB I/O, producers only wait on ring access.
+   * thread_buffer and out_buffer are only touched by the driver thread. */
+  const int len = buffer_pos;
+  buffer_pos = 1;
+  pthread_mutex_unlock(&us_mutex);
+  while (transfer_out_pending && run_thread == 1) {  /* Previous packet in flight */
+    struct timeval tv = {0, 500};  // 0.5 ms
+    libusb_handle_events_timeout_completed(ctx, &tv, NULL);
+  }
+  if (!transfer_out_pending && transfer_out != NULL) {  /* NULL after a failed transfer */
+    memset(out_buffer, 0, len_out_buffer);
+    memcpy(out_buffer, thread_buffer, len);
+    transfer_out_pending = true;
+    if (libusb_submit_transfer(transfer_out) < 0) {
+      transfer_out_pending = false;
+    } else {
+      libusb_handle_events_completed(ctx, NULL);
+#ifdef USE_VENDOR_ITF
+      struct timeval tv = {0, 500};  // 0.5 ms
+      libusb_handle_events_timeout_completed(ctx, &tv, NULL);
+#endif
+    }
+  }
+  memset(thread_buffer, 0, 64);
+  pthread_mutex_lock(&us_mutex);
+  return;
+}
+
+void USBSID_Class::USBSID_WaitTransferOut(void)
+{ /* Driver thread only, us_mutex held on entry and on return. Block on
+   * libusb events with us_mutex released instead of spinning. */
+  pthread_mutex_unlock(&us_mutex);
+  struct timeval tv = {0, 500};  // 0.5 ms
+  libusb_handle_events_timeout_completed(ctx, &tv, NULL);
+  pthread_mutex_lock(&us_mutex);
   return;
 }
 
@@ -1477,7 +1501,7 @@ void USBSID_Class::LIBUSB_InitOutBuffer(void)
   USBDBG(stdout, "[USBSID] Alloc out_buffer complete\r\n");
   transfer_out = libusb_alloc_transfer(0);
   USBDBG(stdout, "[USBSID] Alloc transfer_out complete\r\n");
-  libusb_fill_bulk_transfer(transfer_out, devh, EP_OUT_ADDR, out_buffer, len_out_buffer, usb_out, NULL, LIBUSB_TIMEOUT);
+  libusb_fill_bulk_transfer(transfer_out, devh, EP_OUT_ADDR, out_buffer, len_out_buffer, usb_out, this, LIBUSB_TIMEOUT);
   USBDBG(stdout, "[USBSID] libusb_fill_bulk_transfer transfer_out complete\r\n");
 
   if (thread_buffer == NULL) {
@@ -1685,7 +1709,10 @@ void LIBUSB_CALL USBSID_Class::usb_out(struct libusb_transfer *transfer)
         transfer->status, libusb_error_name(transfer->status), libusb_strerror((enum libusb_error)transfer->status));
     }
     libusb_free_transfer(transfer);
-    if (self) self->transfer_out = NULL;
+    if (self) {
+      self->transfer_out = NULL;
+      self->transfer_out_pending = false;
+    }
     return;
   }
 
