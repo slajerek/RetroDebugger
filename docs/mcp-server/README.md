@@ -164,6 +164,13 @@ unsupported devices, missing paths, and images VICE cannot attach. It bypasses
 the GUI's *Load first PRG on disk insert* setting, and does not reset, load, or
 start any program. Swap at a disk-change prompt rather than during active I/O.
 
+**Known VICE limitation:** a path that exists but is not a valid disk image can
+fail *after* VICE clears its virtual-drive image pointer. When replacing an
+already mounted disk, that failure can leave the old image visible to the
+emulated drive but inaccessible to disk-only detach. This also affects GUI
+disk insertion. Use known-good image files for in-program swaps; an attach
+error does **not** guarantee that the previous disk remains safely ejectable.
+
 ## Troubleshooting
 
 ### `retro_load` says the file was not found

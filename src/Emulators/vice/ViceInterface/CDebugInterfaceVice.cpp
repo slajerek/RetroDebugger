@@ -1554,6 +1554,8 @@ bool CDebugInterfaceVice::AttachDiskImage(CSlrString *path)
 
 	// VICE returns 0 only when the image was attached. In particular, checking
 	// just whether a disk is present can misreport a failed replacement.
+	// An existing invalid image may still disturb an already-mounted virtual
+	// drive in VICE's failure path; only swap to known-valid media mid-program.
 	bool attached = (file_system_attach_disk(8, 0, asciiPath) == 0);
 	delete [] asciiPath;
 

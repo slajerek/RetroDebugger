@@ -1100,7 +1100,7 @@ void CMCPServer::RegisterDebuggerTools(CDebuggerServer *server)
 	{
 		MCPToolDescriptor tool;
 		tool.name = "retro_disk_attach";
-		tool.description = "Attach one disk image WITHOUT resetting the machine and WITHOUT loading or running its first program. This is the safe counterpart to retro_disk_detach for an in-program disk swap. The path is resolved by the RetroDebugger host process; the current C64 implementation supports device 8.";
+		tool.description = "Attach a known-valid disk image to C64 device 8 WITHOUT resetting or loading/running its first program. The path is resolved by the RetroDebugger host process. Warning: attempting to replace a mounted disk with an existing invalid image may leave VICE's drive state inconsistent; do not rely on failed replacement being harmless.";
 		tool.inputSchema = {
 			{"type", "object"},
 			{"properties", {
