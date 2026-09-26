@@ -120,6 +120,9 @@ USBSID_Class::~USBSID_Class()
   thread_buffer = NULL;
   write_buffer = NULL;
   result = NULL;
+  /* Destroy here, a thread restart after StopThread() locks it again */
+  pthread_mutex_destroy(&us_mutex);
+  pthread_cond_destroy(&us_cond);
 }
 
 int USBSID_Class::USBSID_Init(bool start_threaded, bool with_cycles)
@@ -506,7 +509,6 @@ void USBSID_Class::USBSID_SingleWrite(unsigned char *buff, size_t len)
     USBERR(stderr, "[USBSID] Error while sending synchronous write buffer of length %d\n",
       actual_length);
   }
-  transfer_out_pending = false;
   return;
 }
 
@@ -519,7 +521,6 @@ unsigned char USBSID_Class::USBSID_SingleRead(uint8_t reg)
     USBERR(stderr, "[USBSID] Error while sending write command for reading\n");
   }
   rc = libusb_bulk_transfer(devh, EP_IN_ADDR, result, 1, &actual_length, LIBUSB_TIMEOUT);
-  transfer_in_pending = false;
   if (rc == LIBUSB_ERROR_TIMEOUT) {
     USBERR(stderr, "[USBSID] Timeout error while reading (%d)\n", actual_length);
     return 0;
@@ -536,7 +537,6 @@ unsigned char USBSID_Class::USBSID_SingleReadConfig(unsigned char *buff, size_t 
   if (!us_PortIsOpen) return 0;
   int actual_length;
   rc = libusb_bulk_transfer(devh, EP_IN_ADDR, buff, len, &actual_length, LIBUSB_TIMEOUT);
-  transfer_in_pending = false;
   if (rc == LIBUSB_ERROR_TIMEOUT) {
     USBERR(stderr, "[USBSID] Timeout error while reading (%d)\n", actual_length);
     return 0;
@@ -553,7 +553,6 @@ int USBSID_Class::USBSID_ReadConfig(unsigned char *buff, size_t len)
   if (!us_PortIsOpen) return 0;
   int actual_length;
   rc = libusb_bulk_transfer(devh, EP_IN_ADDR, buff, len, &actual_length, LIBUSB_TIMEOUT);
-  transfer_in_pending = false;
   if (rc == LIBUSB_ERROR_TIMEOUT) {
     USBERR(stderr, "[USBSID] Timeout error while reading (%d)\n", actual_length);
     return 0;
@@ -783,8 +782,6 @@ void* USBSID_Class::USBSID_Thread(void)
   #ifdef _GNU_SOURCE
   pthread_setname_np(pthread_self(), "USBSID Thread");
   #endif
-  pthread_detach(pthread_self());
-  USBDBG(stdout, "[USBSID] Thread detached\r\n");
   if (withcycles) {
     USBDBG(stdout, "[USBSID] Thread with cycles\r\n");
   }
@@ -859,12 +856,11 @@ void USBSID_Class::USBSID_StopThread(void)
     run_thread = flush_buffer = 0;
     pthread_cond_signal(&us_cond);
     pthread_mutex_unlock(&us_mutex);
-    pthread_join(us_ptid, NULL);
-    USBDBG(stdout, "[USBSID] Thread attached\r\n");
+    pthread_join(us_ptid, NULL);  /* joinable, the thread does not detach itself */
+    USBDBG(stdout, "[USBSID] Thread joined\r\n");
     threaded = withcycles = false;
     USBSID_DeInitRingBuffer(); /* after the join, the thread reads the ring until it exits */
     while (us_thread > 0) {};
-    pthread_mutex_destroy(&us_mutex);
   }
   return;
 }
@@ -881,8 +877,6 @@ void USBSID_Class::USBSID_RestartThread(bool with_cycles)
   /* First check if not already running */
   USBSID_StopThread();
   /* Stop any active transfers */
-  transfer_in_pending = false;
-  transfer_out_pending = false;
   LIBUSB_StopTransfers();
   /* Free all buffers */
   LIBUSB_FreeOutBuffer();
@@ -1012,17 +1006,9 @@ int USBSID_Class::USBSID_RingFree(void)
   return ring_size - 1 - ((w - r + ring_size) % ring_size);
 }
 
-bool USBSID_Class::USBSID_IsHigher()
-{
-  return (us_ringbuffer.ring_read < us_ringbuffer.ring_write);
-}
-
 int USBSID_Class::USBSID_RingDiff()
-{
-  int d = (USBSID_IsHigher()
-    ? (us_ringbuffer.ring_read - us_ringbuffer.ring_write)
-    : (us_ringbuffer.ring_write - us_ringbuffer.ring_read));
-  return ((d < 0) ? (d * -1) : d);
+{ /* Bytes waiting in the ring, counted across the wrap-around */
+  return (us_ringbuffer.ring_write - us_ringbuffer.ring_read + ring_size) % ring_size;
 }
 
 void USBSID_Class::USBSID_RingPut(uint8_t item)
@@ -1582,36 +1568,57 @@ void USBSID_Class::LIBUSB_StopTransfers(void)
 {
   USBDBG(stdout, "[USBSID] Stopping transfers\r\n");
 
-  if (transfer_out && transfer_out_pending) {
+  /* Cancel regardless of the pending flags: libusb knows whether a transfer
+   * is in flight, 0 means it was and its callback is still due */
+  transfer_out_pending = transfer_in_pending = false;
+  if (transfer_out) {
     rc = libusb_cancel_transfer(transfer_out);
-    if (rc < 0 && rc != LIBUSB_ERROR_NOT_FOUND) {
+    if (rc == 0) {
+      transfer_out_pending = true;
+    } else if (rc != LIBUSB_ERROR_NOT_FOUND) {
       USBERR(stderr, "[USBSID] Error cancel OUT %d - %s: %s\n",
         rc, libusb_error_name(rc), libusb_strerror((enum libusb_error)rc));
     }
   }
 
-  if (transfer_in && transfer_in_pending) {
+  if (transfer_in) {
     rc = libusb_cancel_transfer(transfer_in);
-    if (rc < 0 && rc != LIBUSB_ERROR_NOT_FOUND) {
+    if (rc == 0) {
+      transfer_in_pending = true;
+    } else if (rc != LIBUSB_ERROR_NOT_FOUND) {
       USBERR(stderr, "[USBSID] Error cancel IN %d - %s: %s\n",
         rc, libusb_error_name(rc), libusb_strerror((enum libusb_error)rc));
     }
   }
 
-  while (transfer_out_pending || transfer_in_pending) {
+  /* Wait for the cancel callbacks, bounded for an unresponsive device */
+  const timestamp_t limit = std::chrono::steady_clock::now() + std::chrono::seconds(1);
+  while ((transfer_out_pending || transfer_in_pending)
+         && std::chrono::steady_clock::now() < limit) {
     struct timeval tv = {0, 1000};
     libusb_handle_events_timeout_completed(ctx, &tv, NULL);
   }
 
+  /* A transfer still in flight stays allocated: libusb_close() walks the
+   * in-flight list and locks each transfer. Detach it from this instance. */
   if (transfer_out) {
-    libusb_free_transfer(transfer_out);
+    if (transfer_out_pending) {
+      transfer_out->user_data = NULL;
+    } else {
+      libusb_free_transfer(transfer_out);
+    }
     transfer_out = NULL;
   }
 
   if (transfer_in) {
-    libusb_free_transfer(transfer_in);
+    if (transfer_in_pending) {
+      transfer_in->user_data = NULL;
+    } else {
+      libusb_free_transfer(transfer_in);
+    }
     transfer_in = NULL;
   }
+  transfer_out_pending = transfer_in_pending = false;
 }
 
 int USBSID_Class::LIBUSB_Setup(bool start_threaded, bool with_cycles)
@@ -1681,9 +1688,7 @@ int USBSID_Class::LIBUSB_Exit(void)
     #ifdef US_RESET_ON_EXIT
     USBSID_Reset();
     #endif
-    transfer_in_pending = false;
-    transfer_out_pending = false;
-    LIBUSB_StopTransfers();
+    LIBUSB_StopTransfers();  /* uses the pending flags to cancel and wait */
     LIBUSB_FreeInBuffer();
     LIBUSB_FreeOutBuffer();
     LIBUSB_CloseDevice();
@@ -1734,7 +1739,10 @@ void LIBUSB_CALL USBSID_Class::usb_in(struct libusb_transfer *transfer)
         libusb_error_name(transfer->status));
     }
     libusb_free_transfer(transfer);
-    if (self) self->transfer_in = NULL;
+    if (self) {
+      self->transfer_in = NULL;
+      self->transfer_in_pending = false;
+    }
     return;
   }
 

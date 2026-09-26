@@ -395,7 +395,6 @@ namespace USBSID_NS
       void USBSID_InitRingBuffer(int buffer_size, int differ_size);  /* Player thread */
       void USBSID_InitRingBuffer(void);    /* Player thread */
       void USBSID_DeInitRingBuffer(void);  /* Player thread */
-      bool USBSID_IsHigher(void);          /* Driver thread only */
       int USBSID_RingDiff(void);           /* Driver thread only */
       void USBSID_RingPut(uint8_t item);   /* Player thread */
       uint8_t USBSID_RingGet(void);        /* Driver thread only */
