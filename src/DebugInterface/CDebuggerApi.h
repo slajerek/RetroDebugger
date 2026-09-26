@@ -86,6 +86,10 @@ public:
 	// which power-cycles the machine. Returns false when the platform has no disk
 	// drives or when deviceNumber is out of range.
 	virtual bool DetachDriveDisk(int deviceNumber);
+	// Attaches only a disk image, without loading or running any program and
+	// without resetting the machine. Returns false when unsupported, invalid,
+	// or the image could not be attached.
+	virtual bool AttachDriveDisk(const char *filePath, int deviceNumber);
 	// Drive/device number used when the caller does not specify one (C64: 8, Atari: 1)
 	virtual int GetDefaultDiskDriveNumber();
 	virtual void ClearRam(int startAddr, int endAddr, u8 value);

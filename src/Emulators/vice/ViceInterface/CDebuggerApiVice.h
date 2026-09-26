@@ -113,6 +113,7 @@ public:
 	//
 	void DetachEverything();
 	bool DetachDriveDisk(int deviceNumber);
+	bool AttachDriveDisk(const char *filePath, int deviceNumber);
 	void ClearRam(int startAddr, int endAddr, u8 value);
 	
 	//

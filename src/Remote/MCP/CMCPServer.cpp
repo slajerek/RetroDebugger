@@ -1096,6 +1096,34 @@ void CMCPServer::RegisterDebuggerTools(CDebuggerServer *server)
 		RegisterTool(tool);
 	}
 
+	// Attach disk image only (no reset, no auto-load/run)
+	{
+		MCPToolDescriptor tool;
+		tool.name = "retro_disk_attach";
+		tool.description = "Attach one disk image WITHOUT resetting the machine and WITHOUT loading or running its first program. This is the safe counterpart to retro_disk_detach for an in-program disk swap. The path is resolved by the RetroDebugger host process; the current C64 implementation supports device 8.";
+		tool.inputSchema = {
+			{"type", "object"},
+			{"properties", {
+				{"platform", {{"type", "string"}, {"description", "Platform name; currently c64"}}},
+				{"path", {{"type", "string"}, {"description", "Disk-image path as seen by the RetroDebugger host process"}}},
+				{"device", {{"type", "integer"}, {"description", "Drive/device number; current C64 implementation supports 8 (default 8)"}}}
+			}},
+			{"required", json::array({"platform", "path"})}
+		};
+		tool.handler = [server](const json &params) -> json
+		{
+			string platform = params.value("platform", "c64");
+			json ep;
+			ep["path"] = params.at("path");
+			if (params.contains("device"))
+			{
+				ep["device"] = params.at("device");
+			}
+			return ConsumeEndpointResult(server->RunEndpointFunction(platform + "/attachDiskImage", "", ep, nullptr, 0), "retro_disk_attach");
+		};
+		RegisterTool(tool);
+	}
+
 	// Start platform
 	{
 		MCPToolDescriptor tool;
