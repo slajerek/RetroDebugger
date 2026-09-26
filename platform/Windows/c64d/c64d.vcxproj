@@ -1544,6 +1544,7 @@
     <ClCompile Include="..\..\..\src\Tests\CTestSidStatusWaveform.cpp" />
     <ClCompile Include="..\..\..\src\Tests\CTestVicePeripherals.cpp" />
     <ClCompile Include="..\..\..\src\Tests\CTestDiskDetach.cpp" />
+    <ClCompile Include="..\..\..\src\Tests\CTestDiskAttach.cpp" />
     <ClCompile Include="..\..\..\src\Tests\CTestKeyboardShortcuts.cpp" />
     <ClCompile Include="..\..\..\src\Tests\CTestDetachCartridgePaused.cpp" />
     <ClCompile Include="..\..\..\src\Tests\CTestViceInstructionStepping.cpp" />
@@ -3078,6 +3079,7 @@
     <ClInclude Include="..\..\..\src\Tests\CTestSidStatusWaveform.h" />
     <ClInclude Include="..\..\..\src\Tests\CTestVicePeripherals.h" />
     <ClInclude Include="..\..\..\src\Tests\CTestDiskDetach.h" />
+    <ClInclude Include="..\..\..\src\Tests\CTestDiskAttach.h" />
     <ClInclude Include="..\..\..\src\Tests\CTestKeyboardShortcuts.h" />
     <ClInclude Include="..\..\..\src\Tests\CTestDetachCartridgePaused.h" />
     <ClInclude Include="..\..\..\src\Tests\CTestViceInstructionStepping.h" />
