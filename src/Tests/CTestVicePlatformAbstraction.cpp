@@ -12,6 +12,7 @@
 #include <cstring>
 #include <algorithm>
 #include <atomic>
+#include <chrono>
 #include <thread>
 
 extern "C"
@@ -44,25 +45,57 @@ public:
 	}
 };
 
-static unsigned int CountFramesFor(CDebugInterfaceVice *di, int durationMs)
+using FramePacingClock = std::chrono::steady_clock;
+
+struct FramePacingSample
 {
-	di->ResetEmulationFrameCounter();
+	unsigned int frames = 0;
+	double elapsedMs = 0.0;
+	bool counterReset = false;
+
+	double FramesPerSecond() const
+	{
+		return elapsedMs > 0.0 ? frames * 1000.0 / elapsedMs : 0.0;
+	}
+};
+
+static FramePacingSample CountFramesFor(CDebugInterfaceVice *di, int durationMs)
+{
+	// SYS_Sleep is a minimum delay, not an exact measurement interval. A CI
+	// worker can wake late while the emulation thread keeps producing frames.
+	// Do not reset the running counter (and debug history) to take a sample.
+	auto start = FramePacingClock::now();
 	unsigned int before = di->GetEmulationFrameNumber();
-	di->SetDebugMode(DEBUGGER_MODE_RUNNING);
 	SYS_Sleep(durationMs);
 	unsigned int after = di->GetEmulationFrameNumber();
-	return after - before;
+	auto end = FramePacingClock::now();
+	FramePacingSample sample;
+	sample.counterReset = after < before;
+	sample.frames = sample.counterReset ? 0 : after - before;
+	sample.elapsedMs = std::chrono::duration<double, std::milli>(end - start).count();
+	return sample;
+}
+
+static bool FramePacingRecovered(const FramePacingSample &baseline, const FramePacingSample &resumed)
+{
+	return !baseline.counterReset && !resumed.counterReset
+		&& baseline.elapsedMs > 0.0 && resumed.elapsedMs > 0.0
+		&& resumed.FramesPerSecond() >= baseline.FramesPerSecond() * 0.9;
 }
 
 static bool WaitForFrameAdvance(CDebugInterfaceVice *di, unsigned int minFrames, int timeoutMs)
 {
 	unsigned int before = di->GetEmulationFrameNumber();
-	for (int elapsed = 0; elapsed < timeoutMs; elapsed += 20)
+	auto deadline = FramePacingClock::now() + std::chrono::milliseconds(timeoutMs);
+	while (FramePacingClock::now() < deadline)
 	{
-		if (di->GetEmulationFrameNumber() - before >= minFrames)
-		{
+		unsigned int after = di->GetEmulationFrameNumber();
+		// Step 8 queues resets. A backwards counter is not frame progress:
+		// unsigned subtraction would otherwise make it look enormous.
+		if (after < before)
+			before = after;
+		if (after - before >= minFrames)
 			return true;
-		}
 		SYS_Sleep(20);
 	}
 	return false;
@@ -439,25 +472,41 @@ void CTestVicePlatformAbstraction::Run(ITestCallback *cb)
 	if (allPassed)
 	{
 		di->SetDebugMode(DEBUGGER_MODE_RUNNING);
+		di->WaitCpuDebugInterruptTasksApplied();
+		// Let the preceding reset stress settle. Use the same settling period
+		// after restart and a longer sample to reduce frame-boundary noise.
 		SYS_Sleep(300);
-		unsigned int baselineFrames = CountFramesFor(di, 700);
+		FramePacingSample baseline = CountFramesFor(di, 2000);
 
 		viewC64->StopEmulationThread(di);
 		SYS_Sleep(6000);
 		viewC64->StartEmulationThread(di);
 		di->SetDebugMode(DEBUGGER_MODE_RUNNING);
 
-		unsigned int resumedFrames = 0;
+		FramePacingSample resumed;
 		bool restarted = WaitForFrameAdvance(di, 3, 1500);
 		if (restarted)
 		{
-			resumedFrames = CountFramesFor(di, 700);
+			SYS_Sleep(300);
+			resumed = CountFramesFor(di, 2000);
 		}
 		di->PauseEmulationBlockedWait();
 
-		if (baselineFrames < 20)
+		char measurements[256];
+		snprintf(measurements, sizeof(measurements),
+				 "baseline=%u frames/%.1fms (%.2fHz), resumed=%u frames/%.1fms (%.2fHz)",
+				 baseline.frames, baseline.elapsedMs, baseline.FramesPerSecond(),
+				 resumed.frames, resumed.elapsedMs, resumed.FramesPerSecond());
+
+		if (baseline.counterReset || resumed.counterReset)
 		{
-			sprintf(failureMsg, "Baseline frame pacing too low before restart: %u frames/700ms", baselineFrames);
+			snprintf(failureMsg, sizeof(failureMsg), "Frame counter reset during pacing sample: %s", measurements);
+			allPassed = false;
+		}
+		else if (baseline.FramesPerSecond() < 20.0 * 1000.0 / 700.0)
+		{
+			// Preserve the original minimum (20 frames/700ms), as a rate.
+			snprintf(failureMsg, sizeof(failureMsg), "Baseline frame pacing too low before restart: %s", measurements);
 			allPassed = false;
 		}
 		else if (!restarted)
@@ -465,16 +514,16 @@ void CTestVicePlatformAbstraction::Run(ITestCallback *cb)
 			sprintf(failureMsg, "C64 did not advance frames after stop/start within 1500ms");
 			allPassed = false;
 		}
-		else if (resumedFrames * 10 < baselineFrames * 9)
+		else if (!FramePacingRecovered(baseline, resumed))
 		{
-			sprintf(failureMsg, "Frame pacing did not recover after C64 stop/start: baseline=%u resumed=%u frames/700ms", baselineFrames, resumedFrames);
+			snprintf(failureMsg, sizeof(failureMsg), "Frame pacing did not recover after C64 stop/start: %s", measurements);
 			allPassed = false;
 		}
 
 		if (allPassed)
 		{
-			char msg[160];
-			sprintf(msg, "C64 stop/start frame pacing recovered: baseline=%u resumed=%u frames/700ms", baselineFrames, resumedFrames);
+			char msg[320];
+			snprintf(msg, sizeof(msg), "C64 stop/start frame pacing recovered: %s", measurements);
 			StepCompleted(9, true, msg);
 		}
 		else
