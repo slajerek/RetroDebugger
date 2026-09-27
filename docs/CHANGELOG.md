@@ -21,3 +21,9 @@ starting from the first public releases lives in
 - Snapshot save/restore boundary regression tests; Windows and Linux build
   fixes; macOS CI now builds SDL through the engine's vendored source
 - Many bug fixes across the C64, Atari XL/XE and NES debugger views
+- USBSID-Pico SID engine (Linux): SID writes are sent cycle exact to a
+  USBSID-Pico board over USB, using the VICE 3.10 USBSID driver. Needs
+  libusb-1.0 at build time (CMake `USBSID_SUPPORT`, ON when libusb is found);
+  the engine and its "USBSID-Pico" settings menu are listed only when a board
+  is attached at startup. The board is muted on pause and above 100% speed or
+  in warp; macOS and Windows builds do not include the engine yet

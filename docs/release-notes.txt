@@ -1,12 +1,3 @@
-Retro Debugger (unreleased)
-Added Linux: USBSID-Pico as a SID engine (Settings, SID engine, "USBSID-Pico"). SID writes are sent cycle exact to a USBSID-Pico board over USB.
-       Requires libusb-1.0 at build time (CMake option USBSID_SUPPORT, ON when libusb-1.0 is found).
-       The engine and its settings menu are listed only when a board is attached at startup, as in VICE. The board is not opened until the engine is selected.
-       Settings menu "USBSID-Pico": read mode, stereo audio (PCB v1.3), mute board on pause, ring buffer size and diff size.
-       Board is muted while the debugger is paused and while running above 100% speed or in warp, register state is restored on resume.
-       Selecting the engine without a board attached shows an error and falls back to ReSID 6581.
-       macOS and Windows builds do not include the engine yet.
-
 Retro Debugger v0.64.72 (22 Feb - my birthday celebration and BCC Party release)
 Bug fixed #73: crash when rewinding code (thanks to Tom Telmo and Isildur for testing)
 Bug fixed #69: command line arguments buffer overflow
