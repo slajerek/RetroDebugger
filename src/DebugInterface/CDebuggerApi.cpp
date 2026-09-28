@@ -293,6 +293,12 @@ bool CDebuggerApi::DetachDriveDisk(int deviceNumber)
 	return false;
 }
 
+bool CDebuggerApi::AttachDriveDisk(const char *filePath, int deviceNumber)
+{
+	LOGError("CDebuggerApi::AttachDriveDisk: not supported by this platform");
+	return false;
+}
+
 int CDebuggerApi::GetDefaultDiskDriveNumber()
 {
 	return 8;

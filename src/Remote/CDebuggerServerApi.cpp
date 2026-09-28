@@ -134,6 +134,56 @@ void CDebuggerServerApi::RegisterEndpoints(CDebuggerServer *server)
 		return server->PrepareResult(HTTP_OK, token, result, NULL, 0);
 	});
 
+	sprintf(buf, "%s/attachDiskImage", plat);
+	RegisterEndpoint(server, buf, plat, "control", "Attach one disk image without resetting, loading, or running a program",
+	[this, server](const string token, json params, unsigned char *binaryData, int binaryDataSize) -> vector<char>*
+	{
+		json result;
+		result["platform"] = debugInterface->GetPlatformNameEndpointString();
+		if (!params.contains("path") || !params.at("path").is_string()
+			|| params.at("path").get<string>().empty())
+		{
+			result["error"] = "non-empty disk image path required";
+			return server->PrepareResult(HTTP_BAD_REQUEST, token, result, NULL, 0);
+		}
+
+		string filePath = params.at("path").get<string>();
+		int device = debuggerApi->GetDefaultDiskDriveNumber();
+		if (params.contains("device"))
+		{
+			if (!params.at("device").is_number_integer())
+			{
+				result["error"] = "integer disk device required";
+				return server->PrepareResult(HTTP_BAD_REQUEST, token, result, NULL, 0);
+			}
+			device = params.at("device").get<int>();
+		}
+		result["device"] = device;
+		result["path"] = filePath;
+
+		if (!SYS_FileExists(filePath.c_str()))
+		{
+			result["error"] = "disk image file not found";
+			return server->PrepareResult(HTTP_NOT_FOUND, token, result, NULL, 0);
+		}
+
+		if (!debuggerApi->AttachDriveDisk(filePath.c_str(), device))
+		{
+			result["error"] = "disk attach is not supported by this platform/device, or the image could not be attached";
+			return server->PrepareResult(HTTP_BAD_REQUEST, token, result, NULL, 0);
+		}
+
+		json ev;
+		ev["platform"] = debugInterface->GetPlatformNameEndpointString();
+		ev["device"] = device;
+		ev["path"] = filePath;
+		server->BroadcastEvent("media.attached", ev);
+
+		result["status"] = "attached";
+		result["autoRun"] = false;
+		return server->PrepareResult(HTTP_OK, token, result, NULL, 0);
+	});
+
 	sprintf(buf, "%s/warp/set", plat);
 	RegisterEndpoint(server, buf, plat, "control", "Enable or disable warp speed",
 	[this, server](const string token, json params, unsigned char *binaryData, int binaryDataSize) -> vector<char>*

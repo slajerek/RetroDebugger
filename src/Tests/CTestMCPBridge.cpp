@@ -438,6 +438,7 @@ void CTestMCPBridge::Run(ITestCallback *cb)
 		bool hasCpuStatus = false;
 		bool hasMemoryRead = false;
 		bool hasTransportDiag = false;
+		bool hasDiskAttach = false;
 		int toolCount = 0;
 		for (const auto &t : tools)
 		{
@@ -445,6 +446,7 @@ void CTestMCPBridge::Run(ITestCallback *cb)
 			if (name == "retro_cpu_status") hasCpuStatus = true;
 			if (name == "retro_memory_read") hasMemoryRead = true;
 			if (name == "retro_transport_diagnostics") hasTransportDiag = true;
+			if (name == "retro_disk_attach") hasDiskAttach = true;
 			toolCount++;
 		}
 
@@ -467,10 +469,18 @@ void CTestMCPBridge::Run(ITestCallback *cb)
 			return;
 		}
 
-		// Should be 46: 43 debugger + 3 bridge-local
-		if (toolCount != 46)
+		if (!hasDiskAttach)
 		{
-			sprintf(sFailMsg, "Test %d FAIL: expected 46 tools, got %d", testNum, toolCount);
+			sprintf(sFailMsg, "Test %d FAIL: missing retro_disk_attach in connected tools", testNum);
+			bridge.Stop();
+			FinishTest(false, sFailMsg);
+			return;
+		}
+
+		// Should be 47: 44 debugger + 3 bridge-local
+		if (toolCount != 47)
+		{
+			sprintf(sFailMsg, "Test %d FAIL: expected 47 tools, got %d", testNum, toolCount);
 			bridge.Stop();
 			FinishTest(false, sFailMsg);
 			return;
@@ -571,9 +581,9 @@ void CTestMCPBridge::Run(ITestCallback *cb)
 			json response = server.HandleRequest(request);
 			json tools = response["result"]["tools"];
 			int toolCount = (int)tools.size();
-			if (toolCount != 46)
+			if (toolCount != 47)
 			{
-				sprintf(sFailMsg, "Test %d FAIL: after reconnect expected 46 tools, got %d",
+				sprintf(sFailMsg, "Test %d FAIL: after reconnect expected 47 tools, got %d",
 						testNum, toolCount);
 				bridge2.Stop();
 				FinishTest(false, sFailMsg);
@@ -593,6 +603,13 @@ void CTestMCPBridge::Run(ITestCallback *cb)
 					return;
 				}
 				names.insert(name);
+			}
+			if (!names.count("retro_disk_attach"))
+			{
+				sprintf(sFailMsg, "Test %d FAIL: retro_disk_attach missing after reconnect", testNum);
+				bridge2.Stop();
+				FinishTest(false, sFailMsg);
+				return;
 			}
 		}
 

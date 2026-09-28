@@ -38,6 +38,7 @@ Use this skill when working with the RetroDebugger MCP server to debug 8-bit pro
 - `retro_warp` — enable/disable warp speed (run as fast as possible)
 - `retro_media_detach` — detach all cartridges, disks, and tapes. **Power-cycles the C64** (RAM and CPU state are lost) — do not use it just to remove a disk
 - `retro_disk_detach` — detach the disk from one drive **without resetting** (`platform`, optional `device`: C64 8-11 default 8, Atari 1-8 default 1). Use this when swapping or ejecting a disk mid-session
+- `retro_disk_attach` — attach a **known-valid** disk to C64 device 8 (`platform`, host-visible `path`, optional `device`: 8) **without resetting or loading/running the first PRG**, regardless of GUI autorun settings. Use after `retro_disk_detach` at a disk-change prompt; it is not a substitute for a program load. Bundled VICE has a known failed-replacement bug: an existing invalid image can leave the old mounted disk in an inconsistent, non-ejectable state despite an attach error. Validate media before live swaps
 - `retro_segment_read` — get current debug symbol segment name
 - `retro_segment_write` — set active debug symbol segment by name
 - `retro_load` — load a program file (PRG, XEX, NES ROM, D64, CRT). The path is opened by the

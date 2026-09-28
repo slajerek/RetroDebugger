@@ -261,6 +261,37 @@ bool CDebuggerApiVice::DetachDriveDisk(int deviceNumber)
 	return true;
 }
 
+bool CDebuggerApiVice::AttachDriveDisk(const char *filePath, int deviceNumber)
+{
+	// CDebugInterfaceVice::AttachDiskImage currently targets unit 8. Refuse
+	// another unit rather than silently mounting in the wrong drive.
+	if (deviceNumber != 8)
+	{
+		LOGError("CDebuggerApiVice::AttachDriveDisk: invalid device number %d, expected 8", deviceNumber);
+		return false;
+	}
+
+	if (filePath == NULL || filePath[0] == '\0')
+		return false;
+
+	CSlrFileFromOS *file = new CSlrFileFromOS(filePath);
+	bool exists = file->Exists();
+	delete file;
+	if (!exists)
+	{
+		LOGError("CDebuggerApiVice::AttachDriveDisk: file not found: %s", filePath);
+		return false;
+	}
+
+	// Bypass CMainMenuHelper::LoadFile/InsertD64, which can auto-load and
+	// run the first PRG depending on the user's setting. Return VICE's actual
+	// attach result even when a different disk was already mounted.
+	CSlrString *path = new CSlrString(filePath);
+	bool attached = debugInterfaceVice->AttachDiskImage(path);
+	delete path;
+	return attached;
+}
+
 void CDebuggerApiVice::ClearRam(int startAddr, int endAddr, u8 value)
 {
 	for (int i = startAddr; i < endAddr; i++)

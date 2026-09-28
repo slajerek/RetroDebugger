@@ -159,6 +159,7 @@ public:
 	virtual void GetDrive1541State(C64StateDrive1541 *state);
 
 	virtual void InsertD64(CSlrString *path);
+	bool AttachDiskImage(CSlrString *path);
 	virtual void DetachDriveDisk();
 	virtual void DetachDriveDisk(int deviceNumber);
 

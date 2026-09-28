@@ -128,7 +128,7 @@ guidance file, so every project picks it up.
 
 ## Available Tools
 
-When connected, Claude gets 18 debugger tools + 2 bridge-only tools:
+When connected, Claude gets debugger tools (including these examples) and bridge-only transport tools:
 
 | Tool | Description |
 |------|-------------|
@@ -144,7 +144,9 @@ When connected, Claude gets 18 debugger tools + 2 bridge-only tools:
 | `retro_breakpoint_remove` | Remove a breakpoint |
 | `retro_breakpoint_list` | List all breakpoints |
 | `retro_machine_state` | Get run/pause state |
-| `retro_load` | Load a PRG/XEX/NES ROM/D64 from a path the RetroDebugger process can open |
+| `retro_load` | Load a PRG/XEX/NES ROM/D64 from a path the RetroDebugger process can open; may autostart the first PRG on a disk |
+| `retro_disk_detach` | Remove only the disk image from a drive, without resetting the machine |
+| `retro_disk_attach` | Attach a C64 disk image to device 8 without reset, program load, or autorun |
 | `retro_watch_add` | Add a memory watch |
 | `retro_watch_remove` | Remove a watch |
 | `retro_watch_list` | List all watches |
@@ -152,6 +154,22 @@ When connected, Claude gets 18 debugger tools + 2 bridge-only tools:
 | `retro_snapshot_load` | Restore emulator state (base64) |
 | `retro_transport_diagnostics` | Bridge connection status (live mode only) |
 | `retro_reconnect` | Force bridge reconnect (live mode only) |
+
+For a mid-program C64 disk change, use `retro_disk_detach` followed by
+`retro_disk_attach` with a path visible to the debugger host (not just the
+MCP client). For example, `retro_disk_attach` accepts
+`{"platform":"c64","device":8,"path":"C:\\disks\\game.d64"}` on Windows.
+The attach tool currently supports C64 device 8 only; it reports errors for
+unsupported devices, missing paths, and images VICE cannot attach. It bypasses
+the GUI's *Load first PRG on disk insert* setting, and does not reset, load, or
+start any program. Swap at a disk-change prompt rather than during active I/O.
+
+**Known VICE limitation:** a path that exists but is not a valid disk image can
+fail *after* VICE clears its virtual-drive image pointer. When replacing an
+already mounted disk, that failure can leave the old image visible to the
+emulated drive but inaccessible to disk-only detach. This also affects GUI
+disk insertion. Use known-good image files for in-program swaps; an attach
+error does **not** guarantee that the previous disk remains safely ejectable.
 
 ## Troubleshooting
 

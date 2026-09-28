@@ -1096,6 +1096,34 @@ void CMCPServer::RegisterDebuggerTools(CDebuggerServer *server)
 		RegisterTool(tool);
 	}
 
+	// Attach disk image only (no reset, no auto-load/run)
+	{
+		MCPToolDescriptor tool;
+		tool.name = "retro_disk_attach";
+		tool.description = "Attach a known-valid disk image to C64 device 8 WITHOUT resetting or loading/running its first program. The path is resolved by the RetroDebugger host process. Warning: attempting to replace a mounted disk with an existing invalid image may leave VICE's drive state inconsistent; do not rely on failed replacement being harmless.";
+		tool.inputSchema = {
+			{"type", "object"},
+			{"properties", {
+				{"platform", {{"type", "string"}, {"description", "Platform name; currently c64"}}},
+				{"path", {{"type", "string"}, {"description", "Disk-image path as seen by the RetroDebugger host process"}}},
+				{"device", {{"type", "integer"}, {"description", "Drive/device number; current C64 implementation supports 8 (default 8)"}}}
+			}},
+			{"required", json::array({"platform", "path"})}
+		};
+		tool.handler = [server](const json &params) -> json
+		{
+			string platform = params.value("platform", "c64");
+			json ep;
+			ep["path"] = params.at("path");
+			if (params.contains("device"))
+			{
+				ep["device"] = params.at("device");
+			}
+			return ConsumeEndpointResult(server->RunEndpointFunction(platform + "/attachDiskImage", "", ep, nullptr, 0), "retro_disk_attach");
+		};
+		RegisterTool(tool);
+	}
+
 	// Start platform
 	{
 		MCPToolDescriptor tool;

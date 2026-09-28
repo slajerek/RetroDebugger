@@ -1253,6 +1253,7 @@
 		70E0BAA760B77EEE82DF4426 /* CTestViceMemoryAccess.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1491084F82359D55D18ABE77 /* CTestViceMemoryAccess.cpp */; };
 		74302C8A36924B16986365CA /* wordcraft-dongle.c in Sources */ = {isa = PBXBuildFile; fileRef = 557E743CB3AD48E79F26D896 /* wordcraft-dongle.c */; };
 		782340EB6C4B2BE9CD47278C /* CTestDiskDetach.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CFFEBBE2B3E6F3FB1F8E4004 /* CTestDiskDetach.cpp */; };
+		782340EB6C4B2BE9CD47278D /* CTestDiskAttach.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CFFEBBE2B3E6F3FB1F8E4005 /* CTestDiskAttach.cpp */; };
 		7A11C0DE0001000000000101 /* CTestKeyboardShortcuts.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7A11C0DE0001000000000102 /* CTestKeyboardShortcuts.cpp */; };
 		7A11C0DE0001000000000201 /* CTestDetachCartridgePaused.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7A11C0DE0001000000000202 /* CTestDetachCartridgePaused.cpp */; };
 		7AF7BE5A68E2A9ED60FA19D8 /* CGT2UndoHistory.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C61A28FAB0E75C2F0381B06D /* CGT2UndoHistory.cpp */; };
@@ -4415,6 +4416,7 @@
 		CDWSLAY000000000002 /* CDefaultWorkspaceLayouts.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = "$(SRCROOT)/../../src/Views/CDefaultWorkspaceLayouts.cpp"; sourceTree = "<absolute>"; };
 		CDWSLAY000000000003 /* CDefaultWorkspaceLayouts.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "$(SRCROOT)/../../src/Views/CDefaultWorkspaceLayouts.h"; sourceTree = "<absolute>"; };
 		CFFEBBE2B3E6F3FB1F8E4004 /* CTestDiskDetach.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = CTestDiskDetach.cpp; path = ../../src/Tests/CTestDiskDetach.cpp; sourceTree = "<group>"; };
+		CFFEBBE2B3E6F3FB1F8E4005 /* CTestDiskAttach.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = CTestDiskAttach.cpp; path = ../../src/Tests/CTestDiskAttach.cpp; sourceTree = "<group>"; };
 		D04D5F3E7AB16C9DAE2F3041 /* CTestVicEditorCursor.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = CTestVicEditorCursor.cpp; path = ../../src/Tests/CTestVicEditorCursor.cpp; sourceTree = "<group>"; };
 		D1E2F3A4B5C60000000011 /* CViewInputEventsTable.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = "$(SRCROOT)/../../src/Views/CViewInputEventsTable.cpp"; sourceTree = "<absolute>"; };
 		D1E2F3A4B5C60000000012 /* CViewInputEventsTable.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "$(SRCROOT)/../../src/Views/CViewInputEventsTable.h"; sourceTree = "<absolute>"; };
@@ -4449,6 +4451,7 @@
 		F9E0E33D584C8D93012C74C4 /* CTestViceCiaHooks.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = CTestViceCiaHooks.h; path = ../../src/Tests/CTestViceCiaHooks.h; sourceTree = "<group>"; };
 		F9E37F5507A1B74FA95351A8 /* CTestVicePeripherals.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = CTestVicePeripherals.h; path = ../../src/Tests/CTestVicePeripherals.h; sourceTree = "<group>"; };
 		FA75236248D9A962932D2A46 /* CTestDiskDetach.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = CTestDiskDetach.h; path = ../../src/Tests/CTestDiskDetach.h; sourceTree = "<group>"; };
+		FA75236248D9A962932D2A47 /* CTestDiskAttach.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = CTestDiskAttach.h; path = ../../src/Tests/CTestDiskAttach.h; sourceTree = "<group>"; };
 		FBA58F3223C9470CB85D453B /* fakesid.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "$(SRCROOT)/../../src/Emulators/vice/sid/fakesid.c"; sourceTree = "<absolute>"; };
 		FDCBD6EFDBF0404A8026B4B8 /* userport_hks_joystick.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "$(SRCROOT)/../../src/Emulators/vice/userport/userport_hks_joystick.c"; sourceTree = "<absolute>"; };
 		FF46CD67705B41EE9DAD5EA7 /* userport_synergy_joystick.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "$(SRCROOT)/../../src/Emulators/vice/userport/userport_synergy_joystick.c"; sourceTree = "<absolute>"; };
@@ -8406,6 +8409,8 @@
 				8B8F2261D45C43A54B50BAF3 /* CTestVicePeripherals.cpp */,
 				FA75236248D9A962932D2A46 /* CTestDiskDetach.h */,
 				CFFEBBE2B3E6F3FB1F8E4004 /* CTestDiskDetach.cpp */,
+				FA75236248D9A962932D2A47 /* CTestDiskAttach.h */,
+				CFFEBBE2B3E6F3FB1F8E4005 /* CTestDiskAttach.cpp */,
 				7A11C0DE0001000000000103 /* CTestKeyboardShortcuts.h */,
 				7A11C0DE0001000000000102 /* CTestKeyboardShortcuts.cpp */,
 				7A11C0DE0001000000000203 /* CTestDetachCartridgePaused.h */,
@@ -8702,6 +8707,7 @@
 				EB775A5E9C76458D9C4AA739 /* CTestSidStatusWaveform.cpp in Sources */,
 				0DD3021462989B1A891775C7 /* CTestVicePeripherals.cpp in Sources */,
 				782340EB6C4B2BE9CD47278C /* CTestDiskDetach.cpp in Sources */,
+				782340EB6C4B2BE9CD47278D /* CTestDiskAttach.cpp in Sources */,
 				7A11C0DE0001000000000101 /* CTestKeyboardShortcuts.cpp in Sources */,
 				7A11C0DE0001000000000201 /* CTestDetachCartridgePaused.cpp in Sources */,
 				A7F3B92C1D4E8A6F03C57B21 /* CTestViceInstructionStepping.cpp in Sources */,

@@ -2865,6 +2865,9 @@
     <ClCompile Include="..\..\..\src\Tests\CTestDiskDetach.cpp">
       <Filter>Source Files\src\Tests</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\src\Tests\CTestDiskAttach.cpp">
+      <Filter>Source Files\src\Tests</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\..\src\Tests\CTestKeyboardShortcuts.cpp">
       <Filter>Source Files\src\Tests</Filter>
     </ClCompile>
@@ -7541,6 +7544,9 @@
       <Filter>Source Files\src\Tests</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\src\Tests\CTestDiskDetach.h">
+      <Filter>Source Files\src\Tests</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Tests\CTestDiskAttach.h">
       <Filter>Source Files\src\Tests</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\src\Tests\CTestKeyboardShortcuts.h">

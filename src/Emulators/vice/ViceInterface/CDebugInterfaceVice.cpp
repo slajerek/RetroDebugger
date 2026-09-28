@@ -1542,26 +1542,28 @@ void CDebugInterfaceVice::GetDrive1541State(C64StateDrive1541 *state)
 
 void CDebugInterfaceVice::InsertD64(CSlrString *path)
 {
-	int diskId = 0;
-	
+	if (!AttachDiskImage(path))
+		viewC64->ShowMessageError("Inserting disk failed");
+}
+
+bool CDebugInterfaceVice::AttachDiskImage(CSlrString *path)
+{
 	LockIoMutex();
 	char *asciiPath = path->GetStdASCII();
-	
 	SYS_FixFileNameSlashes(asciiPath);
 
-	int rc = file_system_attach_disk(8, 0, asciiPath);
-	
-	if (rc == -1)
-	{
-		viewC64->ShowMessageError("Inserting disk failed");
-	}
-	
+	// VICE returns 0 only when the image was attached. In particular, checking
+	// just whether a disk is present can misreport a failed replacement.
+	// An existing invalid image may still disturb an already-mounted virtual
+	// drive in VICE's failure path; only swap to known-valid media mid-program.
+	bool attached = (file_system_attach_disk(8, 0, asciiPath) == 0);
 	delete [] asciiPath;
 
-	// TODO: add drive ID
-	((CDataAdapterViceDrive1541DiskContents*)dataAdapterDrive1541DiskContents)->DiskAttached();
-	
+	if (attached)
+		((CDataAdapterViceDrive1541DiskContents*)dataAdapterDrive1541DiskContents)->DiskAttached();
+
 	UnlockIoMutex();
+	return attached;
 }
 
 void CDebugInterfaceVice::DetachDriveDisk()

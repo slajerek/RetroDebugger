@@ -1790,6 +1790,7 @@ add_executable(retrodebugger
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CTestSidStatusWaveform.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CTestVicePeripherals.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CTestDiskDetach.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CTestDiskAttach.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CTestKeyboardShortcuts.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CTestDetachCartridgePaused.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CTestViceInstructionStepping.cpp"

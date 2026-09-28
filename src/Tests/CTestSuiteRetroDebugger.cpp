@@ -8,6 +8,7 @@
 #include "CTestStackAnnotation.h"
 #include "CTestAutoloadD64.h"
 #include "CTestDiskDetach.h"
+#include "CTestDiskAttach.h"
 #include "CTestKeyboardShortcuts.h"
 #include "CTestDetachCartridgePaused.h"
 #include "CTestViceRewindWhileRunning.h"
@@ -136,6 +137,7 @@ void CTestSuiteRegisterRetroDebuggerTests(std::vector<std::unique_ptr<CTest> > &
 	tests.push_back(std::make_unique<CTestSidStatusWaveform>());
 	tests.push_back(std::make_unique<CTestVicePeripherals>());
 	tests.push_back(std::make_unique<CTestDiskDetach>());
+	tests.push_back(std::make_unique<CTestDiskAttach>());
 	tests.push_back(std::make_unique<CTestKeyboardShortcuts>());
 	tests.push_back(std::make_unique<CTestDetachCartridgePaused>());
 	tests.push_back(std::make_unique<CTestViceInstructionStepping>());
