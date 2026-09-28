@@ -143,13 +143,8 @@ namespace USBSID_NS
 #else
     EP_OUT_ADDR    = 0x04,
     EP_IN_ADDR     = 0x84,
-#if defined(__APPLE__)
     LEN_IN_BUFFER  = 64,  /* macOS overflows on a request shorter than the 64 byte reply, see LIBUSB_ReadIn() */
     LEN_IN_XFER    = 128, /* reply packet plus room for the zero length packet that follows it */
-#else
-    LEN_IN_BUFFER  = 1,
-    LEN_IN_XFER    = 1,
-#endif
 #endif
     LEN_OUT_BUFFER = 64,
   };

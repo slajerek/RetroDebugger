@@ -1488,9 +1488,9 @@ int USBSID_Class::LIBUSB_ConfigureDevice(void)
  * @brief Bulk IN read of up to len bytes into buff
  *
  * @note The request is rounded up to whole LEN_IN_BUFFER units plus
- *       LEN_IN_XFER - LEN_IN_BUFFER bytes of room. Both are 1 except for the
- *       Vendor interface on macOS, where the request stays len.
- * @note macOS (LEN_IN_BUFFER 64, LEN_IN_XFER 128): the Vendor interface
+ *       LEN_IN_XFER - LEN_IN_BUFFER bytes of room. On the CDC interface
+ *       (Linux, Windows) both are 1 and the request stays len.
+ * @note Vendor interface, macOS (LEN_IN_BUFFER 64, LEN_IN_XFER 128): it
  *       always answers with a full 64 byte packet. A shorter request ends in
  *       LIBUSB_ERROR_OVERFLOW and halts the endpoint, after which every read
  *       fails with LIBUSB_ERROR_PIPE until the halt is cleared. TinyUSB
