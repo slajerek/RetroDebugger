@@ -32,13 +32,17 @@
 #if defined(HAVE_USBSID)
 
 #include <fcntl.h>
+#ifdef HAVE_UNISTD_H
 #include <unistd.h>
+#endif
 #include <stdio.h>
 #include <stdint.h>
 #include <errno.h>
 #include <stdlib.h>
 #include <string.h>
+#ifdef HAVE_SYS_TIME_H
 #include <sys/time.h> /* TIMESPEC */
+#endif
 #include <time.h> /* TIMESPEC */
 
 #include "alarm.h"
