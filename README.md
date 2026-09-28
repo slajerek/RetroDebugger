@@ -65,6 +65,10 @@ library.
 Check VS2019 project in `./platform/Windows`. This should work when put into
 `C:\develop\c64d`. Note, the SDL3 library was built static.
 
+The USBSID-Pico SID engine is built in (vendored libusb in `platform/libusb`).
+To use a board, install the WinUSB driver for its "USBSID-Pico Data"
+interface with [Zadig](https://zadig.akeo.ie/), the same as for VICE.
+
 ## Linux
 
 You need GLEW installed:
