@@ -1953,6 +1953,71 @@ void CMainMenuBar::RenderImGui()
 							ImGui::EndMenu();
 						}
 
+#if defined(HAVE_USBSID)
+						// settings submenu only when the engine is listed (board attached at startup)
+						bool usbsidListed = false;
+						for (const char *sidType : sidTypes)
+						{
+							if (!strcmp(sidType, "USBSID-Pico"))
+							{
+								usbsidListed = true;
+								break;
+							}
+						}
+						if (usbsidListed && ImGui::BeginMenu("USBSID-Pico"))
+						{
+							int numSids = 0;
+							int pcbVersion = 0;
+							if (viewC64->debugInterfaceC64->GetUSBSIDInfo(&numSids, &pcbVersion))
+							{
+								ImGui::TextDisabled("Board connected: %d SID(s), PCB v%d.%d", numSids, pcbVersion / 10, pcbVersion % 10);
+							}
+							else
+							{
+								ImGui::TextDisabled("Board not connected (select the engine to connect)");
+							}
+							ImGui::Separator();
+							
+							bool readMode = (c64SettingsUSBSIDReadMode != 0);
+							if (ImGui::MenuItem("Read mode (no cycled writes, no digi)", NULL, &readMode))
+							{
+								int v = readMode ? 1 : 0;
+								C64DebuggerSetSetting("USBSIDReadMode", &v);
+								C64DebuggerStoreSettings();
+							}
+							
+							bool stereo = (c64SettingsUSBSIDAudioMode != 0);
+							if (ImGui::MenuItem("Stereo audio (PCB v1.3)", NULL, &stereo))
+							{
+								int v = stereo ? 1 : 0;
+								C64DebuggerSetSetting("USBSIDAudioMode", &v);
+								C64DebuggerStoreSettings();
+							}
+							
+							if (ImGui::MenuItem("Mute board on pause", NULL, &c64SettingsUSBSIDMuteOnPause))
+							{
+								C64DebuggerSetSetting("USBSIDMuteOnPause", &c64SettingsUSBSIDMuteOnPause);
+								C64DebuggerStoreSettings();
+							}
+							
+							int bufferSize = c64SettingsUSBSIDBufferSize;
+							if (ImGui::InputInt("Ring buffer size", &bufferSize, 256, 1024, ImGuiInputTextFlags_EnterReturnsTrue))
+							{
+								C64DebuggerSetSetting("USBSIDBufferSize", &bufferSize);
+								C64DebuggerStoreSettings();
+							}
+							
+							int diffSize = c64SettingsUSBSIDDiffSize;
+							if (ImGui::InputInt("Ring buffer diff size", &diffSize, 8, 64, ImGuiInputTextFlags_EnterReturnsTrue))
+							{
+								C64DebuggerSetSetting("USBSIDDiffSize", &diffSize);
+								C64DebuggerStoreSettings();
+							}
+							
+							ImGui::EndMenu();
+						}
+#endif
+
 						if (ImGui::BeginMenu("RESID Sampling method"))
 						{
 							std::vector<const char *> options;

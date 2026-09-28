@@ -297,6 +297,24 @@
     <Filter Include="Source Files\src\Tools\Shaders">
       <UniqueIdentifier>{4f484901-4712-4349-9bf1-3c44a2f2e20d}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\src\Emulators\vice\arch\hwsiddrv">
+      <UniqueIdentifier>{b7429ec7-dd7e-4e73-996b-f888e4b014da}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\src\Emulators\vice\lib\libusbsiddrv">
+      <UniqueIdentifier>{68fcc358-9262-4e29-8141-dcece2d9aefd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\src.Windows\usbsid">
+      <UniqueIdentifier>{a735c4b2-e464-493a-bcfa-e4f1b3c84646}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\libusb">
+      <UniqueIdentifier>{f49edc12-f9b7-402d-8985-87a63eb38bd0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\libusb\os">
+      <UniqueIdentifier>{49e6d4de-b6fb-4b37-8f1b-e20c31ee149c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\libusb\msvc">
+      <UniqueIdentifier>{529e1f9d-85bf-4719-b987-0570967943bc}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\src\Emulators\atari800\a-cartridge.c">
@@ -4884,6 +4902,111 @@
     </ClCompile>
     <ClInclude Include="..\..\..\src\Tools\Shaders\CRTMonitorShaderFactory.h">
       <Filter>src\Tools\Shaders</Filter>
+    </ClInclude>
+    <ClCompile Include="..\..\..\src\Emulators\vice\sid\usbsid.c">
+      <Filter>Source Files\src\Emulators\vice\sid</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Emulators\vice\arch\hwsiddrv\usbsid-unixwin-drv.c">
+      <Filter>Source Files\src\Emulators\vice\arch\hwsiddrv</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Emulators\vice\arch\hwsiddrv\us-unixwin-device.c">
+      <Filter>Source Files\src\Emulators\vice\arch\hwsiddrv</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Emulators\vice\lib\libusbsiddrv\USBSID.cpp">
+      <Filter>Source Files\src\Emulators\vice\lib\libusbsiddrv</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Emulators\vice\lib\libusbsiddrv\USBSIDInterface.cpp">
+      <Filter>Source Files\src\Emulators\vice\lib\libusbsiddrv</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Emulators\vice\lib\libusbsiddrv\USBSID_Manager.cpp">
+      <Filter>Source Files\src\Emulators\vice\lib\libusbsiddrv</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Emulators\vice\lib\libusbsiddrv\USBSIDManagerInterface.cpp">
+      <Filter>Source Files\src\Emulators\vice\lib\libusbsiddrv</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\libusb\libusb\core.c">
+      <Filter>Source Files\libusb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\libusb\libusb\descriptor.c">
+      <Filter>Source Files\libusb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\libusb\libusb\hotplug.c">
+      <Filter>Source Files\libusb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\libusb\libusb\io.c">
+      <Filter>Source Files\libusb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\libusb\libusb\strerror.c">
+      <Filter>Source Files\libusb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\libusb\libusb\sync.c">
+      <Filter>Source Files\libusb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\libusb\libusb\os\events_windows.c">
+      <Filter>Source Files\libusb\os</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\libusb\libusb\os\threads_windows.c">
+      <Filter>Source Files\libusb\os</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\libusb\libusb\os\windows_common.c">
+      <Filter>Source Files\libusb\os</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\libusb\libusb\os\windows_usbdk.c">
+      <Filter>Source Files\libusb\os</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\libusb\libusb\os\windows_winusb.c">
+      <Filter>Source Files\libusb\os</Filter>
+    </ClCompile>
+    <ClInclude Include="..\..\..\src\Emulators\vice\root\usbsid.h">
+      <Filter>Source Files\src\Emulators\vice\root</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Emulators\vice\arch\hwsiddrv\us-unixwin.h">
+      <Filter>Source Files\src\Emulators\vice\arch\hwsiddrv</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Emulators\vice\lib\libusbsiddrv\USBSID.h">
+      <Filter>Source Files\src\Emulators\vice\lib\libusbsiddrv</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Emulators\vice\lib\libusbsiddrv\USBSIDInterface.h">
+      <Filter>Source Files\src\Emulators\vice\lib\libusbsiddrv</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Emulators\vice\lib\libusbsiddrv\USBSID_Manager.h">
+      <Filter>Source Files\src\Emulators\vice\lib\libusbsiddrv</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Emulators\vice\lib\libusbsiddrv\USBSIDManagerInterface.h">
+      <Filter>Source Files\src\Emulators\vice\lib\libusbsiddrv</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src.Windows\usbsid\pthread.h">
+      <Filter>Source Files\src.Windows\usbsid</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libusb\msvc\config.h">
+      <Filter>Source Files\libusb\msvc</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libusb\libusb\libusb.h">
+      <Filter>Source Files\libusb</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libusb\libusb\libusbi.h">
+      <Filter>Source Files\libusb</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libusb\libusb\version.h">
+      <Filter>Source Files\libusb</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libusb\libusb\version_nano.h">
+      <Filter>Source Files\libusb</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libusb\libusb\os\events_windows.h">
+      <Filter>Source Files\libusb\os</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libusb\libusb\os\threads_windows.h">
+      <Filter>Source Files\libusb\os</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libusb\libusb\os\windows_common.h">
+      <Filter>Source Files\libusb\os</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libusb\libusb\os\windows_usbdk.h">
+      <Filter>Source Files\libusb\os</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libusb\libusb\os\windows_winusb.h">
+      <Filter>Source Files\libusb\os</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

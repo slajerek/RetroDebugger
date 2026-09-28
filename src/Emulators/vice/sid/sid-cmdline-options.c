@@ -41,6 +41,7 @@
 #include "sid.h"
 #include "sid-cmdline-options.h"
 #include "sid-resources.h"
+#include "usbsid.h"
 #include "util.h"
 
 static char *sid_address_range = NULL;
@@ -192,6 +193,24 @@ static const cmdline_option_t hardsid_cmdline_options[] = {
 };
 #endif
 
+#ifdef HAVE_USBSID
+static const cmdline_option_t usbsid_cmdline_options[] = {
+    { "-usreadmode", SET_RESOURCE, CMDLINE_ATTRIB_NEED_ARGS,
+      NULL, NULL, "SidUSBSIDReadMode", NULL,
+      "<1 or 0>", "Enable USBSID-Pico read mode (disables cycled writing & digiplay)" },
+    { "-usaudiomode", SET_RESOURCE, CMDLINE_ATTRIB_NEED_ARGS,
+      NULL, NULL, "SidUSBSIDAudioMode", NULL,
+      "<1 or 0>", "Set USBSID-Pico PCB (v1.3) audio mode to Stereo (1) or Mono (0) (default)" },
+    { "-usdiffsize", SET_RESOURCE, CMDLINE_ATTRIB_NEED_ARGS,
+      NULL, NULL, "SidUSBSIDDiffSize", NULL,
+      "<number divisable by 8>", "Set USBSID-Pico write buffer head -> tail diff size (default: 64)" },
+    { "-usbuffsize", SET_RESOURCE, CMDLINE_ATTRIB_NEED_ARGS,
+      NULL, NULL, "SidUSBSIDBufferSize", NULL,
+      "<number divisable by 8>", "Set USBSID-Pico write buffer size (default: 8192)" },
+    CMDLINE_LIST_END
+};
+#endif
+
 static cmdline_option_t stereo_cmdline_options[] = {
     { "-sidstereo", SET_RESOURCE, CMDLINE_ATTRIB_NEED_ARGS,
       NULL, NULL, "SidStereo", NULL,
@@ -266,6 +285,12 @@ int sid_cmdline_options_init(void)
 
 #ifdef HAVE_RESID
     if (cmdline_register_options(resid_cmdline_options) < 0) {
+        return -1;
+    }
+#endif
+
+#ifdef HAVE_USBSID
+    if (cmdline_register_options(usbsid_cmdline_options) < 0) {
         return -1;
     }
 #endif

@@ -48,6 +48,7 @@
 #include "sid.h"
 #include "sound.h"
 #include "ssi2001.h"
+#include "usbsid.h"
 #include "vicetypes.h"
 
 #include "log.h"
@@ -433,6 +434,11 @@ int sid_sound_machine_init_vbr(sound_t *psid, int speed, int cycles_per_sec, int
 
 int sid_sound_machine_init(sound_t *psid, int speed, int cycles_per_sec)
 {
+#ifdef HAVE_USBSID
+    if (sid_engine_type == SID_ENGINE_USBSID) {
+        usbsid_open();
+    }
+#endif
     int ret = sid_engine.init(psid, speed, cycles_per_sec, 1000);
 
 	sid_engine.set_voice_mask(psid, c64d_sid_voiceMask);
@@ -454,6 +460,9 @@ void sid_sound_machine_close(sound_t *psid)
         lib_free(buf2);
         buf2 = NULL;
     }
+#ifdef HAVE_USBSID
+    usbsid_close();
+#endif
 }
 
 uint8_t sid_sound_machine_read(sound_t *psid, uint16_t addr)
@@ -469,6 +478,9 @@ void sid_sound_machine_store(sound_t *psid, uint16_t addr, uint8_t byte)
 void sid_sound_machine_reset(sound_t *psid, CLOCK cpu_clk)
 {
     sid_engine.reset(psid, cpu_clk);
+#ifdef HAVE_USBSID
+    usbsid_reset(true);
+#endif
 }
 
 int sid_sound_machine_calculate_samples(sound_t **psid, int16_t *pbuf, int nr, int soc, int scc, int *delta_t)

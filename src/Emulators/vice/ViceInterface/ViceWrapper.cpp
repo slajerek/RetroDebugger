@@ -16,6 +16,9 @@ extern "C" {
 #include "cia.h"
 #include "maincpu.h"
 #include "snapshot.h"
+#ifdef HAVE_USBSID
+#include "usbsid.h"
+#endif
 #include "vicii-resources.h"
 }
 
@@ -1608,8 +1611,18 @@ void c64d_debug_pause_check(int allowRestore)
 
 	// Use relaxed load for initial check - we're in emulation thread, no inter-thread visibility needed yet
 	int currentMode = c64d_debug_mode.load(std::memory_order_acquire);
+#ifdef HAVE_USBSID
+	if (currentMode != DEBUGGER_MODE_PAUSED)
+	{
+		// Covers leaving the pause loop through the snapshot restore return path.
+		usbsid_resume();
+	}
+#endif
 	if (currentMode == DEBUGGER_MODE_PAUSED)
 	{
+#ifdef HAVE_USBSID
+		usbsid_pause();
+#endif
 		LOGD("pause_check: entering pause loop (set by: %s, allowRestore=%d, clk=%d)",
 			 c64d_debug_mode_last_setter, allowRestore, (int)c64d_maincpu_clk);
 		// Only refresh once when entering pause mode, not on every pause check
@@ -1715,6 +1728,9 @@ void c64d_debug_pause_check(int allowRestore)
 
 		// Reset flag when exiting pause mode
 		pauseRefreshDone = 0;
+#ifdef HAVE_USBSID
+		usbsid_resume();
+#endif
 		debugInterfaceVice->RefreshSync();
 		LOGD("pause_check: exited pause loop, mode now=%d (set by: %s, clk=%d)",
 			 c64d_debug_mode.load(std::memory_order_relaxed), c64d_debug_mode_last_setter, (int)c64d_maincpu_clk);

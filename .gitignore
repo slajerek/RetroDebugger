@@ -61,6 +61,7 @@ core
 !src/Emulators/nestopiaue/core/
 !src/Emulators/nestopiaue/core/*
 !src/Emulators/nestopiaue/core/**/*
+!platform/libusb/libusb/core.c
 
 # Local/generated artifacts (do not commit)
 /releases/

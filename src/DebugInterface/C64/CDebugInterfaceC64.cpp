@@ -359,6 +359,18 @@ void CDebugInterfaceC64::GetSidTypes(std::vector<const char *> *sidTypes)
 	LOGTODO("CDebugInterfaceC64::GetSidTypes");
 }
 
+void CDebugInterfaceC64::SetUSBSIDSettings()
+{
+	LOGTODO("CDebugInterfaceC64::SetUSBSIDSettings");
+}
+
+bool CDebugInterfaceC64::GetUSBSIDInfo(int *numSids, int *pcbVersion)
+{
+	*numSids = 0;
+	*pcbVersion = 0;
+	return false;
+}
+
 void CDebugInterfaceC64::SetSidType(int sidType)
 {
 	LOGTODO("CDebugInterfaceC64::SetSidType");

@@ -105,6 +105,13 @@ extern bool c64SettingsRESIDEmulateFilters;
 extern int c64SettingsRESIDPassBand;
 extern int c64SettingsRESIDFilterBias;
 
+// USBSID-Pico SID engine
+extern int c64SettingsUSBSIDReadMode;		// 0=cycled writes (threaded), 1=read mode
+extern int c64SettingsUSBSIDAudioMode;		// 0=mono, 1=stereo (PCB v1.3)
+extern int c64SettingsUSBSIDBufferSize;
+extern int c64SettingsUSBSIDDiffSize;
+extern bool c64SettingsUSBSIDMuteOnPause;
+
 extern uint8 c64SettingsSIDStereo;			// "SidStereo" 0=none, 1=stereo, 2=triple
 extern uint16 c64SettingsSIDStereoAddress;	// "SidStereoAddressStart"
 extern uint16 c64SettingsSIDTripleAddress;	// "SidTripleAddressStart"

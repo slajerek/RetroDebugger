@@ -65,6 +65,10 @@ library.
 Check VS2019 project in `./platform/Windows`. This should work when put into
 `C:\develop\c64d`. Note, the SDL3 library was built static.
 
+The USBSID-Pico SID engine is built in (vendored libusb in `platform/libusb`).
+To use a board, install the WinUSB driver for its "USBSID-Pico Data"
+interface with [Zadig](https://zadig.akeo.ie/), the same as for VICE.
+
 ## Linux
 
 You need GLEW installed:
@@ -73,6 +77,10 @@ You need GLEW installed:
 SDL is **not** a system dependency. `build-linux.sh` builds a static SDL3 from
 MTEngineSDL's vendored source tree; a distro `libsdl2-dev`/`libsdl3-dev` is
 neither used nor consulted.
+
+Optional, for the USBSID-Pico SID engine (enabled automatically when found, disable with
+`cmake -DUSBSID_SUPPORT=OFF`):
+`sudo apt install libusb-1.0-0-dev`
 
 Put MTEngineSDL and RetroDebugger folders into the same folder and then compile.
 
