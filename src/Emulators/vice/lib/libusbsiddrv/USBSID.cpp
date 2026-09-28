@@ -157,8 +157,8 @@ int USBSID_Class::USBSID_Init(bool start_threaded, bool with_cycles)
 int USBSID_Class::USBSID_Close(void)
 {
   if (!us_PortIsOpen) return 0;
-  int e = -1;
-  if (rc >= 0) e = LIBUSB_Exit();
+  /* Always exit: a transfer error leaves rc < 0 with the device still open */
+  int e = LIBUSB_Exit();
   if (rc != -1) USBERR(stderr, "Expected rc == -1, received: %d\n", rc);
   if (e != 0) USBERR(stderr, "Expected e == 0, received: %d\n", e);
   if (devh != NULL) USBERR(stderr, "Expected dev == NULL, received: %p\n", (void*)&devh);
@@ -505,7 +505,7 @@ void USBSID_Class::USBSID_SingleWrite(unsigned char *buff, size_t len)
 {
   if (!us_PortIsOpen) return;
   int actual_length = 0;
-  if (libusb_bulk_transfer(devh, EP_OUT_ADDR, buff, len, &actual_length, LIBUSB_TIMEOUT) < 0) {
+  if (libusb_bulk_transfer(devh, EP_OUT_ADDR, buff, (int)len, &actual_length, LIBUSB_TIMEOUT) < 0) {
     USBERR(stderr, "[USBSID] Error while sending synchronous write buffer of length %d\n",
       actual_length);
   }
@@ -520,7 +520,7 @@ unsigned char USBSID_Class::USBSID_SingleRead(uint8_t reg)
   if (libusb_bulk_transfer(devh, EP_OUT_ADDR, buff, 3, &actual_length, LIBUSB_TIMEOUT) < 0) {
     USBERR(stderr, "[USBSID] Error while sending write command for reading\n");
   }
-  rc = libusb_bulk_transfer(devh, EP_IN_ADDR, result, 1, &actual_length, LIBUSB_TIMEOUT);
+  rc = LIBUSB_ReadIn(result, 1, &actual_length);
   if (rc == LIBUSB_ERROR_TIMEOUT) {
     USBERR(stderr, "[USBSID] Timeout error while reading (%d)\n", actual_length);
     return 0;
@@ -536,7 +536,7 @@ unsigned char USBSID_Class::USBSID_SingleReadConfig(unsigned char *buff, size_t 
 {
   if (!us_PortIsOpen) return 0;
   int actual_length;
-  rc = libusb_bulk_transfer(devh, EP_IN_ADDR, buff, len, &actual_length, LIBUSB_TIMEOUT);
+  rc = LIBUSB_ReadIn(buff, len, &actual_length);
   if (rc == LIBUSB_ERROR_TIMEOUT) {
     USBERR(stderr, "[USBSID] Timeout error while reading (%d)\n", actual_length);
     return 0;
@@ -552,7 +552,7 @@ int USBSID_Class::USBSID_ReadConfig(unsigned char *buff, size_t len)
 {
   if (!us_PortIsOpen) return 0;
   int actual_length;
-  rc = libusb_bulk_transfer(devh, EP_IN_ADDR, buff, len, &actual_length, LIBUSB_TIMEOUT);
+  rc = LIBUSB_ReadIn(buff, len, &actual_length);
   if (rc == LIBUSB_ERROR_TIMEOUT) {
     USBERR(stderr, "[USBSID] Timeout error while reading (%d)\n", actual_length);
     return 0;
@@ -1450,7 +1450,17 @@ int USBSID_Class::LIBUSB_ConfigureDevice(void)
 #ifdef USE_VENDOR_ITF
     /* again macOS needs this */
     rc = libusb_set_interface_alt_setting(devh, 4, 0);
+    if (rc < 0) {  /* not fatal, report only */
+      USBERR(stderr, "[USBSID] Error setting alt setting 0 on interface 4: %d, %s: %s\r\n",
+        rc, libusb_error_name(rc), libusb_strerror((enum libusb_error)rc));
+    }
     rc = libusb_control_transfer(devh, 0x21, 0x22, 0x01, 4, NULL, 0, 1000);
+    if (rc < 0) {  /* should return 0 or higher */
+      USBERR(stderr, "[USBSID] Error configuring line state on interface 4 during control transfer: %d, %s: %s\r\n",
+        rc, libusb_error_name(rc), libusb_strerror((enum libusb_error)rc));
+      rc = -1;
+      return rc;
+    }
 #else
   /* Start configuring the device:
    * set line state */
@@ -1472,6 +1482,48 @@ int USBSID_Class::LIBUSB_ConfigureDevice(void)
   }
 #endif
   return rc;
+}
+
+/**
+ * @brief Bulk IN read of up to len bytes into buff
+ *
+ * @note The request is rounded up to whole LEN_IN_BUFFER units plus
+ *       LEN_IN_XFER - LEN_IN_BUFFER bytes of room. Both are 1 except for the
+ *       Vendor interface on macOS, where the request stays len.
+ * @note macOS (LEN_IN_BUFFER 64, LEN_IN_XFER 128): the Vendor interface
+ *       always answers with a full 64 byte packet. A shorter request ends in
+ *       LIBUSB_ERROR_OVERFLOW and halts the endpoint, after which every read
+ *       fails with LIBUSB_ERROR_PIPE until the halt is cleared. TinyUSB
+ *       follows each full packet with a zero length packet, the extra room
+ *       lets that packet end this transfer. Otherwise the next read receives
+ *       it and every later reply arrives one read late.
+ *
+ * @param buff destination, receives at most len bytes
+ * @param len number of bytes the caller wants
+ * @param actual_length set to the number of bytes copied into buff
+ * @return int libusb_bulk_transfer() result
+ */
+int USBSID_Class::LIBUSB_ReadIn(unsigned char *buff, size_t len, int *actual_length)
+{
+  size_t req = ((len + LEN_IN_BUFFER - 1) / LEN_IN_BUFFER) * LEN_IN_BUFFER;
+  if (req == 0) req = LEN_IN_BUFFER;
+  req += LEN_IN_XFER - LEN_IN_BUFFER;  /* room for the zero length packet */
+  unsigned char packet[LEN_IN_XFER];
+  std::vector<unsigned char> large;
+  unsigned char *in = packet;
+  if (req > LEN_IN_XFER) {
+    large.resize(req);
+    in = large.data();
+  }
+  int got = 0;
+  int ret = libusb_bulk_transfer(devh, EP_IN_ADDR, in, (int)req, &got, LIBUSB_TIMEOUT);
+  if (ret == LIBUSB_ERROR_PIPE || ret == LIBUSB_ERROR_OVERFLOW) {
+    libusb_clear_halt(devh, EP_IN_ADDR);  /* keep the next read working */
+  }
+  if (got > (int)len) got = (int)len;
+  if (got > 0 && buff != in) memcpy(buff, in, (size_t)got);
+  *actual_length = got;
+  return ret;
 }
 
 void USBSID_Class::LIBUSB_InitOutBuffer(void)
@@ -1526,17 +1578,17 @@ void USBSID_Class::LIBUSB_FreeOutBuffer(void)
 void USBSID_Class::LIBUSB_InitInBuffer(void)
 {
   USBDBG(stdout, "[USBSID] Init in buffers\r\n");
-  in_buffer = libusb_dev_mem_alloc(devh, LEN_IN_BUFFER);
+  in_buffer = libusb_dev_mem_alloc(devh, LEN_IN_XFER);
   if (in_buffer == NULL) {
     USBDBG(stdout, "[USBSID] libusb_dev_mem_alloc failed on in_buffer, allocating with malloc\r\n");
-    in_buffer = us_alloc(2 * LEN_IN_BUFFER, (sizeof(uint8_t)) * LEN_IN_BUFFER);
+    in_buffer = us_alloc(2 * LEN_IN_XFER, (sizeof(uint8_t)) * LEN_IN_XFER);
   } else {
     in_buffer_dma = true;
   }
   USBDBG(stdout, "[USBSID] Alloc in_buffer complete\r\n");
   transfer_in = libusb_alloc_transfer(0);
   USBDBG(stdout, "[USBSID] Alloc transfer_in complete\r\n");
-  libusb_fill_bulk_transfer(transfer_in, devh, EP_IN_ADDR, in_buffer, LEN_IN_BUFFER, usb_in, this, LIBUSB_TIMEOUT);
+  libusb_fill_bulk_transfer(transfer_in, devh, EP_IN_ADDR, in_buffer, LEN_IN_XFER, usb_in, this, LIBUSB_TIMEOUT);
   USBDBG(stdout, "[USBSID] libusb_fill_bulk_transfer transfer_in complete\r\n");
 
   if (result == NULL) {
@@ -1549,7 +1601,7 @@ void USBSID_Class::LIBUSB_FreeInBuffer(void)
 {
   USBDBG(stdout, "[USBSID] Free in buffers\r\n");
   if (in_buffer_dma) {
-    rc = libusb_dev_mem_free(devh, in_buffer, LEN_IN_BUFFER);
+    rc = libusb_dev_mem_free(devh, in_buffer, LEN_IN_XFER);
     if (rc < 0) {
       USBERR(stderr, "[USBSID] Error, failed to free in_buffer DMA memory: %d, %s: %s\n", rc, libusb_error_name(rc), libusb_strerror((enum libusb_error)rc));
     }
@@ -1680,7 +1732,10 @@ out:
 
 int USBSID_Class::LIBUSB_Exit(void)
 {
-  if (rc >= 0) {
+  /* Runs only when devh, not rc. a failed LIBUSB_Setup() or a transfer error
+   * leaves rc < 0 with the device still open and its interface claimed, which
+   * on MacOS locks the device for retries and for every other process */
+  if (devh) {
     USBSID_StopThread();
     #ifdef US_MUTE_ON_EXIT
     USBSID_Mute();
