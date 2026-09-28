@@ -7,6 +7,23 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		05B51D880226BC21E211A452 /* usbsid.c in Sources */ = {isa = PBXBuildFile; fileRef = 05B51D020C105AE3C8E91E51 /* usbsid.c */; };
+		05B51DFEEDF6DD1D1B073660 /* usbsid-unixwin-drv.c in Sources */ = {isa = PBXBuildFile; fileRef = 05B51D0B9C8F201F39574C95 /* usbsid-unixwin-drv.c */; };
+		05B51DA89C52CE203270A3F5 /* us-unixwin-device.c in Sources */ = {isa = PBXBuildFile; fileRef = 05B51DF16EF74E0EDCA2C651 /* us-unixwin-device.c */; settings = {COMPILER_FLAGS = "-idirafter \"$(SRCROOT)/../../src/Emulators/vice/lib/libusbsiddrv\""; }; };
+		05B51D98E2CEE3B1F2D80176 /* USBSID.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 05B51D0B9B088F35715719C3 /* USBSID.cpp */; settings = {COMPILER_FLAGS = "-I\"$(SRCROOT)/../libusb/libusb\""; }; };
+		05B51D99DF4A1DBACEDF5E7E /* USBSIDInterface.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 05B51D9FF63A0BC4C0052FC8 /* USBSIDInterface.cpp */; settings = {COMPILER_FLAGS = "-I\"$(SRCROOT)/../libusb/libusb\""; }; };
+		05B51DF4F59936CFB5E54B2E /* USBSID_Manager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 05B51D20C716466AC06558E3 /* USBSID_Manager.cpp */; settings = {COMPILER_FLAGS = "-I\"$(SRCROOT)/../libusb/libusb\""; }; };
+		05B51D3BB97513C8F18034AB /* USBSIDManagerInterface.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 05B51D448B5D61EF85B3D977 /* USBSIDManagerInterface.cpp */; settings = {COMPILER_FLAGS = "-I\"$(SRCROOT)/../libusb/libusb\""; }; };
+		05B51D315F5CB55600F14CF5 /* core.c in Sources */ = {isa = PBXBuildFile; fileRef = 05B51D9CC6D1BFE939AA54B0 /* core.c */; settings = {COMPILER_FLAGS = "-I\"$(SRCROOT)/../libusb/Xcode\" -I\"$(SRCROOT)/../libusb/libusb\""; }; };
+		05B51D6F399E27444AFA2B3F /* descriptor.c in Sources */ = {isa = PBXBuildFile; fileRef = 05B51D18C1131953DC72BC5B /* descriptor.c */; settings = {COMPILER_FLAGS = "-I\"$(SRCROOT)/../libusb/Xcode\" -I\"$(SRCROOT)/../libusb/libusb\""; }; };
+		05B51DE67674FA7181A81EB1 /* hotplug.c in Sources */ = {isa = PBXBuildFile; fileRef = 05B51D2AB41B17FC814A6DBA /* hotplug.c */; settings = {COMPILER_FLAGS = "-I\"$(SRCROOT)/../libusb/Xcode\" -I\"$(SRCROOT)/../libusb/libusb\""; }; };
+		05B51DC9E8DD88983A8490FE /* io.c in Sources */ = {isa = PBXBuildFile; fileRef = 05B51D7524D90A2EA383904C /* io.c */; settings = {COMPILER_FLAGS = "-I\"$(SRCROOT)/../libusb/Xcode\" -I\"$(SRCROOT)/../libusb/libusb\""; }; };
+		05B51D07B9F9EFFDFC419F8B /* strerror.c in Sources */ = {isa = PBXBuildFile; fileRef = 05B51D2098807814DDD2FBD7 /* strerror.c */; settings = {COMPILER_FLAGS = "-I\"$(SRCROOT)/../libusb/Xcode\" -I\"$(SRCROOT)/../libusb/libusb\""; }; };
+		05B51D9BC9A70CD481604F08 /* sync.c in Sources */ = {isa = PBXBuildFile; fileRef = 05B51D541B97BE466093607A /* sync.c */; settings = {COMPILER_FLAGS = "-I\"$(SRCROOT)/../libusb/Xcode\" -I\"$(SRCROOT)/../libusb/libusb\""; }; };
+		05B51D73929F2A8681DE608D /* darwin_usb.c in Sources */ = {isa = PBXBuildFile; fileRef = 05B51D3F52B58C67DA8CA8B5 /* darwin_usb.c */; settings = {COMPILER_FLAGS = "-I\"$(SRCROOT)/../libusb/Xcode\" -I\"$(SRCROOT)/../libusb/libusb\""; }; };
+		05B51DEEE6500A4D5D45DD85 /* events_posix.c in Sources */ = {isa = PBXBuildFile; fileRef = 05B51DC9C4242DD44529F6E4 /* events_posix.c */; settings = {COMPILER_FLAGS = "-I\"$(SRCROOT)/../libusb/Xcode\" -I\"$(SRCROOT)/../libusb/libusb\""; }; };
+		05B51D3B2773C59545583663 /* threads_posix.c in Sources */ = {isa = PBXBuildFile; fileRef = 05B51DB5252A466CA4688E13 /* threads_posix.c */; settings = {COMPILER_FLAGS = "-I\"$(SRCROOT)/../libusb/Xcode\" -I\"$(SRCROOT)/../libusb/libusb\""; }; };
+		05B51DB780F798E5587B938D /* Security.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 05B51DB226B03C0509C0AB9D /* Security.framework */; };
 		036A40780BD34570A75EC8A8 /* mouse_quadrature.c in Sources */ = {isa = PBXBuildFile; fileRef = A36D780A3A054AD48CB0F8FB /* mouse_quadrature.c */; };
 		05B103FDD5E78AB1BA1E45C4 /* CTestViceEmbeddedRoms.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F1AD6A0C5922883AF907B19D /* CTestViceEmbeddedRoms.cpp */; };
 		0C5B9E9DA62149EF9F4BDF0D /* mouse_1351.c in Sources */ = {isa = PBXBuildFile; fileRef = FF5E9EE2DEE14A4F81861FDE /* mouse_1351.c */; };
@@ -1493,6 +1510,23 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		05B51D020C105AE3C8E91E51 /* usbsid.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "$(SRCROOT)/../../src/Emulators/vice/sid/usbsid.c"; sourceTree = "<absolute>"; };
+		05B51D0B9C8F201F39574C95 /* usbsid-unixwin-drv.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "$(SRCROOT)/../../src/Emulators/vice/arch/hwsiddrv/usbsid-unixwin-drv.c"; sourceTree = "<absolute>"; };
+		05B51DF16EF74E0EDCA2C651 /* us-unixwin-device.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "$(SRCROOT)/../../src/Emulators/vice/arch/hwsiddrv/us-unixwin-device.c"; sourceTree = "<absolute>"; };
+		05B51D0B9B088F35715719C3 /* USBSID.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = "$(SRCROOT)/../../src/Emulators/vice/lib/libusbsiddrv/USBSID.cpp"; sourceTree = "<absolute>"; };
+		05B51D9FF63A0BC4C0052FC8 /* USBSIDInterface.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = "$(SRCROOT)/../../src/Emulators/vice/lib/libusbsiddrv/USBSIDInterface.cpp"; sourceTree = "<absolute>"; };
+		05B51D20C716466AC06558E3 /* USBSID_Manager.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = "$(SRCROOT)/../../src/Emulators/vice/lib/libusbsiddrv/USBSID_Manager.cpp"; sourceTree = "<absolute>"; };
+		05B51D448B5D61EF85B3D977 /* USBSIDManagerInterface.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = "$(SRCROOT)/../../src/Emulators/vice/lib/libusbsiddrv/USBSIDManagerInterface.cpp"; sourceTree = "<absolute>"; };
+		05B51D9CC6D1BFE939AA54B0 /* core.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "$(SRCROOT)/../libusb/libusb/core.c"; sourceTree = "<absolute>"; };
+		05B51D18C1131953DC72BC5B /* descriptor.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "$(SRCROOT)/../libusb/libusb/descriptor.c"; sourceTree = "<absolute>"; };
+		05B51D2AB41B17FC814A6DBA /* hotplug.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "$(SRCROOT)/../libusb/libusb/hotplug.c"; sourceTree = "<absolute>"; };
+		05B51D7524D90A2EA383904C /* io.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "$(SRCROOT)/../libusb/libusb/io.c"; sourceTree = "<absolute>"; };
+		05B51D2098807814DDD2FBD7 /* strerror.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "$(SRCROOT)/../libusb/libusb/strerror.c"; sourceTree = "<absolute>"; };
+		05B51D541B97BE466093607A /* sync.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "$(SRCROOT)/../libusb/libusb/sync.c"; sourceTree = "<absolute>"; };
+		05B51D3F52B58C67DA8CA8B5 /* darwin_usb.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "$(SRCROOT)/../libusb/libusb/os/darwin_usb.c"; sourceTree = "<absolute>"; };
+		05B51DC9C4242DD44529F6E4 /* events_posix.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "$(SRCROOT)/../libusb/libusb/os/events_posix.c"; sourceTree = "<absolute>"; };
+		05B51DB5252A466CA4688E13 /* threads_posix.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "$(SRCROOT)/../libusb/libusb/os/threads_posix.c"; sourceTree = "<absolute>"; };
+		05B51DB226B03C0509C0AB9D /* Security.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Security.framework; path = System/Library/Frameworks/Security.framework; sourceTree = SDKROOT; };
 		01352D02C171C73C234CC2C1 /* video-render-crtmono.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "$(SRCROOT)/../../src/Emulators/vice/video/video-render-crtmono.c"; sourceTree = "<absolute>"; };
 		01BCC63C205198A2545DE195 /* CTestViceModelConfig.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = CTestViceModelConfig.cpp; path = ../../src/Tests/CTestViceModelConfig.cpp; sourceTree = "<group>"; };
 		0528BD1F2A070B41C95B208B /* CTestVicePlatformAbstraction.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = CTestVicePlatformAbstraction.h; path = ../../src/Tests/CTestVicePlatformAbstraction.h; sourceTree = "<group>"; };
@@ -4579,6 +4613,7 @@
 				41C84E5E23C6189D007C0889 /* AudioUnit.framework in Frameworks */,
 				41C84E5D23C61897007C0889 /* CoreFoundation.framework in Frameworks */,
 				41C84E5C23C61893007C0889 /* IOKit.framework in Frameworks */,
+				05B51DB780F798E5587B938D /* Security.framework in Frameworks */,
 				41C84E5B23C6188E007C0889 /* ForceFeedback.framework in Frameworks */,
 				41C84E5A23C61886007C0889 /* CoreVideo.framework in Frameworks */,
 				AB40000000000001 /* AVFoundation.framework in Frameworks */,
@@ -4595,6 +4630,29 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		05B51D14A068F9EA34E66583 /* USBSID */ = {
+			isa = PBXGroup;
+			children = (
+				05B51D020C105AE3C8E91E51 /* usbsid.c */,
+				05B51D0B9C8F201F39574C95 /* usbsid-unixwin-drv.c */,
+				05B51DF16EF74E0EDCA2C651 /* us-unixwin-device.c */,
+				05B51D0B9B088F35715719C3 /* USBSID.cpp */,
+				05B51D9FF63A0BC4C0052FC8 /* USBSIDInterface.cpp */,
+				05B51D20C716466AC06558E3 /* USBSID_Manager.cpp */,
+				05B51D448B5D61EF85B3D977 /* USBSIDManagerInterface.cpp */,
+				05B51D9CC6D1BFE939AA54B0 /* core.c */,
+				05B51D18C1131953DC72BC5B /* descriptor.c */,
+				05B51D2AB41B17FC814A6DBA /* hotplug.c */,
+				05B51D7524D90A2EA383904C /* io.c */,
+				05B51D2098807814DDD2FBD7 /* strerror.c */,
+				05B51D541B97BE466093607A /* sync.c */,
+				05B51D3F52B58C67DA8CA8B5 /* darwin_usb.c */,
+				05B51DC9C4242DD44529F6E4 /* events_posix.c */,
+				05B51DB5252A466CA4688E13 /* threads_posix.c */,
+			);
+			name = USBSID;
+			sourceTree = "<group>";
+		};
 		41032FE12FCB3DD300EFD94C /* Galaxy */ = {
 			isa = PBXGroup;
 			children = (
@@ -5162,6 +5220,7 @@
 				AB40000000000004 /* CoreMedia.framework */,
 				41B529A323992E300084F0DB /* ForceFeedback.framework */,
 				41B529A123992E2B0084F0DB /* IOKit.framework */,
+				05B51DB226B03C0509C0AB9D /* Security.framework */,
 				41B5299F23992E260084F0DB /* CoreFoundation.framework */,
 				41B5299D23992E200084F0DB /* AudioUnit.framework */,
 				41B5299B23992E1B0084F0DB /* Carbon.framework */,
@@ -6259,6 +6318,7 @@
 		41D4A92323AA0F1000A54EB2 /* arch */ = {
 			isa = PBXGroup;
 			children = (
+				05B51D14A068F9EA34E66583 /* USBSID */,
 				AA0000000000000000000206 /* archdep_file_io.c */,
 				7394243CF375410BB005A81E /* archdep_tick.c */,
 				41D4A92423AA0F1000A54EB2 /* archdep_unix.h */,
@@ -8626,6 +8686,22 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				05B51D880226BC21E211A452 /* usbsid.c in Sources */,
+				05B51DFEEDF6DD1D1B073660 /* usbsid-unixwin-drv.c in Sources */,
+				05B51DA89C52CE203270A3F5 /* us-unixwin-device.c in Sources */,
+				05B51D98E2CEE3B1F2D80176 /* USBSID.cpp in Sources */,
+				05B51D99DF4A1DBACEDF5E7E /* USBSIDInterface.cpp in Sources */,
+				05B51DF4F59936CFB5E54B2E /* USBSID_Manager.cpp in Sources */,
+				05B51D3BB97513C8F18034AB /* USBSIDManagerInterface.cpp in Sources */,
+				05B51D315F5CB55600F14CF5 /* core.c in Sources */,
+				05B51D6F399E27444AFA2B3F /* descriptor.c in Sources */,
+				05B51DE67674FA7181A81EB1 /* hotplug.c in Sources */,
+				05B51DC9E8DD88983A8490FE /* io.c in Sources */,
+				05B51D07B9F9EFFDFC419F8B /* strerror.c in Sources */,
+				05B51D9BC9A70CD481604F08 /* sync.c in Sources */,
+				05B51D73929F2A8681DE608D /* darwin_usb.c in Sources */,
+				05B51DEEE6500A4D5D45DD85 /* events_posix.c in Sources */,
+				05B51D3B2773C59545583663 /* threads_posix.c in Sources */,
 				411D2E402D71D4D3007714A9 /* CRenderShaderCRTMonitorOpenGL4.cpp in Sources */,
 				FA7F4EB8CA63F5ECB0A8D9FE /* CRTMonitorShaderFactoryMacOS.mm in Sources */,
 				9708E1DFD6D1CCB71EDC37A6 /* CRenderShaderCRTMonitorMetal.mm in Sources */,
@@ -10192,6 +10268,7 @@
 				CURRENT_PROJECT_VERSION = 1.0.1;
 				DEVELOPMENT_TEAM = APV7Y7Q9JY;
 				ENABLE_HARDENED_RUNTIME = YES;
+				EXCLUDED_RECURSIVE_SEARCH_PATH_SUBDIRECTORIES = "$(inherited) libusbsiddrv";
 				GCC_C_LANGUAGE_STANDARD = c17;
 				HEADER_SEARCH_PATHS = (
 					"$(MT_CAPS_INCLUDE_DIR)",
@@ -10251,6 +10328,7 @@
 				DEVELOPMENT_TEAM = APV7Y7Q9JY;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_TESTABILITY = YES;
+				EXCLUDED_RECURSIVE_SEARCH_PATH_SUBDIRECTORIES = "$(inherited) libusbsiddrv";
 				GCC_C_LANGUAGE_STANDARD = c17;
 				GCC_OPTIMIZATION_LEVEL = 3;
 				HEADER_SEARCH_PATHS = (

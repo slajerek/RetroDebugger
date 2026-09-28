@@ -22,7 +22,8 @@
 // have made this file inert.
 
 // MACOS is a platform define, not a capability: mtcaps has no source for it.
-GCC_PREPROCESSOR_DEFINITIONS = $(inherited) MACOS $(MT_CAPS_DEFINES) $(MT_APP_DEFAULT_CAPS)
+// HAVE_USBSID enables the USBSID-Pico SID engine (vendored libusb, platform/libusb).
+GCC_PREPROCESSOR_DEFINITIONS = $(inherited) MACOS HAVE_USBSID $(MT_CAPS_DEFINES) $(MT_APP_DEFAULT_CAPS)
 
 // Fallback for opening this project directly in Xcode with no wrapper run. The
 // build still fails at the agreement check -- that is the designed outcome, not
