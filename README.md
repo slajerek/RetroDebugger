@@ -26,7 +26,7 @@ File Size Name
 ```
 
 
-Retro Debugger embeds Vice v3.1, Atari800 and NestopiaUE 
+Retro Debugger embeds Vice, Atari800 and NestopiaUE 
 emulator engines provided by:
 
 Vice: https://sourceforge.net/projects/vice-emu/
