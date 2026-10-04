@@ -4,6 +4,7 @@
 #include "CDebuggerServerProtocol.h"
 #include "CViewC64.h"
 #include "CDebugInterface.h"
+#include "CDebugMemoryCell.h"
 #include "C64DShutdown.h"
 #include "SYS_Main.h"
 #include <cstdio>
@@ -56,9 +57,8 @@ static bool WaitForShutdownCalls(int expected, int timeoutMs)
 	return sRecordedShutdownCount >= expected;
 }
 
-// CMCPServer registers its tools lazily, and outside bridge mode it waits for
-// viewC64->debuggerServer to show up before doing so. Make sure it is there, or
-// every tool request below pays that ten second stall.
+// CMCPServer registers its tools lazily.  Fake tool servers publish their own
+// readiness separately; keep the real server available for later suite tests.
 //
 // Deliberately never stopped again: CDebuggerServerWebSockets does not survive
 // a Start() after a Stop(), and later tests in the suite (CTestMCPBridge) need
@@ -69,6 +69,15 @@ static void EnsureDebuggerServerPresent()
 	{
 		viewC64->DebuggerServerWebSocketsStart();
 	}
+}
+
+// Publish the complete fake endpoint registry through the same readiness gate
+// used by the application. RegisterDebuggerTools alone neither publishes the
+// server nor completes lazy registration, so every request would wait ten seconds.
+static void PrepareToolTestServer(CMCPServer &server, CDebuggerServer &debuggerServer)
+{
+	debuggerServer.SetEndpointRegistryReady(true);
+	server.SetDebuggerServer(&debuggerServer);
 }
 
 // Stands in for the debugger server (or the bridge to a remote one) so the
@@ -106,11 +115,15 @@ public:
 
 	json envelope;
 	int callCount;
+	std::string lastEndpointName;
+	json lastParams;
 
 	virtual std::vector<char> *RunEndpointFunction(const std::string &endpointName, const std::string token,
 												   json params, u8 *binaryData, int binaryDataSize)
 	{
 		callCount++;
+		lastEndpointName = endpointName;
+		lastParams = params;
 		std::string raw = envelope.dump();
 		return new std::vector<char>(raw.begin(), raw.end());
 	}
@@ -618,19 +631,17 @@ void CTestMCPProtocol::Run(ITestCallback *cb)
 	}
 
 	// Tests 20 and 21 both drive CMCPServer tool dispatch.
-	{
 	EnsureDebuggerServerPresent();
 
 	// --- Test 20: retro_shutdown forwards to the server/shutdown endpoint ---
 	{
-		// Guard the real executor for the whole block: tool registration also
-		// binds a second retro_shutdown to the live debugger server, and nothing
+		// Guard the real executor for the whole block: nothing
 		// in this test may be able to take the test runner down.
 		CShutdownExecutorGuard guard(RecordShutdown);
 
 		CRecordingDebuggerServer recordingServer;
 		CMCPServer server;
-		server.RegisterDebuggerTools(&recordingServer);
+		PrepareToolTestServer(server, recordingServer);
 
 		json request;
 		request["jsonrpc"] = "2.0";
@@ -694,7 +705,7 @@ void CTestMCPProtocol::Run(ITestCallback *cb)
 
 		CRecordingDebuggerServer recordingServer;
 		CMCPServer server;
-		server.RegisterDebuggerTools(&recordingServer);
+		PrepareToolTestServer(server, recordingServer);
 
 		json request;
 		request["jsonrpc"] = "2.0";
@@ -735,7 +746,7 @@ void CTestMCPProtocol::Run(ITestCallback *cb)
 	{
 		CRecordingDebuggerServer recordingServer;
 		CMCPServer server;
-		server.RegisterDebuggerTools(&recordingServer);
+		PrepareToolTestServer(server, recordingServer);
 
 		json request;
 		request["jsonrpc"] = "2.0";
@@ -797,7 +808,7 @@ void CTestMCPProtocol::Run(ITestCallback *cb)
 	{
 		CRecordingDebuggerServer recordingServer;
 		CMCPServer server;
-		server.RegisterDebuggerTools(&recordingServer);
+		PrepareToolTestServer(server, recordingServer);
 
 		json request;
 		request["jsonrpc"] = "2.0";
@@ -849,7 +860,7 @@ void CTestMCPProtocol::Run(ITestCallback *cb)
 
 		CCannedDebuggerServer cannedServer(envelope);
 		CMCPServer server;
-		server.RegisterDebuggerTools(&cannedServer);
+		PrepareToolTestServer(server, cannedServer);
 
 		json response = CallTool(server, 24, "retro_load", {{"path", "/docker-share/c64TestData/test.d64"}});
 		std::string error = ToolErrorText(response);
@@ -883,7 +894,7 @@ void CTestMCPProtocol::Run(ITestCallback *cb)
 
 		CCannedDebuggerServer cannedServer(envelope);
 		CMCPServer server;
-		server.RegisterDebuggerTools(&cannedServer);
+		PrepareToolTestServer(server, cannedServer);
 
 		json response = CallTool(server, 25, "retro_load", {{"path", "/tmp/game.prg"}});
 		std::string error = ToolErrorText(response);
@@ -916,7 +927,7 @@ void CTestMCPProtocol::Run(ITestCallback *cb)
 
 		CCannedDebuggerServer cannedServer(envelope);
 		CMCPServer server;
-		server.RegisterDebuggerTools(&cannedServer);
+		PrepareToolTestServer(server, cannedServer);
 
 		json response = CallTool(server, 26, "retro_load", {{"path", "/tmp/game.prg"}});
 		std::string error = ToolErrorText(response);
@@ -946,7 +957,7 @@ void CTestMCPProtocol::Run(ITestCallback *cb)
 		{
 			CCannedDebuggerServer cannedServer(envelope);
 			CMCPServer server;
-			server.RegisterDebuggerTools(&cannedServer);
+			PrepareToolTestServer(server, cannedServer);
 
 			json arguments;
 			arguments["platform"] = "c64";
@@ -965,9 +976,6 @@ void CTestMCPProtocol::Run(ITestCallback *cb)
 			}
 		}
 	}
-
-	}
-
 
 	// --- Test 28: MCP cannot acquire a server before endpoint registration ---
 	// (PR #130's Test 9, carried into the private tree's numbering)
@@ -1031,7 +1039,113 @@ void CTestMCPProtocol::Run(ITestCallback *cb)
 		}
 	}
 
-	TestCompleted(true, "All MCP protocol tests passed (29/29)");
+	// --- Test 30: last-access MCP forwards exact address/platform and payload ---
+	{
+		json absent = {{"available", false}, {"pc", nullptr}, {"cycle", nullptr},
+			{"frame", nullptr}, {"rasterLine", nullptr}, {"rasterCycle", nullptr}};
+		json recorded = {{"available", true}, {"pc", 0}, {"cycle", (1ULL << 42)},
+			{"frame", 0}, {"rasterLine", nullptr}, {"rasterCycle", nullptr}};
+		for (const char *platform : {"c64", "atari800", "nes"})
+		{
+			for (int address : {0, 65535})
+			{
+				json payload = {{"platform", platform}, {"address", address}, {"addressSpace", "cpu"},
+					{"read", absent}, {"write", recorded}};
+				CCannedDebuggerServer debuggerServer({{"status", HTTP_OK}, {"result", payload}});
+				CMCPServer server;
+				PrepareToolTestServer(server, debuggerServer);
+				json response = CallTool(server, 30, "retro_memory_last_access",
+					{{"platform", platform}, {"address", address}});
+				if (!ToolErrorText(response).empty() || debuggerServer.callCount != 1
+					|| debuggerServer.lastEndpointName != std::string(platform) + "/cpu/memory/lastAccess"
+					|| debuggerServer.lastParams != json({{"address", address}})
+					|| json::parse(response["result"]["content"][0]["text"].get<std::string>()) != payload)
+				{
+					sprintf(failureMsg, "Test 30 FAIL: last-access forwarding/payload mismatch");
+					TestCompleted(false, failureMsg);
+					return;
+				}
+			}
+		}
+	}
+
+	// --- Test 31: reject missing, non-integer, overflowing and bad-platform inputs ---
+	{
+		CCannedDebuggerServer debuggerServer({{"status", HTTP_OK}, {"result", json::object()}});
+		CMCPServer server;
+		PrepareToolTestServer(server, debuggerServer);
+		json invalid = json::array({json::object(), {{"platform", "c64"}}, {{"address", 0}}});
+		for (const auto &address : json::array({nullptr, true, "4096", 1.5, -1, 65536,
+			18446744073709551615ULL, json::object(), json::array()}))
+			invalid.push_back({{"platform", "c64"}, {"address", address}});
+		for (const auto &platform : json::array({nullptr, 7, "", "unknown", "c64u"}))
+			invalid.push_back({{"platform", platform}, {"address", 0}});
+		for (const auto &arguments : invalid)
+		{
+			json response = CallTool(server, 31, "retro_memory_last_access", arguments);
+			if (ToolErrorText(response).empty() || debuggerServer.callCount != 0)
+			{
+				sprintf(failureMsg, "Test 31 FAIL: invalid last-access input reached endpoint");
+				TestCompleted(false, failureMsg);
+				return;
+			}
+		}
+	}
+
+	// --- Test 32: last-access endpoint and bridge failures become MCP errors ---
+	{
+		for (const auto &envelope : json::array({
+			{{"status", HTTP_SERVICE_UNAVAILABLE}, {"result", {{"error", "CPU memory access tracking is unavailable"}}}},
+			{{"status", HTTP_SERVICE_UNAVAILABLE}, {"error", "desktop_unavailable"}, {"message", "Desktop disconnected"}}}))
+		{
+			CCannedDebuggerServer debuggerServer(envelope);
+			CMCPServer server;
+			PrepareToolTestServer(server, debuggerServer);
+			json response = CallTool(server, 32, "retro_memory_last_access", {{"platform", "c64"}, {"address", 0}});
+			if (ToolErrorText(response).empty() || debuggerServer.callCount != 1)
+			{
+				sprintf(failureMsg, "Test 32 FAIL: last-access endpoint failure swallowed");
+				TestCompleted(false, failureMsg);
+				return;
+			}
+		}
+	}
+
+	// --- Test 33: record sentinels, zero PC/cycle, unknown hooks and clear semantics ---
+	{
+		CDebugMemoryCell cell(0);
+		DebugMemoryCellLastAccess access = cell.GetLastAccess();
+		bool valid = !access.read.IsAvailable() && !access.write.IsAvailable();
+		cell.MarkCellRead(0, 0, 0, -1, -1);
+		cell.MarkCellWrite(0, (1ULL << 42), 0, 0, 12, 34);
+		access = cell.GetLastAccess();
+		valid = valid && access.read.IsAvailable() && access.read.pc == 0 && access.read.cycle == 0
+			&& access.write.IsAvailable() && access.write.cycle == (1ULL << 42)
+			&& access.write.rasterLine == 12 && access.write.rasterCycle == 34;
+		cell.ClearDebugMarkers();
+		access = cell.GetLastAccess();
+		valid = valid && access.read.IsAvailable() && access.write.IsAvailable();
+		cell.MarkCellRead();
+		cell.MarkCellWrite(0);
+		access = cell.GetLastAccess();
+		valid = valid && !access.read.IsAvailable() && !access.write.IsAvailable();
+		cell.MarkCellRead(1, 1, 0x1000, -1, -1);
+		cell.MarkCellWrite(0, 2, 1, 0x2000, -1, -1);
+		cell.ClearReadWriteDebugMarkers();
+		access = cell.GetLastAccess();
+		valid = valid && !access.read.IsAvailable() && !access.write.IsAvailable();
+		// Legacy cells do not free these buffers in their destructor.
+		circlebuf_free(&cell.valuesHistory);
+		circlebuf_free(&cell.executeHistory);
+		if (!valid)
+		{
+			sprintf(failureMsg, "Test 33 FAIL: memory-access record semantics");
+			TestCompleted(false, failureMsg);
+			return;
+		}
+	}
+
+	TestCompleted(true, "All MCP protocol tests passed (33/33)");
 }
 
 void CTestMCPProtocol::Cancel()

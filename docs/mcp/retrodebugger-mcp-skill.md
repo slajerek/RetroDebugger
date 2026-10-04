@@ -12,6 +12,7 @@ Use this skill when working with the RetroDebugger MCP server to debug 8-bit pro
 ### Inspection (safe, read-only)
 - `retro_cpu_status` — CPU registers (PC, A, X, Y, SP, flags)
 - `retro_memory_read` — read memory block (base64 encoded)
+- `retro_memory_last_access` — last recorded reader/writer PC and instruction cycle for one CPU address; no memory read, GUI navigation or rewind
 - `retro_memory_search` — **search all RAM for a specific byte value** (returns list of matching addresses — use this to find lives/score/level counters)
 - `retro_search_pattern` — search executed code for opcode patterns (`DEC ??`, `STA $0340`, etc.)
 - `retro_screenshot` — **capture current screen as PNG** — use this to observe game state, verify patches, read on-screen text, or confirm the game has started/died. Two modes:
@@ -110,6 +111,35 @@ These are available as WebSocket endpoints, not yet wrapped as MCP tools:
    explicitly asked to close RetroDebugger. It is not a way to recover from a
    stuck emulator: use `retro_reset`, `retro_continue` or `retro_snapshot_load`
    for that.
+
+### Finding the last reader or writer
+
+Call `retro_memory_last_access(platform:"c64", address:1024)` (also `atari800` or
+`nes`; integer address 0–65535). The native endpoint is
+`<platform>/cpu/memory/lastAccess`. The result contains `platform`, `address`,
+`addressSpace:"cpu"`, and separate `read`/`write` records with `available`, `pc`,
+`cycle`, `frame`, `rasterLine`, and `rasterCycle`.
+
+- `available:false` means no PC-and-cycle-bearing record is retained; all record
+  fields are `null`. PC zero and cycle zero are valid, not absence sentinels.
+- `cycle` uses the backend's **execution-counter units**, not a guarantee of the
+  exact bus-access cycle. C64/Atari report instruction-start CPU cycles; NES
+  currently counts instructions, not hardware cycles. Do not compare these
+  values across platforms. Frame/raster fields are `null` when not recorded.
+- Records are copied coherently without pausing or reading emulated memory. A
+  running emulator can produce a newer record immediately after the query; pause
+  it separately when you need stable follow-up disassembly.
+- This is the latest tracked access, not all writers/readers, a value's full
+  provenance, or necessarily a physical RAM bank. Bank switches, mirrors, ROM,
+  hardware/DMA and debugger-originated accesses follow each backend's existing
+  marker hooks; the result does not resolve their physical identity.
+- These are debugger records, not snapshot state or an execution-epoch guarantee.
+  Resets/rewinds can leave retained records from an earlier timeline. Existing
+  visual-only marker clearing preserves them; read/write-marker clearing erases
+  them. An access hook without PC/cycle metadata invalidates that side's record
+  instead of reporting an older or fabricated instruction.
+- C64U hardware and 1541-drive address spaces are not supported by this tool.
+  Missing/unavailable endpoints are errors, not successful empty results.
 
 ### Using `retro_shutdown`
 

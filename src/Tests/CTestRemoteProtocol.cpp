@@ -1,9 +1,13 @@
 #include "CTestRemoteProtocol.h"
+#include "EmulatorsConfig.h"
 #include "CDebuggerServer.h"
 #include "CDebuggerServerProtocol.h"
 #include "CViewC64.h"
 #include "CDebugInterface.h"
 #include "CDebugInterfaceC64.h"
+#include "CDebugSymbols.h"
+#include "CDebugMemory.h"
+#include "CDebugMemoryCell.h"
 #include "C64DShutdown.h"
 #include "SYS_Main.h"
 #include "SYS_Funct.h"
@@ -112,6 +116,40 @@ static json CallEndpointWithParams(CDebuggerServer *server, const char *fn, cons
 			{"details", e.what()}
 		};
 	}
+}
+
+// Pause only a running CPU and restore its previous mode on every test exit.
+struct CAccessQueryPauseGuard
+{
+	CDebugInterface *di;
+	uint8 mode;
+	bool changed;
+	CAccessQueryPauseGuard(CDebugInterface *di) : di(di), mode(di->GetDebugMode()),
+		changed(di->IsEmulationRunning() && mode != DEBUGGER_MODE_PAUSED)
+	{
+		if (changed) di->PauseEmulationBlockedWait();
+	}
+	void Restore()
+	{
+		if (changed) di->SetDebugMode(mode);
+		changed = false;
+	}
+	~CAccessQueryPauseGuard() { Restore(); }
+};
+
+static json ExpectedAccessRecord(const DebugMemoryCellAccess &access)
+{
+	json result = {{"available", access.IsAvailable()}, {"pc", nullptr}, {"cycle", nullptr},
+		{"frame", nullptr}, {"rasterLine", nullptr}, {"rasterCycle", nullptr}};
+	if (access.IsAvailable())
+	{
+		result["pc"] = access.pc;
+		result["cycle"] = access.cycle;
+		if (access.frame != (u32)-1) result["frame"] = access.frame;
+		if (access.rasterLine >= 0) result["rasterLine"] = access.rasterLine;
+		if (access.rasterCycle >= 0) result["rasterCycle"] = access.rasterCycle;
+	}
+	return result;
 }
 
 static bool JsonObjectContainsFields(const json &object, const json &expectedFields)
@@ -526,7 +564,92 @@ void CTestRemoteProtocol::Run(ITestCallback *cb)
 		}
 	}
 
-	FinishTest(true, "All remote protocol tests passed (8/8)");
+	// --- Test 9: actual last-access endpoints match records and do not mutate ---
+	{
+		// Missing interfaces/maps must not silently reduce enabled-platform coverage.
+		std::vector<std::string> expectedPlatforms;
+#ifdef RUN_COMMODORE64
+		expectedPlatforms.push_back("c64");
+#endif
+#ifdef RUN_ATARI
+		expectedPlatforms.push_back("atari800");
+#endif
+#ifdef RUN_NES
+		expectedPlatforms.push_back("nes");
+#endif
+		if (expectedPlatforms.empty())
+		{
+			FinishTest(false, "Test 9 FAIL: no CPU platform enabled for last-access coverage");
+			return;
+		}
+		for (const std::string &platform : expectedPlatforms)
+		{
+			CDebugInterface *di = NULL;
+			for (CDebugInterface *candidate : viewC64->debugInterfaces)
+			{
+				if (candidate && platform == candidate->GetPlatformNameEndpointString())
+				{
+					di = candidate;
+					break;
+				}
+			}
+			if (!di || !di->symbols || !di->symbols->memory || !di->GetDebuggerApi())
+			{
+				std::string detail = "Test 9 FAIL: enabled CPU marker endpoint unavailable for " + platform;
+				FinishTest(false, detail.c_str());
+				return;
+			}
+			CAccessQueryPauseGuard pauseGuard(di);
+			CDebugMemoryCell *cell = di->symbols->memory->GetMemoryCell(0x2345);
+			if (!cell)
+			{
+				pauseGuard.Restore();
+				FinishTest(false, "Test 9 FAIL: CPU marker map missing test address");
+				return;
+			}
+			DebugMemoryCellLastAccess before = cell->GetLastAccess();
+			uint8 mode = di->GetDebugMode();
+			std::string endpoint = platform + "/cpu/memory/lastAccess";
+			json expected = {{"platform", platform}, {"address", 0x2345}, {"addressSpace", "cpu"},
+				{"read", ExpectedAccessRecord(before.read)}, {"write", ExpectedAccessRecord(before.write)}};
+			json response = CallEndpointWithParams(server, endpoint.c_str(), {{"address", 0x2345}});
+			DebugMemoryCellLastAccess after = cell->GetLastAccess();
+			if (response.value("status", 0) != HTTP_OK || response.value("result", json()) != expected
+				|| di->GetDebugMode() != mode
+				|| ExpectedAccessRecord(after.read) != expected["read"]
+				|| ExpectedAccessRecord(after.write) != expected["write"])
+			{
+				std::string detail = "Test 9 FAIL: last-access payload/state mismatch for " + platform;
+				pauseGuard.Restore();
+				FinishTest(false, detail.c_str());
+				return;
+			}
+			// Exercise raw endpoint validation, independently of the MCP schema.
+			for (const auto &address : json::array({nullptr, true, "0", 1.5, -1, 65536,
+				18446744073709551615ULL}))
+			{
+				response = CallEndpointWithParams(server, endpoint.c_str(), {{"address", address}});
+				if (response.value("status", 0) != HTTP_BAD_REQUEST || di->GetDebugMode() != mode)
+				{
+					pauseGuard.Restore();
+					FinishTest(false, "Test 9 FAIL: invalid raw last-access address accepted");
+					return;
+				}
+			}
+			response = CallEndpointWithParams(server, endpoint.c_str(), json::object());
+			if (response.value("status", 0) != HTTP_BAD_REQUEST)
+			{
+				pauseGuard.Restore();
+				FinishTest(false, "Test 9 FAIL: missing raw last-access address accepted");
+				return;
+			}
+			pauseGuard.Restore();
+			std::string detail = "Last-access endpoint verified for " + platform;
+			StepCompleted(9, true, detail.c_str());
+		}
+	}
+
+	FinishTest(true, "All remote protocol tests passed (9/9)");
 }
 
 void CTestRemoteProtocol::Cancel()
