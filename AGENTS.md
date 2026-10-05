@@ -26,7 +26,8 @@ the platform nobody checked:
 - 2026-09-18: the Ide64UsbListener teardown segfault reproduced only on the
   GitHub arm64 macOS runners (USB-server teardown vs the emulation thread).
 - `DetachCartridgePaused` / `VicePlatformAbstraction` flake only under CI
-  scheduling pressure (step polls hardened; frame pacing still sensitive).
+  scheduling pressure (step polls hardened; frame pacing closed later, see
+  Known state).
 
 After pushing, watch `gh run list` until every workflow's BOTH matrix legs
 (logs on/off) finish; a job that only produced the Linux leg is not evidence
@@ -46,7 +47,20 @@ for the other two.
   branch `devel` FIRST, then the app push (the macOS/macOS-bundle fix lives
   in the engine driver: `-derivedDataPath $APP_DIR/build-macos`).
 
-## Known state (2026-09-18, late)
+## Known state (2026-10-06)
+
+All three platforms green at devel tip `d4bd4b0`, both macOS legs each,
+73/73: Linux `37381634893`, Windows `37381634903`, macOS `37381635005`.
+
+- `d4bd4b0` closes the `VicePlatformAbstraction` frame-pacing flake: the
+  settle after `StartEmulationThread` in Step 9 was raised 300ms -> 500ms
+  before the resumed pacing sample. At 300ms CI arm64 runners measured
+  resumed pacing at 77.9% (`36929444690`, commit `31452e8`) and 88.6%
+  (`37315395458`, devel tip `a7b349b`) of baseline against a 90% gate;
+  at 500ms both legs reported ~102% (on) and ~105% (off), and the local
+  check ran at ~102%.
+
+## Known state history (2026-09-18, late)
 
 All three platforms green at devel tip `ac1c305`, both matrix legs each:
 
@@ -82,5 +96,5 @@ What got fixed since `35308230558` (in merge order):
   resource before the CPU thread drained). The wait is bounded at 2s and
   bails when the debugger leaves RUNNING.
 
-Not yet fully closed: `VicePlatformAbstraction` frame pacing (36 vs 31
-frames/700ms) has not recurred since; revisit it separately if it returns.
+The frame-pacing tail of this saga (36 vs 31 frames/700ms) recurred on
+2026-10-01 and 2026-10-05 and was closed by `d4bd4b0`, see Known state.
