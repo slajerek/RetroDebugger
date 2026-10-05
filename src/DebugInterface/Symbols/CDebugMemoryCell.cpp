@@ -290,6 +290,7 @@ void CDebugMemoryCell::ClearDebugMarkers()
 
 void CDebugMemoryCell::ClearReadWriteDebugMarkers()
 {
+	std::lock_guard<std::mutex> guard(readWriteAccessMutex);
 	isRead = false;
 	isWrite = false;
 
@@ -305,18 +306,41 @@ void CDebugMemoryCell::ClearReadWriteDebugMarkers()
 
 void CDebugMemoryCell::MarkCellRead()
 {
+	// A backend without PC/cycle metadata must not leave an older rich record.
+	MarkCellRead((u64)-1, (u32)-1, -1, -1, -1);
+}
+
+void CDebugMemoryCell::MarkCellRead(u64 readCycle, u32 readFrame, int readPC, int readRasterLine, int readRasterCycle)
+{
+	std::lock_guard<std::mutex> guard(readWriteAccessMutex);
+	this->readPC = readPC;
+	this->readCycle = readCycle;
+	this->readFrame = readFrame;
+	this->readRasterLine = readRasterLine;
+	this->readRasterCycle = readRasterCycle;
 	markMemoryCellColorRead(this);
 	isRead = true;
+}
+
+DebugMemoryCellLastAccess CDebugMemoryCell::GetLastAccess()
+{
+	std::lock_guard<std::mutex> guard(readWriteAccessMutex);
+	DebugMemoryCellLastAccess result;
+	result.read = {readPC, readCycle, readFrame, readRasterLine, readRasterCycle};
+	result.write = {writePC, writeCycle, writeFrame, writeRasterLine, writeRasterCycle};
+	return result;
 }
 
 void CDebugMemoryCell::MarkCellWrite(uint8 value)
 {
 	//LOGTODO("remove argument marker based on previous code length");
-	MarkCellWrite(value, 0, 0, 0, 0, 0);
+	// Unknown provenance is not a write by instruction $0000 at cycle zero.
+	MarkCellWrite(value, (u64)-1, (u32)-1, -1, -1, -1);
 }
 
 void CDebugMemoryCell::MarkCellWrite(uint8 value, u64 writeCycle, u32 writeFrame, int writePC, int writeRasterLine, int writeRasterCycle)
 {
+	std::lock_guard<std::mutex> guard(readWriteAccessMutex);
 	isExecuteCode = false;
 	isExecuteArgument = false;
 	isWrite = true;

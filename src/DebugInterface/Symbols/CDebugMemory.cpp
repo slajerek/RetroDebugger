@@ -75,14 +75,9 @@ void CDebugMemory::CellRead(int addr, int pc, int readRasterLine, int readRaster
 	
 	if (cell)
 	{
-		cell->MarkCellRead();
-
-		cell->readPC = pc;
-		cell->readRasterLine = readRasterLine;
-		cell->readRasterCycle = readRasterCycle;
-
-		cell->readCycle = debugInterface->GetCurrentCpuInstructionCycleCounter();
-		cell->readFrame = debugInterface->GetEmulationFrameNumber();
+		u64 readCycle = debugInterface->GetCurrentCpuInstructionCycleCounter();
+		u32 readFrame = debugInterface->GetEmulationFrameNumber();
+		cell->MarkCellRead(readCycle, readFrame, pc, readRasterLine, readRasterCycle);
 	}
 }
 

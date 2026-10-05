@@ -921,6 +921,36 @@ void CMCPServer::RegisterDebuggerTools(CDebuggerServer *server)
 		RegisterTool(tool);
 	}
 
+	// Last recorded CPU-address reader and writer (does not read emulated memory)
+	{
+		MCPToolDescriptor tool;
+		tool.name = "retro_memory_last_access";
+		tool.description = "Read the last recorded CPU-address reader and writer: PC, instruction cycle, frame and optional raster coordinates. Read-only; no GUI navigation or rewind. Records describe CPU addresses, not physical banks or full access history.";
+		tool.inputSchema = {
+			{"type", "object"},
+			{"properties", {
+				{"platform", {{"type", "string"}, {"enum", json::array({"c64", "atari800", "nes"})}, {"description", "Emulator platform"}}},
+				{"address", {{"type", "integer"}, {"minimum", 0}, {"maximum", 65535}, {"description", "16-bit CPU address"}}}
+			}},
+			{"required", json::array({"platform", "address"})}
+		};
+		tool.handler = [server](const json &params) -> json
+		{
+			if (!params.contains("platform") || !params.at("platform").is_string())
+				throw runtime_error("platform must be c64, atari800 or nes");
+			string platform = params.at("platform").get<string>();
+			if (platform != "c64" && platform != "atari800" && platform != "nes")
+				throw runtime_error("platform must be c64, atari800 or nes");
+			if (!params.contains("address") || !params.at("address").is_number_integer()
+				|| params.at("address") < 0 || params.at("address") > 0xFFFF)
+				throw runtime_error("address must be an integer from 0 to 65535");
+			json endpointParams = {{"address", params.at("address")}};
+			return ConsumeEndpointResult(server->RunEndpointFunction(platform + "/cpu/memory/lastAccess",
+				"", endpointParams, nullptr, 0), "retro_memory_last_access");
+		};
+		RegisterTool(tool);
+	}
+
 	// Memory write (accepts base64-encoded data)
 	{
 		MCPToolDescriptor tool;

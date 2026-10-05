@@ -5,6 +5,8 @@
 #include "CDebugInterface.h"
 #include "CDebuggerApi.h"
 #include "CDebugSymbols.h"
+#include "CDebugMemory.h"
+#include "CDebugMemoryCell.h"
 #include "CDebugSymbolsSegment.h"
 #include "CDebugBreakpointsAddr.h"
 #include "CDebugBreakpointsData.h"
@@ -57,6 +59,21 @@ static void RegisterEndpoint(CDebuggerServer *server, const char *fn, const char
 	desc.supportsBinaryInput = binaryIn;
 	desc.supportsBinaryOutput = binaryOut;
 	server->AddEndpointFunction(desc, handler);
+}
+
+static json MemoryAccessToJson(const DebugMemoryCellAccess &access)
+{
+	json result = {{"available", access.IsAvailable()}, {"pc", nullptr},
+		{"cycle", nullptr}, {"frame", nullptr}, {"rasterLine", nullptr}, {"rasterCycle", nullptr}};
+	if (access.IsAvailable())
+	{
+		result["pc"] = access.pc;
+		result["cycle"] = access.cycle;
+		if (access.frame != (u32)-1) result["frame"] = access.frame;
+		if (access.rasterLine >= 0) result["rasterLine"] = access.rasterLine;
+		if (access.rasterCycle >= 0) result["rasterCycle"] = access.rasterCycle;
+	}
+	return result;
 }
 
 void CDebuggerServerApi::RegisterEndpoints(CDebuggerServer *server)
@@ -286,6 +303,39 @@ void CDebuggerServerApi::RegisterEndpoints(CDebuggerServer *server)
 		counters["instruction"] = debuggerApi->GetMainCpuInstructionCycleCounter();
 		counters["frame"] = debuggerApi->GetEmulationFrameNumber();
 		return server->PrepareResult(HTTP_OK, token, counters, NULL, 0);
+	});
+
+	sprintf(buf, "%s/cpu/memory/lastAccess", plat);
+	RegisterEndpoint(server, buf, plat, "memory", "Read last recorded CPU-address reader and writer without changing emulation",
+	[this, server](const string token, json params, unsigned char *binaryData, int binaryDataSize) -> vector<char>*
+	{
+		if (!params.contains("address") || !params.at("address").is_number_integer()
+			|| params.at("address") < 0 || params.at("address") > 0xFFFF)
+		{
+			return server->PrepareResult(HTTP_BAD_REQUEST, token,
+				{{"error", "address must be an integer from 0 to 65535"}}, NULL, 0);
+		}
+		int address = params.at("address").get<int>();
+		CDebugInterfaceMutexGuard guard(debugInterface);
+		CDebugMemory *memory = debugInterface->symbols ? debugInterface->symbols->memory : NULL;
+		if (!memory)
+		{
+			return server->PrepareResult(HTTP_SERVICE_UNAVAILABLE, token,
+				{{"error", "CPU memory access tracking is unavailable"}}, NULL, 0);
+		}
+		CDebugMemoryCell *cell = memory->GetMemoryCell(address);
+		if (!cell)
+		{
+			return server->PrepareResult(HTTP_BAD_REQUEST, token,
+				{{"error", "address is outside the CPU memory marker map"}}, NULL, 0);
+		}
+
+		// No memory adapter reads: inspecting a record must not become a CPU read.
+		DebugMemoryCellLastAccess access = cell->GetLastAccess();
+		json result = {{"platform", debugInterface->GetPlatformNameEndpointString()},
+			{"address", address}, {"addressSpace", "cpu"},
+			{"read", MemoryAccessToJson(access.read)}, {"write", MemoryAccessToJson(access.write)}};
+		return server->PrepareResult(HTTP_OK, token, result, NULL, 0);
 	});
 
 	sprintf(buf, "%s/cpu/memory/writeBlock", plat);

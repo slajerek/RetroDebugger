@@ -439,6 +439,7 @@ void CTestMCPBridge::Run(ITestCallback *cb)
 		bool hasMemoryRead = false;
 		bool hasTransportDiag = false;
 		bool hasDiskAttach = false;
+		bool hasMemoryLastAccess = false;
 		int toolCount = 0;
 		for (const auto &t : tools)
 		{
@@ -447,6 +448,7 @@ void CTestMCPBridge::Run(ITestCallback *cb)
 			if (name == "retro_memory_read") hasMemoryRead = true;
 			if (name == "retro_transport_diagnostics") hasTransportDiag = true;
 			if (name == "retro_disk_attach") hasDiskAttach = true;
+			if (name == "retro_memory_last_access") hasMemoryLastAccess = true;
 			toolCount++;
 		}
 
@@ -477,10 +479,47 @@ void CTestMCPBridge::Run(ITestCallback *cb)
 			return;
 		}
 
-		// Should be 47: 44 debugger + 3 bridge-local
-		if (toolCount != 47)
+		if (!hasMemoryLastAccess)
 		{
-			sprintf(sFailMsg, "Test %d FAIL: expected 47 tools, got %d", testNum, toolCount);
+			sprintf(sFailMsg, "Test %d FAIL: missing retro_memory_last_access in connected tools", testNum);
+			bridge.Stop();
+			FinishTest(false, sFailMsg);
+			return;
+		}
+
+		// Should be 48: 45 debugger + 3 bridge-local
+		if (toolCount != 48)
+		{
+			sprintf(sFailMsg, "Test %d FAIL: expected 48 tools, got %d", testNum, toolCount);
+			bridge.Stop();
+			FinishTest(false, sFailMsg);
+			return;
+		}
+
+		// Exercise the new tool through the real WebSocket bridge and endpoint.
+		request["id"] = 2;
+		request["method"] = "tools/call";
+		request["params"] = {{"name", "retro_memory_last_access"},
+			{"arguments", {{"platform", "c64"}, {"address", 0x2345}}}};
+		response = server.HandleRequest(request);
+		if (!response.contains("result") || !response["result"].is_object() || response["result"].value("isError", false)
+			|| !response["result"].contains("content") || !response["result"]["content"].is_array()
+			|| response["result"]["content"].empty() || !response["result"]["content"][0].is_object()
+			|| !response["result"]["content"][0].contains("text") || !response["result"]["content"][0]["text"].is_string())
+		{
+			sprintf(sFailMsg, "Test %d FAIL: last-access bridge call failed", testNum);
+			bridge.Stop();
+			FinishTest(false, sFailMsg);
+			return;
+		}
+		json access = json::parse(response["result"]["content"][0].value("text", std::string()), nullptr, false);
+		if (!access.is_object() || access.value("platform", std::string()) != "c64"
+			|| access.value("address", -1) != 0x2345 || access.value("addressSpace", std::string()) != "cpu"
+			|| !access.contains("read") || !access.contains("write")
+			|| !access["read"].is_object() || !access["write"].is_object()
+			|| !access["read"].contains("available") || !access["write"].contains("available"))
+		{
+			sprintf(sFailMsg, "Test %d FAIL: invalid last-access bridge payload", testNum);
 			bridge.Stop();
 			FinishTest(false, sFailMsg);
 			return;
@@ -549,6 +588,12 @@ void CTestMCPBridge::Run(ITestCallback *cb)
 			{
 				if (t.value("name", std::string()) == "retro_shutdown")
 					hasShutdown = true;
+				if (t.value("name", std::string()) == "retro_memory_last_access")
+				{
+					sprintf(sFailMsg, "Test %d FAIL: debugger access tool survived disconnect", testNum);
+					FinishTest(false, sFailMsg);
+					return;
+				}
 			}
 			if (!hasShutdown)
 			{
@@ -581,9 +626,9 @@ void CTestMCPBridge::Run(ITestCallback *cb)
 			json response = server.HandleRequest(request);
 			json tools = response["result"]["tools"];
 			int toolCount = (int)tools.size();
-			if (toolCount != 47)
+			if (toolCount != 48)
 			{
-				sprintf(sFailMsg, "Test %d FAIL: after reconnect expected 47 tools, got %d",
+				sprintf(sFailMsg, "Test %d FAIL: after reconnect expected 48 tools, got %d",
 						testNum, toolCount);
 				bridge2.Stop();
 				FinishTest(false, sFailMsg);
@@ -603,6 +648,13 @@ void CTestMCPBridge::Run(ITestCallback *cb)
 					return;
 				}
 				names.insert(name);
+			}
+			if (!names.count("retro_memory_last_access"))
+			{
+				sprintf(sFailMsg, "Test %d FAIL: retro_memory_last_access missing after reconnect", testNum);
+				bridge2.Stop();
+				FinishTest(false, sFailMsg);
+				return;
 			}
 			if (!names.count("retro_disk_attach"))
 			{
