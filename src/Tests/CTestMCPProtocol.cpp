@@ -10,6 +10,7 @@
 #include "SYS_Main.h"
 #include <cstdio>
 #include <cstring>
+#include <limits>
 #include <string>
 #include <vector>
 
@@ -162,6 +163,18 @@ public:
 	{
 		numCalls++;
 		lastEndpointName = endpointName;
+		lastParams = params;
+		if (endpointName.find("/readBlock") != std::string::npos)
+		{
+			json response = {{"status", 200}};
+			std::string raw = response.dump();
+			auto *result = new std::vector<char>(raw.begin(), raw.end());
+			int size = params.at("size").get<int>();
+			result->push_back('\0');
+			for (int i = 0; i < size; i++)
+				result->push_back(static_cast<char>((params.at("address").get<int>() + i) & 0xFF));
+			return result;
+		}
 
 		json response;
 		response["status"] = 200;
@@ -172,7 +185,102 @@ public:
 
 	int numCalls;
 	std::string lastEndpointName;
+	json lastParams;
 };
+
+
+// Exercise the registered tool through tools/call, not a parallel validation model.
+static bool TestMemoryReadProtocol()
+{
+	CTestMCPDebuggerServer debuggerServer;
+	debuggerServer.SetEndpointRegistryReady(true);
+	CMCPServer server;
+	server.SetDebuggerServer(&debuggerServer);
+	auto Call = [&](const json &args) -> json
+	{
+		return server.HandleRequest({{"jsonrpc", "2.0"}, {"id", 11}, {"method", "tools/call"},
+			{"params", {{"name", "retro_memory_read"}, {"arguments", args}}}}).at("result");
+	};
+
+	json expected = {{"status", 200}, {"result", {{"data", "AAEC"}, {"encoding", "base64"}, {"byteCount", 3}}}};
+	for (const char *platform : {"c64", "atari800", "nes"})
+	{
+		for (const char *space : {"", "cpu", "ram"})
+		{
+			if (std::string(space) == "ram" && std::string(platform) != "c64") continue;
+			json args = {{"platform", platform}, {"address", 0}, {"length", 3}};
+			if (space[0]) args["memorySpace"] = space;
+			json result = Call(args);
+			std::string endpoint = std::string(platform) + (std::string(space) == "ram" ? "/ram/readBlock" : "/cpu/memory/readBlock");
+			if (result.value("isError", false) || debuggerServer.lastEndpointName != endpoint
+				|| debuggerServer.lastParams != json({{"address", 0}, {"size", 3}})
+				|| json::parse(result.at("content").at(0).at("text").get<std::string>()) != expected)
+				return false;
+		}
+	}
+
+	// Existing defaults and length-over-size precedence, including ignored malformed aliases.
+	for (const json &args : std::vector<json>{
+		{{"address", 0}}, {{"address", 0}, {"size", 1}},
+		{{"address", 0}, {"length", 1}, {"size", false}}})
+	{
+		json result = Call(args);
+		if (result.value("isError", false) || debuggerServer.lastEndpointName != "c64/cpu/memory/readBlock"
+			|| debuggerServer.lastParams.at("size") != 1) return false;
+	}
+
+	for (const char *space : {"cpu", "ram"})
+	{
+		for (const json &range : std::vector<json>{
+			{{"address", 65536}, {"length", 0}}, {{"address", 65535}, {"length", 1}},
+			{{"address", 0}, {"length", 65536}}})
+		{
+			json args = range;
+			args["memorySpace"] = space;
+			json result = Call(args);
+			if (result.value("isError", false)) return false;
+			json payload = json::parse(result.at("content").at(0).at("text").get<std::string>());
+			int size = range.at("length").get<int>();
+			if (size == 0)
+			{
+				if (payload != json({{"status", 200}})) return false;
+			}
+			else if (payload.at("result").at("byteCount") != size
+				|| payload.at("result").at("encoding") != "base64"
+				|| payload.at("result").at("data").get<std::string>().size() != static_cast<size_t>((size + 2) / 3 * 4)
+				|| (size == 1 && payload.at("result").at("data") != "/w==")) return false;
+		}
+	}
+
+	std::vector<json> invalid = {
+		true, 42, 1.5, "invalid", nullptr, json::array(),
+		{{"address", 0}, {"memorySpace", "rom"}}, {{"address", 0}, {"memorySpace", false}},
+		{{"address", 0}, {"memorySpace", nullptr}}, {{"address", 0}, {"memorySpace", 1}},
+		{{"address", 0}, {"memorySpace", json::array()}}, {{"address", 0}, {"memorySpace", json::object()}},
+		{{"address", 0}, {"memorySpace", "ram"}, {"platform", "atari800"}},
+		{{"address", 0}, {"memorySpace", "ram"}, {"platform", "nes"}},
+		{{"address", 0}, {"memorySpace", "ram"}, {"platform", "unknown"}},
+		{{"address", 0}, {"platform", false}}, {{"length", 1}},
+		{{"address", 65536}, {"length", 1}}, {{"address", 65537}, {"length", 0}},
+		{{"address", 65535}, {"length", 2}}, {{"address", 0}, {"length", 65537}},
+		{{"address", 2147483647}, {"length", 1}}
+	};
+	for (const json &value : std::vector<json>{-1, false, true, 1.0, 1.5, "1", nullptr, json::array(), json::object(),
+		std::numeric_limits<int64_t>::min(), std::numeric_limits<int64_t>::max(), std::numeric_limits<uint64_t>::max(),
+		std::numeric_limits<int32_t>::min(), std::numeric_limits<int32_t>::max(),
+		uint64_t(2147483648), uint64_t(4294967295), uint64_t(4294967296)})
+	{
+		invalid.push_back({{"address", value}, {"length", 1}});
+		invalid.push_back({{"address", 0}, {"length", value}});
+		invalid.push_back({{"address", 0}, {"size", value}});
+	}
+	for (const json &args : invalid)
+	{
+		int before = debuggerServer.numCalls;
+		if (!Call(args).value("isError", false) || debuggerServer.numCalls != before) return false;
+	}
+	return true;
+}
 
 void CTestMCPProtocol::Run(ITestCallback *cb)
 {
@@ -1146,7 +1254,14 @@ void CTestMCPProtocol::Run(ITestCallback *cb)
 		}
 	}
 
-	// --- Test 34: native-frame tool forwards acceptance/status without upgrading it ---
+	// --- Test 34: memory read selection, compatibility, and refused dispatch ---
+	if (!TestMemoryReadProtocol())
+	{
+		TestCompleted(false, "Test 34 FAIL: memory read routing/envelope/range or refusal mismatch");
+		return;
+	}
+
+	// --- Test 35: native-frame tool forwards acceptance/status without upgrading it ---
 	{
 		for (bool statusOnly : {true, false})
 		{
@@ -1163,13 +1278,13 @@ void CTestMCPProtocol::Run(ITestCallback *cb)
 				|| debuggerServer.lastParams != (statusOnly ? json::object() : json({{"frame", INT_MAX}}))
 				|| json::parse(response["result"]["content"][0]["text"].get<std::string>()) != payload)
 			{
-				TestCompleted(false, "Test 34 FAIL: frame-navigation forwarding/payload mismatch");
+				TestCompleted(false, "Test 35 FAIL: frame-navigation forwarding/payload mismatch");
 				return;
 			}
 		}
 	}
 
-	// --- Test 35: frame input validation occurs before dispatch; no other backend ---
+	// --- Test 36: frame input validation occurs before dispatch; no other backend ---
 	{
 		CCannedDebuggerServer debuggerServer({{"status", HTTP_OK}, {"result", json::object()}});
 		CMCPServer server;
@@ -1186,13 +1301,13 @@ void CTestMCPProtocol::Run(ITestCallback *cb)
 		{
 			if (ToolErrorText(CallTool(server, 35, "retro_timeline", args)).empty() || debuggerServer.callCount != 0)
 			{
-				TestCompleted(false, "Test 35 FAIL: invalid timeline input reached endpoint");
+				TestCompleted(false, "Test 36 FAIL: invalid timeline input reached endpoint");
 				return;
 			}
 		}
 	}
 
-	// --- Test 36: refusals remain refusals; transport failures remain MCP errors ---
+	// --- Test 37: refusals remain refusals; transport failures remain MCP errors ---
 	{
 		for (const auto &payload : json::array({{{"accepted", false}, {"status", "refused"}, {"reason", "busy"}},
 			{{"accepted", false}, {"status", "refused"}, {"reason", "no_history"}}}))
@@ -1204,7 +1319,7 @@ void CTestMCPProtocol::Run(ITestCallback *cb)
 			if (!ToolErrorText(response).empty() || debuggerServer.callCount != 1
 				|| json::parse(response["result"]["content"][0]["text"].get<std::string>()) != payload)
 			{
-				TestCompleted(false, "Test 36 FAIL: navigation refusal changed"); return;
+				TestCompleted(false, "Test 37 FAIL: navigation refusal changed"); return;
 			}
 		}
 		CCannedDebuggerServer debuggerServer({{"status", HTTP_SERVICE_UNAVAILABLE}, {"error", "desktop_unavailable"}});
@@ -1212,11 +1327,11 @@ void CTestMCPProtocol::Run(ITestCallback *cb)
 		PrepareToolTestServer(server, debuggerServer);
 		if (ToolErrorText(CallTool(server, 36, "retro_timeline", {{"platform", "c64"}, {"action", "status"}})).empty())
 		{
-			TestCompleted(false, "Test 36 FAIL: timeline transport error swallowed"); return;
+			TestCompleted(false, "Test 37 FAIL: timeline transport error swallowed"); return;
 		}
 	}
 
-	TestCompleted(true, "All MCP protocol tests passed (36/36)");
+	TestCompleted(true, "All MCP protocol tests passed (37/37)");
 }
 
 void CTestMCPProtocol::Cancel()

@@ -15,6 +15,22 @@ using namespace nlohmann;
 
 static char sFailMsg[1024];
 
+static bool HasMemoryReadSchema(const json &tools)
+{
+	int matches = 0;
+	for (const auto &tool : tools)
+	{
+		if (tool.value("name", "") != "retro_memory_read") continue;
+		matches++;
+		const json &properties = tool.at("inputSchema").at("properties");
+		if (!properties.contains("memorySpace")) return false;
+		const json &space = properties.at("memorySpace");
+		if (space.value("type", "") != "string" || space.value("default", "") != "cpu"
+			|| space.at("enum") != json::array({"cpu", "ram"})) return false;
+	}
+	return matches == 1;
+}
+
 static bool WaitForBridgeState(CMCPBridgeClient *bridge, MCPBridgeState target, int timeoutMs)
 {
 	for (int elapsed = 0; elapsed < timeoutMs; elapsed += 50)
@@ -460,9 +476,9 @@ void CTestMCPBridge::Run(ITestCallback *cb)
 			FinishTest(false, sFailMsg);
 			return;
 		}
-		if (!hasMemoryRead)
+		if (!hasMemoryRead || !HasMemoryReadSchema(tools))
 		{
-			sprintf(sFailMsg, "Test %d FAIL: missing retro_memory_read in connected tools", testNum);
+			sprintf(sFailMsg, "Test %d FAIL: missing or stale retro_memory_read schema in connected tools", testNum);
 			FinishTest(false, sFailMsg);
 			return;
 		}
@@ -654,6 +670,14 @@ void CTestMCPBridge::Run(ITestCallback *cb)
 			{
 				sprintf(sFailMsg, "Test %d FAIL: after reconnect expected 49 tools, got %d",
 						testNum, toolCount);
+				bridge2.Stop();
+				FinishTest(false, sFailMsg);
+				return;
+			}
+
+			if (!HasMemoryReadSchema(tools))
+			{
+				sprintf(sFailMsg, "Test %d FAIL: missing or stale memory read schema after reconnect", testNum);
 				bridge2.Stop();
 				FinishTest(false, sFailMsg);
 				return;

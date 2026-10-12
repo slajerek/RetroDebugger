@@ -9,9 +9,9 @@ Use this skill when working with the RetroDebugger MCP server to debug 8-bit pro
 ### Platform Discovery
 - `retro_list_platforms` — list active emulators and their state
 
-### Inspection (safe, read-only)
+### Inspection (read-only; see memory-read limits below)
 - `retro_cpu_status` — CPU registers (PC, A, X, Y, SP, flags)
-- `retro_memory_read` — read memory block (base64 encoded)
+- `retro_memory_read` -- read CPU-visible memory (default), or C64 physical RAM with `memorySpace:"ram"` (base64 encoded)
 - `retro_memory_last_access` — last recorded reader/writer PC and instruction cycle for one CPU address; no memory read, GUI navigation or rewind
 - `retro_memory_search` — **search all RAM for a specific byte value** (returns list of matching addresses — use this to find lives/score/level counters)
 - `retro_search_pattern` — search executed code for opcode patterns (`DEC ??`, `STA $0340`, etc.)
@@ -228,6 +228,16 @@ Call `retro_memory_last_access(platform:"c64", address:1024)` (also `atari800` o
 - `retrodebugger://reference/c64/drive-1541` — 1541 drive memory map, VIA registers, GCR format
 - `retrodebugger://reference/atari800/memory-map` — Atari memory map + ANTIC/GTIA/POKEY/PIA registers
 - `retrodebugger://reference/nes/memory-map` — NES CPU/PPU/APU memory maps + register reference
+
+## Memory Read Selection and Limits
+
+`retro_memory_read` accepts optional `memorySpace:"cpu"|"ram"`.  Omission or explicit `"cpu"` retains the CPU-visible adapter and existing result envelope on all supported platforms.  Explicit `"ram"` is C64-only and routes to the existing `c64/ram/readBlock` endpoint; other platforms, unknown selectors, and non-string selectors are refused before dispatch, without fallback.  No memory-space field is added to the response.
+
+`length` takes precedence over the legacy `size` alias; if both are absent, the handler reads one byte.  The schema continues to advertise `platform`, `address`, and `length` as required, while the handler retains the legacy `platform:"c64"` default.  Address and selected length must be JSON integers, not booleans or floats.  Valid byte addresses are 0–65535.  Address 65536 is accepted only when length is zero, for compatibility with existing empty-read behavior.  Length must satisfy `0 <= length <= 65536 - address`.  Last-byte and full-64-KiB reads remain accepted.  Native CPU and RAM block handlers independently validate `{address,size}` against their adapter length before narrowing, allocation, or access.  Invalid native ranges/types return status 413 with no binary bytes.
+
+Physical RAM reads backing bytes beneath ROM, I/O, and cartridge mappings, including raw RAM bytes at `$0000/$0001` rather than CPU-port register values.  RAM bypasses device-read callbacks, but the block is **not an atomic snapshot** against concurrent emulation or restoration.  The tool does not pause, switch banks, or restore snapshots.  CPU-visible reads are debugger peeks, not guaranteed exact CPU bus reads or universally side-effect-free inspection; an existing Ultimax undefined-return defect remains outside this change.  ROM, VIC, cart selectors, and arbitrary banking are not supported.
+
+Example: `retro_memory_read(platform:"c64", address:40960, length:16, memorySpace:"ram")`.
 
 ## Binary Data Encoding
 

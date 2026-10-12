@@ -398,12 +398,11 @@ void CDebuggerServerApi::RegisterEndpoints(CDebuggerServer *server)
 	RegisterEndpoint(server, buf, plat, "memory", "Read binary block from CPU-visible memory",
 	[this, server](const string token, json params, unsigned char* binaryData, int binaryDataSize) -> vector<char>*
 	{
-		int address = params.at("address").get<int>();
-		int size = params.at("size").get<int>();
-//		LOGD("cpu/memory/readBlock: address=%d size=%d", address, size);
-
 		CDataAdapter *dataAdapter = debuggerApi->GetDataAdapterMemoryWithIO();
-		if (address + size > dataAdapter->AdapterGetDataLength())
+		int address, size;
+		if (!params.contains("address") || !params.contains("size")
+			|| !DebuggerProtocol::ValidateMemoryReadRange(params.at("address"), params.at("size"),
+				dataAdapter->AdapterGetDataLength(), address, size))
 		{
 			return server->PrepareResult(HTTP_PAYLOAD_TOO_LARGE, token, json(), NULL, 0);
 		}
@@ -470,12 +469,11 @@ void CDebuggerServerApi::RegisterEndpoints(CDebuggerServer *server)
 	RegisterEndpoint(server, buf, plat, "memory", "Read binary block from direct RAM",
 	[this, server](const string token, json params, unsigned char* binaryData, int binaryDataSize) -> vector<char>*
 	{
-		int address = params.at("address").get<int>();
-		int size = params.at("size").get<int>();
-//		LOGD("readBlock: address=%d size=%d", address, size);
-
 		CDataAdapter *dataAdapter = debuggerApi->GetDataAdapterMemoryDirectRAM();
-		if (address + size > dataAdapter->AdapterGetDataLength())
+		int address, size;
+		if (!params.contains("address") || !params.contains("size")
+			|| !DebuggerProtocol::ValidateMemoryReadRange(params.at("address"), params.at("size"),
+				dataAdapter->AdapterGetDataLength(), address, size))
 		{
 			return server->PrepareResult(HTTP_PAYLOAD_TOO_LARGE, token, json(), NULL, 0);
 		}

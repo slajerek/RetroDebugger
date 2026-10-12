@@ -487,7 +487,7 @@ void CTestVicePlatformAbstraction::Run(ITestCallback *cb)
 		bool restarted = WaitForFrameAdvance(di, 3, 1500);
 		if (restarted)
 		{
-			SYS_Sleep(300);
+			SYS_Sleep(500);
 			resumed = CountFramesFor(di, 2000);
 		}
 		di->PauseEmulationBlockedWait();
