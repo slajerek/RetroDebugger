@@ -12,6 +12,7 @@
 #include "SYS_Main.h"
 #include "SYS_Funct.h"
 #include <string>
+#include <limits>
 #include <vector>
 
 using namespace nlohmann;
@@ -192,6 +193,48 @@ static bool JsonArrayContainsString(const json &array, const char *value)
 	}
 
 	return false;
+}
+
+// Exercise both registered native handlers through the real endpoint dispatcher.
+static bool TestMemoryReadEndpoints(CDebuggerServer *server)
+{
+	std::vector<json> invalid = {
+		true, 42, 1.5, "invalid", nullptr, json::array(),
+		json::object(), {{"address", 0}}, {{"size", 1}},
+		{{"address", 65536}, {"size", 1}}, {{"address", 65537}, {"size", 0}},
+		{{"address", 65535}, {"size", 2}}, {{"address", 0}, {"size", 65537}},
+		{{"address", 2147483647}, {"size", 1}}
+	};
+	for (const json &value : std::vector<json>{-1, false, true, 1.0, 1.5, "1", nullptr, json::array(), json::object(),
+		std::numeric_limits<int64_t>::min(), std::numeric_limits<int64_t>::max(), std::numeric_limits<uint64_t>::max(),
+		std::numeric_limits<int32_t>::min(), std::numeric_limits<int32_t>::max(),
+		uint64_t(2147483648), uint64_t(4294967295), uint64_t(4294967296)})
+	{
+		invalid.push_back({{"address", value}, {"size", 1}});
+		invalid.push_back({{"address", 0}, {"size", value}});
+	}
+	for (const char *fn : {"c64/cpu/memory/readBlock", "c64/ram/readBlock"})
+	{
+		auto Check = [&](const json &params, int status, int size) -> bool
+		{
+			auto *result = server->RunEndpointFunction(fn, "read-test", params, nullptr, 0);
+			if (!result) return false;
+			std::string raw(result->begin(), result->end());
+			delete result;
+			auto separator = raw.find('\0');
+			int binarySize = separator == std::string::npos ? 0 : static_cast<int>(raw.size() - separator - 1);
+			json response = json::parse(raw.substr(0, separator), nullptr, false);
+			return response.is_object() && response.contains("status") && response.contains("token")
+				&& response.at("status") == status && response.at("token") == "read-test" && binarySize == size;
+		};
+		for (const json &params : invalid)
+			if (!Check(params, HTTP_PAYLOAD_TOO_LARGE, 0)) return false;
+		for (const json &params : std::vector<json>{
+			{{"address", 65536}, {"size", 0}}, {{"address", 65535}, {"size", 1}},
+			{{"address", 0}, {"size", 65536}}, {{"address", uint64_t(0)}, {"size", uint64_t(1)}}})
+			if (!Check(params, HTTP_OK, params.at("size").get<int>())) return false;
+	}
+	return true;
 }
 
 void CTestRemoteProtocol::Run(ITestCallback *cb)
@@ -471,6 +514,14 @@ void CTestRemoteProtocol::Run(ITestCallback *cb)
 			return;
 		}
 
+		// --- Test 10: native block read validation and compatible block edges ---
+		// Run while the existing C64 fixture is active; keep tests 7-9 unchanged.
+		if (!TestMemoryReadEndpoints(server))
+		{
+			if (startedByTest) viewC64->StopEmulationThread(diC64);
+			FinishTest(false, "Test 10 FAIL: native memory read range/status/binary-size mismatch");
+			return;
+		}
 		if (startedByTest) viewC64->StopEmulationThread(diC64);
 	}
 
@@ -649,7 +700,7 @@ void CTestRemoteProtocol::Run(ITestCallback *cb)
 		}
 	}
 
-	FinishTest(true, "All remote protocol tests passed (9/9)");
+	FinishTest(true, "All remote protocol tests passed (10/10)");
 }
 
 void CTestRemoteProtocol::Cancel()

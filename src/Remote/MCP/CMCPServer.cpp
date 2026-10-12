@@ -873,26 +873,38 @@ void CMCPServer::RegisterDebuggerTools(CDebuggerServer *server)
 	{
 		MCPToolDescriptor tool;
 		tool.name = "retro_memory_read";
-		tool.description = "Read a block of memory from emulator (with I/O mapping)";
+		tool.description = "Read CPU-visible memory (default), or physical RAM on C64; not an atomic snapshot";
 		tool.inputSchema = {
 			{"type", "object"},
 			{"properties", {
 				{"platform", {{"type", "string"}, {"description", "Platform name"}}},
 				{"address", {{"type", "integer"}, {"description", "Start address"}}},
-				{"length", {{"type", "integer"}, {"description", "Number of bytes to read"}}}
+				{"length", {{"type", "integer"}, {"description", "Number of bytes to read"}}},
+				{"memorySpace", {{"type", "string"}, {"enum", json::array({"cpu", "ram"})},
+					{"default", "cpu"}, {"description", "CPU-visible memory, or C64-only physical RAM"}}}
 			}},
 			{"required", json::array({"platform", "address", "length"})}
 		};
 		tool.handler = [server](const json &params) -> json
 		{
 			string platform = params.value("platform", "c64");
-			string fn = platform + "/cpu/memory/readBlock";
-			// Accept both "length" and "size" for robustness
-			int size = params.contains("length") ? params.at("length").get<int>()
-					 : params.contains("size")   ? params.at("size").get<int>()
-					 : 1;
+			string memorySpace = params.value("memorySpace", "cpu");
+			if (memorySpace != "cpu" && memorySpace != "ram")
+				throw runtime_error("Unsupported memorySpace: " + memorySpace);
+			if (memorySpace == "ram" && platform != "c64")
+				throw runtime_error("Physical RAM reads are supported only on c64");
+			string fn = platform + (memorySpace == "ram" ? "/ram/readBlock" : "/cpu/memory/readBlock");
+			// Retain length precedence, size alias, and one-byte default.
+			const json defaultSize = 1;
+			const json &sizeJson = params.contains("length") ? params.at("length")
+								 : params.contains("size") ? params.at("size") : defaultSize;
+			int address, size;
+			// All currently exposed CPU-memory adapters have a 64-KiB address space.
+			// Native handlers also validate against the selected adapter's actual length.
+			if (!DebuggerProtocol::ValidateMemoryReadRange(params.at("address"), sizeJson, 0x10000, address, size))
+				throw runtime_error("Invalid memory read range: expected nonnegative integers within 64 KiB");
 			json endpointParams;
-			endpointParams["address"] = params.at("address");
+			endpointParams["address"] = address;
 			endpointParams["size"] = size;
 			vector<char> *result = server->RunEndpointFunction(fn, "", endpointParams, nullptr, 0);
 			if (!result || result->empty())

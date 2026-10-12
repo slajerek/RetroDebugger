@@ -7,6 +7,7 @@
 #include <vector>
 #include <unordered_map>
 #include <functional>
+#include <cstdint>
 
 // Protocol versions
 #define DEBUGGER_PROTOCOL_V1 1
@@ -69,6 +70,28 @@ typedef std::function<std::vector<char> *(const std::string token, const nlohman
 // Protocol helper functions
 namespace DebuggerProtocol
 {
+	// Validate JSON integers before narrowing.  Subtraction avoids overflowing address + size.
+	// An empty read at the exact end remains compatible with the legacy block endpoints.
+	inline bool ValidateMemoryReadRange(const nlohmann::json &addressJson, const nlohmann::json &sizeJson,
+									   int dataLength, int &address, int &size)
+	{
+		if (dataLength < 0 || !addressJson.is_number_integer() || !sizeJson.is_number_integer())
+			return false;
+		if ((!addressJson.is_number_unsigned() && addressJson.get<int64_t>() < 0)
+			|| (!sizeJson.is_number_unsigned() && sizeJson.get<int64_t>() < 0))
+			return false;
+
+		uint64_t start = addressJson.get<uint64_t>();
+		uint64_t count = sizeJson.get<uint64_t>();
+		uint64_t length = static_cast<uint64_t>(dataLength);
+		if (start > length || count > length - start)
+			return false;
+
+		address = static_cast<int>(start);
+		size = static_cast<int>(count);
+		return true;
+	}
+
 	// Parse incoming request, populate context
 	RequestContext ParseRequest(const nlohmann::json &requestJson);
 
