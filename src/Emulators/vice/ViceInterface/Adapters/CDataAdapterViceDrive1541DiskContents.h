@@ -33,6 +33,7 @@ struct Drive1541ContentsIndex
 struct Drive1541ContentsSector
 {
 	u8 data[256];
+	bool isAvailable;
 };
 
 struct Drive1541ContentsTrack
@@ -60,9 +61,11 @@ class CDataAdapterViceDrive1541DiskContents : public CDebugDataAdapter
 {
 public:
 	CDataAdapterViceDrive1541DiskContents(CDebugSymbols *debugSymbols, int driveId);
+	virtual ~CDataAdapterViceDrive1541DiskContents();
 	CDebugInterfaceVice *debugInterfaceVice;
 	
 	virtual int AdapterGetDataLength();
+	virtual int GetDebugMemoryCapacity();
 
 	virtual void GetAddressStringForCell(int cell, char *str, int maxLen);
 	virtual CDataAddressEditBox *CreateDataAddressEditBox(CDataAddressEditBoxCallback *callback);
@@ -96,14 +99,14 @@ public:
 	virtual int GetDataAddressForTrackAndSector(int track, int sector);
 	virtual Drive1541ContentsIndex *GetTrackAndSectorForDataAddress(int dataAddress);
 	
-	virtual void DriveContextReadSector(int trackNum, int sectorNum, u8 *buf);
-	virtual void DriveContextWriteSector(int trackNum, int sectorNum, u8 *buf);
+	virtual bool DriveContextReadSector(int trackNum, int sectorNum, u8 *buf);
+	virtual bool DriveContextWriteSector(int trackNum, int sectorNum, u8 *buf);
 	
 //	virtual void MarkWholeDiskDirty();
 	virtual void MarkTrackDirty(int trackNum);
 	
-	virtual void ReadSector(int trackNum, int sectorNum, u8 *buf);
-	virtual void WriteSector(int trackNum, int sectorNum, u8 *buf);
+	virtual bool ReadSector(int trackNum, int sectorNum, u8 *buf);
+	virtual bool WriteSector(int trackNum, int sectorNum, u8 *buf);
 	
 	// for disk operations
 	bool CreateDiskImage(const char *cPath);

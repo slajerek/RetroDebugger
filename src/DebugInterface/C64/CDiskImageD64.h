@@ -74,6 +74,7 @@ public:
 	bool isFromFile;
 	
 	bool ReadImage();
+	bool isDirectoryValid = false;
 
 	u8 diskName[0x10];
 	u8 diskId[0x07];

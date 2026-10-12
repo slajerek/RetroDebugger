@@ -11,8 +11,9 @@ CDebugMemory::CDebugMemory(CDebugSymbols *debugSymbols)
 	this->debugInterface = debugSymbols->debugInterface;
 	this->dataAdapter = debugSymbols->dataAdapter;
 	
-	// alloc with safe margin for broken algorithms
-	numCells = dataAdapter->AdapterGetDataLength() + DATA_CELLS_PADDING_LENGTH;
+	// Keep cells stable across adapter geometry changes, including attachment
+	// after construction.  Accessors still use the current logical length.
+	numCells = debugSymbols->dataAdapter->GetDebugMemoryCapacity() + DATA_CELLS_PADDING_LENGTH;
 	memoryCells = new CDebugMemoryCell *[numCells];
 	for (int i = 0; i < numCells; i++)
 	{

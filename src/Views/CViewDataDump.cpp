@@ -585,7 +585,7 @@ void CViewDataDump::Render()
 						{
 							sprintfHexCode8(buf, value);
 
-							CDebugMemoryCell *cell = debugMemory->GetMemoryCell(this->currentDataIndex);
+							// Use the checked rendered cell; the old selection may be outside a shrunken image.
 	//						fontBytes->BlitTextColor(buf, px, py, posZ, fontBytesSize,
 
 	//						fontBytesSize*2.0f, fontCharactersWidth, 0.3f,  1.0f, 0.3f, 0.5f, 1.3f);
@@ -1028,6 +1028,11 @@ bool CViewDataDump::DoTap(float x, float y)
 	if (guiMain->isControlPressed)
 	{
 		CDebugMemoryCell *cell = debugMemory->GetMemoryCell(dataPositionAddr);
+		if (!cell)
+		{
+			guiMain->UnlockMutex();
+			return true;
+		}
 		
 		if (guiMain->isShiftPressed)
 		{

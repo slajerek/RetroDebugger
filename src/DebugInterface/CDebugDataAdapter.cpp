@@ -27,6 +27,11 @@ int CDebugDataAdapter::AdapterGetDataLength()
 	return CDataAdapter::AdapterGetDataLength();
 }
 
+int CDebugDataAdapter::GetDebugMemoryCapacity()
+{
+	return AdapterGetDataLength();
+}
+
 int CDebugDataAdapter::GetDataOffset()
 {
 	return CDataAdapter::GetDataOffset();

@@ -3539,10 +3539,11 @@ bool CDebugInterfaceVice::SaveFullSnapshotSynced(CByteBuffer *byteBuffer,
 // this sets up drive internals from disk image so it is ready for the c64 basic run
 void CDebugInterfaceVice::PrepareDriveForBasicRun()
 {
-	viewC64->viewDrive1541Browser->UpdateDriveDiskID();
-
 	u8 buf[256];
-	dataAdapterViceDrive1541DiskContents->ReadSector(D64_BAM_TRACK-1, 0, buf);
+	if (!dataAdapterViceDrive1541DiskContents->ReadSector(D64_BAM_TRACK-1, 0, buf))
+		return;
+
+	viewC64->viewDrive1541Browser->UpdateDriveDiskID();
 	
 	for (int i = 0; i < 256; i++)
 	{

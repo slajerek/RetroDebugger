@@ -114,9 +114,9 @@ void CDataAddressEditBoxDiskContents::SetValue(int value)
 {
 	Drive1541ContentsIndex *index = dataAdapter->GetTrackAndSectorForDataAddress(value);
 	
-	editHexBoxes[0]->SetValue(index->track+1, 2);
-	editHexBoxes[1]->SetValue(index->sector, 2);
-	editHexBoxes[2]->SetValue(index->sectorDataOffset, 2);
+	editHexBoxes[0]->SetValue(index ? index->track+1 : 0, 2);
+	editHexBoxes[1]->SetValue(index ? index->sector : 0, 2);
+	editHexBoxes[2]->SetValue(index ? index->sectorDataOffset : 0, 2);
 	
 	// reset typing
 	editHexBoxes[0]->SetCursorPos(0);
@@ -137,9 +137,8 @@ int CDataAddressEditBoxDiskContents::GetValue()
 	int sector = editHexBoxes[1]->value;
 	int offset = editHexBoxes[2]->value;
 	
-	int value = dataAdapter->GetDataAddressForTrackAndSector(track, sector) + offset;
-
-	return value;
+	int value = dataAdapter->GetDataAddressForTrackAndSector(track, sector);
+	return value < 0 ? -1 : value + offset;
 }
 
 void CDataAddressEditBoxDiskContents::SetCursorPos(int newPos)

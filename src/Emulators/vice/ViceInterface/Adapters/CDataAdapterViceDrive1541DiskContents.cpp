@@ -1,5 +1,6 @@
 extern "C" {
 #include "diskimage.h"
+#include "diskconstants.h"
 #include "vdrive.h"
 #include "vdrive-command.h"
 #include "vdrive-iec.h"
@@ -42,9 +43,9 @@ CDataAdapterViceDrive1541DiskContents::CDataAdapterViceDrive1541DiskContents(CDe
 	this->driveId = driveId;
 	
 	dataIndexes = NULL;
-	numOfTracks = 35;
-	numOfSectors = 683;
-	totalSize = 174848;
+	numOfTracks = 0;
+	numOfSectors = 0;
+	totalSize = 0;
 	
 	diskImage = NULL;
 	gcr = NULL;
@@ -55,6 +56,13 @@ CDataAdapterViceDrive1541DiskContents::CDataAdapterViceDrive1541DiskContents(CDe
 int CDataAdapterViceDrive1541DiskContents::AdapterGetDataLength()
 {
 	return totalSize;
+}
+
+int CDataAdapterViceDrive1541DiskContents::GetDebugMemoryCapacity()
+{
+	// Metadata is created before a disk is attached and must cover every
+	// supported full track without changing detached/attached availability.
+	return MAX_BLOCKS_1541 * DRIVE1541_SECTOR_SIZE;
 }
 
 void CDataAdapterViceDrive1541DiskContents::GetAddressStringForCell(int cell, char *str, int maxLen)
@@ -82,84 +90,75 @@ CDataAddressEditBox *CDataAdapterViceDrive1541DiskContents::CreateDataAddressEdi
 	return editBox;
 }
 
+CDataAdapterViceDrive1541DiskContents::~CDataAdapterViceDrive1541DiskContents()
+{
+	for (int track = 0; track < numOfTracks; track++)
+		delete [] tracks[track].sectors;
+	delete [] tracks;
+	delete [] dataIndexes;
+}
+
 void CDataAdapterViceDrive1541DiskContents::DiskAttached()
-{  
-	LOGD("CDataAdapterViceDrive1541DiskContents::DiskAttached");
+{
 	debugInterface->LockMutex();
 	debugInterface->LockIoMutex();
-	
-	this->diskImage = c64d_get_drive_disk_image(driveId);// TODO: diskImage;
-	this->gcr = c64d_get_drive_disk_gcr(driveId);
-	
-	if (diskImage || gcr)
-	{
-		if (dataIndexes)
-			delete [] dataIndexes;
-		dataIndexes = NULL;
-		
-		if (tracks)
-			delete [] tracks;
-		tracks = NULL;
-		
-		numOfTracks = diskImage ? diskImage->tracks : 35;
-//		LOGD("# of tracks=%d", numOfTracks);
-	
-		tracks = new Drive1541ContentsTrack[numOfTracks];
 
-		// sanity check, calc size
-		totalSize = 0;
-		numOfSectors = 0;
-		for (u32 track = 0; track < numOfTracks; track++)
+	for (int track = 0; track < numOfTracks; track++)
+		delete [] tracks[track].sectors;
+	delete [] tracks;
+	delete [] dataIndexes;
+	tracks = NULL;
+	dataIndexes = NULL;
+	numOfTracks = numOfSectors = totalSize = 0;
+
+	diskImage = c64d_get_drive_disk_image(driveId);
+	gcr = c64d_get_drive_disk_gcr(driveId);
+	if (IsDiskAttached())
+	{
+		if (diskImage)
+		{
+			// VICE reports logical tracks, not G64 half-track slots.
+			if (diskImage->tracks <= MAX_TRACKS_1541)
+				numOfTracks = diskImage->tracks;
+			else
+				debugInterface->ShowNotificationError("Unsupported geometry for 1541 disk contents");
+		}
+		else if (gcr)
+		{
+			// Only full tracks belong in the logical DOS view.  Half-tracks
+			// remain accessible through the raw GCR adapter.
+			for (int track = 0; track < MAX_TRACKS_1541; track++)
+			{
+				if (gcr->tracks[track*2].data && gcr->tracks[track*2].size > 0)
+					numOfTracks = track+1;
+			}
+		}
+	}
+
+	if (numOfTracks > 0)
+	{
+		tracks = new Drive1541ContentsTrack[numOfTracks];
+		for (int track = 0; track < numOfTracks; track++)
 		{
 			tracks[track].numSectors = GetNumberOfSectorsPerTrack(track);
-			tracks[track].sectors = new Drive1541ContentsSector[tracks[track].numSectors];
+			tracks[track].sectors = new Drive1541ContentsSector[tracks[track].numSectors]();
 			tracks[track].dataOffset = totalSize;
 			tracks[track].isDirty = true;
-			
-//			LOGD("%4d %5d offset %d", track+1, tracks[track].numSectors, tracks[track].dataOffset);
 			numOfSectors += tracks[track].numSectors;
 			totalSize += tracks[track].numSectors * 256;
 		}
 
-		LOGD("totalSectors=%d totalSize=%d", numOfSectors, totalSize);
-		if (numOfSectors > 783)	// != 683
-		{
-			debugInterface->ShowNotificationError("Can't refresh disk contents, # of sectors is too large"); //not 683");
-			LOGError("CDataAdapterViceDrive1541DiskContents::RefreshDiskContentsData: # of sectors is too large"); //not 683");
-			debugInterface->UnlockMutex();
-			debugInterface->UnlockIoMutex();
-			return;
-		}
-		if (totalSize > 196608)	// != 174848
-		{
-			debugInterface->ShowNotificationError("Can't refresh disk contents, # of bytes stored is too large"); //not 174848");
-			LOGError("CDataAdapterViceDrive1541DiskContents::RefreshDiskContentsData: # of bytes stored is too large"); //not 174848");
-			debugInterface->UnlockMutex();
-			debugInterface->UnlockIoMutex();
-			return;
-		}
-		
 		dataIndexes = new Drive1541ContentsIndex[totalSize];
 		int index = 0;
-		for (u32 t = 0; t < numOfTracks; t++)
-		{
-			for (int s = 0; s < tracks[t].numSectors; s++)
-			{
-				for (int i = 0; i < 256; i++)
-				{
-					dataIndexes[index].track = t;
-					dataIndexes[index].sector = s;
-					dataIndexes[index].sectorDataOffset = i;
-					index++;
-				}
-			}
-		}
+		for (int track = 0; track < numOfTracks; track++)
+			for (unsigned int sector = 0; sector < tracks[track].numSectors; sector++)
+				for (int byte = 0; byte < 256; byte++)
+					dataIndexes[index++] = { (u32)track, sector, (u32)byte };
 	}
-	
+
 	RefreshDiskContentsData();
-	
-	debugInterface->UnlockMutex();
 	debugInterface->UnlockIoMutex();
+	debugInterface->UnlockMutex();
 }
 
 void CDataAdapterViceDrive1541DiskContents::DiskDetached()
@@ -170,7 +169,7 @@ void CDataAdapterViceDrive1541DiskContents::DiskDetached()
 
 unsigned int CDataAdapterViceDrive1541DiskContents::GetNumberOfSectorsPerTrack(unsigned int track)
 {
-	// note: Vice counts tracks from 1 to 35
+	// Standard 1541 logical geometry predicts slots, not sector availability.
 	return disk_image_sector_per_track(DISK_IMAGE_TYPE_D64, track+1);
 }
 
@@ -188,7 +187,8 @@ void CDataAdapterViceDrive1541DiskContents::AdapterWriteByte(int pointer, uint8 
 
 void CDataAdapterViceDrive1541DiskContents::AdapterReadByte(int pointer, uint8 *value, bool *isAvailable)
 {
-	if (!dataIndexes)
+	*value = 0;
+	if (!IsDiskAttached() || !dataIndexes)
 	{
 		*isAvailable = false;
 		return;
@@ -205,8 +205,10 @@ void CDataAdapterViceDrive1541DiskContents::AdapterReadByte(int pointer, uint8 *
 	{
 		RefreshDiskContentsData();
 	}
-	*value = tracks[dataIndex.track].sectors[dataIndex.sector].data[dataIndex.sectorDataOffset];
-	*isAvailable = true;
+	Drive1541ContentsSector &sector = tracks[dataIndex.track].sectors[dataIndex.sector];
+	*isAvailable = sector.isAvailable;
+	if (*isAvailable)
+		*value = sector.data[dataIndex.sectorDataOffset];
 	
 	// debug test, always refresh all tracks every 2 seconds
 //	static int t1 = SYS_GetTickCount();
@@ -226,89 +228,43 @@ bool CDataAdapterViceDrive1541DiskContents::IsDiskAttached()
 	return true;
 }
 
-void CDataAdapterViceDrive1541DiskContents::ReadSector(int trackNum, int sectorNum, u8 *buf)
+bool CDataAdapterViceDrive1541DiskContents::ReadSector(int trackNum, int sectorNum, u8 *buf)
 {
-	if (!dataIndexes)
-	{
-		LOGError("CDataAdapterViceDrive1541DiskContents::WriteSector: disk not ready, dataIndexes is NULL");
-		return;
-	}
+	memset(buf, 0, 256);
+	if (!IsDiskAttached() || !dataIndexes || trackNum < 0 || trackNum >= numOfTracks
+		|| sectorNum < 0 || sectorNum >= (int)tracks[trackNum].numSectors)
+		return false;
 
 	if (tracks[trackNum].isDirty)
-	{
 		RefreshDiskContentsData();
-	}
 
-	if (trackNum >= 0 && trackNum < numOfTracks)
-	{
-		if (sectorNum >= 0 && sectorNum < tracks[trackNum].numSectors)
-		{
-			LOGD("CDataAdapterViceDrive1541DiskContents::ReadSector %d %d offset %d", trackNum, sectorNum, tracks[trackNum].dataOffset);
-			memcpy(buf, tracks[trackNum].sectors[sectorNum].data, 256);
-//			LOG_PrintHexArray(buf, 256);
-
-		}
-		else
-		{
-			LOGError("CDataAdapterViceDrive1541DiskContents::ReadSector: sectorNum=%d out of bounds (max=%d)", sectorNum, tracks[trackNum].numSectors);
-		}
-	}
-	else
-	{
-		LOGError("CDataAdapterViceDrive1541DiskContents::ReadSector: trackNum=%d out of bounds (max=%d)", trackNum, numOfTracks);
-	}
+	Drive1541ContentsSector &sector = tracks[trackNum].sectors[sectorNum];
+	if (!sector.isAvailable)
+		return false;
+	memcpy(buf, sector.data, 256);
+	return true;
 }
 
 void CDataAdapterViceDrive1541DiskContents::AdapterWriteByte(int pointer, uint8 value, bool *isAvailable)
 {
-	LOGD("CDataAdapterViceDrive1541DiskContents::AdapterWriteByte: diskImage=%x", this->diskImage);
-	
-	if (!dataIndexes)
-	{
-		*isAvailable = false;
+	*isAvailable = false;
+	if (!dataIndexes || pointer < 0 || pointer >= totalSize)
 		return;
-	}
-	
-	if (pointer < 0 || pointer >= totalSize)
-	{
-		*isAvailable = false;
-		return;
-	}
-	
-	Drive1541ContentsIndex dataIndex = dataIndexes[pointer];
-	tracks[dataIndex.track].sectors[dataIndex.sector].data[dataIndex.sectorDataOffset] = value;
-	*isAvailable = true;
 
-	DriveContextWriteSector(dataIndex.track, dataIndex.sector, tracks[dataIndex.track].sectors[dataIndex.sector].data);
-		
-	// debug sanity check:
-//	RefreshDiskContentsData();
+	Drive1541ContentsIndex dataIndex = dataIndexes[pointer];
+	u8 buf[256];
+	if (!ReadSector(dataIndex.track, dataIndex.sector, buf))
+		return;
+	buf[dataIndex.sectorDataOffset] = value;
+	*isAvailable = WriteSector(dataIndex.track, dataIndex.sector, buf);
 }
 
-void CDataAdapterViceDrive1541DiskContents::WriteSector(int trackNum, int sectorNum, u8 *buf)
+bool CDataAdapterViceDrive1541DiskContents::WriteSector(int trackNum, int sectorNum, u8 *buf)
 {
-	if (!dataIndexes)
-	{
-		LOGError("CDataAdapterViceDrive1541DiskContents::WriteSector: disk not ready, dataIndexes is NULL");
-		return;
-	}
-	
-	if (trackNum >= 0 && trackNum < numOfTracks)
-	{
-		if (sectorNum >= 0 && sectorNum < tracks[trackNum].numSectors)
-		{
-			memcpy(buf, tracks[trackNum].sectors[sectorNum].data, 256);
-			DriveContextWriteSector(trackNum, sectorNum, tracks[trackNum].sectors[sectorNum].data);
-		}
-		else
-		{
-			LOGError("CDataAdapterViceDrive1541DiskContents::WriteSector: sectorNum=%d out of bounds (max=%d)", sectorNum, tracks[trackNum].numSectors);
-		}
-	}
-	else
-	{
-		LOGError("CDataAdapterViceDrive1541DiskContents::WriteSector: trackNum=%d out of bounds (max=%d)", trackNum, numOfTracks);
-	}
+	if (!IsDiskAttached() || !dataIndexes || trackNum < 0 || trackNum >= numOfTracks
+		|| sectorNum < 0 || sectorNum >= (int)tracks[trackNum].numSectors)
+		return false;
+	return DriveContextWriteSector(trackNum, sectorNum, buf);
 }
 
 // reads all tracks and sectors and puts backup data for quicker access
@@ -323,7 +279,7 @@ void CDataAdapterViceDrive1541DiskContents::RefreshDiskContentsData()
 	this->gcr = c64d_get_drive_disk_gcr(driveId);
 	
 	bool needsDirectoryRefresh = false;
-	if (dataIndexes && (diskImage || gcr))
+	if (dataIndexes && IsDiskAttached() && (diskImage || gcr))
 	{
 		// read all sectors
 		u64 t1 = SYS_GetCurrentTimeInMillis();
@@ -340,7 +296,8 @@ void CDataAdapterViceDrive1541DiskContents::RefreshDiskContentsData()
 
 				for (u32 sector = 0; sector < tracks[track].numSectors; sector++)
 				{
-					DriveContextReadSector(track, sector, tracks[track].sectors[sector].data);
+					Drive1541ContentsSector &cachedSector = tracks[track].sectors[sector];
+					cachedSector.isAvailable = DriveContextReadSector(track, sector, cachedSector.data);
 					
 //					if (track == D64_BAM_TRACK-1 && sector == 0)
 //					{
@@ -364,57 +321,71 @@ void CDataAdapterViceDrive1541DiskContents::RefreshDiskContentsData()
 	debugInterface->UnlockIoMutex();
 }
 
-void CDataAdapterViceDrive1541DiskContents::DriveContextReadSector(int trackNum, int sectorNum, u8 *buf)
+bool CDataAdapterViceDrive1541DiskContents::DriveContextReadSector(int trackNum, int sectorNum, u8 *buf)
 {
-//	LOGD("CDataAdapterViceDrive1541DiskContents::DriveContextReadSector: %d %d", trackNum, sectorNum);
+	memset(buf, 0, 256);
+	if (!IsDiskAttached() || trackNum < 0 || trackNum >= numOfTracks
+		|| sectorNum < 0 || sectorNum >= (int)GetNumberOfSectorsPerTrack(trackNum))
+		return false;
+
 	debugInterface->LockIoMutex();
+	int status = -1;
+	bool success = false;
 	if (diskImage)
 	{
-		disk_addr_t diskAddr;
-		diskAddr.track = trackNum+1;
-		diskAddr.sector = sectorNum;
-		disk_image_read_sector(diskImage, buf, &diskAddr);
+		disk_addr_t diskAddr = { (u32)trackNum+1, (u32)sectorNum };
+		status = disk_image_read_sector(diskImage, buf, &diskAddr);
+		success = (status == CBMDOS_IPE_OK);
 	}
 	else if (gcr)
 	{
 		int halfTrack = trackNum*2;
-		gcr_read_sector(&(gcr->tracks[halfTrack]), buf, sectorNum);
+		status = gcr_read_sector(&gcr->tracks[halfTrack], buf, sectorNum);
+		success = (status == CBMDOS_FDC_ERR_OK);
 	}
-	else
+	if (!success)
 	{
-		LOGError("CDataAdapterViceDrive1541DiskContents::DriveContextReadSector: no disk");
+		memset(buf, 0, 256);
+		LOGError("1541 disk read failed: track=%d sector=%d status=%d", trackNum+1, sectorNum, status);
 	}
 	debugInterface->UnlockIoMutex();
+	return success;
 }
 
-void CDataAdapterViceDrive1541DiskContents::DriveContextWriteSector(int trackNum, int sectorNum, u8 *buf)
+bool CDataAdapterViceDrive1541DiskContents::DriveContextWriteSector(int trackNum, int sectorNum, u8 *buf)
 {
-	debugInterface->LockIoMutex();
+	if (!IsDiskAttached() || trackNum < 0 || trackNum >= numOfTracks
+		|| sectorNum < 0 || sectorNum >= (int)GetNumberOfSectorsPerTrack(trackNum))
+		return false;
 
-	if (diskImage)
+	debugInterface->LockIoMutex();
+	int status = -1;
+	bool success = false;
+	if (diskImage && !diskImage->read_only)
 	{
-		disk_addr_t diskAddr;
-		diskAddr.track = trackNum+1;
-		diskAddr.sector = sectorNum;
-		disk_image_write_sector(diskImage, buf, &diskAddr);
+		disk_addr_t diskAddr = { (u32)trackNum+1, (u32)sectorNum };
+		status = disk_image_write_sector(diskImage, buf, &diskAddr);
+		success = (status == 0);
 	}
-	else if (gcr)
+	else if (!diskImage && gcr)
 	{
 		int halfTrack = trackNum*2;
-		gcr_write_sector(&(gcr->tracks[halfTrack]), buf, sectorNum);
+		status = gcr_write_sector(&gcr->tracks[halfTrack], buf, sectorNum);
+		success = (status == CBMDOS_FDC_ERR_OK);
 	}
-	else
-	{
-		LOGError("CDataAdapterViceDrive1541DiskContents::DriveContextWriteSector: no disk");
-	}
-	
+	if (!success)
+		LOGError("1541 disk write failed: track=%d sector=%d status=%d", trackNum+1, sectorNum, status);
+
+	// Re-read even after a failed write: VICE may have partially changed data.
 	MarkTrackDirty(trackNum);
 	debugInterface->UnlockIoMutex();
+	return success;
 }
 
 void CDataAdapterViceDrive1541DiskContents::MarkTrackDirty(int track)
 {
-	tracks[track].isDirty = true;
+	if (tracks && track >= 0 && track < numOfTracks)
+		tracks[track].isDirty = true;
 }
 
 // disk operations on vdrive
@@ -597,6 +568,8 @@ int CDataAdapterViceDrive1541DiskContents::InsertFile(std::filesystem::path file
 
 int CDataAdapterViceDrive1541DiskContents::GetDataAddressForTrackAndSector(int track, int sector)
 {
+	if (!dataIndexes || numOfTracks == 0)
+		return -1;
 	if (track < 0)
 		track = 0;
 	
@@ -614,5 +587,7 @@ int CDataAdapterViceDrive1541DiskContents::GetDataAddressForTrackAndSector(int t
 
 Drive1541ContentsIndex *CDataAdapterViceDrive1541DiskContents::GetTrackAndSectorForDataAddress(int dataAddress)
 {
+	if (!dataIndexes || dataAddress < 0 || dataAddress >= totalSize)
+		return NULL;
 	return &dataIndexes[dataAddress];
 }

@@ -10,6 +10,7 @@
 
 #include "CDebugInterfaceVice.h"
 #include "CDataAdapterViceDrive1541DiskContents.h"
+#include <set>
 
 
 CDiskImageD64::CDiskImageD64(CDebugInterfaceVice *debugInterface, int driveId)
@@ -85,6 +86,10 @@ CDiskImageD64::~CDiskImageD64()
 
 void CDiskImageD64::Clear()
 {
+	isDirectoryValid = false;
+	memset(diskName, ' ', sizeof(diskName));
+	memset(diskId, ' ', sizeof(diskId));
+	numFreeSectors = 0;
 	while(!fileEntries.empty())
 	{
 		DiskImageFileEntry *entry = fileEntries.back();
@@ -121,10 +126,12 @@ bool CDiskImageD64::ReadImage()
 		return true;
 	}
 	
+	isDiskAttached = true;
 	u8 sectorData[256];
 	
-	// read BAM
-	dataAdapter->ReadSector(D64_BAM_TRACK-1, D64_BAM_SECTOR, sectorData);
+	// Do not interpret unavailable bytes as DOS metadata.
+	if (!dataAdapter->ReadSector(D64_BAM_TRACK-1, D64_BAM_SECTOR, sectorData))
+		return false;
 	
 	
 	int offset = 0x90;
@@ -163,12 +170,18 @@ bool CDiskImageD64::ReadImage()
 
 	int track = D64_BAM_TRACK-1;
 	int sector = 1;
+	std::set<std::pair<int, int>> visited;
 
 	while(track != -1)
 	{
 		LOGReadImage("--> dirTrack=%d dirSector=%d", track+1, sector);
-		dataAdapter->ReadSector(track, sector, sectorData);
-//		disk_image_read_sector(diskImage, sectorData, &diskAddr);
+		if (!visited.insert({track, sector}).second
+			|| !dataAdapter->ReadSector(track, sector, sectorData))
+		{
+			LOGError("1541 directory chain is unavailable or cyclic: track=%d sector=%d", track+1, sector);
+			Clear();
+			return false;
+		}
 		
 		for (int entryNum = 0; entryNum < 8; entryNum++)
 		{
@@ -214,12 +227,15 @@ bool CDiskImageD64::ReadImage()
 		
 		LOGReadImage("next track=%d sector=%d", track, sector);
 		
-		if (this->fileEntries.size() >= D64_MAX_FILES)
-			break;
+		if (this->fileEntries.size() > D64_MAX_FILES)
+		{
+			Clear();
+			return false;
+		}
 	}
 	LOGReadImage("--> done dir");
 	
-	isDiskAttached = true;
+	isDirectoryValid = true;
 	
 	LOGD("CDiskImageD64::ReadImage: done");
 	return true;
@@ -227,6 +243,7 @@ bool CDiskImageD64::ReadImage()
 
 bool CDiskImageD64::ReadEntry(DiskImageFileEntry *fileEntry, CByteBuffer *byteBuffer)
 {
+	byteBuffer->Clear();
 	char *buf = SYS_GetCharBuf();
 	
 	memcpy(buf, fileEntry->fileName, 0x10);
@@ -255,11 +272,18 @@ bool CDiskImageD64::ReadEntry(DiskImageFileEntry *fileEntry, CByteBuffer *byteBu
 
 	int track = fileEntry->track-1;
 	int sector = fileEntry->sector;
+	std::set<std::pair<int, int>> visited;
 	
 	while(1)
 	{
 //		LOGD("..reading track=%d sector=%d", track+1, sector);
-		dataAdapter->ReadSector(track, sector, sectorData);
+		if (!visited.insert({track, sector}).second
+			|| !dataAdapter->ReadSector(track, sector, sectorData))
+		{
+			LOGError("1541 file chain is unavailable or cyclic: track=%d sector=%d", track+1, sector);
+			byteBuffer->Clear();
+			return false;
+		}
 
 		track = sectorData[0]-1;
 		sector = sectorData[1];
@@ -282,11 +306,17 @@ bool CDiskImageD64::ReadEntry(DiskImageFileEntry *fileEntry, CByteBuffer *byteBu
 			sprintf(buf, "Failed to load D64 due to a broken file entry. File entry is larger than 64kB:\n%s.%s (size %d). Ensure the file's integrity and try loading again or use a valid D64 file.", fileEntry->fileName, FileEntryTypeToStr(fileEntry->fileType), fileEntry->fileSize);
 			guiMain->ShowMessageBox("Broken D64 file entry", buf);
 			SYS_ReleaseCharBuf(buf);
+			byteBuffer->Clear();
 			return false;
 		}
 	}
 	
 	LOGD("..finishing sector data=%d", sector);
+	if (sector == 0 || byteBuffer->length + sector-1 > 0x10000)
+	{
+		byteBuffer->Clear();
+		return false;
+	}
 	
 	sector += 1;
 	for (int i = 2; i < sector; i++)
@@ -301,9 +331,10 @@ bool CDiskImageD64::ReadEntry(DiskImageFileEntry *fileEntry, CByteBuffer *byteBu
 
 bool CDiskImageD64::ReadEntry(int entryNum, CByteBuffer *byteBuffer)
 {
-	if (entryNum > fileEntries.size()-1)
+	if (entryNum < 0 || entryNum >= (int)fileEntries.size())
 	{
-		LOGError("CDiskImageD64::ReadEntry: entryNum=%d fileEntries.size()=%d", entryNum, fileEntries.size());
+		byteBuffer->Clear();
+		LOGError("CDiskImageD64::ReadEntry: entryNum=%d fileEntries.size()=%d", entryNum, (int)fileEntries.size());
 		return false;
 	}
 	

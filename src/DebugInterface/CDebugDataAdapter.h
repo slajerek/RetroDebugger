@@ -26,6 +26,10 @@ public:
 	CDebugInterface *debugInterface;
 
 	virtual int AdapterGetDataLength();
+
+	// Maximum logical length during a debug memory map's lifetime.  Dynamic
+	// adapters reserve metadata here without exposing unavailable data.
+	virtual int GetDebugMemoryCapacity();
 	
 	// renderers should add this offset to the presented address
 	virtual int GetDataOffset();
