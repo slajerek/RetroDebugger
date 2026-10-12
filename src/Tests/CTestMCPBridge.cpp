@@ -440,6 +440,7 @@ void CTestMCPBridge::Run(ITestCallback *cb)
 		bool hasTransportDiag = false;
 		bool hasDiskAttach = false;
 		bool hasMemoryLastAccess = false;
+		int timelineCount = 0;
 		int toolCount = 0;
 		for (const auto &t : tools)
 		{
@@ -449,6 +450,7 @@ void CTestMCPBridge::Run(ITestCallback *cb)
 			if (name == "retro_transport_diagnostics") hasTransportDiag = true;
 			if (name == "retro_disk_attach") hasDiskAttach = true;
 			if (name == "retro_memory_last_access") hasMemoryLastAccess = true;
+			if (name == "retro_timeline") timelineCount++;
 			toolCount++;
 		}
 
@@ -487,10 +489,17 @@ void CTestMCPBridge::Run(ITestCallback *cb)
 			return;
 		}
 
-		// Should be 48: 45 debugger + 3 bridge-local
-		if (toolCount != 48)
+		if (timelineCount != 1)
 		{
-			sprintf(sFailMsg, "Test %d FAIL: expected 48 tools, got %d", testNum, toolCount);
+			bridge.Stop();
+			FinishTest(false, "Connected tools must contain exactly one retro_timeline");
+			return;
+		}
+
+		// Should be 49: 46 debugger + 3 bridge-local
+		if (toolCount != 49)
+		{
+			sprintf(sFailMsg, "Test %d FAIL: expected 49 tools, got %d", testNum, toolCount);
 			bridge.Stop();
 			FinishTest(false, sFailMsg);
 			return;
@@ -523,6 +532,21 @@ void CTestMCPBridge::Run(ITestCallback *cb)
 			bridge.Stop();
 			FinishTest(false, sFailMsg);
 			return;
+		}
+
+		request["id"] = 3;
+		request["params"] = {{"name", "retro_timeline"}, {"arguments", {{"platform", "c64"}, {"action", "status"}}}};
+		response = server.HandleRequest(request);
+		if (!response.contains("result") || response["result"].value("isError", false)
+			|| !response["result"].contains("content") || response["result"]["content"].empty())
+		{
+			bridge.Stop(); FinishTest(false, "Timeline status bridge call failed"); return;
+		}
+		json timeline = json::parse(response["result"]["content"][0].value("text", std::string()), nullptr, false);
+		if (!timeline.is_object() || timeline.value("navigation", std::string()) != "native_frame"
+			|| timeline.value("completionReporting", std::string()) != "acceptance_only")
+		{
+			bridge.Stop(); FinishTest(false, "Timeline bridge acceptance-only contract changed"); return;
 		}
 
 		bridge.Stop();
@@ -626,9 +650,9 @@ void CTestMCPBridge::Run(ITestCallback *cb)
 			json response = server.HandleRequest(request);
 			json tools = response["result"]["tools"];
 			int toolCount = (int)tools.size();
-			if (toolCount != 48)
+			if (toolCount != 49)
 			{
-				sprintf(sFailMsg, "Test %d FAIL: after reconnect expected 48 tools, got %d",
+				sprintf(sFailMsg, "Test %d FAIL: after reconnect expected 49 tools, got %d",
 						testNum, toolCount);
 				bridge2.Stop();
 				FinishTest(false, sFailMsg);
@@ -648,6 +672,10 @@ void CTestMCPBridge::Run(ITestCallback *cb)
 					return;
 				}
 				names.insert(name);
+			}
+			if (!names.count("retro_timeline"))
+			{
+				bridge2.Stop(); FinishTest(false, "retro_timeline missing after reconnect"); return;
 			}
 			if (!names.count("retro_memory_last_access"))
 			{

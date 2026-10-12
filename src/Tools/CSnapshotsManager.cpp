@@ -662,6 +662,61 @@ bool CSnapshotsManager::ConsumeExternalSnapshotRequestUnlocks()
 	return loadPerformed;
 }
 
+TimelineNavigation::Status CSnapshotsManager::FrameNavigationStatusLocked()
+{
+	TimelineNavigation::Status status;
+	status.supported = debugInterface->GetEmulatorType() == EMULATOR_TYPE_C64_VICE;
+	status.running = debugInterface->isRunning;
+	status.paused = debugInterface->GetDebugMode() == DEBUGGER_MODE_PAUSED;
+	// Do not call IsPerformingSnapshotRestore(): that legacy query can resume.
+	status.busy = snapshotToRestore != NULL || isPerformingSnapshotRestore
+		|| IsExternalSnapshotRequestActive() || IsSnapshotOperationInProgress();
+	status.snapshots = chipSnapshotsByFrame.size();
+	if (!chipSnapshotsByFrame.empty())
+	{
+		status.oldestFrame = chipSnapshotsByFrame.begin()->first;
+		status.newestFrame = chipSnapshotsByFrame.rbegin()->first;
+	}
+	return status;
+}
+
+TimelineNavigation::Status CSnapshotsManager::GetFrameNavigationStatus()
+{
+	// Settings use the interface mutex.  Release it before taking the manager
+	// mutex; this is not a transaction across UI settings and history updates.
+	debugInterface->LockMutex();
+	bool recording = c64SettingsSnapshotsRecordIsActive;
+	int interval = c64SettingsSnapshotsIntervalNumFrames;
+	int limit = c64SettingsSnapshotsLimit;
+	debugInterface->UnlockMutex();
+	LockMutex();
+	TimelineNavigation::Status status = FrameNavigationStatusLocked();
+	UnlockMutex();
+	status.recording = recording;
+	status.intervalFrames = interval;
+	status.retention = limit;
+	return status;
+}
+
+TimelineNavigation::Result CSnapshotsManager::RequestFrameNavigation(int frame)
+{
+	LockMutex();
+	TimelineNavigation::Result result;
+	const char *refusal = TimelineNavigation::FrameRefusal(FrameNavigationStatusLocked(), frame);
+	if (refusal)
+		result.reason = refusal;
+	else
+	{
+		// The existing recursive manager lock already nests in
+		// RestoreSnapshotByFrame -> GetFramesLimits.  Keep admission and queueing
+		// under that same lock; never restore chips on this calling thread.
+		result.accepted = RestoreSnapshotByFrame(frame, -1, DEBUGGER_MODE_PAUSED);
+		result.reason = result.accepted ? nullptr : "not_queued";
+	}
+	UnlockMutex();
+	return result;
+}
+
 // @returns false=snapshot was not found, not possible to restore. cycleNum is optional, if -1 only frame will be searched.
 bool CSnapshotsManager::RestoreSnapshotByFrame(int frame)
 {

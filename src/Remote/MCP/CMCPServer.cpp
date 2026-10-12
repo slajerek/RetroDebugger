@@ -6,6 +6,7 @@
 #include "CDebugInterface.h"
 #include "CDebuggerServerApi.h"
 #include "C64DShutdown.h"
+#include "CTimelineNavigation.h"
 #include "DBG_Log.h"
 
 #include <iostream>
@@ -843,6 +844,39 @@ void CMCPServer::RegisterDebuggerTools(CDebuggerServer *server)
 				return {{"status", "queued"}, {"requestedPc", params.at("address")}, {"applied", false}};
 			}
 			return {{"status", "jumped"}, {"address", params.at("address")}, {"applied", true}};
+		};
+		RegisterTool(tool);
+	}
+
+	// Existing frame-navigation contract stays separate from precise seeking.
+	{
+		MCPToolDescriptor tool;
+		tool.name = "retro_timeline";
+		tool.description = "C64-only existing timeline status or native frame-navigation request. "
+			"Status is read-only. Frame requires an already paused emulator and retained history; "
+			"acceptance is queued, not completed/exact restoration. May resume replay before pausing. "
+			"No instruction/cycle seek, automatic recording, or request-specific completion.";
+		tool.inputSchema = {
+			{"type", "object"}, {"additionalProperties", false},
+			{"properties", {
+				{"platform", {{"type", "string"}, {"enum", json::array({"c64"})}}},
+				{"action", {{"type", "string"}, {"enum", json::array({"status", "frame"})}}},
+				{"frame", {{"type", "integer"}, {"minimum", 0}, {"maximum", INT_MAX}}}
+			}}, {"required", json::array({"platform", "action"})},
+			{"oneOf", json::array({
+				{{"properties", {{"action", {{"enum", json::array({"status"})}}}}}, {"not", {{"required", json::array({"frame"})}}}},
+				{{"properties", {{"action", {{"enum", json::array({"frame"})}}}}}, {"required", json::array({"frame"})}}
+			})}
+		};
+		tool.handler = [server](const json &params) -> json
+		{
+			bool statusOnly = false;
+			int frame = 0;
+			if (!TimelineNavigation::ParseTool(params, statusOnly, frame))
+				throw runtime_error("retro_timeline requires c64 and action=status, or action=frame with an integer frame in [0, INT_MAX]; no extra fields");
+			json args = statusOnly ? json::object() : json({{"frame", frame}});
+			return ConsumeEndpointResult(server->RunEndpointFunction(statusOnly ? "c64/timeline/status" : "c64/timeline/frame",
+				"", args, nullptr, 0), "retro_timeline");
 		};
 		RegisterTool(tool);
 	}

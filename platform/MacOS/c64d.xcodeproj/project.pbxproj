@@ -3868,6 +3868,7 @@
 		41D4AE4423AA0F1100A54EB2 /* CGuiLockableList.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = "$(SRCROOT)/../../src/Tools/CGuiLockableList.cpp"; sourceTree = "<absolute>"; };
 		41D4AE4523AA0F1100A54EB2 /* CGuiLockableList.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "$(SRCROOT)/../../src/Tools/CGuiLockableList.h"; sourceTree = "<absolute>"; };
 		41D4AE4623AA0F1100A54EB2 /* CSnapshotsManager.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = "$(SRCROOT)/../../src/Tools/CSnapshotsManager.cpp"; sourceTree = "<absolute>"; };
+		C1A064001026101000000001 /* CTimelineNavigation.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "$(SRCROOT)/../../src/Tools/CTimelineNavigation.h"; sourceTree = "<absolute>"; };
 		41D4AE4723AA0F1100A54EB2 /* CSnapshotsManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "$(SRCROOT)/../../src/Tools/CSnapshotsManager.h"; sourceTree = "<absolute>"; };
 		41D4AE4923AA0F1100A54EB2 /* exomizer-chunkpool.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "$(SRCROOT)/../../src/Tools/exomizer/exomizer-chunkpool.c"; sourceTree = "<absolute>"; };
 		41D4AE4A23AA0F1100A54EB2 /* exomizer-chunkpool.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "$(SRCROOT)/../../src/Tools/exomizer/exomizer-chunkpool.h"; sourceTree = "<absolute>"; };
@@ -7948,6 +7949,7 @@
 				41D4AE4523AA0F1100A54EB2 /* CGuiLockableList.h */,
 				41D4AE4623AA0F1100A54EB2 /* CSnapshotsManager.cpp */,
 				41D4AE4723AA0F1100A54EB2 /* CSnapshotsManager.h */,
+				C1A064001026101000000001 /* CTimelineNavigation.h */,
 				41D4AE4823AA0F1100A54EB2 /* exomizer */,
 				41D4AE5A23AA0F1100A54EB2 /* libpsid64 */,
 				41D4AE6923AA0F1100A54EB2 /* sidplay */,

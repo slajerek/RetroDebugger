@@ -47,6 +47,10 @@ Use this skill when working with the RetroDebugger MCP server to debug 8-bit pro
   build needs `C:\data\game.d64`, not `/data/game.d64`. A path the debugger cannot see comes
   back as an MCP error (`retro_load failed: File not found: ...`), not as a silent no-op
 
+### Existing C64 Timeline
+- `retro_timeline(platform:"c64", action:"status")` -- read-only recording/history/frame-range status.
+- `retro_timeline(platform:"c64", action:"frame", frame:120)` -- queue existing frame navigation from an already paused emulator.  Check `accepted`; `status:"queued"` is not completed or precise restoration.  Replay can temporarily resume execution.  No automatic recording or instruction/cycle seek.  See [the acceptance-only contract](timeline-navigation.md).
+
 ### Memory & Breakpoints (changes emulator state)
 - `retro_memory_write` — write base64-encoded data to memory
 - `retro_breakpoint_add` — add CPU execution breakpoint (fires when PC reaches address)
@@ -96,7 +100,7 @@ These are available as WebSocket endpoints, not yet wrapped as MCP tools:
 ## Safe Debugging Defaults
 
 1. **Always inspect before mutating.** Read CPU status and memory before writing or stepping.
-2. **Verify platform is not paused** before issuing commands. Use `retro_machine_state` — check `isPaused` and `isRunning`. If paused, call `retro_continue` first. PC=0 while paused is normal, not a crash.
+2. **Verify platform is not paused** before issuing commands. Use `retro_machine_state` — check `isPaused` and `isRunning`. If paused, call `retro_continue` first. PC=0 while paused is normal, not a crash.  Exception: `retro_timeline` frame navigation requires an already paused emulator -- do not resume before that request.
 3. **Pause before memory inspection** for consistent state. Memory can change between reads if emulation is running.
 4. **Use platform parameter** on every tool call. Don't assume which emulator is active.
 5. **Prefer read-only tools** when exploring. Use mutation tools only when you have a clear goal.
@@ -106,6 +110,8 @@ These are available as WebSocket endpoints, not yet wrapped as MCP tools:
    really did reach the emulator. In live/bridge mode the debugger tools
    disappear from the roster entirely while no desktop app is attached, and a
    call that loses the connection mid-flight fails with `desktop_unavailable`.
+   For `retro_timeline`, also check `accepted`: a well-formed request can return
+   `status:"refused"` without an MCP transport error, and `queued` is not completion.
 8. **Never call `retro_shutdown` on your own initiative.** It ends the session —
    the app quits and every later tool call fails. Call it only when the user
    explicitly asked to close RetroDebugger. It is not a way to recover from a

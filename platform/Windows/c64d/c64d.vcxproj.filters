@@ -7183,6 +7183,9 @@
     <ClInclude Include="..\..\..\src\Tools\CSnapshotsManager.h">
       <Filter>Source Files\src\Tools</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\src\Tools\CTimelineNavigation.h">
+      <Filter>Source Files\src\Tools</Filter>
+    </ClInclude>
     <ClInclude Include="..\..\..\src\Tools\64tass\64tass-encoding.h">
       <Filter>Source Files\src\Tools\64tass</Filter>
     </ClInclude>
