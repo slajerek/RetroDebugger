@@ -1,0 +1,35 @@
+name: Disk contents regression
+
+on:
+  push:
+    branches: [ master, main, devel ]
+  pull_request:
+    branches: [ master, main, devel ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  disk-contents:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout RetroDebugger
+        uses: actions/checkout@v6
+
+      - name: Test D64 and G64 disk contents
+        shell: bash
+        env:
+          CC: gcc
+          CXX: g++
+        run: bash tests/disk_contents/run.sh "$RUNNER_TEMP/disk-contents"
+
+      - name: Upload regression logs
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: disk-contents-logs
+          path: ${{ runner.temp }}/disk-contents/*.log
+          if-no-files-found: warn
+          retention-days: 7

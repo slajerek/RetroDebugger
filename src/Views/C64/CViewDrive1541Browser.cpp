@@ -225,7 +225,7 @@ void c64d_set_drive_half_track(int driveId, int halfTrack);
 void CViewDrive1541Browser::UpdateDriveDiskID()
 {
 	LOGD("CViewDrive1541FileD64::UpdateDriveDiskID, diskImage=%x", diskImage);
-	if (diskImage)
+	if (diskImage && diskImage->isDirectoryValid)
 	{
 		// set correct disk ID to let 1541 ROM not throw 29, 'disk id mismatch'
 		// see $F3F6 in 1541 ROM: http://unusedino.de/ec64/technical/misc/c1541/romlisting.html#FDD3
@@ -317,7 +317,10 @@ void CViewDrive1541Browser::Render()
 
 	if (diskImage->IsDiskAttached())
 	{
-		viewMenu->Render();
+		if (diskImage->isDirectoryValid)
+			viewMenu->Render();
+		else
+			font->BlitTextColor("DIRECTORY UNAVAILABLE", px, py, -1, fontScale, tr, tg, tb, 1);
 	}
 	// just leave empty
 //	else
@@ -585,7 +588,7 @@ void CViewDrive1541Browser::RefreshDiskImageMenu()
 	float menuHeightReduction = fontScale * 26.0f;
 	viewMenu = new CGuiViewMenu(posX+menuMarginX, posY+menuMarginTop, -1, sizeX-menuWidthReduction, sizeY-menuHeightReduction, this);
 	
-	if (diskImage->IsDiskAttached() == false)
+	if (diskImage->IsDiskAttached() == false || !diskImage->isDirectoryValid)
 	{
 		debugInterfaceVice->UnlockMutex();
 		guiMain->UnlockMutex();
