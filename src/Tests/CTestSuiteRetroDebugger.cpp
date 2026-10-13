@@ -27,6 +27,7 @@
 #include "CTestIde64Settings.h"
 #include "CTestIde64UsbListener.h"
 #include "CTestSnapshotBoundary.h"
+#include "CTestTimelineCancellation.h"
 #include "CTestViceModelConfig.h"
 #include "CTestVicePlatformAbstraction.h"
 #include "CTestViceSoundIntegration.h"
@@ -131,6 +132,7 @@ void CTestSuiteRegisterRetroDebuggerTests(std::vector<std::unique_ptr<CTest> > &
 	tests.push_back(std::make_unique<CTestIde64Settings>());
 	tests.push_back(std::make_unique<CTestIde64UsbListener>());
 	tests.push_back(std::make_unique<CTestSnapshotBoundary>());
+	tests.push_back(std::make_unique<CTestTimelineCancellation>());
 	tests.push_back(std::make_unique<CTestViceModelConfig>());
 	tests.push_back(std::make_unique<CTestVicePlatformAbstraction>());
 	tests.push_back(std::make_unique<CTestViceSoundIntegration>());

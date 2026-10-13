@@ -8,6 +8,8 @@
 #include "CDebugSymbols.h"
 #include "CDebugMemory.h"
 #include "CDebugMemoryCell.h"
+#include "CSnapshotsManager.h"
+#include "CTimelineSeekJson.h"
 #include "C64DShutdown.h"
 #include "SYS_Main.h"
 #include "SYS_Funct.h"
@@ -754,7 +756,108 @@ void CTestRemoteProtocol::Run(ITestCallback *cb)
 		}
 	}
 
-	FinishTest(true, "All remote protocol tests passed (11/11)");
+	// --- Test 12: real timeline status/validation routes on every enabled CPU ---
+	{
+		std::vector<std::string> expectedPlatforms;
+#ifdef RUN_COMMODORE64
+		expectedPlatforms.push_back("c64");
+#endif
+#ifdef RUN_ATARI
+		expectedPlatforms.push_back("atari800");
+#endif
+#ifdef RUN_NES
+		expectedPlatforms.push_back("nes");
+#endif
+		if (expectedPlatforms.empty())
+		{
+			FinishTest(false, "Test 12 FAIL: no enabled timeline platform"); return;
+		}
+		for (const std::string &platform : expectedPlatforms)
+		{
+			CDebugInterface *di = NULL;
+			for (CDebugInterface *candidate : viewC64->debugInterfaces)
+				if (candidate && platform == candidate->GetPlatformNameEndpointString()) { di = candidate; break; }
+			if (!di || !di->snapshotsManager)
+			{
+				FinishTest(false, "Test 12 FAIL: enabled timeline interface missing"); return;
+			}
+			CAccessQueryPauseGuard pauseGuard(di);
+			const uint8 mode = di->GetDebugMode();
+			const std::string endpoint = platform + "/timeline/seek";
+			const json response = CallEndpointWithParams(server, endpoint.c_str(), {{"mode", "status"}});
+			const char *domain = platform == "c64" ? "cpu_clock"
+				: platform == "nes" ? "instruction_index" : "instruction_debug_clock";
+			if (response.value("status", 0) != HTTP_OK || !response.contains("result")
+				|| response["result"].value("outcome", std::string()) != "status"
+				|| response["result"].value("counterDomain", std::string()) != domain
+				|| !response["result"].contains("checkpointRange") || di->GetDebugMode() != mode
+				|| response["result"].value("seekSupported", false) != (platform == "c64")
+				|| (platform != "c64" && (response["result"].value("emulatedSeconds", true)
+					|| response["result"]["supportedModes"] != json::array({"status"})
+					|| !response["result"]["checkpointRange"].is_null())))
+			{
+				pauseGuard.Restore();
+				FinishTest(false, "Test 12 FAIL: native timeline status/domain contract"); return;
+			}
+			for (const auto &params : json::array({json::object(), {{"mode", "back"}},
+				{{"mode", "frame"}, {"frame", 1.5}}, {{"mode", "status"}, {"timeoutMs", 1}},
+				{{"mode", "cycle"}, {"cycle", 1}, {"address", 0}},
+				{{"mode", "last_write"}, {"address", -1}}}))
+			{
+				const json invalid = CallEndpointWithParams(server, endpoint.c_str(), params);
+				if (invalid.value("status", 0) != HTTP_BAD_REQUEST || di->GetDebugMode() != mode)
+				{
+					pauseGuard.Restore();
+					FinishTest(false, "Test 12 FAIL: malformed raw timeline request accepted"); return;
+				}
+			}
+			if (platform != "c64")
+			{
+				// Both the real endpoint and direct manager callers must refuse.
+				// The caller's mode, counter/frame, request sequence, and work flags
+				// remain unchanged; status must not advertise restoration coverage.
+				const u64 counter = di->GetMainCpuCycleCounter();
+				const u32 frame = di->GetEmulationFrameNumber();
+				const bool cpuWork = di->snapshotsManager->TimelineNeedsCpuService();
+				const bool restoring = di->snapshotsManager->IsPerformingSnapshotRestore();
+				for (const auto &params : json::array({{{"mode", "last_read"}, {"address", 0}},
+					{{"mode", "last_write"}, {"address", 65535}}, {{"mode", "cycle"}, {"cycle", 0}},
+					{{"mode", "frame"}, {"frame", 0}}, {{"mode", "back"}, {"unit", "instructions"}},
+					{{"mode", "back"}, {"unit", "video_frames"}}, {{"mode", "back"}, {"unit", "emulated_seconds"}}}))
+				{
+					const json refused = CallEndpointWithParams(server, endpoint.c_str(), params);
+					TimelineSeek::Request request;
+					bool status = false;
+					std::uint32_t timeout = 5000;
+					const char *error = TimelineSeek::ParseRequest(params, request, status, timeout);
+					const TimelineSeek::Result direct = di->snapshotsManager->PerformTimelineSeek(request, timeout);
+					const json after = CallEndpointWithParams(server, endpoint.c_str(), {{"mode", "status"}});
+					if (error || status || refused.value("status", 0) != HTTP_OK
+						|| refused["result"].value("outcome", std::string()) != "unsupported_platform"
+						|| refused["result"].value("success", true) || !refused["result"].value("completed", false)
+						|| refused["result"].value("mutationStarted", true) || refused["result"].value("sequence", 1) != 0
+						|| !refused["result"]["origin"].is_null() || !refused["result"]["actual"].is_null()
+						|| direct.outcome != "unsupported_platform" || !direct.completed || direct.mutationStarted
+						|| direct.sequence != 0 || direct.contextAvailable || direct.actualAvailable
+						|| after != response || di->GetDebugMode() != mode
+						|| di->GetMainCpuCycleCounter() != counter || di->GetEmulationFrameNumber() != frame
+						|| di->snapshotsManager->TimelineNeedsCpuService() != cpuWork
+						|| di->snapshotsManager->IsPerformingSnapshotRestore() != restoring)
+					{
+						pauseGuard.Restore();
+						FinishTest(false, "Test 12 FAIL: unsupported timeline request changed state or dispatched work"); return;
+					}
+				}
+				const std::string refusalDetail = "Unsupported timeline modes refused without mutation for " + platform;
+				StepCompleted(12, true, refusalDetail.c_str());
+			}
+			pauseGuard.Restore();
+			const std::string detail = "Timeline status/parser route verified for " + platform + "; not a restore test";
+			StepCompleted(12, true, detail.c_str());
+		}
+	}
+
+	FinishTest(true, "All remote protocol tests passed (12/12)");
 }
 
 void CTestRemoteProtocol::Cancel()
