@@ -4,9 +4,12 @@
 #include "CDebugInterface.h"
 #include "CGuiViewProgressBarWindow.h"
 #include "CTimelineNavigation.h"
+#include "CTimelineSeekTransaction.h"
 
 #include <mutex>
 #include <condition_variable>
+#include <cstdint>
+#include <atomic>
 
 #define RDTL_MAGIC		0x5244544C
 #define RDTL_VERSION	0x0001
@@ -37,6 +40,9 @@ public:
 	u64 cycle;
 	
 	u8 snapshotType;
+	// Transient capture receipt; not serialized into legacy timeline files.
+	// A true backend return is not a promise about unsupported external media.
+	bool captureSucceeded = false;
 	virtual void StoreToFile(CSlrFile *file);
 	virtual void RestoreFromFile(CSlrFile *file);
 };
@@ -116,8 +122,8 @@ public:
 	
 	virtual void RestoreSnapshot(CStoredChipsSnapshot *snapshot);
 	virtual bool RestoreSnapshotByFrame(int frame);
-	virtual bool RestoreSnapshotByFrame(int frame, long cycleNum);
-	virtual bool RestoreSnapshotByFrame(int frame, long cycleNum, u8 targetDebugMode);
+	virtual bool RestoreSnapshotByFrame(int frame, std::int64_t cycleNum);
+	virtual bool RestoreSnapshotByFrame(int frame, std::int64_t cycleNum, u8 targetDebugMode);
 	virtual bool RestoreSnapshotByCycle(u64 cycle);
 	virtual bool RestoreSnapshotByCycle(u64 cycle, u8 targetDebugMode);
 
@@ -140,6 +146,24 @@ public:
 	CStoredInputEvent *GetNewInputEventSnapshot(CSlrFile *file);
 
 	bool CheckMainCpuCycle();
+
+	// Main CPU only, at pre-dispatch and immediately before opcode execution.
+	// This is a finite contiguous boundary index, not per-address markers.
+	void TimelineInstructionBoundary(bool executable = true, u64 clocksPerSecond = 0);
+	void TimelineInstructionDispatch(bool executable = true, u64 clocksPerSecond = 0);
+	bool GetTimelineInstructionCoverage(u64 &first, u64 &last, std::size_t &count, bool &atBoundary);
+
+	TimelineSeek::Status GetTimelineStatus();
+	TimelineSeek::Result PerformTimelineSeek(const TimelineSeek::Request &request, u32 timeoutMs);
+	// CPU-thread pause observation, after native register import and refresh.
+	// A queued request alone must never unwind a paused instruction.
+	void TimelinePausePoint(const TimelineSeek::Position &position);
+	bool TimelineCanPublishPause();
+	void TimelinePauseRegisters(u16 pc, u8 a, u8 x, u8 y, u8 p, u8 sp);
+	void TimelineAfterRegisterImport();
+	bool TimelineNeedsCpuService() const { return timelineTransaction.NeedsCpuService(); }
+	bool IsStrictTimelineSeekActive() const { return timelineActive.load(std::memory_order_acquire); }
+	bool IsStrictTimelineImportPending() const { return IsStrictTimelineSeekActive() && timelineImportPending.load(std::memory_order_acquire); }
 	
 	void ResetLastStoredFrameCounter();
 	void ClearSnapshotsHistory();
@@ -149,7 +173,8 @@ public:
 	void RestoreSnapshotBackstepInstruction();
 	
 	int pauseNumFrame;
-	long pauseNumCycle;
+	// -1 means no cycle target; long is only 32 bits on Windows.
+	std::int64_t pauseNumCycle;
 	volatile bool skipFrameRender;
 	bool SkipRefreshOfVideoFrame();
 	
@@ -262,6 +287,38 @@ public:
 	};
 
 private:
+	// Lock order: manager mutex -> timeline history mutex.  The CPU producer
+	// never calls a manager operation while holding the history mutex.
+	// Coarse request: manager -> admission -> transaction.  Precise Submit
+	// holds admission -> transaction only, never manager; release before Wait.
+	// CPU intake/publication retain manager -> transaction.  No reverse edge.
+	std::mutex timelineAdmissionMutex;
+	TimelineSeek::Transaction timelineTransaction;
+	std::atomic<bool> timelineActive{false};
+	// Native fields below are protected by the manager mutex.  CPU observations
+	// and admission never retain pointers owned by the remote caller.
+	TimelineSeek::Result timelineNativeResult;
+	CStoredChipsSnapshot *timelineCheckpoint = nullptr;
+	u64 timelineEpoch = 0, timelineAdmittedEpoch = 0;
+	std::atomic<bool> timelineImportPending{false};
+	bool timelineLoaded = false;
+	bool timelineTargetReached = false, timelineRequireBoundary = false;
+	u64 timelineTargetCounter = 0;
+	std::string timelineFailure;
+	TimelineSeek::Bounds TimelineBoundsLocked(const TimelineSeek::Position *origin);
+	void TimelineStopLocked(const char *reason);
+	void TimelineCheckCancellation();
+
+	std::mutex timelineHistoryMutex;
+	TimelineSeek::InstructionHistory timelineInstructionHistory;
+	// Main-CPU rate observations use the same history lock.  A rate transition
+	// bounds time conversion; never substitute nominal display FPS.
+	u64 timelineClockRate = 0, timelineTimebaseStart = 0;
+	std::atomic<bool> timelineAtInstructionBoundary{false};
+	// CPU-thread-owned cache avoids a second history lock on ordinary dispatch.
+	u64 timelineLastBoundary = 0;
+	bool timelineBoundaryExecutable = false;
+
 	CSlrMutex *mutex;
 	u32 lastStoredFrame;
 	u32 lastStoredFrameCounter;

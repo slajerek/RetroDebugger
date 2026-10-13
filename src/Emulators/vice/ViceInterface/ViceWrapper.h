@@ -229,6 +229,9 @@ void c64d_drive1541_check_irqvia2_breakpoint();
 void c64d_c64_check_irqvic_breakpoint();
 void c64d_c64_check_irqcia_breakpoint(int ciaNum);
 void c64d_c64_check_irqnmi_breakpoint();
+void c64d_timeline_instruction_boundary(int executable);
+void c64d_timeline_instruction_dispatch(int executable);
+void c64d_timeline_after_register_import();
 void c64d_debug_pause_check(int allowRestore);
 
 // c64d: deferred PC change requested by the debugger (CDebugInterfaceVice::MakeJmpC64).

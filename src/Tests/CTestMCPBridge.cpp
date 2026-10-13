@@ -457,6 +457,7 @@ void CTestMCPBridge::Run(ITestCallback *cb)
 		bool hasDiskAttach = false;
 		bool hasMemoryLastAccess = false;
 		int timelineCount = 0;
+		bool hasTimelineSeek = false;
 		int toolCount = 0;
 		for (const auto &t : tools)
 		{
@@ -467,6 +468,7 @@ void CTestMCPBridge::Run(ITestCallback *cb)
 			if (name == "retro_disk_attach") hasDiskAttach = true;
 			if (name == "retro_memory_last_access") hasMemoryLastAccess = true;
 			if (name == "retro_timeline") timelineCount++;
+			if (name == "retro_timeline_seek") hasTimelineSeek = true;
 			toolCount++;
 		}
 
@@ -511,11 +513,18 @@ void CTestMCPBridge::Run(ITestCallback *cb)
 			FinishTest(false, "Connected tools must contain exactly one retro_timeline");
 			return;
 		}
-
-		// Should be 49: 46 debugger + 3 bridge-local
-		if (toolCount != 49)
+		if (!hasTimelineSeek)
 		{
-			sprintf(sFailMsg, "Test %d FAIL: expected 49 tools, got %d", testNum, toolCount);
+			sprintf(sFailMsg, "Test %d FAIL: missing retro_timeline_seek in connected tools", testNum);
+			bridge.Stop();
+			FinishTest(false, sFailMsg);
+			return;
+		}
+
+		// Should be 50: 47 debugger + 3 bridge-local
+		if (toolCount != 50)
+		{
+			sprintf(sFailMsg, "Test %d FAIL: expected 50 tools, got %d", testNum, toolCount);
 			bridge.Stop();
 			FinishTest(false, sFailMsg);
 			return;
@@ -666,9 +675,9 @@ void CTestMCPBridge::Run(ITestCallback *cb)
 			json response = server.HandleRequest(request);
 			json tools = response["result"]["tools"];
 			int toolCount = (int)tools.size();
-			if (toolCount != 49)
+			if (toolCount != 50)
 			{
-				sprintf(sFailMsg, "Test %d FAIL: after reconnect expected 49 tools, got %d",
+				sprintf(sFailMsg, "Test %d FAIL: after reconnect expected 50 tools, got %d",
 						testNum, toolCount);
 				bridge2.Stop();
 				FinishTest(false, sFailMsg);
@@ -704,6 +713,13 @@ void CTestMCPBridge::Run(ITestCallback *cb)
 			if (!names.count("retro_memory_last_access"))
 			{
 				sprintf(sFailMsg, "Test %d FAIL: retro_memory_last_access missing after reconnect", testNum);
+				bridge2.Stop();
+				FinishTest(false, sFailMsg);
+				return;
+			}
+			if (!names.count("retro_timeline_seek"))
+			{
+				sprintf(sFailMsg, "Test %d FAIL: retro_timeline_seek missing after reconnect", testNum);
 				bridge2.Stop();
 				FinishTest(false, sFailMsg);
 				return;

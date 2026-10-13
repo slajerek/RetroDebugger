@@ -1589,6 +1589,44 @@ public:
 	~CParkedInPauseLoopGuard() { c64d_cpu_parked_in_pause_loop.store(0, std::memory_order_release); }
 };
 
+void c64d_timeline_instruction_boundary(int executable)
+{
+	debugInterfaceVice->snapshotsManager->TimelineInstructionBoundary(executable != 0,
+		static_cast<u64>(machine_get_cycles_per_second()));
+}
+
+void c64d_timeline_instruction_dispatch(int executable)
+{
+	debugInterfaceVice->snapshotsManager->TimelineInstructionDispatch(executable != 0,
+		static_cast<u64>(machine_get_cycles_per_second()));
+}
+
+void c64d_timeline_after_register_import()
+{
+	CSnapshotsManager *manager = debugInterfaceVice->snapshotsManager;
+	if (!manager->IsStrictTimelineSeekActive()) return;
+	c64d_timeline_instruction_boundary(1);
+	manager->TimelineAfterRegisterImport();
+	pauseRefreshDone = 0;
+}
+
+static void c64d_timeline_pause_point()
+{
+	CSnapshotsManager *manager = debugInterfaceVice->snapshotsManager;
+	if (!manager->TimelineCanPublishPause()) return;
+	if (manager->IsStrictTimelineSeekActive())
+	{
+		debugInterfaceVice->RefreshScreenNoCallback();
+		c64d_refresh_cia();
+	}
+	u16 pc;
+	u8 a, x, y, p, sp;
+	// This getter reads the live CPU-loop registers, not the VIC-frame cache.
+	debugInterfaceVice->GetCpuRegs(&pc, &a, &x, &y, &p, &sp);
+	manager->TimelinePauseRegisters(pc, a, x, y, p, sp);
+	if (manager->IsStrictTimelineSeekActive()) c64d_vice_input_tasks_flag = 1;
+}
+
 void c64d_debug_pause_check(int allowRestore)
 {
 	if (allowRestore)
@@ -1664,6 +1702,10 @@ void c64d_debug_pause_check(int allowRestore)
 			std::unique_lock<std::mutex> lock(debugInterfaceVice->pauseMutex);
 			while (c64d_debug_mode.load(std::memory_order_acquire) == DEBUGGER_MODE_PAUSED)
 			{
+				// No pause mutex is held across admission, import, or publication.
+				lock.unlock();
+				c64d_timeline_pause_point();
+				lock.lock();
 				// Use 16ms timeout (~60fps) to keep audio processing frequent while paused.
 				// The predicate also wakes on a debugger PC change requested while paused
 				// (MakeJmpC64) so it commits here, on the emulation thread, instead of only
@@ -1739,7 +1781,8 @@ void c64d_debug_pause_check(int allowRestore)
 
 int c64d_is_performing_snapshot_restore()
 {
-	if (debugInterfaceVice->snapshotsManager->IsPerformingSnapshotRestore())
+	if (debugInterfaceVice->snapshotsManager->IsPerformingSnapshotRestore()
+		|| debugInterfaceVice->snapshotsManager->IsStrictTimelineImportPending())
 	{
 		return 1;
 	}
@@ -1780,7 +1823,8 @@ int c64d_check_snapshot_restore(int allowSnapshotRestore)
 	// Clear the fast flag if no more work pending
 	if (!debugInterfaceVice->hasPendingCpuDebugInterruptTasks.load(std::memory_order_acquire)
 		&& !debugInterfaceVice->snapshotsManager->isReplayInputEventsEnabled
-		&& !debugInterfaceVice->snapshotsManager->isStoreInputEventsEnabled)
+		&& !debugInterfaceVice->snapshotsManager->isStoreInputEventsEnabled
+		&& !debugInterfaceVice->snapshotsManager->IsStrictTimelineSeekActive())
 	{
 		c64d_vice_input_tasks_flag = 0;
 	}

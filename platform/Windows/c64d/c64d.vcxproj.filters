@@ -7186,6 +7186,15 @@
     <ClInclude Include="..\..\..\src\Tools\CTimelineNavigation.h">
       <Filter>Source Files\src\Tools</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\src\Tools\CTimelineSeekPlan.h">
+      <Filter>Source Files\src\Tools</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Tools\CTimelineSeekTransaction.h">
+      <Filter>Source Files\src\Tools</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Tools\CTimelineSeekJson.h">
+      <Filter>Source Files\src\Tools</Filter>
+    </ClInclude>
     <ClInclude Include="..\..\..\src\Tools\64tass\64tass-encoding.h">
       <Filter>Source Files\src\Tools\64tass</Filter>
     </ClInclude>
@@ -7649,6 +7658,12 @@
       <Filter>Source Files\src\Tests</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\src\Tests\CTestSnapshotBoundary.h">
+      <Filter>Source Files\src\Tests</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Tests\CTestTimelineCancellation.h">
+      <Filter>Source Files\src\Tests</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Tests\CTestTimelineCancellationChecks.h">
       <Filter>Source Files\src\Tests</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\src\Tests\CTestViceRewindWhileRunning.h">

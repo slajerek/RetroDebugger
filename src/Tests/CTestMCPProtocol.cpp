@@ -6,6 +6,7 @@
 #include "CDebugInterface.h"
 #include "CDebugMemoryCell.h"
 #include "CTimelineNavigation.h"
+#include "CTimelineSeekJson.h"
 #include "C64DShutdown.h"
 #include "SYS_Main.h"
 #include <cstdio>
@@ -1243,6 +1244,25 @@ void CTestMCPProtocol::Run(ITestCallback *cb)
 		cell.ClearReadWriteDebugMarkers();
 		access = cell.GetLastAccess();
 		valid = valid && !access.read.IsAvailable() && !access.write.IsAvailable();
+		// Restoring a checkpoint invalidates equal/newer access provenance,
+		// but it cannot recover an older writer from a single latest record.
+		cell.MarkCellRead(9, 1, 0x1234, 2, 3);
+		cell.MarkCellWrite(0, 10, 1, 0x2345, 4, 5);
+		cell.ClearEventsAfterCycle(10);
+		access = cell.GetLastAccess();
+		valid = valid && access.read.IsAvailable() && access.read.cycle == 9
+			&& !access.write.IsAvailable() && access.write.pc == -1;
+		cell.MarkCellRead(0, 0, 0, 0, 0);
+		cell.MarkCellWrite(0, 0, 0, 0, 0, 0);
+		cell.ClearEventsAfterCycle(0);
+		access = cell.GetLastAccess();
+		valid = valid && !access.read.IsAvailable() && !access.write.IsAvailable();
+		cell.MarkCellRead((1ULL << 42) + 1, 2, 0x3456, 6, 7);
+		cell.MarkCellWrite(0, (1ULL << 42) + 2, 2, 0x4567, 8, 9);
+		cell.ClearEventsAfterCycle((1ULL << 42) + 2);
+		access = cell.GetLastAccess();
+		valid = valid && access.read.IsAvailable() && access.read.cycle == (1ULL << 42) + 1
+			&& !access.write.IsAvailable();
 		// Legacy cells do not free these buffers in their destructor.
 		circlebuf_free(&cell.valuesHistory);
 		circlebuf_free(&cell.executeHistory);
@@ -1331,7 +1351,122 @@ void CTestMCPProtocol::Run(ITestCallback *cb)
 		}
 	}
 
-	TestCompleted(true, "All MCP protocol tests passed (37/37)");
+	// --- Test 38: shared timeline parser retains exact integers and rejects ambiguity ---
+	{
+		TimelineSeek::Request request;
+		bool status = false;
+		std::uint32_t timeout = 0;
+		bool valid = !TimelineSeek::ParseRequest({{"mode", "back"}, {"unit", "instructions"}}, request, status, timeout)
+			&& request.mode == TimelineSeek::Mode::BackInstructions && request.value == 1 && timeout == 5000 && !status;
+		valid = valid && !TimelineSeek::ParseRequest({{"mode", "cycle"}, {"cycle", (1ULL << 42)}}, request, status, timeout)
+			&& request.value == (1ULL << 42);
+		valid = valid && !TimelineSeek::ParseRequest({{"mode", "cycle"}, {"cycle", 18446744073709551615ULL}}, request, status, timeout)
+			&& request.value == 18446744073709551615ULL;
+		for (const auto &params : json::array({json::object(), {{"mode", "unknown"}},
+			{{"mode", "status"}, {"address", 0}}, {{"mode", "cycle"}, {"cycle", 0}, {"frame", 0}},
+			{{"mode", "frame"}, {"frame", 1.5}}, {{"mode", "back"}},
+			{{"mode", "back"}, {"unit", "instructions"}, {"count", 0}},
+			{{"mode", "last_read"}, {"address", 65536}}, {{"mode", "last_write"}, {"address", true}},
+			{{"mode", "cycle"}, {"cycle", -1}}, {{"mode", "cycle"}, {"cycle", 1}, {"timeoutMs", 60001}}}))
+			valid = valid && TimelineSeek::ParseRequest(params, request, status, timeout) != nullptr;
+		if (!valid)
+		{
+			sprintf(failureMsg, "Test 38 FAIL: timeline parser width/default/refusal contract");
+			TestCompleted(false, failureMsg); return;
+		}
+	}
+
+	// --- Test 39: C64/status forwarding and non-C64 no-dispatch refusals ---
+	{
+		const json payload = {{"outcome", "timeout_cancellation_pending"}, {"success", false},
+			{"completed", false}, {"mutationStarted", true}, {"actualStateIsFinal", false}};
+		for (const char *platform : {"c64", "atari800", "nes"})
+		{
+			for (json arguments : json::array({{{"mode", "status"}}, {{"mode", "last_read"}, {"address", 0}},
+				{{"mode", "last_write"}, {"address", 65535}}, {{"mode", "cycle"}, {"cycle", (1ULL << 42)}},
+				{{"mode", "frame"}, {"frame", 0}}, {{"mode", "back"}, {"unit", "instructions"}},
+				{{"mode", "back"}, {"unit", "video_frames"}, {"count", 2}},
+				{{"mode", "back"}, {"unit", "emulated_seconds"}, {"timeoutMs", 60000}}}))
+			{
+				const json expectedParams = arguments;
+				arguments["platform"] = platform;
+				CCannedDebuggerServer debuggerServer({{"status", HTTP_OK}, {"result", payload}});
+				CMCPServer server;
+				PrepareToolTestServer(server, debuggerServer);
+				json response = CallTool(server, 38, "retro_timeline_seek", arguments);
+				if (std::string(platform) != "c64" && expectedParams.at("mode") != "status")
+				{
+					if (!ToolErrorText(response).empty() || debuggerServer.callCount != 0)
+					{
+						sprintf(failureMsg, "Test 39 FAIL: unsupported timeline request dispatched or became a transport error");
+						TestCompleted(false, failureMsg); return;
+					}
+					const json refused = json::parse(response["result"]["content"][0]["text"].get<std::string>());
+					if (refused.value("outcome", std::string()) != "unsupported_platform"
+						|| refused.value("success", true) || !refused.value("completed", false)
+						|| refused.value("mutationStarted", true) || refused.value("actualStateIsFinal", true)
+						|| refused.value("sequence", 1) != 0 || refused.value("platform", std::string()) != platform
+						|| !refused["origin"].is_null() || !refused["actual"].is_null() || !refused["destination"].is_null()
+						|| refused["requested"] != expectedParams || refused["supportedPlatforms"] != json::array({"c64"}))
+					{
+						sprintf(failureMsg, "Test 39 FAIL: unsupported timeline refusal was not an unsubmitted no-op");
+						TestCompleted(false, failureMsg); return;
+					}
+					continue;
+				}
+				if (!ToolErrorText(response).empty() || debuggerServer.callCount != 1
+					|| debuggerServer.lastEndpointName != std::string(platform) + "/timeline/seek"
+					|| debuggerServer.lastParams != expectedParams
+					|| json::parse(response["result"]["content"][0]["text"].get<std::string>()) != payload)
+				{
+					sprintf(failureMsg, "Test 39 FAIL: timeline forwarding or failure-state preservation");
+					TestCompleted(false, failureMsg); return;
+				}
+			}
+		}
+	}
+
+	// --- Test 40: malformed timeline calls must not reach any endpoint ---
+	{
+		CCannedDebuggerServer debuggerServer({{"status", HTTP_OK}, {"result", json::object()}});
+		CMCPServer server;
+		PrepareToolTestServer(server, debuggerServer);
+		for (const auto &arguments : json::array({{{"mode", "status"}}, {{"platform", "c64"}},
+			{{"platform", "c64u"}, {"mode", "status"}}, {{"platform", "nes"}, {"mode", "status"}, {"count", 1}},
+			{{"platform", "atari800"}, {"mode", "back"}, {"unit", "cycles"}},
+			{{"platform", "c64"}, {"mode", "cycle"}, {"cycle", "9007199254740993"}},
+			{{"platform", "c64"}, {"mode", "last_read"}, {"address", 0}, {"frame", 0}}}))
+		{
+			if (ToolErrorText(CallTool(server, 39, "retro_timeline_seek", arguments)).empty() || debuggerServer.callCount != 0)
+			{
+				sprintf(failureMsg, "Test 40 FAIL: malformed timeline request reached endpoint");
+				TestCompleted(false, failureMsg); return;
+			}
+		}
+	}
+
+	// --- Test 41: transport errors are still errors; missing observations are null ---
+	{
+		CCannedDebuggerServer debuggerServer({{"status", HTTP_SERVICE_UNAVAILABLE}, {"error", "desktop_unavailable"}});
+		CMCPServer server;
+		PrepareToolTestServer(server, debuggerServer);
+		const json response = CallTool(server, 40, "retro_timeline_seek", {{"platform", "c64"}, {"mode", "status"}});
+		const json absent = TimelineSeek::ResultJson(TimelineSeek::Result());
+		TimelineSeek::Status nes;
+		nes.bounds.domain = TimelineSeek::ClockDomain::InstructionIndex;
+		const json nesStatus = TimelineSeek::StatusJson(nes);
+		if (ToolErrorText(response).empty() || debuggerServer.callCount != 1 || !absent["actual"].is_null()
+			|| !absent["origin"].is_null() || absent["actualStateIsFinal"] != false
+			|| nesStatus["counterDomain"] != "instruction_index" || nesStatus["emulatedSeconds"] != false
+			|| nesStatus["seekSupported"] != false || nesStatus["supportedModes"] != json::array({"status"})
+			|| nesStatus["unsupportedReason"] != "unsupported_platform")
+		{
+			sprintf(failureMsg, "Test 41 FAIL: timeline error/unknown/domain contract");
+			TestCompleted(false, failureMsg); return;
+		}
+	}
+
+	TestCompleted(true, "All MCP protocol tests passed (41/41)");
 }
 
 void CTestMCPProtocol::Cancel()

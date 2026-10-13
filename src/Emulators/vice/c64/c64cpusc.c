@@ -3348,6 +3348,7 @@ INC_PC(1);                \
 				}
 				
 				c64d_maincpu_current_instruction_clk = maincpu_clk;
+				c64d_timeline_instruction_boundary(!CPU_IS_JAMMED);
 				
 				{
 					int _dm = c64d_debug_mode_get();
@@ -3378,6 +3379,10 @@ INC_PC(1);                \
 			
 			{
 				opcode_t opcode;
+				/* A restore while paused can replace the clock above.  Access
+				   hooks for this opcode must use the imported instruction start. */
+				c64d_maincpu_current_instruction_clk = maincpu_clk;
+				c64d_timeline_instruction_dispatch(!CPU_IS_JAMMED);
 #if defined (DEBUG) || defined (FEATURE_CPUMEMHISTORY)
 				debug_clk = maincpu_clk;
 #endif
@@ -4869,6 +4874,9 @@ int c64d_check_cpu_snapshot_manager_restore()
 		
 		LOGD("after alarm_context_dispatch: viceCurrentC64PC=%04x reg_pc=%04x cycle=%d", viceCurrentC64PC, reg_pc, maincpu_clk);
 		
+		/* A strict seek may acknowledge only after cached registers and pending
+		 * interrupt/alarm work have reached this imported CPU boundary. */
+		c64d_timeline_after_register_import();
 		return 1;
 	}
 	return 0;

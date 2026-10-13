@@ -4,6 +4,7 @@
 #include "CGuiMain.h"
 #include "CViewC64.h"
 #include "CDebugMemory.h"
+#include "CDebugMemoryCell.h"
 #include "SND_SoundEngine.h"
 #include "C64SettingsStorage.h"
 #include "CSlrFileFromOS.h"
@@ -11,6 +12,7 @@
 
 #include "M_Circlebuf.h"
 #include <chrono>
+#include <limits>
 
 // TODO: rewriting map frame snapshot...  (?)
 // DONE?: attach regular snapshots -> clear rewind data
@@ -56,10 +58,12 @@ void CStoredSnapshot::Use(u32 frame, u64 cycle)
 {
 	this->frame = frame;
 	this->cycle = cycle;
+	captureSucceeded = false;
 }
 
 void CStoredSnapshot::Clear()
 {
+	captureSucceeded = false;
 	if (this->cycle != -1)
 	{
 //		LOGD("CStoredSnapshot::Clear: was cycle %d", this->cycle);
@@ -83,6 +87,8 @@ void CStoredSnapshot::RestoreFromFile(CSlrFile *file)
 	frame = file->ReadU32();
 	cycle = file->ReadU64();
 	file->ReadByteBuffer(byteBuffer);
+	// Imported legacy buffers have no successful in-process capture receipt.
+	captureSucceeded = false;
 }
 
 CStoredDiskSnapshot::CStoredDiskSnapshot(CSnapshotsManager *manager, u32 frame, u64 cycle)
@@ -234,6 +240,8 @@ CStoredInputEvent::CStoredInputEvent(CSnapshotsManager *manager, CSlrFile *file)
 }
 
 CSnapshotsManager::CSnapshotsManager(CDebugInterface *debugInterface)
+: timelineInstructionHistory(debugInterface->GetEmulatorType() == EMULATOR_TYPE_C64_VICE
+	? TimelineSeek::InstructionHistory::DefaultCapacity : 0)
 {
 	this->mutex = new CSlrMutex("CSnapshotsManager");
 	this->debugInterface = debugInterface;
@@ -276,6 +284,369 @@ CSnapshotsManager::~CSnapshotsManager()
 {
 }
 
+void CSnapshotsManager::TimelineInstructionBoundary(bool executable, u64 clocksPerSecond)
+{
+	const u64 cycle = debugInterface->GetMainCpuCycleCounter();
+	{
+		std::lock_guard<std::mutex> lock(timelineHistoryMutex);
+		if (clocksPerSecond != timelineClockRate
+			|| (cycle < timelineLastBoundary && !IsStrictTimelineSeekActive()))
+		{
+			timelineClockRate = clocksPerSecond;
+			timelineTimebaseStart = cycle;
+		}
+		if (executable)
+			timelineInstructionHistory.Observe(cycle);
+		else if (timelineInstructionHistory.Size())
+			timelineInstructionHistory.Clear();
+		timelineAtInstructionBoundary.store(executable, std::memory_order_release);
+	}
+	timelineLastBoundary = cycle;
+	timelineBoundaryExecutable = executable;
+	// Boundary destinations must stop here, not in the previous opcode's last
+	// bus cycle merely because the numeric clock happens to match.
+	if (IsStrictTimelineSeekActive()) CheckMainCpuCycle();
+}
+
+void CSnapshotsManager::TimelineInstructionDispatch(bool executable, u64 clocksPerSecond)
+{
+	// A restore can replace the clock/CPU state while the pre-dispatch pause
+	// is serviced.  Observe the imported boundary, not the old pause's clock.
+	if (!executable || !timelineBoundaryExecutable || debugInterface->GetMainCpuCycleCounter() != timelineLastBoundary)
+		TimelineInstructionBoundary(executable, clocksPerSecond);
+	timelineAtInstructionBoundary.store(false, std::memory_order_release);
+}
+
+bool CSnapshotsManager::GetTimelineInstructionCoverage(u64 &first, u64 &last, std::size_t &count, bool &atBoundary)
+{
+	std::lock_guard<std::mutex> lock(timelineHistoryMutex);
+	count = timelineInstructionHistory.Size();
+	atBoundary = timelineAtInstructionBoundary.load(std::memory_order_acquire);
+	TimelineSeek::Counter low = 0, high = 0;
+	if (!timelineInstructionHistory.Range(low, high)) return false;
+	first = low;
+	last = high;
+	return true;
+}
+
+namespace
+{
+class TimelineManagerGuard
+{
+public:
+	explicit TimelineManagerGuard(CSnapshotsManager &manager) : manager(manager) { manager.LockMutex(); }
+	~TimelineManagerGuard() { manager.UnlockMutex(); }
+private:
+	CSnapshotsManager &manager;
+};
+
+bool TimelineCheckpointCaptured(const CStoredChipsSnapshot *snapshot)
+{
+	return snapshot && snapshot->captureSucceeded && snapshot->byteBuffer->length > 0
+		&& snapshot->diskSnapshot && snapshot->diskSnapshot->captureSucceeded;
+}
+}
+
+TimelineSeek::Bounds CSnapshotsManager::TimelineBoundsLocked(const TimelineSeek::Position *origin)
+{
+	TimelineSeek::Bounds bounds;
+	const int platform = debugInterface->GetEmulatorType();
+	bounds.domain = platform == EMULATOR_TYPE_C64_VICE ? TimelineSeek::ClockDomain::CpuClock
+		: platform == EMULATOR_TYPE_NESTOPIA ? TimelineSeek::ClockDomain::InstructionIndex
+		: TimelineSeek::ClockDomain::InstructionDebugClock;
+	// Unsupported platforms expose capability metadata, not seek coverage.
+	if (platform != EMULATOR_TYPE_C64_VICE) return bounds;
+	for (const auto &entry : chipSnapshotsByCycle)
+	{
+		const CStoredChipsSnapshot *snapshot = entry.second;
+		if (!TimelineCheckpointCaptured(snapshot)) continue;
+		if (!bounds.available)
+		{
+			bounds.available = true;
+			bounds.firstCounter = snapshot->cycle;
+			bounds.firstFrame = snapshot->frame;
+		}
+		bounds.lastCounter = snapshot->cycle;
+		bounds.lastFrame = snapshot->frame;
+	}
+	if (origin)
+	{
+		bounds.originCounter = origin->counter;
+		bounds.originFrame = origin->frame;
+		bounds.originAtInstructionBoundary = origin->instructionBoundary;
+		// The CPU has observed the interval since the latest checkpoint while
+		// recording is active.  This does not invent missing historical input.
+		if (bounds.available && c64SettingsSnapshotsRecordIsActive
+			&& origin->counter >= bounds.lastCounter && origin->frame >= bounds.lastFrame)
+		{
+			bounds.lastCounter = origin->counter;
+			bounds.lastFrame = origin->frame;
+		}
+	}
+	std::lock_guard<std::mutex> history(timelineHistoryMutex);
+	bounds.clocksPerSecond = timelineClockRate;
+	bounds.constantTimebase = timelineClockRate != 0 && bounds.available
+		&& bounds.firstCounter >= timelineTimebaseStart;
+	return bounds;
+}
+
+TimelineSeek::Status CSnapshotsManager::GetTimelineStatus()
+{
+	TimelineManagerGuard guard(*this);
+	TimelineSeek::Status status;
+	status.bounds = TimelineBoundsLocked(nullptr);
+	status.recording = c64SettingsSnapshotsRecordIsActive;
+	status.inputRecording = isStoreInputEventsEnabled;
+	status.inputReplay = isReplayInputEventsEnabled;
+	status.seekSupported = debugInterface->GetEmulatorType() == EMULATOR_TYPE_C64_VICE;
+	if (!status.seekSupported) return status;
+	for (const auto &entry : chipSnapshotsByCycle)
+		if (TimelineCheckpointCaptured(entry.second)) ++status.verifiedCheckpoints;
+	u64 first = 0, last = 0;
+	status.instructionCoverage = GetTimelineInstructionCoverage(first, last,
+		status.instructionCount, status.atInstructionBoundary);
+	status.firstInstruction = first;
+	status.lastInstruction = last;
+	status.busy = timelineTransaction.Busy() || snapshotToRestore != NULL || isPerformingSnapshotRestore
+		|| IsExternalSnapshotRequestActive() || IsSnapshotOperationInProgress();
+	status.lastRequest = timelineTransaction.Inspect();
+	return status;
+}
+
+TimelineSeek::Result CSnapshotsManager::PerformTimelineSeek(const TimelineSeek::Request &request, u32 timeoutMs)
+{
+	// Refuse before run-state inspection, transaction admission, or CPU work.
+	// C64 PAL and NTSC share this path; there is no video-standard restriction.
+	if (debugInterface->GetEmulatorType() != EMULATOR_TYPE_C64_VICE)
+		return TimelineSeek::UnsupportedPlatformResult();
+	TimelineSeek::Result refusal;
+	refusal.completed = true;
+	if (timeoutMs == 0 || timeoutMs > 60000)
+	{
+		refusal.outcome = "invalid_timeout";
+		return refusal;
+	}
+	if (!debugInterface->isRunning)
+	{
+		refusal.outcome = "emulation_thread_not_running";
+		return refusal;
+	}
+	TimelineSeek::Counter sequence;
+	{
+		// Serialize Submit with the coarse API's busy check and queueing.
+		// Do not acquire the manager lock here: a Pending request must still
+		// time out while CPU admission is blocked on that lock.  Contention
+		// must not create an unbounded wait before the transaction timeout.
+		std::unique_lock<std::mutex> admission(timelineAdmissionMutex, std::try_to_lock);
+		if (!admission.owns_lock())
+		{
+			refusal.outcome = "busy";
+			return refusal;
+		}
+		// Check inside the shared gate: a coarse request that won admission
+		// has already made the emulator running before releasing this gate.
+		if (debugInterface->GetDebugMode() != DEBUGGER_MODE_PAUSED)
+		{
+			refusal.outcome = "pause_required";
+			return refusal;
+		}
+		if (!timelineTransaction.Submit(request, sequence))
+		{
+			refusal.outcome = "busy";
+			return refusal;
+		}
+	}
+	// CPU admission rechecks pause/restore state under the manager lock.
+	// Neither the manager lock nor the admission gate survives into Wait.
+	return timelineTransaction.Wait(sequence, std::chrono::milliseconds(timeoutMs));
+}
+
+void CSnapshotsManager::TimelineStopLocked(const char *reason)
+{
+	if (timelineFailure.empty()) timelineFailure = reason;
+	snapshotToRestore = nullptr;
+	pauseNumCycle = -1;
+	pauseNumFrame = -1;
+	skipFrameRender = false;
+	isPerformingSnapshotRestore = false;
+	debugInterface->SetDebugMode(DEBUGGER_MODE_PAUSED);
+}
+
+void CSnapshotsManager::TimelineCheckCancellation()
+{
+	if (!IsStrictTimelineSeekActive()) return;
+	TimelineManagerGuard guard(*this);
+	if (timelineTransaction.CancellationRequested(timelineNativeResult.sequence))
+		TimelineStopLocked("cancelled_after_admission");
+	else if (timelineAdmittedEpoch != timelineEpoch)
+		TimelineStopLocked("history_changed");
+}
+
+void CSnapshotsManager::TimelineAfterRegisterImport()
+{
+	if (!IsStrictTimelineSeekActive()) return;
+	TimelineManagerGuard guard(*this);
+	timelineImportPending = false;
+	if (!timelineFailure.empty()) TimelineStopLocked(timelineFailure.c_str());
+	else if (timelineLoaded && timelineNativeResult.byFrame && timelineTargetReached)
+	{
+		pauseNumCycle = pauseNumFrame = -1;
+		skipFrameRender = false;
+		isPerformingSnapshotRestore = false;
+		debugInterface->SetDebugMode(DEBUGGER_MODE_PAUSED);
+	}
+}
+
+bool CSnapshotsManager::TimelineCanPublishPause()
+{
+	if (!TimelineNeedsCpuService() || debugInterface->GetDebugMode() != DEBUGGER_MODE_PAUSED) return false;
+	TimelineManagerGuard guard(*this);
+	if (timelineImportPending || snapshotToRestore || IsSnapshotOperationInProgress()) return false;
+	// Breakpoint interruption is also a settled final observation.  Clear the
+	// replay render suppression before the backend publishes that pause.
+	if (IsStrictTimelineSeekActive()) skipFrameRender = false;
+	return true;
+}
+
+void CSnapshotsManager::TimelinePauseRegisters(u16 pc, u8 a, u8 x, u8 y, u8 p, u8 sp)
+{
+	TimelineSeek::Position position;
+	position.counter = debugInterface->GetMainCpuCycleCounter();
+	position.frame = debugInterface->GetEmulationFrameNumber();
+	position.paused = debugInterface->GetDebugMode() == DEBUGGER_MODE_PAUSED;
+	position.instructionBoundary = timelineAtInstructionBoundary.load(std::memory_order_acquire);
+	position.pc = pc;
+	char registers[192];
+	snprintf(registers, sizeof(registers), "{\"pc\":%u,\"a\":%u,\"x\":%u,\"y\":%u,\"p\":%u,\"sp\":%u}",
+		static_cast<unsigned>(pc), static_cast<unsigned>(a), static_cast<unsigned>(x),
+		static_cast<unsigned>(y), static_cast<unsigned>(p), static_cast<unsigned>(sp));
+	position.registersJson = registers;
+	TimelinePausePoint(position);
+}
+
+void CSnapshotsManager::TimelinePausePoint(const TimelineSeek::Position &position)
+{
+	if (!TimelineNeedsCpuService() || !position.paused) return;
+	TimelineManagerGuard guard(*this);
+	if (IsStrictTimelineSeekActive())
+	{
+		if (timelineTransaction.CancellationRequested(timelineNativeResult.sequence))
+			TimelineStopLocked("cancelled_after_admission");
+		else if (timelineAdmittedEpoch != timelineEpoch)
+			TimelineStopLocked("history_changed");
+		// Dequeuing/loading is not completion: the native CPU must import its
+		// cached registers and enter this settled, refreshed pause afterward.
+		if (timelineImportPending || snapshotToRestore) return;
+		timelineNativeResult.actual = position;
+		timelineNativeResult.actualAvailable = true;
+		const bool exact = timelineNativeResult.byFrame
+			? position.frame == timelineNativeResult.destination && position.counter == timelineTargetCounter
+			: position.counter == timelineNativeResult.destination;
+		const bool boundary = !timelineRequireBoundary || position.instructionBoundary;
+		const bool pcMatches = !timelineNativeResult.sourceAccessAvailable || position.pc == timelineNativeResult.sourcePC;
+		if (!timelineFailure.empty()) timelineNativeResult.outcome = timelineFailure;
+		else if (!timelineLoaded) timelineNativeResult.outcome = "restore_not_observed";
+		else if (!timelineTargetReached) timelineNativeResult.outcome = "interrupted";
+		else if (!exact || !boundary) timelineNativeResult.outcome = "target_boundary_missed";
+		else if (!pcMatches) timelineNativeResult.outcome = "access_pc_mismatch";
+		else timelineNativeResult.outcome = "restored";
+		pauseNumCycle = -1;
+		pauseNumFrame = -1;
+		skipFrameRender = false;
+		isPerformingSnapshotRestore = false;
+		timelineCheckpoint = nullptr;
+		timelineActive.store(false, std::memory_order_release);
+		timelineTransaction.Finish(timelineNativeResult.sequence, timelineNativeResult);
+		return;
+	}
+
+	TimelineSeek::Request request;
+	TimelineSeek::Counter sequence;
+	if (!timelineTransaction.Take(request, sequence)) return;
+	TimelineSeek::Result admission;
+	admission.sequence = sequence;
+	admission.contextAvailable = admission.actualAvailable = true;
+	admission.origin = admission.actual = position;
+	admission.inputRecording = isStoreInputEventsEnabled;
+	admission.inputReplay = isReplayInputEventsEnabled;
+	auto refuse = [&](const char *reason) {
+		admission.outcome = reason;
+		timelineTransaction.Finish(sequence, admission);
+	};
+	if (debugInterface->GetDebugMode() != DEBUGGER_MODE_PAUSED) { refuse("pause_required"); return; }
+	if (snapshotToRestore || isPerformingSnapshotRestore || IsExternalSnapshotRequestActive() || IsSnapshotOperationInProgress())
+	{
+		refuse("restore_busy"); return;
+	}
+	if (request.access != TimelineSeek::Access::None)
+	{
+		if (request.mode != TimelineSeek::Mode::Counter) { refuse("conflicting_destination"); return; }
+		CDebugMemory *memory = debugInterface->symbols ? debugInterface->symbols->memory : nullptr;
+		CDebugMemoryCell *cell = memory ? memory->GetMemoryCell(request.address) : nullptr;
+		if (!cell) { refuse("access_tracking_unavailable"); return; }
+		const DebugMemoryCellLastAccess access = cell->GetLastAccess();
+		const DebugMemoryCellAccess &source = request.access == TimelineSeek::Access::Read ? access.read : access.write;
+		if (!source.IsAvailable()) { refuse("access_unavailable"); return; }
+		request.value = source.cycle;
+		admission.sourceAccessAvailable = true;
+		admission.sourcePC = source.pc;
+	}
+	const TimelineSeek::Bounds bounds = TimelineBoundsLocked(&position);
+	TimelineSeek::Plan plan;
+	{
+		std::lock_guard<std::mutex> history(timelineHistoryMutex);
+		plan = TimelineSeek::Resolve(bounds, timelineInstructionHistory, request.mode, request.value);
+	}
+	if (plan.error != TimelineSeek::Error::None) { refuse(TimelineSeek::ErrorName(plan.error)); return; }
+	if ((plan.byFrame && plan.target > static_cast<u64>(std::numeric_limits<int>::max()))
+		|| (!plan.byFrame && plan.target > static_cast<u64>(std::numeric_limits<std::int64_t>::max())))
+	{
+		refuse("native_target_overflow"); return;
+	}
+	CStoredChipsSnapshot *selected = nullptr;
+	if (plan.byFrame)
+	{
+		auto it = chipSnapshotsByFrame.upper_bound(static_cast<u32>(plan.target));
+		while (it != chipSnapshotsByFrame.begin())
+		{
+			--it;
+			if (TimelineCheckpointCaptured(it->second)) { selected = it->second; break; }
+		}
+	}
+	else
+	{
+		auto it = chipSnapshotsByCycle.upper_bound(plan.target);
+		while (it != chipSnapshotsByCycle.begin())
+		{
+			--it;
+			if (TimelineCheckpointCaptured(it->second)) { selected = it->second; break; }
+		}
+	}
+	if (!selected) { refuse("checkpoint_unavailable"); return; }
+	admission.destinationResolved = true;
+	admission.byFrame = plan.byFrame;
+	admission.destination = plan.target;
+	// Snapshot selection, ownership, and the cancellation boundary are all
+	// under the manager lock.  No raw snapshot pointer crosses to the caller.
+	if (!timelineTransaction.BeginMutation(sequence, admission)) return;
+	timelineNativeResult = admission;
+	timelineNativeResult.mutationStarted = true;
+	timelineCheckpoint = selected;
+	timelineAdmittedEpoch = timelineEpoch;
+	timelineFailure.clear();
+	timelineLoaded = timelineImportPending = timelineTargetReached = false;
+	timelineRequireBoundary = request.access != TimelineSeek::Access::None || request.mode == TimelineSeek::Mode::BackInstructions;
+	timelineTargetCounter = 0;
+	snapshotToRestore = selected;
+	pauseNumFrame = plan.byFrame ? static_cast<int>(plan.target) : -1;
+	pauseNumCycle = plan.byFrame ? -1 : static_cast<std::int64_t>(plan.target);
+	lastReplayedCycle = selected->cycle > 0 ? selected->cycle - 1 : 0;
+	skipFrameRender = true;
+	isPerformingSnapshotRestore = true;
+	timelineActive.store(true, std::memory_order_release);
+	debugInterface->SetDebugMode(DEBUGGER_MODE_RUNNING);
+}
+
 void CSnapshotsManager::ResetLastStoredFrameCounter()
 {
 	lastStoredFrameCounter = c64SettingsSnapshotsIntervalNumFrames-1;
@@ -301,11 +672,11 @@ void CSnapshotsManager::CancelRestore()
 // check if we are exactly in a new frame cycle should be done by the caller
 bool CSnapshotsManager::CheckSnapshotInterval()
 {
-	LOGS("CSnapshotsManager::CheckSnapshotInterval: pauseNumCycle=%d currentCycle=%d", pauseNumCycle, debugInterface->GetMainCpuCycleCounter());
+	LOGS("CSnapshotsManager::CheckSnapshotInterval: pauseNumCycle=%lld currentCycle=%llu", (long long)pauseNumCycle, (unsigned long long)debugInterface->GetMainCpuCycleCounter());
 	
 	if (snapshotToRestore || pauseNumCycle != -1) // || skipSavingSnapshots)
 	{
-		LOGS("snapshotToRestore=%x pauseNumCycle=%d", snapshotToRestore, pauseNumCycle);
+		LOGS("snapshotToRestore=%p pauseNumCycle=%lld", (void *)snapshotToRestore, (long long)pauseNumCycle);
 		return false;
 	}
 	
@@ -313,6 +684,12 @@ bool CSnapshotsManager::CheckSnapshotInterval()
 	
 	if (pauseNumFrame == currentFrame)
 	{
+		if (IsStrictTimelineSeekActive())
+		{
+			TimelineManagerGuard guard(*this);
+			timelineTargetReached = true;
+			timelineTargetCounter = debugInterface->GetMainCpuCycleCounter();
+		}
 		LOGD("CSnapshotsManager::CheckSnapshotInterval: pauseNumFrame == currentFrame");
 		debugInterface->SetDebugMode(DEBUGGER_MODE_PAUSED);
 		pauseNumFrame = -1;
@@ -342,13 +719,15 @@ bool CSnapshotsManager::CheckSnapshotInterval()
 			
 			u64 currentCycle = debugInterface->GetMainCpuCycleCounter();
 			
-			LOGS("CSnapshotsManager::CheckSnapshotInterval: store snapshot, currentFrame=%d, currentCycle=%d", currentFrame, currentCycle);
+			LOGS("CSnapshotsManager::CheckSnapshotInterval: store snapshot, currentFrame=%u, currentCycle=%llu", (unsigned)currentFrame, (unsigned long long)currentCycle);
 			lastStoredFrame = currentFrame;
 			
 			long t1 = SYS_GetCurrentTimeInMillis();
 			
 			// we are in CPU interrupt check, we can safely store snapshot now
-			if (currentDiskSnapshot == NULL
+			// A failed capture is not reusable, even if the backend no longer
+			// reports a dirty drive.  Retry instead of poisoning later checkpoints.
+			if (currentDiskSnapshot == NULL || !currentDiskSnapshot->captureSucceeded
 				|| debugInterface->IsDriveDirtyForSnapshot())
 			{
 //				LOGD("....... create new disk snapshot");
@@ -361,12 +740,13 @@ bool CSnapshotsManager::CheckSnapshotInterval()
 				}
 				
 				// store disk snapshot now, in a synced manner
-				debugInterface->SaveDiskDataSnapshotSynced(diskSnapshot->byteBuffer);
+				diskSnapshot->captureSucceeded = debugInterface->SaveDiskDataSnapshotSynced(diskSnapshot->byteBuffer);
 				
 				//	TODO: add int save_chips and store only disk GCR data      <- nope don't do this
 				//int drive_snapshot_write_module(snapshot_t *s, int save_disks, int save_roms)
 				
-				debugInterface->ClearDriveDirtyForSnapshotFlag();
+				if (diskSnapshot->captureSucceeded)
+					debugInterface->ClearDriveDirtyForSnapshotFlag();
 				
 				currentDiskSnapshot = diskSnapshot;
 				diskSnapshotsByFrame[currentFrame] = diskSnapshot;
@@ -387,7 +767,7 @@ bool CSnapshotsManager::CheckSnapshotInterval()
 			}
 			
 			// store snapshot now, in a synced manner
-			debugInterface->SaveChipsSnapshotSynced(chipSnapshot->byteBuffer);
+			chipSnapshot->captureSucceeded = debugInterface->SaveChipsSnapshotSynced(chipSnapshot->byteBuffer);
 			
 			chipSnapshotsByFrame[currentFrame] = chipSnapshot;
 			chipSnapshotsByCycle[chipSnapshot->cycle] = chipSnapshot;
@@ -425,6 +805,7 @@ void CSnapshotsManager::RestoreSnapshot(CStoredChipsSnapshot *snapshot)
 // The code below is run for each CPU cycle
 bool CSnapshotsManager::CheckMainCpuCycle()
 {
+	TimelineCheckCancellation();
 //	LOGD("CSnapshotsManager::CheckMainCpuCycle prev clk=%d now clk=%d", debugInterface->GetPreviousCpuInstructionCycleCounter(), debugInterface->GetMainCpuCycleCounter());
 	
 	if (snapshotToRestore)
@@ -437,14 +818,22 @@ bool CSnapshotsManager::CheckMainCpuCycle()
 
 //	LOGD("previous_instr_maincpu_clk=%d pauseNumCycle=%d maincpu_clk=%d", debugInterface->GetPreviousCpuInstructionCycleCounter(), pauseNumCycle, currentCycle);
 		
-	if (pauseNumCycle <= currentCycle)
+	if ((u64)pauseNumCycle <= currentCycle)
 	{
-		if (pauseNumCycle != currentCycle)
+		if (IsStrictTimelineSeekActive())
 		{
-			LOGError("Could not hit cycle %d, now we are at %d", pauseNumCycle, currentCycle);
+			TimelineManagerGuard guard(*this);
+			if (timelineRequireBoundary && static_cast<u64>(pauseNumCycle) == currentCycle
+				&& !timelineAtInstructionBoundary.load(std::memory_order_acquire)) return false;
+			timelineTargetReached = true;
+			timelineTargetCounter = currentCycle;
+		}
+		if ((u64)pauseNumCycle != currentCycle)
+		{
+			LOGError("Could not hit cycle %lld, now we are at %llu", (long long)pauseNumCycle, (unsigned long long)currentCycle);
 		}
 		
-		LOGD("STOP: pauseNumCycle=%d currentCycle=%d frame=%d", pauseNumCycle, currentCycle, debugInterface->GetEmulationFrameNumber());
+		LOGD("STOP: pauseNumCycle=%lld currentCycle=%llu frame=%d", (long long)pauseNumCycle, (unsigned long long)currentCycle, debugInterface->GetEmulationFrameNumber());
 		debugInterface->SetDebugMode(DEBUGGER_MODE_PAUSED);
 		pauseNumCycle = -1;
 		pauseNumFrame = -1;
@@ -535,12 +924,22 @@ bool CSnapshotsManager::CheckSnapshotRestore()
 	
 	if (snapshotToRestore)
 	{
-		LOGS("!!!!!!!!!!!!!!!!!!!!!!!! RESTORING SNAPSHOT frame=%d cycle=%d", snapshotToRestore->frame, snapshotToRestore->cycle);
+		const bool strictSeek = IsStrictTimelineSeekActive();
+		const u64 restoredCounter = snapshotToRestore->cycle;
+		const u32 restoredFrame = snapshotToRestore->frame;
+		if (strictSeek)
+		{
+			timelineImportPending = true;
+			if (snapshotToRestore != timelineCheckpoint || timelineAdmittedEpoch != timelineEpoch)
+				timelineFailure = "restore_replaced";
+		}
+		LOGS("!!!!!!!!!!!!!!!!!!!!!!!! RESTORING SNAPSHOT frame=%u cycle=%llu", (unsigned)snapshotToRestore->frame, (unsigned long long)snapshotToRestore->cycle);
 		
 		gSoundEngine->LockMutex("CSnapshotsManager::CheckSnapshotRestore: restore snapshot");
 
 		// restore disk
 		CStoredDiskSnapshot *diskSnapshot = snapshotToRestore->diskSnapshot;
+		bool diskLoaded = true;
 		
 		// TODO: note, we *must* always have a disk snapshot. if disk snapshot is NULL that means there's a bug in storing code.
 		// my observation is that this might happen when a regular snapshot is restored, then the disk snapshot is missing.
@@ -549,21 +948,42 @@ bool CSnapshotsManager::CheckSnapshotRestore()
 		if (diskSnapshot != NULL)
 		{
 			LOGS("!!!!!!!!!!!!!!!!!!!!!!!!     -> diskSnapshot frame=%d", diskSnapshot->frame);
-			debugInterface->LoadDiskDataSnapshotSynced(diskSnapshot->byteBuffer);
+			diskLoaded = debugInterface->LoadDiskDataSnapshotSynced(diskSnapshot->byteBuffer);
 			
 			// make all following chips snapshots use this diskSnapshot
 			currentDiskSnapshot = diskSnapshot;
 		}
 				
 		// restore chips
-		debugInterface->LoadChipsSnapshotSynced(snapshotToRestore->byteBuffer);
+		const bool chipsLoaded = debugInterface->LoadChipsSnapshotSynced(snapshotToRestore->byteBuffer);
+
+		// Deliberate replay retains only boundaries preceding a successfully
+		// loaded checkpoint.  A failed load cannot establish that continuity.
+		{
+			std::lock_guard<std::mutex> lock(timelineHistoryMutex);
+			if (diskLoaded && chipsLoaded)
+				timelineInstructionHistory.TrimAtOrAfter(snapshotToRestore->cycle);
+			else
+				timelineInstructionHistory.Clear();
+			timelineAtInstructionBoundary.store(false, std::memory_order_release);
+		}
 
 		// clear all history events after restored cycle (mem write history, execute history)
 		debugInterface->symbols->memory->ClearEventsAfterCycle(snapshotToRestore->cycle);
 
 		snapshotToRestore = NULL;
+		if (strictSeek)
+		{
+			timelineLoaded = diskLoaded && chipsLoaded;
+			if (!timelineLoaded) timelineFailure = "snapshot_load_failed";
+			if (timelineNativeResult.byFrame && restoredFrame == timelineNativeResult.destination)
+			{
+				timelineTargetReached = true;
+				timelineTargetCounter = restoredCounter;
+			}
+		}
 
-		LOGS("!!!!!!!!!!!!!!!!!!!!!!!!     restored, currentFrame=%d pauseNumFrame=%d currentCycle=%d", debugInterface->GetEmulationFrameNumber(), pauseNumFrame, debugInterface->GetMainCpuCycleCounter());
+		LOGS("!!!!!!!!!!!!!!!!!!!!!!!!     restored, currentFrame=%u pauseNumFrame=%d currentCycle=%llu", (unsigned)debugInterface->GetEmulationFrameNumber(), pauseNumFrame, (unsigned long long)debugInterface->GetMainCpuCycleCounter());
 
 		if (pauseNumFrame == -1 && pauseNumCycle == -1)
 		{
@@ -670,7 +1090,8 @@ TimelineNavigation::Status CSnapshotsManager::FrameNavigationStatusLocked()
 	status.paused = debugInterface->GetDebugMode() == DEBUGGER_MODE_PAUSED;
 	// Do not call IsPerformingSnapshotRestore(): that legacy query can resume.
 	status.busy = snapshotToRestore != NULL || isPerformingSnapshotRestore
-		|| IsExternalSnapshotRequestActive() || IsSnapshotOperationInProgress();
+		|| IsExternalSnapshotRequestActive() || IsSnapshotOperationInProgress()
+		|| timelineTransaction.Busy();
 	status.snapshots = chipSnapshotsByFrame.size();
 	if (!chipSnapshotsByFrame.empty())
 	{
@@ -700,7 +1121,8 @@ TimelineNavigation::Status CSnapshotsManager::GetFrameNavigationStatus()
 
 TimelineNavigation::Result CSnapshotsManager::RequestFrameNavigation(int frame)
 {
-	LockMutex();
+	TimelineManagerGuard manager(*this);
+	std::lock_guard<std::mutex> admission(timelineAdmissionMutex);
 	TimelineNavigation::Result result;
 	const char *refusal = TimelineNavigation::FrameRefusal(FrameNavigationStatusLocked(), frame);
 	if (refusal)
@@ -713,7 +1135,6 @@ TimelineNavigation::Result CSnapshotsManager::RequestFrameNavigation(int frame)
 		result.accepted = RestoreSnapshotByFrame(frame, -1, DEBUGGER_MODE_PAUSED);
 		result.reason = result.accepted ? nullptr : "not_queued";
 	}
-	UnlockMutex();
 	return result;
 }
 
@@ -725,14 +1146,14 @@ bool CSnapshotsManager::RestoreSnapshotByFrame(int frame)
 	return RestoreSnapshotByFrame(frame, -1, debugInterface->GetDebugMode());
 }
 
-bool CSnapshotsManager::RestoreSnapshotByFrame(int frame, long cycleNum)
+bool CSnapshotsManager::RestoreSnapshotByFrame(int frame, std::int64_t cycleNum)
 {
 	return RestoreSnapshotByFrame(frame, cycleNum, debugInterface->GetDebugMode());
 }
 
-bool CSnapshotsManager::RestoreSnapshotByFrame(int frame, long cycleNum, u8 targetDebugMode)
+bool CSnapshotsManager::RestoreSnapshotByFrame(int frame, std::int64_t cycleNum, u8 targetDebugMode)
 {
-	LOGD("RestoreSnapshotByFrame: frame=%d cycle=%d, LockMutex", frame, cycleNum);
+	LOGD("RestoreSnapshotByFrame: frame=%d cycle=%lld, LockMutex", frame, (long long)cycleNum);
 	this->LockMutex();
 
 	if (snapshotToRestore)
@@ -840,7 +1261,7 @@ bool CSnapshotsManager::RestoreSnapshotByFrame(int frame, long cycleNum, u8 targ
 		}
 		else
 		{
-			LOGS("... found frame, going to cycle cycleNum=%d", cycleNum);
+			LOGS("... found frame, going to cycle cycleNum=%lld", (long long)cycleNum);
 			if (cycleNum == -1)
 			{
 //#if defined(RUN_COMMODORE64)
@@ -881,11 +1302,14 @@ bool CSnapshotsManager::RestoreSnapshotByFrame(int frame, long cycleNum, u8 targ
 
 bool CSnapshotsManager::IsPerformingSnapshotRestore()
 {
+	// A strict transaction owns its pause and failure states.  GUI observation
+	// must not force it to resume after a missed target or cancellation.
+	if (IsStrictTimelineSeekActive()) return isPerformingSnapshotRestore;
 	// ??
 	if (this->isPerformingSnapshotRestore && debugInterface->GetDebugMode() != DEBUGGER_MODE_RUNNING)
 	{
-		LOGError("isPerformingSnapshotRestore && debugMode=%d, frame=%d pauseNumFrame=%d pauseNumCycle=%d", debugInterface->GetDebugMode(),
-				 debugInterface->GetEmulationFrameNumber(), pauseNumFrame, pauseNumCycle);
+		LOGError("isPerformingSnapshotRestore && debugMode=%d, frame=%d pauseNumFrame=%d pauseNumCycle=%lld", debugInterface->GetDebugMode(),
+				 debugInterface->GetEmulationFrameNumber(), pauseNumFrame, (long long)pauseNumCycle);
 		
 		if (pauseNumFrame != -1 && pauseNumFrame < debugInterface->GetEmulationFrameNumber())
 		{
@@ -1373,10 +1797,16 @@ CStoredInputEvent *CSnapshotsManager::GetNewInputEventSnapshot(CSlrFile *file)
 
 void CSnapshotsManager::ClearSnapshotsHistory()
 {
+	{
+		std::lock_guard<std::mutex> lock(timelineHistoryMutex);
+		timelineInstructionHistory.Clear();
+		timelineAtInstructionBoundary.store(false, std::memory_order_release);
+	}
 	// this will completely remove all history, used when new PRG is loaded or cart is inserted/detached
 	LOGD("CSnapshotsManager::ClearSnapshotsHistory");
 	
 	this->LockMutex();
+	++timelineEpoch;
 //	LOGD("CSnapshotsManager::ClearSnapshotsHistory: locked");
 	
 	snapshotToRestore = NULL;
@@ -1463,9 +1893,9 @@ void CSnapshotsManager::RestoreSnapshotBackstepInstruction()
 	
 //	LOGD(">>>>>>>>>................ currentFrame=%d restoreToFrame=%d", currentFrame, restoreToFrame);
 
-	unsigned int previousInstructionClk = debugInterface->GetPreviousCpuInstructionCycleCounter();
+	u64 previousInstructionClk = debugInterface->GetPreviousCpuInstructionCycleCounter();
 	
-	LOGD(">>>>>>>>>................ previousInstructionClk=%d", previousInstructionClk);
+	LOGD(">>>>>>>>>................ previousInstructionClk=%llu", (unsigned long long)previousInstructionClk);
 	
 //	debugInterface->snapshotsManager->RestoreSnapshotByFrame(restoreToFrame, previousInstructionClk);
 	debugInterface->snapshotsManager->RestoreSnapshotByCycle(previousInstructionClk);
@@ -1550,7 +1980,11 @@ bool CSnapshotsManager::RestoreSnapshotByCycle(u64 cycle)
 
 bool CSnapshotsManager::RestoreSnapshotByCycle(u64 cycle, u8 targetDebugMode)
 {
-	LOGD("CSnapshotsManager::RestoreSnapshotByCycle: cycle=%d", cycle);
+	// The legacy target uses -1 as a sentinel.  Refuse unrepresentable values
+	// rather than silently narrowing an unsigned 64-bit coordinate.
+	if (cycle > (u64)std::numeric_limits<std::int64_t>::max())
+		return false;
+	LOGD("CSnapshotsManager::RestoreSnapshotByCycle: cycle=%llu", (unsigned long long)cycle);
 	// TODO: fixme and reuse code considering that we have found the snapshot, thus pass it further
 	//       the RestoreSnapshotByFrame searches this again, so it is twice.
 	
@@ -1599,9 +2033,9 @@ bool CSnapshotsManager::RestoreSnapshotByCycle(u64 cycle, u8 targetDebugMode)
 		return false;
 	}
 
-	LOGD(".... FOUND nearestChipSnapshot->cycle=%d, run to cycle=%d", nearestChipSnapshot->cycle, cycle);
+	LOGD(".... FOUND nearestChipSnapshot->cycle=%llu, run to cycle=%llu", (unsigned long long)nearestChipSnapshot->cycle, (unsigned long long)cycle);
 
-	LOGD("RestoreSnapshotByCycle: OK run RestoreSnapshotByFrame frame=%d cycle=%d", nearestChipSnapshot->frame, cycle);
+	LOGD("RestoreSnapshotByCycle: OK run RestoreSnapshotByFrame frame=%u cycle=%llu", (unsigned)nearestChipSnapshot->frame, (unsigned long long)cycle);
 	bool ret = RestoreSnapshotByFrame(nearestChipSnapshot->frame-2, cycle, targetDebugMode);
 
 	// Reset replay marker so events replay from the restored cycle
