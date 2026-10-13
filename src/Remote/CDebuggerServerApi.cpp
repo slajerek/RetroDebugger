@@ -3,6 +3,7 @@
 #include "CDebuggerServerApi.h"
 #include "CDebuggerServer.h"
 #include "CDebugInterface.h"
+#include "CSnapshotsManager.h"
 #include "CDebuggerApi.h"
 #include "CDebugSymbols.h"
 #include "CDebugMemory.h"
@@ -89,6 +90,39 @@ void CDebuggerServerApi::RegisterEndpoints(CDebuggerServer *server)
 
 	char *buf = SYS_GetCharBuf();
 	const char *plat = debugInterface->GetPlatformNameEndpointString();
+
+	// PR1 exposes only the existing frame-navigation queue, not precise seek.
+	for (bool statusOnly : {true, false})
+	{
+		EndpointDescriptor desc;
+		desc.fn = std::string(plat) + (statusOnly ? "/timeline/status" : "/timeline/frame");
+		desc.platform = plat;
+		desc.category = "timeline";
+		desc.description = statusOnly ? "C64-only read-only frame history/recording status"
+			: "C64-only native frame navigation; queued acceptance, not completed restoration";
+		desc.paramsSchema = {{"type", "object"}, {"additionalProperties", false}};
+		if (!statusOnly)
+		{
+			desc.paramsSchema["properties"] = {{"frame", {{"type", "integer"}, {"minimum", 0}, {"maximum", INT_MAX}}}};
+			desc.paramsSchema["required"] = json::array({"frame"});
+		}
+		server->AddEndpointFunction(desc,
+			[this, server, statusOnly](const string token, json params, unsigned char *, int) -> vector<char>*
+		{
+			if (debugInterface->GetEmulatorType() != EMULATOR_TYPE_C64_VICE)
+				return server->PrepareResult(HTTP_BAD_REQUEST, token, {{"error", "unsupported_platform"}}, NULL, 0);
+			int frame = 0;
+			if (statusOnly ? !(params.is_null() || (params.is_object() && params.empty()))
+				: !TimelineNavigation::ParseFrame(params, frame))
+				return server->PrepareResult(HTTP_BAD_REQUEST, token, {{"error", "invalid_timeline_arguments"}}, NULL, 0);
+			CSnapshotsManager *manager = debugInterface->snapshotsManager;
+			if (!manager)
+				return server->PrepareResult(HTTP_SERVICE_UNAVAILABLE, token, {{"error", "timeline_unavailable"}}, NULL, 0);
+			json result = statusOnly ? TimelineNavigation::StatusJson(manager->GetFrameNavigationStatus())
+				: TimelineNavigation::ResultJson(manager->RequestFrameNavigation(frame), frame);
+			return server->PrepareResult(HTTP_OK, token, result, NULL, 0);
+		});
+	}
 	
 	sprintf(buf, "%s/reset/hard", plat);
 	RegisterEndpoint(server, buf, plat, "control", "Hard reset the machine",

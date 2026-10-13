@@ -3040,6 +3040,7 @@
     <ClInclude Include="..\..\..\src\Tools\C64Tools.h" />
     <ClInclude Include="..\..\..\src\Tools\CGuiLockableList.h" />
     <ClInclude Include="..\..\..\src\Tools\CSnapshotsManager.h" />
+    <ClInclude Include="..\..\..\src\Tools\CTimelineNavigation.h" />
     <ClInclude Include="..\..\..\src\Tools\64tass\64tass-encoding.h" />
     <ClInclude Include="..\..\..\src\Tools\64tass\64tass-error.h" />
     <ClInclude Include="..\..\..\src\Tools\64tass\64tass-eval.h" />

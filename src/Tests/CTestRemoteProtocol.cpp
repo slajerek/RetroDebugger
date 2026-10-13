@@ -700,7 +700,61 @@ void CTestRemoteProtocol::Run(ITestCallback *cb)
 		}
 	}
 
-	FinishTest(true, "All remote protocol tests passed (10/10)");
+	// --- Test 11: real read-only frame status and raw validation (no navigation) ---
+	{
+#ifdef RUN_COMMODORE64
+		CDebugInterface *di = NULL;
+		for (CDebugInterface *candidate : viewC64->debugInterfaces)
+			if (candidate && std::string(candidate->GetPlatformNameEndpointString()) == "c64") di = candidate;
+		if (!di)
+		{
+			FinishTest(false, "Test 11 FAIL: enabled C64 interface missing"); return;
+		}
+		CAccessQueryPauseGuard pauseGuard(di);
+		const uint8 mode = di->GetDebugMode();
+		const u64 cycle = di->GetMainCpuCycleCounter();
+		json response = CallEndpointWithParams(server, "c64/timeline/status", json::object());
+		if (response.value("status", 0) != HTTP_OK || !response.contains("result")
+			|| response["result"].value("navigation", std::string()) != "native_frame"
+			|| response["result"].value("completionReporting", std::string()) != "acceptance_only"
+			|| !response["result"].contains("storedSnapshots")
+			|| !response["result"].contains("oldestFrame") || !response["result"].contains("newestFrame")
+			|| di->GetDebugMode() != mode || di->GetMainCpuCycleCounter() != cycle)
+		{
+			pauseGuard.Restore(); FinishTest(false, "Test 11 FAIL: timeline status/state mismatch"); return;
+		}
+		for (const auto &params : json::array({json::object(), {{"frame", -1}}, {{"frame", true}},
+			{{"frame", 1.5}}, {{"frame", "1"}}, {{"frame", 18446744073709551615ULL}},
+			{{"frame", 1}, {"extra", true}}}))
+		{
+			response = CallEndpointWithParams(server, "c64/timeline/frame", params);
+			if (response.value("status", 0) != HTTP_BAD_REQUEST
+				|| di->GetDebugMode() != mode || di->GetMainCpuCycleCounter() != cycle)
+			{
+				pauseGuard.Restore(); FinishTest(false, "Test 11 FAIL: invalid raw frame request accepted/mutated"); return;
+			}
+		}
+		response = CallEndpointWithParams(server, "c64/timeline/status", {{"frame", 1}});
+		if (response.value("status", 0) != HTTP_BAD_REQUEST)
+		{
+			pauseGuard.Restore(); FinishTest(false, "Test 11 FAIL: status accepted frame"); return;
+		}
+		pauseGuard.Restore();
+#endif
+		for (CDebugInterface *di : viewC64->debugInterfaces)
+		{
+			if (!di) continue;
+			std::string platform = di->GetPlatformNameEndpointString();
+			if (platform != "atari800" && platform != "nes") continue;
+			json response = CallEndpointWithParams(server, (platform + "/timeline/status").c_str(), json::object());
+			if (response.value("status", 0) != HTTP_BAD_REQUEST || response["result"].value("error", std::string()) != "unsupported_platform")
+			{
+				FinishTest(false, "Test 11 FAIL: non-C64 timeline not refused"); return;
+			}
+		}
+	}
+
+	FinishTest(true, "All remote protocol tests passed (11/11)");
 }
 
 void CTestRemoteProtocol::Cancel()

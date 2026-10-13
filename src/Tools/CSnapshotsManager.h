@@ -3,6 +3,7 @@
 
 #include "CDebugInterface.h"
 #include "CGuiViewProgressBarWindow.h"
+#include "CTimelineNavigation.h"
 
 #include <mutex>
 #include <condition_variable>
@@ -119,6 +120,14 @@ public:
 	virtual bool RestoreSnapshotByFrame(int frame, long cycleNum, u8 targetDebugMode);
 	virtual bool RestoreSnapshotByCycle(u64 cycle);
 	virtual bool RestoreSnapshotByCycle(u64 cycle, u8 targetDebugMode);
+
+	// On-demand coarse navigation only; accepted does not mean restored.
+	TimelineNavigation::Status GetFrameNavigationStatus();
+	TimelineNavigation::Result RequestFrameNavigation(int frame);
+
+private:
+	TimelineNavigation::Status FrameNavigationStatusLocked();
+public:
 	
 	// realtime recording snapshots, get new or reuse empty snapshots from pool
 	CStoredDiskSnapshot *GetNewDiskSnapshot(u32 frame, u64 cycle);

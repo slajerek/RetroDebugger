@@ -5,6 +5,7 @@
 #include "CViewC64.h"
 #include "CDebugInterface.h"
 #include "CDebugMemoryCell.h"
+#include "CTimelineNavigation.h"
 #include "C64DShutdown.h"
 #include "SYS_Main.h"
 #include <cstdio>
@@ -1260,7 +1261,77 @@ void CTestMCPProtocol::Run(ITestCallback *cb)
 		return;
 	}
 
-	TestCompleted(true, "All MCP protocol tests passed (34/34)");
+	// --- Test 35: native-frame tool forwards acceptance/status without upgrading it ---
+	{
+		for (bool statusOnly : {true, false})
+		{
+			json payload = statusOnly ? TimelineNavigation::StatusJson(TimelineNavigation::Status())
+				: json({{"status", "queued"}, {"accepted", true}, {"completionKnown", false}});
+			CCannedDebuggerServer debuggerServer({{"status", HTTP_OK}, {"result", payload}});
+			CMCPServer server;
+			PrepareToolTestServer(server, debuggerServer);
+			json args = {{"platform", "c64"}, {"action", statusOnly ? "status" : "frame"}};
+			if (!statusOnly) args["frame"] = INT_MAX;
+			json response = CallTool(server, 34, "retro_timeline", args);
+			if (!ToolErrorText(response).empty() || debuggerServer.callCount != 1
+				|| debuggerServer.lastEndpointName != (statusOnly ? "c64/timeline/status" : "c64/timeline/frame")
+				|| debuggerServer.lastParams != (statusOnly ? json::object() : json({{"frame", INT_MAX}}))
+				|| json::parse(response["result"]["content"][0]["text"].get<std::string>()) != payload)
+			{
+				TestCompleted(false, "Test 35 FAIL: frame-navigation forwarding/payload mismatch");
+				return;
+			}
+		}
+	}
+
+	// --- Test 36: frame input validation occurs before dispatch; no other backend ---
+	{
+		CCannedDebuggerServer debuggerServer({{"status", HTTP_OK}, {"result", json::object()}});
+		CMCPServer server;
+		PrepareToolTestServer(server, debuggerServer);
+		json invalid = json::array({nullptr, json::object(), {{"platform", "c64"}},
+			{{"platform", "c64"}, {"action", "cycle"}}, {{"platform", "c64"}, {"action", "frame"}},
+			{{"platform", "c64"}, {"action", "status"}, {"frame", 0}},
+			{{"platform", "c64"}, {"action", "status"}, {"extra", true}}});
+		for (const auto &frame : json::array({nullptr, true, "1", 1.5, -1, 2147483648ULL, 18446744073709551615ULL}))
+			invalid.push_back({{"platform", "c64"}, {"action", "frame"}, {"frame", frame}});
+		for (const auto &platform : json::array({nullptr, 1, "atari800", "nes", "c64u", "unknown"}))
+			invalid.push_back({{"platform", platform}, {"action", "status"}});
+		for (const auto &args : invalid)
+		{
+			if (ToolErrorText(CallTool(server, 35, "retro_timeline", args)).empty() || debuggerServer.callCount != 0)
+			{
+				TestCompleted(false, "Test 36 FAIL: invalid timeline input reached endpoint");
+				return;
+			}
+		}
+	}
+
+	// --- Test 37: refusals remain refusals; transport failures remain MCP errors ---
+	{
+		for (const auto &payload : json::array({{{"accepted", false}, {"status", "refused"}, {"reason", "busy"}},
+			{{"accepted", false}, {"status", "refused"}, {"reason", "no_history"}}}))
+		{
+			CCannedDebuggerServer debuggerServer({{"status", HTTP_OK}, {"result", payload}});
+			CMCPServer server;
+			PrepareToolTestServer(server, debuggerServer);
+			json response = CallTool(server, 36, "retro_timeline", {{"platform", "c64"}, {"action", "frame"}, {"frame", 1}});
+			if (!ToolErrorText(response).empty() || debuggerServer.callCount != 1
+				|| json::parse(response["result"]["content"][0]["text"].get<std::string>()) != payload)
+			{
+				TestCompleted(false, "Test 37 FAIL: navigation refusal changed"); return;
+			}
+		}
+		CCannedDebuggerServer debuggerServer({{"status", HTTP_SERVICE_UNAVAILABLE}, {"error", "desktop_unavailable"}});
+		CMCPServer server;
+		PrepareToolTestServer(server, debuggerServer);
+		if (ToolErrorText(CallTool(server, 36, "retro_timeline", {{"platform", "c64"}, {"action", "status"}})).empty())
+		{
+			TestCompleted(false, "Test 37 FAIL: timeline transport error swallowed"); return;
+		}
+	}
+
+	TestCompleted(true, "All MCP protocol tests passed (37/37)");
 }
 
 void CTestMCPProtocol::Cancel()
