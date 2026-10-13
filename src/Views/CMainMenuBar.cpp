@@ -777,9 +777,11 @@ void CMainMenuBar::RenderImGui()
 			for (std::vector<CDebugInterface *>::iterator it = viewC64->debugInterfaces.begin(); it != viewC64->debugInterfaces.end(); it++)
 			{
 				CDebugInterface *debugInterface = *it;
+				if (!debugInterface->isRunning)
+					continue;
 				if (debugInterface->GetDebugMode() == DEBUGGER_MODE_RUNNING)
 				{
-					// if at least one emulator is not paused then change text to Pause
+					// if at least one active emulator is not paused then change text to Pause
 					t = "Pause";
 					isPaused = false;
 					break;
