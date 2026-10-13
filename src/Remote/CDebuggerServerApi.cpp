@@ -378,8 +378,9 @@ void CDebuggerServerApi::RegisterEndpoints(CDebuggerServer *server)
 		result["applied"] = applied;
 		if (!applied)
 		{
-			// The PC change is queued but has not reached the CPU yet, so a step
-			// issued now would still execute at the old PC.
+			// A queued PC change has not committed yet. At a mid-instruction
+			// pause, deliberate resume/step must finish the current instruction
+			// before the target can be applied at a safe boundary.
 			result["pendingPc"] = address;
 		}
 		return server->PrepareResult(HTTP_OK, token, result, NULL, 0);

@@ -824,7 +824,9 @@ void CMCPServer::RegisterDebuggerTools(CDebuggerServer *server)
 						   "Returns status \"jumped\" with applied=true once the new PC has been "
 						   "committed to the CPU, so a following step executes at the target. "
 						   "Returns status \"queued\" with applied=false if the change could not be "
-						   "committed (emulation thread not running, or backend unsupported).";
+						   "committed yet (including a C64 mid-instruction pause). At that phase, "
+						   "deliberate resume/step finishes the current instruction before applying "
+						   "the queued target; it is not a step at the target.";
 		tool.inputSchema = {
 			{"type", "object"},
 			{"properties", {

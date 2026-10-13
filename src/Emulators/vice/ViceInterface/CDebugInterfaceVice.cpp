@@ -2594,21 +2594,13 @@ bool CDebugInterfaceVice::MakeJmpC64(uint16 addr)
 		return false;
 	}
 	
-	if (!wasPaused)
+	if (!wasPaused || !c64d_can_apply_pc_in_pause_loop())
 	{
-		// Running: the queued trap is dispatched at the top of the next main loop
-		// iteration, which the CPU reaches on its own within one instruction.
-		return true;
-	}
-	
-	if (!c64d_is_cpu_parked_in_pause_loop())
-	{
-		// The CPU has not reached a pause point yet. It commits the change on its own
-		// before it fetches its next opcode — at the trap dispatch, at the pause loop
-		// wake-up, or at the pause loop exit — so the contract still holds. Do not
-		// wait here: the emulation thread may need a debugger lock that this caller
-		// is holding to get there.
-		return true;
+		// A running/not-yet-parked CPU may need a lock held by this caller.
+		// A mid-instruction or drive park cannot safely change the main CPU PC.
+		// Do not wait or claim a commit: keep the request queued until the trap
+		// or a main-CPU boundary can consume it after deliberate resume/step.
+		return !c64d_is_pc_change_pending();
 	}
 	
 	unsigned long startTime = SYS_GetCurrentTimeInMillis();

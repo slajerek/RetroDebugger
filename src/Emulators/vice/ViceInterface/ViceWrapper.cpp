@@ -1573,11 +1573,17 @@ void c64d_c64_check_irqnmi_breakpoint()
 // for the request to be committed: when the CPU is NOT parked it is still on its way
 // to a pause point and may need a lock the calling thread is holding, so waiting
 // there could stall the caller for no reason.
+// 0: not parked; 1: in-flight main instruction or drive park; 2: PC-safe park.
 static std::atomic<int> c64d_cpu_parked_in_pause_loop(0);
 
 int c64d_is_cpu_parked_in_pause_loop(void)
 {
-	return c64d_cpu_parked_in_pause_loop.load(std::memory_order_acquire);
+	return c64d_cpu_parked_in_pause_loop.load(std::memory_order_acquire) != 0;
+}
+
+int c64d_can_apply_pc_in_pause_loop(void)
+{
+	return c64d_cpu_parked_in_pause_loop.load(std::memory_order_acquire) == 2;
 }
 
 // Clears the parked flag on every exit path out of the pause loop, including the
@@ -1585,7 +1591,7 @@ int c64d_is_cpu_parked_in_pause_loop(void)
 class CParkedInPauseLoopGuard
 {
 public:
-	CParkedInPauseLoopGuard()  { c64d_cpu_parked_in_pause_loop.store(1, std::memory_order_release); }
+	CParkedInPauseLoopGuard(int allowPcChange) { c64d_cpu_parked_in_pause_loop.store(allowPcChange ? 2 : 1, std::memory_order_release); }
 	~CParkedInPauseLoopGuard() { c64d_cpu_parked_in_pause_loop.store(0, std::memory_order_release); }
 };
 
@@ -1627,7 +1633,7 @@ static void c64d_timeline_pause_point()
 	if (manager->IsStrictTimelineSeekActive()) c64d_vice_input_tasks_flag = 1;
 }
 
-void c64d_debug_pause_check(int allowRestore)
+void c64d_debug_pause_check(int allowRestore, int allowPcChange)
 {
 	if (allowRestore)
 	{
@@ -1698,7 +1704,7 @@ void c64d_debug_pause_check(int allowRestore)
 		}
 
 		{
-			CParkedInPauseLoopGuard parkedGuard;
+			CParkedInPauseLoopGuard parkedGuard(allowPcChange);
 			std::unique_lock<std::mutex> lock(debugInterfaceVice->pauseMutex);
 			while (c64d_debug_mode.load(std::memory_order_acquire) == DEBUGGER_MODE_PAUSED)
 			{
@@ -1707,14 +1713,14 @@ void c64d_debug_pause_check(int allowRestore)
 				c64d_timeline_pause_point();
 				lock.lock();
 				// Use 16ms timeout (~60fps) to keep audio processing frequent while paused.
-				// The predicate also wakes on a debugger PC change requested while paused
-				// (MakeJmpC64) so it commits here, on the emulation thread, instead of only
-				// at the pause exit — this is what lets MakeJmpC64 report a committed jump.
+				// Only a main-CPU boundary park may commit a PC change. A pending
+				// request at a cycle/drive park must neither mutate the suspended
+				// opcode nor make this wait spin; its trap runs after resume.
 				bool signaled = debugInterfaceVice->pauseCV.wait_for(lock, std::chrono::milliseconds(16),
-					[]{ return c64d_debug_mode.load(std::memory_order_acquire) != DEBUGGER_MODE_PAUSED
-							|| c64d_is_pc_change_pending(); });
+					[allowPcChange]{ return c64d_debug_mode.load(std::memory_order_acquire) != DEBUGGER_MODE_PAUSED
+							|| (allowPcChange && c64d_is_pc_change_pending()); });
 
-				if (signaled && c64d_debug_mode.load(std::memory_order_acquire) == DEBUGGER_MODE_PAUSED)
+				if (allowPcChange && signaled && c64d_debug_mode.load(std::memory_order_acquire) == DEBUGGER_MODE_PAUSED)
 				{
 					// Woken only to apply a pending debugger PC change; stay paused.
 					lock.unlock();
@@ -1728,8 +1734,9 @@ void c64d_debug_pause_check(int allowRestore)
 					// Timeout: process audio and handle snapshot/SID restore while paused
 					lock.unlock();
 
-					// Backstop in case the notify above was missed
-					c64d_apply_pending_debugger_pc();
+					// Backstop in case the notify above was missed, at safe parks only.
+					if (allowPcChange)
+						c64d_apply_pending_debugger_pc();
 
 					if (allowRestore)
 					{

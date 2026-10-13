@@ -32,9 +32,13 @@ Use this skill when working with the RetroDebugger MCP server to debug 8-bit pro
 - `retro_step_subroutine` — step over a JSR (runs until the subroutine returns)
 - `retro_cpu_jump` — force PC to a specific address. Returns `{"status":"jumped","applied":true}`
   once the new PC has been committed to the CPU, so a following `retro_step_instruction`
-  executes at the target. `{"status":"queued","applied":false}` means the change did not
-  reach the CPU (emulation thread not running, or an unsupported backend) — do not chain a
-  step onto a queued jump.
+  executes at the target.  `{"status":"queued","applied":false}` means it has not committed
+  yet (including a C64 mid-instruction/drive pause, running or unparked CPU, stopped thread,
+  or unsupported backend).  On C64, `pendingPc` in CPU status is the requested target,
+  separate from the published PC.  A mid-instruction pause does not execute hidden clocks:
+  deliberate resume/step must finish the suspended instruction before the queued target
+  can commit at a safe boundary.  Do not treat that step as a step at the target; verify
+  commitment first.  Waiting while still paused at that phase cannot apply the request.
 - `retro_cpu_counters` — read cycle, instruction, and frame counters
 - `retro_timeline_seek` -- read timeline capabilities/status, or restore a paused **C64 (PAL or NTSC)** to a retained access/counter/frame destination or bounded backward distance.  Atari/NES seeking returns `unsupported_platform` without mutation; their status does not advertise seeking.  Check structured outcomes; see [Timeline seek](timeline-seek.md).
 - `retro_warp` — enable/disable warp speed (run as fast as possible)
