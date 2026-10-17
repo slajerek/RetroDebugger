@@ -46,6 +46,10 @@ bool isREUInCommandLine = false;
 
 bool isXEXInCommandLine = false;
 bool isATRInCommandLine = false;
+// which machine the command line loads a program for: symbols, watches and
+// debug info given on the command line go to that machine (RD-033)
+static bool commandLineLoadsNES = false;
+static bool commandLineLoadsAtari = false;
 
 bool cmdLineOptionDoAutoJmp = false;
 
@@ -649,11 +653,18 @@ void c64PerformStartupTasksThreaded()
 		gSoundEngine->UnlockMutex("c64PerformStartupTasksThreaded/c64CommandLineAudioOutDevice");
 	}
 
-	// load breakpoints & symbols
-	LOGTODO("c64PerformStartupTasksThreaded: SYMBOLS & BREAKPOINTS FOR BOTH ATARI & C64 + NES. GENERALIZE ME");
-
+	// load breakpoints & symbols into the machine the command line loads a
+	// program for (NES ROM, Atari XEX/ATR), else the C64 (RD-033)
 	CDebugInterface *debugInterface = NULL;
-	if (viewC64->debugInterfaceC64)
+	if (viewC64->debugInterfaceNes && commandLineLoadsNES)
+	{
+		debugInterface = viewC64->debugInterfaceNes;
+	}
+	else if (viewC64->debugInterfaceAtari && (commandLineLoadsAtari || isXEXInCommandLine || isATRInCommandLine))
+	{
+		debugInterface = viewC64->debugInterfaceAtari;
+	}
+	else if (viewC64->debugInterfaceC64)
 	{
 		debugInterface = viewC64->debugInterfaceC64;
 	}
@@ -1009,18 +1020,24 @@ void C64DebuggerParseCommandLine2()
 			char *arg = c64ParseCommandLineGetArgument();
 			LOGD("C64DebuggerParseCommandLine2: set c64SettingsPathToXEX=%s", arg);
 			c64SettingsPathToXEX = new CSlrString(arg);
+			commandLineLoadsAtari = true;
 		}
 		else if (!strcmp(cmd, "atr"))
 		{
 			char *arg = c64ParseCommandLineGetArgument();
 			LOGD("C64DebuggerParseCommandLine2: set c64SettingsPathToATR=%s", arg);
 			c64SettingsPathToATR = new CSlrString(arg);
+			commandLineLoadsAtari = true;
 		}
-		else if (!strcmp(cmd, "nes"))
+		else if (!strcmp(cmd, "ines"))
 		{
+			// "-nes" (above) selects the emulator; the ROM comes with "-ines",
+			// which is also what dragging a .nes onto the app passes (RD-033).
+			// This branch used to test "nes" again and was unreachable.
 			char *arg = c64ParseCommandLineGetArgument();
 			LOGD("C64DebuggerParseCommandLine2: set c64SettingsPathToNES=%s", arg);
 			c64SettingsPathToNES = new CSlrString(arg);
+			commandLineLoadsNES = true;
 		}
 
 		else if (!strcmp(cmd, "jmp"))

@@ -59,6 +59,11 @@ not active" headless), about 90 s.
   backend is available` (MTEngineSDL branch `c-source-debugging`): without
   `/dev/snd/seq`, as on GitHub's runners, the app segfaulted at startup in
   `CPianoKeyboard`. Merged into engine `devel` (40c95f8) on 2026-10-17.
+- The ImGui UI suite (`--imgui`, not run by any Linux workflow) is 10/15
+  under Xvfb in that container, before and after the source-debugging
+  changes: `default_workspaces_popup`, `default_workspaces_create_and_menu`,
+  `default_workspaces_create_with_tab_bars`, `autolayout_preserve_scan_fixture`
+  and `..._atari` fail on Linux. Not investigated yet.
 - `GT2Patterns` step 16 had only ever run on macOS: `gpattern.c` reads note
   keys from `virtualkeycode` on `__APPLE__` and from `rawkey` elsewhere; the
   test now sets the input the platform reads.

@@ -1783,9 +1783,9 @@ static bool VerifyDefaultWorkspaceLayoutDataCreation()
 	}
 
 	int numCreatedOrUpdated = defaultLayouts.CreateOrUpdateAllDefaultWorkspaceLayoutData(true);
-	if (numCreatedOrUpdated != 32 || layoutManager.layouts.size() != 32)
+	if (numCreatedOrUpdated != 33 || layoutManager.layouts.size() != 33)
 	{
-		snprintf(failureMsg, sizeof(failureMsg), "Creating all default layout data should cover all 32 specs, got %d and %zu layouts", numCreatedOrUpdated, layoutManager.layouts.size());
+		snprintf(failureMsg, sizeof(failureMsg), "Creating all default layout data should cover all 33 specs, got %d and %zu layouts", numCreatedOrUpdated, layoutManager.layouts.size());
 		layoutManager.DeleteAllLayouts();
 		return false;
 	}
@@ -2676,9 +2676,9 @@ void CTestDefaultWorkspaceSpecs::Run(ITestCallback *cb)
 	const std::vector<SDefaultWorkspaceLayoutSpec> &atariSpecs = GetDefaultWorkspaceLayoutSpecs(DefaultWorkspacePlatform_Atari800);
 	const std::vector<SDefaultWorkspaceLayoutSpec> &nesSpecs = GetDefaultWorkspaceLayoutSpecs(DefaultWorkspacePlatform_NES);
 
-	if (c64Specs.size() != 16 || atariSpecs.size() != 9 || nesSpecs.size() != 7)
+	if (c64Specs.size() != 16 || atariSpecs.size() != 9 || nesSpecs.size() != 8)
 	{
-		snprintf(failureMsg, sizeof(failureMsg), "Expected C64/Atari/NES spec counts 16/9/7, got %zu/%zu/%zu", c64Specs.size(), atariSpecs.size(), nesSpecs.size());
+		snprintf(failureMsg, sizeof(failureMsg), "Expected C64/Atari/NES spec counts 16/9/8, got %zu/%zu/%zu", c64Specs.size(), atariSpecs.size(), nesSpecs.size());
 		TestCompleted(false, failureMsg);
 		return;
 	}
@@ -2722,7 +2722,8 @@ void CTestDefaultWorkspaceSpecs::Run(ITestCallback *cb)
 		{ DefaultWorkspaceSlot_1541MemoryMap, "NES APU", "retro.default.nes.apu" },
 		{ DefaultWorkspaceSlot_ShowStates, "NES Show States", "retro.default.nes.show_states" },
 		{ DefaultWorkspaceSlot_MemoryMap, "NES Memory Map", "retro.default.nes.memory_map" },
-		{ DefaultWorkspaceSlot_MonitorConsole, "NES Monitor Console", "retro.default.nes.monitor_console" }
+		{ DefaultWorkspaceSlot_MonitorConsole, "NES Monitor Console", "retro.default.nes.monitor_console" },
+		{ DefaultWorkspaceSlot_SourceCode, "NES Source Code", "retro.default.nes.source_code" }
 	};
 
 	if (!VerifyLayoutSpecs(c64Specs, expectedC64Specs, sizeof(expectedC64Specs) / sizeof(expectedC64Specs[0]), "C64")
@@ -2926,6 +2927,19 @@ void CTestDefaultWorkspaceSpecs::Run(ITestCallback *cb)
 		return;
 	}
 
+	const SDefaultWorkspaceLayoutSpec *nesSourceCode = FindDefaultWorkspaceLayoutSpec(DefaultWorkspacePlatform_NES, DefaultWorkspaceSlot_SourceCode);
+	if (nesSourceCode == NULL
+		|| nesSourceCode->placements == NULL
+		|| nesSourceCode->numPlacements != 4
+		|| !VerifyPlacementSpec(nesSourceCode, "nes.disassembly", 1.0f, 1.0f, 110.6f, 356.0f)
+		|| !VerifyPlacementSpec(nesSourceCode, "nes.source_code", 114.1f, 15.0f, 463.9f, 341.0f)
+		|| !VerifyPlacementSpec(nesSourceCode, "nes.cpu_state", 220.0f, 2.5f, 0.0f, 0.0f)
+		|| !VerifyPlacementSpec(nesSourceCode, "nes.screen", 478.0f, 0.0f, 85.680f, 80.325f))
+	{
+		TestCompleted(false, failureMsg[0] != '\0' ? failureMsg : "NES Source Code should mirror the C64/Atari source-code layout");
+		return;
+	}
+
 	const SDefaultWorkspaceLayoutSpec *c64AllGraphics = FindDefaultWorkspaceLayoutSpec(DefaultWorkspacePlatform_C64, DefaultWorkspaceSlot_AllGraphics);
 	if (c64AllGraphics == NULL
 		|| c64AllGraphics->placements == NULL
@@ -3056,9 +3070,9 @@ void CTestDefaultWorkspaceSpecs::Run(ITestCallback *cb)
 	}
 
 	const std::vector<SDefaultWorkspaceLayoutSpec> &allSpecs = GetAllDefaultWorkspaceLayoutSpecs();
-	if (allSpecs.size() != 32)
+	if (allSpecs.size() != 33)
 	{
-		snprintf(failureMsg, sizeof(failureMsg), "Expected 32 default workspace specs and no mixed layout, got %zu", allSpecs.size());
+		snprintf(failureMsg, sizeof(failureMsg), "Expected 33 default workspace specs and no mixed layout, got %zu", allSpecs.size());
 		TestCompleted(false, failureMsg);
 		return;
 	}

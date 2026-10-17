@@ -36,7 +36,7 @@ definitions are in `IMPLEMENTATION-PLAN.md`.
 | RD-032 | P2 | core | Symbol lifetime fixes (segments, re-import, dtor, `D:` labels, Watchpoints layout) | in-progress(done: line ownership, re-import, `SetSegment`, `D:` labels, Watchpoints; open: deleting replaced segments, blocked on purging `CDebugEventsHistory` pointers) | RD-006 | ASan/valgrind-clean re-import test |
 | RD-007 | P2 | core | Bank-aware address indexes, source remapping, binary/cartridge identity checks | todo | RD-006, RD-024 | Lookup tests: multi-span, missing, ambiguous, same-PC two identities |
 | RD-008 | P2 | compiler | Oscar64 `.dbj` adapter + contract tests | review(`DebugInfoLoadOscar64`; DebugInfoFormats steps 20-26 green on Linux) | RD-002, RD-006, RD-031 | Tier 1 Oscar64 fixture resolves file:line for known addresses |
-| RD-033 | P3 | core | Generalize loading entry points (NES `-debuginfo`/autoload, CLI `nes`/`-ines`, NES source slot) | todo | RD-031 | NES loads `.dbg` from CLI and menu; workspace test updated |
+| RD-033 | P3 | core | Generalize loading entry points (NES `-debuginfo`/autoload, CLI `nes`/`-ines`, NES source slot) | review(autoload, `-ines`, CLI target machine, NES layout; DefaultWorkspaceSpecs green) | RD-031 | NES loads `.dbg` from CLI and menu; workspace test updated |
 | RD-003 | P1 | ui | Document registry + read-only `SourceDocumentView` replacing `CViewSourceCode` internals | todo | RD-001, RD-038 | ImGui test `source_view_opens_and_scrolls`; C64/Atari/NES instances |
 | RD-004 | P1 | ui | C lexer + 6502 dialect profiles (KickAss, 64tass, ca65, Oscar64 asm) | todo | RD-003 | Lexer snapshot tests (golden tokens) |
 | RD-005 | P1 | ui | PC/breakpoint/selection decorations + bidirectional navigation | todo | RD-003, RD-006 | ImGui test: click line → disassembly address; PC line follows pause |
@@ -93,7 +93,7 @@ Questions 1, 2, 3, 5, 8 and 10 are answered in spec #15/#20.
 | `.vs` `D:` labels ignored; newer `<Watchpoints>` layout misparsed | RD-032 (fixed) |
 | Menu "Import labels" with a `.dbg` skips `DeleteAllSymbols`: stale same-name segments keep freed source lines and `ActivateSelectedSegment` picks the stale one (use-after-free) | RD-032 (fixed: segments hold no line pointers, a `.dbg` load replaces the segment set) |
 | `.dbg` `<Sources>` paths: split on every comma; a Windows path is not split into a file name on macOS/Linux (`GetFileNameComponentFromPath` uses the host separator); relative paths resolve against the process cwd, not the `.dbg` folder | RD-006 (file names from both separators; a source missing at its path is looked up next to the `.dbg`; comma split remains) |
-| CLI `nes` unreachable branch; `-ines` missing; `-debuginfo` never NES; NES source layout slot | RD-033 |
+| CLI `nes` unreachable branch; `-ines` missing; `-debuginfo` never NES; NES source layout slot | RD-033 (fixed) |
 | C64 PC/memory checks ignore `breakOnPC`/`breakOnMemory`; temp bp hides user bp, no event | RD-037 |
 | `nesd_peek_safe_io` OOB read | RD-027 (fixed) |
 | Engine: `CPianoKeyboard` dereferenced a NULL `midiIn` without an ALSA sequencer (startup segfault on Linux CI/containers) | RD-034 (fixed on engine branch, 623b76e) |
@@ -119,3 +119,4 @@ Questions 1, 2, 3, 5, 8 and 10 are answered in spec #15/#20.
 | 2026-10-17 | RD-006 + RD-031: `CDebugDatabase` replaces `CDebugAsmSource` and the per-segment address arrays; content-sniffing `DebugInfoLoadFile` at all dispatch sites; RD-032 re-import fixed. Linux suite 79/79 (7 skipped) |
 | 2026-10-17 | RD-032: `SetSegment` activates fully, `D:` labels reach the 1541, both `<Watchpoints>` layouts; segment deletion traced to `CDebugEventsHistory` raw pointers (still open). Linux suite 79/79 |
 | 2026-10-17 | RD-009 (early): cc65 `.dbg` loader; relative source paths resolve against the debug file. Linux suite 79/79 |
+| 2026-10-17 | RD-033: NES autoload of labels/debug info, `-ines`, CLI symbols to the loaded machine, NES source-code layout. Linux suite 79/79; ImGui suite 10/15 before and after (five pre-existing Linux failures, AGENTS.md) |

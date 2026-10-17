@@ -1626,10 +1626,12 @@ bool CMainMenuHelper::LoadNES(CSlrString *path, bool updateNESFolderPath)
 //	menuItemOpenFile->str2 = new CSlrString(fname);
 //	delete [] fname;
 
-	LOGTODO("NES: load labels/symbols/watches");
-//	LoadLabelsAndWatches(path);
-	
 	guiMain->UnlockMutex();
+	
+	// labels, watches and debug info next to the ROM (RD-033), as for PRG and XEX
+	viewC64->debugInterfaceNes->LockMutex();
+	LoadLabelsAndWatches(path, viewC64->debugInterfaceNes);
+	viewC64->debugInterfaceNes->UnlockMutex();
 	
 	//
 	debugInterfaceNes->LockMutex();
@@ -1716,6 +1718,14 @@ void CMainMenuHelper::LoadLabelsAndWatches(CSlrString *path, CDebugInterface *de
 		LOGD("...searching for debug info: %s", buf);
 		
 		CSlrFileFromOS *file = new CSlrFileFromOS(buf);
+		if (file->Exists() == false)
+		{
+			// Oscar64 writes .dbj; the content decides the loader either way
+			delete file;
+			sprintf(buf, "%s.dbj", noExtPath);
+			LOGD("...searching for debug info: %s", buf);
+			file = new CSlrFileFromOS(buf);
+		}
 		if (file->Exists())
 		{
 			debugInterface->symbols->DeleteAllSymbols();

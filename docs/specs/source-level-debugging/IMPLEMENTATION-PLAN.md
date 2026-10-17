@@ -306,6 +306,15 @@ rule 3), so a source step that ends there needs the Missing-code policy of RD-01
   the manifest to file:line and resolve `main.c:12` back to at least one range.
 
 ### RD-033 Entry points
+Done (review): `LoadNES` calls `LoadLabelsAndWatches` (labels, watches, `.dbg`, and
+`.dbj` when there is no `.dbg`, next to the ROM, as for PRG/XEX); the CLI ROM option is
+`-ines` (the second `nes` branch was unreachable; `-ines` is what the drag-in path
+emits); command-line symbols/watches/debug info go to the machine the command line loads
+a program for (NES ROM, Atari XEX/ATR, else C64); `nes.source_code` +
+`retro.default.nes.source_code` layout, `CTestDefaultWorkspaceSpecs` updated (33
+specs). Not changed: the `-pass` path still loads symbols into the first running
+machine before the program arrives (the program's own autoload covers the common case).
+
 NES: `-debuginfo` and autoload (`LoadLabelsAndWatches` is called from the C64 and Atari
 load paths only), fix the duplicate `nes` CLI match, add the `-ines` handler the drag-in
 path emits, add `nes.source_code` to `CDefaultWorkspaceLayouts` and its spec test.

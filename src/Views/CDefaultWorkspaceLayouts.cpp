@@ -290,6 +290,15 @@ static const SDefaultWorkspaceViewPlacementSpec kAtariSourceCodePlacements[] = {
 	{ "atari.screen", 478.0f, 0.0f, 85.680f, 61.200f }
 };
 
+// Same arrangement as the C64 and Atari source code layouts; the screen keeps
+// the NES 256x240 aspect.
+static const SDefaultWorkspaceViewPlacementSpec kNesSourceCodePlacements[] = {
+	{ "nes.disassembly", 1.0f, 1.0f, 110.6f, 356.0f, 7.0f },
+	{ "nes.source_code", 114.1f, 15.0f, 463.9f, 341.0f },
+	{ "nes.cpu_state", 220.0f, 2.5f, 0.0f, 0.0f },
+	{ "nes.screen", 478.0f, 0.0f, 85.680f, 80.325f }
+};
+
 static const SDefaultWorkspaceViewPlacementSpec kNesOnlyPlacements[] = {
 	{ "nes.screen", 97.220f, 0.0f, 384.000f, 360.000f }
 };
@@ -386,7 +395,8 @@ static const std::vector<SDefaultWorkspaceLayoutSpec> kNesDefaultWorkspaceSpecs 
 	{ DefaultWorkspacePlatform_NES, DefaultWorkspaceSlot_1541MemoryMap, "NES APU", "retro.default.nes.apu", kNesApuPlacements, sizeof(kNesApuPlacements) / sizeof(kNesApuPlacements[0]) },
 	{ DefaultWorkspacePlatform_NES, DefaultWorkspaceSlot_ShowStates, "NES Show States", "retro.default.nes.show_states", kNesShowStatesPlacements, sizeof(kNesShowStatesPlacements) / sizeof(kNesShowStatesPlacements[0]) },
 	{ DefaultWorkspacePlatform_NES, DefaultWorkspaceSlot_MemoryMap, "NES Memory Map", "retro.default.nes.memory_map", kNesMemoryMapPlacements, sizeof(kNesMemoryMapPlacements) / sizeof(kNesMemoryMapPlacements[0]) },
-	{ DefaultWorkspacePlatform_NES, DefaultWorkspaceSlot_MonitorConsole, "NES Monitor Console", "retro.default.nes.monitor_console", kNesMonitorConsolePlacements, sizeof(kNesMonitorConsolePlacements) / sizeof(kNesMonitorConsolePlacements[0]) }
+	{ DefaultWorkspacePlatform_NES, DefaultWorkspaceSlot_MonitorConsole, "NES Monitor Console", "retro.default.nes.monitor_console", kNesMonitorConsolePlacements, sizeof(kNesMonitorConsolePlacements) / sizeof(kNesMonitorConsolePlacements[0]) },
+	{ DefaultWorkspacePlatform_NES, DefaultWorkspaceSlot_SourceCode, "NES Source Code", "retro.default.nes.source_code", kNesSourceCodePlacements, sizeof(kNesSourceCodePlacements) / sizeof(kNesSourceCodePlacements[0]) }
 };
 
 static const std::vector<SDefaultWorkspaceShortcutSlotSpec> kDefaultWorkspaceShortcutSlotSpecs = {
@@ -1666,6 +1676,8 @@ CGuiView *CDefaultWorkspaceLayouts::FindViewForPlacement(const char *viewId) con
 		return viewC64->viewNesScreen;
 	if (strcmp(viewId, "nes.cpu_state") == 0)
 		return viewC64->viewNesStateCPU;
+	if (strcmp(viewId, "nes.source_code") == 0)
+		return viewC64->viewNesSourceCode;
 	if (strcmp(viewId, "nes.disassembly") == 0)
 		return viewC64->viewNesDisassembly;
 	if (strcmp(viewId, "nes.memory_map") == 0)
