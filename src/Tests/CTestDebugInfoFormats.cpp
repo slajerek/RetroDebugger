@@ -85,11 +85,10 @@ bool CTestDebugInfoFormats::RunProbe()
 
 bool CTestDebugInfoFormats::RunRouting(CDebugSymbols *symbols)
 {
-	size_t segmentsBefore = symbols->segments.size();
 	DebugInfoFormat format = DebugInfoLoadFile(symbols, ResolveProjectPath("tests/data/source-debug/cc65/c64/basic-flow/main.dbg").c_str());
-	if (!Check(format == DebugInfoFormat::Cc65Dbg && symbols->debugDatabase == NULL
-			   && symbols->segments.size() == segmentsBefore,
-			   "a cc65 .dbg is reported and NOT fed to the KickAssembler parser"))
+	if (!Check(format == DebugInfoFormat::Cc65Dbg && symbols->debugDatabase != NULL
+			   && symbols->debugDatabase->producer == "cc65",
+			   "a cc65 .dbg goes to the cc65 loader, not to the KickAssembler parser"))
 		return false;
 
 	format = DebugInfoLoadFile(symbols, ResolveProjectPath("tests/data/source-debug/kickass/c64/basic-flow/main.dbg").c_str());
@@ -292,6 +291,83 @@ bool CTestDebugInfoFormats::RunOscar64(CDebugSymbols *symbols)
 	return true;
 }
 
+bool CTestDebugInfoFormats::RunCc65(CDebugSymbols *symbols)
+{
+	// main.c lives in the fixture directory; cc65 recorded it relative to the build
+	CDebugInfoLoadOptions options;
+	options.debugFileDir = ResolveProjectPath("tests/source-debug/fixtures/basic-flow");
+	DebugInfoFormat format = DebugInfoLoadFile(symbols,
+		ResolveProjectPath("tests/data/source-debug/cc65/c64/basic-flow/main.dbg").c_str(), options);
+	std::shared_ptr<const CDebugDatabase> db = symbols->debugDatabase;
+	CDebugSymbolsSegment *segment = symbols->currentSegment;
+	if (!Check(format == DebugInfoFormat::Cc65Dbg && db != NULL && db->producer == "cc65"
+			   && symbols->segments.size() == 1 && segment != NULL && segment->debugRegionId == 0
+			   && db->capabilities.functions && !db->capabilities.columns,
+			   "cc65 .dbg: one Default segment, functions, line mappings, no columns"))
+		return false;
+
+	// Expected values computed from the artifact (seg start + span start)
+	const CDebugSourceMapping *body = db->Resolve(0, 0x0845);
+	const CDebugSourceFile *mainC = body ? db->GetFile(body->fileId) : NULL;
+	if (!Check(body != NULL && body->lineStart == 8 && body->start == 0x0843 && body->end == 0x085A
+			   && mainC != NULL && mainC->fileName == "main.c"
+			   && db->Resolve(0, 0x0877)->lineStart == 18 && db->Resolve(0, 0x0885)->lineStart == 19,
+			   "cc65 .dbg: C line mappings from segment + span (the for(;;) is mapped too)"))
+		return false;
+
+	std::vector<const CDebugSourceMapping *> candidates;
+	db->ResolveCandidates(0, 0x0845, candidates);
+	bool hasAsm = false;
+	for (const CDebugSourceMapping *c : candidates)
+		hasAsm |= (db->GetFile(c->fileId) != NULL && db->GetFile(c->fileId)->fileName == "main.s");
+	if (!Check(candidates.size() >= 2 && hasAsm,
+			   "cc65 .dbg: C wins, the generated asm line stays a candidate"))
+		return false;
+
+	const CDebugFunction *add = db->FindFunction(0, 0x0845);
+	const CDebugFunction *main = db->FindFunction(0, 0x0877);
+	if (!Check(add != NULL && add->name == "add" && add->signature == "_add" && add->start == 0x0840
+			   && add->line == 7 && main != NULL && main->name == "main" && main->start == 0x086D,
+			   "cc65 .dbg: functions from external C symbols via their asm scope"))
+		return false;
+
+	CDebugSymbolsCodeLabel *addLabel = segment->FindLabelByText("_add");
+	CDebugSymbolsCodeLabel *result = segment->FindLabelByText("_result");
+	if (!Check(addLabel != NULL && addLabel->address == 0x0840 && result != NULL && result->address == 0x0983
+			   && segment->FindLabelByText("L0008") == NULL,
+			   "cc65 .dbg: asm labels, without cc65's generated Lxxxx ones"))
+		return false;
+
+	char *text = (mainC != NULL && mainC->lines.size() > 8) ? mainC->lines[8]->GetStdASCII() : NULL;
+	bool textOk = text != NULL && strcmp(text, "    return left + right;") == 0;
+	delete [] text;
+	if (!Check(textOk, "cc65 .dbg: main.c, recorded relative, is found in debugFileDir"))
+		return false;
+
+	// Without options the .dbg's own directory is the base: main.s sits there
+	DebugInfoLoadFile(symbols, ResolveProjectPath("tests/data/source-debug/cc65/c64/basic-flow/main.dbg").c_str());
+	const CDebugSourceFile *mainS = symbols->debugDatabase->GetFile(0);
+	if (!Check(mainS != NULL && mainS->fileName == "main.s" && mainS->HasText(),
+			   "cc65 .dbg: a relative source path resolves against the .dbg's directory"))
+		return false;
+
+	const char *machines[] = { "atari", "nes" };
+	for (const char *machine : machines)
+	{
+		std::string path = ResolveProjectPath((std::string("tests/data/source-debug/cc65/") + machine + "/basic-flow/main.dbg").c_str());
+		format = DebugInfoLoadFile(symbols, path.c_str());
+		db = symbols->debugDatabase;
+		bool found = false;
+		for (const CDebugFunction &f : db->Functions())
+			found |= (f.name == "add" && db->Resolve(0, f.start) != NULL && f.line == 7);
+		char msg[128];
+		snprintf(msg, sizeof(msg), "cc65 .dbg (%s): add() has its line-7 mapping at its entry", machine);
+		if (!Check(format == DebugInfoFormat::Cc65Dbg && found, msg))
+			return false;
+	}
+	return true;
+}
+
 void CTestDebugInfoFormats::Run(ITestCallback *cb)
 {
 	this->callback = cb;
@@ -321,7 +397,7 @@ void CTestDebugInfoFormats::Run(ITestCallback *cb)
 	typedef bool (CTestDebugInfoFormats::*SubTest)(CDebugSymbols *);
 	SubTest subTests[] = { &CTestDebugInfoFormats::RunRouting, &CTestDebugInfoFormats::RunReimport,
 						   &CTestDebugInfoFormats::RunSegmentsAndWatches, &CTestDebugInfoFormats::RunDriveLabels,
-						   &CTestDebugInfoFormats::RunOscar64 };
+						   &CTestDebugInfoFormats::RunOscar64, &CTestDebugInfoFormats::RunCc65 };
 
 	CDebugSymbols *liveSymbols = c64->symbols;
 	bool ok = true;

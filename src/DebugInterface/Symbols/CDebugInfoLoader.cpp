@@ -14,6 +14,8 @@
 #include "std_membuf.h"
 #include "utf8.h"
 #include <cstring>
+#include <cctype>
+#include <cstdlib>
 #include <istream>
 #include <list>
 #include <memory>
@@ -155,8 +157,7 @@ DebugInfoFormat DebugInfoLoadFile(CDebugSymbols *symbols, const char *cPath, con
 			symbols->ParseSymbols(byteBuffer);
 			break;
 		case DebugInfoFormat::Cc65Dbg:
-			LOGError("DebugInfoLoadFile: %s is %s, which has no loader yet (RD-009); not loaded",
-					 cPath, DebugInfoFormatName(format));
+			DebugInfoLoadCc65(symbols, byteBuffer, options);
 			break;
 		case DebugInfoFormat::Unknown:
 			LOGError("DebugInfoLoadFile: %s is not a recognized symbols or debug info format", cPath);
@@ -217,6 +218,12 @@ static void LoadSourceTextFor(CDebugSourceFile *sourceFile, const CDebugInfoLoad
 			&& LoadSourceText(sourceFile, remap.second + path.substr(remap.first.size())))
 			return;
 	}
+	// A relative path is relative to the build, i.e. to the debug file, not to
+	// this process's working directory.
+	bool relative = !path.empty() && path[0] != '/' && path[0] != '\\'
+		&& !(path.size() > 1 && path[1] == ':');
+	if (relative && !options.debugFileDir.empty() && LoadSourceText(sourceFile, options.debugFileDir + "/" + path))
+		return;
 	if (LoadSourceText(sourceFile, path))
 		return;
 	if (!options.debugFileDir.empty() && !sourceFile->fileName.empty())
@@ -816,6 +823,264 @@ bool DebugInfoLoadOscar64(CDebugSymbols *symbols, CByteBuffer *byteBuffer, const
 	guiMain->UnlockMutex();
 
 	LOGM("DebugInfoLoadOscar64: %d files, %d functions, %d mappings", (int)database->NumFiles(),
+		 (int)database->Functions().size(), (int)database->NumMappings());
+	return true;
+}
+
+// One cc65 .dbg record: "kind<TAB>key=value,key="quoted, value",...".
+struct Cc65Record
+{
+	std::string kind;
+	std::map<std::string, std::string> fields;
+
+	bool Has(const char *key) const { return fields.find(key) != fields.end(); }
+	std::string Get(const char *key) const
+	{
+		auto it = fields.find(key);
+		return it == fields.end() ? std::string() : it->second;
+	}
+	long Num(const char *key, long fallback = -1) const
+	{
+		auto it = fields.find(key);
+		return (it == fields.end() || it->second.empty()) ? fallback : strtol(it->second.c_str(), NULL, 0);
+	}
+	// "12+13+40" -> {12, 13, 40}
+	std::vector<long> List(const char *key) const
+	{
+		std::vector<long> out;
+		std::string value = Get(key);
+		size_t pos = 0;
+		while (pos < value.size())
+		{
+			size_t plus = value.find('+', pos);
+			if (plus == std::string::npos)
+				plus = value.size();
+			out.push_back(strtol(value.substr(pos, plus - pos).c_str(), NULL, 0));
+			pos = plus + 1;
+		}
+		return out;
+	}
+};
+
+static bool ParseCc65Record(const std::string &line, Cc65Record &record)
+{
+	size_t tab = line.find('\t');
+	if (tab == std::string::npos)
+		return false;
+	record.kind = line.substr(0, tab);
+	record.fields.clear();
+	size_t pos = tab + 1;
+	while (pos < line.size())
+	{
+		size_t eq = line.find('=', pos);
+		if (eq == std::string::npos)
+			return false;
+		std::string key = line.substr(pos, eq - pos);
+		pos = eq + 1;
+		std::string value;
+		if (pos < line.size() && line[pos] == '"')
+		{
+			size_t close = line.find('"', pos + 1);
+			if (close == std::string::npos)
+				return false;
+			value = line.substr(pos + 1, close - pos - 1);
+			pos = close + 1;
+		}
+		else
+		{
+			size_t comma = line.find(',', pos);
+			if (comma == std::string::npos)
+				comma = line.size();
+			value = line.substr(pos, comma - pos);
+			pos = comma;
+		}
+		record.fields[key] = value;
+		if (pos < line.size() && line[pos] == ',')
+			pos++;
+	}
+	return true;
+}
+
+static bool IsCc65GeneratedLabel(const std::string &name)
+{
+	// cc65's code generator names its jump targets Lxxxx (hex)
+	if (name.size() != 5 || name[0] != 'L')
+		return false;
+	for (size_t i = 1; i < name.size(); i++)
+	{
+		if (!isxdigit((unsigned char)name[i]))
+			return false;
+	}
+	return true;
+}
+
+bool DebugInfoLoadCc65(CDebugSymbols *symbols, CByteBuffer *byteBuffer, const CDebugInfoLoadOptions &options)
+{
+	std::map<long, Cc65Record> files, segs, spans, scopes, syms;
+	std::vector<Cc65Record> lines, csyms;
+
+	std::string text((const char *)byteBuffer->data, (size_t)byteBuffer->length);
+	size_t pos = 0;
+	int lineNum = 0;
+	while (pos < text.size())
+	{
+		size_t end = text.find('\n', pos);
+		if (end == std::string::npos)
+			end = text.size();
+		std::string line = text.substr(pos, end - pos);
+		if (!line.empty() && line[line.size() - 1] == '\r')
+			line.erase(line.size() - 1);
+		pos = end + 1;
+		lineNum++;
+
+		Cc65Record record;
+		if (line.empty() || !ParseCc65Record(line, record))
+			continue;
+		if (record.kind == "version" && record.Num("major") != 2)
+		{
+			LOGError("DebugInfoLoadCc65: unsupported version major=%ld", record.Num("major"));
+			return false;
+		}
+		long id = record.Num("id");
+		if (record.kind == "file")			files[id] = record;
+		else if (record.kind == "seg")		segs[id] = record;
+		else if (record.kind == "span")		spans[id] = record;
+		else if (record.kind == "scope")	scopes[id] = record;
+		else if (record.kind == "sym")		syms[id] = record;
+		else if (record.kind == "line")		lines.push_back(record);
+		else if (record.kind == "csym")		csyms.push_back(record);
+	}
+
+	std::shared_ptr<CDebugDatabase> database = std::make_shared<CDebugDatabase>("cc65");
+	database->capabilities.lineMappings = true;
+	database->capabilities.functions = true;
+	u32 regionId = database->AddRegion("Default", "");
+	u32 blockId = database->AddBlock("", regionId);
+	int maxAddress = symbols->dataAdapter->AdapterGetDataLength();
+
+	for (auto &it : files)
+		database->AddFile((u32)it.first, it.second.Get("name"));
+
+	// address range of a span: segment start + span start, size bytes
+	auto spanRange = [&](long spanId, u32 &start, u32 &end) -> bool {
+		auto span = spans.find(spanId);
+		if (span == spans.end())
+			return false;
+		auto seg = segs.find(span->second.Num("seg"));
+		if (seg == segs.end())
+			return false;
+		long size = span->second.Num("size", 0);
+		if (size <= 0)
+			return false;
+		start = (u32)(seg->second.Num("start", 0) + span->second.Num("start", 0));
+		end = start + (u32)size;
+		return start < (u32)maxAddress;
+	};
+
+	// asm (type 0) and macro (type 2) lines first, C (type 1) last: later wins
+	std::map<u32, std::pair<u32, i32>> cLineAtAddress;	// start -> (file, line), for function lines
+	for (int pass = 0; pass < 2; pass++)
+	{
+		for (const Cc65Record &line : lines)
+		{
+			bool isC = line.Num("type", 0) == 1;
+			if (isC != (pass == 1))
+				continue;
+			for (long spanId : line.List("span"))
+			{
+				CDebugSourceMapping mapping;
+				if (!spanRange(spanId, mapping.start, mapping.end))
+					continue;
+				if (mapping.end > (u32)maxAddress)
+					mapping.end = (u32)maxAddress;
+				mapping.regionId = regionId;
+				mapping.blockId = blockId;
+				mapping.fileId = (u32)line.Num("file", 0);
+				mapping.lineStart = (i32)line.Num("line", 0);
+				mapping.lineEnd = mapping.lineStart;
+				mapping.quality = DebugMappingQuality::Exact;
+				database->AddMapping(mapping);
+				if (isC)
+					cLineAtAddress[mapping.start] = std::make_pair(mapping.fileId, mapping.lineStart);
+			}
+		}
+	}
+
+	// Functions: a C symbol with external linkage names an asm symbol, whose
+	// scope ("_add") spans the function's code.
+	for (const Cc65Record &csym : csyms)
+	{
+		if (csym.Get("sc") != "ext" || !csym.Has("sym"))
+			continue;
+		long symId = csym.Num("sym");
+		for (auto &it : scopes)
+		{
+			const Cc65Record &scope = it.second;
+			if (scope.Num("sym") != symId || scope.Get("type") != "scope")
+				continue;
+			CDebugFunction function;
+			function.name = csym.Get("name");
+			function.signature = scope.Get("name");
+			function.regionId = regionId;
+			bool any = false;
+			for (long spanId : scope.List("span"))
+			{
+				u32 start, end;
+				if (!spanRange(spanId, start, end))
+					continue;
+				if (!any || start < function.start)
+					function.start = start;
+				if (!any || end > function.end)
+					function.end = end;
+				any = true;
+			}
+			if (!any)
+				continue;
+			// the function's line: the C line mapped at its entry, when there is one
+			auto entry = cLineAtAddress.find(function.start);
+			if (entry != cLineAtAddress.end())
+			{
+				function.fileId = entry->second.first;
+				function.line = entry->second.second;
+			}
+			database->AddFunction(function);
+		}
+	}
+
+	struct Label { u32 address; std::string name; };
+	std::vector<Label> labels;
+	for (auto &it : syms)
+	{
+		const Cc65Record &sym = it.second;
+		std::string name = sym.Get("name");
+		if (sym.Get("type") != "lab" || name.empty() || IsCc65GeneratedLabel(name))
+			continue;
+		long value = sym.Num("val");
+		if (value >= 0 && value < maxAddress)
+			labels.push_back(Label{ (u32)value, name });
+	}
+
+	for (auto &it : database->Files())
+		LoadSourceTextFor(it.second, options);
+	database->Finalize();
+
+	guiMain->LockMutex();
+	symbols->debugInterface->LockMutex();
+
+	symbols->DeleteAllSymbols();
+	CDebugSymbolsSegment *segment = symbols->CreateNewDebugSymbolsSegment(new CSlrString("Default"), 0);
+	segment->debugRegionId = (int)regionId;
+	symbols->segments.push_back(segment);
+	for (const Label &label : labels)
+		segment->AddCodeLabel((int)label.address, (char *)label.name.c_str());	// copies the text
+
+	symbols->debugDatabase = database;
+	symbols->ActivateSelectedSegment();
+
+	symbols->debugInterface->UnlockMutex();
+	guiMain->UnlockMutex();
+
+	LOGM("DebugInfoLoadCc65: %d files, %d functions, %d mappings", (int)database->NumFiles(),
 		 (int)database->Functions().size(), (int)database->NumMappings());
 	return true;
 }

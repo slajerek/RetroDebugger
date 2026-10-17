@@ -29,7 +29,8 @@ const char *DebugInfoFormatName(DebugInfoFormat format);
 // Where loaders look for the source files a debug file names. A source is
 // looked up (1) through each remap rule whose FROM prefixes its recorded path
 // (FROM replaced by TO: a build directory that moved, another machine's
-// checkout), (2) at its recorded path, (3) by file name in debugFileDir.
+// checkout), (2) a relative recorded path against debugFileDir, (3) at its
+// recorded path, (4) by file name in debugFileDir.
 struct CDebugInfoLoadOptions
 {
 	std::string debugFileDir;
@@ -40,9 +41,8 @@ struct CDebugInfoLoadOptions
 DebugInfoFormat DebugInfoProbe(const u8 *data, int length);
 
 // Loads a symbols / debug-info file into SYMBOLS by content: KickAssembler
-// .dbg and Oscar64 .dbj through their loaders, VICE and 64tass labels through
-// CDebugSymbols::ParseSymbols. A format recognized but not loaded yet (cc65:
-// RD-009) is reported, not fed to the wrong parser.
+// .dbg, cc65 .dbg and Oscar64 .dbj through their loaders, VICE and 64tass
+// labels through CDebugSymbols::ParseSymbols.
 // Returns the format found; Unknown when the file is missing or unrecognized.
 DebugInfoFormat DebugInfoLoadFile(CDebugSymbols *symbols, CSlrString *path);
 DebugInfoFormat DebugInfoLoadFile(CDebugSymbols *symbols, const char *path);
@@ -60,5 +60,13 @@ bool DebugInfoLoadKickAss(CDebugSymbols *symbols, CByteBuffer *byteBuffer, const
 // mappings from each function's "lines", labels for functions and variables.
 // Oscar64 has no columns; "origins" (inline provenance) is ignored until RD-017.
 bool DebugInfoLoadOscar64(CDebugSymbols *symbols, CByteBuffer *byteBuffer, const CDebugInfoLoadOptions &options);
+
+// The cc65 / ld65 --dbgfile loader (RD-009): one "Default" segment and
+// region; line mappings from every "line" record's spans (address = segment
+// start + span start), asm (ca65, including cc65's generated .s) first and C
+// lines last, so C wins where both cover an address and asm stays a
+// candidate; functions from C symbols with external linkage via their asm
+// scope; labels from asm labels except cc65's generated Lxxxx ones. No columns.
+bool DebugInfoLoadCc65(CDebugSymbols *symbols, CByteBuffer *byteBuffer, const CDebugInfoLoadOptions &options);
 
 #endif
