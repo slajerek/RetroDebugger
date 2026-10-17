@@ -13,6 +13,7 @@ class CDebugSymbols;
 // menu import) replaces the segments instead of leaving stale duplicates.
 // Also RD-032: SetSegment activates fully (next/previous continue from it),
 // both <Watchpoints> layouts, and VICE "al D:" labels reaching the 1541.
+// RD-008: the Oscar64 .dbj loader on the Tier 1 artifacts of all machines.
 class CTestDebugInfoFormats : public CTest
 {
 public:
@@ -29,4 +30,5 @@ private:
 	bool RunReimport(CDebugSymbols *symbols);
 	bool RunSegmentsAndWatches(CDebugSymbols *symbols);
 	bool RunDriveLabels(CDebugSymbols *symbols);
+	bool RunOscar64(CDebugSymbols *symbols);
 };

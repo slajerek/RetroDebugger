@@ -10,6 +10,7 @@
 #include "CGuiMain.h"
 #include "DBG_Log.h"
 #include "pugixml.h"
+#include "hjson.h"
 #include "std_membuf.h"
 #include "utf8.h"
 #include <cstring>
@@ -105,23 +106,26 @@ DebugInfoFormat DebugInfoProbe(const u8 *data, int length)
 	return DebugInfoFormat::Unknown;
 }
 
-DebugInfoFormat DebugInfoLoadFile(CDebugSymbols *symbols, const char *path)
-{
-	CSlrString *slrPath = new CSlrString(path);
-	DebugInfoFormat format = DebugInfoLoadFile(symbols, slrPath);
-	delete slrPath;
-	return format;
-}
-
 DebugInfoFormat DebugInfoLoadFile(CDebugSymbols *symbols, CSlrString *path)
 {
 	char *cPath = path->GetStdASCII();
-	CSlrFileFromOS *file = new CSlrFileFromOS(cPath);
+	DebugInfoFormat format = DebugInfoLoadFile(symbols, cPath, CDebugInfoLoadOptions());
+	delete [] cPath;
+	return format;
+}
+
+DebugInfoFormat DebugInfoLoadFile(CDebugSymbols *symbols, const char *path)
+{
+	return DebugInfoLoadFile(symbols, path, CDebugInfoLoadOptions());
+}
+
+DebugInfoFormat DebugInfoLoadFile(CDebugSymbols *symbols, const char *cPath, const CDebugInfoLoadOptions &loadOptions)
+{
+	CSlrFileFromOS *file = new CSlrFileFromOS((char *)cPath);
 	if (!file->Exists())
 	{
 		LOGError("DebugInfoLoadFile: %s does not exist", cPath);
 		delete file;
-		delete [] cPath;
 		return DebugInfoFormat::Unknown;
 	}
 	CByteBuffer *byteBuffer = new CByteBuffer(file, false);
@@ -130,23 +134,28 @@ DebugInfoFormat DebugInfoLoadFile(CDebugSymbols *symbols, CSlrString *path)
 	DebugInfoFormat format = DebugInfoProbe(byteBuffer->data, byteBuffer->length);
 	LOGM("DebugInfoLoadFile: %s is %s", cPath, DebugInfoFormatName(format));
 
+	CDebugInfoLoadOptions options = loadOptions;
+	if (options.debugFileDir.empty())
+	{
+		std::string dir(cPath);
+		size_t slash = dir.find_last_of("/\\");
+		options.debugFileDir = (slash == std::string::npos) ? std::string(".") : dir.substr(0, slash);
+	}
+
 	switch (format)
 	{
 		case DebugInfoFormat::KickAssDbg:
-		{
-			std::string dir(cPath);
-			size_t slash = dir.find_last_of("/\\");
-			dir = (slash == std::string::npos) ? std::string(".") : dir.substr(0, slash);
-			DebugInfoLoadKickAss(symbols, byteBuffer, dir.c_str());
+			DebugInfoLoadKickAss(symbols, byteBuffer, options);
 			break;
-		}
+		case DebugInfoFormat::Oscar64Dbj:
+			DebugInfoLoadOscar64(symbols, byteBuffer, options);
+			break;
 		case DebugInfoFormat::ViceLabels:
 		case DebugInfoFormat::Tass64Labels:
 			symbols->ParseSymbols(byteBuffer);
 			break;
 		case DebugInfoFormat::Cc65Dbg:
-		case DebugInfoFormat::Oscar64Dbj:
-			LOGError("DebugInfoLoadFile: %s is %s, which has no loader yet (RD-008/RD-009); not loaded",
+			LOGError("DebugInfoLoadFile: %s is %s, which has no loader yet (RD-009); not loaded",
 					 cPath, DebugInfoFormatName(format));
 			break;
 		case DebugInfoFormat::Unknown:
@@ -155,7 +164,6 @@ DebugInfoFormat DebugInfoLoadFile(CDebugSymbols *symbols, CSlrString *path)
 	}
 
 	delete byteBuffer;
-	delete [] cPath;
 	return format;
 }
 
@@ -198,6 +206,23 @@ static bool LoadSourceText(CDebugSourceFile *sourceFile, const std::string &path
 	return true;
 }
 
+// Loads SOURCEFILE's text from the first place that has it: remapped path,
+// recorded path, or its file name in the debug file's directory.
+static void LoadSourceTextFor(CDebugSourceFile *sourceFile, const CDebugInfoLoadOptions &options)
+{
+	const std::string &path = sourceFile->originalPath;
+	for (const auto &remap : options.pathRemaps)
+	{
+		if (!remap.first.empty() && path.compare(0, remap.first.size(), remap.first) == 0
+			&& LoadSourceText(sourceFile, remap.second + path.substr(remap.first.size())))
+			return;
+	}
+	if (LoadSourceText(sourceFile, path))
+		return;
+	if (!options.debugFileDir.empty() && !sourceFile->fileName.empty())
+		LoadSourceText(sourceFile, options.debugFileDir + "/" + sourceFile->fileName);
+}
+
 static std::string ToStd(CSlrString *str)
 {
 	char *ascii = str->GetStdASCII();
@@ -213,6 +238,14 @@ static std::string ToStd(CSlrString *str)
 //	&   &amp;
 
 bool DebugInfoLoadKickAss(CDebugSymbols *symbols, CByteBuffer *byteBuffer, const char *debugFileDir)
+{
+	CDebugInfoLoadOptions options;
+	if (debugFileDir != NULL)
+		options.debugFileDir = debugFileDir;
+	return DebugInfoLoadKickAss(symbols, byteBuffer, options);
+}
+
+bool DebugInfoLoadKickAss(CDebugSymbols *symbols, CByteBuffer *byteBuffer, const CDebugInfoLoadOptions &options)
 {
 	LOGD("DebugInfoLoadKickAss");
 
@@ -416,8 +449,9 @@ bool DebugInfoLoadKickAss(CDebugSymbols *symbols, CByteBuffer *byteBuffer, const
 			char *labelNameStr = (*words)[2]->GetStdASCII();
 			if (labelNameStr[0] != 0)
 			{
-				segment->AddCodeLabel(address, labelNameStr);
+				segment->AddCodeLabel(address, labelNameStr);	// copies the text
 			}
+			delete [] labelNameStr;
 			CSlrString::DeleteVector(words);
 		}
 		CSlrString::DeleteVector(labelLines);
@@ -650,15 +684,9 @@ bool DebugInfoLoadKickAss(CDebugSymbols *symbols, CByteBuffer *byteBuffer, const
 		delete strBreakpoints;
 	}
 
-	// == Source text: the recorded path, else the file name next to the .dbg
+	// == Source text
 	for (auto &it : database->Files())
-	{
-		CDebugSourceFile *sourceFile = it.second;
-		if (LoadSourceText(sourceFile, sourceFile->originalPath))
-			continue;
-		if (debugFileDir != NULL && !sourceFile->fileName.empty())
-			LoadSourceText(sourceFile, std::string(debugFileDir) + "/" + sourceFile->fileName);
-	}
+		LoadSourceTextFor(it.second, options);
 
 	database->Finalize();
 	symbols->debugDatabase = database;
@@ -670,5 +698,124 @@ bool DebugInfoLoadKickAss(CDebugSymbols *symbols, CByteBuffer *byteBuffer, const
 
 	LOGM("DebugInfoLoadKickAss: %d files, %d segments, %d mappings", (int)database->NumFiles(),
 		 (int)database->NumRegions(), (int)database->NumMappings());
+	return true;
+}
+
+bool DebugInfoLoadOscar64(CDebugSymbols *symbols, CByteBuffer *byteBuffer, const CDebugInfoLoadOptions &options)
+{
+	Hjson::Value root;
+	try
+	{
+		root = Hjson::Unmarshal((const char *)byteBuffer->data, (size_t)byteBuffer->length);
+	}
+	catch (const std::exception &e)
+	{
+		LOGError("DebugInfoLoadOscar64: not valid JSON: %s", e.what());
+		return false;
+	}
+	Hjson::Value functions = root["functions"];
+	if (functions.type() != Hjson::Type::Vector)
+	{
+		LOGError("DebugInfoLoadOscar64: no \"functions\" array");
+		return false;
+	}
+
+	std::shared_ptr<CDebugDatabase> database = std::make_shared<CDebugDatabase>("Oscar64");
+	database->capabilities.lineMappings = true;
+	database->capabilities.functions = true;
+	u32 regionId = database->AddRegion("Default", "");
+	int maxAddress = symbols->dataAdapter->AdapterGetDataLength();
+
+	// Oscar64 names files by path in every entry; number them in order of appearance.
+	std::map<std::string, u32> fileIds;
+	auto fileIdFor = [&](const std::string &path) -> u32 {
+		auto it = fileIds.find(path);
+		if (it != fileIds.end())
+			return it->second;
+		u32 id = (u32)fileIds.size();
+		fileIds[path] = id;
+		database->AddFile(id, path);
+		return id;
+	};
+
+	struct Label { u32 address; std::string name; };
+	std::vector<Label> labels;
+
+	for (size_t i = 0; i < functions.size(); i++)
+	{
+		const Hjson::Value &f = functions[(int)i];
+		CDebugFunction function;
+		function.name = f["name"].to_string();
+		function.signature = f["xname"].to_string();
+		function.start = (u32)f["start"].to_int64();
+		function.end = (u32)f["end"].to_int64();
+		function.regionId = regionId;
+		function.fileId = fileIdFor(f["source"].to_string());
+		function.line = (i32)f["line"].to_int64();
+		if (function.start >= (u32)maxAddress)
+		{
+			LOGError("DebugInfoLoadOscar64: %s at %x is out of memory range", function.name.c_str(), function.start);
+			continue;
+		}
+		if (function.end > (u32)maxAddress)
+			function.end = (u32)maxAddress;
+		database->AddFunction(function);
+		labels.push_back(Label{ function.start, function.name });
+
+		u32 blockId = database->AddBlock(function.name, regionId);
+		const Hjson::Value &lines = f["lines"];
+		for (size_t l = 0; l < lines.size(); l++)
+		{
+			const Hjson::Value &line = lines[(int)l];
+			CDebugSourceMapping mapping;
+			mapping.start = (u32)line["start"].to_int64();
+			mapping.end = (u32)line["end"].to_int64();
+			if (mapping.end > (u32)maxAddress)
+				mapping.end = (u32)maxAddress;
+			mapping.regionId = regionId;
+			mapping.blockId = blockId;
+			mapping.fileId = fileIdFor(line["source"].to_string());
+			mapping.lineStart = (i32)line["line"].to_int64();
+			mapping.lineEnd = mapping.lineStart;
+			mapping.quality = DebugMappingQuality::Exact;
+			if (mapping.start < mapping.end)
+				database->AddMapping(mapping);
+		}
+	}
+
+	Hjson::Value variables = root["variables"];
+	for (size_t i = 0; i < variables.size(); i++)
+	{
+		const Hjson::Value &v = variables[(int)i];
+		u32 start = (u32)v["start"].to_int64();
+		if (start < (u32)maxAddress)
+			labels.push_back(Label{ start, v["name"].to_string() });
+	}
+
+	for (auto &it : database->Files())
+		LoadSourceTextFor(it.second, options);
+	database->Finalize();
+
+	guiMain->LockMutex();
+	symbols->debugInterface->LockMutex();
+
+	symbols->DeleteAllSymbols();
+	CDebugSymbolsSegment *segment = symbols->CreateNewDebugSymbolsSegment(new CSlrString("Default"), 0);
+	segment->debugRegionId = (int)regionId;
+	symbols->segments.push_back(segment);
+	for (const Label &label : labels)
+	{
+		if (!label.name.empty())
+			segment->AddCodeLabel((int)label.address, (char *)label.name.c_str());	// copies the text
+	}
+
+	symbols->debugDatabase = database;
+	symbols->ActivateSelectedSegment();
+
+	symbols->debugInterface->UnlockMutex();
+	guiMain->UnlockMutex();
+
+	LOGM("DebugInfoLoadOscar64: %d files, %d functions, %d mappings", (int)database->NumFiles(),
+		 (int)database->Functions().size(), (int)database->NumMappings());
 	return true;
 }

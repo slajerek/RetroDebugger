@@ -290,6 +290,14 @@ the database snapshot), segment deletion on database replacement (atomic swap un
   warning in the view and `Approximate` quality.
 
 ### RD-008 Oscar64 `.dbj` adapter
+Done (review): `DebugInfoLoadOscar64` (JSON through the app's Hjson): one `Default`
+segment/region, `CDebugFunction` per function (name, signature, half-open range, line;
+`CDebugDatabase::FindFunction`), line mappings from `lines`, labels for functions and
+variables; `origins` (inline provenance) ignored until RD-017; no columns in the format.
+`CDebugInfoLoadOptions::pathRemaps` maps a recorded build directory to where the sources
+are now. Tested on the Tier 1 artifacts of C64, Atari and NES (`DebugInfoFormats`).
+Notable: the `for(;;)` jump at the end of `main` has no line mapping (Missing, spec #6.2
+rule 3), so a source step that ends there needs the Missing-code policy of RD-013.
 - Parse `functions[].lines[]` (start/end/source/line), `memory[]`, `variables[]`,
   `types[]` where present; line-only mapping → `isStatementBoundary=false`, quality
   `Exact` for debug builds. Record every field actually emitted by the pinned build in
@@ -539,3 +547,4 @@ M7 starts with the RD-023 research spike and ends in a separate spec.
    RD-031 + RD-032), proven by the PR-1 tests staying green.
 
 After these, M2 (view), M3 (stepping) and the M4 machine tracks can proceed in parallel.
+| 2026-10-17 | RD-008: Oscar64 `.dbj` loader + `CDebugFunction` + path remapping; tested on C64/Atari/NES fixtures. Linux suite 79/79 |

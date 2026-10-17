@@ -5708,7 +5708,7 @@ void CMainMenuBar::SystemDialogFileOpenSelected(CSlrString *path)
 			{
 				viewC64->ShowMessageError("Loading labels failed, unrecognized file format");
 			}
-			else if (format == DebugInfoFormat::Cc65Dbg || format == DebugInfoFormat::Oscar64Dbj)
+			else if (format == DebugInfoFormat::Cc65Dbg)
 			{
 				viewC64->ShowMessageWarning("%s debug info is recognized but not supported yet", DebugInfoFormatName(format));
 			}

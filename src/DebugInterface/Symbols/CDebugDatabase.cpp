@@ -87,10 +87,30 @@ void CDebugDatabase::AddMapping(const CDebugSourceMapping &mapping)
 	mappings.push_back(mapping);
 }
 
+u32 CDebugDatabase::AddFunction(const CDebugFunction &function)
+{
+	if (finalized || function.end <= function.start || function.regionId >= regions.size())
+	{
+		LOGError("CDebugDatabase::AddFunction: rejected %s [%x,%x)", function.name.c_str(), function.start, function.end);
+		return (u32)-1;
+	}
+	functions.push_back(function);
+	return (u32)functions.size() - 1;
+}
+
 void CDebugDatabase::Finalize()
 {
 	if (finalized)
 		return;
+
+	functionsByStart.resize(regions.size());
+	for (u32 index = 0; index < functions.size(); index++)
+		functionsByStart[functions[index].regionId].push_back(index);
+	for (std::vector<u32> &byStart : functionsByStart)
+	{
+		std::sort(byStart.begin(), byStart.end(),
+				  [this](u32 a, u32 b) { return functions[a].start < functions[b].start; });
+	}
 
 	// Paint each region's ranges in producer order: a later range replaces
 	// whatever earlier ranges covered, splitting them where it overlaps only
@@ -165,6 +185,20 @@ void CDebugDatabase::ResolveSource(u32 fileId, i32 line, std::vector<const CDebu
 		return;
 	for (u32 index : it->second)
 		out.push_back(&mappings[index]);
+}
+
+const CDebugFunction *CDebugDatabase::FindFunction(u32 regionId, u32 address) const
+{
+	if (!finalized || regionId >= functionsByStart.size())
+		return NULL;
+
+	const std::vector<u32> &byStart = functionsByStart[regionId];
+	auto it = std::upper_bound(byStart.begin(), byStart.end(), address,
+							   [this](u32 a, u32 index) { return a < functions[index].start; });
+	if (it == byStart.begin())
+		return NULL;
+	const CDebugFunction &function = functions[*std::prev(it)];
+	return address < function.end ? &function : NULL;
 }
 
 int CDebugDatabase::FindRegion(const char *name) const

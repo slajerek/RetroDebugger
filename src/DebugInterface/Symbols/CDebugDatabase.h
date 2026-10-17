@@ -75,6 +75,18 @@ public:
 	u32 regionId;
 };
 
+// A function's entry and code range, as the producer reports it.
+struct CDebugFunction
+{
+	std::string name;
+	std::string signature;	// producer's decorated form, e.g. Oscar64 "add(u8,u8)->u8"
+	u32 start = 0;			// half-open [start, end)
+	u32 end = 0;
+	u32 regionId = 0;
+	u32 fileId = 0;
+	i32 line = 0;			// line of the definition
+};
+
 struct CDebugSourceMapping
 {
 	u32 start = 0;		// half-open address range [start, end)
@@ -106,6 +118,7 @@ public:
 	// is the one in effect (what the KickAssembler loader always did); the
 	// earlier ones stay available as candidates.
 	void AddMapping(const CDebugSourceMapping &mapping);
+	u32 AddFunction(const CDebugFunction &function);
 	void Finalize();
 
 	// --- queries: after Finalize() ---
@@ -115,6 +128,10 @@ public:
 	void ResolveCandidates(u32 regionId, u32 address, std::vector<const CDebugSourceMapping *> &out) const;
 	// Every mapping whose first line is LINE of FILEID, in producer order.
 	void ResolveSource(u32 fileId, i32 line, std::vector<const CDebugSourceMapping *> &out) const;
+
+	// The function whose range holds ADDRESS in REGION, or NULL. O(log n).
+	const CDebugFunction *FindFunction(u32 regionId, u32 address) const;
+	const std::vector<CDebugFunction> &Functions() const { return functions; }
 
 	int FindRegion(const char *name) const;
 	const CDebugSourceFile *GetFile(u32 producerFileId) const;
@@ -137,6 +154,9 @@ private:
 	std::vector<CDebugRegion> regions;
 	std::vector<CDebugBlock *> blocks;
 	std::vector<CDebugSourceMapping> mappings;
+	std::vector<CDebugFunction> functions;
+	// Per region: function indices sorted by start.
+	std::vector<std::vector<u32>> functionsByStart;
 
 	// Per region: non-overlapping, sorted intervals naming the mapping in effect.
 	std::vector<std::vector<Interval>> effective;

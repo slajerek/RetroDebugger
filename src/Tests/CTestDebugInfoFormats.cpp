@@ -15,6 +15,7 @@
 #include "CSlrString.h"
 #include "CSlrFileFromOS.h"
 #include <cstring>
+#include <cstdio>
 #include <vector>
 
 bool CTestDebugInfoFormats::Check(bool condition, const char *message)
@@ -230,6 +231,67 @@ bool CTestDebugInfoFormats::RunDriveLabels(CDebugSymbols *symbols)
 				 "VICE \"al D:\" labels go to the 1541 symbols, \"al C:\" to the C64");
 }
 
+bool CTestDebugInfoFormats::RunOscar64(CDebugSymbols *symbols)
+{
+	// The artifacts record their build directory; remap it to the fixture
+	// so the source text is found (that is what the manifest's buildDir is for).
+	CDebugInfoLoadOptions options;
+	options.pathRemaps.push_back(std::make_pair(std::string("/tmp/rd-source-debug/oscar64/c64/basic-flow"),
+												ResolveProjectPath("tests/source-debug/fixtures/basic-flow")));
+	DebugInfoFormat format = DebugInfoLoadFile(symbols,
+		ResolveProjectPath("tests/data/source-debug/oscar64/c64/basic-flow/main.dbj").c_str(), options);
+	std::shared_ptr<const CDebugDatabase> db = symbols->debugDatabase;
+	CDebugSymbolsSegment *segment = symbols->currentSegment;
+	if (!Check(format == DebugInfoFormat::Oscar64Dbj && db != NULL && db->producer == "Oscar64"
+			   && symbols->segments.size() == 1 && segment != NULL && segment->debugRegionId == 0
+			   && db->capabilities.functions && db->capabilities.lineMappings && !db->capabilities.columns,
+			   "Oscar64 .dbj: one Default segment, functions and line mappings, no columns"))
+		return false;
+
+	// add() is [2218, 2224) at main.c:7, its body line 8; main's lines 16-18
+	const CDebugFunction *add = db->FindFunction(0, 2220);
+	const CDebugFunction *main = db->FindFunction(0, 2176);
+	const CDebugSourceMapping *body = db->Resolve(0, 2219);
+	const CDebugSourceMapping *call = db->Resolve(0, 2185);
+	const CDebugSourceFile *mainC = body ? db->GetFile(body->fileId) : NULL;
+	if (!Check(add != NULL && add->name == "add" && add->signature == "add(u8,u8)->u8" && add->start == 2218
+			   && add->end == 2224 && add->line == 7 && main != NULL && main->name == "main"
+			   && db->FindFunction(0, 2224) == NULL,
+			   "Oscar64 .dbj: functions resolve by address, with their signature and range"))
+		return false;
+	if (!Check(body != NULL && body->lineStart == 8 && call != NULL && call->lineStart == 18
+			   && mainC != NULL && mainC->fileName == "main.c" && db->Resolve(0, 2199) == NULL,
+			   "Oscar64 .dbj: line mappings, and the endless loop's jump has none (Missing)"))
+		return false;
+
+	CDebugSymbolsCodeLabel *addLabel = segment->FindLabelByText("add");
+	if (!Check(addLabel != NULL && addLabel->address == 2218 && segment->FindLabelByText("result") != NULL,
+			   "Oscar64 .dbj: labels for functions and variables"))
+		return false;
+
+	char *text = (mainC != NULL && mainC->lines.size() > 8) ? mainC->lines[8]->GetStdASCII() : NULL;
+	bool textOk = text != NULL && strcmp(text, "    return left + right;") == 0;
+	delete [] text;
+	if (!Check(textOk, "Oscar64 .dbj: the source text is found through the build-directory remap"))
+		return false;
+
+	const char *machines[] = { "atari", "nes" };
+	for (const char *machine : machines)
+	{
+		std::string path = ResolveProjectPath((std::string("tests/data/source-debug/oscar64/") + machine + "/basic-flow/main.dbj").c_str());
+		format = DebugInfoLoadFile(symbols, path.c_str());
+		db = symbols->debugDatabase;
+		bool found = false;
+		for (const CDebugFunction &f : db->Functions())
+			found |= (f.name == "add" && db->Resolve(0, f.start) != NULL);
+		char msg[128];
+		snprintf(msg, sizeof(msg), "Oscar64 .dbj (%s): add() has a line mapping at its entry", machine);
+		if (!Check(format == DebugInfoFormat::Oscar64Dbj && found, msg))
+			return false;
+	}
+	return true;
+}
+
 void CTestDebugInfoFormats::Run(ITestCallback *cb)
 {
 	this->callback = cb;
@@ -258,7 +320,8 @@ void CTestDebugInfoFormats::Run(ITestCallback *cb)
 
 	typedef bool (CTestDebugInfoFormats::*SubTest)(CDebugSymbols *);
 	SubTest subTests[] = { &CTestDebugInfoFormats::RunRouting, &CTestDebugInfoFormats::RunReimport,
-						   &CTestDebugInfoFormats::RunSegmentsAndWatches, &CTestDebugInfoFormats::RunDriveLabels };
+						   &CTestDebugInfoFormats::RunSegmentsAndWatches, &CTestDebugInfoFormats::RunDriveLabels,
+						   &CTestDebugInfoFormats::RunOscar64 };
 
 	CDebugSymbols *liveSymbols = c64->symbols;
 	bool ok = true;
