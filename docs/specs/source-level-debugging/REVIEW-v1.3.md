@@ -105,7 +105,7 @@ MTEngineSDL or add app-side platform code. Needed for P5 only.
   against the migrated `.dbg` map. — Corrected
 - **Backlog ordering:** RD-023..030 were appended after RD-022 in the table; the table
   is now ordered by phase. — Corrected
-- **`§` section markers** violate the repo writing convention (CLAUDE.md); all
+- **Section-sign markers** violate the repo writing convention (CLAUDE.md); all
   cross-references are now `#N`. — Corrected
 - **"Follow PC"** (#4.2): the current view follows the disassembly *cursor*; 1.4 keeps a
   cursor-follow mode for parity and defines a true PC-follow mode. Views are polled per
