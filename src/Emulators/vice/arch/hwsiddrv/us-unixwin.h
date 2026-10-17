@@ -1,3 +1,9 @@
+/* [C64D-REFERENCE-LIVE-EXCEPTION]
+ * Vendored from VICE 3.10 (arch/shared/hwsiddrv/us-unixwin.h). LIVE code:
+ * us_device_* prototypes, included by usbsid-unixwin-drv.c and
+ * us-unixwin-device.c (HAVE_USBSID). Contains no SDL calls.
+ * See src/Emulators/REFERENCE_FILES.md.
+ */
 /*
  * us-unixwin.h - Linux USBSID specific prototypes.
  *
