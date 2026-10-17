@@ -447,7 +447,14 @@ list; explicit `skip(reason)` for unsupported emulator configurations.
 
 ## 7. M5 — Compiler coverage & remote (P3/P4)
 
-- **RD-009 cc65:** parse `.dbg` records (`file`, `line` with `span` refs, `span` with
+- **RD-009 cc65 -- done early (review)**, since the Tier 1 cc65 artifacts existed:
+  `DebugInfoLoadCc65` maps `line` spans (segment start + span start), asm/macro lines
+  first and C lines last (C wins, asm stays a candidate), functions from `csym sc=ext`
+  via their asm `scope`, labels from `sym type=lab` minus generated `Lxxxx`. Relative
+  source paths now resolve against the debug file's directory (fixes the cwd defect).
+  Unlike Oscar64, cc65 maps the `for(;;)` line. `seg` `oname`/`ooffs` (output-file
+  offset) is the hook for RD-007's identity checks. Original notes:
+   parse `.dbg` records (`file`, `line` with `span` refs, `span` with
   `seg`, `seg` with `start`/`addrsize`, `scope`, `sym`, `csym`); relocate spans by segment
   start; C lines vs asm lines by `type`; functions from `scope` entries of type `scope`
   with a `sym`; test on C64, Atari and NES targets where the pinned toolchain builds.
