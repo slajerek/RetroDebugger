@@ -86,6 +86,11 @@ void CDebuggerApi::StepOverSubroutine()
 	debugInterface->StepOverSubroutine();
 }
 
+bool CDebuggerApi::StepOutSubroutine()
+{
+	return debugInterface->StepOutSubroutine();
+}
+
 u64 CDebuggerApi::GetMainCpuCycleCounter()
 {
 	return debugInterface->GetMainCpuCycleCounter();

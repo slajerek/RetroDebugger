@@ -1481,6 +1481,12 @@
     <ClCompile Include="..\..\..\src\Tools\libpsid64\libpsid-sidid.cpp" />
     <ClCompile Include="..\..\..\src\Tools\libpsid64\libpsid-theme.cpp" />
     <ClCompile Include="..\..\..\src\Tools\Shaders\CRenderShaderCRTMonitorOpenGL4.cpp" />
+    <ClCompile Include="..\..\..\src\Tests\CTestInstructionStepping.cpp" />
+    <ClInclude Include="..\..\..\src\Tests\CTestInstructionStepping.h" />
+    <ClCompile Include="..\..\..\src\DebugInterface\CDebugInstructionStepper.cpp" />
+    <ClInclude Include="..\..\..\src\DebugInterface\CDebugInstructionStepper.h" />
+    <ClCompile Include="..\..\..\src\DebugInterface\CDebugExecutionEvents.cpp" />
+    <ClInclude Include="..\..\..\src\DebugInterface\CDebugExecutionEvents.h" />
     <ClCompile Include="..\..\..\src\Tests\CTestMachineMemoryMapping.cpp" />
     <ClInclude Include="..\..\..\src\Tests\CTestMachineMemoryMapping.h" />
     <ClCompile Include="..\..\..\src\Emulators\atari800\AtariInterface\CAtariMemoryMappingResolver.cpp" />

@@ -1694,6 +1694,8 @@ bool nesd_is_debug_on()
 	return debugInterfaceNes->isDebugOn;
 }
 
+static void nesd_evaluate_pc_breakpoints(uint16 pc);
+
 void nesd_check_pc_breakpoint(uint16 pc)
 {
 //	LOGD("nesd_check_pc_breakpoint: pc=%04x", pc);
@@ -1702,6 +1704,20 @@ void nesd_check_pc_breakpoint(uint16 pc)
 	if (debugInterfaceNes->snapshotsManager->IsPerformingSnapshotRestore())
 		return;
 
+	// user breakpoints first: a stop they make ends an armed step (RD-037)
+	nesd_evaluate_pc_breakpoints(pc);
+
+	if (debugInterfaceNes->IsObservingExecution())
+	{
+		u16 regPc;
+		u8 a, x, y, p, sp;
+		debugInterfaceNes->GetCpuRegs(&regPc, &a, &x, &y, &p, &sp);
+		debugInterfaceNes->NotifyInstructionBoundary(pc, sp, debugInterfaceNes->GetByte(pc));
+	}
+}
+
+static void nesd_evaluate_pc_breakpoints(uint16 pc)
+{
 	CDebugInterfaceNes *debugInterface = debugInterfaceNes;
 	CDebugSymbolsSegment *segment = debugInterface->symbols->currentSegment;
 	

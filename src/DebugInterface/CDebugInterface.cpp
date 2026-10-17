@@ -8,6 +8,7 @@
 #include "CSnapshotsManager.h"
 #include "CDebuggerEmulatorPlugin.h"
 #include "CViewDisassembly.h"
+#include "CDebugInstructionStepper.h"
 #include "CDebugEventsHistory.h"
 #include "CDebuggerServerApi.h"
 
@@ -24,6 +25,12 @@ CDebugInterface::CDebugInterface(CViewC64 *viewC64)
 
 	isDebugOn = true;
 	hasPendingCpuDebugInterruptTasks = false;
+
+	instructionStepper = new CDebugInstructionStepper();
+	executionObserved.store(false, std::memory_order_relaxed);
+	boundaryHistoryRestart.store(BoundaryHistoryReset, std::memory_order_relaxed);
+	hasLastBoundary = false;
+	boundarySequence = 0;
 	
 	isRunning = false;
 	isSelected = false;
@@ -61,6 +68,7 @@ CDebugInterface::CDebugInterface(CViewC64 *viewC64)
 
 CDebugInterface::~CDebugInterface()
 {
+	delete instructionStepper;
 }
 
 const char *CDebugInterface::GetIrqSourceName(u8 source)
@@ -511,6 +519,14 @@ void CDebugInterface::SetDebugMode(uint8 debugMode)
 
 	isSteppingMode.store(stepping, std::memory_order_release);
 	this->debugMode.store(debugMode, std::memory_order_release);
+
+	// Anything but RUNNING ends an armed instruction step: a breakpoint or a
+	// pause stopped first, or the user stepped by hand.
+	if (stepping && instructionStepper->IsArmed())
+	{
+		instructionStepper->Cancel(DebugStepStopReason::Interrupted);
+		UpdateExecutionObserved();
+	}
 	NotifyPauseChanged();
 }
 
@@ -629,7 +645,11 @@ void CDebugInterface::StepOneCycle()
 
 void CDebugInterface::StepOverSubroutine()
 {
-	if (viewDisassembly)
+	if (SupportsExecutionEvents())
+	{
+		StepOverSubroutineObserved();
+	}
+	else if (viewDisassembly)
 	{
 		viewDisassembly->StepOverJsr();
 	}

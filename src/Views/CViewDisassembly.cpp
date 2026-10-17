@@ -3227,6 +3227,14 @@ void CViewDisassembly::StepOverJsr()
 {
 //	LOGD("CViewDisassembly::StepOverJsr");
 
+	// The main CPU steps over on execution events (RD-037); the drive CPU
+	// and machines without them keep the temporary breakpoint at PC+3.
+	if (symbols == debugInterface->symbols && debugInterface->SupportsExecutionEvents())
+	{
+		debugInterface->StepOverSubroutineObserved();
+		return;
+	}
+
 	// step over JSR
 	debugInterface->LockMutex();
 

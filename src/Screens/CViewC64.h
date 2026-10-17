@@ -562,6 +562,7 @@ public:
 	
 	void StepOverInstruction();
 	void StepOverSubroutine();
+	void StepOutSubroutine();
 	void StepOneCycle();
 	void StepBackInstruction();
 	void RunContinueEmulation();

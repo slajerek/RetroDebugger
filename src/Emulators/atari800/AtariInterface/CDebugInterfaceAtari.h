@@ -172,6 +172,7 @@ public:
 	virtual void StepOneCycle();
 
 	virtual void SupportsBreakpoints(bool *writeBreakpoint, bool *readBreakpoint);
+	virtual bool SupportsExecutionEvents() override { return true; }
 
 	virtual CDebuggerApi *GetDebuggerApi();
 

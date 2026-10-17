@@ -2674,6 +2674,17 @@ void CViewC64::StepOverSubroutine()
 	}
 }
 
+void CViewC64::StepOutSubroutine()
+{
+	for (std::vector<CDebugInterface *>::iterator it = debugInterfaces.begin(); it != debugInterfaces.end(); it++)
+	{
+		CDebugInterface *debugInterface = *it;
+		if (!debugInterface->isRunning || !debugInterface->SupportsExecutionEvents())
+			continue;
+		debugInterface->StepOutSubroutine();
+	}
+}
+
 void CViewC64::StepOneCycle()
 {
 	for (std::vector<CDebugInterface *>::iterator it = debugInterfaces.begin(); it != debugInterfaces.end(); it++)

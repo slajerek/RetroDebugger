@@ -1496,6 +1496,25 @@ void CMCPServer::RegisterDebuggerTools(CDebuggerServer *server)
 		RegisterTool(tool);
 	}
 
+	// Step out of the current subroutine
+	{
+		MCPToolDescriptor tool;
+		tool.name = "retro_step_out";
+		tool.description = "Step out of the current subroutine — runs until the current frame's RTS (or RTI in an interrupt handler) has executed; recursion and interrupts do not stop it early";
+		tool.inputSchema = {
+			{"type", "object"},
+			{"properties", {{"platform", {{"type", "string"}}}}},
+			{"required", json::array({"platform"})}
+		};
+		tool.handler = [server](const json &params) -> json
+		{
+			string platform = params.value("platform", "c64");
+			ConsumeEndpointResult(server->RunEndpointFunction(platform + "/step/out", "", json(), nullptr, 0), "retro_step_out");
+			return {{"status", "stepping_out"}};
+		};
+		RegisterTool(tool);
+	}
+
 	// Load file
 	{
 		MCPToolDescriptor tool;

@@ -16,7 +16,7 @@ definitions are in `IMPLEMENTATION-PLAN.md`.
 | M0 Discovery & safety net | P0 | RD-001, RD-038, RD-002, RD-024, RD-027, **RD-034**, **RD-042 (engine)** | RD-001 done; all other M0 items in review (remaining gates: CI on 3 platforms, maintainer review of RD-024) |
 | M1 Canonical model & loaders | P2 (core) | RD-006, RD-031, RD-032, RD-007, RD-008, RD-033 | RD-006, RD-031 in review; RD-032 in progress |
 | M2 Source document & view | P1 | RD-003, RD-004, RD-005 | todo |
-| M3 Execution events & stepping engine | P2/P3 | RD-011, RD-037, RD-012, RD-013, RD-014, RD-015 | todo |
+| M3 Execution events & stepping engine | P2/P3 | RD-011, RD-037, RD-012, RD-013, RD-014, RD-015 | in-progress |
 | M4 Machine mapping providers | P2/P3 | RD-028, RD-040, RD-029, RD-025, RD-026, RD-030, RD-034 | in-progress |
 | M5 Compiler coverage & remote | P3/P4 | RD-009, RD-010, RD-036, RD-016, RD-017, RD-035, **RD-043 (64tass symbols)**, **RD-044 (1541)** | todo |
 | M6 IDE workspace | P5 | RD-018, RD-042 (consumption), RD-019, RD-020, RD-021, **RD-045 (C64U observed mode)** | todo |
@@ -40,8 +40,8 @@ definitions are in `IMPLEMENTATION-PLAN.md`.
 | RD-003 | P1 | ui | Document registry + read-only `SourceDocumentView` replacing `CViewSourceCode` internals | todo | RD-001, RD-038 | ImGui test `source_view_opens_and_scrolls`; C64/Atari/NES instances |
 | RD-004 | P1 | ui | C lexer + 6502 dialect profiles (KickAss, 64tass, ca65, Oscar64 asm) | todo | RD-003 | Lexer snapshot tests (golden tokens) |
 | RD-005 | P1 | ui | PC/breakpoint/selection decorations + bidirectional navigation | todo | RD-003, RD-006 | ImGui test: click line → disassembly address; PC line follows pause |
-| RD-011 | P2 | core | Generic execution events at existing hook points (+ RTS/RTI/reset/interrupt-entry) | todo | RD-001, RD-024 | Event-order test per machine; no perf regression vs `VicePlatformAbstraction` pacing gate |
-| RD-037 | P2 | core | Step-over/step-out in `CDebugInterface`; proper temporary breakpoint with priorities | todo | RD-011 | `CTestStepOverRecursion`, `CTestStepOut`, user bp beats temp bp |
+| RD-011 | P2 | core | Generic execution events at existing hook points (+ RTS/RTI/reset/interrupt-entry) | in-progress(boundary events on C64/Atari/NES CPUs, classifier + C64 event counts green, pacing gate green; open: reset/mapping-changed events, 1541) | RD-001, RD-024 | Event-order test per machine; no perf regression vs `VicePlatformAbstraction` pacing gate |
+| RD-037 | P2 | core | Step-over/step-out in `CDebugInterface`; proper temporary breakpoint with priorities | review(stack-based step-over/out on 3 machines, user bp wins; `CTestInstructionStepping` 18 steps; open: event-history entry for step stops, 1541 still PC+3) | RD-011 | `CTestStepOverRecursion`, `CTestStepOut`, user bp beats temp bp |
 | RD-028 | P2 | c64 | C64 mapping provider (6510 port/PLA/cart/Ultimax), unify `CViewC64MemoryBank` table | in-progress(provider from VICE tables, no-cart tests green; open: cart fixtures/profiles, view unification) | RD-024, RD-027 | #3B.2 "Required C64 tests" pass |
 | RD-040 | P2 | nes | NES mapping provider (mapper PRG identity, header→ROM offset, PRG-RAM), fix OOB peek | in-progress(provider from the board page tables, UxROM + NROM tests green; open: iNES file offset, MMC1/MMC3 fixtures in RD-026) | RD-024, RD-027 | NROM + UxROM identity tests pass |
 | RD-029 | P2 | atari | Atari provider (model, PORTB, OS/BASIC, 130XE banks, ANTIC view, cartridge) | in-progress(provider from Atari800 attributes + banking state; OS/BASIC/130XE CPU-vs-ANTIC tests green; open: XEGS and other cart types, direct-RAM adapter) | RD-024, RD-027 | #3B.3 "Required Atari tests" pass or explicit skips recorded |
@@ -94,7 +94,7 @@ Questions 1, 2, 3, 5, 8 and 10 are answered in spec #15/#20.
 | Menu "Import labels" with a `.dbg` skips `DeleteAllSymbols`: stale same-name segments keep freed source lines and `ActivateSelectedSegment` picks the stale one (use-after-free) | RD-032 (fixed: segments hold no line pointers, a `.dbg` load replaces the segment set) |
 | `.dbg` `<Sources>` paths: split on every comma; a Windows path is not split into a file name on macOS/Linux (`GetFileNameComponentFromPath` uses the host separator); relative paths resolve against the process cwd, not the `.dbg` folder | RD-006 (file names from both separators; a source missing at its path is looked up next to the `.dbg`; comma split remains) |
 | CLI `nes` unreachable branch; `-ines` missing; `-debuginfo` never NES; NES source layout slot | RD-033 (fixed) |
-| C64 PC/memory checks ignore `breakOnPC`/`breakOnMemory`; temp bp hides user bp, no event | RD-037 |
+| C64 PC/memory checks ignore `breakOnPC`/`breakOnMemory`; temp bp hides user bp, no event | RD-037 (main CPU: user bp now wins and ends the step; `breakOnPC` and the event entry still open) |
 | `nesd_peek_safe_io` OOB read | RD-027 (fixed) |
 | Engine: `CPianoKeyboard` dereferenced a NULL `midiIn` without an ALSA sequencer (startup segfault on Linux CI/containers) | RD-034 (fixed on engine branch, 623b76e) |
 | `GT2Patterns` step 16 assumed macOS key input (`virtualkeycode`); failed on every other platform | RD-034 (test fixed, 7fed440) |
@@ -122,3 +122,4 @@ Questions 1, 2, 3, 5, 8 and 10 are answered in spec #15/#20.
 | 2026-10-17 | RD-033: NES autoload of labels/debug info, `-ines`, CLI symbols to the loaded machine, NES source-code layout. Linux suite 79/79; ImGui suite 10/15 before and after (five pre-existing Linux failures, AGENTS.md) |
 | 2026-10-17 | RD-028 part 1: `CViceMemoryMappingResolver` classifies accesses from VICE's own memory tables; `CTestC64MemoryMapping` (all `$01` patterns). Spec #3B.2 `$34` row corrected (RAM, not I/O). Linux suite 80/80 |
 | 2026-10-17 | RD-040 + RD-029 first parts: `CNesMemoryMappingResolver` (board page tables) and `CAtariMemoryMappingResolver` (Atari800 attributes + banking state); `CTestMachineMemoryMapping` (16 steps: synthesized UxROM bank switch, mapper writes, RAM mirrors; Atari OS/BASIC via PORTB, 130XE CPU vs ANTIC bank). Linux suite 81/81 (7 skipped) |
+| 2026-10-17 | RD-011 + RD-037: instruction-boundary events (`CDebugExecutionEvents`) from the three CPU hooks, classified from the previous opcode and SP; stack-based step-over/step-out (`CDebugInstructionStepper`), Step Out in the Code menu (Ctrl+F11), remote `step/out`, MCP `retro_step_out`; `CTestInstructionStepping` (18 steps: recursion, user bp priority, IRQ through the return address, all three machines). Linux suite 82/82 (7 skipped); ImGui 10/15 unchanged |

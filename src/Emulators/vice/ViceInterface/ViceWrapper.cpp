@@ -844,11 +844,28 @@ int c64d_is_debug_on_drive1541()
 	return 0;
 }
 
+static void c64d_c64_evaluate_pc_breakpoints(uint16 pc);
+
 void c64d_c64_check_pc_breakpoint(uint16 pc)
 {
 	// skip checking breakpoints when quick fast-forward/restoring snapshot
 	if (debugInterfaceVice->snapshotsManager->IsPerformingSnapshotRestore())
 		return;
+
+	// user breakpoints first: a stop they make ends an armed step (RD-037)
+	c64d_c64_evaluate_pc_breakpoints(pc);
+
+	if (debugInterfaceVice->IsObservingExecution())
+	{
+		u16 regPc;
+		u8 a, x, y, p, sp;
+		debugInterfaceVice->GetCpuRegs(&regPc, &a, &x, &y, &p, &sp);
+		debugInterfaceVice->NotifyInstructionBoundary(pc, sp, c64d_peek_c64(pc));
+	}
+}
+
+static void c64d_c64_evaluate_pc_breakpoints(uint16 pc)
+{
 
 	CDebugSymbolsSegmentC64 *segment = (CDebugSymbolsSegmentC64*) debugInterfaceVice->symbols->currentSegment;
 	if (segment == NULL)

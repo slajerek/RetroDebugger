@@ -13,6 +13,7 @@
 #include "EmulatorsConfig.h"
 #include "CStackAnnotation.h"
 #include "json.hpp"
+#include "CDebugExecutionEvents.h"
 
 #include <atomic>
 #include <mutex>
@@ -20,6 +21,7 @@
 #include <map>
 #include <list>
 #include <string>
+#include <vector>
 
 class CGuiView;
 
@@ -32,6 +34,7 @@ class CSnapshotsManager;
 class CDebugSymbols;
 class CDebugSymbolsSegment;
 class CDebugMemoryMappingResolver;
+class CDebugInstructionStepper;
 
 class CViewEmulatorScreen;
 class CViewDisassembly;
@@ -238,6 +241,21 @@ public:
 	virtual void StepOverInstruction();
 	virtual void StepOneCycle();
 	virtual void StepOverSubroutine();
+
+	// Execution events (RD-011). The emulator's per-instruction hook calls
+	// NotifyInstructionBoundary on the emulation thread, only while
+	// IsObservingExecution() -- a step is armed or an observer is registered.
+	virtual bool SupportsExecutionEvents() { return false; }
+	bool IsObservingExecution() const { return executionObserved.load(std::memory_order_relaxed); }
+	void NotifyInstructionBoundary(u16 pc, u8 sp, u8 opcode);
+	void AddExecutionObserver(CDebugExecutionObserver *observer);
+	void RemoveExecutionObserver(CDebugExecutionObserver *observer);
+
+	// Instruction step-over/step-out on execution events (RD-037). Machines
+	// without SupportsExecutionEvents() keep the PC+3 temporary breakpoint.
+	CDebugInstructionStepper *instructionStepper;
+	void StepOverSubroutineObserved();
+	virtual bool StepOutSubroutine();
 	virtual bool RunEmulationForOneFrame();
 	
 	virtual void RunContinueEmulation();
@@ -340,6 +358,21 @@ public:
 	//
 protected:
 	std::atomic<int> debugMode;
+
+private:
+	bool BeginInstructionStep(u16 *pc, u8 *sp, u8 *opcode);
+	void UpdateExecutionObserved();
+
+	enum { BoundaryHistoryKeep, BoundaryHistoryReset, BoundaryHistorySeed };
+	std::atomic<bool> executionObserved;
+	std::atomic<int> boundaryHistoryRestart;
+	CDebugInstructionBoundary boundaryHistorySeed;
+	std::mutex executionObserversMutex;
+	std::vector<CDebugExecutionObserver *> executionObservers;
+	// emulation thread only
+	CDebugInstructionBoundary lastBoundary;
+	bool hasLastBoundary;
+	u64 boundarySequence;
 
 };
 

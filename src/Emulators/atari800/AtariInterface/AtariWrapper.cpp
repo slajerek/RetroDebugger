@@ -109,6 +109,8 @@ int atrd_is_debug_on_atari()
 	return 0;
 }
 
+static void atrd_evaluate_pc_breakpoints(uint16 pc);
+
 void atrd_check_pc_breakpoint(uint16 pc)
 {
 //	LOGD("atrd_check_pc_breakpoint: pc=%04x", pc);
@@ -116,7 +118,21 @@ void atrd_check_pc_breakpoint(uint16 pc)
 	// skip checking breakpoints when quick fast-forward/restoring snapshot
 	if (debugInterfaceAtari->snapshotsManager->IsPerformingSnapshotRestore())
 		return;
-	
+
+	// user breakpoints first: a stop they make ends an armed step (RD-037)
+	atrd_evaluate_pc_breakpoints(pc);
+
+	if (debugInterfaceAtari->IsObservingExecution())
+	{
+		u16 regPc;
+		u8 a, x, y, p, sp;
+		debugInterfaceAtari->GetCpuRegs(&regPc, &a, &x, &y, &p, &sp);
+		debugInterfaceAtari->NotifyInstructionBoundary(pc, sp, debugInterfaceAtari->GetByte(pc));
+	}
+}
+
+static void atrd_evaluate_pc_breakpoints(uint16 pc)
+{
 	CDebugInterfaceAtari *debugInterface = debugInterfaceAtari;
 
 	CDebugSymbolsSegment *segment = debugInterface->symbols->currentSegment;

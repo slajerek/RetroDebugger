@@ -487,6 +487,9 @@ CMainMenuBar::CMainMenuBar()
 	kbsStepOverSubroutine = new CSlrKeyboardShortcut(KBZONE_GLOBAL, "Step over JSR", MTKEY_F10, false, false, true, false, this);
 	guiMain->AddKeyboardShortcut(kbsStepOverSubroutine);
 
+	kbsStepOutSubroutine = new CSlrKeyboardShortcut(KBZONE_GLOBAL, "Step out of subroutine", MTKEY_F11, false, false, true, false, this);
+	guiMain->AddKeyboardShortcut(kbsStepOutSubroutine);
+
 	kbsStepBackInstruction = new CSlrKeyboardShortcut(KBZONE_GLOBAL, "Step back instruction", MTKEY_F10, false, true, false, false, this);
 	guiMain->AddKeyboardShortcut(kbsStepBackInstruction);
 
@@ -804,6 +807,11 @@ void CMainMenuBar::RenderImGui()
 			if (ImGui::MenuItem("Step Over JSR", kbsStepOverSubroutine->cstr))
 			{
 				kbsStepOverSubroutine->Run();
+			}
+
+			if (ImGui::MenuItem("Step Out", kbsStepOutSubroutine->cstr))
+			{
+				kbsStepOutSubroutine->Run();
 			}
 			
 			if (ImGui::MenuItem("Backstep", kbsStepBackInstruction->cstr))
@@ -4827,6 +4835,11 @@ bool CMainMenuBar::ProcessKeyboardShortcut(u32 zone, u8 actionType, CSlrKeyboard
 	else if (shortcut == kbsStepOverSubroutine)
 	{
 		viewC64->StepOverSubroutine();
+		return true;
+	}
+	else if (shortcut == kbsStepOutSubroutine)
+	{
+		viewC64->StepOutSubroutine();
 		return true;
 	}
 	else if (shortcut == kbsStepBackInstruction)

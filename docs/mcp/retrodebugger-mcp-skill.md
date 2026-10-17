@@ -30,6 +30,8 @@ Use this skill when working with the RetroDebugger MCP server to debug 8-bit pro
 - `retro_step_instruction` — step one CPU instruction
 - `retro_step_cycle` — step one CPU clock cycle
 - `retro_step_subroutine` — step over a JSR (runs until the subroutine returns)
+- `retro_step_out` — run until the current subroutine returns (its RTS, or the RTI of an
+  interrupt handler); deeper calls, recursion and interrupts do not stop it early
 - `retro_cpu_jump` — force PC to a specific address. Returns `{"status":"jumped","applied":true}`
   once the new PC has been committed to the CPU, so a following `retro_step_instruction`
   executes at the target. `{"status":"queued","applied":false}` means the change did not

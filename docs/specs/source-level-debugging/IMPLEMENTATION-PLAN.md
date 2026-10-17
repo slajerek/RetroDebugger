@@ -364,6 +364,17 @@ Oscar64 and VICE labels load through the registry; RD-038 + new contract tests g
 and never fights user breakpoints.
 
 ### RD-011 Execution events
+**First part done (in progress):** one hook, not six. Each machine's existing
+per-instruction breakpoint hook (`c64d_c64_check_pc_breakpoint`,
+`atrd_check_pc_breakpoint`, `nesd_check_pc_breakpoint`) evaluates user breakpoints and
+then, only while `IsObservingExecution()` (one relaxed atomic load otherwise), calls
+`CDebugInterface::NotifyInstructionBoundary(pc, sp, opcode)`. Calls, returns, RTI, BRK,
+TXS and interrupt entries are derived from the previous boundary's opcode and the SP
+movement (an interrupt adds -3 on top of the opcode's own change), so no emulator core
+was touched. A step seeds the history with its starting boundary, so an IRQ taken right
+after the first instruction is still an interrupt entry. Observers
+(`CDebugExecutionObserver`) are registered on the interface. Still open: explicit reset
+and mapping-changed events, the 1541 CPU. Original plan:
 - `CDebugInterface` gets an `IExecutionObserver` list with `OnBeforeInstruction(pc,
   mapped)`, `OnAfterInstruction(lastPc, opcode, nextPc)`, `OnInterruptEntry(kind,
   vectorPc)`, `OnReturn(kind)`, `OnReset()`, `OnMappingChanged(epoch)`.
@@ -376,6 +387,18 @@ and never fights user breakpoints.
   existing `VicePlatformAbstraction` pacing test.
 
 ### RD-037 Instruction-level step-over/step-out in the interface
+**Done (review):** `CDebugInstructionStepper` on the boundary events. Step-over arms on
+a JSR with the start SP and stops at the first boundary where the stack is back at (or
+above) it: `Returned` at PC+3 with the same SP, `FrameLeft` otherwise (the routine
+dropped its return address). Step-out stops after the RTS/RTI that lifts SP above the
+start. No temporary breakpoint is involved on the main CPU: any `SetDebugMode` other than
+RUNNING (a user breakpoint, a pause, a manual step) cancels an armed step as
+`Interrupted`. Exposed as Code > Step Out (Ctrl+F11), remote `<platform>/step/out` and
+MCP `retro_step_out`; `CDebuggerApi::StepOutSubroutine`. The 1541 view and machines
+without execution events keep the PC+3 breakpoint. `CTestInstructionStepping` replaces the
+four planned test classes (recursion from inside the first frame, step-out, user bp
+beats the step, an IRQ handler running through PC+3; C64, Atari, NES). Still open: an
+event-history entry for step stops. Original plan:
 - Move `StepOverJsr` logic into `CDebugInterface::StepOverSubroutine` using the
   observer: arm, count JSR/RTS depth from events (with interrupt nesting tracked
   separately), stop when depth returns to zero at an instruction boundary. Keep the

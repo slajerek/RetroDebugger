@@ -301,6 +301,15 @@ void CDebuggerServerApi::RegisterEndpoints(CDebuggerServer *server)
 		debuggerApi->StepOverSubroutine();
 		return server->PrepareResult(HTTP_OK, token, json(), NULL, 0);
 	});
+
+	sprintf(buf, "%s/step/out", plat);
+	RegisterEndpoint(server, buf, plat, "cpu", "Step out of the current subroutine",
+	[this, server](const string token, json params, unsigned char *binaryData, int binaryDataSize) -> vector<char>*
+	{
+		if (!debuggerApi->StepOutSubroutine())
+			return server->PrepareResult(HTTP_BAD_REQUEST, token, json{{"error", "step out needs a paused CPU that reports execution events"}}, NULL, 0);
+		return server->PrepareResult(HTTP_OK, token, json(), NULL, 0);
+	});
 	
 	sprintf(buf, "%s/cpu/status", plat);
 	RegisterEndpoint(server, buf, plat, "cpu", "Get CPU registers and flags",

@@ -29,6 +29,7 @@ public:
 	virtual void StepOneCycle();
 	virtual void StepOverInstruction();
 	virtual void StepOverSubroutine();	// step over JSR
+	virtual bool StepOutSubroutine();	// run until the current frame returns
 
 	virtual u64 GetMainCpuCycleCounter();
 	virtual u64 GetMainCpuInstructionCycleCounter();

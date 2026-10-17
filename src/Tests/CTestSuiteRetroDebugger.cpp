@@ -14,6 +14,7 @@
 #include "CTestCoreMappingAccessors.h"
 #include "CTestC64MemoryMapping.h"
 #include "CTestMachineMemoryMapping.h"
+#include "CTestInstructionStepping.h"
 #include "CTestAutoloadD64.h"
 #include "CTestDiskDetach.h"
 #include "CTestDiskAttach.h"
@@ -116,6 +117,7 @@ void CTestSuiteRegisterRetroDebuggerTests(std::vector<std::unique_ptr<CTest> > &
 	tests.push_back(std::make_unique<CTestCoreMappingAccessors>());
 	tests.push_back(std::make_unique<CTestC64MemoryMapping>());
 	tests.push_back(std::make_unique<CTestMachineMemoryMapping>());
+	tests.push_back(std::make_unique<CTestInstructionStepping>());
 	// TODO(autoload-d64): Re-enable once the cold-reset fastloader wedge
 	// in bitbreaker.d64 is fixed. The test reliably reproduces the bug
 	// (drvPC stuck at $0400 spinning JMP ($1800), C64 stuck on
