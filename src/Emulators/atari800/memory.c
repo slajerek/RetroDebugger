@@ -1241,3 +1241,79 @@ void MEMORY_HwPutByte(UWORD addr, UBYTE byte)
 	}
 }
 #endif /* PAGED_MEM */
+
+/* RD-027 (docs/specs/source-level-debugging): the banking state the Atari
+   memory mapping provider resolves from, as the emulator holds it. Never
+   decode it again from the last byte written to PORTB or $D5xx: machine
+   type, RAM size and cartridge type change what those registers mean.
+   Any pointer may be NULL.
+     machineType      Atari800_machine_type (Atari800_MACHINE_800/XLXE/5200)
+     ramSizeKb        MEMORY_ram_size (MEMORY_RAM_320_RAMBO/COMPY_SHOP codes)
+     portb, portbMask PIA_PORTB and PIA_PORTB_mask as the PIA holds them
+     xeBank           MEMORY_xe_bank: extended bank the CPU sees at
+                      $4000-$7FFF, 0 = base RAM
+     anticXeBank      the bank ANTIC fetches $4000-$7FFF from (it can differ
+                      from the CPU's on 130XE/Compy Shop), 0 = base RAM
+     selftestEnabled  MEMORY_selftest_enabled ($5000-$57FF self-test ROM)
+     cart809fEnabled, cartA0bfEnabled  cartridge windows switched in
+     cartType, cartState, cartSizeKb   CARTRIDGE_main (state = bank/switch,
+                      its meaning is per cartridge type) */
+void atrd_get_banking_state(int *machineType, int *ramSizeKb, int *portb, int *portbMask,
+                            int *xeBank, int *anticXeBank, int *selftestEnabled,
+                            int *cart809fEnabled, int *cartA0bfEnabled,
+                            int *cartType, int *cartState, int *cartSizeKb)
+{
+	if (machineType) *machineType = Atari800_machine_type;
+	if (ramSizeKb) *ramSizeKb = MEMORY_ram_size;
+	if (portb) *portb = PIA_PORTB;
+	if (portbMask) *portbMask = PIA_PORTB_mask;
+	if (xeBank) *xeBank = MEMORY_xe_bank;
+	if (anticXeBank) {
+		*anticXeBank = (ANTIC_xe_ptr == NULL || atarixe_memory == NULL)
+			? 0 : (int)((ANTIC_xe_ptr - atarixe_memory) >> 14);
+	}
+	if (selftestEnabled) *selftestEnabled = MEMORY_selftest_enabled;
+	if (cart809fEnabled) *cart809fEnabled = cart809F_enabled;
+	if (cartA0bfEnabled) *cartA0bfEnabled = MEMORY_cartA0BF_enabled;
+	if (cartType) *cartType = CARTRIDGE_main.type;
+	if (cartState) *cartState = CARTRIDGE_main.state;
+	if (cartSizeKb) *cartSizeKb = CARTRIDGE_main.size;
+}
+
+/* What the CPU finds at ADDR for reads: MEMORY_RAM, MEMORY_ROM (writes are
+   dropped) or MEMORY_HARDWARE. -1 when attributes are paged (PAGED_ATTRIB). */
+int atrd_get_memory_attrib(int addr)
+{
+#ifndef PAGED_ATTRIB
+	if (addr < 0 || addr > 0xffff)
+		return -1;
+	return MEMORY_attrib[addr];
+#else
+	return -1;
+#endif
+}
+
+/* Physical backing storage that is not visible at its CPU address right now.
+   region 0: RAM under the XL/XE OS ROM, offset = address - $C000 ($C000-$FFFF;
+             it holds that RAM only while the OS ROM is switched in)
+   region 1: RAM under the $8000-$9FFF cartridge window
+   region 2: RAM under the $A000-$BFFF cartridge / BASIC window
+   region 3: extended RAM banks, offset = (bank << 14) + (address - $4000);
+             the bank currently mapped for the CPU lives in MEMORY_mem instead
+   Returns the byte, or -1 for an unknown region or out-of-range offset. */
+int atrd_peek_backing(int region, int offset)
+{
+	if (offset < 0)
+		return -1;
+	switch (region) {
+	case 0:
+		return offset < (int)sizeof(under_atarixl_os) ? under_atarixl_os[offset] : -1;
+	case 1:
+		return offset < (int)sizeof(under_cart809F) ? under_cart809F[offset] : -1;
+	case 2:
+		return offset < (int)sizeof(under_cartA0BF) ? under_cartA0BF[offset] : -1;
+	case 3:
+		return (atarixe_memory != NULL && (ULONG)offset < atarixe_memory_size) ? atarixe_memory[offset] : -1;
+	}
+	return -1;
+}

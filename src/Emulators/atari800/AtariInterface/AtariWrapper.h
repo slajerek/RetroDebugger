@@ -112,4 +112,18 @@ extern uint16 *atrd_stack_origin_pc;
 
 void c64d_show_message(char *message);
 
+// RD-027: Atari banking state and backing storage (definitions in memory.c).
+#ifdef __cplusplus
+extern "C" {
+#endif
+void atrd_get_banking_state(int *machineType, int *ramSizeKb, int *portb, int *portbMask,
+							int *xeBank, int *anticXeBank, int *selftestEnabled,
+							int *cart809fEnabled, int *cartA0bfEnabled,
+							int *cartType, int *cartState, int *cartSizeKb);
+int atrd_get_memory_attrib(int addr);
+int atrd_peek_backing(int region, int offset);
+#ifdef __cplusplus
+}
+#endif
+
 #endif
