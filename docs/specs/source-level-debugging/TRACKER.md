@@ -1,0 +1,100 @@
+# Source-level debugging — work tracker
+
+Live status of the backlog in `source-level-debugging-ide-spec.md` #14. Update this
+file in the same commit as the work it describes. Sequencing and milestone
+definitions are in `IMPLEMENTATION-PLAN.md`.
+
+**Status values:** `todo` · `in-progress` · `blocked(<on what>)` · `review` · `done(<commit>)` · `dropped(<why>)`
+**Tracks:** core · ui · c64 · nes · atari · tests · ci · remote · compiler · research
+
+**Legend for "Gate":** what must be true (test name, CI leg, doc) before the row can be `done`.
+
+## Milestone overview
+
+| Milestone | Phase | Scope | Status |
+|---|---|---|---|
+| M0 Discovery & safety net | P0 | RD-001, RD-038, RD-002, RD-024, RD-027 | RD-001 done, rest todo |
+| M1 Canonical model & loaders | P2 (core) | RD-006, RD-031, RD-032, RD-007, RD-008, RD-033 | todo |
+| M2 Source document & view | P1 | RD-003, RD-004, RD-005 | todo |
+| M3 Execution events & stepping engine | P2/P3 | RD-011, RD-037, RD-012, RD-013, RD-014, RD-015 | todo |
+| M4 Machine mapping providers | P2/P3 | RD-028, RD-040, RD-029, RD-025, RD-026, RD-030, RD-034 | todo |
+| M5 Compiler coverage & remote | P3/P4 | RD-009, RD-010, RD-036, RD-016, RD-017, RD-035 | todo |
+| M6 IDE workspace | P5 | RD-018, RD-042, RD-019, RD-020, RD-021 | todo |
+| M7 Advanced & research | P6 | RD-022, RD-023 | todo |
+
+## Backlog
+
+| ID | Phase | Track | Title | Status | Depends on | Gate |
+|---|---|---|---|---|---|---|
+| RD-001 | P0 | core | Inventory source view, hooks, breakpoints, loaders, memory translation APIs | done(53d397d+1.4) | — | Spec #20 written |
+| RD-038 | P0 | tests | Regression test for KickAss `.dbg` + VICE `.vs` loaders (`dankwars.dbg`, `labelstest1.vs`) | todo | RD-001 | `CTestSymbolsKickAssDbg` + `CTestSymbolsViceLabels` pass on all 3 CI platforms |
+| RD-002 | P0 | tests | Portable C/ASM fixtures, pinned toolchains, verified compiler×machine matrix | todo | — | `tests/source-debug/toolchains/*.yaml` with versions; matrix table in plan; Tier 1 artifacts committed |
+| RD-024 | P0 | core | Logical vs physical code identity + `IMemoryMappingResolver` contract | todo | RD-001 | Header + unit test of `Unknown`/alias semantics; reviewed by maintainer |
+| RD-027 | P0 | core | Audit + accessor patches in VICE/Nestopia/Atari800 cores (fetch/read/write, bus master) | todo | RD-001, RD-024 | Accessors compiled on 3 platforms; `tests/test-reference-files.sh` still green |
+| RD-006 | P2 | core | Canonical debug database + capability model; migrate `CDebugAsmSource` | todo | RD-001, RD-038 | RD-038 tests unchanged and green; interval index unit tests |
+| RD-031 | P2 | core | Loader registry with content sniffing (`.dbg` XML vs text, `.dbj`) | todo | RD-006 | Menu/autoload/CLI go through registry; sniff unit test |
+| RD-032 | P2 | core | Symbol lifetime fixes (segments, re-import, dtor, `D:` labels, Watchpoints layout) | todo | RD-006 | ASan/valgrind-clean re-import test |
+| RD-007 | P2 | core | Bank-aware address indexes, source remapping, binary/cartridge identity checks | todo | RD-006, RD-024 | Lookup tests: multi-span, missing, ambiguous, same-PC two identities |
+| RD-008 | P2 | compiler | Oscar64 `.dbj` adapter + contract tests | todo | RD-002, RD-006, RD-031 | Tier 1 Oscar64 fixture resolves file:line for known addresses |
+| RD-033 | P3 | core | Generalize loading entry points (NES `-debuginfo`/autoload, CLI `nes`/`-ines`, NES source slot) | todo | RD-031 | NES loads `.dbg` from CLI and menu; workspace test updated |
+| RD-003 | P1 | ui | Document registry + read-only `SourceDocumentView` replacing `CViewSourceCode` internals | todo | RD-001, RD-038 | ImGui test `source_view_opens_and_scrolls`; C64/Atari/NES instances |
+| RD-004 | P1 | ui | C lexer + 6502 dialect profiles (KickAss, 64tass, ca65, Oscar64 asm) | todo | RD-003 | Lexer snapshot tests (golden tokens) |
+| RD-005 | P1 | ui | PC/breakpoint/selection decorations + bidirectional navigation | todo | RD-003, RD-006 | ImGui test: click line → disassembly address; PC line follows pause |
+| RD-011 | P2 | core | Generic execution events at existing hook points (+ RTS/RTI/reset/interrupt-entry) | todo | RD-001, RD-024 | Event-order test per machine; no perf regression vs `VicePlatformAbstraction` pacing gate |
+| RD-037 | P2 | core | Step-over/step-out in `CDebugInterface`; proper temporary breakpoint with priorities | todo | RD-011 | `CTestStepOverRecursion`, `CTestStepOut`, user bp beats temp bp |
+| RD-028 | P2 | c64 | C64 mapping provider (6510 port/PLA/cart/Ultimax), unify `CViewC64MemoryBank` table | todo | RD-024, RD-027 | #3B.2 "Required C64 tests" pass |
+| RD-040 | P2 | nes | NES mapping provider (mapper PRG identity, header→ROM offset, PRG-RAM), fix OOB peek | todo | RD-024, RD-027 | NROM + UxROM identity tests pass |
+| RD-029 | P2 | atari | Atari provider (model, PORTB, OS/BASIC, 130XE banks, ANTIC view, cartridge) | todo | RD-024, RD-027 | #3B.3 "Required Atari tests" pass or explicit skips recorded |
+| RD-012 | P3 | core | Physical/logical execution context tracker (seeded from stack annotations) | todo | RD-011, RD-006 | Tracker tests: JSR/RTS, IRQ/RTI nesting, tail JMP, attach mid-run → unknown |
+| RD-013 | P3 | core | Source-step state machine in the emulation-thread hook, stop reasons, budget | todo | RD-007, RD-012, RD-037 | Into/Over/Out on Tier 1 Oscar64 fixture; watchdog never trips |
+| RD-025 | P3 | core | Bank-aware CPU/source/physical breakpoints + labels; mapping-driven segment activation | todo | RD-007, RD-011, RD-024 | Same-PC/different-identity breakpoint tests on 3 machines |
+| RD-014 | P3 | core | Source breakpoints + re-resolution after rebuild | todo | RD-007, RD-013, RD-025 | Breakpoint survives reload; stale-binary warning test |
+| RD-015 | P3 | tests | Headless step-trace runner + golden expectations (#9.5 format) | todo | RD-002, RD-013 | `tests/source-debug/expectations/**` replayed in suite |
+| RD-026 | P3 | tests | NES NROM/UxROM/MMC1-or-MMC3 banked fixtures with physical-fetch traces | todo | RD-002, RD-024, RD-025, RD-040 | #3A.6 assertion list green |
+| RD-030 | P3 | tests | C64 + Atari banked suites; shared 3-machine matrix | todo | RD-002, RD-025, RD-028, RD-029 | #3B.4 trace schema produced for every fixture |
+| RD-034 | P3 | ci | Run headless suite on Linux CI (both log legs) | todo | — | `build-linux.yml` runs `tests/run_test.sh --skip-build` under xvfb; AGENTS.md updated |
+| RD-036 | P3 | remote | Remote/MCP: `step/source/*`, `step/out`, `source/location`, `symbols/load`; skill doc | todo | RD-013, RD-031 | `CTestMCPProtocol` extended; `docs/mcp/retrodebugger-mcp-skill.md` updated |
+| RD-009 | P2 | compiler | cc65 `.dbg` adapter + contract tests | todo | RD-002, RD-006, RD-031 | Tier 1 cc65 fixture (C64, Atari, NES where target builds) |
+| RD-010 | P2 | compiler | KickC artifact audit + supported subset | todo | RD-002, RD-006, RD-031 | Capability flags documented; `Approximate` where only line mapping |
+| RD-016 | P4 | compiler | Oscar64 upstream: range coalescing/column export | todo | RD-008 | Upstream PR link; before/after `.dbj` fixture |
+| RD-017 | P4 | compiler | Structured inline provenance + logical inline frames | todo | RD-016, RD-012 | Inline fixture Step Out of inlined frame |
+| RD-035 | P4 | ci | Nightly toolchain provisioning (cc65, Oscar64 pinned, KickC+Java, KickAss jar licensing) | todo | RD-002 | Nightly workflow green with version report artifact |
+| RD-018 | P5 | ui | Workspace explorer + tabs | todo | RD-003 | ImGui test opens folder, switches tabs |
+| RD-042 | P5 | core | argv process launcher (engine proposal or app-side) | todo | RD-002 | Decision 11 recorded; launcher unit test with timeout |
+| RD-019 | P5 | ui | Toolchain registry, build tasks, diagnostics console | todo | RD-018, RD-002, RD-042 | Build an Oscar64 sample from the UI; clickable diagnostic |
+| RD-020 | P5 | core | Build/run/debug orchestration + artifact consistency | todo | RD-019, RD-007 | Failed build keeps old session marked stale |
+| RD-021 | P5 | ui | Editing, save, undo/redo, search, file watchers | todo | RD-003, RD-018 | Dirty-buffer + save + watcher tests |
+| RD-022 | P6 | core | Variables/types model, optimized stepping | todo | RD-017 | Feature-gated; optimized fixture |
+| RD-023 | P6 | research | C symbols / Watch / Memory Viewer research spike (proposal only) | todo | RD-008, RD-009, RD-010, RD-020 | Capability matrix + follow-up spec reviewed |
+
+## Open decisions (spec #15)
+
+| # | Question | Owner | Status |
+|---|---|---|---|
+| 4 | Exact Oscar64 / cc65 / KickC baseline versions and flags | RD-002 | open |
+| 6 | Step into function without metadata: skip (default) vs enter disassembly | maintainer | proposed: skip tracked runtime calls, option to enter disassembly |
+| 7 | Optimization levels with precise stepping | RD-002 | proposed: debug/unoptimized exact, optimized best-effort with warning |
+| 9 | NES mapper families for headless tests | RD-026 | proposed: NROM, UxROM, MMC1 |
+| 11 | argv process launcher: engine proposal vs app-side | maintainer | open (needed before P5) |
+| 12 | C64U and 1541 CPU scope | maintainer | proposed: out of scope through P4 |
+| 13 | Default Atari fixture configuration | RD-002 | proposed: explicit 800XL/64K and 130XE/128K per fixture |
+
+Questions 1, 2, 3, 5, 8 and 10 are answered in spec #15/#20.
+
+## Known defects to close on the way (not separate rows)
+
+| Defect | Closed by |
+|---|---|
+| Segments never deleted; `.dbg` re-import dangling pointers; segment dtor double delete | RD-032 |
+| `.vs` `D:` labels ignored; newer `<Watchpoints>` layout misparsed | RD-032 |
+| CLI `nes` unreachable branch; `-ines` missing; `-debuginfo` never NES; NES source layout slot | RD-033 |
+| C64 PC/memory checks ignore `breakOnPC`/`breakOnMemory`; temp bp hides user bp, no event | RD-037 |
+| `nesd_peek_safe_io` OOB read | RD-040 |
+| `c64d_peek_c64` Ultimax uninitialized read; per-cart peek bypass; cart adapter 512 KB/ROML only | RD-028 |
+| Atari "direct RAM" adapter returns the CPU view | RD-029 |
+
+## Change log
+
+| Date | Change |
+|---|---|
+| 2026-10-17 | Tracker created from spec v1.4; RD-001 marked done; RD-031..RD-042 added |

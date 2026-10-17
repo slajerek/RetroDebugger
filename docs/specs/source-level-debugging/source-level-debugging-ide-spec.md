@@ -1,8 +1,8 @@
 # RetroDebugger — Source-Level Debugging & IDE Evolution
 
 **Technical specification / implementation plan**  
-**Status:** Proposed · **Version:** 1.3 · **Date:** 2026-10-17  
-**Parallel implementation targets from P0:** C64 (6510/PLA), NES (cartridge mappers), Atari 8-bit (400/800/XL/XE/XEGS) · **Shared core:** generic bank-aware 6502-family debugging · **Compiler targets:** Oscar64, cc65, KickC · **Assembler targets:** existing TASM integration, KickAssembler and other external tools
+**Status:** Proposed, reconciled with the codebase (see #20) · **Version:** 1.4 · **Date:** 2026-10-17  
+**Parallel implementation targets from P0:** C64 (6510/PLA), NES (cartridge mappers), Atari 8-bit (400/800/XL/XE/XEGS) · **Shared core:** generic bank-aware 6502-family debugging · **Compiler targets:** Oscar64, cc65, KickC · **Assembler targets:** existing KickAssembler `.dbg` integration (must not regress), embedded 64tass, ca65 and other external tools
 
 ## 1. Executive summary
 
@@ -25,7 +25,7 @@ Full editing and save workflows, language server integration, autocomplete, refa
 
 ### 1.3 Principles
 
-- Preserve current disassembly stepping and existing assembler workflows.
+- Preserve current disassembly stepping and the existing symbol workflows: KickAssembler `.dbg` (`CDebugAsmSource`), VICE `.vs` / 64tass labels (`CDebugSymbols::ParseSymbols`), HJSON labels/watches/breakpoints and the `-symbols`/`-debuginfo`/`-segment` command line.
 - Do not infer a C call from every `JSR`; compiler-generated runtime helpers and inline code must be distinguished where possible.
 - Treat debug mappings as **many-to-many, non-contiguous and sometimes ambiguous**; never assume one C line equals one contiguous address range.
 - Handle absent/invalid metadata explicitly; never silently guess a source line.
@@ -40,7 +40,7 @@ Full editing and save workflows, language server integration, autocomplete, refa
 
 | Phase | Deliverable | Exit criteria |
 |---|---|---|
-| **P0 — Discovery & fixtures** | Inventory current Source Code view, CPU stepping API, symbol loaders, TASM integration, and NES mapper/memory translation hooks; compile sample fixtures | Current interfaces documented; golden binaries and metadata retained |
+| **P0 — Discovery & fixtures** | Inventory current Source Code view, CPU stepping API, symbol loaders (KickAss `.dbg`, VICE `.vs`, 64tass), 64tass/KickAssembler integrations and the C64/NES/Atari memory-translation hooks; compile sample fixtures | Inventory recorded in #20 (done 2026-10-17); golden binaries and metadata retained; the existing `.dbg` path is covered by a regression test before any refactor (RD-038) |
 | **P1 — Source document foundation** | Read-only source document, C/ASM highlighting, line numbers, tabs-ready document model, source↔disassembly navigation | Correct display and current-line highlighting; no editor dependency leaks |
 | **P2 — Debug information core** | Canonical bank-aware source map, function/statement metadata, mapper-backed physical address resolution, loaders, diagnostics and address lookup | Correct lookup on known fixtures, multiple spans, missing mappings, and same CPU address mapped to distinct physical memories on C64, NES and Atari |
 | **P3 — Source stepping MVP** | Source Into/Over/Out; call/interrupt-aware state machine; breakpoints; safe fallback | Integration tests pass for unoptimized C and assembly, including bank/overlay switching on C64, NES and Atari |
@@ -64,7 +64,7 @@ Workspace / Project (future)
   │                    ├─ Oscar64
   │                    ├─ cc65
   │                    ├─ KickC + KickAssembler
-  │                    └─ TASM / custom commands
+  │                    └─ KickAssembler (Java) / 64tass (embedded) / custom commands
   └─ Debug Session
        ├─ Binary/metadata loader
        ├─ Compiler Debug Adapters
@@ -179,7 +179,7 @@ public:
 };
 ```
 
-`resolveInstructionFetch` must use the **actual fetch mapping**; read, write, and instruction-fetch routing must remain distinct. On C64, a write under BASIC/KERNAL ROM normally targets hidden RAM even when reads/fetches see ROM; on Atari XL/XE, ROM overlays generally block write-through. NES mapper behavior also depends on access type. `resolveCpuWindows` may return zero, one, or several currently mapped aliases. Expose an explicit `Unknown`/`Unmapped` result; never silently fall back to an arbitrary bank. The exact API must be adapted to existing emulator interfaces after RD-001.
+`resolveInstructionFetch` must use the **actual fetch mapping**; read, write, and instruction-fetch routing must remain distinct. On C64, a write under BASIC/KERNAL ROM normally targets hidden RAM even when reads/fetches see ROM; on Atari XL/XE, ROM overlays generally block write-through. NES mapper behavior also depends on access type. `resolveCpuWindows` may return zero, one, or several currently mapped aliases. Expose an explicit `Unknown`/`Unmapped` result; never silently fall back to an arbitrary bank. The exact API must be adapted to the existing emulator interfaces; the RD-001 findings per machine are in #20.4 (none of the three emulators exposes physical bank identity to debugger code today).
 
 ### 3A.3 NES-specific behavior
 
@@ -274,7 +274,9 @@ Run a **parallel three-machine matrix** with a common step-trace schema: `machin
 
 ### 4.1 Current-state integration
 
-Retain the existing `Source Code` window/menu placement and debugger context. Replace its internal single-file display implementation with a reusable `SourceDocumentView` (or wrap the existing component if suitable). Before changes, inventory its rendering technology, file-loading path, line-number support, scrolling, selection, fonts and synchronization with emulator execution.
+Retain the existing `Source Code` window/menu placement and debugger context. Replace its internal single-file display implementation with a reusable `SourceDocumentView` (or wrap the existing component if suitable).
+
+**Inventory result (RD-001, #20.2):** the existing view is `CViewSourceCode` (`src/Views/CViewSourceCode.h/.cpp`), instantiated for C64 ("C64 Source code"), Atari ("Atari Assembler source") and NES ("NES Assembler source"); NES has no workspace layout slot. It draws with the engine font blitter (`CSlrFont::BlitTextColor`), borrowing the disassembly view's font, inside a custom `Render()`; there is no ImGui text widget and no text-editor component in the app. It follows `viewDisassembly->cursorAddress` (not the PC directly), shows only the file that contains the mapped line, centres it, and draws line numbers and the file path. Scrolling, keyboard, click-to-address, breakpoint markers, multi-file browsing and serialization are stubs. The address-to-line map it reads is `CDebugSymbolsSegment::codeSourceLineByMemoryAddress` (a flat per-segment array of `CDebugAsmSourceLine*`, which already carries line AND column ranges from the KickAssembler `.dbg` format). The new document component therefore replaces the rendering/interaction half and keeps feeding from the canonical database of #6 (which supersedes the flat array).
 
 ### 4.2 MVP read-only behavior
 
@@ -283,7 +285,7 @@ Retain the existing `Source Code` window/menu placement and debugger context. Re
 - Highlight **current execution line** distinctly from **selected line** and **breakpoint line**; support multiple indicators on one line.
 - Source line gutter with breakpoint markers, current PC marker and (later) coverage/diagnostic markers.
 - Click line to select; double-click or command to navigate to corresponding disassembly addresses; if multiple mappings exist, show choices rather than choosing arbitrarily.
-- Follow PC option (on/off); when off, execution updates do not steal scroll position or tab focus.
+- Follow PC option (on/off); when off, execution updates do not steal scroll position or tab focus. Today the view follows the disassembly cursor; keep a "follow disassembly cursor" mode for parity and add a true "follow PC" mode fed from the symbols' CPU (the disassembly view already gets `SetCurrentPC` per UI frame from `CViewC64::Render`, there is no pause callback to subscribe to).
 - Missing source files: show path-resolution UI, workspace-relative remapping and per-project source roots; do not crash or show stale content.
 - On debug stop, show the best matching source file and location, and keep disassembly synchronized bidirectionally.
 - Multiple open files internally from day one; tabs can ship in P1 or be exposed in P5.
@@ -310,7 +312,7 @@ Keywords, types, qualifiers, operators, strings/escapes, character literals, num
 
 ### 5.3 6502 assembly highlighting
 
-Opcodes (`LDA`, `STA`, `JSR`, `RTS`, `RTI`, `JMP`, branches, etc.), registers, addressing syntax, hex (`$0400`, `0x0400` where accepted), binary, labels, directives, macros, comments, local labels and symbols. **Dialect profiles** for TASM, KickAssembler, ca65 and Oscar64-generated assembler; avoid treating incompatible directive syntaxes as interchangeable. Allow a base 6502 profile and future 65C02/65816 profiles.
+Opcodes (`LDA`, `STA`, `JSR`, `RTS`, `RTI`, `JMP`, branches, etc.), registers, addressing syntax, hex (`$0400`, `0x0400` where accepted), binary, labels, directives, macros, comments, local labels and symbols. **Dialect profiles** for KickAssembler, 64tass, ca65 and Oscar64-generated assembler; avoid treating incompatible directive syntaxes as interchangeable. Allow a base 6502 profile and future 65C02/65816 profiles.
 
 ### 5.4 UI/technical requirements
 
@@ -335,6 +337,8 @@ Minimum P2 database:
 - function entry points and address coverage; zero/multiple entries supported;
 - compiler/build provenance and metadata capability flags;
 - binary checksum/build ID to prevent loading stale maps against another executable.
+
+**Migration rule (1.4):** the P2 database supersedes `CDebugAsmSource` / `codeSourceLineByMemoryAddress`, it does not sit beside it. The KickAssembler `.dbg` loader becomes the first provider of the new model (its `<Segment>` becomes a physical-identity candidate, its `<Block>` a compilation-unit-like grouping, its `LINE1,COL1,LINE2,COL2` a column-aware mapping), and `CViewSourceCode`, the disassembly label/breakpoint lookups and the Remote/MCP `segment` endpoints keep working through it. One active `CDebugSymbolsSegment` per `CDebugSymbols` remains the breakpoint/label scope until RD-025 makes selection mapping-driven.
 
 Optional P6: lexical scopes, variable types and location expressions (memory, registers, software stack, PC-dependent ranges), logical inline frames, optimized-out markers, relocation and overlay semantics.
 
@@ -408,7 +412,7 @@ Treat KickC as a separate compiler adapter and KickAssembler as a potentially se
 
 ### 7.4 Assembly and legacy support
 
-Continue existing TASM integration; add ca65/KickAssembler/Oscar64 assembly dialects through language profiles. Allow a generic assembler map provider and disassembly-only fallback. Source-level stepping in pure ASM should default to instruction semantics unless explicitly configured for source-line stepping.
+There is no TASM integration to continue. What exists: the KickAssembler `.dbg` XML loader (`CDebugSymbols::ParseSourceDebugInfo` → `CDebugAsmSource::ParseXML`, documented in `docs/README-RetroDebugger.txt` "KickAss debug symbols"), the embedded 64tass assembler used for in-memory assembly only (`CDebuggerApi::Assemble64Tass*`, no debug output), and a KickAssembler-via-Java invocation inside the CrtMaker plugin. Keep all three working; add ca65/64tass/Oscar64 assembly dialects through language profiles. Allow a generic assembler map provider and disassembly-only fallback. **Extension collision:** cc65/ld65 debug files and KickAssembler debug files are both named `.dbg`; loaders must sniff content (`<C64debugger` XML root vs. `version\tmajor=` text header), never dispatch on extension alone (RD-031). Source-level stepping in pure ASM should default to instruction semantics unless explicitly configured for source-line stepping.
 
 ---
 
@@ -419,6 +423,8 @@ Continue existing TASM integration; add ca65/KickAssembler/Oscar64 assembly dial
 Observe `beforeInstruction`, `afterInstruction`, call/return (decoded or derived), IRQ/NMI/BRK entry, RTI, authoritative instruction-fetch physical mapping, mapper/memory mapping changes, breakpoint/watchpoint hits, reset, pause/resume and debug session termination. Prefer authoritative emulator events over decoding an opcode at PC when an instruction may be intercepted or emulated specially.
 
 6502 basics: `JSR` opcode `$20`, `RTS` `$60`, `RTI` `$40`, `BRK` `$00`. `JSR` alone does **not** imply a source-language function call. Do not rely solely on SP comparisons: hardware stack, compiler software stack and interrupts are different concepts.
+
+**What the emulators provide today (RD-001, #20.3):** every CPU core has a hard-coded pre-instruction hook that receives the PC (`c64d_c64_check_pc_breakpoint`, `atrd_check_pc_breakpoint`, `nesd_check_pc_breakpoint`) and a post-execute cell marker; there is no generic callback registry, no RTS/RTI hook, no reset hook, and the only interrupt-entry signal is the VICE IRQ/NMI breakpoint check (which runs after the vector was taken). Stack pushes are annotated per byte (`CStackAnnotationData`: JSR_PCH/PCL, BRK, IRQ, NMI, origin PC) in all three cores; pops do not clear entries. These annotations are the seed of the physical execution tracker, not a replacement for it. VICE auto-pauses on `BRK` and has a single-step watchdog (more than 300 single-step re-arms under 5 ms apart force PAUSED), so a source step must execute as a policy evaluated **inside the emulation-thread hook** with an instruction budget, never as a UI loop of `RUN_ONE_INSTRUCTION` steps. Single-step parks after the instruction in VICE and before the next instruction in Atari800/Nestopia; the observable contract ("PC is the next instruction to execute") is the same, but the state machine must only evaluate at instruction boundaries, never from the VICE per-cycle hook. The 1541 drive CPU shares the C64 debug-mode word and can consume a `RUN_ONE_INSTRUCTION` when drive debugging is on; the step controller must own its own arming state.
 
 ### 8.2 Physical versus logical frames
 
@@ -438,7 +444,7 @@ Execute until the next *distinct executable source statement* in the appropriate
 
 ### 8.5 Source Step Over
 
-Finish the current source statement in the **starting logical frame**, ignoring mapped locations in deeper callees, then stop at the next executable statement in that frame. Do not implement this merely as `JSR depth++ / RTS depth--`: handle nested calls, IRQ/RTI, tail calls, indirect calls and control-flow exits. A temporary return-address breakpoint can be an optimization for a proven simple call, **not** the only correctness mechanism. If the current frame exits before reaching another statement, stop at the caller with a reason such as `FrameExited`.
+Finish the current source statement in the **starting logical frame**, ignoring mapped locations in deeper callees, then stop at the next executable statement in that frame. Do not implement this merely as `JSR depth++ / RTS depth--`: handle nested calls, IRQ/RTI, tail calls, indirect calls and control-flow exits. A temporary return-address breakpoint can be an optimization for a proven simple call, **not** the only correctness mechanism. The current `CViewDisassembly::StepOverJsr()` is exactly that shortcut (temporary breakpoint at `pc+3`, no depth check, not recursion-safe, not bank-aware, implemented in a view): it is replaced by the engine of this section and moved into `CDebugInterface` (RD-037), which also gives instruction-level Step Out for free. If the current frame exits before reaching another statement, stop at the caller with a reason such as `FrameExited`.
 
 ### 8.6 Source Step Out
 
@@ -454,7 +460,7 @@ Default: skip unmapped callees that are reached during a source step **when thei
 - Disassembly breakpoints bind to machine address context.
 - Breakpoints survive recompilation by re-resolving source intent; stale binary/metadata must trigger warnings.
 - Conditional source breakpoints require a separate expression evaluator and are out of MVP scope.
-- Define priorities for user breakpoints, watchpoints, temporary internal step breakpoints and pause requests.
+- Define priorities for user breakpoints, watchpoints, temporary internal step breakpoints and pause requests. Today the temporary breakpoint is a single `int` per `CDebugBreakpointsAddr`, its hit is checked ahead of the user breakpoint lookup in the VICE hooks (a user breakpoint at the same address is skipped), it creates no event-history entry and no remote broadcast, and the C64 PC/memory checks ignore the `breakOnPC`/`breakOnMemory` flags. The priority rules of this section fix all four.
 
 ### 8.9 Pseudocode (behavioral, not emulator API)
 
@@ -508,7 +514,8 @@ tests/source-debug/
     oscar64.yaml
     cc65.yaml
     kickc.yaml
-    tasm.yaml
+    kickass.yaml
+    64tass.yaml
   expectations/
     oscar64/*.json
     cc65/*.json
@@ -521,6 +528,8 @@ tests/source-debug/
 ```
 
 Keep one portable C subset across compilers plus compiler-specific fixture variants when startup, intrinsics, calling conventions or memory layout differ. Do not pretend that one C source can always be compiled unchanged by all three toolchains.
+
+**Fixture tiers (1.4):** Tier 0 fixtures are synthesized in-process by the test itself with no external tool (the repo already does this: `CTestViceInstructionStepping` pokes opcodes and jumps, `CTestStackAnnotation` writes a NES ROM to a temp path, the embedded 64tass can assemble source into RAM); they carry the banking and stepping-engine tests. Tier 1 fixtures are committed golden artifacts (binary + debug metadata + the exact toolchain command and version) under `tests/data/source-debug/`, regenerated by `tests/source-debug/scripts/`; they run in the PR suite. Tier 2 rebuilds Tier 1 from pinned toolchains in the nightly job. `assets/tests/c64/dankwars.prg` + `dankwars.dbg` (an unused KickAssembler pair already in the repo) is the first Tier 1 fixture and the regression anchor for the existing loader.
 
 ### 9.2 Minimal shared test source
 
@@ -543,7 +552,7 @@ int main(void) {
 }
 ```
 
-Add mandatory NES NROM and switchable-PRG-bank fixtures (see §3A.6), including the same CPU PC mapped to different physical PRG banks. Add tests for `a(); b();` on one line, multiple statements with different columns, nested calls, calls to runtime helpers, repeated calls from the same line, `if/else`, `for`, `while`, `switch`, `return`, recursion (where supported), indirect function calls (where supported), inlining, optimized-out statements, IRQ/NMI, and bank switches. For `printf`, use compiler-specific tests because library and startup behavior differ.
+Add mandatory NES NROM and switchable-PRG-bank fixtures (see #3A.6), including the same CPU PC mapped to different physical PRG banks. Add tests for `a(); b();` on one line, multiple statements with different columns, nested calls, calls to runtime helpers, repeated calls from the same line, `if/else`, `for`, `while`, `switch`, `return`, recursion (where supported), indirect function calls (where supported), inlining, optimized-out statements, IRQ/NMI, and bank switches. For `printf`, use compiler-specific tests because library and startup behavior differ.
 
 ### 9.3 Toolchain configuration
 
@@ -571,7 +580,7 @@ Pin working toolchain versions/commits in CI; verify each command and generated 
 3. **CPU stepping integration:** load PRG/ROM into headless emulator, stop at fixture start, issue Step Into/Over/Out, assert `(PC, function, file, line, frame depth, stop reason)`.
 4. **Negative/fault:** missing source file, corrupted debug file, stale binary, unresolvable function, interrupt during step, infinite loop, unmapped runtime and budget exhaustion.
 5. **UI smoke:** open Source Code view, syntax language, current-line decoration, click navigation, tab switching and follow-PC toggle.
-6. **Regression:** disassembly stepping, existing breakpoints, TASM build and performance must not regress.
+6. **Regression:** disassembly stepping, existing breakpoints, KickAssembler `.dbg` loading (`assets/tests/c64/dankwars.dbg`), VICE `.vs`/64tass labels, HJSON symbol persistence, the `-symbols`/`-debuginfo`/`-segment` command line and performance must not regress.
 
 ### 9.5 Expected-step trace format
 
@@ -595,7 +604,7 @@ Pin working toolchain versions/commits in CI; verify each command and generated 
 
 ### 9.6 CI strategy
 
-- Fast PR suite: parser/stepping unit tests + checked-in golden binaries/maps (subject to licensing and size review).
+- Fast PR suite: parser/stepping unit tests + checked-in golden binaries/maps (subject to licensing and size review). **Today only `build-macos.yml` runs `tests/run_test.sh`; Linux installs xvfb but runs no tests and Windows runs none.** The three-machine matrix needs the headless suite on Linux (at least) before P2/P3 acceptance can be measured (RD-034); `AGENTS.md` already requires all three platforms green on both log legs.
 - Nightly or optional full suite: compile with pinned Oscar64/cc65/KickC versions and run headless integration tests.
 - Matrix: compiler × optimization level × fixture × target machine; mark unsupported capabilities as `skip with reason`, not pass.
 - Produce JUnit/XML or equivalent test report, logs, machine/source step traces and failing metadata artifacts.
@@ -619,7 +628,7 @@ Each file URI maps to one document model with multiple possible views. Tabs show
 
 ### 10.3 Build/run/debug
 
-- Toolchain registry for built-in TASM and external Oscar64, cc65, KickC/KickAssembler and future tools.
+- Toolchain registry for the built-in 64tass (`CDebuggerApi::Assemble64Tass*`), the KickAssembler-via-Java pattern already used by the CrtMaker plugin (`javaPath`, `kickAssJarPath`, `kickAssParams`, mtime-based rebuild skip) and external Oscar64, cc65, KickC/KickAssembler and future tools.
 - Configurable build task: executable, arguments, cwd, env, outputs, diagnostic parser, pre/post steps.
 - Build console with stdout/stderr and clickable compiler diagnostics.
 - On successful build, atomically load matching executable + debug info; optional reset/run-to-entry policy.
@@ -629,7 +638,7 @@ Each file URI maps to one document model with multiple possible views. Tabs show
 
 ### 10.4 Security and robustness
 
-Explicit consent before running arbitrary workspace build commands; do not automatically execute a newly opened project's scripts. Escape/process arguments correctly; prevent path traversal in artifact resolution; cap external tool runtime; redact sensitive environment variables in logs; handle untrusted malformed metadata safely.
+Explicit consent before running arbitrary workspace build commands; do not automatically execute a newly opened project's scripts. Escape/process arguments correctly (the only process launcher used today is the engine's `SYS_ExecSystemCommand(const char *shellString, ...)`, which takes a shell string; an argv-based launcher is needed, see open decision 11); prevent path traversal in artifact resolution; cap external tool runtime; redact sensitive environment variables in logs; handle untrusted malformed metadata safely.
 
 ---
 
@@ -677,62 +686,75 @@ Recommended source line decorations: current execution (gutter arrow + backgroun
 
 ### Definition of done (cross-cutting)
 
-Tests are repeatable; logs explain stop reasons; no regression in existing TASM/disassembly features; documentation includes setup, supported compiler versions, limitations and sample workflows; code reviews validate lifetime/threading safety between UI and emulator.
+Tests are repeatable; logs explain stop reasons; no regression in existing KickAssembler `.dbg`/label/disassembly features; documentation includes setup, supported compiler versions, limitations and sample workflows; code reviews validate lifetime/threading safety between UI and emulator.
 
 ---
 
 ## 14. Concrete engineering backlog
 
-| ID | Priority | Task | Depends on |
-|---|---|---|---|
-| RD-001 | P0 | Inventory existing source view, debugger hooks, breakpoint engine, TASM integration and C64 PLA/6510, NES mapper, and Atari PIA/cartridge translation APIs | — |
-| RD-002 | P0 | Add portable C/ASM fixtures and pin compiler versions | — |
-| RD-003 | P1 | Introduce document registry and read-only source view | RD-001 |
-| RD-004 | P1 | Implement C lexer and 6502 assembler dialect profiles | RD-003 |
-| RD-005 | P1 | Add PC/source decorations and bidirectional navigation | RD-003, RD-007 |
-| RD-006 | P1 | Define canonical debug database and capability model | RD-001 |
-| RD-007 | P1 | Implement physical-bank-aware address indexes, source remapping and binary/cartridge identity checks | RD-006, RD-024 |
-| RD-008 | P1 | Implement Oscar64 `.dbj` adapter and fixture contract tests | RD-002, RD-006 |
-| RD-009 | P1 | Implement cc65 `.dbg` adapter and fixture contract tests | RD-002, RD-006 |
-| RD-010 | P1 | Audit KickC artifacts and implement supported adapter subset | RD-002, RD-006 |
-| RD-011 | P1 | Add emulator execution/interrupt events and instruction-fetch mapping snapshot hooks | RD-001, RD-024 |
-| RD-012 | P1 | Implement physical/logical execution context tracker | RD-011, RD-006 |
-| RD-013 | P1 | Implement asynchronous source-step state machine and stop reasons | RD-007, RD-012 |
-| RD-014 | P1 | Implement source breakpoints and re-resolution after rebuild | RD-007, RD-013 |
-| RD-015 | P1 | Add headless step trace runner and golden expectations | RD-002, RD-013 |
-| RD-016 | P2 | Patch Oscar64 range coalescing/column export with regression tests | RD-008 |
-| RD-017 | P2 | Add structured inline provenance support and logical inline frames | RD-016, RD-012 |
-| RD-018 | P2 | Add workspace explorer and multi-file tabs | RD-003 |
-| RD-019 | P2 | Add toolchain registry, external build tasks and diagnostics | RD-018, RD-002 |
-| RD-020 | P2 | Add build/run/debug orchestration with artifact consistency checks | RD-019, RD-007 |
-| RD-021 | P3 | Enable editing, save, undo/redo, search and file watchers | RD-003, RD-018 |
-| RD-022 | P3 | Extend debug model for variables/types, advanced optimized stepping | RD-017 |
-| RD-024 | P0 / core | Define generic CPU/logical versus physical code identity and machine mapping provider contract, including mapper capability discovery | RD-001 |
-| RD-025 | P1 / core | Implement bank-aware CPU/source/physical breakpoints and labels; preserve source identity across mapper changes | RD-007, RD-011, RD-024 |
-| RD-026 | P1 / tests | Add NROM, UxROM and one MMC1/MMC3 bank-switching fixture with golden physical-fetch traces and source-step assertions | RD-002, RD-024, RD-025 |
-| RD-027 | P0 / core | Audit C64 PLA/6510 and Atari 400/800/XL/XE/XEGS emulator memory hooks, including fetch/read/write and bus-master semantics; implement shared mapping event contracts | RD-001, RD-024 |
-| RD-028 | P1 / core | Implement C64 memory mapping provider: 6510 DDR/port, PLA, ROM-under-RAM, I/O and cartridge/Ultimax identities | RD-024, RD-027 |
-| RD-029 | P1 / core | Implement Atari 8-bit provider: machine variants, PIA PORTB, BASIC/OS ROM, 130XE extended RAM, ANTIC view and cartridge mappings | RD-024, RD-027 |
-| RD-030 | P1 / tests | Add C64 and Atari banked fixture suites and shared three-machine headless stepping/breakpoint test matrix | RD-002, RD-025, RD-028, RD-029 |
-| RD-023 | P6 / final research spike | Research C symbols, labels, variable-to-memory mapping and integration with existing Memory Viewer and Watch; produce a follow-up implementation proposal only | RD-008, RD-009, RD-010, RD-020 |
+| ID | Phase | Priority | Task | Depends on |
+|---|---|---|---|---|
+| RD-001 | P0 | core | Inventory existing source view, debugger hooks, breakpoint engine, symbol loaders, 64tass/KickAssembler integrations and C64 PLA/6510, NES mapper, and Atari PIA/cartridge translation APIs. **Done 2026-10-17, results in #20.** | — |
+| RD-002 | P0 | core | Add portable C/ASM fixtures and pin compiler versions; verify the compiler x machine matrix with real invocations | — |
+| RD-038 | P0 | core | Regression test for the existing KickAssembler `.dbg` path (`assets/tests/c64/dankwars.dbg`) and VICE `.vs` loader before any refactor | RD-001 |
+| RD-024 | P0 | core | Define generic CPU/logical versus physical code identity and machine mapping provider contract, including mapper capability discovery | RD-001 |
+| RD-027 | P0 | core | Audit C64 PLA/6510, NES mapper and Atari 400/800/XL/XE/XEGS emulator memory hooks, including fetch/read/write and bus-master semantics; implement shared mapping event contracts; add the missing emulator-core accessors (#20.4) | RD-001, RD-024 |
+| RD-003 | P1 | ui | Introduce document registry and read-only source view (replaces `CViewSourceCode` rendering/interaction, keeps its placement) | RD-001, RD-038 |
+| RD-004 | P1 | ui | Implement C lexer and 6502 assembler dialect profiles | RD-003 |
+| RD-005 | P1 | ui | Add PC/source decorations and bidirectional navigation (first against the migrated `.dbg` map, then RD-007) | RD-003, RD-006 |
+| RD-006 | P2 | core | Define canonical debug database and capability model; migrate `CDebugAsmSource` onto it | RD-001, RD-038 |
+| RD-031 | P2 | core | Debug-artifact loader registry with content sniffing (KickAss `.dbg` XML vs cc65 `.dbg` text vs Oscar64 `.dbj` JSON), replacing extension dispatch in `CMainMenuBar`, `CMainMenuHelper::LoadLabelsAndWatches` and `C64CommandLine` | RD-006 |
+| RD-032 | P2 | core | Fix symbol lifetime hazards: segments never deleted, dangling `codeSourceLineByMemoryAddress` after `.dbg` re-import, segment destructor double delete, `.vs` `D:` labels ignored, newer `<Watchpoints>` layout misparsed | RD-006 |
+| RD-007 | P2 | core | Implement physical-bank-aware address indexes, source remapping and binary/cartridge identity checks | RD-006, RD-024 |
+| RD-008 | P2 | core | Implement Oscar64 `.dbj` adapter and fixture contract tests | RD-002, RD-006, RD-031 |
+| RD-009 | P2 | core | Implement cc65 `.dbg` adapter and fixture contract tests | RD-002, RD-006, RD-031 |
+| RD-010 | P2 | core | Audit KickC artifacts and implement supported adapter subset | RD-002, RD-006, RD-031 |
+| RD-011 | P2 | core | Add emulator execution/interrupt events and instruction-fetch mapping snapshot hooks (generic callback at the existing pre/post-instruction hook points; RTS/RTI/reset/interrupt-entry signals) | RD-001, RD-024 |
+| RD-028 | P2 | c64 | Implement C64 memory mapping provider: 6510 DDR/port, PLA, ROM-under-RAM, I/O and cartridge/Ultimax identities (unify the `CViewC64MemoryBank` table; add VICE cart-bank accessors; fix the Ultimax uninitialized-read path in `c64d_peek_c64`) | RD-024, RD-027 |
+| RD-040 | P2 | nes | Implement NES memory mapping provider: mapper-authoritative PRG identity via the board's `Memory::GetBank`, iNES/NES 2.0 header → ROM file offset, PRG-RAM, aliases; fix `nesd_peek_safe_io` out-of-bounds RAM reads | RD-024, RD-027 |
+| RD-029 | P2 | atari | Implement Atari 8-bit provider: machine variants, PIA PORTB, BASIC/OS ROM, 130XE extended RAM (`MEMORY_xe_bank`), ANTIC view and cartridge mappings (`CARTRIDGE_main`) | RD-024, RD-027 |
+| RD-037 | P2 | core | Move step-over out of `CViewDisassembly::StepOverJsr` into `CDebugInterface`; add instruction-level Step Out; make the temporary breakpoint a proper breakpoint object with event/broadcast and correct priority vs user breakpoints | RD-011 |
+| RD-012 | P3 | core | Implement physical/logical execution context tracker (seeded from `CStackAnnotationData`) | RD-011, RD-006 |
+| RD-013 | P3 | core | Implement asynchronous source-step state machine and stop reasons, evaluated in the emulation-thread hook | RD-007, RD-012, RD-037 |
+| RD-025 | P3 | core | Implement bank-aware CPU/source/physical breakpoints and labels; preserve source identity across mapper changes; mapping-driven segment activation | RD-007, RD-011, RD-024 |
+| RD-014 | P3 | core | Implement source breakpoints and re-resolution after rebuild | RD-007, RD-013, RD-025 |
+| RD-015 | P3 | tests | Add headless step trace runner and golden expectations | RD-002, RD-013 |
+| RD-026 | P3 | tests | Add NROM, UxROM and one MMC1/MMC3 bank-switching fixture with golden physical-fetch traces and source-step assertions | RD-002, RD-024, RD-025, RD-040 |
+| RD-030 | P3 | tests | Add C64 and Atari banked fixture suites and the shared three-machine headless stepping/breakpoint test matrix | RD-002, RD-025, RD-028, RD-029 |
+| RD-034 | P3 | ci | Run the headless suite on Linux CI (xvfb is already installed) so the three-machine matrix is measured on more than macOS; keep both log legs | — |
+| RD-036 | P3 | remote | Remote/MCP endpoints: `step/source/{into,over,out}`, `step/out`, `source/location`, `symbols/load`, and the MCP skill doc update | RD-013, RD-031 |
+| RD-033 | P3 | core | Generalize symbol loading entry points: `-debuginfo`/autoload for NES (today C64 or Atari only), unreachable `nes` CLI branch, missing `-ines` handler, NES `source_code` workspace slot | RD-031 |
+| RD-016 | P4 | compiler | Patch Oscar64 range coalescing/column export with regression tests (upstream) | RD-008 |
+| RD-017 | P4 | compiler | Add structured inline provenance support and logical inline frames | RD-016, RD-012 |
+| RD-035 | P4 | ci | Toolchain provisioning for the nightly matrix: cc65 (distro package), Oscar64 (pinned commit, built from source), KickC + KickAssembler (Java; licensing review for the jar), with version recording | RD-002 |
+| RD-018 | P5 | ui | Add workspace explorer and multi-file tabs | RD-003 |
+| RD-042 | P5 | core | argv-based process launcher with cwd/env/timeout/capture (engine proposal or app-side platform code), replacing shell-string `SYS_ExecSystemCommand` for build tasks | RD-002 |
+| RD-019 | P5 | ui | Add toolchain registry, external build tasks and diagnostics | RD-018, RD-002, RD-042 |
+| RD-020 | P5 | core | Add build/run/debug orchestration with artifact consistency checks | RD-019, RD-007 |
+| RD-021 | P5 | ui | Enable editing, save, undo/redo, search and file watchers (no file watcher exists today) | RD-003, RD-018 |
+| RD-022 | P6 | core | Extend debug model for variables/types, advanced optimized stepping | RD-017 |
+| RD-023 | P6 | research | Research C symbols, labels, variable-to-memory mapping and integration with existing Memory Viewer and Watch; produce a follow-up implementation proposal only | RD-008, RD-009, RD-010, RD-020 |
 
-**Recommended critical path:** RD-001/002 → RD-024/027/006 → RD-007/011/025 + RD-028/029 + RD-008 → RD-012/013/015/026/030 → RD-003/004/005 integration → compiler expansion. Keep the UI and core debugger changes separately testable.
+**Recommended critical path:** RD-001 (done) → RD-038/002 → RD-024/027/006 → RD-031/032/007/011/037 + RD-028/040/029 + RD-008 → RD-012/013/025/014/015/026/030 (+ RD-034 so the matrix is measured) → RD-003/004/005 integration (can start earlier against the migrated `.dbg` map) → RD-036 → compiler expansion (RD-009/010/016/017, RD-035) → IDE (RD-018..021, RD-042) → RD-022/023. The `Phase` column is the delivery phase of #2; `Priority` is the delivery track (core / ui / c64 / nes / atari / tests / ci / remote / compiler / research). Keep the UI and core debugger changes separately testable. The live status of every item is tracked in `TRACKER.md` next to this file.
 
 ---
 
 ## 15. Open decisions / discovery questions
 
-1. Which existing RetroDebugger UI text-rendering/editor component can be reused without introducing an incompatible dependency?
-2. Which exact CPU execution callbacks and threading model exist for C64 and other emulators?
-3. Does the current debugger have reliable breakpoint hooks before each instruction, including IRQ entry and bank mapping changes?
+1. Which existing RetroDebugger UI text-rendering/editor component can be reused without introducing an incompatible dependency? **Answered (1.4):** none beyond `CSlrFont` blitting; the app has no text-editor widget and the engine (MTEngineSDL, which must not be modified from this repo) offers `CGuiEditBoxText`/`CGuiEditHex` single-line editors only, as far as the app's includes show. The document component is app-side code rendering with ImGui draw lists or the existing font blitter.
+2. Which exact CPU execution callbacks and threading model exist for C64 and other emulators? **Answered (1.4):** #20.3.
+3. Does the current debugger have reliable breakpoint hooks before each instruction, including IRQ entry and bank mapping changes? **Answered (1.4):** before each instruction yes (all three cores); IRQ entry only on VICE and only as a post-vector breakpoint check; bank mapping change notifications: none, the provider must re-resolve per fetch (#20.4).
 4. Which exact Oscar64, cc65 and KickC versions/flags are the initial supported baseline?
-5. C64 may be the first integrated runtime, but C64/Atari/NES must share a bank-aware canonical debug-address API immediately; identify which mapper hooks are already exposed per emulator.
+5. C64 may be the first integrated runtime, but C64/Atari/NES must share a bank-aware canonical debug-address API immediately; identify which mapper hooks are already exposed per emulator. **Answered (1.4):** none are exposed to debugger code; VICE has `mem_get_current_bank_config()` and the cart bank variables, Nestopia has `Memory::GetBank` behind a protected `Board::prg`, Atari800 has `MEMORY_xe_bank`/`PIA_PORTB`/`CARTRIDGE_main`; all need accessors (RD-027).
 6. Should a source step into a function without source metadata fall back to disassembly or skip that call by default? Proposed default: skip tracked runtime calls; expose an option to enter disassembly.
 7. Which compiler optimizations are officially supported for *precise* source stepping? Proposed initial baseline: debug/unoptimized builds; optimized mode best-effort with visible warning.
-8. What existing TASM build/project configuration must remain backward-compatible?
+8. What existing assembler build/project configuration must remain backward-compatible? **Answered (1.4):** there is no TASM integration; backward compatibility covers the KickAssembler `.dbg` loader and its documented format, the `-debuginfo`/`-symbols`/`-segment`/`-pass` command line, the `.labels`/`.vs`/`.watch`/`.dbg` autoload next to a PRG/XEX, the HJSON symbol persistence and the Remote/MCP `segment` endpoints.
 
 9. Which NES mapper families and ROM/linker artifact formats can be exercised in headless integration tests initially?
-10. How does the existing emulator expose physical PRG identity and fetch mapping, including mapper-specific aliases and PRG-RAM?
+10. How does the existing emulator expose physical PRG identity and fetch mapping, including mapper-specific aliases and PRG-RAM? **Answered (1.4):** it does not; #20.4 lists the core accessors to add (RD-040).
+11. Which argv-based process launcher is used for build tasks: an engine addition proposed to MTEngineSDL, or app-side platform code? The engine's `SYS_ExecSystemCommand` takes a shell string and is unsuitable for #9.3/#10.4. (RD-042; decide before P5.)
+12. Does source-level debugging cover the C64 Ultimate (`CDebugInterfaceC64U`, page-cache memory adapters, no instruction hooks) and the 1541 drive CPU (own `CDebugSymbols`, shares the C64 debug-mode word)? Proposed: both out of scope for P1-P4; the stepping engine must only remain correct when `debugOnDrive1541` is enabled.
+13. Which default Atari configuration do fixtures assume? The debugger's default is 800XL with the 1088 KB RAM option (`c64SettingsAtariMachineType=4`, `c64SettingsAtariRamSizeOption=9`), so an extended-RAM window is active by default; fixtures must set machine type and RAM size explicitly.
 
 Resolve these during RD-001/RD-002; none requires postponing the canonical model or the Oscar64 adapter.
 
@@ -740,9 +762,9 @@ Resolve these during RD-001/RD-002; none requires postponing the canonical model
 
 ## 16. Source basis and verification status
 
-This specification consolidates the architecture and stepping discussion in the conversation and the **user-supplied Oscar64 source snapshot** (`oscar64-source.zip`, archive revision `a92fd0cd4f9a12dd5340f57da768fc5a8dc1dd63`). Relevant Oscar64 anchors are listed in §7.1. The source audit supports the existence of source locations, IR/native linkage and provenance data, but **does not establish that every optimizer transformation preserves exact statement identity**.
+This specification consolidates the architecture and stepping discussion in the conversation and the **user-supplied Oscar64 source snapshot** (`oscar64-source.zip`, archive revision `a92fd0cd4f9a12dd5340f57da768fc5a8dc1dd63`). Relevant Oscar64 anchors are listed in #7.1. The source audit supports the existence of source locations, IR/native linkage and provenance data, but **does not establish that every optimizer transformation preserves exact statement identity**.
 
-cc65/KickC integration details remain **implementation hypotheses pending compilation of pinned fixture programs**; their precise output formats, flags and capabilities must be established by RD-002/RD-009/RD-010. The proposed APIs, JSON, YAML and class names are design proposals, not claims about existing RetroDebugger interfaces. No RetroDebugger source repository was provided for this specification, so its internal integration points must be confirmed in RD-001.
+cc65/KickC integration details remain **implementation hypotheses pending compilation of pinned fixture programs**; their precise output formats, flags and capabilities must be established by RD-002/RD-009/RD-010. The proposed APIs, JSON, YAML and class names are design proposals, not claims about existing RetroDebugger interfaces. No RetroDebugger source repository was provided for revisions 1.0-1.3; revision 1.4 performed that reconciliation against the repository (branch `c-source-debugging`, base `devel` 778ef3a) and records it in #20. Where #20 and earlier sections disagree, #20 wins.
 
 
 ---
@@ -780,10 +802,78 @@ RetroDebugger already provides a **Memory Viewer** and a **Watch** facility capa
 
 ## 18. Revision 1.2 — NES banking decision
 
-Bank-aware physical code identity, mapper-backed instruction-fetch resolution, and physical/source breakpoint semantics are mandatory early architecture and test requirements (§3A; RD-024–026), **not** deferred to P6. The final C variable/Watch/Memory Viewer research spike (RD-023) remains last and research-only. Existing C64 behavior must remain compatible.
+Bank-aware physical code identity, mapper-backed instruction-fetch resolution, and physical/source breakpoint semantics are mandatory early architecture and test requirements (#3A; RD-024–026), **not** deferred to P6. The final C variable/Watch/Memory Viewer research spike (RD-023) remains last and research-only. Existing C64 behavior must remain compatible.
 
 ---
 
 ## 19. Revision 1.3 — parallel C64/NES/Atari banking decision
 
 **Decision:** No C64-first / NES-later architecture. Implement generic physical memory identity and fetch/read/write mapping contracts immediately; build C64, NES, and Atari adapters and test fixtures in parallel. C64 banking is governed by 6510 `$0000/$0001`, PLA and `/GAME`/`/EXROM`, with hidden RAM and access-specific routing. Atari banking is model-dependent, including XL/XE `PORTB`, 130XE extended RAM, ANTIC versus CPU views, and cartridge-specific `$D5xx` switching. NES continues to use mapper-authoritative PRG translation. RD-027–030 implement this decision; RD-023 remains the final research-only C-symbol/Watch/Memory Viewer spike.
+
+## 20. Revision 1.4 — reconciliation with the RetroDebugger codebase
+
+Revision 1.4 is the first revision written with the repository at hand. It executes the RD-001 inventory against `devel` (778ef3a) and corrects the sections above where they assumed something the code does not have, or missed something it already has. All paths are relative to `src/` unless stated otherwise; the engine sibling `../MTEngineSDL` was not available, so engine-side widgets are described only through the app's includes.
+
+### 20.1 Summary of corrections
+
+| Area | Revisions 1.0-1.3 assumed | What the code has | Consequence |
+|---|---|---|---|
+| Assembler integration | "existing TASM integration" | No TASM anywhere. A KickAssembler `.dbg` XML loader with segments, blocks and line+column ranges; the embedded 64tass used for in-memory assembly only; a KickAssembler-via-Java call in the CrtMaker plugin | Replace every "TASM" reference; the `.dbg` loader is the regression anchor and the first provider of the new model |
+| Address-to-source map | To be created in P2 | Exists: `CDebugSymbolsSegment::codeSourceLineByMemoryAddress[]` filled by `CDebugAsmSource::ParseXML` | P2 migrates, it does not greenfield; P1 decorations can ship against the migrated map |
+| Segments / banks | Nothing bank-like exists | KickAssembler `<Segment>` = one `CDebugSymbolsSegment` with its own labels, watches, breakpoints and source map; exactly one is active, selected by hand (menu, `;`/`'`, `-segment`, remote `segment/write`) | A segment is already a "physical code identity candidate"; RD-025 makes activation mapping-driven instead of manual |
+| Stepping API | Unknown | Modes are `#define`s (RUNNING/PAUSED/RUN_ONE_CYCLE/RUN_ONE_INSTRUCTION/SHUTDOWN); step-over lives in `CViewDisassembly::StepOverJsr` as a temp breakpoint at `pc+3`; no step-out, no run-to-cursor | RD-037 moves stepping into the interface before the source engine is built on it |
+| Execution hooks | Unknown | Pre-instruction PC hook in all three cores, hard-coded to breakpoint checks; stack-push annotation; VICE-only IRQ breakpoint checks; no RTS/RTI/reset hooks; VICE single-step watchdog | Source step controller runs inside the emulation-thread hook with a budget (#8.1) |
+| Bank state exposure | Unknown | None reaches debugger code; VICE, Nestopia and Atari800 each have the state internally without accessors | RD-027 adds accessors in the embedded cores (allowed; they are not MTEngineSDL); RD-040 added for the NES provider, which had no backlog item |
+| CPU view vs raw RAM | Not discussed | C64 and 1541 have CPU-view and direct-RAM adapters (`SwitchIsDataDirectlyFromRam`, marked "TODO: proper banking"); Atari "RAM" is the CPU view; NES has CPU view only | #3B.1's "CPU read view / write destination / physical backing" has a C64 head start and no Atari/NES start |
+| Tests / CI | Nightly + PR suites to be designed | In-process `CTest` suite (`tests/run_test.sh`), run in CI on macOS only; no external toolchains; `dankwars.prg/.dbg` and `labelstest1.vs` fixtures unused | RD-034 (Linux suite), RD-035 (toolchains), RD-038 (regression anchor) |
+| Process launching | argv arrays required | Only `SYS_ExecSystemCommand(shellString)` is used | Open decision 11, RD-042 |
+| Section markers | the section-sign character | Repo convention forbids it (CLAUDE.md) | All cross-references use `#N` |
+
+### 20.2 Source view, symbols and loaders (facts)
+
+- **View:** `CViewSourceCode` (`Views/CViewSourceCode.h:23`, 447-line `.cpp`), constructed with `(name, ..., CDebugInterface*, CDebugSymbols*, CViewDisassembly*)`. Instances: C64 "C64 Source code" (`Screens/CViewC64.cpp:1148`), Atari "Atari Assembler source" (`:1581`), NES "NES Assembler source" (`:1698`), all hidden by default and added through `AddEmulatorMenuItemView`. Workspace slot `DefaultWorkspaceSlot_SourceCode = 13`, Ctrl+Shift+F3 (`Views/CDefaultWorkspaceLayouts.cpp:405`); C64 and Atari have layouts and view ids (`c64.source_code`, `atari.source_code`), NES has neither.
+- **Rendering:** custom `Render()` (`CViewSourceCode.cpp:113-316`) blitting with `CSlrFont::BlitTextColor`, font and size borrowed from `viewDisassembly` each frame; `RenderImGui` only wraps pre/post. Each frame copies `cursorAddress = viewDisassembly->cursorAddress` and looks up `currentSegment->codeSourceLineByMemoryAddress[cursorAddress]`; the file containing that line is drawn centred, white only, with line numbers (`showLineNumbers`) and the path (`showFilePath`) and a green highlight on the centre line. Column information is never used. `DoScrollWheel`/`ScrollUp`/`ScrollDown` only set `changedByUser`; `KeyDown` returns false; `DoTap` handles only the segment-name area (`SelectNextSegment`); `Serialize`/`Deserialize` are empty. No breakpoint markers, no file switching, no click-to-address.
+- **Symbol model:** `CDebugSymbols` (`DebugInterface/Symbols/CDebugSymbols.h:26-118`) owns `dataAdapter`, `asmSource`, `segments`, `currentSegment`, `memory`. `CDebugSymbolsSegment` owns `codeSourceLineByMemoryAddress` (flat array sized `AdapterGetDataLength()`), `blocks`, `breakpointsByType` with `breakpointsPC`/`breakpointsData` (C64 adds raster, VIC/CIA/NMI IRQ flags; 1541 adds VIA/IEC), `codeLabelByAddress` (`CDebugSymbolsCodeLabel` with a `u16 address`, no source position), `watches`. `CDebugAsmSourceLine` carries `codeLineNumberStart/End`, `codeColumnNumberStart/End`, `memoryAddressStart/End` (`CDebugAsmSource.h:42-55`). No reverse file:line → address index, no bank key anywhere; `CDebugMemoryCell.h:8` says so explicitly.
+- **One `CDebugSymbols` per CPU/address space:** VICE main CPU `symbolsC64`, `symbolsDrive1541`, `symbolsDrive1541DiskContents`, `symbolsCartridgeC64` (`Emulators/vice/ViceInterface/CDebugInterfaceVice.cpp:176-216`); Atari one generic (`CDebugInterfaceAtari.cpp:89`); NES `symbols` + `symbolsPpuNmt` (`CDebugInterfaceNes.cpp:78-89`); C64U its own.
+- **Loaders:** VICE `.vs` + 64tass labels in `CDebugSymbols::ParseSymbols` (`CDebugSymbols.cpp:117-339`, `D:` drive labels ignored with a TODO); text breakpoints (`:378-631`) and watches (`:687-931`); KickAss `.dbg` in `ParseSourceDebugInfo` (`:936-1005`) → `CDebugAsmSource::ParseXML` (`CDebugAsmSource.cpp:67-694`, pugixml; `<Sources>`, `<Segment>`/`<Block>` with `START,END,FILE_IDX,LINE1,COL1,LINE2,COL2`, `<Labels>`, `<Watchpoints>`, `<Breakpoints>`; source files read from disk by absolute path, tabs to 4 spaces, UTF-16 lines, 1-based). `ParseOldFormat` is dead code. HJSON labels/watches/breakpoints persist per segment (`:1008-1436`), source map is not serialized ("TODO" at `:1105`). Nothing parses cc65, Oscar64, KickC or Atari `.lbl`.
+- **Entry points:** menu import by extension (`Views/CMainMenuBar.cpp:5694-5718`, `.dbg` re-import does not call `DeleteAllSymbols`); autoload next to PRG/XEX of `.labels`, `.vs`, `.watch`, `.dbg` (`Screens/CMainMenuHelper.cpp:1655-1747`, C64 and Atari only, gated by `c64SettingsLoad*`); command line `-breakpoints`, `-symbols`/`-vicesymbols`/`-vs`, `-watch`, `-debuginfo`, `-segment` applied to C64 else Atari, never NES (`Tools/C64CommandLine.cpp:651-694`, `:926-1052`, "GENERALIZE ME"); `-pass` shared-memory path (`:1412-1450`). Remote `segment/read|write` and MCP `retro_segment_read|write` exist; there is no remote "load symbols" or "source location".
+- **Known defects to fix on the way (RD-032/033):** segments are never deleted on purpose ("THE BUG" comments, `CDebugSymbols.cpp:63-67, 109-111`); the segment destructor would double-delete lines also owned by `CDebugAsmSourceFile` (`CDebugSymbolsSegment.cpp:50-55`); `.dbg` re-import deletes `asmSource` and leaves old segments with dangling pointers (`CDebugSymbols.cpp:992-996`); `SetSegment` bypasses `ActivateSegment` (`:1567`); newer KickAss `<Watchpoints>` `ADDRESS1,ADDRESS2,ARGUMENT` rows read ADDRESS2 as the value count; `"nes"` is matched twice in the CLI so the NES path branch is unreachable, and the drag-in `-ines` has no handler.
+
+### 20.3 Execution control (facts)
+
+- **Modes:** `DEBUGGER_MODE_RUNNING 0x00`, `PAUSED 0x80`, `RUN_ONE_CYCLE 0x81`, `RUN_ONE_INSTRUCTION 0x82`, `SHUTDOWN 0xFF` (`DebugInterface/DebuggerDefs.h:15-19`). `SetDebugMode` writes an atomic and notifies `pauseCV` (`CDebugInterface.cpp:499-517`); emulator overrides mirror it into `c64d_debug_mode` / `atrd_debug_mode` / `nesd_debug_mode`. `PauseEmulationBlockedWait` polls up to 2 s. `StepOverInstruction` is a single instruction step; `StepOneCycle` is a no-op on Atari and NES; `StepOverSubroutine` delegates to `viewDisassembly->StepOverJsr()` (`Views/CViewDisassembly.cpp:3224-3261`): opcode `$20` → `SetTemporaryBreakpointPC(pc+3)` + RUNNING, else one instruction. `RunEmulationForOneFrame` exists (tests only). No run-to-cursor (`MakeJMPToCursor` sets PC), no step-out. The VICE monitor has opcode-counting step/next/return (`monitor/monitor.c:2564-2618`, `:2893-2954`) reachable only from the monitor console; usable as a reference, not as the engine.
+- **Hooks, VICE (`Emulators/vice/c64/c64cpusc.c`):** after alarms and `DO_INTERRUPT`, IRQ/NMI/VIC/CIA breakpoint checks (`:3283-3313`, after the vector was taken, `reg_pc` is the handler); pre-execute `c64d_c64_check_pc_breakpoint(reg_pc)` + `c64d_debug_pause_check(1)` unless single-stepping (`:3352-3376`); `BRK` auto-pauses (`:3457-3465`); post-execute `c64d_mark_c64_cell_execute` (`:4417`), RUN_ONE_INSTRUCTION → PAUSED (`:4428-4431`), `c64d_debug_pause_check(0)` (`:4447`); per-cycle `c64d_c64_do_cycle` (`:4551`) drains tasks and allows mid-instruction pauses; `c64d_set_debug_mode` watchdog (`:4473`, >300 re-arms <5 ms apart force PAUSED). JSR/RTS only annotate the stack and call Champ-profiler stubs (`USE_CHAMP_PROFILER` undefined); RTI has no hook; no reset hook. The 1541 CPU shares `c64d_debug_mode` and can consume a single step ("drive1541 stealing RUN_ONE_INSTRUCTION", `drive/drivecpu.c:3697-3711`).
+- **Hooks, Atari800 (`Emulators/atari800/cpu.c:762-808`):** top-of-instruction `atrd_mark_atari_cell_execute`, task drain, `atrd_check_pc_breakpoint` + `atrd_debug_pause_check`, then RUN_ONE_INSTRUCTION → PAUSED; pause loop polls with `Sleep(10)` (`AtariInterface/AtariWrapper.cpp:194-240`). JSR/NMI/IRQ annotate only. `MONITOR_ret_nesting` is compiled out.
+- **Hooks, Nestopia (`Emulators/nestopiaue/core/NstCpu.cpp:2083-2136`):** `nesd_update_cpu_pc_by_emulator`, `nesd_mark_cell_execute`, `nesd_check_pc_breakpoint`, `nesd_debug_pause_check(1)`, opcode, `nesd_debug_pause_check(0)`, RUN_ONE_INSTRUCTION → PAUSED. `DoISR` annotates only. `nesdMainCpuCycle` counts instructions, not cycles.
+- **Breakpoints:** `CDebugBreakpointAddr{int addr; actions; data}`, `CDebugBreakpointData` adds range/access/comparison, `CDebugBreakpointRasterLine`; containers `CDebugBreakpointsAddr` (`std::map<int,...>` + render copy) and `CDebugBreakpointsData` (linear sweep); evaluated only on `symbols->currentSegment` (`ViceWrapper.cpp:853-868`, `AtariWrapper.cpp:112-153`, `NesWrapper.cpp:1676-1689`); hit = `SetDebugMode(PAUSED)` from the emulation thread + `CDebugEventsHistory::CreateEventBreakpoint` + WebSocket "breakpoint" broadcast; views are never notified, they poll (`CViewC64::Render` ~`:2370-2445` calls `SetCurrentPC`). The temporary breakpoint is one `int temporaryBreakpointPC` per `CDebugBreakpointsAddr`, checked before user breakpoints in VICE, no event, no broadcast; cleared by step/continue/frame-step/reset. All checks are suppressed during snapshot restore (`IsPerformingSnapshotRestore`), every forward step calls `snapshotsManager->CancelRestore()`.
+- **Threads and tasks:** one emulation thread per emulator (`CEmulationThreadC64/Atari/Nes::ThreadRun`); `cpuDebugInterruptTasks` drained in the pause check / snapshot-restore check; task classes are joystick/keyboard/reset/cartridge/resource only, there is no stepping task. Mutexes: `breakpointsMutex` (`LockMutex`), `renderScreenMutex`, `ioMutex`, `tasksMutex`, `pauseMutex`+`pauseCV` (VICE only), `frameStepMutex`+`frameStepCV`.
+- **Call tracking:** none in the debugger layer; `CStackAnnotationData` (`DebugInterface/CStackAnnotation.h`: `entryTypes[256]`, `irqSources[256]`, `originPC[256]`) is written on pushes by all three cores and shown by `CViewStack`; pops do not clear; cleared on snapshot restore.
+- **Timeline:** `CSnapshotsManager` backstep = restore an earlier snapshot and run forward to a target cycle; C64-only frame navigation documented in `docs/mcp/timeline-navigation.md`. A source step must call `CancelRestore` like the instruction step and stay inert during replay.
+
+### 20.4 Memory mapping per machine (facts)
+
+- **Adapters:** base `CDebugDataAdapter` (`DebugInterface/CDebugDataAdapter.h:19`). VICE: `CDataAdapterViceC64` (CPU view via `c64d_peek_c64`, bus write via `c64d_mem_write_c64`; used by disassembly, memory map and hex dump), `CDataAdapterViceC64DirectRam` (`mem_ram[]`; used by monitor and stack views and by `SwitchIsDataDirectlyFromRam`, `Screens/CViewC64.cpp:2830-2856`, "TODO: proper banking"), 1541 CPU/direct/minimal adapters, `CDataAdapterViceC64Cartridge` (hard-coded 512 KB, ROML only through `c64d_peek_cart_roml`, type enum unused, cells never marked), `CDataAdapterViceC64Reu` stub. Atari: single `CDataAdapterAtari` over `MEMORY_SafeGetByte`/`MEMORY_PutByte`. NES: `CDataAdapterNesRam` over `nesd_peek_safe_io` and `CDataAdapterNesPpuNmt`; PPU/CHR/OAM/palette adapters are uninstantiated stubs.
+- **C64:** `c64d_peek_c64` (`Emulators/vice/c64/c64memsc.c:1208-1398`) is a hand-written decoder from `pport.dir/data/data_read` and `export.exrom/game` reading `mem_ram`, the ROM arrays, `c64d_peek_io` and `c64io_de00/df00_peek`; cartridge windows go through `generic_peek_mem` (`cart/c64-generic.c:370`) at the current `roml_bank`/`romh_bank`, bypassing per-cartridge `cartridge_peek_mem_slotmain`; Ultimax open areas can leave the result uninitialized. VICE's `mem_get_current_bank_config()` (`:228`) and the cart bank variables (`cart/c64cartsystem.h:144-148`) have no debugger accessor. Exposed today: `c64d_get_exrom_game`, `c64d_get_ultimax_phi`, `c64d_peek_memory0001`, `GetC64CartridgeState`, and the remote CPU status fields `memory0001/exrom/game`. `CViewC64MemoryBank` holds a 32-entry table indexed by `(exrom<<4)|(game<<3)|(port&7)` with RAM/BASIC/KERNAL/CHAR/IO/CART_LO/CART_HI/OPEN (duplicated in `CVicEditorLayerMemoryAccess.cpp`); it shows no cart bank number and no write routing. RAM-under-ROM is not modelled; writes just follow VICE's write table.
+- **NES:** `nesd_peek_safe_io` (`NestopiaInterface/NesWrapper.cpp:1049`) peeks the mapper's current PRG window for `$0001-$1FFF` and `$5001-$FFFF`, and reads `ram[addr]` (a 2 KB array) for `$0000`, `$2000-$4FFF`, out of bounds. Writes are bus pokes (mapper registers). PRG bank accessors exist in the core (`Memory::GetBank<SIZE>(addr)`, `core/NstMemory.hpp:450-468`) behind protected `Board::prg` and private `Cartridge::board`; `Cartridge::GetProfile()` / `Api::Cartridge::Profile` (header, `prgRom`, `trainer`) exist but are unused by the debugger. 199 board implementations, 236 distinct mapper numbers. No PRG bank display anywhere.
+- **Atari:** `MEMORY_mem` is the CPU-visible image; OS/BASIC/cart/XE banks are `memcpy`'d in by `MEMORY_HandlePORTB` (`Emulators/atari800/memory.c:729-908`), RAM under the OS lives in static `under_atarixl_os[]`, `under_cart809F`/`under_cartA0BF`, banked RAM in static `atarixe_memory`; `MEMORY_PutByte` drops writes to ROM. `MEMORY_xe_bank` (`memory.c:82`) is unused by the debugger; `PIA_PORTB` is shown as a register only. `CARTRIDGE_main{type,state,size,image}` with `CARTRIDGE_LAST_SUPPORTED = 70` is never referenced by debugger code. Machine presets in `atariMachinesDefs` (400/16K, 800/48K, 1200XL, 600XL, 800XL, 130XE, XEGS, 5200); default 800XL with RAM option 9 (`MEMORY_ram_size = 1088`).
+- **Keying:** one `CDebugMemoryCell` per CPU address per adapter (`Symbols/CDebugMemory.cpp:16`), marked by `c64d_/atrd_/nesd_mark_*cell*` on the CPU symbols only; breakpoints, labels, watches and source lines are `std::map<int,...>` / flat arrays per segment. Nothing carries PRG offset, ROM file offset or bank; the only bank arithmetic in the app is the CrtMaker Magic Desk builder.
+
+### 20.5 Tests, CI and tooling (facts)
+
+- `src/Tests/`: ~70 `CTest` subclasses (`GetName`, `Run(ITestCallback*)`, `Cancel`, `StepCompleted`, `TestCompleted`, `ResolveProjectPath`), registered in `CTestSuiteRegisterRetroDebuggerTests()` (`src/Tests/CTestSuiteRetroDebugger.cpp:95-221`); ImGui tests in `CImGuiTests.cpp` under `MT_ENABLE_IMGUI_TEST_ENGINE`. Patterns to copy: `CTestViceInstructionStepping` (poke + `MakeJmpC64` + RUN_ONE_INSTRUCTION polling), `CTestViceBreakpoints` (`currentSegment->AddBreakpointPC`), `CTestStackAnnotation` (C64 + Atari + a synthesized NES ROM), `CTestNesInputReplay` (`InsertCartridge`). No test loads symbols, `.dbg` or source; no NES/Atari stepping or breakpoint test.
+- `tests/run_test.sh`: builds unless `--skip-build`, `--imgui`, `--imgui-test`, `--timeout` (900 s default), results in `tests/results/last_run.txt` (`RESULT: P/T`); `run_suite_isolated.sh` one process per test; `test-skipped-tests.sh` keeps `tests/SKIPPED_TESTS.md` honest.
+- CI: `build-linux.yml` builds and runs `test_mtcaps.py` only (xvfb installed, suite not run); `build-macos.yml` builds and runs `tests/run_test.sh --skip-build`; `build-windows.yml` builds only; `disk-contents.yml` runs a standalone test. No toolchain is downloaded anywhere.
+- External tools: 64tass vendored in `src/Tools/64tass` (also `src/Tools/asm6`), used by `CDebuggerApi::Assemble64Tass*` and the `retro_assemble` tool; KickAssembler via `SYS_ExecSystemCommand("java -jar ...")` in `Plugins/CrtMaker/CViewC64CrtMaker.cpp:395-430` with `javaPath`/`kickAssJarPath`/`kickAssParams` and an mtime-based skip; ca65 only in `tools/Exomizer-Decrunch/build-decrunch.sh`. No file watcher of any kind.
+- Remote/MCP: stepping endpoints `step/cycle|instruction|subroutine`, `continue`, `pause`, `cpu/jump`; breakpoint PC/memory add/remove/list; `segment/read|write`; `retro_disassemble` with `includeLabels`. Missing: step-out, source stepping, symbol loading, source location queries.
+- Build hygiene: `tools/add_source_file.py` registers a new file in CMake, Xcode and the vcxproj/filters at once; every new file must go through it or the three lists drift (CLAUDE.md).
+
+### 20.6 Decisions taken in 1.4
+
+1. The canonical database (#6) is a migration of `CDebugAsmSource`/`CDebugSymbolsSegment`, keeping KickAssembler segments as physical-identity candidates and the one-active-segment scope until RD-025; the `.dbg` path gets a regression test first (RD-038).
+2. Loader dispatch moves to a content-sniffing registry (RD-031) because cc65 and KickAssembler share the `.dbg` extension.
+3. Step-over/step-out move from `CViewDisassembly` into `CDebugInterface` with a real temporary-breakpoint object and documented priorities (RD-037) before the source-step engine (RD-013) is built on them.
+4. The source-step controller is evaluated inside the per-instruction emulation-thread hook (RD-011 adds the generic callback at the existing hook points), with instruction budget and cancellation; it never drives `RUN_ONE_INSTRUCTION` from the UI.
+5. The NES mapping provider gets its own backlog item (RD-040); the emulator-core accessor patches for all three machines are part of RD-027/028/029/040 and are made in the embedded cores under `src/Emulators/`, never in MTEngineSDL and never in the `[C64D-REFERENCE-ONLY]` reference copies.
+6. The headless suite must run on Linux CI (RD-034) before the three-machine matrix is used as an acceptance gate; toolchain provisioning is nightly-only (RD-035).
+7. C64 Ultimate and the 1541 drive CPU are out of scope through P4 (open decision 12); Atari fixtures must set machine type and RAM size explicitly (open decision 13).
+8. Documentation in this folder: this spec, `REVIEW-v1.3.md` (the review that produced 1.4), `TRACKER.md` (live backlog status), `IMPLEMENTATION-PLAN.md` (milestones and sequencing).
