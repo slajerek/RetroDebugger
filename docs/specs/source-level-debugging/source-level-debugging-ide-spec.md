@@ -638,7 +638,7 @@ Each file URI maps to one document model with multiple possible views. Tabs show
 
 ### 10.4 Security and robustness
 
-Explicit consent before running arbitrary workspace build commands; do not automatically execute a newly opened project's scripts. Escape/process arguments correctly (the only process launcher used today is the engine's `SYS_ExecSystemCommand(const char *shellString, ...)`, which takes a shell string; an argv-based launcher is needed, see open decision 11); prevent path traversal in artifact resolution; cap external tool runtime; redact sensitive environment variables in logs; handle untrusted malformed metadata safely.
+Explicit consent before running arbitrary workspace build commands; do not automatically execute a newly opened project's scripts. Escape/process arguments correctly (the only process launcher the app uses today is the engine's `SYS_ExecSystemCommand(const char *shellString, ...)`, which takes a shell string; build tasks use the engine's argv-based `CProcessSpawner::Run` instead, see open decision 11 and RD-042); prevent path traversal in artifact resolution; cap external tool runtime; redact sensitive environment variables in logs; handle untrusted malformed metadata safely.
 
 ---
 
@@ -731,7 +731,7 @@ Tests are repeatable; logs explain stop reasons; no regression in existing KickA
 | RD-044 | P4 | c64 | 1541 drive CPU source debugging: per-CPU wiring of database/resolver/observer/step controller on `symbolsDrive1541`, drive mapping provider (RAM/VIA/ROM, no banking), `D:` labels, project-level routing of `.dbg` segments to the drive, drive stack as tracker seed; see #20.8 | RD-013, RD-025, RD-032 |
 | RD-045 | P5 | c64 | C64 Ultimate source support in observed mode: source view, labels and mapping provider from polled `$01`/EXROM/GAME, `C64UTraceBuffer` replayed into the execution observer after the fact (source-level trace, last executed source lines); stepping/source breakpoints gated by `CC64BackendCapabilities`; see #20.8 | RD-011, RD-028, RD-003 |
 | RD-018 | P5 | ui | Add workspace explorer and multi-file tabs | RD-003 |
-| RD-042 | P0 (proposal) / P5 (use) | core | **Must fix, decided: engine.** argv-based process launcher with cwd/env/timeout/capture proposed to MTEngineSDL now (lead time), consumed by build tasks in P5; replaces shell-string `SYS_ExecSystemCommand` | — |
+| RD-042 | P0 (engine) / P5 (use) | core | **Must fix, decided: engine.** Extend the engine's existing argv-based `CProcessSpawner` with `Run` (cwd/env/PATH/timeout/cancel/captured output), consumed by build tasks in P5; replaces shell-string `SYS_ExecSystemCommand` | — |
 | RD-019 | P5 | ui | Add toolchain registry, external build tasks and diagnostics | RD-018, RD-002, RD-042 |
 | RD-020 | P5 | core | Add build/run/debug orchestration with artifact consistency checks | RD-019, RD-007 |
 | RD-021 | P5 | ui | Enable editing, save, undo/redo, search and file watchers (no file watcher exists today) | RD-003, RD-018 |
@@ -755,7 +755,7 @@ Tests are repeatable; logs explain stop reasons; no regression in existing KickA
 
 9. Which NES mapper families and ROM/linker artifact formats can be exercised in headless integration tests initially?
 10. How does the existing emulator expose physical PRG identity and fetch mapping, including mapper-specific aliases and PRG-RAM? **Answered (1.4):** it does not; #20.4 lists the core accessors to add (RD-040).
-11. Which argv-based process launcher is used for build tasks? **Decided (maintainer, 2026-10-17): engine.** The proposal goes to MTEngineSDL (RD-042, filed in M0 for lead time); the app pins `MTENGINE_REF` once it lands. The engine's `SYS_ExecSystemCommand` takes a shell string and is unsuitable for #9.3/#10.4.
+11. Which argv-based process launcher is used for build tasks? **Decided (maintainer, 2026-10-17): engine.** The engine already ships an argv-based `CProcessSpawner` (spawn/kill/try-wait, used by NetGame); RD-042 adds `CProcessSpawner::Run` there with working directory, captured stdout/stderr, PATH lookup, timeout and process-tree cancellation (engine branch `c-source-debugging`), and the app consumes it once merged into engine `devel`. The engine's `SYS_ExecSystemCommand` takes a shell string and is unsuitable for #9.3/#10.4.
 12. Does source-level debugging cover the C64 Ultimate (`CDebugInterfaceC64U`) and the 1541 drive CPU? **Decided (maintainer, 2026-10-17): both are must-have, delivered in later phases** (1541: RD-044 in P4; C64U observed mode: RD-045 in P5). The compatibility review in #20.8 lists what P0-P3 must keep open so neither needs a redesign.
 13. Which default Atari configuration do fixtures assume? The debugger's default is 800XL with the 1088 KB RAM option (`c64SettingsAtariMachineType=4`, `c64SettingsAtariRamSizeOption=9`), so an extended-RAM window is active by default; fixtures must set machine type and RAM size explicitly.
 14. Embedded 64tass (vendored 1.46, 2012): capture symbols/listing from the vendored version through callbacks (RD-043, recommended first step) or upgrade the vendored assembler to a current 64tass first? The upgrade is larger (new source tree in three build systems, syntax differences for plugin-generated code) and is not required for RD-043.
@@ -830,7 +830,7 @@ Revision 1.4 is the first revision written with the repository at hand. It execu
 | Bank state exposure | Unknown | None reaches debugger code; VICE, Nestopia and Atari800 each have the state internally without accessors | RD-027 adds accessors in the embedded cores (allowed; they are not MTEngineSDL); RD-040 added for the NES provider, which had no backlog item |
 | CPU view vs raw RAM | Not discussed | C64 and 1541 have CPU-view and direct-RAM adapters (`SwitchIsDataDirectlyFromRam`, marked "TODO: proper banking"); Atari "RAM" is the CPU view; NES has CPU view only | #3B.1's "CPU read view / write destination / physical backing" has a C64 head start and no Atari/NES start |
 | Tests / CI | Nightly + PR suites to be designed | In-process `CTest` suite (`tests/run_test.sh`), run in CI on macOS only; no external toolchains; `dankwars.prg/.dbg` and `labelstest1.vs` fixtures unused | RD-034 (Linux suite), RD-035 (toolchains), RD-038 (regression anchor) |
-| Process launching | argv arrays required | Only `SYS_ExecSystemCommand(shellString)` is used | Open decision 11, RD-042 |
+| Process launching | argv arrays required | The app uses only `SYS_ExecSystemCommand(shellString)`; the engine's argv `CProcessSpawner` lacked cwd/capture/timeout | Open decision 11, RD-042 (`CProcessSpawner::Run`) |
 | Section markers | the section-sign character | Repo convention forbids it (CLAUDE.md) | All cross-references use `#N` |
 
 ### 20.2 Source view, symbols and loaders (facts)

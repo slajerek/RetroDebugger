@@ -74,17 +74,26 @@ promises): M0 1-2 weeks · M1 3-4 weeks · M2 2-3 weeks · M3 4-6 weeks · M4 4-
 Results are spec #20. Re-read #20.2-#20.5 before touching any of the files named there.
 
 ### RD-038 Regression tests for the existing loaders
-- Add `src/Tests/CTestSymbolsKickAssDbg.{h,cpp}`: load `assets/tests/c64/dankwars.dbg`
-  via `symbols->ParseSourceDebugInfo`, assert segment count/names, a handful of
-  `codeSourceLineByMemoryAddress[addr]` → file/line/col values picked from the file,
-  labels and breakpoints parsed, then re-import and assert no crash (this currently
-  leaks/dangles, see RD-032; the test documents the behaviour it must preserve, not the
-  leak).
-- Add `src/Tests/CTestSymbolsViceLabels.{h,cpp}` for `assets/tests/labelstest1.vs` and
-  a 64tass-style string through `ParseSymbols`.
-- Register both in `CTestSuiteRegisterRetroDebuggerTests()`.
-- Read first: `CDebugAsmSource.cpp:67-694`, `CDebugSymbols.cpp:117-339`,
-  `CTestViceBreakpoints.cpp` (pattern for obtaining `debugInterfaceC64`).
+Implemented as one test, `src/Tests/CTestSymbolLoaders.{h,cpp}` (`SymbolLoaders`), with
+four parts, each parsing into a scratch `CDebugSymbolsC64` swapped in for
+`debugInterfaceC64->symbols` (`CDebugAsmSource` reads that pointer directly), so the
+live symbols are untouched:
+- VICE `.vs` (`assets/tests/labelstest1.vs`): one `Default` segment, 89 labels for 91
+  lines, leading `.` stripped, duplicate address keeps the last label.
+- 64tass `NAME = $addr` / decimal, spaces and tabs around `=`.
+- KickAss `.dbg` (`assets/tests/c64/dankwars.dbg`) loaded the way PRG autoload does it
+  (`DeleteAllSymbols` then `ParseSourceDebugInfo`): segment order, first segment
+  activated, per-segment address → file:line:column, `<Block>` names, labels per
+  segment, duplicate label text resolving to the last address, `<Breakpoints>` as PC
+  breakpoints, a missing source file being silent.
+- Source text: an in-memory `.dbg` pointing at `assets/tests/symbols/simple.asm`
+  (absolute path via `ResolveProjectPath`): 1-based line index, each tab becomes four
+  spaces, address → line → text end to end.
+Re-import is deliberately NOT exercised: the menu import path (`CMainMenuBar`
+"Import labels" with a `.dbg`) does not call `DeleteAllSymbols`, so the old segments
+stay in `segments` with source-line pointers that `ParseSourceDebugInfo` just freed, and
+`ActivateSelectedSegment` finds the OLD segment of the same name first. That is a
+use-after-free, recorded as a defect for RD-032; its fix comes with its own test.
 
 ### RD-002 Fixtures and pinned toolchains
 - Create `tests/source-debug/` as in spec #9.1 with `fixtures/`, `toolchains/`,
@@ -132,6 +141,9 @@ Patch the embedded cores so providers can be written without duplicating mapper 
   on the default machine; the behavioural tests come in M4.
 
 ### RD-034 Headless suite on Linux CI (must fix)
+- Local baseline first: a Linux container builds with `./build-linux.sh` after the same
+  `apt-get install` list the workflow uses, and runs the suite under `xvfb-run`; the
+  per-test result of that run is the expected first CI result.
 - `.github/workflows/build-linux.yml`: after the build step add
   `xvfb-run -a --server-args="-screen 0 1280x800x24" ./tests/run_test.sh --skip-build`
   with `SDL_AUDIODRIVER=dummy` (the runner sets it) on both log legs; upload
@@ -141,18 +153,27 @@ Patch the embedded cores so providers can be written without duplicating mapper 
   record them in `tests/SKIPPED_TESTS.md` with the marker convention or fix them,
   never mark green by skipping silently. Update `AGENTS.md` "Known state".
 
-### RD-042 argv process launcher — engine proposal (must fix, decided: engine)
-- File the proposal in `slajerek/MTEngineSDL` now (it is on the P5 critical path and
-  has lead time): `SYS_ExecProcess(const SysProcessSpec &spec, SysProcessResult &out)`
-  with `argv` vector, `cwd`, `env` overrides, `timeoutMs`, stdout/stderr capture
-  (callback or buffer), cancellation handle and exit code; POSIX `posix_spawn`/`fork+exec`,
-  Windows `CreateProcessW` with proper quoting. No shell involved.
-- App side: a thin `CProcessRunner` wrapper lands with RD-019 once `MTENGINE_REF` is
-  bumped; until then nothing in this repo calls the shell-string API for new code.
+### RD-042 argv process launcher — engine (must fix, decided: engine)
+- Correction to the inventory: the engine already has `CProcessSpawner`
+  (`src/Engine/Tools/CProcessSpawner.{h,cpp}`: argv `Spawn`, `SpawnWithEnv`, `Kill`,
+  `TryWait`, `BuildWindowsCommandLine`), used by NetGame. What build tasks lacked was a
+  working directory, captured stdout/stderr, PATH lookup, timeout and cancellation.
+- Done on the engine branch `c-source-debugging` (commit ab37e96): blocking
+  `CProcessSpawner::Run(args, CProcessSpawnOptions{workingDirectory, envVars,
+  searchPath}, CProcessRunResult&, timeoutMs, const atomic<bool> *cancel, onOutput)`,
+  draining both pipes together, no shell. POSIX: `posix_spawn` with file actions and
+  `addchdir_np` (glibc 2.29+, macOS 10.15+), own process group, SIGTERM then SIGKILL to
+  the group. Windows: `CreateProcessW` (UTF-8 to UTF-16), explicit inherited-handle
+  list, kill-on-close job object. Engine test `CTestProcessSpawner` (16 POSIX steps;
+  a smaller Windows set) for a host suite.
+- Next: merge into engine `devel` (the maintainer's call), then the app registers
+  `CTestProcessSpawner` in its suite and RD-019 wraps `Run` in a `CProcessRunner`.
+  Until then nothing in this repo calls the shell-string API for new code.
 
 **M0 exit:** RD-038 tests green on all three platforms; RD-024 header reviewed by the
 maintainer; RD-027 accessors merged; first Tier 1 fixtures committed with manifests;
-Linux CI runs the suite on both legs; the engine proposal for RD-042 is filed.
+Linux CI runs the suite on both legs; RD-042 `CProcessSpawner::Run` is on the engine
+branch awaiting merge into engine `devel`.
 
 ## 3. M1 — Canonical model & loaders (P2 core)
 

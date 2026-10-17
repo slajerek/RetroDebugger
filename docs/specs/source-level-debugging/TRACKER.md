@@ -13,7 +13,7 @@ definitions are in `IMPLEMENTATION-PLAN.md`.
 
 | Milestone | Phase | Scope | Status |
 |---|---|---|---|
-| M0 Discovery & safety net | P0 | RD-001, RD-038, RD-002, RD-024, RD-027, **RD-034**, **RD-042 (engine proposal)** | RD-001 done, rest todo |
+| M0 Discovery & safety net | P0 | RD-001, RD-038, RD-002, RD-024, RD-027, **RD-034**, **RD-042 (engine)** | RD-001 done; RD-038, RD-034 in progress; RD-042 in review on the engine branch |
 | M1 Canonical model & loaders | P2 (core) | RD-006, RD-031, RD-032, RD-007, RD-008, RD-033 | todo |
 | M2 Source document & view | P1 | RD-003, RD-004, RD-005 | todo |
 | M3 Execution events & stepping engine | P2/P3 | RD-011, RD-037, RD-012, RD-013, RD-014, RD-015 | todo |
@@ -27,7 +27,7 @@ definitions are in `IMPLEMENTATION-PLAN.md`.
 | ID | Phase | Track | Title | Status | Depends on | Gate |
 |---|---|---|---|---|---|---|
 | RD-001 | P0 | core | Inventory source view, hooks, breakpoints, loaders, memory translation APIs | done(53d397d+1.4) | — | Spec #20 written |
-| RD-038 | P0 | tests | Regression test for KickAss `.dbg` + VICE `.vs` loaders (`dankwars.dbg`, `labelstest1.vs`) | todo | RD-001 | `CTestSymbolsKickAssDbg` + `CTestSymbolsViceLabels` pass on all 3 CI platforms |
+| RD-038 | P0 | tests | Regression test for KickAss `.dbg` + VICE `.vs` loaders (`dankwars.dbg`, `labelstest1.vs`) | in-progress | RD-001 | `CTestSymbolLoaders` (`SymbolLoaders`) passes on all 3 CI platforms |
 | RD-002 | P0 | tests | Portable C/ASM fixtures, pinned toolchains, verified compiler×machine matrix | todo | — | `tests/source-debug/toolchains/*.yaml` with versions; matrix table in plan; Tier 1 artifacts committed |
 | RD-024 | P0 | core | Logical vs physical code identity + `IMemoryMappingResolver` contract | todo | RD-001 | Header + unit test of `Unknown`/alias semantics; reviewed by maintainer |
 | RD-027 | P0 | core | Audit + accessor patches in VICE/Nestopia/Atari800 cores (fetch/read/write, bus master) | todo | RD-001, RD-024 | Accessors compiled on 3 platforms; `tests/test-reference-files.sh` still green |
@@ -60,7 +60,7 @@ definitions are in `IMPLEMENTATION-PLAN.md`.
 | RD-017 | P4 | compiler | Structured inline provenance + logical inline frames | todo | RD-016, RD-012 | Inline fixture Step Out of inlined frame |
 | RD-035 | P4 | ci | Nightly toolchain provisioning (cc65, Oscar64 pinned, KickC+Java, KickAss jar licensing) | todo | RD-002 | Nightly workflow green with version report artifact |
 | RD-018 | P5 | ui | Workspace explorer + tabs | todo | RD-003 | ImGui test opens folder, switches tabs |
-| RD-042 | P0/P5 | core | **Must fix, decided: engine.** argv process launcher proposed to MTEngineSDL in M0; consumed by RD-019 in P5 | todo | — | Proposal filed in the engine repo (link here); `MTENGINE_REF` bumped when merged; launcher test with timeout |
+| RD-042 | P0/P5 | core | **Must fix, decided: engine.** Extend the engine's existing `CProcessSpawner` with `Run` (cwd, captured output, PATH, timeout, cancel); consumed by RD-019 in P5 | review(engine `c-source-debugging` ab37e96) | — | Merged into engine `devel`; `CTestProcessSpawner` green in the app suite on 3 platforms |
 | RD-043 | P4 | compiler | Embedded 64tass emits symbols + address→line map on every in-process assembly (spec #20.9) | todo | RD-006, RD-031 | `retro_assemble` result carries labels; source view shows the assembled text with PC line; plugin `A(...)` code gets labels |
 | RD-044 | P4 | c64 | 1541 drive CPU source debugging (spec #20.8) | todo | RD-013, RD-025, RD-032 | Source step on drive code with C64 running; `D:` labels land in `symbolsDrive1541`; "1541 Source code" view |
 | RD-045 | P5 | c64 | C64 Ultimate observed-mode source support (spec #20.8) | todo | RD-011, RD-028, RD-003 | Source view + labels + mapping on C64U; trace replay shows last executed source lines; stepping UI greyed by capabilities |
@@ -91,6 +91,8 @@ Questions 1, 2, 3, 5, 8 and 10 are answered in spec #15/#20.
 |---|---|
 | Segments never deleted; `.dbg` re-import dangling pointers; segment dtor double delete | RD-032 |
 | `.vs` `D:` labels ignored; newer `<Watchpoints>` layout misparsed | RD-032 |
+| Menu "Import labels" with a `.dbg` skips `DeleteAllSymbols`: stale same-name segments keep freed source lines and `ActivateSelectedSegment` picks the stale one (use-after-free) | RD-032 |
+| `.dbg` `<Sources>` paths: split on every comma; a Windows path is not split into a file name on macOS/Linux (`GetFileNameComponentFromPath` uses the host separator); relative paths resolve against the process cwd, not the `.dbg` folder | RD-006 |
 | CLI `nes` unreachable branch; `-ines` missing; `-debuginfo` never NES; NES source layout slot | RD-033 |
 | C64 PC/memory checks ignore `breakOnPC`/`breakOnMemory`; temp bp hides user bp, no event | RD-037 |
 | `nesd_peek_safe_io` OOB read | RD-040 |
@@ -103,3 +105,4 @@ Questions 1, 2, 3, 5, 8 and 10 are answered in spec #15/#20.
 |---|---|
 | 2026-10-17 | Tracker created from spec v1.4; RD-001 marked done; RD-031..RD-042 added |
 | 2026-10-17 | Maintainer feedback: RD-034/031/042 must-fix (RD-034 and the RD-042 proposal moved to M0, decision 11 = engine); RD-043 (64tass symbols), RD-044 (1541), RD-045 (C64U) added; decision 12 = must-have later phases; decision 14 added |
+| 2026-10-17 | RD-042: engine already had `CProcessSpawner`; `Run` added on engine branch `c-source-debugging` (ab37e96). RD-038 test written as `CTestSymbolLoaders`. Two loader defects added (menu `.dbg` re-import use-after-free; `<Sources>` path handling) |
