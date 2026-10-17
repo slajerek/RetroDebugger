@@ -13,7 +13,7 @@ definitions are in `IMPLEMENTATION-PLAN.md`.
 
 | Milestone | Phase | Scope | Status |
 |---|---|---|---|
-| M0 Discovery & safety net | P0 | RD-001, RD-038, RD-002, RD-024, RD-027, **RD-034**, **RD-042 (engine)** | RD-001 done; RD-038, RD-034, RD-042 in review (RD-034 and RD-042 wait on the engine branch merge) |
+| M0 Discovery & safety net | P0 | RD-001, RD-038, RD-002, RD-024, RD-027, **RD-034**, **RD-042 (engine)** | RD-001 done; RD-038, RD-034, RD-042 in review (engine changes merged to engine `devel` 40c95f8; remaining gate: CI on 3 platforms) |
 | M1 Canonical model & loaders | P2 (core) | RD-006, RD-031, RD-032, RD-007, RD-008, RD-033 | todo |
 | M2 Source document & view | P1 | RD-003, RD-004, RD-005 | todo |
 | M3 Execution events & stepping engine | P2/P3 | RD-011, RD-037, RD-012, RD-013, RD-014, RD-015 | todo |
@@ -52,7 +52,7 @@ definitions are in `IMPLEMENTATION-PLAN.md`.
 | RD-015 | P3 | tests | Headless step-trace runner + golden expectations (#9.5 format) | todo | RD-002, RD-013 | `tests/source-debug/expectations/**` replayed in suite |
 | RD-026 | P3 | tests | NES NROM/UxROM/MMC1-or-MMC3 banked fixtures with physical-fetch traces | todo | RD-002, RD-024, RD-025, RD-040 | #3A.6 assertion list green |
 | RD-030 | P3 | tests | C64 + Atari banked suites; shared 3-machine matrix | todo | RD-002, RD-025, RD-028, RD-029 | #3B.4 trace schema produced for every fixture |
-| RD-034 | P0 | ci | **Must fix.** Run headless suite on Linux CI (both log legs) | review(ea99097; local Linux 74/74, 7 skipped) | engine `CPianoKeyboard` fix (engine `c-source-debugging` 623b76e) merged to engine `devel` | `build-linux.yml` runs `tests/run_test.sh --skip-build` under xvfb; AGENTS.md updated |
+| RD-034 | P0 | ci | **Must fix.** Run headless suite on Linux CI (both log legs) | review(ea99097; local Linux 74/74, 7 skipped) | engine `CPianoKeyboard` fix (merged to engine `devel`, 40c95f8) | `build-linux.yml` runs `tests/run_test.sh --skip-build` under xvfb; AGENTS.md updated |
 | RD-036 | P3 | remote | Remote/MCP: `step/source/*`, `step/out`, `source/location`, `symbols/load`; skill doc | todo | RD-013, RD-031 | `CTestMCPProtocol` extended; `docs/mcp/retrodebugger-mcp-skill.md` updated |
 | RD-009 | P2 | compiler | cc65 `.dbg` adapter + contract tests | todo | RD-002, RD-006, RD-031 | Tier 1 cc65 fixture (C64, Atari, NES where target builds) |
 | RD-010 | P2 | compiler | KickC artifact audit + supported subset | todo | RD-002, RD-006, RD-031 | Capability flags documented; `Approximate` where only line mapping |
@@ -60,7 +60,7 @@ definitions are in `IMPLEMENTATION-PLAN.md`.
 | RD-017 | P4 | compiler | Structured inline provenance + logical inline frames | todo | RD-016, RD-012 | Inline fixture Step Out of inlined frame |
 | RD-035 | P4 | ci | Nightly toolchain provisioning (cc65, Oscar64 pinned, KickC+Java, KickAss jar licensing) | todo | RD-002 | Nightly workflow green with version report artifact |
 | RD-018 | P5 | ui | Workspace explorer + tabs | todo | RD-003 | ImGui test opens folder, switches tabs |
-| RD-042 | P0/P5 | core | **Must fix, decided: engine.** Extend the engine's existing `CProcessSpawner` with `Run` (cwd, captured output, PATH, timeout, cancel); consumed by RD-019 in P5 | review(engine `c-source-debugging` ab37e96) | — | Merged into engine `devel`; `CTestProcessSpawner` green in the app suite on 3 platforms |
+| RD-042 | P0/P5 | core | **Must fix, decided: engine.** Extend the engine's existing `CProcessSpawner` with `Run` (cwd, captured output, PATH, timeout, cancel); consumed by RD-019 in P5 | review(engine `devel` 40c95f8; app suite registers `ProcessSpawner`, 16/16 green on Linux) | — | Merged into engine `devel`; `CTestProcessSpawner` green in the app suite on 3 platforms |
 | RD-043 | P4 | compiler | Embedded 64tass emits symbols + address→line map on every in-process assembly (spec #20.9) | todo | RD-006, RD-031 | `retro_assemble` result carries labels; source view shows the assembled text with PC line; plugin `A(...)` code gets labels |
 | RD-044 | P4 | c64 | 1541 drive CPU source debugging (spec #20.8) | todo | RD-013, RD-025, RD-032 | Source step on drive code with C64 running; `D:` labels land in `symbolsDrive1541`; "1541 Source code" view |
 | RD-045 | P5 | c64 | C64 Ultimate observed-mode source support (spec #20.8) | todo | RD-011, RD-028, RD-003 | Source view + labels + mapping on C64U; trace replay shows last executed source lines; stepping UI greyed by capabilities |
@@ -109,3 +109,4 @@ Questions 1, 2, 3, 5, 8 and 10 are answered in spec #15/#20.
 | 2026-10-17 | Maintainer feedback: RD-034/031/042 must-fix (RD-034 and the RD-042 proposal moved to M0, decision 11 = engine); RD-043 (64tass symbols), RD-044 (1541), RD-045 (C64U) added; decision 12 = must-have later phases; decision 14 added |
 | 2026-10-17 | RD-042: engine already had `CProcessSpawner`; `Run` added on engine branch `c-source-debugging` (ab37e96). RD-038 test written as `CTestSymbolLoaders`. Two loader defects added (menu `.dbg` re-import use-after-free; `<Sources>` path handling) |
 | 2026-10-17 | Linux build + suite run locally under Xvfb: startup segfault fixed in the engine (`CPianoKeyboard`), `GT2Patterns` made platform-correct, suite 74/74 (7 skipped). RD-034 workflow step added; RD-038 green (25 steps) |
+| 2026-10-17 | Engine `c-source-debugging` fast-forwarded into engine `devel` (40c95f8, changelog under 3.21.22); app suite registers `CTestProcessSpawner`; Linux suite 75/75 (7 skipped) |

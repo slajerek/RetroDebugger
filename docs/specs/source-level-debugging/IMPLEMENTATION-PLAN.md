@@ -166,14 +166,14 @@ Patch the embedded cores so providers can be written without duplicating mapper 
   the group. Windows: `CreateProcessW` (UTF-8 to UTF-16), explicit inherited-handle
   list, kill-on-close job object. Engine test `CTestProcessSpawner` (16 POSIX steps;
   a smaller Windows set) for a host suite.
-- Next: merge into engine `devel` (the maintainer's call), then the app registers
-  `CTestProcessSpawner` in its suite and RD-019 wraps `Run` in a `CProcessRunner`.
-  Until then nothing in this repo calls the shell-string API for new code.
+- Merged into engine `devel` (40c95f8) with the `CPianoKeyboard` fix; the app suite
+  registers `CTestProcessSpawner`. RD-019 wraps `Run` in a `CProcessRunner`; nothing
+  in this repo calls the shell-string API for new code.
 
 **M0 exit:** RD-038 tests green on all three platforms; RD-024 header reviewed by the
 maintainer; RD-027 accessors merged; first Tier 1 fixtures committed with manifests;
-Linux CI runs the suite on both legs; RD-042 `CProcessSpawner::Run` is on the engine
-branch awaiting merge into engine `devel`.
+Linux CI runs the suite on both legs; RD-042 `CProcessSpawner::Run` is in engine
+`devel` and tested by the app suite.
 
 ## 3. M1 — Canonical model & loaders (P2 core)
 
