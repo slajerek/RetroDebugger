@@ -1,3 +1,4 @@
+#include "CViceMemoryMappingResolver.h"
 extern "C" {
 #include "vice.h"
 #include "main.h"
@@ -104,6 +105,8 @@ CDebugInterfaceVice::CDebugInterfaceVice(CViewC64 *viewC64, uint8 *c64memory, bo
 : CDebugInterfaceC64(viewC64)
 {
 	LOGM("CDebugInterfaceVice: VICE %s init", VERSION);
+
+	memoryMappingResolver = NULL;
 
 	CreateScreenData();
 
@@ -321,6 +324,13 @@ CSlrString *CDebugInterfaceVice::GetEmulatorVersionString()
 	SYS_ReleaseCharBuf(buf);
 	
 	return versionString;
+}
+
+CDebugMemoryMappingResolver *CDebugInterfaceVice::GetMemoryMappingResolver()
+{
+	if (memoryMappingResolver == NULL)
+		memoryMappingResolver = new CViceMemoryMappingResolver();
+	return memoryMappingResolver;
 }
 
 CC64BackendCapabilities CDebugInterfaceVice::GetC64BackendCapabilities()

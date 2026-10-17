@@ -42,7 +42,7 @@ definitions are in `IMPLEMENTATION-PLAN.md`.
 | RD-005 | P1 | ui | PC/breakpoint/selection decorations + bidirectional navigation | todo | RD-003, RD-006 | ImGui test: click line → disassembly address; PC line follows pause |
 | RD-011 | P2 | core | Generic execution events at existing hook points (+ RTS/RTI/reset/interrupt-entry) | todo | RD-001, RD-024 | Event-order test per machine; no perf regression vs `VicePlatformAbstraction` pacing gate |
 | RD-037 | P2 | core | Step-over/step-out in `CDebugInterface`; proper temporary breakpoint with priorities | todo | RD-011 | `CTestStepOverRecursion`, `CTestStepOut`, user bp beats temp bp |
-| RD-028 | P2 | c64 | C64 mapping provider (6510 port/PLA/cart/Ultimax), unify `CViewC64MemoryBank` table | todo | RD-024, RD-027 | #3B.2 "Required C64 tests" pass |
+| RD-028 | P2 | c64 | C64 mapping provider (6510 port/PLA/cart/Ultimax), unify `CViewC64MemoryBank` table | in-progress(provider from VICE tables, no-cart tests green; open: cart fixtures/profiles, view unification) | RD-024, RD-027 | #3B.2 "Required C64 tests" pass |
 | RD-040 | P2 | nes | NES mapping provider (mapper PRG identity, header→ROM offset, PRG-RAM), fix OOB peek | todo | RD-024, RD-027 | NROM + UxROM identity tests pass |
 | RD-029 | P2 | atari | Atari provider (model, PORTB, OS/BASIC, 130XE banks, ANTIC view, cartridge) | todo | RD-024, RD-027 | #3B.3 "Required Atari tests" pass or explicit skips recorded |
 | RD-012 | P3 | core | Physical/logical execution context tracker (seeded from stack annotations) | todo | RD-011, RD-006 | Tracker tests: JSR/RTS, IRQ/RTI nesting, tail JMP, attach mid-run → unknown |
@@ -120,3 +120,4 @@ Questions 1, 2, 3, 5, 8 and 10 are answered in spec #15/#20.
 | 2026-10-17 | RD-032: `SetSegment` activates fully, `D:` labels reach the 1541, both `<Watchpoints>` layouts; segment deletion traced to `CDebugEventsHistory` raw pointers (still open). Linux suite 79/79 |
 | 2026-10-17 | RD-009 (early): cc65 `.dbg` loader; relative source paths resolve against the debug file. Linux suite 79/79 |
 | 2026-10-17 | RD-033: NES autoload of labels/debug info, `-ines`, CLI symbols to the loaded machine, NES source-code layout. Linux suite 79/79; ImGui suite 10/15 before and after (five pre-existing Linux failures, AGENTS.md) |
+| 2026-10-17 | RD-028 part 1: `CViceMemoryMappingResolver` classifies accesses from VICE's own memory tables; `CTestC64MemoryMapping` (all `$01` patterns). Spec #3B.2 `$34` row corrected (RAM, not I/O). Linux suite 80/80 |

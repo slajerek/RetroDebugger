@@ -234,13 +234,13 @@ For **no cartridge** (`/GAME=/EXROM=1`), the relevant CPU *read/fetch* windows a
 | `111` (typically `$37`) | BASIC ROM | I/O | KERNAL ROM |
 | `110` (`$36`) | RAM | I/O | KERNAL ROM |
 | `101` (`$35`) | RAM | I/O | RAM |
-| `100` (`$34`) | RAM | I/O | RAM |
+| `100` (`$34`) | RAM | RAM | RAM |
 | `011` (`$33`) | BASIC ROM | character ROM | KERNAL ROM |
 | `010` (`$32`) | RAM | character ROM | KERNAL ROM |
 | `001` (`$31`) | RAM | character ROM | RAM |
 | `000` (`$30`) | RAM | RAM | RAM |
 
-The table shows typical `$3x` values with the usual DDR setup; low-bit combinations, not literal register values alone, define the mapping. BASIC visibility requires both LORAM and HIRAM. `CHAREN=0` selects character ROM only when LORAM or HIRAM is active; otherwise `$D000–DFFF` can expose RAM. **Read and write routing are different:** in normal C64 ROM-overlay modes, writes to `$A000–BFFF` or `$E000–FFFF` go to underlying RAM while CPU reads/fetches see ROM. When I/O is visible at `$D000–DFFF`, writes target I/O registers, not underlying RAM. Cartridge configurations and Ultimax mode alter these rules; do not generalize ordinary ROM write-through to every cartridge/Ultimax window.
+The table shows typical `$3x` values with the usual DDR setup; low-bit combinations, not literal register values alone, define the mapping. BASIC visibility requires both LORAM and HIRAM; with LORAM and HIRAM both 0 the whole map is RAM whatever CHAREN says (the v1.3 table listed I/O for `$34`; VICE and the hardware show RAM, verified by `CTestC64MemoryMapping`). `CHAREN=0` selects character ROM only when LORAM or HIRAM is active; otherwise `$D000–DFFF` can expose RAM. **Read and write routing are different:** in normal C64 ROM-overlay modes, writes to `$A000–BFFF` or `$E000–FFFF` go to underlying RAM while CPU reads/fetches see ROM. When I/O is visible at `$D000–DFFF`, writes target I/O registers, not underlying RAM. Cartridge configurations and Ultimax mode alter these rules; do not generalize ordinary ROM write-through to every cartridge/Ultimax window.
 
 Cartridge handling MUST include `/GAME`/`/EXROM` modes (8 KB, 16 KB, Ultimax), `ROML`/`ROMH`, `IO1` `$DE00–DEFF`, `IO2` `$DF00–DFFF`, mapper/bank-switch registers, RAM-under-ROM, open/unmapped Ultimax windows, and cartridge-specific bank IDs. Treat EasyFlash/Action Replay/etc. as **device-specific follow-up profiles** selected based on actual emulator cartridge support, not as generic PLA behavior. `VIC-II` sees a different memory/bus view than the CPU (including character ROM visibility); represent bus master/address space explicitly, even though CPU stepping only requires CPU fetch resolution in the MVP. Also distinguish physical underlying RAM from the 6510 port at `$0000/$0001`.
 

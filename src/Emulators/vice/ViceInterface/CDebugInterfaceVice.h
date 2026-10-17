@@ -38,6 +38,7 @@ enum shift_type {
 class CAudioChannelVice;
 class CSidData;
 class CDebugInterfaceVice;
+class CViceMemoryMappingResolver;
 class CViewBreakpoints;
 class CWaveformData;
 
@@ -87,6 +88,10 @@ public:
 	virtual int GetEmulatorType();
 	virtual CSlrString *GetEmulatorVersionString();
 	virtual CC64BackendCapabilities GetC64BackendCapabilities();
+
+	// RD-028: the C64 memory mapping provider (CViceMemoryMappingResolver.h)
+	CViceMemoryMappingResolver *memoryMappingResolver;
+	virtual CDebugMemoryMappingResolver *GetMemoryMappingResolver();
 	
 	virtual float GetEmulationFPS();
 	float numEmulationFPS;

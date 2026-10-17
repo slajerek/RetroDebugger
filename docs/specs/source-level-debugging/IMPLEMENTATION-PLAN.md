@@ -426,6 +426,19 @@ Each track: provider class in the emulator's interface folder, wired as
 read mode and by the database resolver; a test class with the spec's "Required tests"
 list; explicit `skip(reason)` for unsupported emulator configurations.
 
+- **RD-028 C64 -- first part done (review):** `CViceMemoryMappingResolver` (returned by
+  `CDebugInterfaceVice::GetMemoryMappingResolver()`) classifies each access from VICE's own
+  `mem_read_tab`/`mem_write_tab` for the current `mem_config` (`c64d_resolve_access`), so
+  the PLA rules are VICE's, not a third copy of the 32-mode table. Identities:
+  c64-ram, c64-cpu-port, c64-basic, c64-kernal, c64-chargen, c64-io, c64-color-ram,
+  c64-cart (region 0 ROML image / 1 ROMH image, bank * 8 KB + offset), c64-cart-ram.
+  Cartridge windows are exact for generic 8K/16K/Ultimax only, Unknown otherwise; VIC
+  bus master Unknown. `CTestC64MemoryMapping` (16 steps: all eight `$01` patterns,
+  hidden-RAM writes, I/O vs RAM writes, same-PC identities, ROM windows, epoch). It also
+  showed the spec's `$34` row was wrong (RAM, not I/O; fixed in spec #3B.2). Still open:
+  cartridge fixtures (Magic Desk-style CRT), per-cartridge profiles (EasyFlash...), and
+  making `CViewC64MemoryBank` / `CVicEditorLayerMemoryAccess` consumers.
+  Original plan:
 - **RD-028 C64** (`src/Emulators/vice/ViceInterface/CMemoryMappingVice.{h,cpp}`):
   decode from `pport` + EXROM/GAME + cart accessors; fetch/read → ROM/IO/RAM per the
   32-mode table (move it out of `CViewC64MemoryBank` and

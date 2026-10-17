@@ -51,6 +51,7 @@
 #include "cartio.h"
 #include "cartridge.h"
 #include "cia.h"
+#include "ViceWrapper.h"
 #include "cpmcart.h"
 #include "machine.h"
 #include "mainc64cpu.h"
@@ -250,6 +251,91 @@ void c64d_get_banking_state(int *memConfig, int *cartType, int *exrom, int *game
     if (romlBank)  { *romlBank = roml_bank; }
     if (romhBank)  { *romhBank = romh_bank; }
     if (exportRam) { *exportRam = export_ram; }
+}
+
+/* RD-028: which storage an access at ADDR reaches under VICE's CURRENT memory
+   configuration, read from VICE's own per-configuration tables -- the routing
+   the CPU itself uses -- so cartridge modes, Ultimax and board quirks are
+   VICE's answer, not a re-derived PLA table. KIND is a C64D_ACCESS_* code
+   (ViceWrapper.h), OFFSET the byte offset inside that storage. A handler this
+   function does not know (memory expansions, cartridge types with their own
+   banking) is C64D_ACCESS_UNKNOWN, never a guess.
+   Must run on the emulation thread or with the emulation paused. */
+static uint8_t void_read(uint16_t addr);
+static void void_store(uint16_t addr, uint8_t value);
+extern int cart_getid_slot0(void);
+extern int cart_getid_slot1(void);
+
+static int c64d_generic_cartridge_only(void)
+{
+    return (mem_cartridge_type == CARTRIDGE_GENERIC_8KB || mem_cartridge_type == CARTRIDGE_GENERIC_16KB
+            || mem_cartridge_type == CARTRIDGE_ULTIMAX)
+           && cart_getid_slot0() == CARTRIDGE_NONE && cart_getid_slot1() == CARTRIDGE_NONE;
+}
+
+void c64d_resolve_access(uint16_t addr, int isWrite, int *kind, uint32_t *offset)
+{
+    int page = addr >> 8;
+    int k = C64D_ACCESS_UNKNOWN;
+    uint32_t off = addr;
+
+    if (addr <= 0x0001) {
+        k = C64D_ACCESS_CPU_PORT;
+    } else if (page == 0) {
+        k = C64D_ACCESS_RAM;    /* zero_read / zero_store: RAM beyond the port */
+    } else if (!isWrite) {
+        read_func_ptr_t f = mem_read_tab[mem_config][page];
+        if (f == ram_read) {
+            k = C64D_ACCESS_RAM;
+        } else if (f == c64memrom_basic64_read) {
+            k = C64D_ACCESS_BASIC;
+            off = addr - 0xa000;
+        } else if (f == c64memrom_kernal64_read) {
+            k = C64D_ACCESS_KERNAL;
+            off = addr - 0xe000;
+        } else if (f == chargen_read) {
+            k = C64D_ACCESS_CHARGEN;
+            off = addr & 0x0fff;
+        } else if (f == colorram_read) {
+            k = C64D_ACCESS_COLORRAM;
+            off = addr & 0x03ff;
+        } else if (f == c64io_d000_read || f == c64io_d100_read || f == c64io_d200_read || f == c64io_d300_read
+                   || f == c64io_d400_read || f == c64io_d500_read || f == c64io_d600_read || f == c64io_d700_read
+                   || f == cia1_read || f == cia2_read || f == c64io_de00_read || f == c64io_df00_read) {
+            k = C64D_ACCESS_IO;
+            off = addr - 0xd000;
+        } else if (f == void_read) {
+            k = C64D_ACCESS_UNMAPPED;
+        } else if (f == roml_read && c64d_generic_cartridge_only()) {
+            k = export_ram ? C64D_ACCESS_CART_RAM : C64D_ACCESS_ROML;
+            off = export_ram ? (uint32_t)(addr & 0x1fff) : (uint32_t)((roml_bank << 13) + (addr & 0x1fff));
+        } else if ((f == romh_read || f == ultimax_romh_read_hirom) && c64d_generic_cartridge_only()) {
+            k = C64D_ACCESS_ROMH;
+            off = (uint32_t)((romh_bank << 13) + (addr & 0x1fff));
+        }
+    } else {
+        store_func_ptr_t s = mem_write_tab[mem_config][page];
+        if (s == ram_store || s == ram_hi_store) {
+            k = C64D_ACCESS_RAM;
+        } else if ((s == raml_no_ultimax_store || s == ramh_no_ultimax_store
+                    || s == roml_no_ultimax_store || s == romh_no_ultimax_store)
+                   && (mem_cartridge_type == CARTRIDGE_NONE || c64d_generic_cartridge_only())) {
+            k = C64D_ACCESS_RAM;    /* ROM overlays write through to the RAM underneath */
+        } else if (s == colorram_store) {
+            k = C64D_ACCESS_COLORRAM;
+            off = addr & 0x03ff;
+        } else if (s == c64io_d000_store || s == c64io_d100_store || s == c64io_d200_store || s == c64io_d300_store
+                   || s == c64io_d400_store || s == c64io_d500_store || s == c64io_d600_store || s == c64io_d700_store
+                   || s == cia1_store || s == cia2_store || s == c64io_de00_store || s == c64io_df00_store) {
+            k = C64D_ACCESS_IO;
+            off = addr - 0xd000;
+        } else if (s == void_store) {
+            k = C64D_ACCESS_UNMAPPED;
+        }
+    }
+
+    if (kind) { *kind = k; }
+    if (offset) { *offset = off; }
 }
 
 void mem_pla_config_changed(void)

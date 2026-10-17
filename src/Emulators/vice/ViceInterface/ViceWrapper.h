@@ -130,6 +130,22 @@ void mt_SYS_FatalExit(char *text);
 void c64d_mark_c64_cell_read(uint16 addr);
 void c64d_mark_c64_cell_write(uint16 addr, uint8 value);
 
+// RD-028: what an access reaches under VICE's current memory configuration
+// (c64d_resolve_access in c64memsc.c, classified from VICE's own tables).
+#define C64D_ACCESS_UNKNOWN		0
+#define C64D_ACCESS_RAM			1	// offset = address in the 64 KB RAM
+#define C64D_ACCESS_CPU_PORT	2	// $0000/$0001
+#define C64D_ACCESS_BASIC		3	// offset in the 8 KB BASIC ROM
+#define C64D_ACCESS_KERNAL		4	// offset in the 8 KB KERNAL ROM
+#define C64D_ACCESS_CHARGEN		5	// offset in the 4 KB character ROM
+#define C64D_ACCESS_IO			6	// offset = address - $D000
+#define C64D_ACCESS_COLORRAM	7	// offset in the 1 KB color RAM
+#define C64D_ACCESS_ROML		8	// offset in roml_banks (bank * 8 KB + window offset)
+#define C64D_ACCESS_ROMH		9	// offset in romh_banks
+#define C64D_ACCESS_CART_RAM	10	// offset in export_ram0
+#define C64D_ACCESS_UNMAPPED	11	// nothing answers (open bus)
+void c64d_resolve_access(uint16 addr, int isWrite, int *kind, uint32 *offset);
+
 // RD-027: VICE's live banking state (definition and field meanings in c64memsc.c).
 void c64d_get_banking_state(int *memConfig, int *cartType, int *exrom, int *game,
 							int *romlBank, int *romhBank, int *exportRam);

@@ -84,6 +84,8 @@
 		4111C8BD262EE4380092E150 /* C64DebuggerPluginGoatTracker.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4111C8BC262EE4370092E150 /* C64DebuggerPluginGoatTracker.cpp */; };
 		4113F62629E2C5B7002FE970 /* CViewC64KeyMap.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4113F62429E2C5B7002FE970 /* CViewC64KeyMap.cpp */; };
 		411D2E402D71D4D3007714A9 /* CRenderShaderCRTMonitorOpenGL4.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4150D9DB2D71D15B0068351B /* CRenderShaderCRTMonitorOpenGL4.cpp */; };
+		D27FD4CAFB3A0AB15CEBDD01 /* CTestC64MemoryMapping.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 21B3BE825980D2AEBFE9669D /* CTestC64MemoryMapping.cpp */; };
+		0236F62BAD1FDD0BC74590CB /* CViceMemoryMappingResolver.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 153D00DB5D6C3F5677FC6C94 /* CViceMemoryMappingResolver.cpp */; };
 		2CA2563845B7D250F0073F81 /* CTestDebugInfoFormats.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B4C671810E9DA160B0E0B428 /* CTestDebugInfoFormats.cpp */; };
 		570515982B098296C09A4248 /* CTestDebugDatabase.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CDC5F8B26B10A326BB1D8991 /* CTestDebugDatabase.cpp */; };
 		271C9DE8E884C2CE31A113E1 /* CDebugInfoLoader.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B4845F097CC72425BE1010F9 /* CDebugInfoLoader.cpp */; };
@@ -1707,6 +1709,10 @@
 		414AD73728797F1200244453 /* CViewC64ScreenViewfinder.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = "$(SRCROOT)/../../src/Views/C64/CViewC64ScreenViewfinder.cpp"; sourceTree = "<absolute>"; };
 		414AD73828797F1200244453 /* CViewC64ScreenViewfinder.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "$(SRCROOT)/../../src/Views/C64/CViewC64ScreenViewfinder.h"; sourceTree = "<absolute>"; };
 		4150D9DB2D71D15B0068351B /* CRenderShaderCRTMonitorOpenGL4.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = "$(SRCROOT)/../../src/Tools/Shaders/CRenderShaderCRTMonitorOpenGL4.cpp"; sourceTree = "<absolute>"; };
+		21B3BE825980D2AEBFE9669D /* CTestC64MemoryMapping.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CTestC64MemoryMapping.cpp; path = ../../src/Tests/CTestC64MemoryMapping.cpp; sourceTree = SOURCE_ROOT; };
+		FA9ECBAF2BCCF623736D086A /* CTestC64MemoryMapping.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = CTestC64MemoryMapping.h; path = ../../src/Tests/CTestC64MemoryMapping.h; sourceTree = SOURCE_ROOT; };
+		153D00DB5D6C3F5677FC6C94 /* CViceMemoryMappingResolver.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CViceMemoryMappingResolver.cpp; path = ../../src/Emulators/vice/ViceInterface/CViceMemoryMappingResolver.cpp; sourceTree = SOURCE_ROOT; };
+		0E5120CB164E53DDBC95A620 /* CViceMemoryMappingResolver.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = CViceMemoryMappingResolver.h; path = ../../src/Emulators/vice/ViceInterface/CViceMemoryMappingResolver.h; sourceTree = SOURCE_ROOT; };
 		B4C671810E9DA160B0E0B428 /* CTestDebugInfoFormats.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CTestDebugInfoFormats.cpp; path = ../../src/Tests/CTestDebugInfoFormats.cpp; sourceTree = SOURCE_ROOT; };
 		E10B944EBB607BC18771F3BB /* CTestDebugInfoFormats.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = CTestDebugInfoFormats.h; path = ../../src/Tests/CTestDebugInfoFormats.h; sourceTree = SOURCE_ROOT; };
 		CDC5F8B26B10A326BB1D8991 /* CTestDebugDatabase.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CTestDebugDatabase.cpp; path = ../../src/Tests/CTestDebugDatabase.cpp; sourceTree = SOURCE_ROOT; };
@@ -4915,6 +4921,10 @@
 			isa = PBXGroup;
 			children = (
 				4150D9DB2D71D15B0068351B /* CRenderShaderCRTMonitorOpenGL4.cpp */,
+				21B3BE825980D2AEBFE9669D /* CTestC64MemoryMapping.cpp */,
+				FA9ECBAF2BCCF623736D086A /* CTestC64MemoryMapping.h */,
+				153D00DB5D6C3F5677FC6C94 /* CViceMemoryMappingResolver.cpp */,
+				0E5120CB164E53DDBC95A620 /* CViceMemoryMappingResolver.h */,
 				B4C671810E9DA160B0E0B428 /* CTestDebugInfoFormats.cpp */,
 				E10B944EBB607BC18771F3BB /* CTestDebugInfoFormats.h */,
 				CDC5F8B26B10A326BB1D8991 /* CTestDebugDatabase.cpp */,
@@ -8745,6 +8755,8 @@
 				05B51DEEE6500A4D5D45DD85 /* events_posix.c in Sources */,
 				05B51D3B2773C59545583663 /* threads_posix.c in Sources */,
 				411D2E402D71D4D3007714A9 /* CRenderShaderCRTMonitorOpenGL4.cpp in Sources */,
+				D27FD4CAFB3A0AB15CEBDD01 /* CTestC64MemoryMapping.cpp in Sources */,
+				0236F62BAD1FDD0BC74590CB /* CViceMemoryMappingResolver.cpp in Sources */,
 				2CA2563845B7D250F0073F81 /* CTestDebugInfoFormats.cpp in Sources */,
 				570515982B098296C09A4248 /* CTestDebugDatabase.cpp in Sources */,
 				271C9DE8E884C2CE31A113E1 /* CDebugInfoLoader.cpp in Sources */,

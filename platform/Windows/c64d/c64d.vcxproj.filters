@@ -4888,6 +4888,18 @@
     <ClCompile Include="..\..\..\src\Tools\Shaders\CRenderShaderCRTMonitorOpenGL4.cpp">
       <Filter>Source Files\src\Tools\Shaders</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\src\Tests\CTestC64MemoryMapping.cpp">
+      <Filter>src\Tests</Filter>
+    </ClCompile>
+    <ClInclude Include="..\..\..\src\Tests\CTestC64MemoryMapping.h">
+      <Filter>src\Tests</Filter>
+    </ClInclude>
+    <ClCompile Include="..\..\..\src\Emulators\vice\ViceInterface\CViceMemoryMappingResolver.cpp">
+      <Filter>src\Emulators\vice\ViceInterface</Filter>
+    </ClCompile>
+    <ClInclude Include="..\..\..\src\Emulators\vice\ViceInterface\CViceMemoryMappingResolver.h">
+      <Filter>src\Emulators\vice\ViceInterface</Filter>
+    </ClInclude>
     <ClCompile Include="..\..\..\src\Tests\CTestDebugInfoFormats.cpp">
       <Filter>src\Tests</Filter>
     </ClCompile>
