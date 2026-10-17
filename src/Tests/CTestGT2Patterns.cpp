@@ -1997,9 +1997,17 @@ void CTestGT2Patterns::Run(ITestCallback *cb)
 		eppos = 3;
 		epview = 99;
 		epcolumn = 0;
+#ifdef __APPLE__
 		key = 0;
 		rawkey = 0;
 		virtualkeycode = 'z';
+#else
+		// gpattern.c reads note keys from virtualkeycode only on macOS;
+		// elsewhere from rawkey (an SDL keycode, KEY_Z == SDLK_Z == 'z').
+		key = 'z';
+		rawkey = 'z';
+		virtualkeycode = 0xff;
+#endif
 		patterncommands();
 		bool mainNoteAdvanced = (eppos == 7);
 		bool mainNoteScrolled = (epview == eppos - visiblePattRows / 2);
