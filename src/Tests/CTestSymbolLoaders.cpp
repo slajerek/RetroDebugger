@@ -11,7 +11,6 @@
 #include "CDebugBreakpointsAddr.h"
 #include "CByteBuffer.h"
 #include "CSlrString.h"
-#include <cstdio>
 #include <cstring>
 
 bool CTestSymbolLoaders::Check(bool condition, const char *message)
@@ -149,8 +148,9 @@ bool CTestSymbolLoaders::RunKickAssDbg(CDebugSymbols *symbols)
 			   && patch->codeSourceLineByMemoryAddress[0xA023] == NULL,
 			   "KickAss .dbg: file:line:column per address in the 'Patch' segment"))
 		return false;
-	// The map is per segment: the same address resolves only in its own segment.
-	if (!Check(base->codeSourceLineByMemoryAddress[0xA000] == NULL,
+	// The map is per segment: 'Base' covers $0801-$F834, 'Patch' does not.
+	if (!Check(patch->codeSourceLineByMemoryAddress[0x0801] == NULL
+			   && base->codeSourceLineByMemoryAddress[0xA000] != patch->codeSourceLineByMemoryAddress[0xA000],
 			   "KickAss .dbg: addresses of one segment are absent from another"))
 		return false;
 	CDebugAsmSourceLine *a002 = patch->codeSourceLineByMemoryAddress[0xA002];
@@ -298,9 +298,7 @@ void CTestSymbolLoaders::Run(ITestCallback *cb)
 
 	if (!ok)
 	{
-		char msg[512];
-		snprintf(msg, sizeof(msg), "FAIL: %s", failure.c_str());
-		TestCompleted(false, msg);
+		TestCompleted(false, failure.c_str());
 		return;
 	}
 	TestCompleted(true, "VICE .vs, 64tass and KickAss .dbg loaders behave as recorded");
