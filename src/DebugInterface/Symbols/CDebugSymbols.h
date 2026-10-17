@@ -18,6 +18,7 @@ class CDebugDataAdapter;
 class CDebugEventsHistory;
 class CDebugMemoryCell;
 class CDebugMemory;
+class CDebugSourceBreakpoint;
 
 #define MAX_LABEL_TEXT_BUFFER_SIZE	512
 
@@ -42,6 +43,17 @@ public:
 	// immutable snapshot, replaced whole on reload under guiMain and
 	// debugInterface locks; NULL when none is loaded.
 	std::shared_ptr<const CDebugDatabase> debugDatabase;
+
+	// Swaps the database and re-resolves the source breakpoints against it
+	// (NULL unloads). Loaders call this instead of assigning debugDatabase.
+	void SetDebugDatabase(std::shared_ptr<const CDebugDatabase> database);
+
+	// Source breakpoints (RD-014, CDebugSourceBreakpoint.h): file + line,
+	// resolved to address breakpoints in the segments of the loaded database.
+	std::vector<CDebugSourceBreakpoint *> sourceBreakpoints;
+	CDebugSourceBreakpoint *AddSourceBreakpoint(const char *path, i32 line);
+	void RemoveSourceBreakpoint(CDebugSourceBreakpoint *breakpoint);
+	CDebugSourceBreakpoint *FindSourceBreakpoint(const char *path, i32 line);
 	
 	std::vector<CDebugSymbolsSegment *> segments;
 	CDebugSymbolsSegment *currentSegment;
@@ -123,6 +135,10 @@ public:
 	// memory cells for memory events and coloring
 	virtual CDebugMemory *CreateNewDebugMemoryMap();
 	CDebugMemory *memory;
+
+private:
+	void BindSourceBreakpoint(CDebugSourceBreakpoint *breakpoint);
+	void UnbindSourceBreakpoint(CDebugSourceBreakpoint *breakpoint);
 };
 
 #endif

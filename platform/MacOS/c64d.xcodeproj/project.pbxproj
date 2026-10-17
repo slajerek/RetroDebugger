@@ -84,6 +84,7 @@
 		4111C8BD262EE4380092E150 /* C64DebuggerPluginGoatTracker.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4111C8BC262EE4370092E150 /* C64DebuggerPluginGoatTracker.cpp */; };
 		4113F62629E2C5B7002FE970 /* CViewC64KeyMap.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4113F62429E2C5B7002FE970 /* CViewC64KeyMap.cpp */; };
 		411D2E402D71D4D3007714A9 /* CRenderShaderCRTMonitorOpenGL4.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4150D9DB2D71D15B0068351B /* CRenderShaderCRTMonitorOpenGL4.cpp */; };
+		0721E47AD20F1E17DA93C570 /* CDebugSourceBreakpoint.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7B98A3B9034E1BD79DB10957 /* CDebugSourceBreakpoint.cpp */; };
 		F97CE44C8AFD458003B6AF98 /* CTestSourceStepping.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A64442D481DEBE1E1AC0ACE6 /* CTestSourceStepping.cpp */; };
 		9E1744974C6A1C50DDC17B03 /* CSourceStepController.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26C5B8C221F54A57A393245A /* CSourceStepController.cpp */; };
 		EC0F12B07247063A4B37C303 /* CDebugExecutionContext.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 0C1CA3DE595847A724BA56D0 /* CDebugExecutionContext.cpp */; };
@@ -1718,6 +1719,8 @@
 		414AD73728797F1200244453 /* CViewC64ScreenViewfinder.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = "$(SRCROOT)/../../src/Views/C64/CViewC64ScreenViewfinder.cpp"; sourceTree = "<absolute>"; };
 		414AD73828797F1200244453 /* CViewC64ScreenViewfinder.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "$(SRCROOT)/../../src/Views/C64/CViewC64ScreenViewfinder.h"; sourceTree = "<absolute>"; };
 		4150D9DB2D71D15B0068351B /* CRenderShaderCRTMonitorOpenGL4.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = "$(SRCROOT)/../../src/Tools/Shaders/CRenderShaderCRTMonitorOpenGL4.cpp"; sourceTree = "<absolute>"; };
+		7B98A3B9034E1BD79DB10957 /* CDebugSourceBreakpoint.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CDebugSourceBreakpoint.cpp; path = ../../src/DebugInterface/Symbols/CDebugSourceBreakpoint.cpp; sourceTree = SOURCE_ROOT; };
+		6805C6874277B6D22CC1EEC1 /* CDebugSourceBreakpoint.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = CDebugSourceBreakpoint.h; path = ../../src/DebugInterface/Symbols/CDebugSourceBreakpoint.h; sourceTree = SOURCE_ROOT; };
 		A64442D481DEBE1E1AC0ACE6 /* CTestSourceStepping.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CTestSourceStepping.cpp; path = ../../src/Tests/CTestSourceStepping.cpp; sourceTree = SOURCE_ROOT; };
 		C669586D2851659C6EC1AFA3 /* CTestSourceStepping.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = CTestSourceStepping.h; path = ../../src/Tests/CTestSourceStepping.h; sourceTree = SOURCE_ROOT; };
 		26C5B8C221F54A57A393245A /* CSourceStepController.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CSourceStepController.cpp; path = ../../src/DebugInterface/CSourceStepController.cpp; sourceTree = SOURCE_ROOT; };
@@ -4948,6 +4951,8 @@
 			isa = PBXGroup;
 			children = (
 				4150D9DB2D71D15B0068351B /* CRenderShaderCRTMonitorOpenGL4.cpp */,
+				7B98A3B9034E1BD79DB10957 /* CDebugSourceBreakpoint.cpp */,
+				6805C6874277B6D22CC1EEC1 /* CDebugSourceBreakpoint.h */,
 				A64442D481DEBE1E1AC0ACE6 /* CTestSourceStepping.cpp */,
 				C669586D2851659C6EC1AFA3 /* CTestSourceStepping.h */,
 				26C5B8C221F54A57A393245A /* CSourceStepController.cpp */,
@@ -8800,6 +8805,7 @@
 				05B51DEEE6500A4D5D45DD85 /* events_posix.c in Sources */,
 				05B51D3B2773C59545583663 /* threads_posix.c in Sources */,
 				411D2E402D71D4D3007714A9 /* CRenderShaderCRTMonitorOpenGL4.cpp in Sources */,
+				0721E47AD20F1E17DA93C570 /* CDebugSourceBreakpoint.cpp in Sources */,
 				F97CE44C8AFD458003B6AF98 /* CTestSourceStepping.cpp in Sources */,
 				9E1744974C6A1C50DDC17B03 /* CSourceStepController.cpp in Sources */,
 				EC0F12B07247063A4B37C303 /* CDebugExecutionContext.cpp in Sources */,

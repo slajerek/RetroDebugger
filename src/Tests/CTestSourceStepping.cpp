@@ -8,6 +8,8 @@
 #include "CDebugSymbolsSegment.h"
 #include "CDebugDatabase.h"
 #include "CDebugInfoLoader.h"
+#include "CDebugSourceBreakpoint.h"
+#include "CDebugBreakpointsAddr.h"
 #include "CDebugExecutionContext.h"
 #include "CSourceStepController.h"
 #include "DebuggerDefs.h"
@@ -142,7 +144,6 @@ bool CTestSourceStepping::RunOscar64(CDebugInterfaceVice *di)
 		di->SetByteToRamC64(0xC060 + i, setup[i]);
 	for (int i = 0; i < (int)sizeof(handler); i++)
 		di->SetByteToRamC64(0xC040 + i, handler[i]);
-	u8 savedVector[2] = { di->GetByteFromRamC64(0x0314), di->GetByteFromRamC64(0x0315) };
 	di->SetByteToRamC64(0x0314, 0x40);
 	di->SetByteToRamC64(0x0315, 0xC0);
 	di->SetByteToRamC64(0x0002, 0);
@@ -190,12 +191,87 @@ bool CTestSourceStepping::RunOscar64(CDebugInterfaceVice *di)
 		ok = Check(result == 6 && irqs != 0 && !di->IsObservingExecution(), msg);
 	}
 
-	// stop the fast IRQ: KERNAL vector back, PAL timer A latch ($4025)
-	di->SetByteToRamC64(0x0314, savedVector[0]);
-	di->SetByteToRamC64(0x0315, savedVector[1]);
-	di->SetByteToRamC64(0xDC04, 0x25);
-	di->SetByteToRamC64(0xDC05, 0x40);
 	return ok;
+}
+
+static bool HasPcBreakpoint(CDebugSymbols *symbols, int address)
+{
+	return symbols->currentSegment && symbols->currentSegment->breakpointsPC->GetBreakpoint(address) != NULL;
+}
+
+bool CTestSourceStepping::RunSourceBreakpoints(CDebugInterfaceVice *di)
+{
+	CDebugSymbols *symbols = di->symbols;
+	const CDebugDatabase *database = symbols->debugDatabase.get();
+	std::vector<const CDebugSourceMapping *> out;
+	i32 line12, line11, line9, line15, full, other;
+	DebugResolveSourceLine(database, "main.c", 12, &line12, out);
+	bool ok = line12 == 12 && out.size() == 1 && out[0]->start == 0x089A;
+	DebugResolveSourceLine(database, "main.c", 11, &line11, out);
+	ok = ok && line11 == 12 && out.size() == 1 && out[0]->start == 0x089A;
+	DebugResolveSourceLine(database, "main.c", 15, &line15, out);
+	ok = ok && line15 == 16 && out.size() == 1 && out[0]->start == 0x0880;
+	DebugResolveSourceLine(database, "main.c", 9, &line9, out);
+	ok = ok && line9 == 0 && out.empty();
+	DebugResolveSourceLine(database, "/tmp/rd-source-debug/oscar64/c64/basic-flow/main.c", 18, &full, out);
+	ok = ok && full == 18 && out.size() == 1 && out[0]->start == 0x0888;
+	DebugResolveSourceLine(database, "other.c", 12, &other, out);
+	ok = ok && other == 0 && out.empty();
+	if (!Check(ok, "Source breakpoints: lines resolve by file name or recorded path; a line without code slides to the next one, not into the next function"))
+		return false;
+
+	// A breakpoint on doSomething's header line stops at its first statement.
+	CDebugSourceBreakpoint *bp = symbols->AddSourceBreakpoint("main.c", 11);
+	ok = Check(bp->IsResolved() && bp->resolvedLine == 12 && HasPcBreakpoint(symbols, 0x089A),
+			   "Source breakpoint main.c:11 resolves to line 12 and an address breakpoint at $089A");
+	if (!ok)
+		return false;
+
+	di->SetByteToRamC64(0x0314, 0x40);
+	di->SetByteToRamC64(0x0315, 0xC0);
+	di->MakeJmpC64(0xC060);
+	di->SetDebugMode(DEBUGGER_MODE_RUNNING);
+	bool paused = false;
+	for (int waited = 0; waited < 3000 && !paused; waited += 10)
+	{
+		paused = di->GetDebugMode() == DEBUGGER_MODE_PAUSED;
+		if (!paused)
+			SYS_Sleep(10);
+	}
+	u16 pc;
+	u8 a, x, y, p, sp;
+	di->GetCpuRegs(&pc, &a, &x, &y, &p, &sp);
+	char msg[160];
+	snprintf(msg, sizeof(msg), "Source breakpoint stops the rerun program in doSomething() at $089A (PC $%04X, result %d)",
+			 pc, di->GetByteFromRamC64(0x08B1));
+	if (!Check(paused && pc == 0x089A && di->GetByteFromRamC64(0x08B1) == 1, msg))
+		return false;
+
+	// Reload: the old segments go, the source breakpoint binds to the new one.
+	std::string dbj = ResolveProjectPath("tests/data/source-debug/oscar64/c64/basic-flow/main.dbj");
+	DebugInfoFormat format = DebugInfoLoadFile(symbols, dbj.c_str());
+	if (!Check(format == DebugInfoFormat::Oscar64Dbj && bp->IsResolved() && HasPcBreakpoint(symbols, 0x089A),
+			   "After a reload of main.dbj the source breakpoint is bound again in the new segment"))
+		return false;
+
+	// Unload and load: unresolved in between, kept as intent.
+	symbols->DeleteSourceDebugInfo();
+	ok = !bp->IsResolved() && !HasPcBreakpoint(symbols, 0x089A) && symbols->sourceBreakpoints.size() == 1;
+	DebugInfoLoadFile(symbols, dbj.c_str());
+	ok = ok && bp->IsResolved() && HasPcBreakpoint(symbols, 0x089A);
+	if (!Check(ok, "Without debug info the source breakpoint stays, unresolved and with no address breakpoint; it binds again on load"))
+		return false;
+
+	// A user's own address breakpoint is shared, never deleted.
+	symbols->currentSegment->AddBreakpointPC(0x0880);
+	CDebugSourceBreakpoint *onMain = symbols->AddSourceBreakpoint("main.c", 16);
+	ok = onMain->IsResolved() && !onMain->bindings[0].created;
+	symbols->RemoveSourceBreakpoint(onMain);
+	ok = ok && HasPcBreakpoint(symbols, 0x0880);
+	symbols->RemoveSourceBreakpoint(bp);
+	ok = ok && !HasPcBreakpoint(symbols, 0x089A) && symbols->sourceBreakpoints.empty();
+	symbols->currentSegment->breakpointsPC->DeleteBreakpoint(0x0880);
+	return Check(ok, "Removing source breakpoints deletes only the address breakpoints they created");
 }
 
 void CTestSourceStepping::Run(ITestCallback *cb)
@@ -231,7 +307,17 @@ void CTestSourceStepping::Run(ITestCallback *cb)
 		di->UnlockMutex();
 		guiMain->UnlockMutex();
 
+		u8 savedVector[2] = { di->GetByteFromRamC64(0x0314), di->GetByteFromRamC64(0x0315) };
 		ok = RunOscar64(di);
+		if (ok)
+			ok = RunSourceBreakpoints(di);
+
+		// stop the fast IRQ: KERNAL vector back, PAL timer A latch ($4025)
+		di->PauseEmulationBlockedWait();
+		di->SetByteToRamC64(0x0314, savedVector[0]);
+		di->SetByteToRamC64(0x0315, savedVector[1]);
+		di->SetByteToRamC64(0xDC04, 0x25);
+		di->SetByteToRamC64(0xDC05, 0x40);
 
 		di->PauseEmulationBlockedWait();
 		guiMain->LockMutex();
@@ -254,5 +340,5 @@ void CTestSourceStepping::Run(ITestCallback *cb)
 		TestCompleted(false, failure.c_str());
 		return;
 	}
-	TestCompleted(true, "Source Into/Over/Out land on the expected Oscar64 lines with interrupts running mapped code");
+	TestCompleted(true, "Source Into/Over/Out land on the expected Oscar64 lines with interrupts running mapped code; source breakpoints resolve, stop and survive reloads");
 }

@@ -990,7 +990,7 @@ void CDebugSymbols::DeleteSourceDebugInfo()
 	guiMain->LockMutex();
 	debugInterface->LockMutex();
 	
-	this->debugDatabase.reset();
+	SetDebugDatabase(nullptr);
 	
 	debugInterface->UnlockMutex();
 	guiMain->UnlockMutex();

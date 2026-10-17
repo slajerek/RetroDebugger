@@ -4888,6 +4888,12 @@
     <ClCompile Include="..\..\..\src\Tools\Shaders\CRenderShaderCRTMonitorOpenGL4.cpp">
       <Filter>Source Files\src\Tools\Shaders</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\src\DebugInterface\Symbols\CDebugSourceBreakpoint.cpp">
+      <Filter>src\DebugInterface\Symbols</Filter>
+    </ClCompile>
+    <ClInclude Include="..\..\..\src\DebugInterface\Symbols\CDebugSourceBreakpoint.h">
+      <Filter>src\DebugInterface\Symbols</Filter>
+    </ClInclude>
     <ClCompile Include="..\..\..\src\Tests\CTestSourceStepping.cpp">
       <Filter>src\Tests</Filter>
     </ClCompile>

@@ -448,6 +448,17 @@ Still open: stop reason in the status line, the same-line fixture. Original plan
 - `CancelRestore()` on arm, inert while `IsPerformingSnapshotRestore()`.
 
 ### RD-014 Source breakpoints
+**First part done (in progress):** `CDebugSourceBreakpoint {path, line}` lives on
+`CDebugSymbols` (`AddSourceBreakpoint` / `RemoveSourceBreakpoint`), separate from the
+address breakpoints it resolves to. `DebugResolveSourceLine` matches the file by
+recorded path, loaded path or file name; a line without code slides forward but not
+past the next function's definition line; each mapping of the line in effect at its
+first address (continuation ranges skipped) gives one address breakpoint in the segment
+of its region. Every loader swaps the database through `CDebugSymbols::SetDebugDatabase`,
+which unbinds and re-binds, so a source breakpoint survives a reload, an unload (kept
+unresolved) and a recompile. A breakpoint the user already had is shared and never
+deleted by the source one. Still open: the stale-binary warning, persistence, bank
+identity (RD-025) and the gutter (M2). Original plan:
 - `CDebugBreakpointSource {file, line, column?, statementId?}` kept in the database
   snapshot's companion list; resolved to N `CDebugBreakpointAddr` with identity; re-resolved
   on every database swap; unresolved shown hollow in the gutter.

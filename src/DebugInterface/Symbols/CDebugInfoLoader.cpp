@@ -696,7 +696,7 @@ bool DebugInfoLoadKickAss(CDebugSymbols *symbols, CByteBuffer *byteBuffer, const
 		LoadSourceTextFor(it.second, options);
 
 	database->Finalize();
-	symbols->debugDatabase = database;
+	symbols->SetDebugDatabase(database);
 
 	symbols->ActivateSelectedSegment();
 
@@ -816,7 +816,7 @@ bool DebugInfoLoadOscar64(CDebugSymbols *symbols, CByteBuffer *byteBuffer, const
 			segment->AddCodeLabel((int)label.address, (char *)label.name.c_str());	// copies the text
 	}
 
-	symbols->debugDatabase = database;
+	symbols->SetDebugDatabase(database);
 	symbols->ActivateSelectedSegment();
 
 	symbols->debugInterface->UnlockMutex();
@@ -1074,7 +1074,7 @@ bool DebugInfoLoadCc65(CDebugSymbols *symbols, CByteBuffer *byteBuffer, const CD
 	for (const Label &label : labels)
 		segment->AddCodeLabel((int)label.address, (char *)label.name.c_str());	// copies the text
 
-	symbols->debugDatabase = database;
+	symbols->SetDebugDatabase(database);
 	symbols->ActivateSelectedSegment();
 
 	symbols->debugInterface->UnlockMutex();
