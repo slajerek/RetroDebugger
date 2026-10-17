@@ -1795,6 +1795,7 @@ add_executable(retrodebugger
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Tools/libpsid64/libpsid-screen.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Tools/C64SIDFrequencies.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Tools/Shaders/CRenderShaderCRTMonitorOpenGL4.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CTestCoreMappingAccessors.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CTestMemoryMappingContract.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/DebugInterface/CDebugMemoryMapping.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CTestSymbolLoaders.cpp"

@@ -132,7 +132,26 @@ use-after-free, recorded as a defect for RD-032; its fix comes with its own test
   same PC two identities, aliases, Unmapped writes, Unknown, epoch movement.
 
 ### RD-027 Core audit + accessors
-Patch the embedded cores so providers can be written without duplicating mapper logic:
+Done (review). What landed, per core:
+- **VICE:** `c64d_get_banking_state(memConfig, cartType, exrom, game, romlBank, romhBank,
+  exportRam)` in `c64memsc.c` (memConfig = VICE `mem_config`, the `mem_read_tab` index);
+  all cartridge-window peeks in `c64d_peek_c64`, `_for_cycle`, `_whole_map` go through
+  `cartridge_peek_mem` (fixes the uninitialized Ultimax read and the per-cart bypass);
+  `c64d_peek/poke_cart_buffer(kind, offset)` for ROML/ROMH/RAM; the cartridge view honours
+  its type. Not added: a separate `c64d_get_cart_banks` (folded into the state call) and
+  per-cart bank registers beyond the generic ones (EasyFlash etc. keep their own; RD-028
+  decides per cart type).
+- **Atari800:** `atrd_get_banking_state(...)`, `atrd_get_memory_attrib(addr)`,
+  `atrd_peek_backing(region, offset)` in `memory.c` (reads its static buffers).
+- **Nestopia:** `Memory::GetSourceOffset`, `Board::GetPrgMapping`, `Cartridge::GetBoard`;
+  wrapper `nesd_get_prg_mapping(addr, isWrk, source, offset, writable)` and
+  `nesd_get_cartridge_info(mapper, subMapper, prgRomSize)`. Not added: iNES header/trainer
+  file offset (the profile does not keep the header; RD-040 records it at load time).
+  Also fixed: `nesd_peek_safe_io` OOB, and loading a cartridge after Detach Everything.
+- Test: `CTestCoreMappingAccessors` (15 steps), including NROM-128 `$8000`/`$C000` aliasing
+  to PRG offset 0 with a real ROM (`tests/data/test_input_replay.nes`).
+
+Original task list:
 - **VICE:** export `mem_get_current_bank_config()` through `ViceWrapper`; add
   `c64d_get_cart_banks(int *roml, int *romh, int *exportRam)` and a
   `c64d_get_cart_type()`; route cartridge-window peeks through

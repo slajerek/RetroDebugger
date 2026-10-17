@@ -13,7 +13,7 @@ definitions are in `IMPLEMENTATION-PLAN.md`.
 
 | Milestone | Phase | Scope | Status |
 |---|---|---|---|
-| M0 Discovery & safety net | P0 | RD-001, RD-038, RD-002, RD-024, RD-027, **RD-034**, **RD-042 (engine)** | RD-001 done; RD-038, RD-034, RD-042 in review (engine changes merged to engine `devel` 40c95f8; remaining gate: CI on 3 platforms) |
+| M0 Discovery & safety net | P0 | RD-001, RD-038, RD-002, RD-024, RD-027, **RD-034**, **RD-042 (engine)** | RD-001 done; RD-024, RD-027, RD-034, RD-038, RD-042 in review (remaining gates: CI on 3 platforms, maintainer review of RD-024); RD-002 todo |
 | M1 Canonical model & loaders | P2 (core) | RD-006, RD-031, RD-032, RD-007, RD-008, RD-033 | todo |
 | M2 Source document & view | P1 | RD-003, RD-004, RD-005 | todo |
 | M3 Execution events & stepping engine | P2/P3 | RD-011, RD-037, RD-012, RD-013, RD-014, RD-015 | todo |
@@ -30,7 +30,7 @@ definitions are in `IMPLEMENTATION-PLAN.md`.
 | RD-038 | P0 | tests | Regression test for KickAss `.dbg` + VICE `.vs` loaders (`dankwars.dbg`, `labelstest1.vs`) | review(d1784e3; 25/25 steps green on Linux locally) | RD-001 | `CTestSymbolLoaders` (`SymbolLoaders`) passes on all 3 CI platforms |
 | RD-002 | P0 | tests | Portable C/ASM fixtures, pinned toolchains, verified compiler×machine matrix | todo | — | `tests/source-debug/toolchains/*.yaml` with versions; matrix table in plan; Tier 1 artifacts committed |
 | RD-024 | P0 | core | Logical vs physical code identity + `IMemoryMappingResolver` contract | review(`CDebugMemoryMapping.h`; awaiting maintainer review) | RD-001 | Header + unit test of `Unknown`/alias semantics; reviewed by maintainer |
-| RD-027 | P0 | core | Audit + accessor patches in VICE/Nestopia/Atari800 cores (fetch/read/write, bus master) | todo | RD-001, RD-024 | Accessors compiled on 3 platforms; `tests/test-reference-files.sh` still green |
+| RD-027 | P0 | core | Audit + accessor patches in VICE/Nestopia/Atari800 cores (fetch/read/write, bus master) | review(accessors + fixes; `CoreMappingAccessors` 15 steps green on Linux) | RD-001, RD-024 | Accessors compiled on 3 platforms; `tests/test-reference-files.sh` still green |
 | RD-006 | P2 | core | Canonical debug database + capability model; migrate `CDebugAsmSource` | todo | RD-001, RD-038 | RD-038 tests unchanged and green; interval index unit tests |
 | RD-031 | P2 | core | **Must fix.** Loader registry with content sniffing (`.dbg` XML vs text, `.dbj`) | todo | RD-006 | Menu/autoload/CLI go through registry; sniff unit test |
 | RD-032 | P2 | core | Symbol lifetime fixes (segments, re-import, dtor, `D:` labels, Watchpoints layout) | todo | RD-006 | ASan/valgrind-clean re-import test |
@@ -95,10 +95,13 @@ Questions 1, 2, 3, 5, 8 and 10 are answered in spec #15/#20.
 | `.dbg` `<Sources>` paths: split on every comma; a Windows path is not split into a file name on macOS/Linux (`GetFileNameComponentFromPath` uses the host separator); relative paths resolve against the process cwd, not the `.dbg` folder | RD-006 |
 | CLI `nes` unreachable branch; `-ines` missing; `-debuginfo` never NES; NES source layout slot | RD-033 |
 | C64 PC/memory checks ignore `breakOnPC`/`breakOnMemory`; temp bp hides user bp, no event | RD-037 |
-| `nesd_peek_safe_io` OOB read | RD-040 |
+| `nesd_peek_safe_io` OOB read | RD-027 (fixed) |
 | Engine: `CPianoKeyboard` dereferenced a NULL `midiIn` without an ALSA sequencer (startup segfault on Linux CI/containers) | RD-034 (fixed on engine branch, 623b76e) |
 | `GT2Patterns` step 16 assumed macOS key input (`virtualkeycode`); failed on every other platform | RD-034 (test fixed, 7fed440) |
-| `c64d_peek_c64` Ultimax uninitialized read; per-cart peek bypass; cart adapter 512 KB/ROML only | RD-028 |
+| `c64d_peek_c64` Ultimax uninitialized read; per-cart peek bypass (also in `_for_cycle` and `_whole_map`) | RD-027 (fixed) |
+| Cartridge data adapter ignored its type (always ROML), instance mislabelled RamL; view stays 512 KB (cell cost) | RD-027 (fixed type/label; size kept, identity via accessors) |
+| NES: loading a cartridge after Detach Everything never reset the new board (PRG unmapped, CPU on open bus) | RD-027 (fixed in `nesd_insert_cartridge`) |
+| `tests/test-reference-files.sh` fails on three unregistered USBSID files under `vice/arch/hwsiddrv/` (since 895f4fc) | outside this programme; suggested as a separate task |
 | Atari "direct RAM" adapter returns the CPU view | RD-029 |
 
 ## Change log
@@ -111,3 +114,4 @@ Questions 1, 2, 3, 5, 8 and 10 are answered in spec #15/#20.
 | 2026-10-17 | Linux build + suite run locally under Xvfb: startup segfault fixed in the engine (`CPianoKeyboard`), `GT2Patterns` made platform-correct, suite 74/74 (7 skipped). RD-034 workflow step added; RD-038 green (25 steps) |
 | 2026-10-17 | Engine `c-source-debugging` fast-forwarded into engine `devel` (40c95f8, changelog under 3.21.22); app suite registers `CTestProcessSpawner`; Linux suite 75/75 (7 skipped) |
 | 2026-10-17 | RD-024: `CDebugMemoryMapping.{h,cpp}`, `CDebugInterface::GetMemoryMappingResolver()`, `CTestMemoryMappingContract` (14 steps green on Linux) |
+| 2026-10-17 | RD-027: VICE/Atari/NES banking accessors, three core fixes plus the NES load-after-detach bug found by the new test; `CTestCoreMappingAccessors` (15 steps, NROM alias at $8000/$C000); Linux suite 77/77 (7 skipped) |
