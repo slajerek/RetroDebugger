@@ -4795,9 +4795,6 @@
     <ClCompile Include="..\..\..\src\DebugInterface\C64\CDiskImageD64.cpp">
       <Filter>Source Files\src\DebugInterface\C64</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\src\DebugInterface\Symbols\CDebugAsmSource.cpp">
-      <Filter>Source Files\src\DebugInterface\Symbols</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\..\src\DebugInterface\Symbols\CDebugBreakpoint.cpp">
       <Filter>Source Files\src\DebugInterface\Symbols</Filter>
     </ClCompile>
@@ -4891,6 +4888,30 @@
     <ClCompile Include="..\..\..\src\Tools\Shaders\CRenderShaderCRTMonitorOpenGL4.cpp">
       <Filter>Source Files\src\Tools\Shaders</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\src\Tests\CTestDebugInfoFormats.cpp">
+      <Filter>src\Tests</Filter>
+    </ClCompile>
+    <ClInclude Include="..\..\..\src\Tests\CTestDebugInfoFormats.h">
+      <Filter>src\Tests</Filter>
+    </ClInclude>
+    <ClCompile Include="..\..\..\src\Tests\CTestDebugDatabase.cpp">
+      <Filter>src\Tests</Filter>
+    </ClCompile>
+    <ClInclude Include="..\..\..\src\Tests\CTestDebugDatabase.h">
+      <Filter>src\Tests</Filter>
+    </ClInclude>
+    <ClCompile Include="..\..\..\src\DebugInterface\Symbols\CDebugInfoLoader.cpp">
+      <Filter>src\DebugInterface\Symbols</Filter>
+    </ClCompile>
+    <ClInclude Include="..\..\..\src\DebugInterface\Symbols\CDebugInfoLoader.h">
+      <Filter>src\DebugInterface\Symbols</Filter>
+    </ClInclude>
+    <ClCompile Include="..\..\..\src\DebugInterface\Symbols\CDebugDatabase.cpp">
+      <Filter>src\DebugInterface\Symbols</Filter>
+    </ClCompile>
+    <ClInclude Include="..\..\..\src\DebugInterface\Symbols\CDebugDatabase.h">
+      <Filter>src\DebugInterface\Symbols</Filter>
+    </ClInclude>
     <ClCompile Include="..\..\..\src\Tests\CTestCoreMappingAccessors.cpp">
       <Filter>src\Tests</Filter>
     </ClCompile>
@@ -9657,9 +9678,6 @@
     </ClInclude>
     <ClInclude Include="..\..\..\src\DebugInterface\C64\CDiskImageD64.h">
       <Filter>Source Files\src\DebugInterface\C64</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\src\DebugInterface\Symbols\CDebugAsmSource.h">
-      <Filter>Source Files\src\DebugInterface\Symbols</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\src\DebugInterface\Symbols\CDebugBreakpoint.h">
       <Filter>Source Files\src\DebugInterface\Symbols</Filter>

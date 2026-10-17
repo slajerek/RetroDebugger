@@ -29,7 +29,10 @@
 #include "CViewC64Palette.h"
 #include "CDebugSymbols.h"
 #include "CDebugSymbolsSegment.h"
-#include "CDebugAsmSource.h"
+#include "CDebugDatabase.h"
+#include "CDebugInfoLoader.h"
+#include "CDebugSymbolsSegment.h"
+#include "CSlrString.h"
 #include "CViewDrive1541Browser.h"
 #include "C64Palette.h"
 #include "CViewC64StateSID.h"
@@ -5697,13 +5700,18 @@ void CMainMenuBar::SystemDialogFileOpenSelected(CSlrString *path)
 	if (systemDialogOperation == SystemDialogOperationImportLabels)
 	{
 		CSlrString *ext = path->GetFileExtensionComponentFromPath();
-		if (ext->CompareWith("vs") || ext->CompareWith("txt"))
+		if (ext->CompareWith("vs") || ext->CompareWith("txt") || ext->CompareWith("dbg") || ext->CompareWith("dbj"))
 		{
-			selectedDebugInterface->symbols->ParseSymbols(path);
-		}
-		else if (ext->CompareWith("dbg"))
-		{
-			selectedDebugInterface->symbols->ParseSourceDebugInfo(path);
+			// the content decides: cc65 and KickAssembler both write .dbg (RD-031)
+			DebugInfoFormat format = DebugInfoLoadFile(selectedDebugInterface->symbols, path);
+			if (format == DebugInfoFormat::Unknown)
+			{
+				viewC64->ShowMessageError("Loading labels failed, unrecognized file format");
+			}
+			else if (format == DebugInfoFormat::Cc65Dbg || format == DebugInfoFormat::Oscar64Dbj)
+			{
+				viewC64->ShowMessageWarning("%s debug info is recognized but not supported yet", DebugInfoFormatName(format));
+			}
 		}
 		else if (ext->CompareWith("lbl"))
 		{

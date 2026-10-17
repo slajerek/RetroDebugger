@@ -84,6 +84,10 @@
 		4111C8BD262EE4380092E150 /* C64DebuggerPluginGoatTracker.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4111C8BC262EE4370092E150 /* C64DebuggerPluginGoatTracker.cpp */; };
 		4113F62629E2C5B7002FE970 /* CViewC64KeyMap.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4113F62429E2C5B7002FE970 /* CViewC64KeyMap.cpp */; };
 		411D2E402D71D4D3007714A9 /* CRenderShaderCRTMonitorOpenGL4.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4150D9DB2D71D15B0068351B /* CRenderShaderCRTMonitorOpenGL4.cpp */; };
+		2CA2563845B7D250F0073F81 /* CTestDebugInfoFormats.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B4C671810E9DA160B0E0B428 /* CTestDebugInfoFormats.cpp */; };
+		570515982B098296C09A4248 /* CTestDebugDatabase.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CDC5F8B26B10A326BB1D8991 /* CTestDebugDatabase.cpp */; };
+		271C9DE8E884C2CE31A113E1 /* CDebugInfoLoader.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B4845F097CC72425BE1010F9 /* CDebugInfoLoader.cpp */; };
+		7648FFCB6788759B54D20361 /* CDebugDatabase.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9A843797E4EA92908325F96E /* CDebugDatabase.cpp */; };
 		561FEDD6C0C9D6810D3D7DAF /* CTestCoreMappingAccessors.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2793BA0B05FDB6CE8FFDD84F /* CTestCoreMappingAccessors.cpp */; };
 		74EF13841B17F495FA63F572 /* CTestMemoryMappingContract.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8B1D1870163F1917B95B25EF /* CTestMemoryMappingContract.cpp */; };
 		3A8B43A4CB5BBF86E9476AC6 /* CDebugMemoryMapping.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 889635D649749DC948E3A08A /* CDebugMemoryMapping.cpp */; };
@@ -110,7 +114,6 @@
 		413EC7D1266E76CC00CB24D2 /* CViewBreakpoints.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 413EC7CE266E76CB00CB24D2 /* CViewBreakpoints.cpp */; };
 		414AD73928797F1200244453 /* CViewC64ScreenViewfinder.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 414AD73728797F1200244453 /* CViewC64ScreenViewfinder.cpp */; };
 		4155B3242681DA9A00110009 /* CDebugSymbols.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4155B31D2681D8B600110009 /* CDebugSymbols.cpp */; };
-		4155B3262681DAAB00110009 /* CDebugAsmSource.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4155B31F2681D8B600110009 /* CDebugAsmSource.cpp */; };
 		4155B3282681DABA00110009 /* CDebugSymbolsSegment.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4155B3222681D91700110009 /* CDebugSymbolsSegment.cpp */; };
 		415E3E3B2775FDD3000BFA07 /* C64DebuggerPluginCrtMaker.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 415E3E382775FDD2000BFA07 /* C64DebuggerPluginCrtMaker.cpp */; };
 		415E3E3C2775FDD3000BFA07 /* CViewC64CrtMaker.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 415E3E3A2775FDD2000BFA07 /* CViewC64CrtMaker.cpp */; };
@@ -1704,6 +1707,14 @@
 		414AD73728797F1200244453 /* CViewC64ScreenViewfinder.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = "$(SRCROOT)/../../src/Views/C64/CViewC64ScreenViewfinder.cpp"; sourceTree = "<absolute>"; };
 		414AD73828797F1200244453 /* CViewC64ScreenViewfinder.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "$(SRCROOT)/../../src/Views/C64/CViewC64ScreenViewfinder.h"; sourceTree = "<absolute>"; };
 		4150D9DB2D71D15B0068351B /* CRenderShaderCRTMonitorOpenGL4.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = "$(SRCROOT)/../../src/Tools/Shaders/CRenderShaderCRTMonitorOpenGL4.cpp"; sourceTree = "<absolute>"; };
+		B4C671810E9DA160B0E0B428 /* CTestDebugInfoFormats.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CTestDebugInfoFormats.cpp; path = ../../src/Tests/CTestDebugInfoFormats.cpp; sourceTree = SOURCE_ROOT; };
+		E10B944EBB607BC18771F3BB /* CTestDebugInfoFormats.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = CTestDebugInfoFormats.h; path = ../../src/Tests/CTestDebugInfoFormats.h; sourceTree = SOURCE_ROOT; };
+		CDC5F8B26B10A326BB1D8991 /* CTestDebugDatabase.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CTestDebugDatabase.cpp; path = ../../src/Tests/CTestDebugDatabase.cpp; sourceTree = SOURCE_ROOT; };
+		FE350DCDDCC3384A06021800 /* CTestDebugDatabase.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = CTestDebugDatabase.h; path = ../../src/Tests/CTestDebugDatabase.h; sourceTree = SOURCE_ROOT; };
+		B4845F097CC72425BE1010F9 /* CDebugInfoLoader.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CDebugInfoLoader.cpp; path = ../../src/DebugInterface/Symbols/CDebugInfoLoader.cpp; sourceTree = SOURCE_ROOT; };
+		BB919634A8B18C9E550282B6 /* CDebugInfoLoader.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = CDebugInfoLoader.h; path = ../../src/DebugInterface/Symbols/CDebugInfoLoader.h; sourceTree = SOURCE_ROOT; };
+		9A843797E4EA92908325F96E /* CDebugDatabase.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CDebugDatabase.cpp; path = ../../src/DebugInterface/Symbols/CDebugDatabase.cpp; sourceTree = SOURCE_ROOT; };
+		E58E63A4214D61389A71C160 /* CDebugDatabase.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = CDebugDatabase.h; path = ../../src/DebugInterface/Symbols/CDebugDatabase.h; sourceTree = SOURCE_ROOT; };
 		2793BA0B05FDB6CE8FFDD84F /* CTestCoreMappingAccessors.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CTestCoreMappingAccessors.cpp; path = ../../src/Tests/CTestCoreMappingAccessors.cpp; sourceTree = SOURCE_ROOT; };
 		2E5C1F710B03CCCA9F7BC630 /* CTestCoreMappingAccessors.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = CTestCoreMappingAccessors.h; path = ../../src/Tests/CTestCoreMappingAccessors.h; sourceTree = SOURCE_ROOT; };
 		8B1D1870163F1917B95B25EF /* CTestMemoryMappingContract.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CTestMemoryMappingContract.cpp; path = ../../src/Tests/CTestMemoryMappingContract.cpp; sourceTree = SOURCE_ROOT; };
@@ -1715,8 +1726,6 @@
 		4150D9DC2D71D15B0068351B /* CRenderShaderCRTMonitorOpenGL4.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "$(SRCROOT)/../../src/Tools/Shaders/CRenderShaderCRTMonitorOpenGL4.h"; sourceTree = "<absolute>"; };
 		4155B31D2681D8B600110009 /* CDebugSymbols.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = "$(SRCROOT)/../../src/DebugInterface/Symbols/CDebugSymbols.cpp"; sourceTree = "<absolute>"; };
 		4155B31E2681D8B600110009 /* CDebugSymbols.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "$(SRCROOT)/../../src/DebugInterface/Symbols/CDebugSymbols.h"; sourceTree = "<absolute>"; };
-		4155B31F2681D8B600110009 /* CDebugAsmSource.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = "$(SRCROOT)/../../src/DebugInterface/Symbols/CDebugAsmSource.cpp"; sourceTree = "<absolute>"; };
-		4155B3202681D8B600110009 /* CDebugAsmSource.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "$(SRCROOT)/../../src/DebugInterface/Symbols/CDebugAsmSource.h"; sourceTree = "<absolute>"; };
 		4155B3212681D91700110009 /* CDebugSymbolsSegment.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "$(SRCROOT)/../../src/DebugInterface/Symbols/CDebugSymbolsSegment.h"; sourceTree = "<absolute>"; };
 		4155B3222681D91700110009 /* CDebugSymbolsSegment.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = "$(SRCROOT)/../../src/DebugInterface/Symbols/CDebugSymbolsSegment.cpp"; sourceTree = "<absolute>"; };
 		415E3E372775FDD2000BFA07 /* CViewC64CrtMaker.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "$(SRCROOT)/../../src/Plugins/CrtMaker/CViewC64CrtMaker.h"; sourceTree = "<absolute>"; };
@@ -4906,6 +4915,14 @@
 			isa = PBXGroup;
 			children = (
 				4150D9DB2D71D15B0068351B /* CRenderShaderCRTMonitorOpenGL4.cpp */,
+				B4C671810E9DA160B0E0B428 /* CTestDebugInfoFormats.cpp */,
+				E10B944EBB607BC18771F3BB /* CTestDebugInfoFormats.h */,
+				CDC5F8B26B10A326BB1D8991 /* CTestDebugDatabase.cpp */,
+				FE350DCDDCC3384A06021800 /* CTestDebugDatabase.h */,
+				B4845F097CC72425BE1010F9 /* CDebugInfoLoader.cpp */,
+				BB919634A8B18C9E550282B6 /* CDebugInfoLoader.h */,
+				9A843797E4EA92908325F96E /* CDebugDatabase.cpp */,
+				E58E63A4214D61389A71C160 /* CDebugDatabase.h */,
 				2793BA0B05FDB6CE8FFDD84F /* CTestCoreMappingAccessors.cpp */,
 				2E5C1F710B03CCCA9F7BC630 /* CTestCoreMappingAccessors.h */,
 				8B1D1870163F1917B95B25EF /* CTestMemoryMappingContract.cpp */,
@@ -4956,8 +4973,6 @@
 				417B325F276D2A5900A257F9 /* CDebugSymbolsCodeLabel.h */,
 				410E2B2F27737A5700F8FD87 /* CDebugSymbolsDataWatch.cpp */,
 				410E2B2D27737A5700F8FD87 /* CDebugSymbolsDataWatch.h */,
-				4155B31F2681D8B600110009 /* CDebugAsmSource.cpp */,
-				4155B3202681D8B600110009 /* CDebugAsmSource.h */,
 			);
 			path = Symbols;
 			sourceTree = "<group>";
@@ -8730,6 +8745,10 @@
 				05B51DEEE6500A4D5D45DD85 /* events_posix.c in Sources */,
 				05B51D3B2773C59545583663 /* threads_posix.c in Sources */,
 				411D2E402D71D4D3007714A9 /* CRenderShaderCRTMonitorOpenGL4.cpp in Sources */,
+				2CA2563845B7D250F0073F81 /* CTestDebugInfoFormats.cpp in Sources */,
+				570515982B098296C09A4248 /* CTestDebugDatabase.cpp in Sources */,
+				271C9DE8E884C2CE31A113E1 /* CDebugInfoLoader.cpp in Sources */,
+				7648FFCB6788759B54D20361 /* CDebugDatabase.cpp in Sources */,
 				561FEDD6C0C9D6810D3D7DAF /* CTestCoreMappingAccessors.cpp in Sources */,
 				74EF13841B17F495FA63F572 /* CTestMemoryMappingContract.cpp in Sources */,
 				3A8B43A4CB5BBF86E9476AC6 /* CDebugMemoryMapping.cpp in Sources */,
@@ -8827,7 +8846,6 @@
 				41FB3C0D2CFE0D0800870F9B /* CDebuggerServer.cpp in Sources */,
 				MCP0000000000000000000001 /* CMCPServer.cpp in Sources */,
 				MCP0000000000000000000010 /* CMCPBridgeClient.cpp in Sources */,
-				4155B3262681DAAB00110009 /* CDebugAsmSource.cpp in Sources */,
 				4155B3242681DA9A00110009 /* CDebugSymbols.cpp in Sources */,
 				41C84BEA23C6183A007C0889 /* archdep.c in Sources */,
 				41C84BEB23C6183A007C0889 /* mididrv.c in Sources */,

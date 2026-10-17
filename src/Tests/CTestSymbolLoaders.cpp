@@ -7,7 +7,7 @@
 #include "CDebugSymbolsC64.h"
 #include "CDebugSymbolsSegment.h"
 #include "CDebugSymbolsCodeLabel.h"
-#include "CDebugAsmSource.h"
+#include "CDebugDatabase.h"
 #include "CDebugBreakpointsAddr.h"
 #include "CByteBuffer.h"
 #include "CSlrString.h"
@@ -43,18 +43,26 @@ static bool SegmentNamed(CDebugSymbolsSegment *segment, const char *name)
 	return segment != NULL && segment->name->CompareWith(name);
 }
 
-static bool SourceLineIs(CDebugAsmSourceLine *line, int sourceId, int lineStart, int colStart, int lineEnd, int colEnd)
+// The mapping in effect at ADDRESS in SEGMENT's region of the loaded database.
+static const CDebugSourceMapping *At(CDebugSymbols *symbols, CDebugSymbolsSegment *segment, int address)
 {
-	return line != NULL && line->codeFile != NULL && line->codeFile->sourceId == sourceId
-		&& line->codeLineNumberStart == lineStart && line->codeColumnNumberStart == colStart
-		&& line->codeLineNumberEnd == lineEnd && line->codeColumnNumberEnd == colEnd;
+	if (symbols->debugDatabase == NULL || segment->debugRegionId < 0)
+		return NULL;
+	return symbols->debugDatabase->Resolve((u32)segment->debugRegionId, (u32)address);
 }
 
-static bool SourceTextIs(CDebugAsmSourceFile *file, int lineNum, const char *text)
+static bool SourceLineIs(const CDebugSourceMapping *line, int sourceId, int lineStart, int colStart, int lineEnd, int colEnd)
 {
-	if (lineNum >= (int)file->codeTextByLineNum.size())
+	return line != NULL && (int)line->fileId == sourceId
+		&& line->lineStart == lineStart && line->columnStart == colStart
+		&& line->lineEnd == lineEnd && line->columnEnd == colEnd;
+}
+
+static bool SourceTextIs(const CDebugSourceFile *file, int lineNum, const char *text)
+{
+	if (lineNum >= (int)file->lines.size())
 		return false;
-	char *ascii = file->codeTextByLineNum[lineNum]->GetStdASCII();
+	char *ascii = file->lines[lineNum]->GetStdASCII();
 	bool same = strcmp(ascii, text) == 0;
 	delete [] ascii;
 	return same;
@@ -132,31 +140,32 @@ bool CTestSymbolLoaders::RunKickAssDbg(CDebugSymbols *symbols)
 	CDebugSymbolsSegment *base = symbols->segments[0];
 	CDebugSymbolsSegment *patch = symbols->segments[2];
 
-	if (!Check(symbols->asmSource != NULL && symbols->asmSource->codeSourceFilesById.size() == 3,
+	if (!Check(symbols->debugDatabase != NULL && symbols->debugDatabase->NumFiles() == 3,
 			   "KickAss .dbg: three <Sources> entries"))
 		return false;
 
 	// $0801-$F834 -> file 1, 19:16-19:23 (one range covering the whole program).
-	if (!Check(SourceLineIs(base->codeSourceLineByMemoryAddress[0x0801], 1, 19, 16, 19, 23)
-			   && base->codeSourceLineByMemoryAddress[0xF834] == base->codeSourceLineByMemoryAddress[0x0801]
-			   && base->codeSourceLineByMemoryAddress[0x0800] == NULL,
+	if (!Check(SourceLineIs(At(symbols, base, 0x0801), 1, 19, 16, 19, 23)
+			   && At(symbols, base, 0xF834) == At(symbols, base, 0x0801)
+			   && At(symbols, base, 0x0800) == NULL,
 			   "KickAss .dbg: an address range maps every address to one source line object"))
 		return false;
-	if (!Check(SourceLineIs(patch->codeSourceLineByMemoryAddress[0xA000], 1, 8, 3, 8, 5)
-			   && SourceLineIs(patch->codeSourceLineByMemoryAddress[0xA002], 2, 6, 3, 6, 5)
-			   && SourceLineIs(patch->codeSourceLineByMemoryAddress[0xB010], 2, 17, 3, 17, 7)
-			   && patch->codeSourceLineByMemoryAddress[0xA023] == NULL,
+	if (!Check(SourceLineIs(At(symbols, patch, 0xA000), 1, 8, 3, 8, 5)
+			   && SourceLineIs(At(symbols, patch, 0xA002), 2, 6, 3, 6, 5)
+			   && SourceLineIs(At(symbols, patch, 0xB010), 2, 17, 3, 17, 7)
+			   && At(symbols, patch, 0xA023) == NULL,
 			   "KickAss .dbg: file:line:column per address in the 'Patch' segment"))
 		return false;
 	// The map is per segment: 'Base' covers $0801-$F834, 'Patch' does not.
-	if (!Check(patch->codeSourceLineByMemoryAddress[0x0801] == NULL
-			   && base->codeSourceLineByMemoryAddress[0xA000] != patch->codeSourceLineByMemoryAddress[0xA000],
+	if (!Check(At(symbols, patch, 0x0801) == NULL
+			   && At(symbols, base, 0xA000) != At(symbols, patch, 0xA000),
 			   "KickAss .dbg: addresses of one segment are absent from another"))
 		return false;
-	CDebugAsmSourceLine *a002 = patch->codeSourceLineByMemoryAddress[0xA002];
-	CDebugAsmSourceLine *b000 = patch->codeSourceLineByMemoryAddress[0xB000];
-	if (!Check(b000 != NULL && a002->block->name->CompareWith("Joycontrol1")
-			   && b000->block->name->CompareWith("Joycontrol2"),
+	const CDebugSourceMapping *a002 = At(symbols, patch, 0xA002);
+	const CDebugSourceMapping *b000 = At(symbols, patch, 0xB000);
+	if (!Check(a002 != NULL && b000 != NULL
+			   && symbols->debugDatabase->GetBlock(a002->blockId)->name == "Joycontrol1"
+			   && symbols->debugDatabase->GetBlock(b000->blockId)->name == "Joycontrol2",
 			   "KickAss .dbg: each line remembers its <Block>"))
 		return false;
 
@@ -177,8 +186,8 @@ bool CTestSymbolLoaders::RunKickAssDbg(CDebugSymbols *symbols)
 		return false;
 
 	// The fixture's sources are absolute Windows paths that do not exist here.
-	CDebugAsmSourceFile *missing = symbols->asmSource->codeSourceFilesById[1];
-	if (!Check(missing != NULL && missing->codeTextByLineNum.empty(),
+	const CDebugSourceFile *missing = symbols->debugDatabase->GetFile(1);
+	if (!Check(missing != NULL && !missing->HasText() && missing->fileName == "dankwars.asm",
 			   "KickAss .dbg: a missing source file leaves no text and is not an error"))
 		return false;
 	return true;
@@ -215,13 +224,13 @@ bool CTestSymbolLoaders::RunKickAssSourceText(CDebugSymbols *symbols)
 	symbols->ParseSourceDebugInfo(buffer);
 	delete buffer;
 
-	if (!Check(symbols->asmSource != NULL && symbols->asmSource->codeSourceFilesById.size() == 1
+	if (!Check(symbols->debugDatabase != NULL && symbols->debugDatabase->NumFiles() == 1
 			   && symbols->segments.size() == 1,
 			   "KickAss source text: one source, one segment"))
 		return false;
-	CDebugAsmSourceFile *file = symbols->asmSource->codeSourceFilesById[0];
+	const CDebugSourceFile *file = symbols->debugDatabase->GetFile(0);
 	// Index 0 is an empty placeholder so that index == 1-based line number.
-	if (!Check(file != NULL && file->codeTextByLineNum.size() == 6 && SourceTextIs(file, 0, ""),
+	if (!Check(file != NULL && file->lines.size() == 6 && SourceTextIs(file, 0, ""),
 			   "KickAss source text: 5 lines loaded, indexed from 1"))
 		return false;
 	if (!Check(SourceTextIs(file, 3, "start:    lda #$01") && SourceTextIs(file, 4, "    sta $d020")
@@ -229,8 +238,8 @@ bool CTestSymbolLoaders::RunKickAssSourceText(CDebugSymbols *symbols)
 			   "KickAss source text: each tab becomes four spaces (no tab stops)"))
 		return false;
 	CDebugSymbolsSegment *segment = symbols->segments[0];
-	CDebugAsmSourceLine *line = segment->codeSourceLineByMemoryAddress[0x1003];
-	if (!Check(SourceLineIs(line, 0, 4, 2, 4, 10) && line->codeFile == file
+	const CDebugSourceMapping *line = At(symbols, segment, 0x1003);
+	if (!Check(SourceLineIs(line, 0, 4, 2, 4, 10) && symbols->debugDatabase->GetFile(line->fileId) == file
 			   && LabelIs(segment, 0x1005, "loop"),
 			   "KickAss source text: address -> line -> text resolves end to end"))
 		return false;
@@ -268,7 +277,7 @@ void CTestSymbolLoaders::Run(ITestCallback *cb)
 	bool ok = true;
 	for (SubTest subTest : subTests)
 	{
-		// The loaders write into debugInterface->symbols (CDebugAsmSource reads
+		// The loaders write into debugInterface->symbols (the loader used to read
 		// it directly), so a scratch instance is swapped in for each part.
 		CDebugSymbols *scratch = new CDebugSymbolsC64(c64);
 		scratch->SetDataAdapter(c64->dataAdapterC64);
@@ -289,9 +298,8 @@ void CTestSymbolLoaders::Run(ITestCallback *cb)
 		guiMain->UnlockMutex();
 
 		// The scratch instance is deliberately leaked: segments are never
-		// deleted today (see the "THE BUG!" notes in CDebugSymbols), and a
-		// CDebugSymbolsSegment destructor would double-delete source lines it
-		// shares with CDebugAsmSourceFile. RD-032 fixes the ownership.
+		// deleted today (see the "THE BUG!" notes in CDebugSymbols); RD-032
+		// decides their lifetime.
 		if (!ok)
 			break;
 	}

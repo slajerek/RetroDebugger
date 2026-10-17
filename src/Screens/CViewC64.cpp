@@ -189,7 +189,9 @@ extern "C"{
 #include "CSlrFileFromOS.h"
 #include "CColorsTheme.h"
 #include "SYS_Threading.h"
-#include "CDebugAsmSource.h"
+#include "CDebugDatabase.h"
+#include "CDebugSymbolsSegment.h"
+#include "CSlrString.h"
 #include "CDebuggerEmulatorPlugin.h"
 #include "CSnapshotsManager.h"
 

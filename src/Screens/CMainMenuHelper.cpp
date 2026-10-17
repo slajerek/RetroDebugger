@@ -3,6 +3,7 @@
 // This view will be removed. It is being refactored and moved to main menu bar instead
 //
 
+#include "CDebugInfoLoader.h"
 #include "RES_ResourceManager.h"
 #include "CSlrFileZlib.h"
 
@@ -1684,7 +1685,7 @@ void CMainMenuHelper::LoadLabelsAndWatches(CSlrString *path, CDebugInterface *de
 		if (file->Exists())
 		{
 			debugInterface->symbols->DeleteAllSymbols();
-			debugInterface->symbols->ParseSymbols(file);
+			DebugInfoLoadFile(debugInterface->symbols, buf);
 		}
 		
 		delete file;
@@ -1718,7 +1719,7 @@ void CMainMenuHelper::LoadLabelsAndWatches(CSlrString *path, CDebugInterface *de
 		if (file->Exists())
 		{
 			debugInterface->symbols->DeleteAllSymbols();
-			debugInterface->symbols->ParseSourceDebugInfo(file);
+			DebugInfoLoadFile(debugInterface->symbols, buf);
 		}
 		else
 		{

@@ -14,7 +14,7 @@ definitions are in `IMPLEMENTATION-PLAN.md`.
 | Milestone | Phase | Scope | Status |
 |---|---|---|---|
 | M0 Discovery & safety net | P0 | RD-001, RD-038, RD-002, RD-024, RD-027, **RD-034**, **RD-042 (engine)** | RD-001 done; all other M0 items in review (remaining gates: CI on 3 platforms, maintainer review of RD-024) |
-| M1 Canonical model & loaders | P2 (core) | RD-006, RD-031, RD-032, RD-007, RD-008, RD-033 | todo |
+| M1 Canonical model & loaders | P2 (core) | RD-006, RD-031, RD-032, RD-007, RD-008, RD-033 | RD-006, RD-031 in review; RD-032 in progress |
 | M2 Source document & view | P1 | RD-003, RD-004, RD-005 | todo |
 | M3 Execution events & stepping engine | P2/P3 | RD-011, RD-037, RD-012, RD-013, RD-014, RD-015 | todo |
 | M4 Machine mapping providers | P2/P3 | RD-028, RD-040, RD-029, RD-025, RD-026, RD-030, RD-034 | todo |
@@ -31,9 +31,9 @@ definitions are in `IMPLEMENTATION-PLAN.md`.
 | RD-002 | P0 | tests | Portable C/ASM fixtures, pinned toolchains, verified compiler×machine matrix | review(first increment: 2 fixtures, 5 toolchains, 20 cells; matrix in plan #8) | — | `tests/source-debug/toolchains/*.yaml` with versions; matrix table in plan; Tier 1 artifacts committed |
 | RD-024 | P0 | core | Logical vs physical code identity + `IMemoryMappingResolver` contract | review(`CDebugMemoryMapping.h`; awaiting maintainer review) | RD-001 | Header + unit test of `Unknown`/alias semantics; reviewed by maintainer |
 | RD-027 | P0 | core | Audit + accessor patches in VICE/Nestopia/Atari800 cores (fetch/read/write, bus master) | review(accessors + fixes; `CoreMappingAccessors` 15 steps green on Linux) | RD-001, RD-024 | Accessors compiled on 3 platforms; `tests/test-reference-files.sh` still green |
-| RD-006 | P2 | core | Canonical debug database + capability model; migrate `CDebugAsmSource` | todo | RD-001, RD-038 | RD-038 tests unchanged and green; interval index unit tests |
-| RD-031 | P2 | core | **Must fix.** Loader registry with content sniffing (`.dbg` XML vs text, `.dbj`) | todo | RD-006 | Menu/autoload/CLI go through registry; sniff unit test |
-| RD-032 | P2 | core | Symbol lifetime fixes (segments, re-import, dtor, `D:` labels, Watchpoints layout) | todo | RD-006 | ASan/valgrind-clean re-import test |
+| RD-006 | P2 | core | Canonical debug database + capability model; migrate `CDebugAsmSource` | review(`CDebugDatabase`; `CDebugAsmSource` removed; SymbolLoaders + DebugDatabase green on Linux) | RD-001, RD-038 | RD-038 tests unchanged and green; interval index unit tests |
+| RD-031 | P2 | core | **Must fix.** Loader registry with content sniffing (`.dbg` XML vs text, `.dbj`) | review(`DebugInfoProbe`/`DebugInfoLoadFile`, all dispatch sites; DebugInfoFormats green on Linux) | RD-006 | Menu/autoload/CLI go through registry; sniff unit test |
+| RD-032 | P2 | core | Symbol lifetime fixes (segments, re-import, dtor, `D:` labels, Watchpoints layout) | in-progress(single owner of source lines, re-import replaces segments; open: segment deletion, `SetSegment`, `D:` labels, Watchpoints) | RD-006 | ASan/valgrind-clean re-import test |
 | RD-007 | P2 | core | Bank-aware address indexes, source remapping, binary/cartridge identity checks | todo | RD-006, RD-024 | Lookup tests: multi-span, missing, ambiguous, same-PC two identities |
 | RD-008 | P2 | compiler | Oscar64 `.dbj` adapter + contract tests | todo | RD-002, RD-006, RD-031 | Tier 1 Oscar64 fixture resolves file:line for known addresses |
 | RD-033 | P3 | core | Generalize loading entry points (NES `-debuginfo`/autoload, CLI `nes`/`-ines`, NES source slot) | todo | RD-031 | NES loads `.dbg` from CLI and menu; workspace test updated |
@@ -91,8 +91,8 @@ Questions 1, 2, 3, 5, 8 and 10 are answered in spec #15/#20.
 |---|---|
 | Segments never deleted; `.dbg` re-import dangling pointers; segment dtor double delete | RD-032 |
 | `.vs` `D:` labels ignored; newer `<Watchpoints>` layout misparsed | RD-032 |
-| Menu "Import labels" with a `.dbg` skips `DeleteAllSymbols`: stale same-name segments keep freed source lines and `ActivateSelectedSegment` picks the stale one (use-after-free) | RD-032 |
-| `.dbg` `<Sources>` paths: split on every comma; a Windows path is not split into a file name on macOS/Linux (`GetFileNameComponentFromPath` uses the host separator); relative paths resolve against the process cwd, not the `.dbg` folder | RD-006 |
+| Menu "Import labels" with a `.dbg` skips `DeleteAllSymbols`: stale same-name segments keep freed source lines and `ActivateSelectedSegment` picks the stale one (use-after-free) | RD-032 (fixed: segments hold no line pointers, a `.dbg` load replaces the segment set) |
+| `.dbg` `<Sources>` paths: split on every comma; a Windows path is not split into a file name on macOS/Linux (`GetFileNameComponentFromPath` uses the host separator); relative paths resolve against the process cwd, not the `.dbg` folder | RD-006 (file names from both separators; a source missing at its path is looked up next to the `.dbg`; comma split remains) |
 | CLI `nes` unreachable branch; `-ines` missing; `-debuginfo` never NES; NES source layout slot | RD-033 |
 | C64 PC/memory checks ignore `breakOnPC`/`breakOnMemory`; temp bp hides user bp, no event | RD-037 |
 | `nesd_peek_safe_io` OOB read | RD-027 (fixed) |
@@ -116,3 +116,4 @@ Questions 1, 2, 3, 5, 8 and 10 are answered in spec #15/#20.
 | 2026-10-17 | RD-024: `CDebugMemoryMapping.{h,cpp}`, `CDebugInterface::GetMemoryMappingResolver()`, `CTestMemoryMappingContract` (14 steps green on Linux) |
 | 2026-10-17 | RD-027: VICE/Atari/NES banking accessors, three core fixes plus the NES load-after-detach bug found by the new test; `CTestCoreMappingAccessors` (15 steps, NROM alias at $8000/$C000); Linux suite 77/77 (7 skipped) |
 | 2026-10-17 | RD-002 first increment: toolchains pinned and built in the container (Oscar64 from tag, cc65/64tass from apt, KickC from tag + its KickAssembler jar), `basic-flow` + `same-line` fixtures, reproducible `build_fixtures.py`, 20 Tier 1 cells; decision 4 closed. Found: KickC `.dbg` is asm-level only |
+| 2026-10-17 | RD-006 + RD-031: `CDebugDatabase` replaces `CDebugAsmSource` and the per-segment address arrays; content-sniffing `DebugInfoLoadFile` at all dispatch sites; RD-032 re-import fixed. Linux suite 79/79 (7 skipped) |

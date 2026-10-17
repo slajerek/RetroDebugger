@@ -1,0 +1,656 @@
+#include "CDebugInfoLoader.h"
+#include "CDebugDatabase.h"
+#include "CDebugSymbols.h"
+#include "CDebugSymbolsSegment.h"
+#include "CDebugInterface.h"
+#include "CDebugDataAdapter.h"
+#include "CByteBuffer.h"
+#include "CSlrString.h"
+#include "CSlrFileFromOS.h"
+#include "CGuiMain.h"
+#include "DBG_Log.h"
+#include "pugixml.h"
+#include "std_membuf.h"
+#include "utf8.h"
+#include <cstring>
+#include <istream>
+#include <list>
+#include <memory>
+#include <string>
+#include <vector>
+
+const char *DebugInfoFormatName(DebugInfoFormat format)
+{
+	switch (format)
+	{
+		case DebugInfoFormat::Unknown:		return "unknown";
+		case DebugInfoFormat::KickAssDbg:	return "KickAssembler .dbg";
+		case DebugInfoFormat::Cc65Dbg:		return "cc65 .dbg";
+		case DebugInfoFormat::Oscar64Dbj:	return "Oscar64 .dbj";
+		case DebugInfoFormat::ViceLabels:	return "VICE labels";
+		case DebugInfoFormat::Tass64Labels:	return "64tass labels";
+	}
+	return "?";
+}
+
+static bool StartsWith(const char *text, int length, const char *prefix)
+{
+	int n = (int)strlen(prefix);
+	return length >= n && memcmp(text, prefix, n) == 0;
+}
+
+static bool Contains(const char *text, int length, const char *needle)
+{
+	int n = (int)strlen(needle);
+	for (int i = 0; i + n <= length; i++)
+	{
+		if (memcmp(text + i, needle, n) == 0)
+			return true;
+	}
+	return false;
+}
+
+DebugInfoFormat DebugInfoProbe(const u8 *data, int length)
+{
+	if (data == NULL || length <= 0)
+		return DebugInfoFormat::Unknown;
+
+	const char *text = (const char *)data;
+	// Only the head of a file decides; skip a UTF-8 BOM and leading blanks.
+	int head = length < 4096 ? length : 4096;
+	if (head >= 3 && (u8)text[0] == 0xEF && (u8)text[1] == 0xBB && (u8)text[2] == 0xBF)
+	{
+		text += 3;
+		head -= 3;
+	}
+	while (head > 0 && (*text == ' ' || *text == '\t' || *text == '\r' || *text == '\n'))
+	{
+		text++;
+		head--;
+	}
+
+	if (StartsWith(text, head, "<C64debugger")
+		|| (StartsWith(text, head, "<?xml") && Contains(text, head, "<C64debugger")))
+		return DebugInfoFormat::KickAssDbg;
+	if (StartsWith(text, head, "version\tmajor="))
+		return DebugInfoFormat::Cc65Dbg;
+	if (StartsWith(text, head, "{") && (Contains(text, head, "\"memory\"") || Contains(text, head, "\"functions\"")))
+		return DebugInfoFormat::Oscar64Dbj;
+
+	// Label files: the first line that is not empty and not a comment decides.
+	int pos = 0;
+	while (pos < head)
+	{
+		int end = pos;
+		while (end < head && text[end] != '\n')
+			end++;
+		const char *line = text + pos;
+		int lineLength = end - pos;
+		while (lineLength > 0 && (*line == ' ' || *line == '\t'))
+		{
+			line++;
+			lineLength--;
+		}
+		if (lineLength > 0 && line[0] != '#' && line[0] != ';' && line[0] != '\r')
+		{
+			if (lineLength >= 5 && (line[0] == 'a' || line[0] == 'A') && (line[1] == 'l' || line[1] == 'L')
+				&& (line[2] == ' ' || line[2] == '\t'))
+				return DebugInfoFormat::ViceLabels;
+			if (memchr(line, '=', lineLength) != NULL)
+				return DebugInfoFormat::Tass64Labels;
+			return DebugInfoFormat::Unknown;
+		}
+		pos = end + 1;
+	}
+	return DebugInfoFormat::Unknown;
+}
+
+DebugInfoFormat DebugInfoLoadFile(CDebugSymbols *symbols, const char *path)
+{
+	CSlrString *slrPath = new CSlrString(path);
+	DebugInfoFormat format = DebugInfoLoadFile(symbols, slrPath);
+	delete slrPath;
+	return format;
+}
+
+DebugInfoFormat DebugInfoLoadFile(CDebugSymbols *symbols, CSlrString *path)
+{
+	char *cPath = path->GetStdASCII();
+	CSlrFileFromOS *file = new CSlrFileFromOS(cPath);
+	if (!file->Exists())
+	{
+		LOGError("DebugInfoLoadFile: %s does not exist", cPath);
+		delete file;
+		delete [] cPath;
+		return DebugInfoFormat::Unknown;
+	}
+	CByteBuffer *byteBuffer = new CByteBuffer(file, false);
+	delete file;
+
+	DebugInfoFormat format = DebugInfoProbe(byteBuffer->data, byteBuffer->length);
+	LOGM("DebugInfoLoadFile: %s is %s", cPath, DebugInfoFormatName(format));
+
+	switch (format)
+	{
+		case DebugInfoFormat::KickAssDbg:
+		{
+			std::string dir(cPath);
+			size_t slash = dir.find_last_of("/\\");
+			dir = (slash == std::string::npos) ? std::string(".") : dir.substr(0, slash);
+			DebugInfoLoadKickAss(symbols, byteBuffer, dir.c_str());
+			break;
+		}
+		case DebugInfoFormat::ViceLabels:
+		case DebugInfoFormat::Tass64Labels:
+			symbols->ParseSymbols(byteBuffer);
+			break;
+		case DebugInfoFormat::Cc65Dbg:
+		case DebugInfoFormat::Oscar64Dbj:
+			LOGError("DebugInfoLoadFile: %s is %s, which has no loader yet (RD-008/RD-009); not loaded",
+					 cPath, DebugInfoFormatName(format));
+			break;
+		case DebugInfoFormat::Unknown:
+			LOGError("DebugInfoLoadFile: %s is not a recognized symbols or debug info format", cPath);
+			break;
+	}
+
+	delete byteBuffer;
+	delete [] cPath;
+	return format;
+}
+
+// Reads a source file's text, 1-based, tabs expanded to four spaces.
+static bool LoadSourceText(CDebugSourceFile *sourceFile, const std::string &path)
+{
+	CSlrFileFromOS *file = new CSlrFileFromOS((char *)path.c_str());
+	if (!file->Exists())
+	{
+		delete file;
+		return false;
+	}
+	CByteBuffer *byteBuffer = file->GetWholeFileAsByteBuffer();
+	delete file;
+
+	std_membuf mb(byteBuffer->data, byteBuffer->length);
+	std::istream reader(&mb);
+	std::string line;
+
+	sourceFile->lines.push_back(new CSlrString(""));
+	CSlrString *strTabs = new CSlrString("    ");
+	unsigned lineNum = 1;
+	while (getline(reader, line))
+	{
+		std::string::iterator endIt = utf8::find_invalid(line.begin(), line.end());
+		if (endIt != line.end())
+			LOGError("LoadSourceText: invalid UTF-8 in %s line %u", path.c_str(), lineNum);
+
+		std::vector<unsigned short> utf16line;
+		utf8::utf8to16(line.begin(), endIt, back_inserter(utf16line));
+		CSlrString *strLine = new CSlrString(utf16line);
+		strLine->RemoveEndLineCharacter();
+		strLine->ReplaceCharacter((u16)'\t', strTabs);
+		sourceFile->lines.push_back(strLine);
+		lineNum++;
+	}
+	delete strTabs;
+	delete byteBuffer;
+	sourceFile->loadedPath = path;
+	return true;
+}
+
+static std::string ToStd(CSlrString *str)
+{
+	char *ascii = str->GetStdASCII();
+	std::string s(ascii);
+	delete [] ascii;
+	return s;
+}
+
+//	"   &quot;
+//	'   &apos;
+//	<   &lt;
+//	>   &gt;
+//	&   &amp;
+
+bool DebugInfoLoadKickAss(CDebugSymbols *symbols, CByteBuffer *byteBuffer, const char *debugFileDir)
+{
+	LOGD("DebugInfoLoadKickAss");
+
+	byteBuffer->removeCRLFinQuotations();
+
+	pugi::xml_document doc;
+	pugi::xml_parse_result result = doc.load_buffer(byteBuffer->data, byteBuffer->length);
+	if (!result)
+	{
+		LOGError("Loading debug symbols failed: %s at %d", result.description(), result.offset);
+		return false;
+	}
+
+	pugi::xml_node rootTag = doc.first_child();
+	pugi::xml_attribute rootAttr = rootTag.first_attribute();
+	if (strcmp(rootAttr.name(), "version"))
+	{
+		LOGError("Version tag mismatch (%s)", rootAttr.name());
+		return false;
+	}
+	if (strcmp(rootAttr.value(), "1.0"))
+	{
+		LOGError("Unknown version of debug symbols (%s)", rootAttr.value());
+		return false;
+	}
+
+	pugi::xml_node nodeSources = rootTag.child("Sources");
+	if (nodeSources.empty())
+	{
+		LOGError("Sources list not found");
+		return false;
+	}
+
+	std::list<u16> splitCharsLine;
+	splitCharsLine.push_back('\n');
+	splitCharsLine.push_back('\r');
+
+	std::list<u16> splitCharsComma;
+	splitCharsComma.push_back(',');
+
+	std::list<u16> splitCharsBreakpoints;
+	splitCharsBreakpoints.push_back(' ');
+	splitCharsBreakpoints.push_back('<');
+	splitCharsBreakpoints.push_back('>');
+	splitCharsBreakpoints.push_back('=');
+	splitCharsBreakpoints.push_back('!');
+	splitCharsBreakpoints.push_back('#');
+
+	std::shared_ptr<CDebugDatabase> database = std::make_shared<CDebugDatabase>("KickAssembler");
+	database->capabilities.lineMappings = true;
+	database->capabilities.columns = true;
+
+	// == Sources: "INDEX,FILE"; SplitWithChars keeps the separators as words
+	CSlrString *strSources = new CSlrString(nodeSources.child_value());
+	std::vector<CSlrString *> *lines = strSources->SplitWithChars(splitCharsLine);
+	for (CSlrString *oneLine : *lines)
+	{
+		if (oneLine->GetLength() < 2)
+			continue;
+		oneLine->RemoveFromBeginningSelectedCharacter(' ');
+		oneLine->RemoveFromBeginningSelectedCharacter('\t');
+
+		std::vector<CSlrString *> *words = oneLine->SplitWithChars(splitCharsComma);
+		if (words->size() == 3)
+		{
+			database->AddFile((*words)[0]->ToInt(), ToStd((*words)[2]));
+		}
+		else if (words->size() != 0)
+		{
+			LOGError("Wrong format for sources list (%d words)", words->size());
+		}
+		CSlrString::DeleteVector(words);
+	}
+	CSlrString::DeleteVector(lines);
+	delete strSources;
+
+	// Everything below replaces SYMBOLS' contents: lock as the old loader did.
+	guiMain->LockMutex();
+	symbols->debugInterface->LockMutex();
+
+	// A .dbg defines the segment set. The old loader appended to whatever was
+	// there, so an import from the menu (which, unlike autoload and the
+	// command line, did not clear first) left stale segments of the same name
+	// that FindSegment then preferred (RD-032).
+	symbols->DeleteAllSymbols();
+
+	int maxAddress = symbols->dataAdapter->AdapterGetDataLength();
+
+	// == Segments: "START,END,FILE_IDX,LINE1,COL1,LINE2,COL2" per <Block>, END inclusive
+	int segmentNum = 0;
+	for (pugi::xml_node segmentNode = rootTag.child("Segment"); segmentNode; segmentNode = segmentNode.next_sibling("Segment"))
+	{
+		const char *segmentNameStr = segmentNode.attribute("name").value();
+		u32 regionId = database->AddRegion(segmentNameStr, segmentNode.attribute("dest").value());
+
+		CDebugSymbolsSegment *segment = symbols->CreateNewDebugSymbolsSegment(new CSlrString(segmentNameStr), segmentNum++);
+		segment->debugRegionId = (int)regionId;
+		symbols->segments.push_back(segment);
+
+		for (pugi::xml_node blockNode = segmentNode.child("Block"); blockNode; blockNode = blockNode.next_sibling("Block"))
+		{
+			u32 blockId = database->AddBlock(blockNode.attribute("name").value(), regionId);
+
+			CSlrString *strBlock = new CSlrString(blockNode.child_value());
+			std::vector<CSlrString *> *blockLines = strBlock->SplitWithChars(splitCharsLine);
+			for (CSlrString *oneLine : *blockLines)
+			{
+				if (oneLine->GetLength() < 2)
+					continue;
+				oneLine->RemoveFromBeginningSelectedCharacter(' ');
+				oneLine->RemoveFromBeginningSelectedCharacter('\t');
+
+				std::vector<CSlrString *> *words = oneLine->SplitWithChars(splitCharsComma);
+				if (words->size() == 13)
+				{
+					int start = (*words)[0]->ToIntFromHex();
+					int endInclusive = (*words)[2]->ToIntFromHex();
+					u32 fileId = (*words)[4]->ToInt();
+
+					if (database->GetFile(fileId) == NULL)
+					{
+						LOGError("Source code id #%d not found", fileId);
+					}
+					else if (start < 0 || start >= maxAddress || endInclusive < start)
+					{
+						LOGError("Address range %04x-%04x is out of memory range", start, endInclusive);
+					}
+					else
+					{
+						if (endInclusive >= maxAddress)
+						{
+							LOGError("Address %04x is out of memory range", maxAddress);
+							endInclusive = maxAddress - 1;
+						}
+						CDebugSourceMapping mapping;
+						mapping.start = (u32)start;
+						mapping.end = (u32)endInclusive + 1;
+						mapping.regionId = regionId;
+						mapping.blockId = blockId;
+						mapping.fileId = fileId;
+						mapping.lineStart = (*words)[6]->ToInt();
+						mapping.columnStart = (*words)[8]->ToInt();
+						mapping.lineEnd = (*words)[10]->ToInt();
+						mapping.columnEnd = (*words)[12]->ToInt();
+						mapping.quality = DebugMappingQuality::Exact;
+						database->AddMapping(mapping);
+					}
+				}
+				else if (words->size() != 0)
+				{
+					LOGError("Wrong format for source code address mapping");
+				}
+				CSlrString::DeleteVector(words);
+			}
+			CSlrString::DeleteVector(blockLines);
+			delete strBlock;
+		}
+	}
+
+	if (symbols->segments.empty())
+	{
+		// a symbols scope must always exist (symbols->currentSegment)
+		symbols->CreateDefaultSegment();
+	}
+
+	// == Labels: "SEGMENT,ADDRESS,NAME[,...]"
+	pugi::xml_node nodeLabels = rootTag.child("Labels");
+	if (!nodeLabels.empty())
+	{
+		CSlrString *strLabels = new CSlrString(nodeLabels.child_value());
+		std::vector<CSlrString *> *labelLines = strLabels->SplitWithChars(splitCharsLine);
+		for (CSlrString *oneLine : *labelLines)
+		{
+			if (oneLine->GetLength() < 2)
+				continue;
+			oneLine->RemoveFromBeginningSelectedCharacter(' ');
+			oneLine->RemoveFromBeginningSelectedCharacter('\t');
+
+			std::vector<CSlrString *> *words = oneLine->Split(splitCharsComma);
+			if (words->size() == 0)
+			{
+				CSlrString::DeleteVector(words);
+				continue;
+			}
+			// KickAssembler added code-line columns after NAME; only the first three matter here
+			if (words->size() < 3)
+			{
+				LOGError("Not enough words for label definition (%d words)", words->size());
+				CSlrString::DeleteVector(words);
+				continue;
+			}
+
+			CDebugSymbolsSegment *segment = symbols->FindSegment((*words)[0]);
+			if (segment == NULL)
+			{
+				LOGError("ParseLabels: segment not found");
+				CSlrString::DeleteVector(words);
+				continue;
+			}
+			int address = (*words)[1]->ToIntFromHex();
+			char *labelNameStr = (*words)[2]->GetStdASCII();
+			if (labelNameStr[0] != 0)
+			{
+				segment->AddCodeLabel(address, labelNameStr);
+			}
+			CSlrString::DeleteVector(words);
+		}
+		CSlrString::DeleteVector(labelLines);
+		delete strLabels;
+	}
+
+	// == Watchpoints: "SEGMENT,ADDRESS[,NUMBER_OF_VALUES[,REPRESENTATION]]"
+	pugi::xml_node nodeWatches = rootTag.child("Watchpoints");
+	if (!nodeWatches.empty())
+	{
+		CSlrString *strWatches = new CSlrString(nodeWatches.child_value());
+		std::vector<CSlrString *> *watchLines = strWatches->SplitWithChars(splitCharsLine);
+		for (CSlrString *oneLine : *watchLines)
+		{
+			if (oneLine->GetLength() < 2)
+				continue;
+			oneLine->RemoveFromBeginningSelectedCharacter(' ');
+			oneLine->RemoveFromBeginningSelectedCharacter('\t');
+
+			std::vector<CSlrString *> *words = oneLine->Split(splitCharsComma);
+			if (words->size() == 0)
+			{
+				CSlrString::DeleteVector(words);
+				continue;
+			}
+			if (words->size() < 2)
+			{
+				LOGError("Wrong format for watches (%d words)", words->size());
+				CSlrString::DeleteVector(words);
+				continue;
+			}
+
+			int address = (*words)[1]->ToIntFromHex();
+			int numberOfValues = 1;
+			CSlrString *strRepresentation = NULL;
+			if (words->size() > 2)
+			{
+				numberOfValues = (*words)[2]->ToInt();
+				if (numberOfValues < 1)
+					numberOfValues = 1;
+			}
+			if (words->size() > 3)
+			{
+				strRepresentation = (*words)[3];
+			}
+
+			CDebugSymbolsSegment *segment = symbols->FindSegment((*words)[0]);
+			if (segment == NULL)
+			{
+				LOGError("ParseWatches: segment not found");
+			}
+			else
+			{
+				segment->AddWatch(address, numberOfValues, strRepresentation);
+			}
+			CSlrString::DeleteVector(words);
+		}
+		CSlrString::DeleteVector(watchLines);
+		delete strWatches;
+	}
+
+	// == Breakpoints: "SEGMENT,ADDRESS,ARGUMENT"
+	pugi::xml_node nodeBreakpoints = rootTag.child("Breakpoints");
+	if (!nodeBreakpoints.empty())
+	{
+		CSlrString *strBreakpoints = new CSlrString(nodeBreakpoints.child_value());
+		std::vector<CSlrString *> *breakpointLines = strBreakpoints->SplitWithChars(splitCharsLine);
+		for (CSlrString *oneLine : *breakpointLines)
+		{
+			if (oneLine->GetLength() < 2)
+				continue;
+			oneLine->RemoveFromBeginningSelectedCharacter(' ');
+			oneLine->RemoveFromBeginningSelectedCharacter('\t');
+
+			std::vector<CSlrString *> *breakpointWords = oneLine->SplitWithChars(splitCharsComma);
+			if (breakpointWords->size() < 3)
+			{
+				if (breakpointWords->size() != 0)
+					LOGError("ParseBreakpoints: unknown format (num elements=%d)", breakpointWords->size());
+				CSlrString::DeleteVector(breakpointWords);
+				continue;
+			}
+
+			CDebugSymbolsSegment *segment = symbols->FindSegment((*breakpointWords)[0]);
+			int breakpointAddress = (*breakpointWords)[2]->ToIntFromHex();
+			if (segment == NULL)
+			{
+				LOGError("ParseBreakpoints: segment not found");
+				CSlrString::DeleteVector(breakpointWords);
+				continue;
+			}
+
+			// "SEGMENT,ADDRESS," -- a plain PC breakpoint
+			if (breakpointWords->size() == 4)
+			{
+				segment->AddBreakpointPC(breakpointAddress);
+				CSlrString::DeleteVector(breakpointWords);
+				continue;
+			}
+			if (breakpointWords->size() != 5)
+			{
+				LOGError("ParseBreakpoints: unknown format (num elements=%d)", breakpointWords->size());
+				CSlrString::DeleteVector(breakpointWords);
+				continue;
+			}
+
+			std::vector<CSlrString *> *words = (*breakpointWords)[4]->SplitWithChars(splitCharsBreakpoints);
+			CSlrString *command = words->empty() ? NULL : (*words)[0];
+			bool parsed = true;
+
+			if (command == NULL || command->GetChar(0) == '#')
+			{
+				// empty or a comment
+			}
+			else
+			{
+				command->ConvertToLowerCase();
+				if (command->Equals("break") || command->Equals("breakpc") || command->Equals("breakonpc"))
+				{
+					segment->AddBreakpointPC(breakpointAddress);
+				}
+				else if (command->Equals("setbkg") || command->Equals("setbackground"))
+				{
+					if (words->size() < 3)
+					{
+						LOGError("ParseBreakpoints: error with setbkg");
+						parsed = false;
+					}
+					else
+					{
+						segment->AddBreakpointSetBackground(breakpointAddress, (*words)[2]->ToIntFromHex());
+					}
+				}
+				else if (command->Equals("breakmemory") || command->Equals("breakonmemory") || command->Equals("breakmem")
+						 || command->Equals("mem"))
+				{
+					if (words->size() < 4)
+					{
+						LOGError("ParseBreakpoints: error with breakmemory");
+						parsed = false;
+					}
+					else
+					{
+						int address = (*words)[2]->ToIntFromHex();
+						int index = 3;
+						CSlrString *op = new CSlrString();
+						while (index < (int)words->size() - 1)
+						{
+							CSlrString *f = (*words)[index];
+							f->ConvertToLowerCase();
+							u16 chr = f->GetChar(0);
+							if (chr == ' ')
+							{
+								index++;
+								continue;
+							}
+							if ((chr >= '0' && chr <= '9') || (chr >= 'a' && chr <= 'f'))
+								break;
+							op->Concatenate(f);
+							index++;
+						}
+
+						DataBreakpointComparison comparison = DataBreakpointComparison::MEMORY_BREAKPOINT_EQUAL;
+						if (index >= (int)words->size())
+						{
+							LOGError("ParseBreakpoints: error");
+							parsed = false;
+						}
+						else if (op->Equals("==") || op->Equals("="))
+							comparison = DataBreakpointComparison::MEMORY_BREAKPOINT_EQUAL;
+						else if (op->Equals("!="))
+							comparison = DataBreakpointComparison::MEMORY_BREAKPOINT_NOT_EQUAL;
+						else if (op->Equals("<"))
+							comparison = DataBreakpointComparison::MEMORY_BREAKPOINT_LESS;
+						else if (op->Equals("<=") || op->Equals("=<"))
+							comparison = DataBreakpointComparison::MEMORY_BREAKPOINT_LESS_OR_EQUAL;
+						else if (op->Equals(">"))
+							comparison = DataBreakpointComparison::MEMORY_BREAKPOINT_GREATER;
+						else if (op->Equals(">=") || op->Equals("=>"))
+							comparison = DataBreakpointComparison::MEMORY_BREAKPOINT_GREATER_OR_EQUAL;
+						else
+						{
+							LOGError("ParseBreakpoints: unknown operator for memory breakpoint");
+							parsed = false;
+						}
+
+						if (parsed)
+						{
+							int value = (*words)[index]->ToIntFromHex();
+							segment->AddBreakpointMemory(address, MEMORY_BREAKPOINT_ACCESS_WRITE, comparison, value);
+						}
+						delete op;
+					}
+				}
+				else if (segment->ParseSymbolsXML(command, words))
+				{
+					// segment-specific (raster line, IRQs, ...)
+				}
+				else
+				{
+					LOGError("ParseBreakpoints: unknown breakpoint type");
+					parsed = false;
+				}
+			}
+
+			CSlrString::DeleteVector(words);
+			CSlrString::DeleteVector(breakpointWords);
+			if (!parsed)
+				break;	// as the old loader: stop at the first malformed breakpoint
+		}
+		CSlrString::DeleteVector(breakpointLines);
+		delete strBreakpoints;
+	}
+
+	// == Source text: the recorded path, else the file name next to the .dbg
+	for (auto &it : database->Files())
+	{
+		CDebugSourceFile *sourceFile = it.second;
+		if (LoadSourceText(sourceFile, sourceFile->originalPath))
+			continue;
+		if (debugFileDir != NULL && !sourceFile->fileName.empty())
+			LoadSourceText(sourceFile, std::string(debugFileDir) + "/" + sourceFile->fileName);
+	}
+
+	database->Finalize();
+	symbols->debugDatabase = database;
+
+	symbols->ActivateSelectedSegment();
+
+	symbols->debugInterface->UnlockMutex();
+	guiMain->UnlockMutex();
+
+	LOGM("DebugInfoLoadKickAss: %d files, %d segments, %d mappings", (int)database->NumFiles(),
+		 (int)database->NumRegions(), (int)database->NumMappings());
+	return true;
+}

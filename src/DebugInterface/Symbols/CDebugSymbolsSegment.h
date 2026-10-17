@@ -12,9 +12,6 @@
 #include <vector>
 
 class CDebugSymbols;
-class CDebugAsmSource;
-class CDebugAsmSourceLine;
-class CDebugAsmSourceBlock;
 class CDebugSymbolsCodeLabel;
 class CDebugSymbolsDataWatch;
 class CSlrString;
@@ -30,8 +27,10 @@ public:
 	
 	CDebugSymbols *symbols;
 	
-	CDebugAsmSourceLine **codeSourceLineByMemoryAddress;
-	std::vector<CDebugAsmSourceBlock *> blocks;
+	// The region of symbols->debugDatabase this segment's source mappings
+	// live in; -1 when the loaded debug info has none for it (VICE labels,
+	// the default segment, a segment left from an earlier load).
+	int debugRegionId;
 
 	// breakpoints
 	

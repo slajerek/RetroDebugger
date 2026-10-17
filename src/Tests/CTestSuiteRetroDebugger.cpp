@@ -7,6 +7,8 @@
 #include "CTestOpenAllViews.h"
 #include "CTestStackAnnotation.h"
 #include "CTestSymbolLoaders.h"
+#include "CTestDebugDatabase.h"
+#include "CTestDebugInfoFormats.h"
 #include "CTestProcessSpawner.h"
 #include "CTestMemoryMappingContract.h"
 #include "CTestCoreMappingAccessors.h"
@@ -104,6 +106,8 @@ void CTestSuiteRegisterRetroDebuggerTests(std::vector<std::unique_ptr<CTest> > &
 	tests.push_back(std::make_unique<CTestOpenAllViews>());
 	tests.push_back(std::make_unique<CTestStackAnnotation>());
 	tests.push_back(std::make_unique<CTestSymbolLoaders>());
+	tests.push_back(std::make_unique<CTestDebugDatabase>());
+	tests.push_back(std::make_unique<CTestDebugInfoFormats>());
 	// Engine test: CProcessSpawner::Run, the argv launcher build tasks use (RD-042).
 	tests.push_back(std::make_unique<CTestProcessSpawner>());
 	tests.push_back(std::make_unique<CTestMemoryMappingContract>());

@@ -6,7 +6,10 @@
 #include "SYS_Main.h"
 #include "CViewC64.h"
 #include "CViewDisassembly.h"
-#include "CDebugAsmSource.h"
+#include "CDebugDatabase.h"
+#include "CDebugInfoLoader.h"
+#include "CDebugSymbolsSegment.h"
+#include "CSlrString.h"
 #include "CDebugSymbolsSegment.h"
 #include "CViewDataWatch.h"
 #include "CGuiMain.h"
@@ -32,7 +35,6 @@ CDebugSymbols::CDebugSymbols(CDebugInterface *debugInterface, bool supportBreakp
 	this->debugInterface = debugInterface;
 	this->supportBreakpoints = supportBreakpoints;
 	
-	this->asmSource = NULL;
 	this->currentSegment = NULL;
 	this->currentSegmentNum = -1;
 	this->previousSegmentName = NULL;
@@ -945,14 +947,19 @@ void CDebugSymbols::ParseSourceDebugInfo(CSlrString *fileName)
 	{
 		LOGError("C64Symbols::ParseSourceDebugInfo: file %s does not exist", fname);
 		delete [] fname;
+		delete file;
 		return;
 	}
-	delete [] fname;
 	
 	CByteBuffer *byteBuffer = new CByteBuffer(file, false);
 	
-	ParseSourceDebugInfo(byteBuffer);
+	// source files missing at their recorded path are looked for next to the .dbg
+	std::string dir(fname);
+	size_t slash = dir.find_last_of("/\\");
+	dir = (slash == std::string::npos) ? std::string(".") : dir.substr(0, slash);
+	DebugInfoLoadKickAss(this, byteBuffer, dir.c_str());
 	
+	delete [] fname;
 	delete byteBuffer;
 	delete file;
 }
@@ -971,37 +978,19 @@ void CDebugSymbols::DeleteSourceDebugInfo()
 	guiMain->LockMutex();
 	debugInterface->LockMutex();
 	
-	if (this->asmSource)
-	{
-		delete this->asmSource;
-	}
-	this->asmSource = NULL;
+	this->debugDatabase.reset();
 	
 	debugInterface->UnlockMutex();
 	guiMain->UnlockMutex();
 }
 
+// KickAssembler debug info (C64 Debugger .dbg XML): see CDebugInfoLoader.h.
+// Callers with a file path should prefer DebugInfoLoadFile, which decides the
+// format by content.
 void CDebugSymbols::ParseSourceDebugInfo(CByteBuffer *byteBuffer)
 {
 	LOGM("C64Symbols::ParseSourceDebugInfo: byteBuffer=%x", byteBuffer);
-	
-	guiMain->LockMutex();
-	debugInterface->LockMutex();
-	
-	LOGTODO("move this->asmSource to debugInterfce->asmSource");
-	if (this->asmSource != NULL)
-	{
-		delete this->asmSource;
-		asmSource = NULL;
-	}
-	
-	LOGD("create asmSource C64AsmSourceSymbols");
-	this->asmSource = new CDebugAsmSource(byteBuffer, debugInterface, dataAdapter);
-	
-	debugInterface->UnlockMutex();
-	guiMain->UnlockMutex();
-
-	LOGD("C64Symbols::ParseSymbols: done");
+	DebugInfoLoadKickAss(this, byteBuffer, NULL);
 }
 
 //

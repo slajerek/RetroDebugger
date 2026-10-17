@@ -19,7 +19,9 @@
 #include "CViewDisassembly.h"
 #include "CDebugSymbols.h"
 #include "CDebugMemory.h"
-#include "CDebugAsmSource.h"
+#include "CDebugDatabase.h"
+#include "CDebugSymbolsSegment.h"
+#include "CSlrString.h"
 #include "CDebugSymbolsSegment.h"
 
 CViewSourceCode::CViewSourceCode(const char *name, float posX, float posY, float posZ, float sizeX, float sizeY,
@@ -159,9 +161,10 @@ void CViewSourceCode::Render()
 //
 //	}
 //
-	CDebugAsmSource *asmSource = debugInterface->symbols->asmSource;
+	// Hold the snapshot for the whole frame: a reload swaps in a new one.
+	std::shared_ptr<const CDebugDatabase> database = debugInterface->symbols->debugDatabase;
 	
-	if (asmSource == NULL)
+	if (database == NULL)
 		return;
 	
 	if (debugInterface->symbols->segments.empty())
@@ -183,7 +186,8 @@ void CViewSourceCode::Render()
 	
 	char buf[16];
 	
-	CDebugAsmSourceLine *sourceLine = NULL;
+	const CDebugSourceMapping *mapping = NULL;
+	const CDebugSourceFile *sourceFile = NULL;
 	
 	CDebugSymbolsSegment *sourceSegment = debugInterface->symbols->currentSegment;
 	
@@ -199,36 +203,38 @@ void CViewSourceCode::Render()
 	
 	this->cursorAddress = viewDisassembly->cursorAddress;
 
-	if (this->cursorAddress >= 0 && this->cursorAddress < asmSource->maxMemoryAddress)
+	if (this->cursorAddress >= 0 && sourceSegment->debugRegionId >= 0)
 	{
-		sourceLine = sourceSegment->codeSourceLineByMemoryAddress[cursorAddress];
+		mapping = database->Resolve((u32)sourceSegment->debugRegionId, (u32)cursorAddress);
+		if (mapping != NULL)
+			sourceFile = database->GetFile(mapping->fileId);
 	}
 	
-//	LOGD("segment=%x cursorAddress=%x sourceLine=%x", sourceSegment, cursorAddress, sourceLine);
-	
-	if (sourceLine != NULL && sourceLine->codeFile != NULL)
+	if (mapping != NULL && sourceFile != NULL)
 	{
-		font->BlitTextColor(sourceLine->block->name, posX, posY + segmentFontSize, -1, segmentFontSize, 1, 1, 1, 1);
+		const std::vector<CSlrString *> &codeTextByLineNum = sourceFile->lines;
+		const CDebugBlock *block = database->GetBlock(mapping->blockId);
+		if (block != NULL)
+			font->BlitTextColor(block->nameSlr, posX, posY + segmentFontSize, -1, segmentFontSize, 1, 1, 1, 1);
 
-		VID_SetClipping(this->posX, this->posY, sx, this->sizeY);
+		int lineNum = mapping->lineStart;
 
-		int lineNum = sourceLine->codeLineNumberStart;
-
-		if (sourceLine->codeFile->codeTextByLineNum.size() < lineNum)
+		if (lineNum < 1 || (int)codeTextByLineNum.size() <= lineNum)
 		{
-			// file not loaded properly?
-			//LOGError("lineNum exceeds codeTextByLineNum");
+			// source text not found, or the mapping points past its end
 			return;
 		}
 
-		std::vector<CSlrString *>::iterator itDown = sourceLine->codeFile->codeTextByLineNum.begin();
+		VID_SetClipping(this->posX, this->posY, sx, this->sizeY);
+
+		std::vector<CSlrString *>::const_iterator itDown = codeTextByLineNum.begin();
 		std::advance(itDown, lineNum);
 
-		std::vector<CSlrString *>::iterator itUp = itDown;
+		std::vector<CSlrString *>::const_iterator itUp = itDown;
 		
 		float pyb = py;
 		
-		for ( ; itDown != sourceLine->codeFile->codeTextByLineNum.end(); itDown++)
+		for ( ; itDown != codeTextByLineNum.end(); itDown++)
 		{
 			CSlrString *str = *itDown;
 			
@@ -243,9 +249,9 @@ void CViewSourceCode::Render()
 		
 		py = pyb - fontSize;
 		itUp--;
-		lineNum = sourceLine->codeLineNumberStart-1;
+		lineNum = mapping->lineStart-1;
 
-		for ( ; itUp != sourceLine->codeFile->codeTextByLineNum.begin(); itUp--)
+		for ( ; itUp != codeTextByLineNum.begin(); itUp--)
 		{
 			CSlrString *str = *itUp;
 			
@@ -263,16 +269,16 @@ void CViewSourceCode::Render()
 		if (showLineNumbers)
 		{
 			py = pyb;
-			lineNum = sourceLine->codeLineNumberStart-1;
+			lineNum = mapping->lineStart-1;
 
-			itDown = sourceLine->codeFile->codeTextByLineNum.begin();
+			itDown = codeTextByLineNum.begin();
 			std::advance(itDown, lineNum);
 
 			itUp = itDown;
 			
-			lineNum = sourceLine->codeLineNumberStart;
+			lineNum = mapping->lineStart;
 			
-			for ( ; itDown != sourceLine->codeFile->codeTextByLineNum.end(); itDown++)
+			for ( ; itDown != codeTextByLineNum.end(); itDown++)
 			{
 				sprintf(buf, "%4d", lineNum);
 				font->BlitTextColor(buf, nx, py, -1, fontSize, 0.7, 0.7, 0.7, 1);
@@ -286,9 +292,9 @@ void CViewSourceCode::Render()
 			
 			py = pyb - fontSize;
 			itUp--;
-			lineNum = sourceLine->codeLineNumberStart-1;
+			lineNum = mapping->lineStart-1;
 			
-			for ( ; itUp != sourceLine->codeFile->codeTextByLineNum.begin(); itUp--)
+			for ( ; itUp != codeTextByLineNum.begin(); itUp--)
 			{
 				sprintf(buf, "%4d", lineNum);
 				font->BlitTextColor(buf, nx, py, -1, fontSize, 0.7, 0.7, 0.7, 1);
@@ -303,7 +309,7 @@ void CViewSourceCode::Render()
 
 		if (showFilePath)
 		{
-			font->BlitTextColor(sourceLine->codeFile->sourceFileName, px, pe+1.5f, -1, fontSize, 0.9, 0.7, 0.7, 1);
+			font->BlitTextColor(sourceFile->fileNameSlr, px, pe+1.5f, -1, fontSize, 0.9, 0.7, 0.7, 1);
 		}
 		
 		// show cursor

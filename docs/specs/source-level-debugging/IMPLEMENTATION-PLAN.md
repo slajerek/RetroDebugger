@@ -219,6 +219,20 @@ Linux CI runs the suite on both legs; RD-042 `CProcessSpawner::Run` is in engine
 disassembly labels, breakpoints, remote `segment` API) reads, fed by pluggable loaders.
 
 ### RD-006 Canonical database (migration)
+Done (review): `src/DebugInterface/Symbols/CDebugDatabase.{h,cpp}` (files with text,
+regions = code-identity candidates, blocks, half-open mappings with quality, capability
+flags; per-region painted interval index with binary search, candidates query, reverse
+file:line index; immutable after `Finalize()`, held by `CDebugSymbols::debugDatabase` as
+`shared_ptr<const ...>` and swapped under the guiMain + debugInterface locks).
+`CDebugAsmSource.{h,cpp}` is gone: the KickAssembler loader lives in
+`CDebugInfoLoader.cpp` and fills the database; `CDebugSymbolsSegment` keeps only
+`debugRegionId` (its 64K-pointer array, 512 KB per segment, and the double delete in its
+destructor are gone). `CViewSourceCode` reads the database. Not done here: build
+identity / binary hash (comes with RD-007's identity checks) and function ranges (no
+KickAssembler data; Oscar64/cc65 loaders bring them). Tests: `SymbolLoaders` unchanged
+in meaning (25 steps), `CTestDebugDatabase` (12 steps).
+
+Original task list:
 - New `src/DebugInterface/Symbols/CDebugDatabase.{h,cpp}` holding immutable snapshots:
   files (normalized path + original path + remap rules), compilation units, functions,
   source mappings with `AddressRange` (half-open, exclusive end) and
@@ -234,6 +248,13 @@ disassembly labels, breakpoints, remote `segment` API) reads, fed by pluggable l
 - RD-038 tests must pass unchanged (that is the whole point of writing them first).
 
 ### RD-031 Loader registry
+Done (review): `DebugInfoProbe()` / `DebugInfoLoadFile()` in `CDebugInfoLoader.{h,cpp}`
+(free functions rather than a registry class while there are two loaders). All three
+dispatch sites use it (menu import also accepts `.dbj`; cc65/Oscar64 files are
+recognized and reported, not misparsed). `CTestDebugInfoFormats` probes the Tier 1
+artifacts of every producer and checks the routing.
+
+Original task list:
 - `CDebugInfoLoaderRegistry` with `Probe(CByteBuffer*) → loader | none` based on
   content: `<C64debugger` root → KickAss; `version\tmajor=` → cc65; leading `{` with
   `"functions"`/`"memory"` keys → Oscar64 `.dbj`; `al C:` → VICE labels.
@@ -242,6 +263,12 @@ disassembly labels, breakpoints, remote `segment` API) reads, fed by pluggable l
   `-pass` paths).
 
 ### RD-032 Lifetime fixes
+Partly done: source lines have a single owner (the database snapshot), and a `.dbg` load
+replaces the segment set (the menu re-import no longer leaves stale same-name segments;
+`CTestDebugInfoFormats` re-import steps). Still open: actually deleting replaced segments
+(still leaked on purpose, see the "THE BUG!" note: something else holds segment
+pointers), `SetSegment` → `ActivateSegment`, `.vs` `D:` labels, `<Watchpoints>` layout.
+
 Fix in this order, each with a test: ownership of `CDebugAsmSourceLine` (single owner:
 the database snapshot), segment deletion on database replacement (atomic swap under
 `symbols->LockMutex()`), `SetSegment` → `ActivateSegment`, `.vs` `D:` labels routed to

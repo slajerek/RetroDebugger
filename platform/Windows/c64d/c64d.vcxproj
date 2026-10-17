@@ -267,7 +267,6 @@
     <ClCompile Include="..\..\..\src\DebugInterface\MenuItems\CDebugInterfaceMenuItem.cpp" />
     <ClCompile Include="..\..\..\src\DebugInterface\MenuItems\CDebugInterfaceMenuItemFolder.cpp" />
     <ClCompile Include="..\..\..\src\DebugInterface\MenuItems\CDebugInterfaceMenuItemView.cpp" />
-    <ClCompile Include="..\..\..\src\DebugInterface\Symbols\CDebugAsmSource.cpp" />
     <ClCompile Include="..\..\..\src\DebugInterface\Symbols\CDebugBreakpoint.cpp" />
     <ClCompile Include="..\..\..\src\DebugInterface\Symbols\CDebugBreakpointAddr.cpp" />
     <ClCompile Include="..\..\..\src\DebugInterface\Symbols\CDebugBreakpointData.cpp" />
@@ -1482,6 +1481,14 @@
     <ClCompile Include="..\..\..\src\Tools\libpsid64\libpsid-sidid.cpp" />
     <ClCompile Include="..\..\..\src\Tools\libpsid64\libpsid-theme.cpp" />
     <ClCompile Include="..\..\..\src\Tools\Shaders\CRenderShaderCRTMonitorOpenGL4.cpp" />
+    <ClCompile Include="..\..\..\src\Tests\CTestDebugInfoFormats.cpp" />
+    <ClInclude Include="..\..\..\src\Tests\CTestDebugInfoFormats.h" />
+    <ClCompile Include="..\..\..\src\Tests\CTestDebugDatabase.cpp" />
+    <ClInclude Include="..\..\..\src\Tests\CTestDebugDatabase.h" />
+    <ClCompile Include="..\..\..\src\DebugInterface\Symbols\CDebugInfoLoader.cpp" />
+    <ClInclude Include="..\..\..\src\DebugInterface\Symbols\CDebugInfoLoader.h" />
+    <ClCompile Include="..\..\..\src\DebugInterface\Symbols\CDebugDatabase.cpp" />
+    <ClInclude Include="..\..\..\src\DebugInterface\Symbols\CDebugDatabase.h" />
     <ClCompile Include="..\..\..\src\Tests\CTestCoreMappingAccessors.cpp" />
     <ClInclude Include="..\..\..\src\Tests\CTestCoreMappingAccessors.h" />
     <ClCompile Include="..\..\..\src\Tests\CTestMemoryMappingContract.cpp" />
@@ -1799,7 +1806,6 @@
     <ClInclude Include="..\..\..\src\DebugInterface\MenuItems\CDebugInterfaceMenuItem.h" />
     <ClInclude Include="..\..\..\src\DebugInterface\MenuItems\CDebugInterfaceMenuItemFolder.h" />
     <ClInclude Include="..\..\..\src\DebugInterface\MenuItems\CDebugInterfaceMenuItemView.h" />
-    <ClInclude Include="..\..\..\src\DebugInterface\Symbols\CDebugAsmSource.h" />
     <ClInclude Include="..\..\..\src\DebugInterface\Symbols\CDebugBreakpoint.h" />
     <ClInclude Include="..\..\..\src\DebugInterface\Symbols\CDebugBreakpointAddr.h" />
     <ClInclude Include="..\..\..\src\DebugInterface\Symbols\CDebugBreakpointData.h" />

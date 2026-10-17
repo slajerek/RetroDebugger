@@ -2,7 +2,9 @@
 #include "CDebugSymbols.h"
 #include "CDebugInterface.h"
 #include "CDebugInterfaceC64.h"
-#include "CDebugAsmSource.h"
+#include "CDebugDatabase.h"
+#include "CDebugSymbolsSegment.h"
+#include "CSlrString.h"
 #include "CViewDisassembly.h"
 #include "CViewDataWatch.h"
 #include "CDebugSymbolsCodeLabel.h"
@@ -19,13 +21,8 @@ CDebugSymbolsSegment::CDebugSymbolsSegment(CDebugSymbols *debugSymbols, CSlrStri
 	this->segmentNum = segmentNum;
 	this->supportBreakpoints = supportBreakpoints;
 	
-	int maxAddress = debugSymbols->dataAdapter->AdapterGetDataLength();
-	codeSourceLineByMemoryAddress = new CDebugAsmSourceLine* [maxAddress];
-	for (int i = 0; i < maxAddress; i++)
-	{
-		codeSourceLineByMemoryAddress[i] = NULL;
-	}
-	
+	debugRegionId = -1;
+
 	numCodeLabelsInArray = 0;
 	codeLabelsArray = NULL;
 }
@@ -46,21 +43,6 @@ CDebugSymbolsSegment::~CDebugSymbolsSegment()
 {
 	name->DebugPrint("~CDebugSymbolsSegment");
 	delete name;
-	
-	int maxAddress = symbols->dataAdapter->AdapterGetDataLength();
-	for (int i = 0; i < maxAddress; i++)
-	{
-		if (codeSourceLineByMemoryAddress[i])
-			delete codeSourceLineByMemoryAddress[i];
-	}
-	delete [] codeSourceLineByMemoryAddress;
-	
-	while (!blocks.empty())
-	{
-		CDebugAsmSourceBlock *b = blocks.back();
-		blocks.pop_back();
-		delete b;
-	}
 	
 	ClearBreakpoints();
 	DeleteCodeLabels();

@@ -1,3 +1,4 @@
+#include "CDebugInfoLoader.h"
 #include "C64D_Version.h"
 #include "EmulatorsConfig.h"
 #include "C64CommandLine.h"
@@ -672,7 +673,7 @@ void c64PerformStartupTasksThreaded()
 		if (c64SettingsPathToSymbols != NULL)
 		{
 			debugInterface->symbols->DeleteAllSymbols();
-			debugInterface->symbols->ParseSymbols(c64SettingsPathToSymbols);
+			DebugInfoLoadFile(debugInterface->symbols, c64SettingsPathToSymbols);
 		}
 
 		if (c64SettingsPathToWatches != NULL)
@@ -684,7 +685,7 @@ void c64PerformStartupTasksThreaded()
 		if (c64SettingsPathToDebugInfo != NULL)
 		{
 			debugInterface->symbols->DeleteAllSymbols();
-			debugInterface->symbols->ParseSourceDebugInfo(c64SettingsPathToDebugInfo);
+			DebugInfoLoadFile(debugInterface->symbols, c64SettingsPathToDebugInfo);
 		}
 
 		if (c64SettingsDefaultSegment != NULL)
@@ -1425,7 +1426,7 @@ void c64PerformNewConfigurationTasksThreaded(CByteBuffer *byteBuffer)
 			if (debugInterface && debugInterface->symbols)
 			{
 				debugInterface->symbols->DeleteAllSymbols();
-				debugInterface->symbols->ParseSymbols(str);
+				DebugInfoLoadFile(debugInterface->symbols, str);
 			}
 			delete str;
 		}
@@ -1445,7 +1446,7 @@ void c64PerformNewConfigurationTasksThreaded(CByteBuffer *byteBuffer)
 			if (debugInterface && debugInterface->symbols)
 			{
 				debugInterface->symbols->DeleteAllSymbols();
-				debugInterface->symbols->ParseSourceDebugInfo(str);
+				DebugInfoLoadFile(debugInterface->symbols, str);
 			}
 			delete str;
 		}

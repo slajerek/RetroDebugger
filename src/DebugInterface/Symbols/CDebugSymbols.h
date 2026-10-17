@@ -4,13 +4,14 @@
 #include "SYS_Defs.h"
 #include "hjson.h"
 #include <list>
+#include <memory>
 #include <vector>
 
 class CSlrFile;
 class CByteBuffer;
 class CSlrString;
 class CDebugInterface;
-class CDebugAsmSource;
+class CDebugDatabase;
 class CDebugSymbolsSegment;
 class CDebugSymbolsCodeLabel;
 class CDebugDataAdapter;
@@ -37,7 +38,10 @@ public:
 	CDebugDataAdapter *dataAdapter;
 	CDebugEventsHistory *debugEventsHistory;
 
-	CDebugAsmSource *asmSource;
+	// Source mappings of the loaded debug info (CDebugDatabase.h): an
+	// immutable snapshot, replaced whole on reload under guiMain and
+	// debugInterface locks; NULL when none is loaded.
+	std::shared_ptr<const CDebugDatabase> debugDatabase;
 	
 	std::vector<CDebugSymbolsSegment *> segments;
 	CDebugSymbolsSegment *currentSegment;
