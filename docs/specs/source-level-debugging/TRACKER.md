@@ -101,7 +101,7 @@ Questions 1, 2, 3, 5, 8 and 10 are answered in spec #15/#20.
 | `c64d_peek_c64` Ultimax uninitialized read; per-cart peek bypass (also in `_for_cycle` and `_whole_map`) | RD-027 (fixed) |
 | Cartridge data adapter ignored its type (always ROML), instance mislabelled RamL; view stays 512 KB (cell cost) | RD-027 (fixed type/label; size kept, identity via accessors) |
 | NES: loading a cartridge after Detach Everything never reset the new board (PRG unmapped, CPU on open bus) | RD-027 (fixed in `nesd_insert_cartridge`) |
-| `tests/test-reference-files.sh` fails on three unregistered USBSID files under `vice/arch/hwsiddrv/` (since 895f4fc) | outside this programme; suggested as a separate task |
+| `tests/test-reference-files.sh` fails on three unregistered USBSID files under `vice/arch/hwsiddrv/` (since 895f4fc) | fixed on `devel` (4a362e5), merged into this branch |
 | Atari "direct RAM" adapter returns the CPU view | RD-029 |
 
 ## Change log
