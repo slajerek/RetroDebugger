@@ -13,7 +13,7 @@ definitions are in `IMPLEMENTATION-PLAN.md`.
 
 | Milestone | Phase | Scope | Status |
 |---|---|---|---|
-| M0 Discovery & safety net | P0 | RD-001, RD-038, RD-002, RD-024, RD-027, **RD-034**, **RD-042 (engine)** | RD-001 done; RD-038, RD-034 in progress; RD-042 in review on the engine branch |
+| M0 Discovery & safety net | P0 | RD-001, RD-038, RD-002, RD-024, RD-027, **RD-034**, **RD-042 (engine)** | RD-001 done; RD-038, RD-034, RD-042 in review (RD-034 and RD-042 wait on the engine branch merge) |
 | M1 Canonical model & loaders | P2 (core) | RD-006, RD-031, RD-032, RD-007, RD-008, RD-033 | todo |
 | M2 Source document & view | P1 | RD-003, RD-004, RD-005 | todo |
 | M3 Execution events & stepping engine | P2/P3 | RD-011, RD-037, RD-012, RD-013, RD-014, RD-015 | todo |
@@ -27,7 +27,7 @@ definitions are in `IMPLEMENTATION-PLAN.md`.
 | ID | Phase | Track | Title | Status | Depends on | Gate |
 |---|---|---|---|---|---|---|
 | RD-001 | P0 | core | Inventory source view, hooks, breakpoints, loaders, memory translation APIs | done(53d397d+1.4) | — | Spec #20 written |
-| RD-038 | P0 | tests | Regression test for KickAss `.dbg` + VICE `.vs` loaders (`dankwars.dbg`, `labelstest1.vs`) | in-progress | RD-001 | `CTestSymbolLoaders` (`SymbolLoaders`) passes on all 3 CI platforms |
+| RD-038 | P0 | tests | Regression test for KickAss `.dbg` + VICE `.vs` loaders (`dankwars.dbg`, `labelstest1.vs`) | review(d1784e3; 25/25 steps green on Linux locally) | RD-001 | `CTestSymbolLoaders` (`SymbolLoaders`) passes on all 3 CI platforms |
 | RD-002 | P0 | tests | Portable C/ASM fixtures, pinned toolchains, verified compiler×machine matrix | todo | — | `tests/source-debug/toolchains/*.yaml` with versions; matrix table in plan; Tier 1 artifacts committed |
 | RD-024 | P0 | core | Logical vs physical code identity + `IMemoryMappingResolver` contract | todo | RD-001 | Header + unit test of `Unknown`/alias semantics; reviewed by maintainer |
 | RD-027 | P0 | core | Audit + accessor patches in VICE/Nestopia/Atari800 cores (fetch/read/write, bus master) | todo | RD-001, RD-024 | Accessors compiled on 3 platforms; `tests/test-reference-files.sh` still green |
@@ -52,7 +52,7 @@ definitions are in `IMPLEMENTATION-PLAN.md`.
 | RD-015 | P3 | tests | Headless step-trace runner + golden expectations (#9.5 format) | todo | RD-002, RD-013 | `tests/source-debug/expectations/**` replayed in suite |
 | RD-026 | P3 | tests | NES NROM/UxROM/MMC1-or-MMC3 banked fixtures with physical-fetch traces | todo | RD-002, RD-024, RD-025, RD-040 | #3A.6 assertion list green |
 | RD-030 | P3 | tests | C64 + Atari banked suites; shared 3-machine matrix | todo | RD-002, RD-025, RD-028, RD-029 | #3B.4 trace schema produced for every fixture |
-| RD-034 | P0 | ci | **Must fix.** Run headless suite on Linux CI (both log legs) | todo | — | `build-linux.yml` runs `tests/run_test.sh --skip-build` under xvfb; AGENTS.md updated |
+| RD-034 | P0 | ci | **Must fix.** Run headless suite on Linux CI (both log legs) | review(ea99097; local Linux 74/74, 7 skipped) | engine `CPianoKeyboard` fix (engine `c-source-debugging` 623b76e) merged to engine `devel` | `build-linux.yml` runs `tests/run_test.sh --skip-build` under xvfb; AGENTS.md updated |
 | RD-036 | P3 | remote | Remote/MCP: `step/source/*`, `step/out`, `source/location`, `symbols/load`; skill doc | todo | RD-013, RD-031 | `CTestMCPProtocol` extended; `docs/mcp/retrodebugger-mcp-skill.md` updated |
 | RD-009 | P2 | compiler | cc65 `.dbg` adapter + contract tests | todo | RD-002, RD-006, RD-031 | Tier 1 cc65 fixture (C64, Atari, NES where target builds) |
 | RD-010 | P2 | compiler | KickC artifact audit + supported subset | todo | RD-002, RD-006, RD-031 | Capability flags documented; `Approximate` where only line mapping |
@@ -96,6 +96,8 @@ Questions 1, 2, 3, 5, 8 and 10 are answered in spec #15/#20.
 | CLI `nes` unreachable branch; `-ines` missing; `-debuginfo` never NES; NES source layout slot | RD-033 |
 | C64 PC/memory checks ignore `breakOnPC`/`breakOnMemory`; temp bp hides user bp, no event | RD-037 |
 | `nesd_peek_safe_io` OOB read | RD-040 |
+| Engine: `CPianoKeyboard` dereferenced a NULL `midiIn` without an ALSA sequencer (startup segfault on Linux CI/containers) | RD-034 (fixed on engine branch, 623b76e) |
+| `GT2Patterns` step 16 assumed macOS key input (`virtualkeycode`); failed on every other platform | RD-034 (test fixed, 7fed440) |
 | `c64d_peek_c64` Ultimax uninitialized read; per-cart peek bypass; cart adapter 512 KB/ROML only | RD-028 |
 | Atari "direct RAM" adapter returns the CPU view | RD-029 |
 
@@ -106,3 +108,4 @@ Questions 1, 2, 3, 5, 8 and 10 are answered in spec #15/#20.
 | 2026-10-17 | Tracker created from spec v1.4; RD-001 marked done; RD-031..RD-042 added |
 | 2026-10-17 | Maintainer feedback: RD-034/031/042 must-fix (RD-034 and the RD-042 proposal moved to M0, decision 11 = engine); RD-043 (64tass symbols), RD-044 (1541), RD-045 (C64U) added; decision 12 = must-have later phases; decision 14 added |
 | 2026-10-17 | RD-042: engine already had `CProcessSpawner`; `Run` added on engine branch `c-source-debugging` (ab37e96). RD-038 test written as `CTestSymbolLoaders`. Two loader defects added (menu `.dbg` re-import use-after-free; `<Sources>` path handling) |
+| 2026-10-17 | Linux build + suite run locally under Xvfb: startup segfault fixed in the engine (`CPianoKeyboard`), `GT2Patterns` made platform-correct, suite 74/74 (7 skipped). RD-034 workflow step added; RD-038 green (25 steps) |
