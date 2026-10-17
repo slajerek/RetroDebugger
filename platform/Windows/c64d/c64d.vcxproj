@@ -1481,6 +1481,12 @@
     <ClCompile Include="..\..\..\src\Tools\libpsid64\libpsid-sidid.cpp" />
     <ClCompile Include="..\..\..\src\Tools\libpsid64\libpsid-theme.cpp" />
     <ClCompile Include="..\..\..\src\Tools\Shaders\CRenderShaderCRTMonitorOpenGL4.cpp" />
+    <ClCompile Include="..\..\..\src\Tests\CTestMachineMemoryMapping.cpp" />
+    <ClInclude Include="..\..\..\src\Tests\CTestMachineMemoryMapping.h" />
+    <ClCompile Include="..\..\..\src\Emulators\atari800\AtariInterface\CAtariMemoryMappingResolver.cpp" />
+    <ClInclude Include="..\..\..\src\Emulators\atari800\AtariInterface\CAtariMemoryMappingResolver.h" />
+    <ClCompile Include="..\..\..\src\Emulators\nestopiaue\NestopiaInterface\CNesMemoryMappingResolver.cpp" />
+    <ClInclude Include="..\..\..\src\Emulators\nestopiaue\NestopiaInterface\CNesMemoryMappingResolver.h" />
     <ClCompile Include="..\..\..\src\Tests\CTestC64MemoryMapping.cpp" />
     <ClInclude Include="..\..\..\src\Tests\CTestC64MemoryMapping.h" />
     <ClCompile Include="..\..\..\src\Emulators\vice\ViceInterface\CViceMemoryMappingResolver.cpp" />

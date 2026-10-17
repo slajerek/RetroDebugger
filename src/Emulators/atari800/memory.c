@@ -1317,3 +1317,18 @@ int atrd_peek_backing(int region, int offset)
 	}
 	return -1;
 }
+
+/* RD-029: the built-in ROM PORTB maps at $A000-$BFFF on an XL/XE when no
+   cartridge is switched in there: 0 none (RAM), 1 BASIC, 2 the XEGS game. */
+int atrd_get_builtin_rom_a000(void)
+{
+	UBYTE const *builtin;
+	if (Atari800_machine_type != Atari800_MACHINE_XLXE)
+		return 0;
+	builtin = builtin_cart(PIA_PORTB | PIA_PORTB_mask);
+	if (builtin == MEMORY_basic)
+		return 1;
+	if (builtin == MEMORY_xegame)
+		return 2;
+	return 0;
+}

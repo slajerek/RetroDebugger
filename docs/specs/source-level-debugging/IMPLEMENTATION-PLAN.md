@@ -445,6 +445,22 @@ list; explicit `skip(reason)` for unsupported emulator configurations.
   `CVicEditorLayerMemoryAccess.cpp` into the provider and make both views consumers);
   write → RAM under ROM, I/O when visible, cartridge rules by type; Ultimax open bus →
   `OpenBus`. Identity for cart windows = `{cartImage, ROML/ROMH, bank, offset}`.
+- **RD-040 NES -- first part done (review):** `CNesMemoryMappingResolver` resolves CPU
+  accesses through the board's own page tables (`nesd_get_prg_mapping`), so the mapper
+  decides which PRG bank sits in which window. Identities: nes-ram (`$0800-$1FFF`
+  aliases), nes-ppu (register 0-7), nes-apu-io, nes-prg (PRG-ROM byte offset), nes-wram,
+  nes-mapper (writes into PRG-ROM space). `$4020-$5FFF` and handler-driven boards (MMC5)
+  are Unknown. Still open: the iNES file offset (the cartridge profile drops the trainer
+  flag) and MMC1/MMC3 fixtures (RD-026).
+- **RD-029 Atari -- first part done (review):** `CAtariMemoryMappingResolver` takes
+  RAM/ROM/hardware from Atari800's attribute map and which ROM / extended bank / cart
+  bank from `atrd_get_banking_state`. Identities: atari-ram, atari-xe-ram (bank, CPU vs
+  ANTIC), atari-os (self-test at `$1000`), atari-basic, atari-xegame, atari-io,
+  atari-cart (standard 8K/16K). ROM writes are Unmapped; other cart types and the 5200
+  Unknown. `CTestMachineMemoryMapping` covers both (16 steps; the Atari part sets DDRB to
+  outputs and cold-starts a 128 KB XE when the machine is another size). Still open:
+  XEGS and other cartridge types, the "direct RAM" data adapter.
+  Original plans:
 - **RD-040 NES** (`.../NestopiaInterface/CMemoryMappingNes.{h,cpp}`): fetch/read/write via
   the new board accessor; identity `{romImage, PRG_ROM|PRG_RAM, bankIndex, offset}` with
   ROM file offset = 16 + trainer + bankIndex*bankSize + offset for iNES/NES 2.0 (from

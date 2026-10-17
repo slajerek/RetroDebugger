@@ -1,3 +1,4 @@
+#include "CAtariMemoryMappingResolver.h"
 #include "EmulatorsConfig.h"
 
 #if defined(RUN_ATARI)
@@ -59,10 +60,18 @@ void ATRD_SetConfigFileName(const char *fileName);
 void atrd_reset_av_sync();
 };
 
+CDebugMemoryMappingResolver *CDebugInterfaceAtari::GetMemoryMappingResolver()
+{
+	if (memoryMappingResolver == NULL)
+		memoryMappingResolver = new CAtariMemoryMappingResolver();
+	return memoryMappingResolver;
+}
+
 CDebugInterfaceAtari::CDebugInterfaceAtari(CViewC64 *viewC64) //, uint8 *memory)
 : CDebugInterface(viewC64)
 {
 	LOGM("CDebugInterfaceAtari: %s init", Atari800_TITLE);
+	memoryMappingResolver = NULL;
 		
 	debugInterfaceAtari = this;
 

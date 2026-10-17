@@ -1,3 +1,4 @@
+#include "CNesMemoryMappingResolver.h"
 #include "NstApiMachine.hpp"
 #include "NstMachine.hpp"
 #include "NstApiEmulator.hpp"
@@ -50,10 +51,18 @@ extern Nes::Api::Emulator nesEmulator;
 // 44100/50*5
 #define NES_APU_WAVEFORM_LENGTH	4410
 
+CDebugMemoryMappingResolver *CDebugInterfaceNes::GetMemoryMappingResolver()
+{
+	if (memoryMappingResolver == NULL)
+		memoryMappingResolver = new CNesMemoryMappingResolver();
+	return memoryMappingResolver;
+}
+
 CDebugInterfaceNes::CDebugInterfaceNes(CViewC64 *viewC64) //, uint8 *memory)
 : CDebugInterface(viewC64)
 {
 	LOGM("CDebugInterfaceNes: NestopiaUE v%s init", NST_VERSION);
+	memoryMappingResolver = NULL;
 	
 	debugInterfaceNes = this;
 	isInitialised = false;

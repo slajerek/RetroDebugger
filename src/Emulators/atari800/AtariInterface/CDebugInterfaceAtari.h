@@ -17,10 +17,16 @@ extern "C"
 class CAudioChannelAtari;
 class CWaveformData;
 
+class CAtariMemoryMappingResolver;
+
 class CDebugInterfaceAtari : public CDebugInterface
 {
 	
 public:
+	// RD-029: the Atari memory mapping provider (CAtariMemoryMappingResolver.h)
+	CAtariMemoryMappingResolver *memoryMappingResolver;
+	virtual CDebugMemoryMappingResolver *GetMemoryMappingResolver();
+
 	CDebugInterfaceAtari(CViewC64 *viewC64); //, uint8 *memory);
 	~CDebugInterfaceAtari();
 	

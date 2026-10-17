@@ -122,6 +122,7 @@ void atrd_get_banking_state(int *machineType, int *ramSizeKb, int *portb, int *p
 							int *cartType, int *cartState, int *cartSizeKb);
 int atrd_get_memory_attrib(int addr);
 int atrd_peek_backing(int region, int offset);
+int atrd_get_builtin_rom_a000(void);
 #ifdef __cplusplus
 }
 #endif

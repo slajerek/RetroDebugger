@@ -16,11 +16,17 @@ class CViewC64;
 class CAudioChannelNes;
 class CWaveformData;
 
+class CNesMemoryMappingResolver;
+
 class CDebugInterfaceNes : public CDebugInterface
 {
 	
 public:
 	CDebugInterfaceNes(CViewC64 *viewC64); //, uint8 *memory);
+
+	// RD-040: the NES memory mapping provider (CNesMemoryMappingResolver.h)
+	CNesMemoryMappingResolver *memoryMappingResolver;
+	virtual CDebugMemoryMappingResolver *GetMemoryMappingResolver();
 	virtual ~CDebugInterfaceNes();
 	
 	volatile bool isInitialised;

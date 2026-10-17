@@ -17,7 +17,7 @@ definitions are in `IMPLEMENTATION-PLAN.md`.
 | M1 Canonical model & loaders | P2 (core) | RD-006, RD-031, RD-032, RD-007, RD-008, RD-033 | RD-006, RD-031 in review; RD-032 in progress |
 | M2 Source document & view | P1 | RD-003, RD-004, RD-005 | todo |
 | M3 Execution events & stepping engine | P2/P3 | RD-011, RD-037, RD-012, RD-013, RD-014, RD-015 | todo |
-| M4 Machine mapping providers | P2/P3 | RD-028, RD-040, RD-029, RD-025, RD-026, RD-030, RD-034 | todo |
+| M4 Machine mapping providers | P2/P3 | RD-028, RD-040, RD-029, RD-025, RD-026, RD-030, RD-034 | in-progress |
 | M5 Compiler coverage & remote | P3/P4 | RD-009, RD-010, RD-036, RD-016, RD-017, RD-035, **RD-043 (64tass symbols)**, **RD-044 (1541)** | todo |
 | M6 IDE workspace | P5 | RD-018, RD-042 (consumption), RD-019, RD-020, RD-021, **RD-045 (C64U observed mode)** | todo |
 | M7 Advanced & research | P6 | RD-022, RD-023 | todo |
@@ -43,8 +43,8 @@ definitions are in `IMPLEMENTATION-PLAN.md`.
 | RD-011 | P2 | core | Generic execution events at existing hook points (+ RTS/RTI/reset/interrupt-entry) | todo | RD-001, RD-024 | Event-order test per machine; no perf regression vs `VicePlatformAbstraction` pacing gate |
 | RD-037 | P2 | core | Step-over/step-out in `CDebugInterface`; proper temporary breakpoint with priorities | todo | RD-011 | `CTestStepOverRecursion`, `CTestStepOut`, user bp beats temp bp |
 | RD-028 | P2 | c64 | C64 mapping provider (6510 port/PLA/cart/Ultimax), unify `CViewC64MemoryBank` table | in-progress(provider from VICE tables, no-cart tests green; open: cart fixtures/profiles, view unification) | RD-024, RD-027 | #3B.2 "Required C64 tests" pass |
-| RD-040 | P2 | nes | NES mapping provider (mapper PRG identity, header→ROM offset, PRG-RAM), fix OOB peek | todo | RD-024, RD-027 | NROM + UxROM identity tests pass |
-| RD-029 | P2 | atari | Atari provider (model, PORTB, OS/BASIC, 130XE banks, ANTIC view, cartridge) | todo | RD-024, RD-027 | #3B.3 "Required Atari tests" pass or explicit skips recorded |
+| RD-040 | P2 | nes | NES mapping provider (mapper PRG identity, header→ROM offset, PRG-RAM), fix OOB peek | in-progress(provider from the board page tables, UxROM + NROM tests green; open: iNES file offset, MMC1/MMC3 fixtures in RD-026) | RD-024, RD-027 | NROM + UxROM identity tests pass |
+| RD-029 | P2 | atari | Atari provider (model, PORTB, OS/BASIC, 130XE banks, ANTIC view, cartridge) | in-progress(provider from Atari800 attributes + banking state; OS/BASIC/130XE CPU-vs-ANTIC tests green; open: XEGS and other cart types, direct-RAM adapter) | RD-024, RD-027 | #3B.3 "Required Atari tests" pass or explicit skips recorded |
 | RD-012 | P3 | core | Physical/logical execution context tracker (seeded from stack annotations) | todo | RD-011, RD-006 | Tracker tests: JSR/RTS, IRQ/RTI nesting, tail JMP, attach mid-run → unknown |
 | RD-013 | P3 | core | Source-step state machine in the emulation-thread hook, stop reasons, budget | todo | RD-007, RD-012, RD-037 | Into/Over/Out on Tier 1 Oscar64 fixture; watchdog never trips |
 | RD-025 | P3 | core | Bank-aware CPU/source/physical breakpoints + labels; mapping-driven segment activation | todo | RD-007, RD-011, RD-024 | Same-PC/different-identity breakpoint tests on 3 machines |
@@ -121,3 +121,4 @@ Questions 1, 2, 3, 5, 8 and 10 are answered in spec #15/#20.
 | 2026-10-17 | RD-009 (early): cc65 `.dbg` loader; relative source paths resolve against the debug file. Linux suite 79/79 |
 | 2026-10-17 | RD-033: NES autoload of labels/debug info, `-ines`, CLI symbols to the loaded machine, NES source-code layout. Linux suite 79/79; ImGui suite 10/15 before and after (five pre-existing Linux failures, AGENTS.md) |
 | 2026-10-17 | RD-028 part 1: `CViceMemoryMappingResolver` classifies accesses from VICE's own memory tables; `CTestC64MemoryMapping` (all `$01` patterns). Spec #3B.2 `$34` row corrected (RAM, not I/O). Linux suite 80/80 |
+| 2026-10-17 | RD-040 + RD-029 first parts: `CNesMemoryMappingResolver` (board page tables) and `CAtariMemoryMappingResolver` (Atari800 attributes + banking state); `CTestMachineMemoryMapping` (16 steps: synthesized UxROM bank switch, mapper writes, RAM mirrors; Atari OS/BASIC via PORTB, 130XE CPU vs ANTIC bank). Linux suite 81/81 (7 skipped) |

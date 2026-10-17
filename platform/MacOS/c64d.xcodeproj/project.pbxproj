@@ -84,6 +84,9 @@
 		4111C8BD262EE4380092E150 /* C64DebuggerPluginGoatTracker.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4111C8BC262EE4370092E150 /* C64DebuggerPluginGoatTracker.cpp */; };
 		4113F62629E2C5B7002FE970 /* CViewC64KeyMap.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4113F62429E2C5B7002FE970 /* CViewC64KeyMap.cpp */; };
 		411D2E402D71D4D3007714A9 /* CRenderShaderCRTMonitorOpenGL4.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4150D9DB2D71D15B0068351B /* CRenderShaderCRTMonitorOpenGL4.cpp */; };
+		AA01D4416B8D1671F6C20D38 /* CTestMachineMemoryMapping.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A606E44A582F21F68AA084DC /* CTestMachineMemoryMapping.cpp */; };
+		A925719407153607D9E4BE21 /* CAtariMemoryMappingResolver.cpp in Sources */ = {isa = PBXBuildFile; fileRef = E1A9885C47E279BD4B27FAE8 /* CAtariMemoryMappingResolver.cpp */; };
+		650938353884FB33464C22F6 /* CNesMemoryMappingResolver.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C1D1E7486DA28AF980E85716 /* CNesMemoryMappingResolver.cpp */; };
 		D27FD4CAFB3A0AB15CEBDD01 /* CTestC64MemoryMapping.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 21B3BE825980D2AEBFE9669D /* CTestC64MemoryMapping.cpp */; };
 		0236F62BAD1FDD0BC74590CB /* CViceMemoryMappingResolver.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 153D00DB5D6C3F5677FC6C94 /* CViceMemoryMappingResolver.cpp */; };
 		2CA2563845B7D250F0073F81 /* CTestDebugInfoFormats.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B4C671810E9DA160B0E0B428 /* CTestDebugInfoFormats.cpp */; };
@@ -1709,6 +1712,12 @@
 		414AD73728797F1200244453 /* CViewC64ScreenViewfinder.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = "$(SRCROOT)/../../src/Views/C64/CViewC64ScreenViewfinder.cpp"; sourceTree = "<absolute>"; };
 		414AD73828797F1200244453 /* CViewC64ScreenViewfinder.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "$(SRCROOT)/../../src/Views/C64/CViewC64ScreenViewfinder.h"; sourceTree = "<absolute>"; };
 		4150D9DB2D71D15B0068351B /* CRenderShaderCRTMonitorOpenGL4.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = "$(SRCROOT)/../../src/Tools/Shaders/CRenderShaderCRTMonitorOpenGL4.cpp"; sourceTree = "<absolute>"; };
+		A606E44A582F21F68AA084DC /* CTestMachineMemoryMapping.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CTestMachineMemoryMapping.cpp; path = ../../src/Tests/CTestMachineMemoryMapping.cpp; sourceTree = SOURCE_ROOT; };
+		3A16CC5AA78DAFB6D3C1F120 /* CTestMachineMemoryMapping.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = CTestMachineMemoryMapping.h; path = ../../src/Tests/CTestMachineMemoryMapping.h; sourceTree = SOURCE_ROOT; };
+		E1A9885C47E279BD4B27FAE8 /* CAtariMemoryMappingResolver.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CAtariMemoryMappingResolver.cpp; path = ../../src/Emulators/atari800/AtariInterface/CAtariMemoryMappingResolver.cpp; sourceTree = SOURCE_ROOT; };
+		EA557F04FE6C86B436D1FB9B /* CAtariMemoryMappingResolver.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = CAtariMemoryMappingResolver.h; path = ../../src/Emulators/atari800/AtariInterface/CAtariMemoryMappingResolver.h; sourceTree = SOURCE_ROOT; };
+		C1D1E7486DA28AF980E85716 /* CNesMemoryMappingResolver.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CNesMemoryMappingResolver.cpp; path = ../../src/Emulators/nestopiaue/NestopiaInterface/CNesMemoryMappingResolver.cpp; sourceTree = SOURCE_ROOT; };
+		54AF41F74ECD9C53FEFA9C30 /* CNesMemoryMappingResolver.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = CNesMemoryMappingResolver.h; path = ../../src/Emulators/nestopiaue/NestopiaInterface/CNesMemoryMappingResolver.h; sourceTree = SOURCE_ROOT; };
 		21B3BE825980D2AEBFE9669D /* CTestC64MemoryMapping.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CTestC64MemoryMapping.cpp; path = ../../src/Tests/CTestC64MemoryMapping.cpp; sourceTree = SOURCE_ROOT; };
 		FA9ECBAF2BCCF623736D086A /* CTestC64MemoryMapping.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = CTestC64MemoryMapping.h; path = ../../src/Tests/CTestC64MemoryMapping.h; sourceTree = SOURCE_ROOT; };
 		153D00DB5D6C3F5677FC6C94 /* CViceMemoryMappingResolver.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CViceMemoryMappingResolver.cpp; path = ../../src/Emulators/vice/ViceInterface/CViceMemoryMappingResolver.cpp; sourceTree = SOURCE_ROOT; };
@@ -4921,6 +4930,12 @@
 			isa = PBXGroup;
 			children = (
 				4150D9DB2D71D15B0068351B /* CRenderShaderCRTMonitorOpenGL4.cpp */,
+				A606E44A582F21F68AA084DC /* CTestMachineMemoryMapping.cpp */,
+				3A16CC5AA78DAFB6D3C1F120 /* CTestMachineMemoryMapping.h */,
+				E1A9885C47E279BD4B27FAE8 /* CAtariMemoryMappingResolver.cpp */,
+				EA557F04FE6C86B436D1FB9B /* CAtariMemoryMappingResolver.h */,
+				C1D1E7486DA28AF980E85716 /* CNesMemoryMappingResolver.cpp */,
+				54AF41F74ECD9C53FEFA9C30 /* CNesMemoryMappingResolver.h */,
 				21B3BE825980D2AEBFE9669D /* CTestC64MemoryMapping.cpp */,
 				FA9ECBAF2BCCF623736D086A /* CTestC64MemoryMapping.h */,
 				153D00DB5D6C3F5677FC6C94 /* CViceMemoryMappingResolver.cpp */,
@@ -8755,6 +8770,9 @@
 				05B51DEEE6500A4D5D45DD85 /* events_posix.c in Sources */,
 				05B51D3B2773C59545583663 /* threads_posix.c in Sources */,
 				411D2E402D71D4D3007714A9 /* CRenderShaderCRTMonitorOpenGL4.cpp in Sources */,
+				AA01D4416B8D1671F6C20D38 /* CTestMachineMemoryMapping.cpp in Sources */,
+				A925719407153607D9E4BE21 /* CAtariMemoryMappingResolver.cpp in Sources */,
+				650938353884FB33464C22F6 /* CNesMemoryMappingResolver.cpp in Sources */,
 				D27FD4CAFB3A0AB15CEBDD01 /* CTestC64MemoryMapping.cpp in Sources */,
 				0236F62BAD1FDD0BC74590CB /* CViceMemoryMappingResolver.cpp in Sources */,
 				2CA2563845B7D250F0073F81 /* CTestDebugInfoFormats.cpp in Sources */,
