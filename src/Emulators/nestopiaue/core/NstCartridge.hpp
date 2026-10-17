@@ -130,6 +130,12 @@ namespace Nes
 				return profile;
 			}
 
+			// RetroDebugger (RD-027): the board, for PRG mapping queries.
+			const Boards::Board* GetBoard() const
+			{
+				return board;
+			}
+
 			dword GetPrgCrc() const
 			{
 				return prgCrc;

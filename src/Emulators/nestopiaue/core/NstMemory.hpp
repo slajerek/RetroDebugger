@@ -466,6 +466,28 @@ namespace Nes
 				address >>= MEM_PAGE_SHIFT;
 				return dword(pages.mem[address] - sources[pages.ref[address]].Mem()) >> (ValueBits<SIZE>::VALUE-1);
 			}
+
+			// RetroDebugger (RD-027): which source an ADDRESS in this space reads
+			// from and the byte offset inside it, straight from the page table, so
+			// it is the bank mapped right now. False when that source is empty or
+			// the page is not mapped into it (a board between Load and Power has
+			// NULL pages).
+			bool GetSourceOffset(uint address,uint& source,dword& offset,bool& writable) const
+			{
+				const uint page = (address & (SPACE-1)) >> MEM_PAGE_SHIFT;
+				source = pages.ref[page];
+				if (source >= NUM_SOURCES || !sources[source].Size())
+					return false;
+
+				const byte* const base = sources[source].Mem();
+				const byte* const mem = pages.mem[page];
+				if (mem == NULL || mem < base || mem >= base + sources[source].Size())
+					return false;
+
+				offset = dword(mem - base) + (address & MEM_PAGE_MASK);
+				writable = sources[source].Writable();
+				return true;
+			}
 		};
 
 		template<dword SPACE,uint U,uint V> template<uint SIZE,uint ADDRESS>

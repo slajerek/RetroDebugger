@@ -31,6 +31,10 @@ bool nesd_restore_nesd_state_from_bytebuffer(CByteBuffer *byteBuffer);
 unsigned char nesd_peek_io(unsigned short addr);
 unsigned char nesd_peek_safe_io(unsigned short addr);
 
+// RD-027: cartridge PRG mapping and identity (see NesWrapper.cpp).
+int nesd_get_prg_mapping(unsigned short addr, int *isWrk, int *source, unsigned int *offset, int *writable);
+int nesd_get_cartridge_info(int *mapper, int *subMapper, unsigned int *prgRomSize);
+
 
 // FDS (Famicom Disk System)
 bool nesd_fds_set_bios(const char *biosPath);

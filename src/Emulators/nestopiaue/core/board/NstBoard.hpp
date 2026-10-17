@@ -706,6 +706,29 @@ namespace Nes
 					return NULL;
 				}
 
+				// RetroDebugger (RD-027): what the CPU sees at ADDRESS in cartridge
+				// space, read from the board's own page tables: $8000-$FFFF through
+				// prg (source 0 is PRG-ROM), $6000-$7FFF through wrk. Boards that
+				// answer these windows with their own peek handlers instead of the
+				// page tables (MMC5 and similar) are not described exactly here;
+				// the NES mapping provider (RD-040) handles those per mapper.
+				bool GetPrgMapping(uint address,bool& isWrk,uint& source,dword& offset,bool& writable) const
+				{
+					if (address >= 0x8000)
+					{
+						isWrk = false;
+						return prg.GetSourceOffset( address - 0x8000, source, offset, writable );
+					}
+
+					if (address >= 0x6000)
+					{
+						isWrk = true;
+						return wrk.GetSourceOffset( address - 0x6000, source, offset, writable );
+					}
+
+					return false;
+				}
+
 			protected:
 
 				explicit Board(const Context&);

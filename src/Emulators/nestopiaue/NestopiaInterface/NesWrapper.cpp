@@ -25,6 +25,8 @@
 #include "NstApiFds.hpp"
 #include "NstMachine.hpp"
 #include "NstPpu.hpp"
+#include "NstCartridge.hpp"
+#include "board/NstBoard.hpp"
 
 #undef uint8_t
 
@@ -328,6 +330,11 @@ bool nesd_insert_cartridge(char *filePath)
 	nesd_sound_lock("nesd_insert_cartridge");
 	
 	machine->Unload();
+	// Power off explicitly: after nesd_unload_cartridge the machine is ON with
+	// no image, Unload() above is then a no-op, and both Load() and the
+	// Power(true) below saw "already on" -- the new board was never reset, so
+	// its PRG banks stayed unmapped and the CPU ran open bus.
+	machine->Power(false);
 		
 	std::ifstream file(filePath, std::ios::in|std::ios::binary);
 	
@@ -1046,50 +1053,73 @@ u8 nesd_peek_io(u16 addr)
 	return machine.cpu.Peek(addr);
 }
 
+// A read without side effects, used to evaluate data breakpoints on every
+// CPU read. It used to return ram[addr] for $2000-$401F and $4020-$5000,
+// indexing the 2 KB internal RAM array far out of bounds.
 u8 nesd_peek_safe_io(u16 addr)
 {
-//	LOGD("nesd_peek_safe_io");
 	Core::Machine& machine = nesEmulator;
-	u8 *ram = &machine.cpu.GetRam()[0];
-//	if (addr > 0x0000 && addr < 0x10000)
-//	{
-//		return ram[addr];
-//	}
 
-
-	if (addr > 0x0000 && addr < 0x2000)
+	// $0000-$1FFF: 2 KB internal RAM and its three mirrors
+	if (addr < 0x2000)
 	{
-		return machine.cpu.Peek_NoMarking(addr);
+		return machine.cpu.GetRam()[addr & 0x07FF];
 	}
 
-	// PPU
-	if (addr > 0x2000 && addr < 0x3FFF)
+	// $2000-$401F: PPU and APU/I/O registers. Reading them changes state
+	// ($2002 clears vblank, $2007 moves the VRAM address, $4016/$4017 shift
+	// the controllers), so a safe peek cannot read them: report 0.
+	if (addr < 0x4020)
 	{
-		return ram[addr];
-	}
-	
-	// APU
-	if (addr > 0x4000 && addr < 0x4020)
-	{
-		return ram[addr];
-	}
-	
-//	if (addr > 0xC000 && addr < 0xE000)
-//	{
-//		return ram[addr];
-//	}
-//
-//	if (addr > 0xE000 && addr < 0xFFFF)
-//	{
-//		return ram[addr];
-//	}
-
-	if (addr > 0x5000 && addr <= 0xFFFF)
-	{
-		return machine.cpu.Peek_NoMarking(addr);
+		return 0;
 	}
 
-	return ram[addr];
+	// $4020-$FFFF: cartridge space, through the board's peek handlers
+	return machine.cpu.Peek_NoMarking(addr);
+}
+
+// RD-027 (docs/specs/source-level-debugging): the PRG source and byte offset
+// the CPU sees at ADDR right now, from the cartridge board's page tables.
+// isWrk: 0 = PRG space $8000-$FFFF (source 0 is PRG-ROM), 1 = $6000-$7FFF.
+// Returns 0 when no cartridge is loaded or ADDR is outside $6000-$FFFF or
+// the window has no backing memory.
+int nesd_get_prg_mapping(unsigned short addr, int *isWrk, int *source, unsigned int *offset, int *writable)
+{
+	Core::Machine& machine = nesEmulator;
+	if (machine.image == NULL || machine.image->GetType() != Core::Image::CARTRIDGE)
+		return 0;
+
+	const Core::Boards::Board *board = static_cast<const Core::Cartridge*>(machine.image)->GetBoard();
+	if (board == NULL)
+		return 0;
+
+	bool wrk = false;
+	uint src = 0;
+	dword off = 0;
+	bool canWrite = false;
+	if (!board->GetPrgMapping(addr, wrk, src, off, canWrite))
+		return 0;
+
+	if (isWrk) *isWrk = wrk ? 1 : 0;
+	if (source) *source = (int)src;
+	if (offset) *offset = (u32)off;
+	if (writable) *writable = canWrite ? 1 : 0;
+	return 1;
+}
+
+// RD-027: the loaded cartridge's mapper, submapper and PRG-ROM size in bytes.
+// Returns 0 when no cartridge is loaded.
+int nesd_get_cartridge_info(int *mapper, int *subMapper, unsigned int *prgRomSize)
+{
+	Core::Machine& machine = nesEmulator;
+	if (machine.image == NULL || machine.image->GetType() != Core::Image::CARTRIDGE)
+		return 0;
+
+	const Api::Cartridge::Profile &profile = static_cast<const Core::Cartridge*>(machine.image)->GetProfile();
+	if (mapper) *mapper = (int)profile.board.mapper;
+	if (subMapper) *subMapper = (int)profile.board.subMapper;
+	if (prgRomSize) *prgRomSize = (u32)profile.board.GetPrg();
+	return 1;
 }
 
 int crossx = 0;
@@ -2056,6 +2086,8 @@ void nesd_get_ppu_clocks(unsigned int *hClock, unsigned int *vClock, unsigned in
 unsigned int nesd_get_cpu_pc() { return 0; }
 unsigned char nesd_peek_io(unsigned short addr) { return 0; }
 unsigned char nesd_peek_safe_io(unsigned short addr) { return 0; }
+int nesd_get_prg_mapping(unsigned short addr, int *isWrk, int *source, unsigned int *offset, int *writable) { return 0; }
+int nesd_get_cartridge_info(int *mapper, int *subMapper, unsigned int *prgRomSize) { return 0; }
 void nesd_get_cpu_regs(unsigned short *pc, unsigned char *a, unsigned char *x, unsigned char *y, unsigned char *p, unsigned char *s, unsigned char *irq) {}
 void nesd_check_pc_breakpoint(uint16 pc) {}
 void nesd_update_cpu_pc_by_emulator(uint16 cpuPC) {}
