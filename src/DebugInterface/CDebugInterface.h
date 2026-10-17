@@ -31,6 +31,7 @@ class CDebuggerEmulatorPlugin;
 class CSnapshotsManager;
 class CDebugSymbols;
 class CDebugSymbolsSegment;
+class CDebugMemoryMappingResolver;
 
 class CViewEmulatorScreen;
 class CViewDisassembly;
@@ -64,6 +65,11 @@ public:
 	
 	CSnapshotsManager *snapshotsManager;
 	CDebugSymbols *symbols;
+
+	// Logical CPU address -> physical identity (CDebugMemoryMapping.h). NULL
+	// while the machine has no mapping provider: callers then treat every
+	// mapping as Unknown, never as "the obvious bank".
+	virtual CDebugMemoryMappingResolver *GetMemoryMappingResolver() { return NULL; }
 
 	virtual int GetEmulatorType();
 	virtual CSlrString *GetEmulatorVersionString();

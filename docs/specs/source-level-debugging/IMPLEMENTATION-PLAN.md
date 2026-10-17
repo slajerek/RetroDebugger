@@ -113,14 +113,23 @@ use-after-free, recorded as a defect for RD-032; its fix comes with its own test
   committing any jar).
 
 ### RD-024 Identity and mapping contract
-- New header `src/DebugInterface/Memory/CMemoryMapping.h` (name illustrative) with
-  `MemoryKind`, `PhysicalAddress`, `MappedAddress`, `AccessKind {Fetch, Read, Write}`,
-  `BusMaster {Cpu, Vic, Antic, Ppu}` and the abstract `CMemoryMappingResolver`
-  (spec #3A.2, #3B.1). `Unknown` is a first-class result.
-- Unit test (`CTestMemoryMappingContract`) with a fake resolver proving alias
-  resolution, `Unknown`, and that fetch/read/write can differ.
-- Decide here how `mappingEpoch` is generated: a per-`CDebugInterface` counter bumped by
-  the provider when it observes a change at fetch time (no core notifications exist).
+- Done: `src/DebugInterface/CDebugMemoryMapping.{h,cpp}` (kept in an existing include
+  directory so no project needs a new search path) with `DebugMemoryKind` (incl.
+  `Unknown`, `Unmapped`, `CpuPort`, `ExtendedRam`), `DebugMemoryAccess {Fetch, Read,
+  Write}`, `DebugMemoryBusMaster {Cpu, Vic, Antic, Ppu}`, `CDebugPhysicalAddress`
+  (device, kind, region, offset; Unknown never compares equal), `CDebugMappedAddress`
+  (CPU address, access, bus master, epoch, physical, optional image offset) and the
+  abstract `CDebugMemoryMappingResolver` (`Resolve`, `ResolveFetch/Read/Write`,
+  `ResolveCpuWindows` with a generic 64 KB scan). No `std::optional`: some Xcode
+  targets still compile as gnu++0x.
+- `CDebugInterface::GetMemoryMappingResolver()` returns NULL until RD-028/RD-029/RD-040
+  provide one; callers treat NULL as Unknown.
+- Epoch decision: per-resolver counter. Each provider calls
+  `ObserveMappingState(signature)` with a cheap signature of the core state its mapping
+  depends on whenever it reads that state; the epoch advances when the signature
+  changes (the cores send no change notifications).
+- `CTestMemoryMappingContract` (14 steps, fake banked resolver): fetch vs write,
+  same PC two identities, aliases, Unmapped writes, Unknown, epoch movement.
 
 ### RD-027 Core audit + accessors
 Patch the embedded cores so providers can be written without duplicating mapper logic:

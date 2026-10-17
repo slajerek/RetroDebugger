@@ -29,7 +29,7 @@ definitions are in `IMPLEMENTATION-PLAN.md`.
 | RD-001 | P0 | core | Inventory source view, hooks, breakpoints, loaders, memory translation APIs | done(53d397d+1.4) | — | Spec #20 written |
 | RD-038 | P0 | tests | Regression test for KickAss `.dbg` + VICE `.vs` loaders (`dankwars.dbg`, `labelstest1.vs`) | review(d1784e3; 25/25 steps green on Linux locally) | RD-001 | `CTestSymbolLoaders` (`SymbolLoaders`) passes on all 3 CI platforms |
 | RD-002 | P0 | tests | Portable C/ASM fixtures, pinned toolchains, verified compiler×machine matrix | todo | — | `tests/source-debug/toolchains/*.yaml` with versions; matrix table in plan; Tier 1 artifacts committed |
-| RD-024 | P0 | core | Logical vs physical code identity + `IMemoryMappingResolver` contract | todo | RD-001 | Header + unit test of `Unknown`/alias semantics; reviewed by maintainer |
+| RD-024 | P0 | core | Logical vs physical code identity + `IMemoryMappingResolver` contract | review(`CDebugMemoryMapping.h`; awaiting maintainer review) | RD-001 | Header + unit test of `Unknown`/alias semantics; reviewed by maintainer |
 | RD-027 | P0 | core | Audit + accessor patches in VICE/Nestopia/Atari800 cores (fetch/read/write, bus master) | todo | RD-001, RD-024 | Accessors compiled on 3 platforms; `tests/test-reference-files.sh` still green |
 | RD-006 | P2 | core | Canonical debug database + capability model; migrate `CDebugAsmSource` | todo | RD-001, RD-038 | RD-038 tests unchanged and green; interval index unit tests |
 | RD-031 | P2 | core | **Must fix.** Loader registry with content sniffing (`.dbg` XML vs text, `.dbj`) | todo | RD-006 | Menu/autoload/CLI go through registry; sniff unit test |
@@ -110,3 +110,4 @@ Questions 1, 2, 3, 5, 8 and 10 are answered in spec #15/#20.
 | 2026-10-17 | RD-042: engine already had `CProcessSpawner`; `Run` added on engine branch `c-source-debugging` (ab37e96). RD-038 test written as `CTestSymbolLoaders`. Two loader defects added (menu `.dbg` re-import use-after-free; `<Sources>` path handling) |
 | 2026-10-17 | Linux build + suite run locally under Xvfb: startup segfault fixed in the engine (`CPianoKeyboard`), `GT2Patterns` made platform-correct, suite 74/74 (7 skipped). RD-034 workflow step added; RD-038 green (25 steps) |
 | 2026-10-17 | Engine `c-source-debugging` fast-forwarded into engine `devel` (40c95f8, changelog under 3.21.22); app suite registers `CTestProcessSpawner`; Linux suite 75/75 (7 skipped) |
+| 2026-10-17 | RD-024: `CDebugMemoryMapping.{h,cpp}`, `CDebugInterface::GetMemoryMappingResolver()`, `CTestMemoryMappingContract` (14 steps green on Linux) |
