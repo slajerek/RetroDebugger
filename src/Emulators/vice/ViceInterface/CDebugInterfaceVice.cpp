@@ -209,7 +209,7 @@ CDebugInterfaceVice::CDebugInterfaceVice(CViewC64 *viewC64, uint8 *c64memory, bo
 
 	// C64Cartridge
 	symbolsCartridgeC64 = new CDebugSymbols(this, false);
-	dataAdapterViceC64Cartridge = new CDataAdapterViceC64Cartridge(symbolsCartridgeC64, CCartridgeDataAdapterViceType::C64CartridgeDataAdapterViceTypeRamL);
+	dataAdapterViceC64Cartridge = new CDataAdapterViceC64Cartridge(symbolsCartridgeC64, CCartridgeDataAdapterViceType::C64CartridgeDataAdapterViceTypeRomL);
 	dataAdapterCartridgeC64 = dataAdapterViceC64Cartridge;
 
 	symbolsCartridgeC64->SetDataAdapter(dataAdapterViceC64Cartridge);

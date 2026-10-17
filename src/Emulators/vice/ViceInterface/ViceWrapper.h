@@ -129,6 +129,10 @@ void mt_SYS_FatalExit(char *text);
 
 void c64d_mark_c64_cell_read(uint16 addr);
 void c64d_mark_c64_cell_write(uint16 addr, uint8 value);
+
+// RD-027: VICE's live banking state (definition and field meanings in c64memsc.c).
+void c64d_get_banking_state(int *memConfig, int *cartType, int *exrom, int *game,
+							int *romlBank, int *romhBank, int *exportRam);
 void c64d_mark_c64_cell_execute(uint16 addr, uint8 opcode);
 
 // TODO: add device num

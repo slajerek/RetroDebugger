@@ -481,3 +481,34 @@ void c64d_poke_cart_roml(int addr, unsigned char value)
 {
 	roml_banks[addr] = value;
 }
+
+/* Raw cartridge image buffers by kind: 0 = ROML banks, 1 = ROMH banks,
+   2 = cartridge RAM. All three are C64CART_ROM_LIMIT bytes, allocated by
+   rombanks_resources_init(); out-of-range offsets read 0 and ignore writes. */
+static uint8_t *c64d_cart_buffer(int kind)
+{
+	switch (kind) {
+		case 0: return roml_banks;
+		case 1: return romh_banks;
+		case 2: return export_ram0;
+	}
+	return NULL;
+}
+
+unsigned char c64d_peek_cart_buffer(int kind, int addr)
+{
+	uint8_t *buffer = c64d_cart_buffer(kind);
+	if (buffer == NULL || addr < 0 || addr >= C64CART_ROM_LIMIT) {
+		return 0;
+	}
+	return buffer[addr];
+}
+
+void c64d_poke_cart_buffer(int kind, int addr, unsigned char value)
+{
+	uint8_t *buffer = c64d_cart_buffer(kind);
+	if (buffer == NULL || addr < 0 || addr >= C64CART_ROM_LIMIT) {
+		return;
+	}
+	buffer[addr] = value;
+}

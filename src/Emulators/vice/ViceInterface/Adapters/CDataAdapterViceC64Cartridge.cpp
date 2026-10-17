@@ -11,38 +11,40 @@ CDataAdapterViceC64Cartridge::CDataAdapterViceC64Cartridge(CDebugSymbols *debugS
 
 int CDataAdapterViceC64Cartridge::AdapterGetDataLength()
 {
-	// TODO: we need to get proper value of cartridge memory size... it is not stored in Vice, so temporarily we assume 512kB cart
-	
+	// VICE keeps 2 MB buffers (C64CART_ROM_LIMIT) but not the size of the
+	// attached image; the view shows the first 512 KB because every byte here
+	// also gets a CDebugMemoryCell. Physical cartridge identity for source
+	// debugging comes from c64d_get_cart_state(), not from this view.
 	return 512 * 1024;
 }
 
 extern "C" {
-unsigned char c64d_peek_cart_roml(int addr);
-void c64d_poke_cart_roml(int addr, unsigned char value);
+unsigned char c64d_peek_cart_buffer(int kind, int addr);
+void c64d_poke_cart_buffer(int kind, int addr, unsigned char value);
 };
 
+// CCartridgeDataAdapterViceType order matches c64d_peek_cart_buffer's kinds.
 void CDataAdapterViceC64Cartridge::AdapterReadByte(int pointer, uint8 *value)
 {
-	*value = c64d_peek_cart_roml(pointer);
+	*value = c64d_peek_cart_buffer(memoryType, pointer);
 }
 
 void CDataAdapterViceC64Cartridge::AdapterWriteByte(int pointer, uint8 value)
 {
-	c64d_poke_cart_roml(pointer, value);
+	c64d_poke_cart_buffer(memoryType, pointer, value);
 }
 
 void CDataAdapterViceC64Cartridge::AdapterReadByte(int pointer, uint8 *value, bool *isAvailable)
 {
-	// TODO: fixme
-	*value = c64d_peek_cart_roml(pointer);
-	*isAvailable = true;
+	*isAvailable = (pointer >= 0 && pointer < AdapterGetDataLength());
+	*value = *isAvailable ? c64d_peek_cart_buffer(memoryType, pointer) : 0;
 }
 
 void CDataAdapterViceC64Cartridge::AdapterWriteByte(int pointer, uint8 value, bool *isAvailable)
 {
-	// TODO: fixme
-	c64d_poke_cart_roml(pointer, value);
-	*isAvailable = true;
+	*isAvailable = (pointer >= 0 && pointer < AdapterGetDataLength());
+	if (*isAvailable)
+		c64d_poke_cart_buffer(memoryType, pointer, value);
 }
 
 void CDataAdapterViceC64Cartridge::AdapterReadBlockDirect(uint8 *buffer, int pointerStart, int pointerEnd)
@@ -51,7 +53,7 @@ void CDataAdapterViceC64Cartridge::AdapterReadBlockDirect(uint8 *buffer, int poi
 	u8 *bufPtr = buffer + pointerStart;
 	for (addr = pointerStart; addr < pointerEnd; addr++)
 	{
-		*bufPtr++ = c64d_peek_cart_roml(addr);
+		*bufPtr++ = c64d_peek_cart_buffer(memoryType, addr);
 	}
 }
 

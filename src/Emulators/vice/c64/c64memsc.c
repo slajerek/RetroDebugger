@@ -229,6 +229,29 @@ int mem_get_current_bank_config(void) {
     return mem_config;
 }
 
+/* RD-027: the banking state the C64 memory mapping provider resolves from,
+   as VICE holds it -- never re-derived from the last byte written to $01.
+   memConfig is VICE's PLA configuration 0..31 (effective 6510 port bits 0-2,
+   export.exrom << 3, export.game << 4), the index of mem_read_tab; cartType
+   is mem_cartridge_type (CARTRIDGE_NONE = -1); romlBank/romhBank/exportRam
+   are the generic "Main Slot" bank registers (8 KB banks of roml_banks,
+   romh_banks, export_ram0), which cartridge types without their own banking
+   leave at 0. Any pointer may be NULL. */
+extern int mem_cartridge_type;
+extern int roml_bank, romh_bank, export_ram;
+
+void c64d_get_banking_state(int *memConfig, int *cartType, int *exrom, int *game,
+                            int *romlBank, int *romhBank, int *exportRam)
+{
+    if (memConfig) { *memConfig = mem_config; }
+    if (cartType)  { *cartType = mem_cartridge_type; }
+    if (exrom)     { *exrom = export.exrom; }
+    if (game)      { *game = export.game; }
+    if (romlBank)  { *romlBank = roml_bank; }
+    if (romhBank)  { *romhBank = romh_bank; }
+    if (exportRam) { *exportRam = export_ram; }
+}
+
 void mem_pla_config_changed(void)
 {
     mem_config = (((~pport.dir | pport.data) & 0x7) | (export.exrom << 3) | (export.game << 4));
@@ -1205,6 +1228,17 @@ uint8_t c64d_peek_memory0001()
 	return (pport.data_read & (0xff - (((!pport.data_set_bit6) << 6) + ((!pport.data_set_bit7) << 7))));
 }
 
+/* Cartridge windows of c64d_peek_c64: VICE's own side-effect-free monitor
+   peek, which dispatches per slot and per cartridge type (EasyFlash, Action
+   Replay, ... each have their own peek) and falls back to RAM where the
+   cartridge does not answer, e.g. Ultimax $1000-$7FFF. This used to call
+   generic_peek_mem for every cartridge type, and returned an uninitialized
+   byte whenever that answered CART_READ_THROUGH. */
+static uint8_t c64d_peek_cartridge(uint16_t addr)
+{
+	return cartridge_peek_mem(addr);
+}
+
 uint8_t c64d_peek_c64(uint16_t addr)
 {
 	int addrHi;
@@ -1221,8 +1255,6 @@ uint8_t c64d_peek_c64(uint16_t addr)
 	uint8_t loram;
 	
 	uint8_t mem01;
-	
-	uint8_t ret;
 	
 
 	if (addr == 0x0000)
@@ -1277,8 +1309,7 @@ uint8_t c64d_peek_c64(uint16_t addr)
 		case 0x07:
 			if (exrom == 1 && game == 0)
 			{
-				generic_peek_mem((struct export_s*)&export, addr, &ret);
-				return ret;
+				return c64d_peek_cartridge(addr);
 			}
 			else
 			{
@@ -1288,15 +1319,13 @@ uint8_t c64d_peek_c64(uint16_t addr)
 		case 0x09:
 			if (exrom == 1 && game == 0)
 			{
-				generic_peek_mem((struct export_s*)&export, addr, &ret);
-				return ret;
+				return c64d_peek_cartridge(addr);
 			}
 			else if (exrom == 0)
 			{
 				if (hiram == 1 && loram == 1)
 				{
-					generic_peek_mem((struct export_s*)&export, addr, &ret);
-					return ret;
+					return c64d_peek_cartridge(addr);
 				}
 				else
 				{
@@ -1311,8 +1340,7 @@ uint8_t c64d_peek_c64(uint16_t addr)
 		case 0x0b:
 			if (exrom == 1 && game == 0)
 			{
-				generic_peek_mem((struct export_s*)&export, addr, &ret);
-				return ret;
+				return c64d_peek_cartridge(addr);
 			}
 			else if (game == 1)
 			{
@@ -1329,8 +1357,7 @@ uint8_t c64d_peek_c64(uint16_t addr)
 			{
 				if (basic_in)
 				{
-					generic_peek_mem((struct export_s*)&export, addr, &ret);
-					return ret;
+					return c64d_peek_cartridge(addr);
 				}
 				else
 				{
@@ -1340,8 +1367,7 @@ uint8_t c64d_peek_c64(uint16_t addr)
 		case 0x0c:
 			if (exrom == 1 && game == 0)
 			{
-				generic_peek_mem((struct export_s*)&export, addr, &ret);
-				return ret;
+				return c64d_peek_cartridge(addr);
 			}
 			else
 			{
@@ -1380,8 +1406,7 @@ uint8_t c64d_peek_c64(uint16_t addr)
 		case 0x0f:
 			if (exrom == 1 && game == 0)
 			{
-				generic_peek_mem((struct export_s*)&export, addr, &ret);
-				return ret;
+				return c64d_peek_cartridge(addr);
 			}
 			else if (kernal_in)
 			{
@@ -1407,7 +1432,6 @@ uint8_t c64d_peek_c64_for_cycle(uint16_t addr, uint8_t memory0001, uint8_t exrom
 	uint8_t char_in;
 	uint8_t io_in;
 	uint8_t mem01;
-	uint8_t ret;
 
 	if (addr == 0x0000 || addr == 0x0001)
 	{
@@ -1440,8 +1464,7 @@ uint8_t c64d_peek_c64_for_cycle(uint16_t addr, uint8_t memory0001, uint8_t exrom
 		case 0x07:
 			if (exrom == 1 && game == 0)
 			{
-				generic_peek_mem((struct export_s*)&export, addr, &ret);
-				return ret;
+				return c64d_peek_cartridge(addr);
 			}
 			else
 			{
@@ -1451,15 +1474,13 @@ uint8_t c64d_peek_c64_for_cycle(uint16_t addr, uint8_t memory0001, uint8_t exrom
 		case 0x09:
 			if (exrom == 1 && game == 0)
 			{
-				generic_peek_mem((struct export_s*)&export, addr, &ret);
-				return ret;
+				return c64d_peek_cartridge(addr);
 			}
 			else if (exrom == 0)
 			{
 				if ((mem01 & 0x02) && (mem01 & 0x01))
 				{
-					generic_peek_mem((struct export_s*)&export, addr, &ret);
-					return ret;
+					return c64d_peek_cartridge(addr);
 				}
 				else
 				{
@@ -1474,8 +1495,7 @@ uint8_t c64d_peek_c64_for_cycle(uint16_t addr, uint8_t memory0001, uint8_t exrom
 		case 0x0b:
 			if (exrom == 1 && game == 0)
 			{
-				generic_peek_mem((struct export_s*)&export, addr, &ret);
-				return ret;
+				return c64d_peek_cartridge(addr);
 			}
 			else if (game == 1)
 			{
@@ -1492,8 +1512,7 @@ uint8_t c64d_peek_c64_for_cycle(uint16_t addr, uint8_t memory0001, uint8_t exrom
 			{
 				if (basic_in)
 				{
-					generic_peek_mem((struct export_s*)&export, addr, &ret);
-					return ret;
+					return c64d_peek_cartridge(addr);
 				}
 				else
 				{
@@ -1503,8 +1522,7 @@ uint8_t c64d_peek_c64_for_cycle(uint16_t addr, uint8_t memory0001, uint8_t exrom
 		case 0x0c:
 			if (exrom == 1 && game == 0)
 			{
-				generic_peek_mem((struct export_s*)&export, addr, &ret);
-				return ret;
+				return c64d_peek_cartridge(addr);
 			}
 			else
 			{
@@ -1529,8 +1547,7 @@ uint8_t c64d_peek_c64_for_cycle(uint16_t addr, uint8_t memory0001, uint8_t exrom
 		case 0x0f:
 			if (exrom == 1 && game == 0)
 			{
-				generic_peek_mem((struct export_s*)&export, addr, &ret);
-				return ret;
+				return c64d_peek_cartridge(addr);
 			}
 			else if (kernal_in)
 			{
@@ -1595,7 +1612,6 @@ void c64d_peek_whole_map_c64(uint8_t *memoryBuffer)
 	
 	uint8_t mem01;
 	
-	uint8_t ret;
 	
 	uint32 addr;
 	uint8 *bufPtr;
@@ -1635,8 +1651,7 @@ void c64d_peek_whole_map_c64(uint8_t *memoryBuffer)
 	{
 		for (addr = 0x1000; addr < 0x8000; addr++)
 		{
-			generic_peek_mem((struct export_s*)&export, addr, &ret);
-			*bufPtr++ = ret;
+			*bufPtr++ = c64d_peek_cartridge(addr);
 		}
 	}
 	else
@@ -1652,8 +1667,7 @@ void c64d_peek_whole_map_c64(uint8_t *memoryBuffer)
 	{
 		for (addr = 0x8000; addr < 0xA000; addr++)
 		{
-			generic_peek_mem((struct export_s*)&export, addr, &ret);
-			*bufPtr++ = ret;
+			*bufPtr++ = c64d_peek_cartridge(addr);
 		}
 	}
 	else if (exrom == 0)
@@ -1662,8 +1676,7 @@ void c64d_peek_whole_map_c64(uint8_t *memoryBuffer)
 		{
 			for (addr = 0x8000; addr < 0xA000; addr++)
 			{
-				generic_peek_mem((struct export_s*)&export, addr, &ret);
-				*bufPtr++ = ret;
+				*bufPtr++ = c64d_peek_cartridge(addr);
 			}
 		}
 		else
@@ -1687,8 +1700,7 @@ void c64d_peek_whole_map_c64(uint8_t *memoryBuffer)
 	{
 		for (addr = 0xA000; addr < 0xC000; addr++)
 		{
-			generic_peek_mem((struct export_s*)&export, addr, &ret);
-			*bufPtr++ = ret;
+			*bufPtr++ = c64d_peek_cartridge(addr);
 		}
 	}
 	else if (game == 1)
@@ -1714,8 +1726,7 @@ void c64d_peek_whole_map_c64(uint8_t *memoryBuffer)
 		{
 			for (addr = 0xA000; addr < 0xC000; addr++)
 			{
-				generic_peek_mem((struct export_s*)&export, addr, &ret);
-				*bufPtr++ = ret;
+				*bufPtr++ = c64d_peek_cartridge(addr);
 			}
 		}
 		else
@@ -1732,8 +1743,7 @@ void c64d_peek_whole_map_c64(uint8_t *memoryBuffer)
 	{
 		for (addr = 0xC000; addr < 0xD000; addr++)
 		{
-			generic_peek_mem((struct export_s*)&export, addr, &ret);
-			*bufPtr++ = ret;
+			*bufPtr++ = c64d_peek_cartridge(addr);
 		}
 	}
 	else
@@ -1811,8 +1821,7 @@ void c64d_peek_whole_map_c64(uint8_t *memoryBuffer)
 	{
 		for (addr = 0xE000; addr < 0x10000; addr++)
 		{
-			generic_peek_mem((struct export_s*)&export, addr, &ret);
-			*bufPtr++ = ret;
+			*bufPtr++ = c64d_peek_cartridge(addr);
 		}
 	}
 	else if (kernal_in)
