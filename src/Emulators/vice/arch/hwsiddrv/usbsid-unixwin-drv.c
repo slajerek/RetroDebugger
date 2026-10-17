@@ -1,3 +1,10 @@
+/* [C64D-REFERENCE-LIVE-EXCEPTION]
+ * Vendored from VICE 3.10 (arch/shared/hwsiddrv/usbsid-unixwin-drv.c). LIVE
+ * code: the usbsid_drv_* backend that sid/usbsid.c calls when the USBSID-Pico
+ * SID engine is selected (HAVE_USBSID; CMake USBSID_SUPPORT, Windows vcxproj,
+ * Xcode project). Forwards to us-unixwin-device.c. Contains no SDL calls.
+ * See src/Emulators/REFERENCE_FILES.md.
+ */
 /*
  * usbsid-unixwin-drv.c
  *
