@@ -74,6 +74,23 @@ jobs:
           # system, so its own tests run before anything that depends on it.
           python3 ../MTEngineSDL/tools/mtcaps/tests/test_mtcaps.py
 
+      - name: Run tests (CTest suite, headless under Xvfb)
+        run: |
+          # The suite used to run on macOS only, so Linux-only failures went
+          # unseen. GitHub's Ubuntu runners have no display and no ALSA
+          # sequencer: Xvfb provides the GL context, and the engine must not
+          # need /dev/snd/seq (CPianoKeyboard used to crash without it).
+          chmod +x ./tests/run_test.sh
+          xvfb-run -a -s "-screen 0 1280x800x24" ./tests/run_test.sh --skip-build
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-results-linux-logs-${{ matrix.logs }}
+          path: tests/results/
+          if-no-files-found: warn
+
       - name: Upload release artifact
         uses: actions/upload-artifact@v7
         with:

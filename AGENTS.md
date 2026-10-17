@@ -47,6 +47,23 @@ for the other two.
   branch `devel` FIRST, then the app push (the macOS/macOS-bundle fix lives
   in the engine driver: `-derivedDataPath $APP_DIR/build-macos`).
 
+## Linux runs the suite (2026-10-17, branch `c-source-debugging`)
+
+`build-linux.yml` now runs `tests/run_test.sh --skip-build` under
+`xvfb-run` on both legs (RD-034 of the source-level debugging plan) and
+uploads `tests/results/`. Local baseline in an Ubuntu 24.04 container with the
+workflow's apt list: 74/74 passed, 7 SKIPPED (every GT2 data test: "GT2 plugin
+not active" headless), about 90 s.
+
+- It needs the engine fix `fix(audio): CPianoKeyboard crashed when no MIDI
+  backend is available` (MTEngineSDL branch `c-source-debugging`): without
+  `/dev/snd/seq`, as on GitHub's runners, the app segfaulted at startup in
+  `CPianoKeyboard`. Merge that into engine `devel` BEFORE this workflow change
+  reaches app `devel`, or the Linux legs go red at startup.
+- `GT2Patterns` step 16 had only ever run on macOS: `gpattern.c` reads note
+  keys from `virtualkeycode` on `__APPLE__` and from `rawkey` elsewhere; the
+  test now sets the input the platform reads.
+
 ## Known state (2026-10-06)
 
 All three platforms green at devel tip `d4bd4b0`, both macOS legs each,

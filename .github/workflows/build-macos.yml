@@ -75,7 +75,7 @@ jobs:
 
       - name: Run tests (both suites)
         run: |
-          # Chunk 0.6. See the Linux job. The Ide64UsbListener teardown
+          # Chunk 0.6. The Linux job runs the same suite under Xvfb. The Ide64UsbListener teardown
           # segfault was fixed in ide64.c (USB-server spinlock), so the app
           # needs no lldb wrapper anymore; tests/run_test.sh still auto-prints
           # a macOS crash report if the app dies abnormally.
