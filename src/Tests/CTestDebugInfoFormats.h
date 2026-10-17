@@ -11,6 +11,8 @@ class CDebugSymbols;
 // its loader and never feeds a cc65 or Oscar64 file to the KickAssembler
 // parser; and loading a KickAssembler .dbg twice without clearing first (the
 // menu import) replaces the segments instead of leaving stale duplicates.
+// Also RD-032: SetSegment activates fully (next/previous continue from it),
+// both <Watchpoints> layouts, and VICE "al D:" labels reaching the 1541.
 class CTestDebugInfoFormats : public CTest
 {
 public:
@@ -25,4 +27,6 @@ private:
 	bool RunProbe();
 	bool RunRouting(CDebugSymbols *symbols);
 	bool RunReimport(CDebugSymbols *symbols);
+	bool RunSegmentsAndWatches(CDebugSymbols *symbols);
+	bool RunDriveLabels(CDebugSymbols *symbols);
 };

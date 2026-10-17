@@ -424,8 +424,12 @@ bool DebugInfoLoadKickAss(CDebugSymbols *symbols, CByteBuffer *byteBuffer, const
 		delete strLabels;
 	}
 
-	// == Watchpoints: "SEGMENT,ADDRESS[,NUMBER_OF_VALUES[,REPRESENTATION]]"
+	// == Watchpoints. Two layouts, told apart by the values attribute:
+	//    old  "SEGMENT,ADDRESS[,NUMBER_OF_VALUES[,REPRESENTATION]]"
+	//    new  "SEGMENT,ADDRESS1,ADDRESS2,ARGUMENT" (KickAssembler .watch: a range,
+	//         its size is the number of values; ARGUMENT is not a representation)
 	pugi::xml_node nodeWatches = rootTag.child("Watchpoints");
+	bool watchRangeLayout = strstr(nodeWatches.attribute("values").value(), "ADDRESS2") != NULL;
 	if (!nodeWatches.empty())
 	{
 		CSlrString *strWatches = new CSlrString(nodeWatches.child_value());
@@ -453,15 +457,29 @@ bool DebugInfoLoadKickAss(CDebugSymbols *symbols, CByteBuffer *byteBuffer, const
 			int address = (*words)[1]->ToIntFromHex();
 			int numberOfValues = 1;
 			CSlrString *strRepresentation = NULL;
-			if (words->size() > 2)
+			if (watchRangeLayout)
 			{
-				numberOfValues = (*words)[2]->ToInt();
-				if (numberOfValues < 1)
-					numberOfValues = 1;
+				// ADDRESS2 may be empty ("Default,$c000,,store") and Split drops
+				// empty fields, so only a $-address in the third place is ADDRESS2
+				if (words->size() > 2 && (*words)[2]->GetLength() > 1 && (*words)[2]->GetChar(0) == '$')
+				{
+					int address2 = (*words)[2]->ToIntFromHex();
+					if (address2 > address)
+						numberOfValues = address2 - address + 1;
+				}
 			}
-			if (words->size() > 3)
+			else
 			{
-				strRepresentation = (*words)[3];
+				if (words->size() > 2)
+				{
+					numberOfValues = (*words)[2]->ToInt();
+					if (numberOfValues < 1)
+						numberOfValues = 1;
+				}
+				if (words->size() > 3)
+				{
+					strRepresentation = (*words)[3];
+				}
 			}
 
 			CDebugSymbolsSegment *segment = symbols->FindSegment((*words)[0]);

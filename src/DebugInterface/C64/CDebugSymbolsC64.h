@@ -9,6 +9,7 @@ public:
 	CDebugSymbolsC64(CDebugInterface *debugInterface);
 	
 	virtual CDebugSymbolsSegment *CreateNewDebugSymbolsSegment(CSlrString *name, int segmentNum);
+	virtual CDebugSymbols *GetSymbolsForDevice(int deviceId);
 };
 
 #endif

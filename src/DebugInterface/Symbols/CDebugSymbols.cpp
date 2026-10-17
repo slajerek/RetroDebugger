@@ -266,7 +266,19 @@ void CDebugSymbols::ParseSymbols(CByteBuffer *byteBuffer)
 			}
 			else if (deviceId == C64_SYMBOL_DEVICE_DRIVE1541)
 			{
-				LOGError("CDebugSymbols::ParseSymbols: TODO: C64_SYMBOL_DEVICE_DRIVE1541");
+				// "al D:..." labels belong to the 1541's CPU (RD-032)
+				CDebugSymbols *driveSymbols = GetSymbolsForDevice(C64_SYMBOL_DEVICE_DRIVE1541);
+				if (driveSymbols != NULL && driveSymbols != this && driveSymbols->currentSegment != NULL)
+				{
+					if (labelNameStr[0] != 0)
+					{
+						driveSymbols->currentSegment->AddCodeLabel(addr, labelNameStr);
+					}
+				}
+				else
+				{
+					LOGError("ParseSymbols: no 1541 symbols for the D: label in line %d", lineNum);
+				}
 			}
 		}
 		else if (words->size() > 3)
@@ -1562,9 +1574,12 @@ bool CDebugSymbols::SetSegment(CSlrString *segmentName)
 	{
 		if (segment->name->CompareWith(segmentName))
 		{
+			// The full activation, under the locks: assigning currentSegment
+			// alone (after unlocking) left currentSegmentNum and the remembered
+			// segment name stale, so "next segment" continued from the old one.
+			ActivateSegment(segment);
 			debugInterface->UnlockMutex();
 			guiMain->UnlockMutex();
-			currentSegment = segment;
 			return true;
 		}
 	}
@@ -1609,6 +1624,11 @@ CDebugSymbolsSegment *CDebugSymbols::CreateNewDebugSymbolsSegment(CSlrString *na
 	segment->Init();
 	
 	return segment;
+}
+
+CDebugSymbols *CDebugSymbols::GetSymbolsForDevice(int deviceId)
+{
+	return deviceId == C64_SYMBOL_DEVICE_COMMODORE ? this : NULL;
 }
 
 // get currently executed addr (PC) to be checked against breakpoint, note it is virtual to have it different for C64 Drive CPU

@@ -102,6 +102,10 @@ public:
 	bool SerializeBreakpointsToHjson(Hjson::Value hjsonRoot);
 	bool DeserializeBreakpointsFromHjson(Hjson::Value hjsonRoot);
 
+	// The symbols that labels for DEVICEID (C64_SYMBOL_DEVICE_*, the "C:"/"D:"
+	// prefix of VICE labels) belong to; NULL when this machine has no such device.
+	virtual CDebugSymbols *GetSymbolsForDevice(int deviceId);
+
 	// get currently executed addr (PC) to be checked against breakpoint, note it is virtual to have it different for C64 Drive CPU
 	virtual int GetCurrentExecuteAddr();
 

@@ -5,6 +5,8 @@
 #include "CDebugInterfaceC64.h"
 #include "CDebugSymbols.h"
 #include "CDebugSymbolsC64.h"
+#include "CDebugSymbolsDrive1541.h"
+#include "CDebugSymbolsDataWatch.h"
 #include "CDebugSymbolsSegment.h"
 #include "CDebugSymbolsCodeLabel.h"
 #include "CDebugDatabase.h"
@@ -144,6 +146,90 @@ bool CTestDebugInfoFormats::RunReimport(CDebugSymbols *symbols)
 	return true;
 }
 
+static CByteBuffer *BufferFromText(const std::string &text)
+{
+	uint8 *data = new uint8[text.size()];
+	memcpy(data, text.data(), text.size());
+	return new CByteBuffer(data, (int)text.size());
+}
+
+bool CTestDebugInfoFormats::RunSegmentsAndWatches(CDebugSymbols *symbols)
+{
+	DebugInfoLoadFile(symbols, ResolveProjectPath("assets/tests/c64/dankwars.dbg").c_str());
+	CSlrString *patchName = new CSlrString("Patch");
+	bool found = symbols->SetSegment(patchName);
+	delete patchName;
+	if (!Check(found && symbols->currentSegment == symbols->segments[2] && symbols->currentSegmentNum == 2,
+			   "SetSegment activates the segment, including its number"))
+		return false;
+	symbols->SelectNextSegment();
+	if (!Check(symbols->currentSegment == symbols->segments[0],
+			   "next segment continues from the one SetSegment chose (wraps to the first)"))
+		return false;
+
+	const char *head = "<C64debugger version=\"1.0\">\n<Sources values=\"INDEX,FILE\">\n0,a.asm\n</Sources>\n"
+		"<Segment name=\"Default\" dest=\"\" values=\"START,END,FILE_IDX,LINE1,COL1,LINE2,COL2\">\n</Segment>\n";
+	std::string rangeLayout = std::string(head)
+		+ "<Watchpoints values=\"SEGMENT,ADDRESS1,ADDRESS2,ARGUMENT\">\n"
+		+ "Default,$c000,$c00f,store\nDefault,$d020,,load\n</Watchpoints>\n</C64debugger>\n";
+	CByteBuffer *buffer = BufferFromText(rangeLayout);
+	DebugInfoLoadKickAss(symbols, buffer, NULL);
+	delete buffer;
+	CDebugSymbolsDataWatch *range = symbols->currentSegment->FindWatch(0xC000);
+	CDebugSymbolsDataWatch *single = symbols->currentSegment->FindWatch(0xD020);
+	if (!Check(range != NULL && range->numberOfValues == 16 && single != NULL && single->numberOfValues == 1,
+			   "<Watchpoints> ADDRESS1,ADDRESS2 layout: the range size is the number of values"))
+		return false;
+
+	std::string countLayout = std::string(head)
+		+ "<Watchpoints>\nDefault,$c100,4\n</Watchpoints>\n</C64debugger>\n";
+	buffer = BufferFromText(countLayout);
+	DebugInfoLoadKickAss(symbols, buffer, NULL);
+	delete buffer;
+	CDebugSymbolsDataWatch *counted = symbols->currentSegment->FindWatch(0xC100);
+	if (!Check(counted != NULL && counted->numberOfValues == 4,
+			   "<Watchpoints> older ADDRESS,NUMBER_OF_VALUES layout still works"))
+		return false;
+	return true;
+}
+
+bool CTestDebugInfoFormats::RunDriveLabels(CDebugSymbols *symbols)
+{
+	CDebugInterfaceC64 *c64 = viewC64->debugInterfaceC64;
+	if (c64->symbolsDrive1541 == NULL || c64->dataAdapterDrive1541 == NULL)
+	{
+		ReportRequiredGap("no 1541 symbols on this C64 backend, so D: labels were never exercised");
+		return true;
+	}
+
+	// a scratch 1541 symbols object too, so the live drive labels stay untouched
+	CDebugSymbolsDrive1541 *liveDrive = c64->symbolsDrive1541;
+	CDebugSymbolsDrive1541 *scratchDrive = new CDebugSymbolsDrive1541(c64);
+	scratchDrive->SetDataAdapter(c64->dataAdapterDrive1541);
+	scratchDrive->CreateDefaultSegment();
+	guiMain->LockMutex();
+	c64->LockMutex();
+	c64->symbolsDrive1541 = scratchDrive;
+	c64->UnlockMutex();
+	guiMain->UnlockMutex();
+
+	CByteBuffer *buffer = BufferFromText("al C:1000 .main\nal D:0500 .drivecode\n");
+	symbols->ParseSymbols(buffer);
+	delete buffer;
+	bool c64Label = symbols->currentSegment->FindLabelByText("main") != NULL
+		&& symbols->currentSegment->FindLabelByText("drivecode") == NULL;
+	CDebugSymbolsCodeLabel *driveLabel = scratchDrive->currentSegment->FindLabelByText("drivecode");
+
+	guiMain->LockMutex();
+	c64->LockMutex();
+	c64->symbolsDrive1541 = liveDrive;
+	c64->UnlockMutex();
+	guiMain->UnlockMutex();
+
+	return Check(c64Label && driveLabel != NULL && driveLabel->address == 0x0500,
+				 "VICE \"al D:\" labels go to the 1541 symbols, \"al C:\" to the C64");
+}
+
 void CTestDebugInfoFormats::Run(ITestCallback *cb)
 {
 	this->callback = cb;
@@ -171,7 +257,8 @@ void CTestDebugInfoFormats::Run(ITestCallback *cb)
 	}
 
 	typedef bool (CTestDebugInfoFormats::*SubTest)(CDebugSymbols *);
-	SubTest subTests[] = { &CTestDebugInfoFormats::RunRouting, &CTestDebugInfoFormats::RunReimport };
+	SubTest subTests[] = { &CTestDebugInfoFormats::RunRouting, &CTestDebugInfoFormats::RunReimport,
+						   &CTestDebugInfoFormats::RunSegmentsAndWatches, &CTestDebugInfoFormats::RunDriveLabels };
 
 	CDebugSymbols *liveSymbols = c64->symbols;
 	bool ok = true;

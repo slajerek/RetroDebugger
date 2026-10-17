@@ -263,11 +263,17 @@ Original task list:
   `-pass` paths).
 
 ### RD-032 Lifetime fixes
-Partly done: source lines have a single owner (the database snapshot), and a `.dbg` load
-replaces the segment set (the menu re-import no longer leaves stale same-name segments;
-`CTestDebugInfoFormats` re-import steps). Still open: actually deleting replaced segments
-(still leaked on purpose, see the "THE BUG!" note: something else holds segment
-pointers), `SetSegment` → `ActivateSegment`, `.vs` `D:` labels, `<Watchpoints>` layout.
+Done: source lines have a single owner (the database snapshot); a `.dbg` load replaces
+the segment set (menu re-import); `SetSegment` activates fully under the locks; VICE
+`al D:` labels go to `symbolsDrive1541` (`CDebugSymbols::GetSymbolsForDevice`); both
+`<Watchpoints>` layouts (`ADDRESS1,ADDRESS2,ARGUMENT` range and the older
+`ADDRESS,NUMBER_OF_VALUES`). All covered by `CTestDebugInfoFormats` (19 steps).
+Still open: actually deleting replaced segments. They are leaked on purpose ("THE BUG!"
+in `CDebugSymbols`), and the likely holder of stale pointers is now known:
+`CDebugEventsHistory` events keep raw `CDebugSymbolsSegment *` and `CDebugBreakpoint *`,
+and the event views render them later. Purge a segment's events (and anything else
+holding `segment`: `CDebugSymbolsDataWatch`, `CDebugBreakpointsAddr`, code labels are
+owned by it) before deleting it, then add a re-import test under ASan.
 
 Fix in this order, each with a test: ownership of `CDebugAsmSourceLine` (single owner:
 the database snapshot), segment deletion on database replacement (atomic swap under

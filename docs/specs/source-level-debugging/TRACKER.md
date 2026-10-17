@@ -33,7 +33,7 @@ definitions are in `IMPLEMENTATION-PLAN.md`.
 | RD-027 | P0 | core | Audit + accessor patches in VICE/Nestopia/Atari800 cores (fetch/read/write, bus master) | review(accessors + fixes; `CoreMappingAccessors` 15 steps green on Linux) | RD-001, RD-024 | Accessors compiled on 3 platforms; `tests/test-reference-files.sh` still green |
 | RD-006 | P2 | core | Canonical debug database + capability model; migrate `CDebugAsmSource` | review(`CDebugDatabase`; `CDebugAsmSource` removed; SymbolLoaders + DebugDatabase green on Linux) | RD-001, RD-038 | RD-038 tests unchanged and green; interval index unit tests |
 | RD-031 | P2 | core | **Must fix.** Loader registry with content sniffing (`.dbg` XML vs text, `.dbj`) | review(`DebugInfoProbe`/`DebugInfoLoadFile`, all dispatch sites; DebugInfoFormats green on Linux) | RD-006 | Menu/autoload/CLI go through registry; sniff unit test |
-| RD-032 | P2 | core | Symbol lifetime fixes (segments, re-import, dtor, `D:` labels, Watchpoints layout) | in-progress(single owner of source lines, re-import replaces segments; open: segment deletion, `SetSegment`, `D:` labels, Watchpoints) | RD-006 | ASan/valgrind-clean re-import test |
+| RD-032 | P2 | core | Symbol lifetime fixes (segments, re-import, dtor, `D:` labels, Watchpoints layout) | in-progress(done: line ownership, re-import, `SetSegment`, `D:` labels, Watchpoints; open: deleting replaced segments, blocked on purging `CDebugEventsHistory` pointers) | RD-006 | ASan/valgrind-clean re-import test |
 | RD-007 | P2 | core | Bank-aware address indexes, source remapping, binary/cartridge identity checks | todo | RD-006, RD-024 | Lookup tests: multi-span, missing, ambiguous, same-PC two identities |
 | RD-008 | P2 | compiler | Oscar64 `.dbj` adapter + contract tests | todo | RD-002, RD-006, RD-031 | Tier 1 Oscar64 fixture resolves file:line for known addresses |
 | RD-033 | P3 | core | Generalize loading entry points (NES `-debuginfo`/autoload, CLI `nes`/`-ines`, NES source slot) | todo | RD-031 | NES loads `.dbg` from CLI and menu; workspace test updated |
@@ -90,7 +90,7 @@ Questions 1, 2, 3, 5, 8 and 10 are answered in spec #15/#20.
 | Defect | Closed by |
 |---|---|
 | Segments never deleted; `.dbg` re-import dangling pointers; segment dtor double delete | RD-032 |
-| `.vs` `D:` labels ignored; newer `<Watchpoints>` layout misparsed | RD-032 |
+| `.vs` `D:` labels ignored; newer `<Watchpoints>` layout misparsed | RD-032 (fixed) |
 | Menu "Import labels" with a `.dbg` skips `DeleteAllSymbols`: stale same-name segments keep freed source lines and `ActivateSelectedSegment` picks the stale one (use-after-free) | RD-032 (fixed: segments hold no line pointers, a `.dbg` load replaces the segment set) |
 | `.dbg` `<Sources>` paths: split on every comma; a Windows path is not split into a file name on macOS/Linux (`GetFileNameComponentFromPath` uses the host separator); relative paths resolve against the process cwd, not the `.dbg` folder | RD-006 (file names from both separators; a source missing at its path is looked up next to the `.dbg`; comma split remains) |
 | CLI `nes` unreachable branch; `-ines` missing; `-debuginfo` never NES; NES source layout slot | RD-033 |
@@ -117,3 +117,4 @@ Questions 1, 2, 3, 5, 8 and 10 are answered in spec #15/#20.
 | 2026-10-17 | RD-027: VICE/Atari/NES banking accessors, three core fixes plus the NES load-after-detach bug found by the new test; `CTestCoreMappingAccessors` (15 steps, NROM alias at $8000/$C000); Linux suite 77/77 (7 skipped) |
 | 2026-10-17 | RD-002 first increment: toolchains pinned and built in the container (Oscar64 from tag, cc65/64tass from apt, KickC from tag + its KickAssembler jar), `basic-flow` + `same-line` fixtures, reproducible `build_fixtures.py`, 20 Tier 1 cells; decision 4 closed. Found: KickC `.dbg` is asm-level only |
 | 2026-10-17 | RD-006 + RD-031: `CDebugDatabase` replaces `CDebugAsmSource` and the per-segment address arrays; content-sniffing `DebugInfoLoadFile` at all dispatch sites; RD-032 re-import fixed. Linux suite 79/79 (7 skipped) |
+| 2026-10-17 | RD-032: `SetSegment` activates fully, `D:` labels reach the 1541, both `<Watchpoints>` layouts; segment deletion traced to `CDebugEventsHistory` raw pointers (still open). Linux suite 79/79 |
