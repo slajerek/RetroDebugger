@@ -10,6 +10,16 @@ says where to start, what to read first, and what "done" looks like in this repo
 
 ## 0. Ground rules for every item
 
+**Compatibility guards for later must-haves (1541 CPU, C64 Ultimate).** Spec #20.8
+lists six guards; the short form, applied to every M0-M3 change:
+- own everything per `CDebugSymbols` (per CPU), never per interface or global;
+- publish execution-control capabilities (`CDebugBackendCapabilities`, generalized from
+  `CC64BackendCapabilities`) and gate UI/remote on them;
+- feed the execution observer from live hooks *or* replayed traces through one interface;
+- route symbols by device (`D:` → `symbolsDrive1541`; project table for `.dbg` segments);
+- source view and decorations take a `CDebugSymbols*`;
+- test the stepping engine against a fake CPU as well as against VICE.
+
 - **Three build systems.** Every new source file goes through
   `tools/add_source_file.py` (CMake + Xcode + vcxproj/filters). A file added to one
   list only fails on another platform.
@@ -121,8 +131,28 @@ Patch the embedded cores so providers can be written without duplicating mapper 
 - Each accessor gets a smoke test that only asserts it compiles and returns sane values
   on the default machine; the behavioural tests come in M4.
 
+### RD-034 Headless suite on Linux CI (must fix)
+- `.github/workflows/build-linux.yml`: after the build step add
+  `xvfb-run -a --server-args="-screen 0 1280x800x24" ./tests/run_test.sh --skip-build`
+  with `SDL_AUDIODRIVER=dummy` (the runner sets it) on both log legs; upload
+  `tests/results/last_run.txt` and the log dir as artifacts; fix the stale "See the
+  Linux job" comment in `build-macos.yml`.
+- Expect first-run failures that are Linux-only (the macOS-only baseline hides them);
+  record them in `tests/SKIPPED_TESTS.md` with the marker convention or fix them,
+  never mark green by skipping silently. Update `AGENTS.md` "Known state".
+
+### RD-042 argv process launcher — engine proposal (must fix, decided: engine)
+- File the proposal in `slajerek/MTEngineSDL` now (it is on the P5 critical path and
+  has lead time): `SYS_ExecProcess(const SysProcessSpec &spec, SysProcessResult &out)`
+  with `argv` vector, `cwd`, `env` overrides, `timeoutMs`, stdout/stderr capture
+  (callback or buffer), cancellation handle and exit code; POSIX `posix_spawn`/`fork+exec`,
+  Windows `CreateProcessW` with proper quoting. No shell involved.
+- App side: a thin `CProcessRunner` wrapper lands with RD-019 once `MTENGINE_REF` is
+  bumped; until then nothing in this repo calls the shell-string API for new code.
+
 **M0 exit:** RD-038 tests green on all three platforms; RD-024 header reviewed by the
-maintainer; RD-027 accessors merged; first Tier 1 fixtures committed with manifests.
+maintainer; RD-027 accessors merged; first Tier 1 fixtures committed with manifests;
+Linux CI runs the suite on both legs; the engine proposal for RD-042 is filed.
 
 ## 3. M1 — Canonical model & loaders (P2 core)
 
@@ -330,6 +360,27 @@ list; explicit `skip(reason)` for unsupported emulator configurations.
   through the registry); MCP tools `retro_step_source_*`, `retro_step_out`,
   `retro_source_location`, `retro_symbols_load`; extend `CTestMCPProtocol`; update
   `docs/mcp/retrodebugger-mcp-skill.md`.
+- **RD-043 Embedded 64tass emits symbols (spec #20.9):** add
+  `c64debugger_assemble_label(userData, name, addr, size)` and
+  `c64debugger_assemble_source_range(userData, start, end, line, col)` callbacks in
+  `src/Tools/64tass/64tass.c` next to `c64debugger_set_assemble_result_to_memory`, fed
+  from the label table (`labelprint()` path) and from the listing pass run in-memory
+  (`listing=1` with a null `flist` and the callback instead of `fputs`); `assemble_64tass`
+  returns them to `CDebuggerApi`, which builds a `CDebugDatabase` fragment (identity =
+  the address space written to) and merges it into `symbols` under the mutex. Register
+  the assembled text as a synthetic document (`asm://<n>`) so the source view can show
+  it. Consumers: MCP `retro_assemble` (result gains `labels`), plugins' `A(...)` macro,
+  later build tasks. Decision 14 (callbacks on 1.46 first, assembler upgrade separately)
+  is the default. Tests: assemble a snippet with two labels and a loop, assert labels
+  and the line map resolve, assert the source view shows the PC on the right line after
+  one step.
+- **RD-044 1541 drive CPU source debugging (spec #20.8):** instantiate database,
+  resolver (flat RAM/VIA/ROM provider), observer, tracker and step controller on
+  `symbolsDrive1541`; wire observer events at `drivecpu.c:2592-2598` and `:3697-3711`;
+  seed the tracker from `driveStack`; `D:` labels from `.vs` and a project table for
+  `.dbg` segments; add a "1541 Source code" view instance and layout slot. Test: source
+  step through a drive routine while the C64 CPU keeps running; a C64 breakpoint during
+  a drive source step wins and reports `UserBreakpoint`.
 - **RD-016 / RD-017 Oscar64 upstream:** regression fixtures first, then the column /
   provenance patches as separate upstream PRs; the adapter consumes `column` when
   present and keeps working without it.
@@ -350,14 +401,26 @@ Replace each cell with `ok(version)` or `skip(reason)` from real pinned builds.
 ## 9. M6 — IDE workspace (P5) and M7 — advanced (P6)
 
 Not detailed here beyond the backlog rows; two prerequisites are already identified:
-RD-042 (argv launcher, decision 11) before RD-019, and a file-watcher strategy (none
-exists; platform APIs or polling with mtimes as the CrtMaker plugin does) before RD-021.
+the RD-042 engine launcher must have landed (proposal filed in M0) before RD-019, and a
+file-watcher strategy (none exists; platform APIs or polling with mtimes as the CrtMaker
+plugin does) before RD-021.
+
+**RD-045 C64 Ultimate observed mode (M6):** publish `CDebugBackendCapabilities` for
+C64U from the existing `CC64BackendCapabilities` (stepping/source breakpoints `NONE`,
+mapping `DIRECT` from polled `$01`/EXROM/GAME, `executionTrace` `OBSERVED`); add a
+trace-replay event source that turns `C64UTraceBuffer` records into observer events
+with a no-op stop channel; the source view shows "last executed" decorations from the
+replayed trace; stepping controls are greyed with the spec #11 warning. Test with the
+existing `CTestC64U*` fixtures (`CTestC64UMemoryCache`, `CTestC64UModeSwitch`).
+
 M7 starts with the RD-023 research spike and ends in a separate spec.
 
 ## 10. First three pull requests (suggested)
 
 1. `test: cover KickAss .dbg and VICE label loaders` (RD-038) + `docs(specs)` tracker
    update. Small, no behaviour change, unblocks everything.
+   In the same week, separately: `ci(linux): run the headless suite under xvfb` (RD-034)
+   and the RD-042 proposal in the MTEngineSDL repo.
 2. `feat(debug): memory mapping contract and emulator-core accessors` (RD-024 + RD-027)
    with the three core bug fixes (NES OOB peek, Ultimax uninitialized read, cart adapter
    size).

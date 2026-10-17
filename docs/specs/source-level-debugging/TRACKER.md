@@ -13,13 +13,13 @@ definitions are in `IMPLEMENTATION-PLAN.md`.
 
 | Milestone | Phase | Scope | Status |
 |---|---|---|---|
-| M0 Discovery & safety net | P0 | RD-001, RD-038, RD-002, RD-024, RD-027 | RD-001 done, rest todo |
+| M0 Discovery & safety net | P0 | RD-001, RD-038, RD-002, RD-024, RD-027, **RD-034**, **RD-042 (engine proposal)** | RD-001 done, rest todo |
 | M1 Canonical model & loaders | P2 (core) | RD-006, RD-031, RD-032, RD-007, RD-008, RD-033 | todo |
 | M2 Source document & view | P1 | RD-003, RD-004, RD-005 | todo |
 | M3 Execution events & stepping engine | P2/P3 | RD-011, RD-037, RD-012, RD-013, RD-014, RD-015 | todo |
 | M4 Machine mapping providers | P2/P3 | RD-028, RD-040, RD-029, RD-025, RD-026, RD-030, RD-034 | todo |
-| M5 Compiler coverage & remote | P3/P4 | RD-009, RD-010, RD-036, RD-016, RD-017, RD-035 | todo |
-| M6 IDE workspace | P5 | RD-018, RD-042, RD-019, RD-020, RD-021 | todo |
+| M5 Compiler coverage & remote | P3/P4 | RD-009, RD-010, RD-036, RD-016, RD-017, RD-035, **RD-043 (64tass symbols)**, **RD-044 (1541)** | todo |
+| M6 IDE workspace | P5 | RD-018, RD-042 (consumption), RD-019, RD-020, RD-021, **RD-045 (C64U observed mode)** | todo |
 | M7 Advanced & research | P6 | RD-022, RD-023 | todo |
 
 ## Backlog
@@ -32,7 +32,7 @@ definitions are in `IMPLEMENTATION-PLAN.md`.
 | RD-024 | P0 | core | Logical vs physical code identity + `IMemoryMappingResolver` contract | todo | RD-001 | Header + unit test of `Unknown`/alias semantics; reviewed by maintainer |
 | RD-027 | P0 | core | Audit + accessor patches in VICE/Nestopia/Atari800 cores (fetch/read/write, bus master) | todo | RD-001, RD-024 | Accessors compiled on 3 platforms; `tests/test-reference-files.sh` still green |
 | RD-006 | P2 | core | Canonical debug database + capability model; migrate `CDebugAsmSource` | todo | RD-001, RD-038 | RD-038 tests unchanged and green; interval index unit tests |
-| RD-031 | P2 | core | Loader registry with content sniffing (`.dbg` XML vs text, `.dbj`) | todo | RD-006 | Menu/autoload/CLI go through registry; sniff unit test |
+| RD-031 | P2 | core | **Must fix.** Loader registry with content sniffing (`.dbg` XML vs text, `.dbj`) | todo | RD-006 | Menu/autoload/CLI go through registry; sniff unit test |
 | RD-032 | P2 | core | Symbol lifetime fixes (segments, re-import, dtor, `D:` labels, Watchpoints layout) | todo | RD-006 | ASan/valgrind-clean re-import test |
 | RD-007 | P2 | core | Bank-aware address indexes, source remapping, binary/cartridge identity checks | todo | RD-006, RD-024 | Lookup tests: multi-span, missing, ambiguous, same-PC two identities |
 | RD-008 | P2 | compiler | Oscar64 `.dbj` adapter + contract tests | todo | RD-002, RD-006, RD-031 | Tier 1 Oscar64 fixture resolves file:line for known addresses |
@@ -52,7 +52,7 @@ definitions are in `IMPLEMENTATION-PLAN.md`.
 | RD-015 | P3 | tests | Headless step-trace runner + golden expectations (#9.5 format) | todo | RD-002, RD-013 | `tests/source-debug/expectations/**` replayed in suite |
 | RD-026 | P3 | tests | NES NROM/UxROM/MMC1-or-MMC3 banked fixtures with physical-fetch traces | todo | RD-002, RD-024, RD-025, RD-040 | #3A.6 assertion list green |
 | RD-030 | P3 | tests | C64 + Atari banked suites; shared 3-machine matrix | todo | RD-002, RD-025, RD-028, RD-029 | #3B.4 trace schema produced for every fixture |
-| RD-034 | P3 | ci | Run headless suite on Linux CI (both log legs) | todo | — | `build-linux.yml` runs `tests/run_test.sh --skip-build` under xvfb; AGENTS.md updated |
+| RD-034 | P0 | ci | **Must fix.** Run headless suite on Linux CI (both log legs) | todo | — | `build-linux.yml` runs `tests/run_test.sh --skip-build` under xvfb; AGENTS.md updated |
 | RD-036 | P3 | remote | Remote/MCP: `step/source/*`, `step/out`, `source/location`, `symbols/load`; skill doc | todo | RD-013, RD-031 | `CTestMCPProtocol` extended; `docs/mcp/retrodebugger-mcp-skill.md` updated |
 | RD-009 | P2 | compiler | cc65 `.dbg` adapter + contract tests | todo | RD-002, RD-006, RD-031 | Tier 1 cc65 fixture (C64, Atari, NES where target builds) |
 | RD-010 | P2 | compiler | KickC artifact audit + supported subset | todo | RD-002, RD-006, RD-031 | Capability flags documented; `Approximate` where only line mapping |
@@ -60,7 +60,10 @@ definitions are in `IMPLEMENTATION-PLAN.md`.
 | RD-017 | P4 | compiler | Structured inline provenance + logical inline frames | todo | RD-016, RD-012 | Inline fixture Step Out of inlined frame |
 | RD-035 | P4 | ci | Nightly toolchain provisioning (cc65, Oscar64 pinned, KickC+Java, KickAss jar licensing) | todo | RD-002 | Nightly workflow green with version report artifact |
 | RD-018 | P5 | ui | Workspace explorer + tabs | todo | RD-003 | ImGui test opens folder, switches tabs |
-| RD-042 | P5 | core | argv process launcher (engine proposal or app-side) | todo | RD-002 | Decision 11 recorded; launcher unit test with timeout |
+| RD-042 | P0/P5 | core | **Must fix, decided: engine.** argv process launcher proposed to MTEngineSDL in M0; consumed by RD-019 in P5 | todo | — | Proposal filed in the engine repo (link here); `MTENGINE_REF` bumped when merged; launcher test with timeout |
+| RD-043 | P4 | compiler | Embedded 64tass emits symbols + address→line map on every in-process assembly (spec #20.9) | todo | RD-006, RD-031 | `retro_assemble` result carries labels; source view shows the assembled text with PC line; plugin `A(...)` code gets labels |
+| RD-044 | P4 | c64 | 1541 drive CPU source debugging (spec #20.8) | todo | RD-013, RD-025, RD-032 | Source step on drive code with C64 running; `D:` labels land in `symbolsDrive1541`; "1541 Source code" view |
+| RD-045 | P5 | c64 | C64 Ultimate observed-mode source support (spec #20.8) | todo | RD-011, RD-028, RD-003 | Source view + labels + mapping on C64U; trace replay shows last executed source lines; stepping UI greyed by capabilities |
 | RD-019 | P5 | ui | Toolchain registry, build tasks, diagnostics console | todo | RD-018, RD-002, RD-042 | Build an Oscar64 sample from the UI; clickable diagnostic |
 | RD-020 | P5 | core | Build/run/debug orchestration + artifact consistency | todo | RD-019, RD-007 | Failed build keeps old session marked stale |
 | RD-021 | P5 | ui | Editing, save, undo/redo, search, file watchers | todo | RD-003, RD-018 | Dirty-buffer + save + watcher tests |
@@ -75,9 +78,10 @@ definitions are in `IMPLEMENTATION-PLAN.md`.
 | 6 | Step into function without metadata: skip (default) vs enter disassembly | maintainer | proposed: skip tracked runtime calls, option to enter disassembly |
 | 7 | Optimization levels with precise stepping | RD-002 | proposed: debug/unoptimized exact, optimized best-effort with warning |
 | 9 | NES mapper families for headless tests | RD-026 | proposed: NROM, UxROM, MMC1 |
-| 11 | argv process launcher: engine proposal vs app-side | maintainer | open (needed before P5) |
-| 12 | C64U and 1541 CPU scope | maintainer | proposed: out of scope through P4 |
+| 11 | argv process launcher: engine proposal vs app-side | maintainer | **decided 2026-10-17: engine proposal (RD-042)** |
+| 12 | C64U and 1541 CPU scope | maintainer | **decided 2026-10-17: must-have, later phases (RD-044 P4, RD-045 P5); guards in spec #20.8** |
 | 13 | Default Atari fixture configuration | RD-002 | proposed: explicit 800XL/64K and 130XE/128K per fixture |
+| 14 | Vendored 64tass 1.46: callbacks first, or upgrade the assembler first? | maintainer | proposed: callbacks first (RD-043), upgrade as a separate item if needed |
 
 Questions 1, 2, 3, 5, 8 and 10 are answered in spec #15/#20.
 
@@ -98,3 +102,4 @@ Questions 1, 2, 3, 5, 8 and 10 are answered in spec #15/#20.
 | Date | Change |
 |---|---|
 | 2026-10-17 | Tracker created from spec v1.4; RD-001 marked done; RD-031..RD-042 added |
+| 2026-10-17 | Maintainer feedback: RD-034/031/042 must-fix (RD-034 and the RD-042 proposal moved to M0, decision 11 = engine); RD-043 (64tass symbols), RD-044 (1541), RD-045 (C64U) added; decision 12 = must-have later phases; decision 14 added |

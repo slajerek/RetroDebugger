@@ -703,7 +703,7 @@ Tests are repeatable; logs explain stop reasons; no regression in existing KickA
 | RD-004 | P1 | ui | Implement C lexer and 6502 assembler dialect profiles | RD-003 |
 | RD-005 | P1 | ui | Add PC/source decorations and bidirectional navigation (first against the migrated `.dbg` map, then RD-007) | RD-003, RD-006 |
 | RD-006 | P2 | core | Define canonical debug database and capability model; migrate `CDebugAsmSource` onto it | RD-001, RD-038 |
-| RD-031 | P2 | core | Debug-artifact loader registry with content sniffing (KickAss `.dbg` XML vs cc65 `.dbg` text vs Oscar64 `.dbj` JSON), replacing extension dispatch in `CMainMenuBar`, `CMainMenuHelper::LoadLabelsAndWatches` and `C64CommandLine` | RD-006 |
+| RD-031 | P2 | core | **Must fix.** Debug-artifact loader registry with content sniffing (KickAss `.dbg` XML vs cc65 `.dbg` text vs Oscar64 `.dbj` JSON), replacing extension dispatch in `CMainMenuBar`, `CMainMenuHelper::LoadLabelsAndWatches` and `C64CommandLine` | RD-006 |
 | RD-032 | P2 | core | Fix symbol lifetime hazards: segments never deleted, dangling `codeSourceLineByMemoryAddress` after `.dbg` re-import, segment destructor double delete, `.vs` `D:` labels ignored, newer `<Watchpoints>` layout misparsed | RD-006 |
 | RD-007 | P2 | core | Implement physical-bank-aware address indexes, source remapping and binary/cartridge identity checks | RD-006, RD-024 |
 | RD-008 | P2 | core | Implement Oscar64 `.dbj` adapter and fixture contract tests | RD-002, RD-006, RD-031 |
@@ -721,21 +721,24 @@ Tests are repeatable; logs explain stop reasons; no regression in existing KickA
 | RD-015 | P3 | tests | Add headless step trace runner and golden expectations | RD-002, RD-013 |
 | RD-026 | P3 | tests | Add NROM, UxROM and one MMC1/MMC3 bank-switching fixture with golden physical-fetch traces and source-step assertions | RD-002, RD-024, RD-025, RD-040 |
 | RD-030 | P3 | tests | Add C64 and Atari banked fixture suites and the shared three-machine headless stepping/breakpoint test matrix | RD-002, RD-025, RD-028, RD-029 |
-| RD-034 | P3 | ci | Run the headless suite on Linux CI (xvfb is already installed) so the three-machine matrix is measured on more than macOS; keep both log legs | — |
+| RD-034 | P0 | ci | **Must fix.** Run the headless suite on Linux CI (xvfb is already installed) so the three-machine matrix is measured on more than macOS; keep both log legs | — |
 | RD-036 | P3 | remote | Remote/MCP endpoints: `step/source/{into,over,out}`, `step/out`, `source/location`, `symbols/load`, and the MCP skill doc update | RD-013, RD-031 |
 | RD-033 | P3 | core | Generalize symbol loading entry points: `-debuginfo`/autoload for NES (today C64 or Atari only), unreachable `nes` CLI branch, missing `-ines` handler, NES `source_code` workspace slot | RD-031 |
 | RD-016 | P4 | compiler | Patch Oscar64 range coalescing/column export with regression tests (upstream) | RD-008 |
 | RD-017 | P4 | compiler | Add structured inline provenance support and logical inline frames | RD-016, RD-012 |
 | RD-035 | P4 | ci | Toolchain provisioning for the nightly matrix: cc65 (distro package), Oscar64 (pinned commit, built from source), KickC + KickAssembler (Java; licensing review for the jar), with version recording | RD-002 |
+| RD-043 | P4 | compiler | Embedded 64tass emits symbols and an address→source-line map on every in-process assembly (`CDebuggerApi::Assemble64Tass*`, MCP `retro_assemble`, plugins), loaded straight into the canonical database; see #20.9 | RD-006, RD-031 |
+| RD-044 | P4 | c64 | 1541 drive CPU source debugging: per-CPU wiring of database/resolver/observer/step controller on `symbolsDrive1541`, drive mapping provider (RAM/VIA/ROM, no banking), `D:` labels, project-level routing of `.dbg` segments to the drive, drive stack as tracker seed; see #20.8 | RD-013, RD-025, RD-032 |
+| RD-045 | P5 | c64 | C64 Ultimate source support in observed mode: source view, labels and mapping provider from polled `$01`/EXROM/GAME, `C64UTraceBuffer` replayed into the execution observer after the fact (source-level trace, last executed source lines); stepping/source breakpoints gated by `CC64BackendCapabilities`; see #20.8 | RD-011, RD-028, RD-003 |
 | RD-018 | P5 | ui | Add workspace explorer and multi-file tabs | RD-003 |
-| RD-042 | P5 | core | argv-based process launcher with cwd/env/timeout/capture (engine proposal or app-side platform code), replacing shell-string `SYS_ExecSystemCommand` for build tasks | RD-002 |
+| RD-042 | P0 (proposal) / P5 (use) | core | **Must fix, decided: engine.** argv-based process launcher with cwd/env/timeout/capture proposed to MTEngineSDL now (lead time), consumed by build tasks in P5; replaces shell-string `SYS_ExecSystemCommand` | — |
 | RD-019 | P5 | ui | Add toolchain registry, external build tasks and diagnostics | RD-018, RD-002, RD-042 |
 | RD-020 | P5 | core | Add build/run/debug orchestration with artifact consistency checks | RD-019, RD-007 |
 | RD-021 | P5 | ui | Enable editing, save, undo/redo, search and file watchers (no file watcher exists today) | RD-003, RD-018 |
 | RD-022 | P6 | core | Extend debug model for variables/types, advanced optimized stepping | RD-017 |
 | RD-023 | P6 | research | Research C symbols, labels, variable-to-memory mapping and integration with existing Memory Viewer and Watch; produce a follow-up implementation proposal only | RD-008, RD-009, RD-010, RD-020 |
 
-**Recommended critical path:** RD-001 (done) → RD-038/002 → RD-024/027/006 → RD-031/032/007/011/037 + RD-028/040/029 + RD-008 → RD-012/013/025/014/015/026/030 (+ RD-034 so the matrix is measured) → RD-003/004/005 integration (can start earlier against the migrated `.dbg` map) → RD-036 → compiler expansion (RD-009/010/016/017, RD-035) → IDE (RD-018..021, RD-042) → RD-022/023. The `Phase` column is the delivery phase of #2; `Priority` is the delivery track (core / ui / c64 / nes / atari / tests / ci / remote / compiler / research). Keep the UI and core debugger changes separately testable. The live status of every item is tracked in `TRACKER.md` next to this file.
+**Recommended critical path:** RD-001 (done) → RD-038/002 → RD-024/027/006 → RD-031/032/007/011/037 + RD-028/040/029 + RD-008 → RD-012/013/025/014/015/026/030 (+ RD-034 so the matrix is measured) → RD-003/004/005 integration (can start earlier against the migrated `.dbg` map) → RD-036 → compiler expansion (RD-009/010/016/017, RD-035) → RD-043/044 → IDE (RD-018..021, RD-042 consumption) → RD-045 → RD-022/023. RD-034 and the RD-042 engine proposal are filed first (must-fix, M0). The `Phase` column is the delivery phase of #2; `Priority` is the delivery track (core / ui / c64 / nes / atari / tests / ci / remote / compiler / research). Keep the UI and core debugger changes separately testable. The live status of every item is tracked in `TRACKER.md` next to this file.
 
 ---
 
@@ -752,9 +755,10 @@ Tests are repeatable; logs explain stop reasons; no regression in existing KickA
 
 9. Which NES mapper families and ROM/linker artifact formats can be exercised in headless integration tests initially?
 10. How does the existing emulator expose physical PRG identity and fetch mapping, including mapper-specific aliases and PRG-RAM? **Answered (1.4):** it does not; #20.4 lists the core accessors to add (RD-040).
-11. Which argv-based process launcher is used for build tasks: an engine addition proposed to MTEngineSDL, or app-side platform code? The engine's `SYS_ExecSystemCommand` takes a shell string and is unsuitable for #9.3/#10.4. (RD-042; decide before P5.)
-12. Does source-level debugging cover the C64 Ultimate (`CDebugInterfaceC64U`, page-cache memory adapters, no instruction hooks) and the 1541 drive CPU (own `CDebugSymbols`, shares the C64 debug-mode word)? Proposed: both out of scope for P1-P4; the stepping engine must only remain correct when `debugOnDrive1541` is enabled.
+11. Which argv-based process launcher is used for build tasks? **Decided (maintainer, 2026-10-17): engine.** The proposal goes to MTEngineSDL (RD-042, filed in M0 for lead time); the app pins `MTENGINE_REF` once it lands. The engine's `SYS_ExecSystemCommand` takes a shell string and is unsuitable for #9.3/#10.4.
+12. Does source-level debugging cover the C64 Ultimate (`CDebugInterfaceC64U`) and the 1541 drive CPU? **Decided (maintainer, 2026-10-17): both are must-have, delivered in later phases** (1541: RD-044 in P4; C64U observed mode: RD-045 in P5). The compatibility review in #20.8 lists what P0-P3 must keep open so neither needs a redesign.
 13. Which default Atari configuration do fixtures assume? The debugger's default is 800XL with the 1088 KB RAM option (`c64SettingsAtariMachineType=4`, `c64SettingsAtariRamSizeOption=9`), so an extended-RAM window is active by default; fixtures must set machine type and RAM size explicitly.
+14. Embedded 64tass (vendored 1.46, 2012): capture symbols/listing from the vendored version through callbacks (RD-043, recommended first step) or upgrade the vendored assembler to a current 64tass first? The upgrade is larger (new source tree in three build systems, syntax differences for plugin-generated code) and is not required for RD-043.
 
 Resolve these during RD-001/RD-002; none requires postponing the canonical model or the Oscar64 adapter.
 
@@ -875,5 +879,49 @@ Revision 1.4 is the first revision written with the repository at hand. It execu
 4. The source-step controller is evaluated inside the per-instruction emulation-thread hook (RD-011 adds the generic callback at the existing hook points), with instruction budget and cancellation; it never drives `RUN_ONE_INSTRUCTION` from the UI.
 5. The NES mapping provider gets its own backlog item (RD-040); the emulator-core accessor patches for all three machines are part of RD-027/028/029/040 and are made in the embedded cores under `src/Emulators/`, never in MTEngineSDL and never in the `[C64D-REFERENCE-ONLY]` reference copies.
 6. The headless suite must run on Linux CI (RD-034) before the three-machine matrix is used as an acceptance gate; toolchain provisioning is nightly-only (RD-035).
-7. C64 Ultimate and the 1541 drive CPU are out of scope through P4 (open decision 12); Atari fixtures must set machine type and RAM size explicitly (open decision 13).
+7. C64 Ultimate and the 1541 drive CPU are must-have, delivered as RD-044 (P4) and RD-045 (P5); P0-P3 follow the compatibility guards in #20.8. Atari fixtures must set machine type and RAM size explicitly (open decision 13).
+9. RD-034 (Linux CI suite), RD-031 (content-sniffing loaders) and the RD-042 engine proposal are must-fix items scheduled in M0/M1, not deferred.
+10. The embedded 64tass emits symbols and a source map on every assembly (RD-043, P4); every assembly the debugger performs feeds the canonical database.
 8. Documentation in this folder: this spec, `REVIEW-v1.3.md` (the review that produced 1.4), `TRACKER.md` (live backlog status), `IMPLEMENTATION-PLAN.md` (milestones and sequencing).
+
+### 20.7 The existing address→source map versus the bank-aware requirements
+
+The map that exists (`codeSourceLineByMemoryAddress`, filled from KickAssembler `.dbg`) is compared below with what #3A, #3B and #6 require. "Partial" means the data model can be migrated without loss; "No" means new data is required.
+
+| Requirement | Existing map | Verdict |
+|---|---|---|
+| Address → file:line | Yes, per address | OK |
+| Column ranges (#6.1, same-line statements) | Yes, `LINE1,COL1,LINE2,COL2` parsed into `CDebugAsmSourceLine` but never displayed | OK, data present |
+| Half-open ranges, multiple non-contiguous ranges per line | Inclusive `START,END` expanded to one pointer per address; several rows may point at the same line | Partial: migrate to ranges, keep many-to-many |
+| Reverse index file:line → addresses (#4.4, #8.8) | No | No: built in RD-006 |
+| Physical code identity per range (#3A.2) | No. A KickAssembler `<Segment>` is a *name*; the `.dbg` carries no bank/physical identity, and the parser ignores the segment `dest` attribute | No: RD-007 adds a project-level "segment name → physical identity" table; without it segments are `Ambiguous`, never `Exact` |
+| CPU address vs mapping epoch vs ROM file offset (#3A.2) | CPU address only; no epoch, no offset | No: RD-024/007 |
+| Fetch/read/write distinction (#3A.2, #3B.1) | Not applicable to the map; the CPU-view adapter follows VICE's tables for reads and writes | No: providers RD-028/040/029 |
+| Automatic selection of the right map for the current mapping (#3A.4) | Manual segment switch only; emulator hooks evaluate `currentSegment` | No: RD-025 mapping-driven activation |
+| Breakpoint intents CPU-only / physical / source (#3A.4) | Per-segment PC breakpoints only (= "CPU address, within the chosen segment") | Partial: RD-025/014 |
+| Mapping quality / capability flags (#6.4) | None, everything is treated as exact | No: RD-006 |
+| Binary identity / stale-map detection (#6.1) | None | No: RD-007 |
+| Banked NES / Atari artifacts | Nothing; `.dbg` loading never reaches NES (CLI/autoload) | No: RD-033, RD-026, RD-030 |
+
+Conclusion: the existing map is a correct *line-level, single-identity* seed and is not in conflict with the spec; the bank-aware requirements are additions on top of it. Nothing in the spec needs to change because of it, and the migration rule in #6.1 stands.
+
+### 20.8 Compatibility review: 1541 drive CPU and C64 Ultimate (must-have, later phases)
+
+**1541 drive CPU (RD-044, P4).** What exists: its own `CDebugSymbols` (`symbolsDrive1541`, `CDebugSymbolsSegmentDrive1541` with VIA1/VIA2/IEC IRQ breakpoints), its own data adapters, a pre-instruction hook with PC breakpoint check (`drive/drivecpu.c:2592-2598`), post-instruction check (`:3697-3711`), JSR stack annotation into `CDebugInterfaceC64::driveStack`, labels with the `D:` device prefix (ignored today). The address space is flat (RAM `$0000-$07FF`, VIA1/VIA2, ROM `$C000-$FFFF`), so its mapping provider is trivial. The one real obstacle is that the drive shares `c64d_debug_mode` with the C64 CPU and "steals" `RUN_ONE_INSTRUCTION`. The source-step engine of #8 does not use `RUN_ONE_INSTRUCTION` (it runs with `RUNNING` and decides in its own per-CPU observer), so the sharing problem disappears for source stepping as long as the arming state is per CPU. Pausing stays machine-wide (both CPUs stop), which is the expected behaviour.
+
+**C64 Ultimate (RD-045, P5).** `CDebugInterfaceC64U` derives from `CDebugInterfaceC64` and publishes `CC64BackendCapabilities` (`src/DebugInterface/C64/CC64BackendCapabilities.h`, levels `NONE/DIRECT/DERIVED/OBSERVED/HELPER`): mapped memory read/write and screen stream `DIRECT`, while `currentPcTracking`, `breakpointsPC`, `stepInstruction` and `stepCycle` are `NONE`. It has a trace mode (`C64UTraceBuffer`, `DrainTraceBusData`) that streams bus activity. Therefore on C64U: symbols, source view, navigation and the mapping provider (from polled `$01`/EXROM/GAME) work as on VICE; live stepping and source breakpoints are unavailable unless the firmware adds them; the trace buffer can be replayed into the execution observer *after the fact* to show the last executed source lines and a source-level trace. The existing capability-level pattern is exactly the negotiation mechanism #6.4 asks for, generalized to execution control.
+
+**Guards that P0-P3 must respect so RD-044/045 are additions, not redesigns:**
+
+1. Every new object is owned per `CDebugSymbols` (= per CPU / address space), never per `CDebugInterface` or as a global: the canonical database (RD-006), the mapping resolver (RD-024), the execution observer list and events (RD-011, every event carries the originating `CDebugSymbols*`/CPU id), the execution tracker (RD-012), the source-step controller and its arming state (RD-013), source breakpoints (RD-014). `CDebugInterface` only aggregates them.
+2. Execution-control capabilities are part of capability negotiation: extend the `EC64CapabilityLevel` pattern into a machine-independent `CDebugBackendCapabilities` (`instructionHook`, `stepInstruction`, `stepOut`, `sourceStep`, `fetchMapping`, `physicalIdentity`, `executionTrace`), published by every `CDebugInterface`; UI and remote endpoints grey out or reject what is `NONE` instead of assuming VICE.
+3. The execution observer accepts events from two sources with the same interface: live hooks (VICE/Atari800/Nestopia) and replayed traces (C64U trace buffer; later any recorded trace). Observers must not assume they can stop the machine synchronously; the stop request is a return value the live source honours and the replay source ignores.
+4. The loader registry and the `.dbg`/`.vs` loaders route symbols by device: `D:` labels go to `symbolsDrive1541`; a project-level table assigns `.dbg` segments to a CPU (default: main CPU). KickAssembler itself has no device notion, so this stays a project setting.
+5. The source view, document registry and decorations take a `CDebugSymbols*`, so a "1541 Source code" instance is a constructor call, not a new class; the NES/Atari instances already prove the pattern.
+6. Tests for the stepping engine are written against an abstract fake CPU (events in, stop decisions out) in addition to the VICE integration tests, so the engine is proven independent of which core feeds it.
+
+With these guards, RD-044 is wiring plus a trivial provider plus `D:` label routing, and RD-045 is a trace-replay event source plus capability gating; neither touches the core contracts.
+
+### 20.9 Embedded 64tass as a symbol and source-map producer (RD-043)
+
+The vendored assembler (`src/Tools/64tass/`, version 1.46 by Soci/Singular, 2012) is driven through `assemble_64tass(userData, text, size, &start, &size)` (`64tass.c:3076`) and writes bytes back through `c64debugger_set_assemble_result_to_memory`. It already contains `labelprint()` (`:2978`, the `-l` label file) and a second listing pass with source lines (`arguments.list`/`arguments.source`, `:2913-2970`), both writing to `FILE*`. RD-043 adds two more callbacks next to the existing one, `c64debugger_assemble_label(userData, name, address, size)` and `c64debugger_assemble_source_range(userData, startAddr, endAddr, line, column?)`, fed from the label table and the listing pass without touching files, and makes `CDebuggerApi::Assemble64Tass*` return a small `CDebugDatabase` fragment (labels + line ranges for the assembled text, identity = the CPU address space it was written to) that is merged into the active symbols. Consumers: the MCP `retro_assemble` tool, plugins using the `A(...)` macro, future build tasks. The in-memory source text is registered as a synthetic document so the source view can show it. Decision 14 covers whether to upgrade the vendored 64tass before or after this.

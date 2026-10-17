@@ -155,3 +155,34 @@ touched anyway:
 - C64 PC/memory breakpoint checks ignore `breakOnPC`/`breakOnMemory`.
 - `nesd_peek_safe_io` out-of-bounds read; `c64d_peek_c64` Ultimax uninitialized read;
   VICE cartridge adapter hard-coded 512 KB / ROML only; Atari "direct RAM" is the CPU view.
+
+## 6. Addendum 2026-10-17 — maintainer feedback on the 1.4 review
+
+Five answers from the maintainer, applied to the spec (#14, #15, #20.6-#20.9), the
+tracker and the plan:
+
+1. **64tass must emit symbols.** Every assembly the debugger performs should also
+   produce labels and an address→line map. Added RD-043 (P4, spec #20.9): callbacks in
+   the vendored 64tass 1.46 next to the existing byte-output callback, fed from its
+   label table and listing pass; results merged into the canonical database. Decision
+   14 records the "callbacks first, assembler upgrade separately" default.
+2. **Is the existing map compatible with the banking requirements?** Yes as a
+   line-level, single-identity seed; the bank-aware requirements are additions. The
+   full requirement-by-requirement comparison is spec #20.7. The one thing KickAssembler
+   cannot supply is physical identity per segment (its `.dbg` has only segment names),
+   so RD-007 introduces a project-level segment→identity table and treats untabled
+   segments as `Ambiguous`.
+3. **RD-034, RD-031, RD-042 must be fixed.** RD-034 (Linux CI suite) and the RD-042
+   engine proposal move to M0 with concrete steps in the plan; RD-031 stays in M1 and
+   is marked must-fix. None of the three was implemented in this documentation pass.
+4. **Launcher: engine proposal.** Decision 11 closed; RD-042 is a proposal to
+   MTEngineSDL (API sketch in the plan), consumed by the app once `MTENGINE_REF` moves.
+5. **1541 CPU and C64 Ultimate are must-have, later phases.** Reviewed in spec #20.8:
+   the 1541 already has its own symbols, hooks, breakpoints and stack annotation, and
+   the only obstacle (shared debug-mode word) does not affect the source-step engine,
+   which never uses `RUN_ONE_INSTRUCTION`; C64U already publishes capability levels and
+   has a trace buffer, so it gets observed-mode source support without live stepping.
+   Six guards for P0-P3 keep both as additions (per-`CDebugSymbols` ownership,
+   capability negotiation for execution control, observer fed by hooks or trace replay,
+   device routing of symbols, views taking `CDebugSymbols*`, fake-CPU engine tests).
+   Added RD-044 (P4) and RD-045 (P5).
