@@ -1,0 +1,54 @@
+{
+  "buildDir": "/tmp/rd-source-debug/oscar64/nes/basic-flow",
+  "commit": "9408778695b5442e755832711b89243b4f94a9ff",
+  "fixedMtime": 1767225600,
+  "fixture": "basic-flow",
+  "inputs": {
+    "64tass-c64.asm": "13f5363a9afa68138826fdeb9a4934034c6578bebb680d10f74495437220a23c",
+    "kickass-c64.asm": "a8bc61e2626d95519fea979cce04f605388d1eb10c9c296a214acfbbaad2e834",
+    "main.c": "b7e2bb2e2a2bd6e7a03e4eca5954de8141a3d5c8fbd0e9f304ba035bd57f9070"
+  },
+  "machine": "nes",
+  "outputs": {
+    "main.asm": {
+      "sha256": "6cf3aac3d07a5d7c868cf6f8c32d515747c3d6faa115188ad997837934c62b59",
+      "size": 2843
+    },
+    "main.dbj": {
+      "sha256": "1bb215afed08565974ba261b77ae9a7b007ba8e29efb9e4819156128d86a5a0b",
+      "size": 6240
+    },
+    "main.map": {
+      "sha256": "110ba2a27f2d3c394080238a81cea730e16404a6f16b1fb0295de564def41441",
+      "size": 1377
+    },
+    "main.mlb": {
+      "sha256": "ddfcabc5f06a83ba8cda74cc81b664c5ca9c8ef71b8858eef5e66cd2dc0bd06e",
+      "size": 266
+    },
+    "main.nes": {
+      "sha256": "ed30dfaf00ed9614298c99f53ec66b42609135053330e7723d547ebbf5826ef0",
+      "size": 40976
+    }
+  },
+  "source": "main.c",
+  "steps": [
+    [
+      "oscar64",
+      "-tm=nes",
+      "-n",
+      "-g",
+      "-O0",
+      "-o=main.nes",
+      "main.c"
+    ]
+  ],
+  "toolDirs": {
+    "oscar64": "/home/user/toolchains/oscar64/bin"
+  },
+  "toolchain": "oscar64",
+  "version": "1.32.273",
+  "versionReported": {
+    "oscar64": "Starting oscar64 1.32.273"
+  }
+}

@@ -1,0 +1,43 @@
+sections
+0880 - 089f : DATA, code
+089f - 08a0 : DATA, data
+08a0 - 08a1 : BSS, bss
+08a8 - 9000 : HEAP, heap
+9000 - a000 : STACK, stack
+00f7 - 00f7 : ZEROPAGE, zeropage
+0801 - 0853 : DATA, startup
+a000 - a000 : SSTACK, sstack
+a000 - a000 : SSTACK, a@stack
+a000 - a000 : SSTACK, b@stack
+a000 - a000 : SSTACK, main@stack
+
+regions
+00f7 - 00ff : 0000, 0000, zeropage
+0801 - 0880 : 0853, 0052, startup
+0880 - 9000 : 08a0, 0021, main
+
+objects
+00f7 - 00f7 : ZeroEnd, END:zeropage
+00f7 - 00f7 : ZeroStart, START:zeropage
+0801 - 0853 : startup, NATIVE_CODE:startup
+0880 - 0894 : main, NATIVE_CODE:code
+0894 - 0898 : a, NATIVE_CODE:code
+0898 - 089f : b, NATIVE_CODE:code
+089f - 08a0 : spentry, DATA:data
+08a0 - 08a0 : BSSStart, START:bss
+08a0 - 08a1 : result, DATA:bss
+08a1 - 08a1 : BSSEnd, END:bss
+a000 - a000 : StackEnd, END:stack
+
+objects by size
+0801 (0052) : startup, NATIVE_CODE:startup
+0880 (0014) : main, NATIVE_CODE:code
+0898 (0007) : b, NATIVE_CODE:code
+0894 (0004) : a, NATIVE_CODE:code
+089f (0001) : spentry, DATA:data
+08a0 (0001) : result, DATA:bss
+00f7 (0000) : ZeroEnd, END:zeropage
+00f7 (0000) : ZeroStart, START:zeropage
+08a0 (0000) : BSSStart, START:bss
+08a1 (0000) : BSSEnd, END:bss
+a000 (0000) : StackEnd, END:stack

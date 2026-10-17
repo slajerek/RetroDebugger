@@ -1,0 +1,52 @@
+{
+  "buildDir": "/tmp/rd-source-debug/oscar64/atari/same-line",
+  "commit": "9408778695b5442e755832711b89243b4f94a9ff",
+  "fixedMtime": 1767225600,
+  "fixture": "same-line",
+  "inputs": {
+    "main.c": "ca4e430bfdbc49ae369fc4f3eb5496bb6fc0ba0a31cf9ff74d9ec76a21b48381"
+  },
+  "machine": "atari",
+  "outputs": {
+    "main.asm": {
+      "sha256": "48b25f711e30f8808d0fe9284772c1c76ae782c6671485eeb0926a2483bb7407",
+      "size": 2311
+    },
+    "main.dbj": {
+      "sha256": "262b22b17f7036b066a3b6c6c2602d5ac480dc13c57842b81bee88b5bbe4a58d",
+      "size": 5931
+    },
+    "main.lbl": {
+      "sha256": "2f0cb441c12d780d6fad9265d75050dadee548e0056c3a440bfcb988e2284282",
+      "size": 157
+    },
+    "main.map": {
+      "sha256": "30d020a014d11ba2b0effbbe464ece053ed94ade89ad530d7229b3b2ed27860f",
+      "size": 1160
+    },
+    "main.xex": {
+      "sha256": "41964a333396b0297b7cbf985e64bb19c0fb47d484ce8dc27f2f6499e53a15e2",
+      "size": 171
+    }
+  },
+  "source": "main.c",
+  "steps": [
+    [
+      "oscar64",
+      "-tm=atari",
+      "-n",
+      "-g",
+      "-O0",
+      "-o=main.xex",
+      "main.c"
+    ]
+  ],
+  "toolDirs": {
+    "oscar64": "/home/user/toolchains/oscar64/bin"
+  },
+  "toolchain": "oscar64",
+  "version": "1.32.273",
+  "versionReported": {
+    "oscar64": "Starting oscar64 1.32.273"
+  }
+}

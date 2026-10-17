@@ -1,0 +1,71 @@
+{	"memory": [		{"name": "ZeroStart", "xname": "ZeroStart", "start": 128, "end": 128, "type": "START", "source": "/home/user/toolchains/oscar64/include/crt.c", "line": 21 },
+		{"name": "ZeroEnd", "xname": "ZeroEnd", "start": 128, "end": 128, "type": "END", "source": "/home/user/toolchains/oscar64/include/crt.c", "line": 21 },
+		{"name": "result", "xname": "result", "start": 512, "end": 513, "type": "DATA", "source": "/tmp/rd-source-debug/oscar64/nes/basic-flow/main.c", "line": 5 },
+		{"name": "BSSStart", "xname": "BSSStart", "start": 512, "end": 512, "type": "START", "source": "/home/user/toolchains/oscar64/include/crt.c", "line": 21 },
+		{"name": "BSSEnd", "xname": "BSSEnd", "start": 513, "end": 513, "type": "END", "source": "/home/user/toolchains/oscar64/include/crt.c", "line": 21 },
+		{"name": "StackEnd", "xname": "StackEnd", "start": 2048, "end": 2048, "type": "END", "source": "/home/user/toolchains/oscar64/include/crt.c", "line": 21 },
+		{"name": "main", "xname": "main()->i16", "start": 32768, "end": 32794, "type": "NATIVE_CODE", "source": "/tmp/rd-source-debug/oscar64/nes/basic-flow/main.c", "line": 15 },
+		{"name": "doSomething", "xname": "doSomething()->void", "start": 32794, "end": 32810, "type": "NATIVE_CODE", "source": "/tmp/rd-source-debug/oscar64/nes/basic-flow/main.c", "line": 11 },
+		{"name": "add", "xname": "add(u8,u8)->u8", "start": 32810, "end": 32816, "type": "NATIVE_CODE", "source": "/tmp/rd-source-debug/oscar64/nes/basic-flow/main.c", "line": 7 },
+		{"name": "startup", "xname": "startup", "start": 65408, "end": 65467, "type": "NATIVE_CODE", "source": "/home/user/toolchains/oscar64/include/crt.c", "line": 69 }],
+	"variables": [
+		{"name": "BSSStart", "start": 512, "end": 512, "typeid": 0, "references": [
+			{"source": "/home/user/toolchains/oscar64/include/crt.c", "line": 21, "column": 28}]},
+		{"name": "BSSEnd", "start": 513, "end": 513, "typeid": 0, "references": [
+			{"source": "/home/user/toolchains/oscar64/include/crt.c", "line": 21, "column": 38}]},
+		{"name": "ZeroStart", "start": 128, "end": 128, "typeid": 0, "references": [
+			{"source": "/home/user/toolchains/oscar64/include/crt.c", "line": 21, "column": 66}]},
+		{"name": "ZeroEnd", "start": 128, "end": 128, "typeid": 0, "references": [
+			{"source": "/home/user/toolchains/oscar64/include/crt.c", "line": 21, "column": 77}]},
+		{"name": "StackEnd", "start": 2048, "end": 2048, "typeid": 0, "references": [
+			{"source": "/home/user/toolchains/oscar64/include/crt.c", "line": 21, "column": 18}]},
+		{"name": "result", "start": 512, "end": 513, "typeid": 1, "references": [
+			{"source": "/tmp/rd-source-debug/oscar64/nes/basic-flow/main.c", "line": 5, "column": 24},
+			{"source": "/tmp/rd-source-debug/oscar64/nes/basic-flow/main.c", "line": 16, "column": 5},
+			{"source": "/tmp/rd-source-debug/oscar64/nes/basic-flow/main.c", "line": 12, "column": 5},
+			{"source": "/tmp/rd-source-debug/oscar64/nes/basic-flow/main.c", "line": 12, "column": 18},
+			{"source": "/tmp/rd-source-debug/oscar64/nes/basic-flow/main.c", "line": 18, "column": 5},
+			{"source": "/tmp/rd-source-debug/oscar64/nes/basic-flow/main.c", "line": 18, "column": 18}]}	],
+	"functions": [
+		{"name": "main", "xname": "main()->i16", "start": 32768, "end": 32794, "typeid": 2, "source": "/tmp/rd-source-debug/oscar64/nes/basic-flow/main.c", "line": 15, "lines": [
+			{"start": 32768, "end": 32773, "source": "/tmp/rd-source-debug/oscar64/nes/basic-flow/main.c", "line": 16},
+			{"start": 32773, "end": 32776, "source": "/tmp/rd-source-debug/oscar64/nes/basic-flow/main.c", "line": 17},
+			{"start": 32776, "end": 32791, "source": "/tmp/rd-source-debug/oscar64/nes/basic-flow/main.c", "line": 18}], 
+			"origins":[
+			{"start": 32768, "end": 32773, "source": "/tmp/rd-source-debug/oscar64/nes/basic-flow/main.c", "line": 16},
+			{"start": 32773, "end": 32776, "source": "/tmp/rd-source-debug/oscar64/nes/basic-flow/main.c", "line": 17},
+			{"start": 32776, "end": 32791, "source": "/tmp/rd-source-debug/oscar64/nes/basic-flow/main.c", "line": 18}], 
+			"variables":[
+], "references": [
+			{"source": "/tmp/rd-source-debug/oscar64/nes/basic-flow/main.c", "line": 15, "column": 5}]}
+,
+		{"name": "doSomething", "xname": "doSomething()->void", "start": 32794, "end": 32810, "typeid": 3, "source": "/tmp/rd-source-debug/oscar64/nes/basic-flow/main.c", "line": 11, "lines": [
+			{"start": 32794, "end": 32809, "source": "/tmp/rd-source-debug/oscar64/nes/basic-flow/main.c", "line": 12},
+			{"start": 32809, "end": 32810, "source": "/tmp/rd-source-debug/oscar64/nes/basic-flow/main.c", "line": 13}], 
+			"origins":[
+			{"start": 32794, "end": 32809, "source": "/tmp/rd-source-debug/oscar64/nes/basic-flow/main.c", "line": 12},
+			{"start": 32809, "end": 32810, "source": "/tmp/rd-source-debug/oscar64/nes/basic-flow/main.c", "line": 13}], 
+			"variables":[
+], "references": [
+			{"source": "/tmp/rd-source-debug/oscar64/nes/basic-flow/main.c", "line": 11, "column": 6},
+			{"source": "/tmp/rd-source-debug/oscar64/nes/basic-flow/main.c", "line": 17, "column": 5}]}
+,
+		{"name": "add", "xname": "add(u8,u8)->u8", "start": 32810, "end": 32816, "typeid": 4, "source": "/tmp/rd-source-debug/oscar64/nes/basic-flow/main.c", "line": 7, "lines": [
+			{"start": 32810, "end": 32816, "source": "/tmp/rd-source-debug/oscar64/nes/basic-flow/main.c", "line": 8}], 
+			"origins":[
+			{"start": 32810, "end": 32816, "source": "/tmp/rd-source-debug/oscar64/nes/basic-flow/main.c", "line": 8}], 
+			"variables":[
+			{"name": "left", "start": 13, "end": 14, "typeid": 5},
+			{"name": "right", "start": 14, "end": 15, "typeid": 6}], "references": [
+			{"source": "/tmp/rd-source-debug/oscar64/nes/basic-flow/main.c", "line": 7, "column": 15},
+			{"source": "/tmp/rd-source-debug/oscar64/nes/basic-flow/main.c", "line": 12, "column": 14},
+			{"source": "/tmp/rd-source-debug/oscar64/nes/basic-flow/main.c", "line": 18, "column": 14}]}
+	],
+	"types": [
+		{"name": "", "typeid": 0, "size": 0},
+		{"name": "", "typeid": 1, "size": 1, "type": "uint"},
+		{"name": "", "typeid": 2, "size": 0},
+		{"name": "", "typeid": 3, "size": 0},
+		{"name": "", "typeid": 4, "size": 0},
+		{"name": "", "typeid": 5, "size": 1, "type": "uint"},
+		{"name": "", "typeid": 6, "size": 1, "type": "uint"}	]}

@@ -1,0 +1,38 @@
+# Pinned toolchain for tests/source-debug (RD-002). Read by scripts/build_fixtures.py.
+name: kickc
+language: c
+version: "0.8.6"
+commit: b99b0cf59dca331436c9df7f0ea67cdf3a69b2ca
+obtain: >-
+  git clone --depth 1 --branch 0.8.6 https://gitlab.com/camelot/kickc && mvn -DskipTests package.
+  `kickc` wraps java -cp target/kickc-release.jar + the Maven classpath with -F src/main/fragment
+  -I src/main/kc/include -L src/main/kc/lib -P src/main/kc/target; `kickass` wraps the
+  KickAssembler 5.24-65ce02.e jar KickC pins in repo/ plus its XEX and cruncher plugins.
+  (The binary release is only linked through a URL shortener.)
+executables:
+  kickc:
+    env: RD_KICKC
+    candidates: [bin/kickc, kickc]
+    version_argv: ["{kickc}", "-V"]
+    version_match: "0.8.6"
+  kickass:
+    env: RD_KICKASS
+    candidates: [bin/kickass, kickass]
+    version_argv: ["{kickass}", "-help"]
+    version_match: "5.24"
+# KickC emits KickAssembler source; KickAssembler's -debugdump writes the .dbg.
+# That .dbg maps addresses to lines of main.asm (KickC's output), not of main.c:
+# C lines are only comments in main.asm (input for RD-010).
+machines:
+  c64:
+    source: main.c
+    steps: [["{kickc}", "-t=c64", "main.c"], ["{kickass}", "main.asm", "-debugdump"]]
+    outputs: [main.prg, main.dbg, main.asm]
+  atari:
+    source: main.c
+    steps: [["{kickc}", "-t=atarixl", "main.c"], ["{kickass}", "main.asm", "-debugdump"]]
+    outputs: [main.xex, main.dbg, main.asm]
+  nes:
+    source: main.c
+    steps: [["{kickc}", "-t=nes", "main.c"], ["{kickass}", "main.asm", "-debugdump"]]
+    outputs: [main.nes, main.dbg, main.asm]

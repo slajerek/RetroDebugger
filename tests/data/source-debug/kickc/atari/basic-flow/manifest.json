@@ -1,0 +1,49 @@
+{
+  "buildDir": "/tmp/rd-source-debug/kickc/atari/basic-flow",
+  "commit": "b99b0cf59dca331436c9df7f0ea67cdf3a69b2ca",
+  "fixedMtime": 1767225600,
+  "fixture": "basic-flow",
+  "inputs": {
+    "64tass-c64.asm": "13f5363a9afa68138826fdeb9a4934034c6578bebb680d10f74495437220a23c",
+    "kickass-c64.asm": "a8bc61e2626d95519fea979cce04f605388d1eb10c9c296a214acfbbaad2e834",
+    "main.c": "b7e2bb2e2a2bd6e7a03e4eca5954de8141a3d5c8fbd0e9f304ba035bd57f9070"
+  },
+  "machine": "atari",
+  "outputs": {
+    "main.asm": {
+      "sha256": "91e4227c48b41350ce3662f8270323fce1723e545e47f7e66e9b699703c2d106",
+      "size": 1103
+    },
+    "main.dbg": {
+      "sha256": "4e57e45b4f0fc834f7c3a40b805a2cf032add80187fca00803563a6ef9cc355f",
+      "size": 2711
+    },
+    "main.xex": {
+      "sha256": "6804d0237aa3566a2ea8467a2be8f644cecdf40914b30b3ea568946d5e8f69b1",
+      "size": 55
+    }
+  },
+  "source": "main.c",
+  "steps": [
+    [
+      "kickc",
+      "-t=atarixl",
+      "main.c"
+    ],
+    [
+      "kickass",
+      "main.asm",
+      "-debugdump"
+    ]
+  ],
+  "toolDirs": {
+    "kickass": "/home/user/toolchains/bin",
+    "kickc": "/home/user/toolchains/bin"
+  },
+  "toolchain": "kickc",
+  "version": "0.8.6",
+  "versionReported": {
+    "kickass": "//         Kick Assembler v5.24 by Mads Nielsen",
+    "kickc": "KickC 0.8.6 BETA"
+  }
+}

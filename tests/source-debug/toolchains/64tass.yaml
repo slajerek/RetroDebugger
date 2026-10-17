@@ -1,0 +1,20 @@
+# Pinned toolchain for tests/source-debug (RD-002). Read by scripts/build_fixtures.py.
+# Hand-written 64tass fixtures (<fixture>/64tass-<machine>.asm). This is the
+# command-line 64tass; the copy embedded in RetroDebugger is 1.46 (RD-043).
+name: 64tass
+language: asm
+version: "1.59.3120"
+obtain: "Ubuntu 24.04 package 64tass 1.59.3120-1 (apt-get install 64tass)"
+executables:
+  64tass:
+    env: RD_64TASS
+    candidates: [64tass]
+    version_argv: ["{64tass}", "--version"]
+    version_match: "1.59.3120"
+# The listing (--line-numbers) is 64tass's address -> source line map; its
+# date line is the source file's mtime, which the build script pins.
+machines:
+  c64:
+    source: 64tass-c64.asm
+    steps: [["{64tass}", "-C", "-a", "-o", "main.prg", "--vice-labels", "--labels=main.vs", "--line-numbers", "--list=main.lst", "64tass-c64.asm"]]
+    outputs: [main.prg, main.vs, main.lst]

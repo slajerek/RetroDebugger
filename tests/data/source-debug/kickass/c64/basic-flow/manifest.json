@@ -1,0 +1,40 @@
+{
+  "buildDir": "/tmp/rd-source-debug/kickass/c64/basic-flow",
+  "commit": null,
+  "fixedMtime": 1767225600,
+  "fixture": "basic-flow",
+  "inputs": {
+    "64tass-c64.asm": "13f5363a9afa68138826fdeb9a4934034c6578bebb680d10f74495437220a23c",
+    "kickass-c64.asm": "a8bc61e2626d95519fea979cce04f605388d1eb10c9c296a214acfbbaad2e834",
+    "main.c": "b7e2bb2e2a2bd6e7a03e4eca5954de8141a3d5c8fbd0e9f304ba035bd57f9070"
+  },
+  "machine": "c64",
+  "outputs": {
+    "main.dbg": {
+      "sha256": "b07dd82c078c3772b7b6b4c1530817b0fea3332cbc1a07550addeca738488e78",
+      "size": 1746
+    },
+    "main.prg": {
+      "sha256": "0f63483f6cd28d78dea1dcac3662d60c870da68cedb39f9bcc275cf174db4a8f",
+      "size": 61
+    }
+  },
+  "source": "kickass-c64.asm",
+  "steps": [
+    [
+      "kickass",
+      "kickass-c64.asm",
+      "-debugdump",
+      "-o",
+      "main.prg"
+    ]
+  ],
+  "toolDirs": {
+    "kickass": "/home/user/toolchains/bin"
+  },
+  "toolchain": "kickass",
+  "version": "5.24-65ce02.e",
+  "versionReported": {
+    "kickass": "//         Kick Assembler v5.24 by Mads Nielsen"
+  }
+}

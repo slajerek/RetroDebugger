@@ -1,0 +1,49 @@
+{
+  "buildDir": "/tmp/rd-source-debug/64tass/c64/basic-flow",
+  "commit": null,
+  "fixedMtime": 1767225600,
+  "fixture": "basic-flow",
+  "inputs": {
+    "64tass-c64.asm": "13f5363a9afa68138826fdeb9a4934034c6578bebb680d10f74495437220a23c",
+    "kickass-c64.asm": "a8bc61e2626d95519fea979cce04f605388d1eb10c9c296a214acfbbaad2e834",
+    "main.c": "b7e2bb2e2a2bd6e7a03e4eca5954de8141a3d5c8fbd0e9f304ba035bd57f9070"
+  },
+  "machine": "c64",
+  "outputs": {
+    "main.lst": {
+      "sha256": "7de6065fd1e978e879df2b77d691da05d6da756d46d5e74a410f7475a807a1aa",
+      "size": 1340
+    },
+    "main.prg": {
+      "sha256": "1374f2ce4a29c917b8cdf77311072b2b4bfc6009d8fa5d21ed2ebfff7d5a597e",
+      "size": 58
+    },
+    "main.vs": {
+      "sha256": "2624ba2b03f306923bd2d79196f0b0ab43624fec7776af1bbe155736f368660a",
+      "size": 86
+    }
+  },
+  "source": "64tass-c64.asm",
+  "steps": [
+    [
+      "64tass",
+      "-C",
+      "-a",
+      "-o",
+      "main.prg",
+      "--vice-labels",
+      "--labels=main.vs",
+      "--line-numbers",
+      "--list=main.lst",
+      "64tass-c64.asm"
+    ]
+  ],
+  "toolDirs": {
+    "64tass": "/usr/bin"
+  },
+  "toolchain": "64tass",
+  "version": "1.59.3120",
+  "versionReported": {
+    "64tass": "64tass Turbo Assembler Macro V1.59.3120"
+  }
+}

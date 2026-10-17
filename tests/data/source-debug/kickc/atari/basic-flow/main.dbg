@@ -1,0 +1,86 @@
+<C64debugger version="1.0">
+   <Sources values="INDEX,FILE">
+      0,KickAss.jar:/include/autoinclude.asm
+      1,/tmp/rd-source-debug/kickc/atari/basic-flow/main.asm
+   </Sources>
+
+   <Segment name="Default" dest="" values="START,END,FILE_IDX,LINE1,COL1,LINE2,COL2">
+   </Segment>
+
+   <Segment name="XexFile" dest="" values="START,END,FILE_IDX,LINE1,COL1,LINE2,COL2">
+      <Block name="xex_format">
+         $0000,$0036,1,8,1,8,11
+      </Block>
+   </Segment>
+
+   <Segment name="Program" dest="" values="START,END,FILE_IDX,LINE1,COL1,LINE2,COL2">
+      <Block name="Code">
+         $2000,$2001,1,15,5,15,7
+         $2002,$2003,1,16,5,16,7
+         $2004,$2006,1,17,5,17,7
+         $2007,$2007,1,18,5,18,7
+         $2008,$2009,1,21,5,21,7
+         $200a,$200b,1,22,5,22,7
+         $200c,$200e,1,23,5,23,7
+         $200f,$2010,1,24,5,24,7
+         $2011,$2012,1,25,5,25,7
+         $2013,$2015,1,26,5,26,7
+         $2016,$2017,1,27,5,27,7
+         $2018,$201a,1,29,5,29,7
+         $201b,$201c,1,32,5,32,7
+         $201d,$201e,1,33,5,33,7
+         $201f,$2021,1,34,5,34,7
+         $2022,$2023,1,35,5,35,7
+         $2024,$2024,1,36,5,36,7
+         $2025,$2026,1,40,5,40,7
+         $2027,$2027,1,41,5,41,7
+         $2028,$2029,1,42,5,42,7
+         $202a,$202a,1,43,5,43,7
+      </Block>
+   </Segment>
+
+   <Segment name="Code" dest="" values="START,END,FILE_IDX,LINE1,COL1,LINE2,COL2">
+      <Block name="Code">
+         $2000,$2001,1,15,5,15,7
+         $2002,$2003,1,16,5,16,7
+         $2004,$2006,1,17,5,17,7
+         $2007,$2007,1,18,5,18,7
+         $2008,$2009,1,21,5,21,7
+         $200a,$200b,1,22,5,22,7
+         $200c,$200e,1,23,5,23,7
+         $200f,$2010,1,24,5,24,7
+         $2011,$2012,1,25,5,25,7
+         $2013,$2015,1,26,5,26,7
+         $2016,$2017,1,27,5,27,7
+         $2018,$201a,1,29,5,29,7
+         $201b,$201c,1,32,5,32,7
+         $201d,$201e,1,33,5,33,7
+         $201f,$2021,1,34,5,34,7
+         $2022,$2023,1,35,5,35,7
+         $2024,$2024,1,36,5,36,7
+         $2025,$2026,1,40,5,40,7
+         $2027,$2027,1,41,5,41,7
+         $2028,$2029,1,42,5,42,7
+         $202a,$202a,1,43,5,43,7
+      </Block>
+   </Segment>
+
+   <Segment name="Data" dest="" values="START,END,FILE_IDX,LINE1,COL1,LINE2,COL2">
+   </Segment>
+
+   <Labels values="SEGMENT,ADDRESS,NAME,START,END,FILE_IDX,LINE1,COL1,LINE2,COL2">
+      Default,$0080,result,1,12,10,12,15
+      Code,$2000,__start,1,14,1,14,8
+      Code,$2008,main,1,20,1,20,5
+      Code,$2018,__b1,1,28,3,28,7
+      Code,$201b,doSomething,1,31,1,31,12
+      Code,$2025,add,1,39,1,39,4
+   </Labels>
+
+   <Breakpoints values="SEGMENT,ADDRESS,ARGUMENT">
+   </Breakpoints>
+
+   <Watchpoints values="SEGMENT,ADDRESS1,ADDRESS2,ARGUMENT">
+   </Watchpoints>
+
+</C64debugger>

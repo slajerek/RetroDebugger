@@ -96,6 +96,16 @@ stay in `segments` with source-line pointers that `ParseSourceDebugInfo` just fr
 use-after-free, recorded as a defect for RD-032; its fix comes with its own test.
 
 ### RD-002 Fixtures and pinned toolchains
+Done (first increment): `tests/source-debug/` with `fixtures/{basic-flow,same-line}`
+(plus `kickass-c64.asm` and `64tass-c64.asm` for basic-flow), `toolchains/` (oscar64,
+cc65, kickc, kickass, 64tass), `scripts/build_fixtures.py` (reproducible: fixed build
+directory, pinned mtimes, `--check` byte-compares), `MATRIX.md`, and 20 Tier 1 cells
+under `tests/data/source-debug/` with manifests beside the artifacts (not under
+`expectations/`, which stays for step expectations, #9.5). Matrix in #8. Remaining
+fixtures (nested-calls ... banked) are added with the milestones that use them. The
+artifacts are not yet executed in the emulator: that is RD-015's trace runner.
+
+Original task list:
 - Create `tests/source-debug/` as in spec #9.1 with `fixtures/`, `toolchains/`,
   `expectations/`, `scripts/` and a gitignored `artifacts/`.
 - `scripts/build_fixtures.py` (run with `python3 -I`): reads `toolchains/*.yaml`,
@@ -437,15 +447,34 @@ list; explicit `skip(reason)` for unsupported emulator configurations.
   toolchains (Linux only), runs `build_fixtures.py`, diffs against Tier 1 manifests, runs
   the trace suite; uploads manifests and traces as artifacts.
 
-## 8. Compiler × machine matrix (to be filled by RD-002)
+## 8. Compiler × machine matrix (RD-002, verified by building)
+
+Built from the pinned toolchains by `tests/source-debug/scripts/build_fixtures.py`
+(`basic-flow` and `same-line`); the generated, authoritative table is
+`tests/source-debug/MATRIX.md`.
 
 | | C64 | Atari 8-bit | NES |
 |---|---|---|---|
-| Oscar64 | documented `-tm=c64` (unverified) | documented `-tm=atari` (unverified) | documented `-tm=nes*` (unverified) |
-| cc65 | documented `-t c64` (unverified) | documented `-t atari`/`atarixl` (unverified) | documented `-t nes` (unverified) |
-| KickC | documented (unverified) | documented `atarixl` (unverified) | documented `nes` (unverified) |
+| Oscar64 1.32.273 (`-n -g -O0`) | ok(`-tm=c64`, `.prg` + `.dbj`) | ok(`-tm=atari`, `.xex` + `.dbj`) | ok(`-tm=nes`, `.nes` + `.dbj`) |
+| cc65 2.19 (`-g`, unoptimized) | ok(`-t c64`, text `.dbg`) | ok(`-t atari`, text `.dbg`) | ok(`-t nes`, text `.dbg`) |
+| KickC 0.8.6 + KickAssembler 5.24 | ok(`-t=c64`, XML `.dbg` of the generated asm) | ok(`-t=atarixl`, idem) | ok(`-t=nes`, idem) |
+| KickAssembler 5.24 (asm) | ok(`basic-flow`) | n/a (no fixture yet) | n/a (no fixture yet) |
+| 64tass 1.59 (asm) | ok(`basic-flow`, labels + `--line-numbers` listing) | n/a (no fixture yet) | n/a (no fixture yet) |
 
-Replace each cell with `ok(version)` or `skip(reason)` from real pinned builds.
+What the builds showed (inputs for M1/M5):
+- **KickC's `.dbg` maps addresses to lines of its generated `main.asm`, not of `main.c`**;
+  the C source survives only as comments in that asm. C-level stepping for KickC needs
+  those comments parsed into a line map (RD-010), or is `Approximate`.
+- **Oscar64** writes `.dbj` (JSON) with absolute source paths, including its own
+  `include/` runtime; it also has `-tm=nes_mmc1` / `nes_mmc3` / `nes_nrom_h|v`, which
+  makes it a candidate producer of the banked NES fixtures (RD-026).
+- **cc65** `.dbg` is a text format with relative file names and file mtimes, sharing the
+  `.dbg` extension with KickAssembler's XML: the RD-031 sniffing case, now with fixtures.
+- **64tass** on the command line is 1.59; the embedded copy is 1.46 (RD-043). Its address
+  to source-line map is the `--line-numbers` listing.
+- KickAssembler's own site is unreachable from the build container; the pinned jar is
+  the one KickC's source repo carries. KickC's binary release is only linked through a
+  URL shortener, so KickC is built from its tag (Maven).
 
 ## 9. M6 — IDE workspace (P5) and M7 — advanced (P6)
 

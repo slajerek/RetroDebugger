@@ -1,0 +1,100 @@
+<C64debugger version="1.0">
+   <Sources values="INDEX,FILE">
+      0,KickAss.jar:/include/autoinclude.asm
+      1,/tmp/rd-source-debug/kickc/c64/basic-flow/main.asm
+   </Sources>
+
+   <Segment name="Default" dest="" values="START,END,FILE_IDX,LINE1,COL1,LINE2,COL2">
+   </Segment>
+
+   <Segment name="Program" dest="" values="START,END,FILE_IDX,LINE1,COL1,LINE2,COL2">
+      <Block name="Basic">
+         $0801,$0802,0,38,2,38,6
+         $0803,$0804,0,39,5,39,9
+         $0805,$0805,0,40,5,40,9
+         $0806,$0809,0,41,2,41,6
+         $080a,$080a,0,42,2,42,6
+         $080b,$080c,0,44,5,44,9
+      </Block>
+      <Block name="Code">
+         $080d,$080e,1,15,5,15,7
+         $080f,$0810,1,16,5,16,7
+         $0811,$0813,1,17,5,17,7
+         $0814,$0814,1,18,5,18,7
+         $0815,$0816,1,21,5,21,7
+         $0817,$0818,1,22,5,22,7
+         $0819,$081b,1,23,5,23,7
+         $081c,$081d,1,24,5,24,7
+         $081e,$081f,1,25,5,25,7
+         $0820,$0822,1,26,5,26,7
+         $0823,$0824,1,27,5,27,7
+         $0825,$0827,1,29,5,29,7
+         $0828,$0829,1,32,5,32,7
+         $082a,$082b,1,33,5,33,7
+         $082c,$082e,1,34,5,34,7
+         $082f,$0830,1,35,5,35,7
+         $0831,$0831,1,36,5,36,7
+         $0832,$0833,1,40,5,40,7
+         $0834,$0834,1,41,5,41,7
+         $0835,$0836,1,42,5,42,7
+         $0837,$0837,1,43,5,43,7
+      </Block>
+   </Segment>
+
+   <Segment name="Basic" dest="" values="START,END,FILE_IDX,LINE1,COL1,LINE2,COL2">
+      <Block name="Basic">
+         $0801,$0802,0,38,2,38,6
+         $0803,$0804,0,39,5,39,9
+         $0805,$0805,0,40,5,40,9
+         $0806,$0809,0,41,2,41,6
+         $080a,$080a,0,42,2,42,6
+         $080b,$080c,0,44,5,44,9
+      </Block>
+   </Segment>
+
+   <Segment name="Code" dest="" values="START,END,FILE_IDX,LINE1,COL1,LINE2,COL2">
+      <Block name="Code">
+         $080d,$080e,1,15,5,15,7
+         $080f,$0810,1,16,5,16,7
+         $0811,$0813,1,17,5,17,7
+         $0814,$0814,1,18,5,18,7
+         $0815,$0816,1,21,5,21,7
+         $0817,$0818,1,22,5,22,7
+         $0819,$081b,1,23,5,23,7
+         $081c,$081d,1,24,5,24,7
+         $081e,$081f,1,25,5,25,7
+         $0820,$0822,1,26,5,26,7
+         $0823,$0824,1,27,5,27,7
+         $0825,$0827,1,29,5,29,7
+         $0828,$0829,1,32,5,32,7
+         $082a,$082b,1,33,5,33,7
+         $082c,$082e,1,34,5,34,7
+         $082f,$0830,1,35,5,35,7
+         $0831,$0831,1,36,5,36,7
+         $0832,$0833,1,40,5,40,7
+         $0834,$0834,1,41,5,41,7
+         $0835,$0836,1,42,5,42,7
+         $0837,$0837,1,43,5,43,7
+      </Block>
+   </Segment>
+
+   <Segment name="Data" dest="" values="START,END,FILE_IDX,LINE1,COL1,LINE2,COL2">
+   </Segment>
+
+   <Labels values="SEGMENT,ADDRESS,NAME,START,END,FILE_IDX,LINE1,COL1,LINE2,COL2">
+      Basic,$0002,result,1,12,10,12,15
+      Code,$080d,__start,1,14,1,14,8
+      Code,$0815,main,1,20,1,20,5
+      Code,$0825,__b1,1,28,3,28,7
+      Code,$0828,doSomething,1,31,1,31,12
+      Code,$0832,add,1,39,1,39,4
+      Basic,$080b,upstartEnd,0,43,1,43,11
+   </Labels>
+
+   <Breakpoints values="SEGMENT,ADDRESS,ARGUMENT">
+   </Breakpoints>
+
+   <Watchpoints values="SEGMENT,ADDRESS1,ADDRESS2,ARGUMENT">
+   </Watchpoints>
+
+</C64debugger>

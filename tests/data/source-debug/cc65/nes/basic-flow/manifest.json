@@ -1,0 +1,78 @@
+{
+  "buildDir": "/tmp/rd-source-debug/cc65/nes/basic-flow",
+  "commit": null,
+  "fixedMtime": 1767225600,
+  "fixture": "basic-flow",
+  "inputs": {
+    "64tass-c64.asm": "13f5363a9afa68138826fdeb9a4934034c6578bebb680d10f74495437220a23c",
+    "kickass-c64.asm": "a8bc61e2626d95519fea979cce04f605388d1eb10c9c296a214acfbbaad2e834",
+    "main.c": "b7e2bb2e2a2bd6e7a03e4eca5954de8141a3d5c8fbd0e9f304ba035bd57f9070"
+  },
+  "machine": "nes",
+  "outputs": {
+    "main.dbg": {
+      "sha256": "08dba6d77d59f2931981a89566b920336d117eb52fc0f69f460365e6bb0eb6c8",
+      "size": 149937
+    },
+    "main.lbl": {
+      "sha256": "13c3dd4bdcfb608b8bece5da49d907ffb3ea835caeb75e48d281629ec879188e",
+      "size": 1870
+    },
+    "main.map": {
+      "sha256": "5d4fd5231a63f6e61a4b20d05946cd10081343dc98ecdafa8096abf7468cf4a6",
+      "size": 7696
+    },
+    "main.nes": {
+      "sha256": "74878853e5de6592b6aa38d92a78ef56ed6aacb0f30b5c107f0b30ea22fdb56b",
+      "size": 40976
+    },
+    "main.s": {
+      "sha256": "410bed623f7a394ebe36155f261c9c1075fdee6f8710f93d4de26ee3b176f14f",
+      "size": 2231
+    }
+  },
+  "source": "main.c",
+  "steps": [
+    [
+      "cc65",
+      "-t",
+      "nes",
+      "-g",
+      "main.c"
+    ],
+    [
+      "ca65",
+      "-t",
+      "nes",
+      "-g",
+      "main.s"
+    ],
+    [
+      "ld65",
+      "-t",
+      "nes",
+      "--dbgfile",
+      "main.dbg",
+      "-Ln",
+      "main.lbl",
+      "-m",
+      "main.map",
+      "-o",
+      "main.nes",
+      "main.o",
+      "nes.lib"
+    ]
+  ],
+  "toolDirs": {
+    "ca65": "/usr/bin",
+    "cc65": "/usr/bin",
+    "ld65": "/usr/bin"
+  },
+  "toolchain": "cc65",
+  "version": "2.19",
+  "versionReported": {
+    "ca65": "ca65 V2.18 - Ubuntu 2.19-1",
+    "cc65": "cc65 V2.18 - Ubuntu 2.19-1",
+    "ld65": "ld65 V2.18 - Ubuntu 2.19-1"
+  }
+}

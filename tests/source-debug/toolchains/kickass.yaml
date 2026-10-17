@@ -1,0 +1,17 @@
+# Pinned toolchain for tests/source-debug (RD-002). Read by scripts/build_fixtures.py.
+# Hand-written KickAssembler fixtures (<fixture>/kickass-<machine>.asm).
+name: kickass
+language: asm
+version: "5.24-65ce02.e"
+obtain: "the KickAssembler jar pinned by KickC 0.8.6 (see kickc.yaml); wrapper bin/kickass"
+executables:
+  kickass:
+    env: RD_KICKASS
+    candidates: [bin/kickass, kickass]
+    version_argv: ["{kickass}", "-help"]
+    version_match: "5.24"
+machines:
+  c64:
+    source: kickass-c64.asm
+    steps: [["{kickass}", "kickass-c64.asm", "-debugdump", "-o", "main.prg"]]
+    outputs: [main.prg, main.dbg]

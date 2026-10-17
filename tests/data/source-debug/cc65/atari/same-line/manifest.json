@@ -1,0 +1,76 @@
+{
+  "buildDir": "/tmp/rd-source-debug/cc65/atari/same-line",
+  "commit": null,
+  "fixedMtime": 1767225600,
+  "fixture": "same-line",
+  "inputs": {
+    "main.c": "ca4e430bfdbc49ae369fc4f3eb5496bb6fc0ba0a31cf9ff74d9ec76a21b48381"
+  },
+  "machine": "atari",
+  "outputs": {
+    "main.dbg": {
+      "sha256": "e4380baf301b1b48127e9066cf28ba4b8b333c13360323b55b98859ba87b216c",
+      "size": 127715
+    },
+    "main.lbl": {
+      "sha256": "8db3d18117e13f81f9a7fa08e21f5c2e117061b38bef47d0072c6df8258960fc",
+      "size": 1701
+    },
+    "main.map": {
+      "sha256": "6189775d0b14cb51f63e4676eef8c425d2c2e04a6484fce8b3762d4d661af201",
+      "size": 8958
+    },
+    "main.s": {
+      "sha256": "90b1e05db004bcfbb6ef772c87f21811df1fc0b99bb6d48626d97bcd4b6d18b5",
+      "size": 1903
+    },
+    "main.xex": {
+      "sha256": "76225d532050095cba11c37a006ca73662f6a0b0008f645aea83c9e7fea4f41f",
+      "size": 612
+    }
+  },
+  "source": "main.c",
+  "steps": [
+    [
+      "cc65",
+      "-t",
+      "atari",
+      "-g",
+      "main.c"
+    ],
+    [
+      "ca65",
+      "-t",
+      "atari",
+      "-g",
+      "main.s"
+    ],
+    [
+      "ld65",
+      "-t",
+      "atari",
+      "--dbgfile",
+      "main.dbg",
+      "-Ln",
+      "main.lbl",
+      "-m",
+      "main.map",
+      "-o",
+      "main.xex",
+      "main.o",
+      "atari.lib"
+    ]
+  ],
+  "toolDirs": {
+    "ca65": "/usr/bin",
+    "cc65": "/usr/bin",
+    "ld65": "/usr/bin"
+  },
+  "toolchain": "cc65",
+  "version": "2.19",
+  "versionReported": {
+    "ca65": "ca65 V2.18 - Ubuntu 2.19-1",
+    "cc65": "cc65 V2.18 - Ubuntu 2.19-1",
+    "ld65": "ld65 V2.18 - Ubuntu 2.19-1"
+  }
+}

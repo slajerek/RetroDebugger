@@ -1,0 +1,76 @@
+{
+  "buildDir": "/tmp/rd-source-debug/cc65/nes/same-line",
+  "commit": null,
+  "fixedMtime": 1767225600,
+  "fixture": "same-line",
+  "inputs": {
+    "main.c": "ca4e430bfdbc49ae369fc4f3eb5496bb6fc0ba0a31cf9ff74d9ec76a21b48381"
+  },
+  "machine": "nes",
+  "outputs": {
+    "main.dbg": {
+      "sha256": "2158f42cfd3b0036d37e5bbe59402b9f4175b6889e97b9447f039cabb13de7db",
+      "size": 147288
+    },
+    "main.lbl": {
+      "sha256": "92b5b99ed42a228e9bee828b00c2a802dfe595d4332b353691dcde26196f2a7e",
+      "size": 1769
+    },
+    "main.map": {
+      "sha256": "c42adffb9c0421ea3c17020617cd422f5a63c7c1deaca85321f5aecba59afeb4",
+      "size": 7391
+    },
+    "main.nes": {
+      "sha256": "3de4ef339dde79f8979af78e03916bb5de02acdc0086d704529fde5eb6c24c83",
+      "size": 40976
+    },
+    "main.s": {
+      "sha256": "90b1e05db004bcfbb6ef772c87f21811df1fc0b99bb6d48626d97bcd4b6d18b5",
+      "size": 1903
+    }
+  },
+  "source": "main.c",
+  "steps": [
+    [
+      "cc65",
+      "-t",
+      "nes",
+      "-g",
+      "main.c"
+    ],
+    [
+      "ca65",
+      "-t",
+      "nes",
+      "-g",
+      "main.s"
+    ],
+    [
+      "ld65",
+      "-t",
+      "nes",
+      "--dbgfile",
+      "main.dbg",
+      "-Ln",
+      "main.lbl",
+      "-m",
+      "main.map",
+      "-o",
+      "main.nes",
+      "main.o",
+      "nes.lib"
+    ]
+  ],
+  "toolDirs": {
+    "ca65": "/usr/bin",
+    "cc65": "/usr/bin",
+    "ld65": "/usr/bin"
+  },
+  "toolchain": "cc65",
+  "version": "2.19",
+  "versionReported": {
+    "ca65": "ca65 V2.18 - Ubuntu 2.19-1",
+    "cc65": "cc65 V2.18 - Ubuntu 2.19-1",
+    "ld65": "ld65 V2.18 - Ubuntu 2.19-1"
+  }
+}

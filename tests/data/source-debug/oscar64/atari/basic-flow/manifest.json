@@ -1,0 +1,54 @@
+{
+  "buildDir": "/tmp/rd-source-debug/oscar64/atari/basic-flow",
+  "commit": "9408778695b5442e755832711b89243b4f94a9ff",
+  "fixedMtime": 1767225600,
+  "fixture": "basic-flow",
+  "inputs": {
+    "64tass-c64.asm": "13f5363a9afa68138826fdeb9a4934034c6578bebb680d10f74495437220a23c",
+    "kickass-c64.asm": "a8bc61e2626d95519fea979cce04f605388d1eb10c9c296a214acfbbaad2e834",
+    "main.c": "b7e2bb2e2a2bd6e7a03e4eca5954de8141a3d5c8fbd0e9f304ba035bd57f9070"
+  },
+  "machine": "atari",
+  "outputs": {
+    "main.asm": {
+      "sha256": "65d1ecdd1c3c5d869dec87e6f44a64398a3301ada499930de010da86b88f69ad",
+      "size": 2661
+    },
+    "main.dbj": {
+      "sha256": "1da9ce85efbaf98f1cbed714d7cae89bac5d5fe09d73549910f03e86f7048472",
+      "size": 6284
+    },
+    "main.lbl": {
+      "sha256": "c4a13be278d0b40d8b188ca8e7f375908c1af57e5f731094c59961b13d03140c",
+      "size": 169
+    },
+    "main.map": {
+      "sha256": "34cdd16beac0c0f99ff16121d948119bf1a69bf98eb75faa8d716f5af32cec0c",
+      "size": 1196
+    },
+    "main.xex": {
+      "sha256": "563b493fffec9157cd34c101c8d96b3cee85d32cc4c73fb5beddec0b432b089c",
+      "size": 188
+    }
+  },
+  "source": "main.c",
+  "steps": [
+    [
+      "oscar64",
+      "-tm=atari",
+      "-n",
+      "-g",
+      "-O0",
+      "-o=main.xex",
+      "main.c"
+    ]
+  ],
+  "toolDirs": {
+    "oscar64": "/home/user/toolchains/oscar64/bin"
+  },
+  "toolchain": "oscar64",
+  "version": "1.32.273",
+  "versionReported": {
+    "oscar64": "Starting oscar64 1.32.273"
+  }
+}

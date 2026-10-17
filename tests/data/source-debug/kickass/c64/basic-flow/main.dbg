@@ -1,0 +1,55 @@
+<C64debugger version="1.0">
+   <Sources values="INDEX,FILE">
+      0,KickAss.jar:/include/autoinclude.asm
+      1,/tmp/rd-source-debug/kickass/c64/basic-flow/kickass-c64.asm
+   </Sources>
+
+   <Segment name="Default" dest="" values="START,END,FILE_IDX,LINE1,COL1,LINE2,COL2">
+      <Block name="Basic">
+         $0801,$0802,0,56,2,56,6
+         $0803,$0804,0,57,5,57,9
+         $0805,$0805,0,58,5,58,9
+         $0806,$0809,0,59,2,59,6
+         $080a,$080a,0,60,2,60,6
+         $080b,$080c,0,62,5,62,9
+      </Block>
+      <Block name="Code">
+         $0810,$0811,1,7,9,7,11
+         $0812,$0814,1,8,9,8,11
+         $0815,$0817,1,9,9,9,11
+         $0818,$081a,1,10,9,10,11
+         $081b,$081c,1,11,9,11,11
+         $081d,$081f,1,12,9,12,11
+         $0820,$0822,1,13,9,13,11
+         $0823,$0825,1,14,9,14,11
+         $0826,$0828,1,17,9,17,11
+         $0829,$082a,1,18,9,18,11
+         $082b,$082d,1,19,9,19,11
+         $082e,$0830,1,20,9,20,11
+         $0831,$0831,1,21,9,21,11
+         $0832,$0834,1,23,9,23,11
+         $0835,$0835,1,24,9,24,11
+         $0836,$0838,1,25,9,25,11
+         $0839,$0839,1,26,9,26,11
+         $083a,$083a,1,28,9,28,13
+         $083b,$083b,1,29,9,29,13
+      </Block>
+   </Segment>
+
+   <Labels values="SEGMENT,ADDRESS,NAME,START,END,FILE_IDX,LINE1,COL1,LINE2,COL2">
+      Default,$0810,start,1,7,1,7,6
+      Default,$0823,loop,1,14,1,14,5
+      Default,$0826,doSomething,1,16,1,16,12
+      Default,$0832,add,1,23,1,23,4
+      Default,$083a,result,1,28,1,28,7
+      Default,$083b,tmp,1,29,1,29,4
+      Default,$080b,upstartEnd,0,61,1,61,11
+   </Labels>
+
+   <Breakpoints values="SEGMENT,ADDRESS,ARGUMENT">
+   </Breakpoints>
+
+   <Watchpoints values="SEGMENT,ADDRESS1,ADDRESS2,ARGUMENT">
+   </Watchpoints>
+
+</C64debugger>

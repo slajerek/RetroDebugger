@@ -1,0 +1,47 @@
+sections
+8000 - 8030 : DATA, code
+10000 - 10000 : DATA, data
+0200 - 0201 : BSS, bss
+0208 - 0700 : HEAP, heap
+0700 - 0800 : STACK, stack
+0080 - 0080 : ZEROPAGE, zeropage
+10000 - 10000 : DATA, boot
+ff80 - ffbb : DATA, startup
+0800 - 0800 : SSTACK, sstack
+0800 - 0800 : SSTACK, add@stack
+0800 - 0800 : SSTACK, doSomething@stack
+0800 - 0800 : SSTACK, main@stack
+
+regions
+0080 - 00ff : 0000, 0000, zeropage
+ff80 - fffa : ffbb, 003b, startup
+fffa - 10000 : 0000, 0000, boot
+8000 - ff80 : 8030, 0030, rom
+0200 - 0700 : 0000, 0001, main
+
+objects
+--:0080 - 0080 : ZeroStart, START:zeropage
+--:0080 - 0080 : ZeroEnd, END:zeropage
+--:0200 - 0201 : result, DATA:bss
+--:0200 - 0200 : BSSStart, START:bss
+--:0201 - 0201 : BSSEnd, END:bss
+--:0800 - 0800 : StackEnd, END:stack
+00:8000 - 801a : main, NATIVE_CODE:code
+00:801a - 802a : doSomething, NATIVE_CODE:code
+00:802a - 8030 : add, NATIVE_CODE:code
+00:ff80 - ffbb : startup, NATIVE_CODE:startup
+
+banks
+00 : 8000 .. ffbb (7fbb)
+
+objects by size
+00:ff80 (003b) : startup, NATIVE_CODE:startup
+00:8000 (001a) : main, NATIVE_CODE:code
+00:801a (0010) : doSomething, NATIVE_CODE:code
+00:802a (0006) : add, NATIVE_CODE:code
+--:0200 (0001) : result, DATA:bss
+--:0080 (0000) : ZeroStart, START:zeropage
+--:0080 (0000) : ZeroEnd, END:zeropage
+--:0200 (0000) : BSSStart, START:bss
+--:0201 (0000) : BSSEnd, END:bss
+--:0800 (0000) : StackEnd, END:stack

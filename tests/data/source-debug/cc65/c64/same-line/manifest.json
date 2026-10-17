@@ -1,0 +1,76 @@
+{
+  "buildDir": "/tmp/rd-source-debug/cc65/c64/same-line",
+  "commit": null,
+  "fixedMtime": 1767225600,
+  "fixture": "same-line",
+  "inputs": {
+    "main.c": "ca4e430bfdbc49ae369fc4f3eb5496bb6fc0ba0a31cf9ff74d9ec76a21b48381"
+  },
+  "machine": "c64",
+  "outputs": {
+    "main.dbg": {
+      "sha256": "f69fe413262c72ce8dc82aece84a52001206d1ae018fa6d380a0e2050afb37b0",
+      "size": 22546
+    },
+    "main.lbl": {
+      "sha256": "80d304ccd7e467520ed78d78213775d496e908adf58f803bedebf127af87ea6d",
+      "size": 2040
+    },
+    "main.map": {
+      "sha256": "b6637a59de994982485dcc651b1cd7ba7330333dab44973baff281d255a77cc0",
+      "size": 7419
+    },
+    "main.prg": {
+      "sha256": "54b72ceda83771698df23b2d1c4b15d46046c702a9223ac7578c3bde15e1ba22",
+      "size": 364
+    },
+    "main.s": {
+      "sha256": "90b1e05db004bcfbb6ef772c87f21811df1fc0b99bb6d48626d97bcd4b6d18b5",
+      "size": 1903
+    }
+  },
+  "source": "main.c",
+  "steps": [
+    [
+      "cc65",
+      "-t",
+      "c64",
+      "-g",
+      "main.c"
+    ],
+    [
+      "ca65",
+      "-t",
+      "c64",
+      "-g",
+      "main.s"
+    ],
+    [
+      "ld65",
+      "-t",
+      "c64",
+      "--dbgfile",
+      "main.dbg",
+      "-Ln",
+      "main.lbl",
+      "-m",
+      "main.map",
+      "-o",
+      "main.prg",
+      "main.o",
+      "c64.lib"
+    ]
+  ],
+  "toolDirs": {
+    "ca65": "/usr/bin",
+    "cc65": "/usr/bin",
+    "ld65": "/usr/bin"
+  },
+  "toolchain": "cc65",
+  "version": "2.19",
+  "versionReported": {
+    "ca65": "ca65 V2.18 - Ubuntu 2.19-1",
+    "cc65": "cc65 V2.18 - Ubuntu 2.19-1",
+    "ld65": "ld65 V2.18 - Ubuntu 2.19-1"
+  }
+}

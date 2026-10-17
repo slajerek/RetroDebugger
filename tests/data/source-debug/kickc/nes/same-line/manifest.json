@@ -1,0 +1,47 @@
+{
+  "buildDir": "/tmp/rd-source-debug/kickc/nes/same-line",
+  "commit": "b99b0cf59dca331436c9df7f0ea67cdf3a69b2ca",
+  "fixedMtime": 1767225600,
+  "fixture": "same-line",
+  "inputs": {
+    "main.c": "ca4e430bfdbc49ae369fc4f3eb5496bb6fc0ba0a31cf9ff74d9ec76a21b48381"
+  },
+  "machine": "nes",
+  "outputs": {
+    "main.asm": {
+      "sha256": "a660051b9b5327ea04fcec99c4fa26a546d742d8c16eae1afb675964d278ed10",
+      "size": 1945
+    },
+    "main.dbg": {
+      "sha256": "5c7126ab987a4cf4d033629824010b29778bea90681a0b6353b4dd40464e1e79",
+      "size": 3753
+    },
+    "main.nes": {
+      "sha256": "358a27474448924645478e06ec86c6d24a578b463a52a7b94afff8ace2cd5cd7",
+      "size": 8251
+    }
+  },
+  "source": "main.c",
+  "steps": [
+    [
+      "kickc",
+      "-t=nes",
+      "main.c"
+    ],
+    [
+      "kickass",
+      "main.asm",
+      "-debugdump"
+    ]
+  ],
+  "toolDirs": {
+    "kickass": "/home/user/toolchains/bin",
+    "kickc": "/home/user/toolchains/bin"
+  },
+  "toolchain": "kickc",
+  "version": "0.8.6",
+  "versionReported": {
+    "kickass": "//         Kick Assembler v5.24 by Mads Nielsen",
+    "kickc": "KickC 0.8.6 BETA"
+  }
+}

@@ -1,0 +1,29 @@
+# Pinned toolchain for tests/source-debug (RD-002). Read by scripts/build_fixtures.py.
+# Placeholders: {name} is an executable from `executables`; {fixture} the fixture name.
+name: oscar64
+language: c
+version: "1.32.273"
+commit: 9408778695b5442e755832711b89243b4f94a9ff
+obtain: >-
+  git clone --depth 1 --branch v1.32.273 https://github.com/drmortalwombat/oscar64
+  && make -C oscar64/make   (bin/oscar64 finds ../include by itself)
+executables:
+  oscar64:
+    env: RD_OSCAR64
+    candidates: [oscar64/bin/oscar64, oscar64]
+    version_argv: ["{oscar64}", "-v"]
+    version_match: "1.32.273"
+# -O0: unoptimized, so every statement keeps its own code (spec decision 7).
+machines:
+  c64:
+    source: main.c
+    steps: [["{oscar64}", "-tm=c64", "-n", "-g", "-O0", "-o=main.prg", "main.c"]]
+    outputs: [main.prg, main.dbj, main.lbl, main.map, main.asm]
+  atari:
+    source: main.c
+    steps: [["{oscar64}", "-tm=atari", "-n", "-g", "-O0", "-o=main.xex", "main.c"]]
+    outputs: [main.xex, main.dbj, main.lbl, main.map, main.asm]
+  nes:
+    source: main.c
+    steps: [["{oscar64}", "-tm=nes", "-n", "-g", "-O0", "-o=main.nes", "main.c"]]
+    outputs: [main.nes, main.dbj, main.mlb, main.map, main.asm]

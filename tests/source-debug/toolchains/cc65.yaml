@@ -1,0 +1,47 @@
+# Pinned toolchain for tests/source-debug (RD-002). Read by scripts/build_fixtures.py.
+name: cc65
+language: c
+version: "2.19"
+obtain: "Ubuntu 24.04 package cc65 2.19-1 (apt-get install cc65); the tools report V2.18 - Ubuntu 2.19-1"
+executables:
+  cc65:
+    env: RD_CC65
+    candidates: [cc65]
+    version_argv: ["{cc65}", "-V"]
+    version_match: "2.19"
+  ca65:
+    env: RD_CA65
+    candidates: [ca65]
+    version_argv: ["{ca65}", "-V"]
+    version_match: "2.19"
+  ld65:
+    env: RD_LD65
+    candidates: [ld65]
+    version_argv: ["{ld65}", "-V"]
+    version_match: "2.19"
+# Compiler, assembler and linker as separate steps (what cl65 does in one), so
+# the intermediate main.s gets a pinned mtime before ca65 records it. No -O:
+# unoptimized. -g carries C line info through ca65 into ld65's --dbgfile,
+# cc65's own TEXT .dbg format -- not KickAssembler's XML (RD-031 sniffs them).
+machines:
+  c64:
+    source: main.c
+    steps:
+      - ["{cc65}", "-t", "c64", "-g", "main.c"]
+      - ["{ca65}", "-t", "c64", "-g", "main.s"]
+      - ["{ld65}", "-t", "c64", "--dbgfile", "main.dbg", "-Ln", "main.lbl", "-m", "main.map", "-o", "main.prg", "main.o", "c64.lib"]
+    outputs: [main.prg, main.dbg, main.lbl, main.map, main.s]
+  atari:
+    source: main.c
+    steps:
+      - ["{cc65}", "-t", "atari", "-g", "main.c"]
+      - ["{ca65}", "-t", "atari", "-g", "main.s"]
+      - ["{ld65}", "-t", "atari", "--dbgfile", "main.dbg", "-Ln", "main.lbl", "-m", "main.map", "-o", "main.xex", "main.o", "atari.lib"]
+    outputs: [main.xex, main.dbg, main.lbl, main.map, main.s]
+  nes:
+    source: main.c
+    steps:
+      - ["{cc65}", "-t", "nes", "-g", "main.c"]
+      - ["{ca65}", "-t", "nes", "-g", "main.s"]
+      - ["{ld65}", "-t", "nes", "--dbgfile", "main.dbg", "-Ln", "main.lbl", "-m", "main.map", "-o", "main.nes", "main.o", "nes.lib"]
+    outputs: [main.nes, main.dbg, main.lbl, main.map, main.s]

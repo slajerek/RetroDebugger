@@ -1,0 +1,47 @@
+{
+  "buildDir": "/tmp/rd-source-debug/kickc/c64/same-line",
+  "commit": "b99b0cf59dca331436c9df7f0ea67cdf3a69b2ca",
+  "fixedMtime": 1767225600,
+  "fixture": "same-line",
+  "inputs": {
+    "main.c": "ca4e430bfdbc49ae369fc4f3eb5496bb6fc0ba0a31cf9ff74d9ec76a21b48381"
+  },
+  "machine": "c64",
+  "outputs": {
+    "main.asm": {
+      "sha256": "2f0979af962872a30c04c1964208703bd22bb524c8cee9df5d7fc548de84e8b9",
+      "size": 827
+    },
+    "main.dbg": {
+      "sha256": "cbb11b5efc46c7f385a0f4cfec2ef473c496f56047326e422d0ea127370da0e0",
+      "size": 3200
+    },
+    "main.prg": {
+      "sha256": "f62be7fc82808818f4ab1245da421f1d50d334706eb413721513fc3b0af272ce",
+      "size": 57
+    }
+  },
+  "source": "main.c",
+  "steps": [
+    [
+      "kickc",
+      "-t=c64",
+      "main.c"
+    ],
+    [
+      "kickass",
+      "main.asm",
+      "-debugdump"
+    ]
+  ],
+  "toolDirs": {
+    "kickass": "/home/user/toolchains/bin",
+    "kickc": "/home/user/toolchains/bin"
+  },
+  "toolchain": "kickc",
+  "version": "0.8.6",
+  "versionReported": {
+    "kickass": "//         Kick Assembler v5.24 by Mads Nielsen",
+    "kickc": "KickC 0.8.6 BETA"
+  }
+}

@@ -1,0 +1,49 @@
+{
+  "buildDir": "/tmp/rd-source-debug/kickc/nes/basic-flow",
+  "commit": "b99b0cf59dca331436c9df7f0ea67cdf3a69b2ca",
+  "fixedMtime": 1767225600,
+  "fixture": "basic-flow",
+  "inputs": {
+    "64tass-c64.asm": "13f5363a9afa68138826fdeb9a4934034c6578bebb680d10f74495437220a23c",
+    "kickass-c64.asm": "a8bc61e2626d95519fea979cce04f605388d1eb10c9c296a214acfbbaad2e834",
+    "main.c": "b7e2bb2e2a2bd6e7a03e4eca5954de8141a3d5c8fbd0e9f304ba035bd57f9070"
+  },
+  "machine": "nes",
+  "outputs": {
+    "main.asm": {
+      "sha256": "b6cbd0eebfad8afcde003e692f33a175284f165bf0bac0c97b1ce0cee3f64087",
+      "size": 2084
+    },
+    "main.dbg": {
+      "sha256": "fc75ab6b69178f779e52ee6c33e7a6c66125d7601d0c342474650ed701df2be8",
+      "size": 3701
+    },
+    "main.nes": {
+      "sha256": "114d1a9f3fbffb84465f658cafd0e80141757ce70bf226e3950bec47d1277be8",
+      "size": 8251
+    }
+  },
+  "source": "main.c",
+  "steps": [
+    [
+      "kickc",
+      "-t=nes",
+      "main.c"
+    ],
+    [
+      "kickass",
+      "main.asm",
+      "-debugdump"
+    ]
+  ],
+  "toolDirs": {
+    "kickass": "/home/user/toolchains/bin",
+    "kickc": "/home/user/toolchains/bin"
+  },
+  "toolchain": "kickc",
+  "version": "0.8.6",
+  "versionReported": {
+    "kickass": "//         Kick Assembler v5.24 by Mads Nielsen",
+    "kickc": "KickC 0.8.6 BETA"
+  }
+}

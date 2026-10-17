@@ -1,0 +1,34 @@
+
+; 64tass Turbo Assembler Macro V1.59.3120 listing file
+; 64tass -C -a -o main.prg --vice-labels --labels=main.vs --line-numbers --list=main.lst 64tass-c64.asm
+; Thu Jan  1 00:00:00 2026
+
+;Line	;Offset	;Hex		;Monitor	;Source
+
+:1	;******  Processing input file: 64tass-c64.asm
+
+5	>0801	0b 08 ea 07			        .word (+), 2026             ; BASIC line: 2026 SYS start
+6	>0805	9e 32 30 36 31 00		        .null $9e, format("%d", start)
+7	>080b	00 00				+       .word 0
+9	.080d	a9 01		lda #$01	start   lda #1
+10	.080f	8d 37 08	sta $0837	        sta result
+11	.0812	20 23 08	jsr $0823	        jsr doSomething
+12	.0815	ad 37 08	lda $0837	        lda result
+13	.0818	a2 02		ldx #$02	        ldx #2
+14	.081a	20 2f 08	jsr $082f	        jsr add
+15	.081d	8d 37 08	sta $0837	        sta result
+16	.0820	4c 20 08	jmp $0820	loop    jmp loop                    ; stable debugger stop point
+18	.0823					doSomething
+19	.0823	ad 37 08	lda $0837	        lda result
+20	.0826	a2 03		ldx #$03	        ldx #3
+21	.0828	20 2f 08	jsr $082f	        jsr add
+22	.082b	8d 37 08	sta $0837	        sta result
+23	.082e	60		rts		        rts
+25	.082f	8e 38 08	stx $0838	add     stx tmp
+26	.0832	18		clc		        clc
+27	.0833	6d 38 08	adc $0838	        adc tmp
+28	.0836	60		rts		        rts
+30	>0837	00				result  .byte 0
+31	>0838	00				tmp     .byte 0
+
+;******  End of listing

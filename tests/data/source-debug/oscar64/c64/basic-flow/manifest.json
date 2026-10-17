@@ -1,0 +1,54 @@
+{
+  "buildDir": "/tmp/rd-source-debug/oscar64/c64/basic-flow",
+  "commit": "9408778695b5442e755832711b89243b4f94a9ff",
+  "fixedMtime": 1767225600,
+  "fixture": "basic-flow",
+  "inputs": {
+    "64tass-c64.asm": "13f5363a9afa68138826fdeb9a4934034c6578bebb680d10f74495437220a23c",
+    "kickass-c64.asm": "a8bc61e2626d95519fea979cce04f605388d1eb10c9c296a214acfbbaad2e834",
+    "main.c": "b7e2bb2e2a2bd6e7a03e4eca5954de8141a3d5c8fbd0e9f304ba035bd57f9070"
+  },
+  "machine": "c64",
+  "outputs": {
+    "main.asm": {
+      "sha256": "91e690e851d7531c3dcf0402f7ee4c829696ae51068bcd0da9660ae235b987e1",
+      "size": 3193
+    },
+    "main.dbj": {
+      "sha256": "74a4eb87c8e5355d5d271e493c3874b21e40bfabb8abc7a6a7eaceb5e048ab8c",
+      "size": 6598
+    },
+    "main.lbl": {
+      "sha256": "12aea7c420215be6e0a7bc60a73d9ff5110f8b46eb87fd79b0a8f4e8fcf2e10b",
+      "size": 186
+    },
+    "main.map": {
+      "sha256": "afc189356ba6fe68207d3a9d0db99c64c84597300e2eb591926a3b7be3049d6f",
+      "size": 1260
+    },
+    "main.prg": {
+      "sha256": "a6362eadf6aba727cd813d844932be45c1001577d61ca99d333545a725bf979c",
+      "size": 178
+    }
+  },
+  "source": "main.c",
+  "steps": [
+    [
+      "oscar64",
+      "-tm=c64",
+      "-n",
+      "-g",
+      "-O0",
+      "-o=main.prg",
+      "main.c"
+    ]
+  ],
+  "toolDirs": {
+    "oscar64": "/home/user/toolchains/oscar64/bin"
+  },
+  "toolchain": "oscar64",
+  "version": "1.32.273",
+  "versionReported": {
+    "oscar64": "Starting oscar64 1.32.273"
+  }
+}
