@@ -1,0 +1,258 @@
+#include "CTestSourceStepping.h"
+#include "EmulatorsConfig.h"
+#include "CViewC64.h"
+#include "CGuiMain.h"
+#include "CDebugInterfaceVice.h"
+#include "CDebugSymbols.h"
+#include "CDebugSymbolsC64.h"
+#include "CDebugSymbolsSegment.h"
+#include "CDebugDatabase.h"
+#include "CDebugInfoLoader.h"
+#include "CDebugExecutionContext.h"
+#include "CSourceStepController.h"
+#include "DebuggerDefs.h"
+#include "SYS_Main.h"
+#include <cstdio>
+#include <vector>
+
+bool CTestSourceStepping::Check(bool condition, const char *message)
+{
+	if (!condition)
+	{
+		failure = message;
+		return false;
+	}
+	StepCompleted(stepNum++, true, message);
+	return true;
+}
+
+static CDebugInstructionBoundary B(u16 previousPc, u8 previousOpcode, u8 previousSp, u16 pc, u8 sp)
+{
+	CDebugInstructionBoundary b;
+	b.previousPc = previousPc;
+	b.previousOpcode = previousOpcode;
+	b.previousSp = previousSp;
+	b.pc = pc;
+	b.sp = sp;
+	b.event = DebugClassifyBoundary(previousOpcode, previousSp, sp);
+	return b;
+}
+
+bool CTestSourceStepping::RunTracker()
+{
+	CDebugExecutionContextTracker t;
+	t.Apply(B(0x1000, 0x20, 0xF0, 0x2000, 0xEE));		// JSR $2000
+	t.Apply(B(0x2000, 0x20, 0xEE, 0x3000, 0xEC));		// JSR $3000
+	bool ok = t.GetCallDepth() == 2 && t.GetFrames()[1].fromPc == 0x2000 && t.GetFrames()[1].entryPc == 0x3000;
+	t.Apply(B(0x3000, 0x60, 0xEC, 0x2003, 0xEE));		// RTS
+	ok = ok && t.GetCallDepth() == 1 && !t.HasLeftBase();
+	if (!Check(ok, "Tracker: JSR pushes a call frame, RTS pops it"))
+		return false;
+
+	// An IRQ taken right after a JSR: the call frame and the interrupt frame
+	// both exist, and RTI then RTS unwind them in order.
+	t.Reset();
+	t.Apply(B(0x1000, 0xEA, 0xF0, 0x1001, 0xF0));
+	t.Apply(B(0x1001, 0x20, 0xF0, 0xFF48, 0xEB));		// JSR, then IRQ: -2 -3
+	ok = t.GetCallDepth() == 1 && t.GetInterruptDepth() == 1 && t.IsInInterrupt();
+	t.Apply(B(0xEA81, 0x40, 0xEB, 0x2000, 0xEE));		// RTI back into the callee
+	ok = ok && t.GetCallDepth() == 1 && !t.IsInInterrupt();
+	t.Apply(B(0x2000, 0x60, 0xEE, 0x1004, 0xF0));		// RTS
+	ok = ok && t.GetDepth() == 0 && !t.HasLeftBase();
+	if (!Check(ok, "Tracker: an IRQ after a JSR stacks a call and an interrupt frame; RTI and RTS unwind them"))
+		return false;
+
+	// A routine that drops its return address (PLA PLA) ends its frame; a
+	// return from the frame tracking started in leaves the base.
+	t.Reset();
+	t.Apply(B(0x1000, 0xEA, 0xF0, 0x1001, 0xF0));
+	t.Apply(B(0x1001, 0x20, 0xF0, 0x2000, 0xEE));
+	t.Apply(B(0x2000, 0x68, 0xEE, 0x2001, 0xEF));
+	t.Apply(B(0x2001, 0x68, 0xEF, 0x2002, 0xF0));
+	ok = t.GetDepth() == 0 && !t.HasLeftBase();
+	t.Apply(B(0x2002, 0x60, 0xF0, 0x0900, 0xF2));
+	ok = ok && t.HasLeftBase();
+	return Check(ok, "Tracker: PLA/PLA of the return address ends the frame; an RTS above the base leaves it");
+}
+
+bool CTestSourceStepping::Step(CDebugInterfaceVice *di, SourceStepKind kind, u16 expectedPc, int expectedLine,
+							   SourceStepStopReason expectedReason, u64 budget)
+{
+	bool armed = di->SourceStep(kind, budget);
+	bool paused = false;
+	for (int waited = 0; armed && waited < 5000; waited += 10)
+	{
+		if (di->GetDebugMode() == DEBUGGER_MODE_PAUSED && !di->sourceStepper->IsArmed())
+		{
+			paused = true;
+			break;
+		}
+		SYS_Sleep(10);
+	}
+	CSourceStepResult r = di->sourceStepper->GetLastResult();
+
+	char msg[256];
+	snprintf(msg, sizeof(msg), "Oscar64 basic-flow: step %s stops at $%04X line %d (%s): got $%04X line %d (%s, %llu instructions)",
+			 SourceStepKindName(kind), expectedPc, expectedLine, SourceStepStopReasonName(expectedReason),
+			 r.pc, r.mapped ? r.line : 0, SourceStepStopReasonName(r.reason), (unsigned long long)r.instructions);
+	return Check(armed && paused && r.pc == expectedPc && r.reason == expectedReason
+				 && (expectedLine == 0 ? !r.mapped : (r.mapped && r.line == expectedLine)), msg);
+}
+
+static bool ReadFile(const std::string &path, std::vector<u8> &out)
+{
+	FILE *f = fopen(path.c_str(), "rb");
+	if (!f)
+		return false;
+	u8 buffer[4096];
+	size_t n;
+	while ((n = fread(buffer, 1, sizeof(buffer), f)) > 0)
+		out.insert(out.end(), buffer, buffer + n);
+	fclose(f);
+	return true;
+}
+
+bool CTestSourceStepping::RunOscar64(CDebugInterfaceVice *di)
+{
+	std::vector<u8> prg;
+	std::string dir = ResolveProjectPath("tests/data/source-debug/oscar64/c64/basic-flow");
+	if (!Check(ReadFile(dir + "/main.prg", prg) && prg.size() > 2 && prg[0] == 0x01 && prg[1] == 0x08,
+			   "Oscar64 basic-flow: main.prg loads at $0801"))
+		return false;
+
+	CDebugSymbols *scratch = di->symbols;
+	DebugInfoFormat format = DebugInfoLoadFile(scratch, (dir + "/main.dbj").c_str());
+	if (!Check(format == DebugInfoFormat::Oscar64Dbj && scratch->debugDatabase
+			   && scratch->currentSegment && scratch->currentSegment->debugRegionId >= 0,
+			   "Oscar64 basic-flow: main.dbj loads into the C64 symbols with a region for the current segment"))
+		return false;
+
+	for (size_t i = 2; i < prg.size(); i++)
+		di->SetByteToRamC64((u16)(0x0801 + i - 2), prg[i]);
+
+	// $C060 SEI, CIA1 timer A IRQ every 150 cycles, CLI, JMP $080D (startup)
+	// $C040 IRQ handler via $0314: INC $02, JSR add ($08AA, mapped line 8), ack, RTI
+	const u8 setup[] = { 0x78, 0xA9, 0x7F, 0x8D, 0x0D, 0xDC, 0xAD, 0x0D, 0xDC,
+						 0xA9, 0x96, 0x8D, 0x04, 0xDC, 0xA9, 0x00, 0x8D, 0x05, 0xDC,
+						 0xA9, 0x81, 0x8D, 0x0D, 0xDC, 0xA9, 0x11, 0x8D, 0x0E, 0xDC,
+						 0x58, 0x4C, 0x0D, 0x08 };
+	const u8 handler[] = { 0xE6, 0x02, 0x20, 0xAA, 0x08, 0xAD, 0x0D, 0xDC, 0xA9, 0xFF, 0x8D, 0x19, 0xD0,
+						   0x68, 0xA8, 0x68, 0xAA, 0x68, 0x40 };
+	for (int i = 0; i < (int)sizeof(setup); i++)
+		di->SetByteToRamC64(0xC060 + i, setup[i]);
+	for (int i = 0; i < (int)sizeof(handler); i++)
+		di->SetByteToRamC64(0xC040 + i, handler[i]);
+	u8 savedVector[2] = { di->GetByteFromRamC64(0x0314), di->GetByteFromRamC64(0x0315) };
+	di->SetByteToRamC64(0x0314, 0x40);
+	di->SetByteToRamC64(0x0315, 0xC0);
+	di->SetByteToRamC64(0x0002, 0);
+
+	di->LockMutex();
+	scratch->currentSegment->AddBreakpointPC(0x0880);
+	di->UnlockMutex();
+	di->MakeJmpC64(0xC060);
+	di->SetDebugMode(DEBUGGER_MODE_RUNNING);
+	bool paused = false;
+	for (int waited = 0; waited < 3000 && !paused; waited += 10)
+	{
+		paused = di->GetDebugMode() == DEBUGGER_MODE_PAUSED;
+		if (!paused)
+			SYS_Sleep(10);
+	}
+	di->LockMutex();
+	scratch->currentSegment->breakpointsPC->DeleteBreakpoint(0x0880);
+	di->UnlockMutex();
+	u16 pc;
+	u8 a, x, y, p, sp;
+	di->GetCpuRegs(&pc, &a, &x, &y, &p, &sp);
+
+	bool ok = Check(paused && pc == 0x0880, "Oscar64 basic-flow: a breakpoint on main() stops at $0880 (line 16)");
+
+	// main: 16 result = 1; 17 doSomething(); 18 result = add(result, 2); 19 for (;;)
+	// doSomething: 12 result = add(result, 3); 13 }     add: 8 return left + right;
+	ok = ok && Step(di, SourceStepKind::Over, 0x0885, 17, SourceStepStopReason::Completed);
+	ok = ok && Step(di, SourceStepKind::Into, 0x089A, 12, SourceStepStopReason::Completed);
+	ok = ok && Step(di, SourceStepKind::Into, 0x08AA, 8, SourceStepStopReason::Completed);
+	ok = ok && Step(di, SourceStepKind::Out, 0x08A6, 12, SourceStepStopReason::Completed);
+	ok = ok && Step(di, SourceStepKind::Over, 0x08A9, 13, SourceStepStopReason::Completed);
+	ok = ok && Step(di, SourceStepKind::Over, 0x0888, 18, SourceStepStopReason::FrameExited);
+	ok = ok && Step(di, SourceStepKind::Into, 0x08AA, 8, SourceStepStopReason::Completed);
+	ok = ok && Step(di, SourceStepKind::Into, 0x0894, 18, SourceStepStopReason::FrameExited);
+	// line 19's loop has no mapping: the step runs it until the budget
+	ok = ok && Step(di, SourceStepKind::Over, 0x0897, 0, SourceStepStopReason::BudgetExceeded, 20000);
+
+	if (ok)
+	{
+		char msg[160];
+		u8 result = di->GetByteFromRamC64(0x08B1);
+		u8 irqs = di->GetByteFromRamC64(0x0002);
+		snprintf(msg, sizeof(msg), "Oscar64 basic-flow: the program computed result = %d (1 + 3 + 2) while the IRQ called add() %d times (mod 256)", result, irqs);
+		ok = Check(result == 6 && irqs != 0 && !di->IsObservingExecution(), msg);
+	}
+
+	// stop the fast IRQ: KERNAL vector back, PAL timer A latch ($4025)
+	di->SetByteToRamC64(0x0314, savedVector[0]);
+	di->SetByteToRamC64(0x0315, savedVector[1]);
+	di->SetByteToRamC64(0xDC04, 0x25);
+	di->SetByteToRamC64(0xDC05, 0x40);
+	return ok;
+}
+
+void CTestSourceStepping::Run(ITestCallback *cb)
+{
+	this->callback = cb;
+	this->isRunning = true;
+	this->currentStep = 0;
+	stepNum = 1;
+	failure.clear();
+
+	bool ok = RunTracker();
+
+#ifdef RUN_COMMODORE64
+	CDebugInterfaceVice *di = (CDebugInterfaceVice *)viewC64->debugInterfaceC64;
+	if (ok && di)
+	{
+		bool wasRunning = di->isRunning;
+		if (!wasRunning)
+		{
+			viewC64->StartEmulationThread(di);
+			SYS_Sleep(2000);
+		}
+		di->PauseEmulationBlockedWait();
+
+		// Scratch symbols, as in CTestSymbolLoaders: the live ones stay untouched.
+		CDebugSymbols *liveSymbols = di->symbols;
+		CDebugSymbols *scratch = new CDebugSymbolsC64(di);
+		scratch->SetDataAdapter(di->dataAdapterC64);
+		scratch->CreateDefaultSegment();
+		guiMain->LockMutex();
+		di->LockMutex();
+		di->symbols = scratch;
+		di->UnlockMutex();
+		guiMain->UnlockMutex();
+
+		ok = RunOscar64(di);
+
+		di->PauseEmulationBlockedWait();
+		guiMain->LockMutex();
+		di->LockMutex();
+		di->symbols = liveSymbols;
+		di->UnlockMutex();
+		guiMain->UnlockMutex();
+		// scratch leaked on purpose, see CTestSymbolLoaders
+
+		di->SetDebugMode(DEBUGGER_MODE_RUNNING);
+		if (!wasRunning)
+			viewC64->StopEmulationThread(di);
+	}
+#else
+	ReportRequiredGap("C64 emulation not compiled in");
+#endif
+
+	if (!ok)
+	{
+		TestCompleted(false, failure.c_str());
+		return;
+	}
+	TestCompleted(true, "Source Into/Over/Out land on the expected Oscar64 lines with interrupts running mapped code");
+}

@@ -512,10 +512,10 @@ void CTestMCPBridge::Run(ITestCallback *cb)
 			return;
 		}
 
-		// Should be 50: 47 debugger + 3 bridge-local
-		if (toolCount != 50)
+		// Should be 51: 48 debugger + 3 bridge-local
+		if (toolCount != 51)
 		{
-			sprintf(sFailMsg, "Test %d FAIL: expected 50 tools, got %d", testNum, toolCount);
+			sprintf(sFailMsg, "Test %d FAIL: expected 51 tools, got %d", testNum, toolCount);
 			bridge.Stop();
 			FinishTest(false, sFailMsg);
 			return;
@@ -666,9 +666,9 @@ void CTestMCPBridge::Run(ITestCallback *cb)
 			json response = server.HandleRequest(request);
 			json tools = response["result"]["tools"];
 			int toolCount = (int)tools.size();
-			if (toolCount != 50)
+			if (toolCount != 51)
 			{
-				sprintf(sFailMsg, "Test %d FAIL: after reconnect expected 50 tools, got %d",
+				sprintf(sFailMsg, "Test %d FAIL: after reconnect expected 51 tools, got %d",
 						testNum, toolCount);
 				bridge2.Stop();
 				FinishTest(false, sFailMsg);

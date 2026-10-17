@@ -2685,6 +2685,17 @@ void CViewC64::StepOutSubroutine()
 	}
 }
 
+void CViewC64::SourceStep(SourceStepKind kind)
+{
+	for (std::vector<CDebugInterface *>::iterator it = debugInterfaces.begin(); it != debugInterfaces.end(); it++)
+	{
+		CDebugInterface *debugInterface = *it;
+		if (!debugInterface->isRunning || !debugInterface->SupportsExecutionEvents())
+			continue;
+		debugInterface->SourceStep(kind);
+	}
+}
+
 void CViewC64::StepOneCycle()
 {
 	for (std::vector<CDebugInterface *>::iterator it = debugInterfaces.begin(); it != debugInterfaces.end(); it++)

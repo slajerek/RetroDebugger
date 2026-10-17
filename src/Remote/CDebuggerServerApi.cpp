@@ -302,6 +302,26 @@ void CDebuggerServerApi::RegisterEndpoints(CDebuggerServer *server)
 		return server->PrepareResult(HTTP_OK, token, json(), NULL, 0);
 	});
 
+	sprintf(buf, "%s/source/step", plat);
+	RegisterEndpoint(server, buf, plat, "cpu", "Source-level step: kind into, over or out (optional budget in instructions)",
+	[this, server](const string token, json params, unsigned char *binaryData, int binaryDataSize) -> vector<char>*
+	{
+		string kind = params.value("kind", "");
+		u64 budget = params.value("budget", (u64)0);
+		if (kind != "into" && kind != "over" && kind != "out")
+			return server->PrepareResult(HTTP_BAD_REQUEST, token, json{{"error", "kind must be into, over or out"}}, NULL, 0);
+		if (!debuggerApi->SourceStep(kind, budget))
+			return server->PrepareResult(HTTP_BAD_REQUEST, token, debuggerApi->GetSourceStepStatusJson(), NULL, 0);
+		return server->PrepareResult(HTTP_OK, token, debuggerApi->GetSourceStepStatusJson(), NULL, 0);
+	});
+
+	sprintf(buf, "%s/source/step/status", plat);
+	RegisterEndpoint(server, buf, plat, "cpu", "The last source-level step: armed, kind, stop reason, PC, file and line",
+	[this, server](const string token, json params, unsigned char *binaryData, int binaryDataSize) -> vector<char>*
+	{
+		return server->PrepareResult(HTTP_OK, token, debuggerApi->GetSourceStepStatusJson(), NULL, 0);
+	});
+
 	sprintf(buf, "%s/step/out", plat);
 	RegisterEndpoint(server, buf, plat, "cpu", "Step out of the current subroutine",
 	[this, server](const string token, json params, unsigned char *binaryData, int binaryDataSize) -> vector<char>*

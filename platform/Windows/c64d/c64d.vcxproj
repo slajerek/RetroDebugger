@@ -1481,6 +1481,12 @@
     <ClCompile Include="..\..\..\src\Tools\libpsid64\libpsid-sidid.cpp" />
     <ClCompile Include="..\..\..\src\Tools\libpsid64\libpsid-theme.cpp" />
     <ClCompile Include="..\..\..\src\Tools\Shaders\CRenderShaderCRTMonitorOpenGL4.cpp" />
+    <ClCompile Include="..\..\..\src\Tests\CTestSourceStepping.cpp" />
+    <ClInclude Include="..\..\..\src\Tests\CTestSourceStepping.h" />
+    <ClCompile Include="..\..\..\src\DebugInterface\CSourceStepController.cpp" />
+    <ClInclude Include="..\..\..\src\DebugInterface\CSourceStepController.h" />
+    <ClCompile Include="..\..\..\src\DebugInterface\CDebugExecutionContext.cpp" />
+    <ClInclude Include="..\..\..\src\DebugInterface\CDebugExecutionContext.h" />
     <ClCompile Include="..\..\..\src\Tests\CTestInstructionStepping.cpp" />
     <ClInclude Include="..\..\..\src\Tests\CTestInstructionStepping.h" />
     <ClCompile Include="..\..\..\src\DebugInterface\CDebugInstructionStepper.cpp" />

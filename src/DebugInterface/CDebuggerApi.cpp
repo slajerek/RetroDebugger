@@ -1,3 +1,6 @@
+#include "CSourceStepController.h"
+#include "CDebugDatabase.h"
+#include "CDebugSymbols.h"
 #include "CDebuggerApi.h"
 #include "CViewC64.h"
 #include "CViewMonitorConsole.h"
@@ -89,6 +92,40 @@ void CDebuggerApi::StepOverSubroutine()
 bool CDebuggerApi::StepOutSubroutine()
 {
 	return debugInterface->StepOutSubroutine();
+}
+
+bool CDebuggerApi::SourceStep(const std::string &kind, u64 budget)
+{
+	SourceStepKind stepKind;
+	if (kind == "into")
+		stepKind = SourceStepKind::Into;
+	else if (kind == "over")
+		stepKind = SourceStepKind::Over;
+	else if (kind == "out")
+		stepKind = SourceStepKind::Out;
+	else
+		return false;
+	return debugInterface->SourceStep(stepKind, budget);
+}
+
+nlohmann::json CDebuggerApi::GetSourceStepStatusJson()
+{
+	CSourceStepResult result = debugInterface->sourceStepper->GetLastResult();
+	nlohmann::json status;
+	status["armed"] = debugInterface->sourceStepper->IsArmed();
+	status["kind"] = SourceStepKindName(result.kind);
+	status["reason"] = SourceStepStopReasonName(result.reason);
+	status["pc"] = result.pc;
+	status["instructions"] = result.instructions;
+	if (result.mapped)
+	{
+		status["line"] = result.line;
+		std::shared_ptr<const CDebugDatabase> database = debugInterface->symbols ? debugInterface->symbols->debugDatabase : nullptr;
+		const CDebugSourceFile *file = database ? database->GetFile(result.fileId) : NULL;
+		if (file)
+			status["file"] = file->originalPath;
+	}
+	return status;
 }
 
 u64 CDebuggerApi::GetMainCpuCycleCounter()

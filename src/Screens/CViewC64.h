@@ -64,6 +64,7 @@ class CViewFileBrowser;
 class CDebugInterfaceMenuItemFolder;
 class CDebugInterfaceMenuItemView;
 
+enum class SourceStepKind : u8;
 class CViewC64Screen;
 class CViewC64ScreenViewfinder;
 class CViewC64UScreen;
@@ -563,6 +564,7 @@ public:
 	void StepOverInstruction();
 	void StepOverSubroutine();
 	void StepOutSubroutine();
+	void SourceStep(SourceStepKind kind);
 	void StepOneCycle();
 	void StepBackInstruction();
 	void RunContinueEmulation();

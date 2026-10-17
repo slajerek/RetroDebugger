@@ -30,6 +30,10 @@ public:
 	virtual void StepOverInstruction();
 	virtual void StepOverSubroutine();	// step over JSR
 	virtual bool StepOutSubroutine();	// run until the current frame returns
+	// Source-level step (RD-013): KIND "into", "over" or "out"; false when not armed.
+	virtual bool SourceStep(const std::string &kind, u64 budget = 0);
+	// The last source step: armed, kind, reason, pc and, when mapped, file and line.
+	virtual nlohmann::json GetSourceStepStatusJson();
 
 	virtual u64 GetMainCpuCycleCounter();
 	virtual u64 GetMainCpuInstructionCycleCounter();

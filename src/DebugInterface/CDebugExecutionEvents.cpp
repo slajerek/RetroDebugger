@@ -1,5 +1,8 @@
 #include "CDebugExecutionEvents.h"
 #include "CDebugInstructionStepper.h"
+#include "CSourceStepController.h"
+#include "CDebugSymbols.h"
+#include "CDebugSymbolsSegment.h"
 #include "CDebugInterface.h"
 #include "CSnapshotsManager.h"
 #include "DBG_Log.h"
@@ -89,10 +92,14 @@ void CDebugInterface::NotifyInstructionBoundary(u16 pc, u8 sp, u8 opcode)
 	lastBoundary = boundary;
 	hasLastBoundary = true;
 
-	bool stepperArmed = instructionStepper->IsArmed();
-	if (stepperArmed)
+	bool stepperArmed = instructionStepper->IsArmed() || sourceStepper->IsArmed();
+	if (instructionStepper->IsArmed())
 	{
 		instructionStepper->OnInstructionBoundary(this, boundary);
+	}
+	if (sourceStepper->IsArmed() && sourceStepper->OnInstructionBoundary(this, boundary))
+	{
+		SetDebugMode(DEBUGGER_MODE_PAUSED);
 	}
 
 	std::vector<CDebugExecutionObserver *> observers;
@@ -105,7 +112,7 @@ void CDebugInterface::NotifyInstructionBoundary(u16 pc, u8 sp, u8 opcode)
 		observer->OnInstructionBoundary(this, boundary);
 	}
 
-	if (stepperArmed && !instructionStepper->IsArmed())
+	if (stepperArmed && !instructionStepper->IsArmed() && !sourceStepper->IsArmed())
 	{
 		UpdateExecutionObserved();
 	}
@@ -139,7 +146,7 @@ void CDebugInterface::RemoveExecutionObserver(CDebugExecutionObserver *observer)
 
 void CDebugInterface::UpdateExecutionObserved()
 {
-	bool observed = instructionStepper->IsArmed();
+	bool observed = instructionStepper->IsArmed() || sourceStepper->IsArmed();
 	if (!observed)
 	{
 		std::lock_guard<std::mutex> lock(executionObserversMutex);
@@ -190,6 +197,7 @@ void CDebugInterface::StepOverSubroutineObserved()
 	u8 sp, opcode;
 	if (BeginInstructionStep(&pc, &sp, &opcode))
 	{
+		sourceStepper->Cancel(SourceStepStopReason::Cancelled);
 		if (opcode == 0x20)
 		{
 			instructionStepper->ArmStepOver(pc, (u16)(pc + 3), sp);
@@ -219,10 +227,49 @@ bool CDebugInterface::StepOutSubroutine()
 	bool armed = BeginInstructionStep(&pc, &sp, &opcode);
 	if (armed)
 	{
+		sourceStepper->Cancel(SourceStepStopReason::Cancelled);
 		instructionStepper->ArmStepOut(pc, sp);
 		UpdateExecutionObserved();
 		LOGD("CDebugInterface::StepOutSubroutine: from %04x, sp=%02x", pc, sp);
 		SetDebugMode(DEBUGGER_MODE_RUNNING);
+	}
+	UnlockMutex();
+	return armed;
+}
+
+bool CDebugInterface::SourceStep(SourceStepKind kind, u64 budget)
+{
+	if (!SupportsExecutionEvents())
+	{
+		LOGError("CDebugInterface::SourceStep: %s does not report execution events", GetPlatformNameString());
+		return false;
+	}
+
+	LockMutex();
+	u16 pc;
+	u8 sp, opcode;
+	bool armed = false;
+	if (BeginInstructionStep(&pc, &sp, &opcode))
+	{
+		std::shared_ptr<const CDebugDatabase> database;
+		int regionId = -1;
+		if (symbols)
+		{
+			database = symbols->debugDatabase;
+			if (symbols->currentSegment)
+				regionId = symbols->currentSegment->debugRegionId;
+		}
+		if (regionId < 0)
+			database.reset();
+
+		instructionStepper->Cancel(DebugStepStopReason::Cancelled);
+		armed = sourceStepper->Arm(kind, database, regionId < 0 ? 0 : (u32)regionId, pc, sp,
+								   budget ? budget : CSourceStepController::kDefaultBudget);
+		if (armed)
+		{
+			UpdateExecutionObserved();
+			SetDebugMode(DEBUGGER_MODE_RUNNING);
+		}
 	}
 	UnlockMutex();
 	return armed;

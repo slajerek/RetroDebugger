@@ -1496,6 +1496,39 @@ void CMCPServer::RegisterDebuggerTools(CDebuggerServer *server)
 		RegisterTool(tool);
 	}
 
+	// Source-level step
+	{
+		MCPToolDescriptor tool;
+		tool.name = "retro_source_step";
+		tool.description = "Source-level step on the loaded debug info: kind 'into', 'over' or 'out' arms a step that runs until "
+			"the next source statement (or the caller); 'status' returns the last step's stop reason, PC, file and line. "
+			"Interrupt handlers are skipped; an instruction budget (default 2000000) bounds the run.";
+		tool.inputSchema = {
+			{"type", "object"},
+			{"properties", {
+				{"platform", {{"type", "string"}}},
+				{"kind", {{"type", "string"}, {"enum", json::array({"into", "over", "out", "status"})}}},
+				{"budget", {{"type", "integer"}}}
+			}},
+			{"required", json::array({"platform", "kind"})}
+		};
+		tool.handler = [server](const json &params) -> json
+		{
+			string platform = params.value("platform", "c64");
+			string kind = params.value("kind", "status");
+			string fn = platform + (kind == "status" ? "/source/step/status" : "/source/step");
+			json args = {{"kind", kind}};
+			if (params.contains("budget"))
+				args["budget"] = params["budget"];
+			vector<char> *result = server->RunEndpointFunction(fn, "", args, nullptr, 0);
+			if (!result || result->empty()) { delete result; return json::object(); }
+			string raw(result->data(), result->size());
+			delete result;
+			return json::parse(raw, nullptr, false);
+		};
+		RegisterTool(tool);
+	}
+
 	// Step out of the current subroutine
 	{
 		MCPToolDescriptor tool;

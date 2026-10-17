@@ -412,12 +412,31 @@ event-history entry for step stops. Original plan:
   the subroutine), `CTestStepOut`, `CTestTempBreakpointPriority`.
 
 ### RD-012 Execution context tracker
+**First part done (in progress):** `CDebugExecutionContextTracker` keeps Call / Interrupt
+/ Break frames from the boundary events; a frame ends when SP is back at or above its
+level before the pushes (so a dropped return address ends it too). An IRQ right after a
+JSR records both frames. The base -- frames entered before tracking -- is Unknown;
+`HasLeftBase()` reports a return out of it. Still open: seeding from `CStackAnnotationData`
+and logical (inline) frames. Original plan:
 - Physical frames from observer events (JSR/RTS/IRQ/NMI/BRK/RTI) with confidence;
   seeded from `CStackAnnotationData` when attaching while paused; `Unknown` when the
   stack is not annotated.
 - Logical frames from the database (function ranges, later inline contexts).
 
 ### RD-013 Source-step state machine
+**Done (review):** `CSourceStepController`, a second built-in observer next to the
+instruction stepper, armed by `CDebugInterface::SourceStep(kind, budget)` with the database
+snapshot and the current segment's region. Per boundary: another pause -> `Interrupted`;
+budget (default 2M instructions; stops outside interrupt handlers unless they run past
+twice the budget) -> `BudgetExceeded`; interrupt frames entered after arming are skipped;
+Out stops once the starting frame returns; Over/Into stop at the start of a mapped range
+of another line (or of the starting line's own first range again), Into also at a mapped
+range start in a deeper frame; a starting frame that returns first gives `FrameExited` at
+the caller. Line-only producers make the statement key (file, line); no columns or
+statement ids yet. Code menu Source Step Into/Over/Out (no shortcuts yet), remote
+`<platform>/source/step` (+ `/status`), MCP `retro_source_step`. `CTestSourceStepping` runs
+the Oscar64 basic-flow fixture with a 150-cycle IRQ whose handler calls the mapped `add()`.
+Still open: stop reason in the status line, the same-line fixture. Original plan:
 - `CSourceStepController` owned by `CDebugInterface`; UI arms it
   (`SourceStepInto/Over/Out`) by storing the start context (PC, identity, mapping,
   statement/line, logical frame, physical depth, interrupt nesting, policy, budget) and

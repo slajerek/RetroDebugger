@@ -4888,6 +4888,24 @@
     <ClCompile Include="..\..\..\src\Tools\Shaders\CRenderShaderCRTMonitorOpenGL4.cpp">
       <Filter>Source Files\src\Tools\Shaders</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\src\Tests\CTestSourceStepping.cpp">
+      <Filter>src\Tests</Filter>
+    </ClCompile>
+    <ClInclude Include="..\..\..\src\Tests\CTestSourceStepping.h">
+      <Filter>src\Tests</Filter>
+    </ClInclude>
+    <ClCompile Include="..\..\..\src\DebugInterface\CSourceStepController.cpp">
+      <Filter>src\DebugInterface</Filter>
+    </ClCompile>
+    <ClInclude Include="..\..\..\src\DebugInterface\CSourceStepController.h">
+      <Filter>src\DebugInterface</Filter>
+    </ClInclude>
+    <ClCompile Include="..\..\..\src\DebugInterface\CDebugExecutionContext.cpp">
+      <Filter>src\DebugInterface</Filter>
+    </ClCompile>
+    <ClInclude Include="..\..\..\src\DebugInterface\CDebugExecutionContext.h">
+      <Filter>src\DebugInterface</Filter>
+    </ClInclude>
     <ClCompile Include="..\..\..\src\Tests\CTestInstructionStepping.cpp">
       <Filter>src\Tests</Filter>
     </ClCompile>

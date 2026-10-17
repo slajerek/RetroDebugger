@@ -32,6 +32,9 @@ Use this skill when working with the RetroDebugger MCP server to debug 8-bit pro
 - `retro_step_subroutine` — step over a JSR (runs until the subroutine returns)
 - `retro_step_out` — run until the current subroutine returns (its RTS, or the RTI of an
   interrupt handler); deeper calls, recursion and interrupts do not stop it early
+- `retro_source_step` — source-level step on the loaded debug info (`kind`: `into`, `over`,
+  `out`); poll with `kind: "status"` for the stop reason, PC, file and line. Needs a paused
+  CPU and, for into/over, a source mapping at the PC
 - `retro_cpu_jump` — force PC to a specific address. Returns `{"status":"jumped","applied":true}`
   once the new PC has been committed to the CPU, so a following `retro_step_instruction`
   executes at the target. `{"status":"queued","applied":false}` means the change did not

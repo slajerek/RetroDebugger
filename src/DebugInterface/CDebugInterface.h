@@ -35,6 +35,8 @@ class CDebugSymbols;
 class CDebugSymbolsSegment;
 class CDebugMemoryMappingResolver;
 class CDebugInstructionStepper;
+class CSourceStepController;
+enum class SourceStepKind : u8;
 
 class CViewEmulatorScreen;
 class CViewDisassembly;
@@ -256,6 +258,12 @@ public:
 	CDebugInstructionStepper *instructionStepper;
 	void StepOverSubroutineObserved();
 	virtual bool StepOutSubroutine();
+
+	// Source-level Step Into/Over/Out (RD-013) on the loaded debug database
+	// and the current segment's region. False when the CPU was running (it is
+	// paused instead) or there is no source at the PC (Into/Over).
+	CSourceStepController *sourceStepper;
+	bool SourceStep(SourceStepKind kind, u64 budget = 0);
 	virtual bool RunEmulationForOneFrame();
 	
 	virtual void RunContinueEmulation();

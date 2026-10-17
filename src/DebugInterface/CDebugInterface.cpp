@@ -9,6 +9,7 @@
 #include "CDebuggerEmulatorPlugin.h"
 #include "CViewDisassembly.h"
 #include "CDebugInstructionStepper.h"
+#include "CSourceStepController.h"
 #include "CDebugEventsHistory.h"
 #include "CDebuggerServerApi.h"
 
@@ -27,6 +28,7 @@ CDebugInterface::CDebugInterface(CViewC64 *viewC64)
 	hasPendingCpuDebugInterruptTasks = false;
 
 	instructionStepper = new CDebugInstructionStepper();
+	sourceStepper = new CSourceStepController();
 	executionObserved.store(false, std::memory_order_relaxed);
 	boundaryHistoryRestart.store(BoundaryHistoryReset, std::memory_order_relaxed);
 	hasLastBoundary = false;
@@ -69,6 +71,7 @@ CDebugInterface::CDebugInterface(CViewC64 *viewC64)
 CDebugInterface::~CDebugInterface()
 {
 	delete instructionStepper;
+	delete sourceStepper;
 }
 
 const char *CDebugInterface::GetIrqSourceName(u8 source)
@@ -522,9 +525,10 @@ void CDebugInterface::SetDebugMode(uint8 debugMode)
 
 	// Anything but RUNNING ends an armed instruction step: a breakpoint or a
 	// pause stopped first, or the user stepped by hand.
-	if (stepping && instructionStepper->IsArmed())
+	if (stepping && (instructionStepper->IsArmed() || sourceStepper->IsArmed()))
 	{
 		instructionStepper->Cancel(DebugStepStopReason::Interrupted);
+		sourceStepper->Cancel(SourceStepStopReason::Interrupted);
 		UpdateExecutionObserved();
 	}
 	NotifyPauseChanged();

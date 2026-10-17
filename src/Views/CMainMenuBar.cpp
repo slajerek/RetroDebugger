@@ -1,3 +1,4 @@
+#include "CSourceStepController.h"
 #include "DBG_Log.h"
 #include "GUI_Main.h"
 #include "SYS_DefaultConfig.h"
@@ -812,6 +813,21 @@ void CMainMenuBar::RenderImGui()
 			if (ImGui::MenuItem("Step Out", kbsStepOutSubroutine->cstr))
 			{
 				kbsStepOutSubroutine->Run();
+			}
+
+			if (ImGui::MenuItem("Source Step Into"))
+			{
+				viewC64->SourceStep(SourceStepKind::Into);
+			}
+
+			if (ImGui::MenuItem("Source Step Over"))
+			{
+				viewC64->SourceStep(SourceStepKind::Over);
+			}
+
+			if (ImGui::MenuItem("Source Step Out"))
+			{
+				viewC64->SourceStep(SourceStepKind::Out);
 			}
 			
 			if (ImGui::MenuItem("Backstep", kbsStepBackInstruction->cstr))
