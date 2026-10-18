@@ -464,6 +464,22 @@ identity (RD-025) and the gutter (M2). Original plan:
   on every database swap; unresolved shown hollow in the gutter.
 
 ### RD-015 Trace runner
+- **First part done (in-progress):** `src/Tests/CTestSourceStepTrace.{h,cpp}`
+  (`SourceStepTrace`) replays the traces listed in
+  `tests/source-debug/expectations/index.json`. Trace fields: the #9.5 ones
+  (`fixture`, `compiler`, `optimization`, `steps[].action` = `sourceInto|Over|Out`,
+  `expected {file, line, function, depth}`, `expectedReason`) plus `machine`,
+  `artifacts` (Tier 1 folder), `binary`, `debugInfo`, `entry`, `start {file, line}`,
+  optional `irq {timerCycles, call}` and per-step `budget`. `line: null` expects an
+  unmapped stop; omitted keys are not checked; reasons are
+  `SourceStepStopReasonName` values, a `Step` prefix and `-`/`_` ignored. `depth`
+  is cumulative from the start line, summed from the new
+  `CSourceStepResult::depth`. The C64 run: scratch symbols, PRG poke, $C060
+  preamble (SEI, CIA1 IRQs off or the timer IRQ into a $C040 handler), the start
+  reached through a source breakpoint. Oscar64 has no columns, so `same-line`
+  stops once per line, not per statement.
+- Next: `nested-calls`, `branches-loops`, `interrupts` fixtures and traces; Atari/NES
+  drivers in the runner.
 - `CTestSourceStepTrace` reads `tests/source-debug/expectations/<compiler>/<fixture>.json`
   (spec #9.5), loads the Tier 1 binary + debug artifact, runs the steps, compares
   `(file, line, function, depth, reason)`; failures dump the machine step trace to the

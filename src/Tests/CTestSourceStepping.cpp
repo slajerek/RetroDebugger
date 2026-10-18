@@ -316,8 +316,8 @@ void CTestSourceStepping::Run(ITestCallback *cb)
 		di->PauseEmulationBlockedWait();
 		di->SetByteToRamC64(0x0314, savedVector[0]);
 		di->SetByteToRamC64(0x0315, savedVector[1]);
-		di->SetByteToRamC64(0xDC04, 0x25);
-		di->SetByteToRamC64(0xDC05, 0x40);
+		di->SetByteC64(0xDC04, 0x25);
+		di->SetByteC64(0xDC05, 0x40);
 
 		di->PauseEmulationBlockedWait();
 		guiMain->LockMutex();

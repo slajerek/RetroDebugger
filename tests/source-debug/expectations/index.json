@@ -1,0 +1,7 @@
+{
+  "comment": "Step traces replayed by CTestSourceStepTrace (RD-015, spec #9.5). Paths are relative to this folder.",
+  "traces": [
+    "oscar64/basic-flow.json",
+    "oscar64/same-line.json"
+  ]
+}

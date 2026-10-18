@@ -62,6 +62,7 @@ struct CSourceStepResult
 	bool mapped = false;	// file/line are valid
 	u32 fileId = 0;
 	i32 line = 0;
+	int depth = 0;			// call depth of the stop from the start; -1 when the starting frame returned
 	u64 instructions = 0;
 };
 

@@ -1,0 +1,23 @@
+{
+  "fixture": "basic-flow",
+  "compiler": "oscar64",
+  "optimization": "debug",
+  "machine": "c64",
+  "artifacts": "tests/data/source-debug/oscar64/c64/basic-flow",
+  "binary": "main.prg",
+  "debugInfo": "main.dbj",
+  "entry": "0x080D",
+  "irq": { "timerCycles": 150, "call": "add" },
+  "start": { "file": "main.c", "line": 16 },
+  "steps": [
+    { "action": "sourceOver", "expected": { "file": "main.c", "line": 17, "function": "main", "depth": 0 }, "expectedReason": "completed" },
+    { "action": "sourceInto", "expected": { "file": "main.c", "line": 12, "function": "doSomething", "depth": 1 }, "expectedReason": "completed" },
+    { "action": "sourceInto", "expected": { "file": "main.c", "line": 8, "function": "add", "depth": 2 }, "expectedReason": "completed" },
+    { "action": "sourceOut", "expected": { "file": "main.c", "line": 12, "function": "doSomething", "depth": 1 }, "expectedReason": "completed" },
+    { "action": "sourceOver", "expected": { "file": "main.c", "line": 13, "function": "doSomething", "depth": 1 }, "expectedReason": "completed" },
+    { "action": "sourceOver", "expected": { "file": "main.c", "line": 18, "function": "main", "depth": 0 }, "expectedReason": "frame-exited" },
+    { "action": "sourceInto", "expected": { "file": "main.c", "line": 8, "function": "add", "depth": 1 }, "expectedReason": "completed" },
+    { "action": "sourceInto", "expected": { "file": "main.c", "line": 18, "function": "main", "depth": 0 }, "expectedReason": "frame-exited" },
+    { "action": "sourceOver", "budget": 20000, "expected": { "line": null, "function": "main", "depth": 0 }, "expectedReason": "budget-exceeded" }
+  ]
+}

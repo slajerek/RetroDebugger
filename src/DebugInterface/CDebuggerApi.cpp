@@ -116,6 +116,7 @@ nlohmann::json CDebuggerApi::GetSourceStepStatusJson()
 	status["kind"] = SourceStepKindName(result.kind);
 	status["reason"] = SourceStepStopReasonName(result.reason);
 	status["pc"] = result.pc;
+	status["depth"] = result.depth;
 	status["instructions"] = result.instructions;
 	if (result.mapped)
 	{
