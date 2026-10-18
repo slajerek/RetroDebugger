@@ -97,6 +97,7 @@ CDebugInterfaceAtari::CDebugInterfaceAtari(CViewC64 *viewC64) //, uint8 *memory)
 	//
 	symbols = new CDebugSymbols(this, true);
 	dataAdapter = new CDataAdapterAtari(symbols);
+	dataAdapterDirectRam = new CDataAdapterAtariDirectRam(symbols);
 
 	symbols->SetDataAdapter(dataAdapter);
 	symbols->CreateDefaultSegment();
@@ -312,6 +313,11 @@ float CDebugInterfaceAtari::GetEmulationFPS()
 CDebugDataAdapter *CDebugInterfaceAtari::GetDataAdapter()
 {
 	return this->dataAdapter;
+}
+
+CDebugDataAdapter *CDebugInterfaceAtari::GetDataAdapterDirectRam()
+{
+	return this->dataAdapterDirectRam;
 }
 
 void ADI_VIDEO_BlitNormal32(Uint32 *dest, Uint8 *src, int pitch, int width, int height, Uint32 *palette32)

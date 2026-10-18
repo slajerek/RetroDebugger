@@ -154,6 +154,8 @@ public:
 	virtual void MakeJmpAndReset(uint16 addr);
 
 	virtual CDebugDataAdapter *GetDataAdapter();
+	virtual CDebugDataAdapter *GetDataAdapterDirectRam();
+	CDebugDataAdapter *dataAdapterDirectRam;	// RD-029: RAM under ROMs and XE banks
 
 	// these calls should be synced with CPU IRQ so snapshot store or restore is allowed
 	// store CHIPS only snapshot, not including DISK DATA

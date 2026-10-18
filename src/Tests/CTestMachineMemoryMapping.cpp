@@ -187,6 +187,26 @@ bool CTestMachineMemoryMapping::RunAtari()
 					   && resolver->GetMappingEpoch() > epochOs,
 					   "Atari XL/XE: with the OS out, the same $E000 is RAM: a different identity");
 		}
+		if (ok)
+		{
+			// RD-029: the direct-RAM adapter reaches the RAM under the OS ROM
+			CDebugDataAdapter *cpuView = atari->GetDataAdapter();
+			CDebugDataAdapter *directRam = atari->GetDataAdapterDirectRam();
+			atari->SetByte(0xD301, (u8)(savedPortb | 0x01));	// OS ROM in
+			u8 rom = 0, savedRam = 0, seen = 0, underRom = 0;
+			cpuView->AdapterReadByte(0xE000, &rom);
+			directRam->AdapterReadByte(0xE000, &savedRam);
+			u8 pattern = (u8)(rom ^ 0xA5);
+			directRam->AdapterWriteByte(0xE000, pattern);
+			cpuView->AdapterReadByte(0xE000, &seen);
+			directRam->AdapterReadByte(0xE000, &underRom);
+			bool romKept = seen == rom && underRom == pattern;
+			atari->SetByte(0xD301, (u8)(savedPortb & ~0x01));	// OS ROM out
+			cpuView->AdapterReadByte(0xE000, &seen);
+			directRam->AdapterWriteByte(0xE000, savedRam);
+			ok = Check(directRam != cpuView && romKept && seen == pattern,
+					   "Atari XL/XE: the direct-RAM adapter writes the RAM under the OS ROM, which the CPU sees once the OS is out");
+		}
 		if (ok && !cartA0bf)
 		{
 			atari->SetByte(0xD301, (u8)((savedPortb & ~0x02) | 0x01));	// BASIC in
@@ -205,6 +225,18 @@ bool CTestMachineMemoryMapping::RunAtari()
 			ok = Check(Is(cpu, DebugMemoryKind::ExtendedRam, "atari-xe-ram") && cpu.physical.region == 3
 					   && Is(antic, DebugMemoryKind::Ram, "atari-ram") && cpu.physical != antic.physical,
 					   "Atari 130XE: at $4000 the CPU sees extended bank 3 while ANTIC sees base RAM");
+			if (ok)
+			{
+				// RD-029: with bank 3 in, the direct-RAM adapter still reads the base RAM ANTIC sees
+				u8 base = 0;
+				atari->GetDataAdapterDirectRam()->AdapterReadByte(0x4000, &base);
+				atari->SetByte(0xD301, (u8)((savedPortb & ~0x1C) | 0x08 | 0x10 | 0x20));	// bit 4 set: base RAM
+				u8 baseSeen = 0;
+				atari->GetDataAdapter()->AdapterReadByte(0x4000, &baseSeen);
+				CDebugMappedAddress cpuBase = resolver->ResolveFetch(0x4000);
+				ok = Check(base == baseSeen && Is(cpuBase, DebugMemoryKind::Ram, "atari-ram"),
+						   "Atari 130XE: the direct-RAM adapter reads base RAM under a bank, and PORTB bit 4 set gives the CPU base RAM");
+			}
 		}
 		else if (ok)
 		{

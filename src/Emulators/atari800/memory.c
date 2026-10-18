@@ -1258,6 +1258,13 @@ void MEMORY_HwPutByte(UWORD addr, UBYTE byte)
      cart809fEnabled, cartA0bfEnabled  cartridge windows switched in
      cartType, cartState, cartSizeKb   CARTRIDGE_main (state = bank/switch,
                       its meaning is per cartridge type) */
+/* MEMORY_xe_bank is the bank PORTB bits 2-3 (and up) select; the CPU sees
+   it only while bit 4 is clear, otherwise base RAM (MEMORY_HandlePORTB) */
+static int atrd_cpu_xe_bank(void)
+{
+	return ((PIA_PORTB | PIA_PORTB_mask) & 0x10) ? 0 : MEMORY_xe_bank;
+}
+
 void atrd_get_banking_state(int *machineType, int *ramSizeKb, int *portb, int *portbMask,
                             int *xeBank, int *anticXeBank, int *selftestEnabled,
                             int *cart809fEnabled, int *cartA0bfEnabled,
@@ -1267,7 +1274,7 @@ void atrd_get_banking_state(int *machineType, int *ramSizeKb, int *portb, int *p
 	if (ramSizeKb) *ramSizeKb = MEMORY_ram_size;
 	if (portb) *portb = PIA_PORTB;
 	if (portbMask) *portbMask = PIA_PORTB_mask;
-	if (xeBank) *xeBank = MEMORY_xe_bank;
+	if (xeBank) *xeBank = atrd_cpu_xe_bank();
 	if (anticXeBank) {
 		*anticXeBank = (ANTIC_xe_ptr == NULL || atarixe_memory == NULL)
 			? 0 : (int)((ANTIC_xe_ptr - atarixe_memory) >> 14);
@@ -1323,6 +1330,42 @@ int atrd_peek_backing(int region, int offset)
 		return (atarixe_memory != NULL && (ULONG)offset < atarixe_memory_size) ? atarixe_memory[offset] : -1;
 	}
 	return -1;
+}
+
+/* RD-029: the RAM byte at ADDR, whatever the CPU sees there: where a ROM
+   (XL/XE OS, Self Test, BASIC, a cartridge) is switched in, the RAM kept
+   under it; where a 130XE extended bank is switched in at $4000-$7FFF, the
+   base RAM saved while it is out. $D000-$D7FF is hardware, never RAM: its
+   raw byte. No side effects. */
+static UBYTE *atrd_ram_cell(int addr)
+{
+	addr &= 0xffff;
+	if (atrd_get_memory_attrib(addr) == MEMORY_ROM) {
+		if (addr >= 0xc000 && addr < 0xd000)
+			return &under_atarixl_os[addr - 0xc000];
+		if (addr >= 0xd800)
+			return &under_atarixl_os[0x1800 + addr - 0xd800];
+		if (addr >= 0x5000 && addr < 0x5800 && MEMORY_selftest_enabled)
+			return &under_atarixl_os[0x1000 + addr - 0x5000];
+		if (addr >= 0x8000 && addr < 0xa000)
+			return &under_cart809F[addr - 0x8000];
+		if (addr >= 0xa000 && addr < 0xc000)
+			return &under_cartA0BF[addr - 0xa000];
+	}
+	if (addr >= 0x4000 && addr < 0x8000 && atrd_cpu_xe_bank() > 0 && atarixe_memory != NULL
+		&& !(MEMORY_selftest_enabled && addr >= 0x5000 && addr < 0x5800))
+		return &atarixe_memory[addr - 0x4000];		/* bank 0 holds the base RAM */
+	return &MEMORY_mem[addr];
+}
+
+int atrd_peek_ram(int addr)
+{
+	return *atrd_ram_cell(addr);
+}
+
+void atrd_poke_ram(int addr, int value)
+{
+	*atrd_ram_cell(addr) = (UBYTE)value;
 }
 
 /* RD-029: the built-in ROM PORTB maps at $A000-$BFFF on an XL/XE when no
