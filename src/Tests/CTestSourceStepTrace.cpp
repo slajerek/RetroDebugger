@@ -3,6 +3,9 @@
 #include "CViewC64.h"
 #include "CGuiMain.h"
 #include "CDebugInterfaceVice.h"
+#include "CDebugInterfaceAtari.h"
+#include "CDebugInterfaceNes.h"
+#include "NesWrapper.h"
 #include "CDebugSymbols.h"
 #include "CDebugSymbolsC64.h"
 #include "CDebugSymbolsSegment.h"
@@ -44,6 +47,19 @@ static bool ReadFile(const std::string &path, std::vector<u8> &out)
 		out.insert(out.end(), buffer, buffer + n);
 	fclose(f);
 	return true;
+}
+
+static void Poke(CDebugInterface *di, u16 addr, const std::vector<u8> &bytes)
+{
+	for (size_t i = 0; i < bytes.size(); i++)
+		di->GetDataAdapter()->AdapterWriteByte((int)(addr + i), bytes[i]);
+}
+
+static u8 Peek(CDebugInterface *di, u16 addr)
+{
+	u8 value = 0;
+	di->GetDataAdapter()->AdapterReadByte(addr, &value);
+	return value;
 }
 
 static bool ReadJson(const std::string &path, json &out)
@@ -112,7 +128,7 @@ static const CDebugFunction *FindFunction(const CDebugDatabase *database, u32 re
 	return NULL;
 }
 
-static bool WaitForPause(CDebugInterfaceVice *di, int timeoutMs)
+static bool WaitForPause(CDebugInterface *di, int timeoutMs)
 {
 	for (int waited = 0; waited < timeoutMs; waited += 10)
 	{
@@ -123,51 +139,107 @@ static bool WaitForPause(CDebugInterfaceVice *di, int timeoutMs)
 	return false;
 }
 
-bool CTestSourceStepTrace::RunTrace(CDebugInterfaceVice *di, const std::string &path)
+CTestSourceStepTrace::Machine *CTestSourceStepTrace::GetMachine(const std::string &name)
 {
-	json trace;
-	if (!Check(ReadJson(path, trace) && trace.contains("steps") && trace["steps"].is_array(),
-			   "Trace " + path + " reads as JSON with a steps array"))
-		return false;
+	for (Machine &machine : machines)
+	{
+		if (machine.name == name)
+			return &machine;
+	}
+	CDebugInterface *di = NULL;
+#ifdef RUN_COMMODORE64
+	if (name == "c64")
+		di = viewC64->debugInterfaceC64;
+#endif
+#ifdef RUN_ATARI
+	if (name == "atari")
+		di = viewC64->debugInterfaceAtari;
+#endif
+#ifdef RUN_NES
+	if (name == "nes")
+		di = viewC64->debugInterfaceNes;
+#endif
+	if (di == NULL)
+		return NULL;
 
-	std::string compiler = trace.value("compiler", "?");
-	std::string fixture = trace.value("fixture", "?");
-	std::string name = compiler + "/" + fixture;
-	if (!Check(trace.value("machine", "") == "c64", name + ": machine is c64 (the only one the runner drives yet)"))
-		return false;
+	Machine machine;
+	machine.name = name;
+	machine.di = di;
+	machine.started = !di->isRunning;
+	if (machine.started)
+	{
+		viewC64->StartEmulationThread(di);
+		SYS_Sleep(2000);
+	}
+	if (name == "nes")
+	{
+		// may have no cartridge, so no CPU running to pause at
+		di->SetDebugMode(DEBUGGER_MODE_PAUSED);
+		SYS_Sleep(200);
+	}
+	else
+	{
+		di->PauseEmulationBlockedWait();
+	}
+	machine.liveSymbols = di->symbols;
+	if (name == "c64")
+	{
+		machine.savedVector[0] = Peek(di, 0x0314);
+		machine.savedVector[1] = Peek(di, 0x0315);
+	}
+	machines.push_back(machine);
+	return &machines.back();
+}
 
-	std::string dir = ResolveProjectPath(trace.value("artifacts", "").c_str());
-	std::vector<u8> prg;
+void CTestSourceStepTrace::RestoreMachines()
+{
+	for (Machine &machine : machines)
+	{
+		CDebugInterface *di = machine.di;
+		di->SetDebugMode(DEBUGGER_MODE_PAUSED);
+		if (machine.name == "c64")
+		{
+			// KERNAL vector, PAL timer A latch ($4025) and the timer A IRQ back
+			CDebugInterfaceVice *vice = (CDebugInterfaceVice *)di;
+			vice->PauseEmulationBlockedWait();
+			vice->SetByteToRamC64(0x0314, machine.savedVector[0]);
+			vice->SetByteToRamC64(0x0315, machine.savedVector[1]);
+			vice->SetByteC64(0xDC04, 0x25);
+			vice->SetByteC64(0xDC05, 0x40);
+			vice->SetByteC64(0xDC0D, 0x81);
+		}
+#ifdef RUN_NES
+		if (machine.name == "nes")
+			nesd_unload_cartridge();
+#endif
+		guiMain->LockMutex();
+		di->LockMutex();
+		di->symbols = machine.liveSymbols;
+		di->UnlockMutex();
+		guiMain->UnlockMutex();
+		// scratch symbols leaked on purpose, see CTestSymbolLoaders
+
+		di->SetDebugMode(DEBUGGER_MODE_RUNNING);
+		if (machine.started)
+			viewC64->StopEmulationThread(di);
+	}
+	machines.clear();
+}
+
+// The C64 preamble at $C060: SEI, CIA1 interrupts off; with "irq" a timer A
+// IRQ every timerCycles into the $C040 handler (16-bit INC $02, optional JSR
+// to a fixture function, ack, RTI) and CLI; then JMP entry.
+bool CTestSourceStepTrace::LaunchC64(CDebugInterface *debugInterface, const json &trace, const std::vector<u8> &binary,
+									 const CDebugDatabase *database, const std::string &name)
+{
+	CDebugInterfaceVice *di = (CDebugInterfaceVice *)debugInterface;
 	int entry = trace.contains("entry") ? ParseAddress(trace["entry"]) : -1;
-	if (!Check(ReadFile(dir + "/" + trace.value("binary", ""), prg) && prg.size() > 2 && entry >= 0,
-			   name + ": the binary reads and the trace names an entry point"))
+	if (!Check(binary.size() > 2 && entry >= 0, name + ": the PRG has a load address and the trace names an entry point"))
 		return false;
+	u16 loadAddress = (u16)(binary[0] | (binary[1] << 8));
+	for (size_t i = 2; i < binary.size(); i++)
+		di->SetByteToRamC64((u16)(loadAddress + i - 2), binary[i]);
 
-	// fresh scratch symbols per trace; the live ones stay untouched
-	CDebugSymbols *scratch = new CDebugSymbolsC64(di);
-	scratch->SetDataAdapter(di->dataAdapterC64);
-	scratch->CreateDefaultSegment();
-	guiMain->LockMutex();
-	di->LockMutex();
-	di->symbols = scratch;
-	di->UnlockMutex();
-	guiMain->UnlockMutex();
-
-	std::string debugInfo = dir + "/" + trace.value("debugInfo", "");
-	DebugInfoLoadFile(scratch, debugInfo.c_str());
-	std::shared_ptr<const CDebugDatabase> database = scratch->debugDatabase;
-	if (!Check(database && scratch->currentSegment && scratch->currentSegment->debugRegionId >= 0,
-			   name + ": " + trace.value("debugInfo", "") + " loads with a region for the current segment"))
-		return false;
-	u32 regionId = (u32)scratch->currentSegment->debugRegionId;
-
-	u16 loadAddress = (u16)(prg[0] | (prg[1] << 8));
-	for (size_t i = 2; i < prg.size(); i++)
-		di->SetByteToRamC64((u16)(loadAddress + i - 2), prg[i]);
-
-	// $C060 preamble: SEI, CIA1 interrupts off; with "irq" a timer A IRQ every
-	// timerCycles into the $C040 handler (16-bit INC $02, optional JSR to a fixture
-	// function, ack, RTI) and CLI; then JMP entry.
 	std::vector<u8> setup = { 0x78, 0xA9, 0x7F, 0x8D, 0x0D, 0xDC, 0xAD, 0x0D, 0xDC };
 	if (trace.contains("irq"))
 	{
@@ -201,6 +273,124 @@ bool CTestSourceStepTrace::RunTrace(CDebugInterfaceVice *di, const std::string &
 		di->SetByteToRamC64((u16)(0xC060 + i), setup[i]);
 	di->SetByteToRamC64(0x0002, 0);
 	di->SetByteToRamC64(0x0003, 0);
+	di->MakeJmpC64(0xC060);
+	return true;
+}
+
+// An Atari XEX: its segments go straight into memory, then a jump to the
+// trace's entry or the RUNAD ($02E0) segment.
+bool CTestSourceStepTrace::LaunchAtari(CDebugInterface *di, const json &trace, const std::vector<u8> &binary,
+									   const std::string &name)
+{
+	int entry = trace.contains("entry") ? ParseAddress(trace["entry"]) : -1;
+	size_t i = 0;
+	bool valid = binary.size() > 6 && binary[0] == 0xFF && binary[1] == 0xFF;
+	while (valid && i + 4 <= binary.size())
+	{
+		if (binary[i] == 0xFF && binary[i + 1] == 0xFF)
+			i += 2;
+		int start = binary[i] | (binary[i + 1] << 8);
+		int end = binary[i + 2] | (binary[i + 3] << 8);
+		i += 4;
+		if (end < start || i + (end - start + 1) > binary.size())
+		{
+			valid = false;
+			break;
+		}
+		for (int addr = start; addr <= end; addr++)
+		{
+			u8 value = binary[i + addr - start];
+			if (addr == 0x02E0 && entry < 0 && end >= 0x02E1)
+				entry = value | (binary[i + addr - start + 1] << 8);
+			if (addr < 0x02E0 || addr > 0x02E3)		// RUNAD/INITAD stay the OS's
+				Poke(di, (u16)addr, { value });
+		}
+		i += end - start + 1;
+	}
+	if (!Check(valid && entry >= 0, name + ": the XEX segments load and give an entry point"))
+		return false;
+	di->MakeJmpNoReset(di->GetDataAdapter(), (u16)entry);
+	return true;
+}
+
+// A NES cartridge: inserted (a reset), then with "entry" the CPU is sent there
+// -- for builds that write no reset vector.
+bool CTestSourceStepTrace::LaunchNes(CDebugInterface *di, const json &trace, const std::string &binaryPath,
+									 const std::string &name)
+{
+#ifdef RUN_NES
+	if (!Check(nesd_insert_cartridge((char *)binaryPath.c_str()), name + ": the cartridge inserts"))
+		return false;
+	if (trace.contains("entry"))
+	{
+		di->SetDebugMode(DEBUGGER_MODE_RUNNING);
+		SYS_Sleep(200);
+		di->PauseEmulationBlockedWait();
+		di->MakeJmpNoReset(di->GetDataAdapter(), (u16)ParseAddress(trace["entry"]));
+	}
+	return true;
+#else
+	return false;
+#endif
+}
+
+bool CTestSourceStepTrace::RunTrace(const std::string &path)
+{
+	json trace;
+	if (!Check(ReadJson(path, trace) && trace.contains("steps") && trace["steps"].is_array(),
+			   "Trace " + path + " reads as JSON with a steps array"))
+		return false;
+
+	std::string compiler = trace.value("compiler", "?");
+	std::string fixture = trace.value("fixture", "?");
+	std::string machineName = trace.value("machine", "");
+	std::string name = compiler + "/" + machineName + "/" + fixture;
+	Machine *machine = GetMachine(machineName);
+	if (machine == NULL)
+	{
+		if (machineName == "c64" || machineName == "atari" || machineName == "nes")
+		{
+			ReportRequiredGap((machineName + " emulation not compiled in").c_str());
+			return true;
+		}
+		return Check(false, name + ": unknown machine " + machineName);
+	}
+	CDebugInterface *di = machine->di;
+	if (!Check(!trace.contains("irq") || machineName == "c64", name + ": \"irq\" is only driven on the C64"))
+		return false;
+
+	std::string dir = ResolveProjectPath(trace.value("artifacts", "").c_str());
+	std::string binaryPath = dir + "/" + trace.value("binary", "");
+	std::vector<u8> binary;
+	if (!Check(ReadFile(binaryPath, binary) && !binary.empty(), name + ": the binary reads"))
+		return false;
+
+	// fresh scratch symbols per trace; the live ones come back in RestoreMachines
+	CDebugSymbols *scratch;
+	if (machineName == "c64")
+	{
+		scratch = new CDebugSymbolsC64(di);
+		scratch->SetDataAdapter(((CDebugInterfaceVice *)di)->dataAdapterC64);
+	}
+	else
+	{
+		scratch = new CDebugSymbols(di, true);
+		scratch->SetDataAdapter(machine->liveSymbols->dataAdapter);
+	}
+	scratch->CreateDefaultSegment();
+	guiMain->LockMutex();
+	di->LockMutex();
+	di->symbols = scratch;
+	di->UnlockMutex();
+	guiMain->UnlockMutex();
+
+	std::string debugInfo = dir + "/" + trace.value("debugInfo", "");
+	DebugInfoLoadFile(scratch, debugInfo.c_str());
+	std::shared_ptr<const CDebugDatabase> database = scratch->debugDatabase;
+	if (!Check(database && scratch->currentSegment && scratch->currentSegment->debugRegionId >= 0,
+			   name + ": " + trace.value("debugInfo", "") + " loads with a region for the current segment"))
+		return false;
+	u32 regionId = (u32)scratch->currentSegment->debugRegionId;
 
 	// run to the start line through a source breakpoint
 	std::string startFile = trace["start"].value("file", "");
@@ -210,16 +400,28 @@ bool CTestSourceStepTrace::RunTrace(CDebugInterfaceVice *di, const std::string &
 			   name + ": the start " + startFile + ":" + std::to_string(startLine) + " resolves to code"))
 		return false;
 	int startAddress = startBp->bindings[0].address;
-	di->MakeJmpC64(0xC060);
+
+	bool launched = false;
+	if (machineName == "c64")
+		launched = LaunchC64(di, trace, binary, database.get(), name);
+	else if (machineName == "atari")
+		launched = LaunchAtari(di, trace, binary, name);
+#ifdef RUN_NES
+	else if (machineName == "nes")
+		launched = LaunchNes(di, trace, binaryPath, name);
+#endif
+	if (!launched)
+		return false;
 	di->SetDebugMode(DEBUGGER_MODE_RUNNING);
-	bool paused = WaitForPause(di, 3000);
+	bool paused = WaitForPause(di, 5000);
 	scratch->RemoveSourceBreakpoint(startBp);
 	u16 pc;
 	u8 a, x, y, p, sp;
 	di->GetCpuRegs(&pc, &a, &x, &y, &p, &sp);
-	char hex[8];
+	char hex[8], got[48];
 	snprintf(hex, sizeof(hex), "$%04X", startAddress);
-	if (!Check(paused && pc == startAddress, name + ": the program stops at the start line (" + hex + ")"))
+	snprintf(got, sizeof(got), "PC $%04X, mode %d", pc, (int)di->GetDebugMode());
+	if (!Check(paused && pc == startAddress, name + ": the program stops at the start line (" + hex + "; " + got + ")"))
 		return false;
 
 	// replay
@@ -288,7 +490,7 @@ bool CTestSourceStepTrace::RunTrace(CDebugInterfaceVice *di, const std::string &
 	if (ok && trace.contains("irq"))
 	{
 		// the handler's counter: the interrupt really ran during the trace
-		int irqs = di->GetByteFromRamC64(0x0002) | (di->GetByteFromRamC64(0x0003) << 8);
+		int irqs = Peek(di, 0x0002) | (Peek(di, 0x0003) << 8);
 		message += ", with the IRQ taken " + std::to_string(irqs) + " times";
 		if (irqs == 0)
 		{
@@ -299,7 +501,7 @@ bool CTestSourceStepTrace::RunTrace(CDebugInterfaceVice *di, const std::string &
 	}
 	if (!ok)
 	{
-		std::string dump = "/tmp/source-step-trace-" + compiler + "-" + fixture + ".txt";
+		std::string dump = "/tmp/source-step-trace-" + compiler + "-" + machineName + "-" + fixture + ".txt";
 		std::ofstream(dump) << log.str();
 		message = name + ": " + mismatch + " (full trace in " + dump + ")";
 	}
@@ -319,52 +521,19 @@ void CTestSourceStepTrace::Run(ITestCallback *cb)
 	bool ok = Check(ReadJson(expectations + "/index.json", index) && index.contains("traces") && !index["traces"].empty(),
 					"tests/source-debug/expectations/index.json lists the traces");
 	int traces = 0;
-
-#ifdef RUN_COMMODORE64
-	CDebugInterfaceVice *di = (CDebugInterfaceVice *)viewC64->debugInterfaceC64;
-	if (ok && di)
+	if (ok)
 	{
-		bool wasRunning = di->isRunning;
-		if (!wasRunning)
-		{
-			viewC64->StartEmulationThread(di);
-			SYS_Sleep(2000);
-		}
-		di->PauseEmulationBlockedWait();
-		CDebugSymbols *liveSymbols = di->symbols;
-		u8 savedVector[2] = { di->GetByteFromRamC64(0x0314), di->GetByteFromRamC64(0x0315) };
-
 		for (const json &entry : index["traces"])
 		{
-			ok = RunTrace(di, expectations + "/" + entry.get<std::string>());
-			di->SetDebugMode(DEBUGGER_MODE_PAUSED);
-			di->PauseEmulationBlockedWait();
+			ok = RunTrace(expectations + "/" + entry.get<std::string>());
+			for (Machine &machine : machines)
+				machine.di->SetDebugMode(DEBUGGER_MODE_PAUSED);
 			if (!ok)
 				break;
 			traces++;
 		}
-
-		// KERNAL vector, PAL timer A latch ($4025) and the timer A IRQ back
-		di->SetByteToRamC64(0x0314, savedVector[0]);
-		di->SetByteToRamC64(0x0315, savedVector[1]);
-		di->SetByteC64(0xDC04, 0x25);
-		di->SetByteC64(0xDC05, 0x40);
-		di->SetByteC64(0xDC0D, 0x81);
-
-		guiMain->LockMutex();
-		di->LockMutex();
-		di->symbols = liveSymbols;
-		di->UnlockMutex();
-		guiMain->UnlockMutex();
-		// scratch symbols leaked on purpose, see CTestSymbolLoaders
-
-		di->SetDebugMode(DEBUGGER_MODE_RUNNING);
-		if (!wasRunning)
-			viewC64->StopEmulationThread(di);
 	}
-#else
-	ReportRequiredGap("C64 emulation not compiled in");
-#endif
+	RestoreMachines();
 
 	if (!ok)
 	{

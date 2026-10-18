@@ -1,0 +1,27 @@
+{
+  "fixture": "interrupts",
+  "compiler": "oscar64",
+  "optimization": "debug",
+  "machine": "nes",
+  "artifacts": "tests/data/source-debug/oscar64/nes/interrupts",
+  "binary": "main.nes",
+  "debugInfo": "main.dbj",
+  "entry": "0xFF80",
+  "note": "Oscar64 1.32.273 -tm=nes writes no vectors for a plain main.c; the runner enters the startup section directly",
+  "start": {
+    "file": "main.c",
+    "line": 21
+  },
+  "steps": [
+    {"action": "sourceOver", "expected": {"file": "main.c", "line": 22, "function": "main", "depth": 0}, "expectedReason": "completed"},
+    {"action": "sourceOver", "expected": {"file": "main.c", "line": 23, "function": "main", "depth": 0}, "expectedReason": "completed"},
+    {"action": "sourceInto", "expected": {"file": "main.c", "line": 16, "function": "work", "depth": 1}, "expectedReason": "completed"},
+    {"action": "sourceOver", "expected": {"file": "main.c", "line": 17, "function": "work", "depth": 1}, "expectedReason": "completed"},
+    {"action": "sourceOut", "expected": {"file": "main.c", "line": 24, "function": "main", "depth": 0}, "expectedReason": "completed"},
+    {"action": "sourceInto", "expected": {"file": "main.c", "line": 16, "function": "work", "depth": 1}, "expectedReason": "completed"},
+    {"action": "sourceOver", "expected": {"file": "main.c", "line": 17, "function": "work", "depth": 1}, "expectedReason": "completed"},
+    {"action": "sourceOver", "expected": {"file": "main.c", "line": 18, "function": "work", "depth": 1}, "expectedReason": "completed"},
+    {"action": "sourceOver", "expected": {"line": null, "function": "main", "depth": 0}, "expectedReason": "frame-exited"},
+    {"action": "sourceOver", "expected": {"line": null, "function": "main", "depth": 0}, "expectedReason": "no-source"}
+  ]
+}

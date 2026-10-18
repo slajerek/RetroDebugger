@@ -5,6 +5,16 @@
     "oscar64/same-line.json",
     "oscar64/nested-calls.json",
     "oscar64/branches-loops.json",
-    "oscar64/interrupts.json"
+    "oscar64/interrupts.json",
+    "oscar64/basic-flow-atari.json",
+    "oscar64/same-line-atari.json",
+    "oscar64/nested-calls-atari.json",
+    "oscar64/branches-loops-atari.json",
+    "oscar64/interrupts-atari.json",
+    "oscar64/basic-flow-nes.json",
+    "oscar64/same-line-nes.json",
+    "oscar64/nested-calls-nes.json",
+    "oscar64/branches-loops-nes.json",
+    "oscar64/interrupts-nes.json"
   ]
 }

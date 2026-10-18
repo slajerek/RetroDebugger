@@ -2,17 +2,23 @@
 
 #include "CTest.h"
 #include "SYS_Defs.h"
+#include "json.hpp"
 #include <string>
+#include <vector>
 
-class CDebugInterfaceVice;
+class CDebugInterface;
+class CDebugSymbols;
+class CDebugDatabase;
 
 // RD-015: the step-trace runner. Replays every trace listed in
 // tests/source-debug/expectations/index.json (spec #9.5 format plus the
-// machine, the Tier 1 artifacts, the entry point and an optional IRQ): loads
+// machine (c64, atari, nes), the Tier 1 artifacts, the entry point and an
+// optional C64 IRQ): loads
 // the binary and its debug info into scratch symbols, runs to the start line
 // through a source breakpoint, then issues each source step and compares
 // (file, line, function, depth, reason). A failing trace writes the actual
-// trace next to the expected one to /tmp/source-step-trace-<compiler>-<fixture>.txt.
+// trace next to the expected one to
+// /tmp/source-step-trace-<compiler>-<machine>-<fixture>.txt.
 class CTestSourceStepTrace : public CTest
 {
 public:
@@ -25,5 +31,24 @@ private:
 	std::string failure;
 	bool Check(bool condition, const std::string &message);
 
-	bool RunTrace(CDebugInterfaceVice *di, const std::string &path);
+	// an emulator a trace ran on: started by the test or not, its own symbols
+	struct Machine
+	{
+		std::string name;
+		CDebugInterface *di = NULL;
+		bool started = false;
+		CDebugSymbols *liveSymbols = NULL;
+		u8 savedVector[2] = { 0, 0 };
+	};
+	std::vector<Machine> machines;
+	Machine *GetMachine(const std::string &name);
+	void RestoreMachines();
+
+	bool RunTrace(const std::string &path);
+	bool LaunchC64(CDebugInterface *di, const nlohmann::json &trace, const std::vector<u8> &binary,
+				   const CDebugDatabase *database, const std::string &name);
+	bool LaunchAtari(CDebugInterface *di, const nlohmann::json &trace, const std::vector<u8> &binary,
+					 const std::string &name);
+	bool LaunchNes(CDebugInterface *di, const nlohmann::json &trace, const std::string &binaryPath,
+				   const std::string &name);
 };

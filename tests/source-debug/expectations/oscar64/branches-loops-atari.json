@@ -1,0 +1,34 @@
+{
+  "fixture": "branches-loops",
+  "compiler": "oscar64",
+  "optimization": "debug",
+  "machine": "atari",
+  "artifacts": "tests/data/source-debug/oscar64/atari/branches-loops",
+  "binary": "main.xex",
+  "debugInfo": "main.dbj",
+  "start": {
+    "file": "main.c",
+    "line": 21
+  },
+  "steps": [
+    {"action": "sourceOver", "expected": {"file": "main.c", "line": 22, "function": "main", "depth": 0}, "expectedReason": "completed"},
+    {"action": "sourceOver", "expected": {"file": "main.c", "line": 23, "function": "main", "depth": 0}, "expectedReason": "completed", "note": "22 is split in three ranges (init, condition, increment); one stop per line per iteration"},
+    {"action": "sourceOver", "expected": {"file": "main.c", "line": 22, "function": "main", "depth": 0}, "expectedReason": "completed"},
+    {"action": "sourceOver", "expected": {"file": "main.c", "line": 23, "function": "main", "depth": 0}, "expectedReason": "completed"},
+    {"action": "sourceOver", "expected": {"file": "main.c", "line": 22, "function": "main", "depth": 0}, "expectedReason": "completed"},
+    {"action": "sourceOver", "expected": {"file": "main.c", "line": 23, "function": "main", "depth": 0}, "expectedReason": "completed"},
+    {"action": "sourceOver", "expected": {"file": "main.c", "line": 22, "function": "main", "depth": 0}, "expectedReason": "completed"},
+    {"action": "sourceOver", "expected": {"file": "main.c", "line": 23, "function": "main", "depth": 0}, "expectedReason": "completed"},
+    {"action": "sourceOver", "expected": {"file": "main.c", "line": 22, "function": "main", "depth": 0}, "expectedReason": "completed"},
+    {"action": "sourceOver", "expected": {"file": "main.c", "line": 24, "function": "main", "depth": 0}, "expectedReason": "completed"},
+    {"action": "sourceOver", "expected": {"file": "main.c", "line": 25, "function": "main", "depth": 0}, "expectedReason": "completed"},
+    {"action": "sourceOver", "expected": {"file": "main.c", "line": 24, "function": "main", "depth": 0}, "expectedReason": "completed"},
+    {"action": "sourceOver", "expected": {"file": "main.c", "line": 26, "function": "main", "depth": 0}, "expectedReason": "completed"},
+    {"action": "sourceOver", "expected": {"file": "main.c", "line": 27, "function": "main", "depth": 0}, "expectedReason": "completed"},
+    {"action": "sourceInto", "expected": {"file": "main.c", "line": 8, "function": "classify", "depth": 1}, "expectedReason": "completed"},
+    {"action": "sourceOver", "expected": {"file": "main.c", "line": 10, "function": "classify", "depth": 1}, "expectedReason": "completed"},
+    {"action": "sourceOver", "expected": {"file": "main.c", "line": 12, "function": "classify", "depth": 1}, "expectedReason": "completed"},
+    {"action": "sourceOver", "note": "return 2 is its own RTS; the shared STA result after both branches is mapped to the else line 29", "expected": {"file": "main.c", "line": 29, "function": "main", "depth": 0}, "expectedReason": "frame-exited"},
+    {"action": "sourceOver", "budget": 20000, "expected": {"line": null, "function": "main", "depth": 0}, "expectedReason": "budget-exceeded"}
+  ]
+}
