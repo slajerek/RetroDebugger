@@ -85,6 +85,18 @@ Docker containers on the maintainer's Mac have no network (Docker Desktop's
 proxy at `http.docker.internal:3128` did not help), so a local Linux build
 cannot fetch the workflow's apt packages.
 
+## Nightly toolchains (2026-10-19, branch `c-source-debugging`)
+
+`nightly-toolchains.yml` rebuilds the source-debugging fixtures from their
+pinned toolchains and compares them with the committed builds
+(`tests/source-debug/scripts/build_fixtures.py --check`; Oscar64 and KickC
+built from their tags by `provision_toolchains.sh`, cc65 and 64tass from
+apt). It is scheduled and dispatchable only once it is on the default branch
+(GitHub refuses `workflow_dispatch` of a workflow the default branch lacks).
+Checked locally on macOS with freshly provisioned toolchains: every cell
+matches except Oscar64 `branches-loops`, whose `.dbj` line ranges differ
+between hosts for the same code (the committed copy is the Linux one).
+
 ## Known state (2026-10-06)
 
 All three platforms green at devel tip `d4bd4b0`, both macOS legs each,
