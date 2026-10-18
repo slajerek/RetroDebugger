@@ -59,8 +59,10 @@ Where the work stands, for whoever picks it up next. Branches: app
   only, CI does not trigger on this branch by itself) and dispatch them on the
   current head.
 - **Next items, in suggested order:**
-  1. RD-015 leftovers: cc65/KickC traces (artifacts exist for cc65, see
-     `tests/source-debug/MATRIX.md`), an Atari/NES interrupt driver like the C64
+  1. RD-015 leftovers: cc65/KickC traces (`basic-flow`/`same-line` artifacts exist
+     for both, see `tests/source-debug/MATRIX.md`; it does not list the three new
+     fixtures yet -- they were built with `--fixture` filters, so rerun
+     `build_fixtures.py` without filters to regenerate it), an Atari/NES interrupt driver like the C64
      `irq`, and the `recursion`/`indirect-calls`/`optimized`/`inline` fixtures
      of spec #9.1.
   2. RD-013 leftovers: stop reason in the status line and an event-history
