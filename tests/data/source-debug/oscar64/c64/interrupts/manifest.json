@@ -1,0 +1,52 @@
+{
+  "buildDir": "/tmp/rd-source-debug/oscar64/c64/interrupts",
+  "commit": "9408778695b5442e755832711b89243b4f94a9ff",
+  "fixedMtime": 1767225600,
+  "fixture": "interrupts",
+  "inputs": {
+    "main.c": "83264778da3296ad67c81209ad6be3716d832cc88816b466a6c0d90015e4a576"
+  },
+  "machine": "c64",
+  "outputs": {
+    "main.asm": {
+      "sha256": "2e5c6743c240c4c823e49bb0b03326aa7d92e737c3f8c93126fe72d63852d2f8",
+      "size": 2671
+    },
+    "main.dbj": {
+      "sha256": "358d6e0d5a5df652650f13e94522e2d5a283e7b7d8ae165fd04510654754ef5c",
+      "size": 5712
+    },
+    "main.lbl": {
+      "sha256": "4e6daaa99ca97eb43fb3a12b5c0303229578d12f89a29d1ea139eb7ad3e42ab6",
+      "size": 166
+    },
+    "main.map": {
+      "sha256": "98365c6e3d815c21790aca3654abdd91245d6a57a4565df3d1f8217c1edc0c9d",
+      "size": 1135
+    },
+    "main.prg": {
+      "sha256": "e8da10ee4a45c2ecbd5989c27b4943bdd796834a4b40e82d20a2e2ef1595a536",
+      "size": 154
+    }
+  },
+  "source": "main.c",
+  "steps": [
+    [
+      "oscar64",
+      "-tm=c64",
+      "-n",
+      "-g",
+      "-O0",
+      "-o=main.prg",
+      "main.c"
+    ]
+  ],
+  "toolDirs": {
+    "oscar64": "/home/user/toolchains/oscar64/bin"
+  },
+  "toolchain": "oscar64",
+  "version": "1.32.273",
+  "versionReported": {
+    "oscar64": "Starting oscar64 1.32.273"
+  }
+}

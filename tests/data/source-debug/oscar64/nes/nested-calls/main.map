@@ -1,0 +1,52 @@
+sections
+8000 - 8033 : DATA, code
+10000 - 10000 : DATA, data
+0200 - 0201 : BSS, bss
+0208 - 0700 : HEAP, heap
+0700 - 07ff : STACK, stack
+0080 - 0080 : ZEROPAGE, zeropage
+10000 - 10000 : DATA, boot
+ff80 - ffbb : DATA, startup
+0800 - 0800 : SSTACK, sstack
+0800 - 0800 : SSTACK, leaf@stack
+07ff - 0800 : SSTACK, middle@stack
+07ff - 07ff : SSTACK, top@stack
+07ff - 07ff : SSTACK, main@stack
+
+regions
+0080 - 00ff : 0000, 0000, zeropage
+ff80 - fffa : ffbb, 003b, startup
+fffa - 10000 : 0000, 0000, boot
+8000 - ff80 : 8033, 0033, rom
+0200 - 0700 : 0000, 0001, main
+
+objects
+--:0080 - 0080 : ZeroEnd, END:zeropage
+--:0080 - 0080 : ZeroStart, START:zeropage
+--:0200 - 0201 : result, DATA:bss
+--:0200 - 0200 : BSSStart, START:bss
+--:0201 - 0201 : BSSEnd, END:bss
+--:07ff - 07ff : StackEnd, END:stack
+--:07ff - 0800 : w, BSS:middle@stack
+00:8000 - 8019 : main, NATIVE_CODE:code
+00:8019 - 8024 : top, NATIVE_CODE:code
+00:8024 - 802f : middle, NATIVE_CODE:code
+00:802f - 8033 : leaf, NATIVE_CODE:code
+00:ff80 - ffbb : startup, NATIVE_CODE:startup
+
+banks
+00 : 8000 .. ffbb (7fbb)
+
+objects by size
+00:ff80 (003b) : startup, NATIVE_CODE:startup
+00:8000 (0019) : main, NATIVE_CODE:code
+00:8019 (000b) : top, NATIVE_CODE:code
+00:8024 (000b) : middle, NATIVE_CODE:code
+00:802f (0004) : leaf, NATIVE_CODE:code
+--:0200 (0001) : result, DATA:bss
+--:07ff (0001) : w, BSS:middle@stack
+--:0080 (0000) : ZeroEnd, END:zeropage
+--:0080 (0000) : ZeroStart, START:zeropage
+--:0200 (0000) : BSSStart, START:bss
+--:0201 (0000) : BSSEnd, END:bss
+--:07ff (0000) : StackEnd, END:stack

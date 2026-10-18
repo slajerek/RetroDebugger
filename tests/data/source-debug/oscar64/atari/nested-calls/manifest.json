@@ -1,0 +1,52 @@
+{
+  "buildDir": "/tmp/rd-source-debug/oscar64/atari/nested-calls",
+  "commit": "9408778695b5442e755832711b89243b4f94a9ff",
+  "fixedMtime": 1767225600,
+  "fixture": "nested-calls",
+  "inputs": {
+    "main.c": "7c9b94b9021368d5800d4947ec0b1522790091db086347b3f9903aea847ef0a6"
+  },
+  "machine": "atari",
+  "outputs": {
+    "main.asm": {
+      "sha256": "da576d2ae0ed058be16e2b53ab55ae46f6b4d95e07b460344de05266501ebe2e",
+      "size": 2866
+    },
+    "main.dbj": {
+      "sha256": "e2d6becb0900cdfc88a4928bd609afcab52cb4866a5e0f7b77cfdca3d27ef949",
+      "size": 7687
+    },
+    "main.lbl": {
+      "sha256": "2372b35c5216cde919354057f921e43c5bf1b2476dac5871346e8e4577b27fa7",
+      "size": 189
+    },
+    "main.map": {
+      "sha256": "b01d6385f6344d384b86b62ab5329eca833636307b1a1f5ac08659b0f0ff73b3",
+      "size": 1356
+    },
+    "main.xex": {
+      "sha256": "59ed54c98b8f610c932815810a68d54819e2756f46cb0ab6a0e238abd1587766",
+      "size": 191
+    }
+  },
+  "source": "main.c",
+  "steps": [
+    [
+      "oscar64",
+      "-tm=atari",
+      "-n",
+      "-g",
+      "-O0",
+      "-o=main.xex",
+      "main.c"
+    ]
+  ],
+  "toolDirs": {
+    "oscar64": "/home/user/toolchains/oscar64/bin"
+  },
+  "toolchain": "oscar64",
+  "version": "1.32.273",
+  "versionReported": {
+    "oscar64": "Starting oscar64 1.32.273"
+  }
+}

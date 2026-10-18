@@ -1,0 +1,38 @@
+sections
+2080 - 2098 : DATA, code
+10000 - 10000 : DATA, data
+2098 - 2099 : BSS, bss
+20a0 - ac00 : HEAP, heap
+ac00 - bc00 : STACK, stack
+00e0 - 00e0 : ZEROPAGE, zeropage
+2000 - 2039 : DATA, startup
+bc00 - bc00 : SSTACK, sstack
+bc00 - bc00 : SSTACK, work@stack
+bc00 - bc00 : SSTACK, main@stack
+
+regions
+00e0 - 00ff : 0000, 0000, zeropage
+2000 - 2080 : 2039, 0039, startup
+2080 - ac00 : 2098, 0019, main
+
+objects
+00e0 - 00e0 : ZeroEnd, END:zeropage
+00e0 - 00e0 : ZeroStart, START:zeropage
+2000 - 2039 : startup, NATIVE_CODE:startup
+2080 - 208e : main, NATIVE_CODE:code
+208e - 2098 : work, NATIVE_CODE:code
+2098 - 2098 : BSSStart, START:bss
+2098 - 2099 : result, DATA:bss
+2099 - 2099 : BSSEnd, END:bss
+bc00 - bc00 : StackEnd, END:stack
+
+objects by size
+2000 (0039) : startup, NATIVE_CODE:startup
+2080 (000e) : main, NATIVE_CODE:code
+208e (000a) : work, NATIVE_CODE:code
+2098 (0001) : result, DATA:bss
+00e0 (0000) : ZeroEnd, END:zeropage
+00e0 (0000) : ZeroStart, START:zeropage
+2098 (0000) : BSSStart, START:bss
+2099 (0000) : BSSEnd, END:bss
+bc00 (0000) : StackEnd, END:stack

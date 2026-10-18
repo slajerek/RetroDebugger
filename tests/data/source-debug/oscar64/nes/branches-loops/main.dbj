@@ -1,0 +1,96 @@
+{	"memory": [		{"name": "ZeroStart", "xname": "ZeroStart", "start": 128, "end": 128, "type": "START", "source": "/home/user/toolchains/oscar64/include/crt.c", "line": 21 },
+		{"name": "ZeroEnd", "xname": "ZeroEnd", "start": 128, "end": 128, "type": "END", "source": "/home/user/toolchains/oscar64/include/crt.c", "line": 21 },
+		{"name": "result", "xname": "result", "start": 512, "end": 513, "type": "DATA", "source": "/tmp/rd-source-debug/oscar64/nes/branches-loops/main.c", "line": 5 },
+		{"name": "BSSStart", "xname": "BSSStart", "start": 512, "end": 512, "type": "START", "source": "/home/user/toolchains/oscar64/include/crt.c", "line": 21 },
+		{"name": "BSSEnd", "xname": "BSSEnd", "start": 513, "end": 513, "type": "END", "source": "/home/user/toolchains/oscar64/include/crt.c", "line": 21 },
+		{"name": "StackEnd", "xname": "StackEnd", "start": 2047, "end": 2047, "type": "END", "source": "/home/user/toolchains/oscar64/include/crt.c", "line": 21 },
+		{"name": "i", "xname": "i", "start": 2047, "end": 2048, "type": "BSS", "source": "/tmp/rd-source-debug/oscar64/nes/branches-loops/main.c", "line": 19 },
+		{"name": "main", "xname": "main()->i16", "start": 32768, "end": 32832, "type": "NATIVE_CODE", "source": "/tmp/rd-source-debug/oscar64/nes/branches-loops/main.c", "line": 19 },
+		{"name": "classify", "xname": "classify(u8)->u8", "start": 32832, "end": 32847, "type": "NATIVE_CODE", "source": "/tmp/rd-source-debug/oscar64/nes/branches-loops/main.c", "line": 7 },
+		{"name": "startup", "xname": "startup", "start": 65408, "end": 65467, "type": "NATIVE_CODE", "source": "/home/user/toolchains/oscar64/include/crt.c", "line": 69 }],
+	"variables": [
+		{"name": "BSSStart", "start": 512, "end": 512, "typeid": 0, "references": [
+			{"source": "/home/user/toolchains/oscar64/include/crt.c", "line": 21, "column": 28}]},
+		{"name": "BSSEnd", "start": 513, "end": 513, "typeid": 0, "references": [
+			{"source": "/home/user/toolchains/oscar64/include/crt.c", "line": 21, "column": 38}]},
+		{"name": "ZeroStart", "start": 128, "end": 128, "typeid": 0, "references": [
+			{"source": "/home/user/toolchains/oscar64/include/crt.c", "line": 21, "column": 66}]},
+		{"name": "ZeroEnd", "start": 128, "end": 128, "typeid": 0, "references": [
+			{"source": "/home/user/toolchains/oscar64/include/crt.c", "line": 21, "column": 77}]},
+		{"name": "StackEnd", "start": 2047, "end": 2047, "typeid": 0, "references": [
+			{"source": "/home/user/toolchains/oscar64/include/crt.c", "line": 21, "column": 18}]},
+		{"name": "result", "start": 512, "end": 513, "typeid": 1, "references": [
+			{"source": "/tmp/rd-source-debug/oscar64/nes/branches-loops/main.c", "line": 5, "column": 24},
+			{"source": "/tmp/rd-source-debug/oscar64/nes/branches-loops/main.c", "line": 21, "column": 5},
+			{"source": "/tmp/rd-source-debug/oscar64/nes/branches-loops/main.c", "line": 23, "column": 9},
+			{"source": "/tmp/rd-source-debug/oscar64/nes/branches-loops/main.c", "line": 23, "column": 18},
+			{"source": "/tmp/rd-source-debug/oscar64/nes/branches-loops/main.c", "line": 24, "column": 12},
+			{"source": "/tmp/rd-source-debug/oscar64/nes/branches-loops/main.c", "line": 25, "column": 9},
+			{"source": "/tmp/rd-source-debug/oscar64/nes/branches-loops/main.c", "line": 25, "column": 18},
+			{"source": "/tmp/rd-source-debug/oscar64/nes/branches-loops/main.c", "line": 26, "column": 9},
+			{"source": "/tmp/rd-source-debug/oscar64/nes/branches-loops/main.c", "line": 27, "column": 9},
+			{"source": "/tmp/rd-source-debug/oscar64/nes/branches-loops/main.c", "line": 29, "column": 9}]}	],
+	"functions": [
+		{"name": "main", "xname": "main()->i16", "start": 32768, "end": 32832, "typeid": 2, "source": "/tmp/rd-source-debug/oscar64/nes/branches-loops/main.c", "line": 19, "lines": [
+			{"start": 32768, "end": 32773, "source": "/tmp/rd-source-debug/oscar64/nes/branches-loops/main.c", "line": 21},
+			{"start": 32773, "end": 32776, "source": "/tmp/rd-source-debug/oscar64/nes/branches-loops/main.c", "line": 22},
+			{"start": 32776, "end": 32777, "source": "/tmp/rd-source-debug/oscar64/nes/branches-loops/main.c", "line": 23},
+			{"start": 32777, "end": 32785, "source": "/tmp/rd-source-debug/oscar64/nes/branches-loops/main.c", "line": 22},
+			{"start": 32785, "end": 32791, "source": "/tmp/rd-source-debug/oscar64/nes/branches-loops/main.c", "line": 23},
+			{"start": 32791, "end": 32793, "source": "/tmp/rd-source-debug/oscar64/nes/branches-loops/main.c", "line": 22},
+			{"start": 32795, "end": 32805, "source": "/tmp/rd-source-debug/oscar64/nes/branches-loops/main.c", "line": 24},
+			{"start": 32805, "end": 32810, "source": "/tmp/rd-source-debug/oscar64/nes/branches-loops/main.c", "line": 25},
+			{"start": 32813, "end": 32817, "source": "/tmp/rd-source-debug/oscar64/nes/branches-loops/main.c", "line": 26},
+			{"start": 32817, "end": 32819, "source": "/tmp/rd-source-debug/oscar64/nes/branches-loops/main.c", "line": 27},
+			{"start": 32821, "end": 32829, "source": "/tmp/rd-source-debug/oscar64/nes/branches-loops/main.c", "line": 29}], 
+			"origins":[
+			{"start": 32768, "end": 32773, "source": "/tmp/rd-source-debug/oscar64/nes/branches-loops/main.c", "line": 21},
+			{"start": 32773, "end": 32776, "source": "/tmp/rd-source-debug/oscar64/nes/branches-loops/main.c", "line": 22},
+			{"start": 32776, "end": 32781, "source": "/tmp/rd-source-debug/oscar64/nes/branches-loops/main.c", "line": 23},
+			{"start": 32781, "end": 32785, "source": "/tmp/rd-source-debug/oscar64/nes/branches-loops/main.c", "line": 22},
+			{"start": 32785, "end": 32791, "source": "/tmp/rd-source-debug/oscar64/nes/branches-loops/main.c", "line": 23},
+			{"start": 32791, "end": 32793, "source": "/tmp/rd-source-debug/oscar64/nes/branches-loops/main.c", "line": 22},
+			{"start": 32795, "end": 32800, "source": "/tmp/rd-source-debug/oscar64/nes/branches-loops/main.c", "line": 24},
+			{"start": 32800, "end": 32803, "source": "/tmp/rd-source-debug/oscar64/nes/branches-loops/main.c", "line": 25},
+			{"start": 32803, "end": 32805, "source": "/tmp/rd-source-debug/oscar64/nes/branches-loops/main.c", "line": 24},
+			{"start": 32805, "end": 32810, "source": "/tmp/rd-source-debug/oscar64/nes/branches-loops/main.c", "line": 25},
+			{"start": 32813, "end": 32817, "source": "/tmp/rd-source-debug/oscar64/nes/branches-loops/main.c", "line": 26},
+			{"start": 32817, "end": 32819, "source": "/tmp/rd-source-debug/oscar64/nes/branches-loops/main.c", "line": 27},
+			{"start": 32821, "end": 32829, "source": "/tmp/rd-source-debug/oscar64/nes/branches-loops/main.c", "line": 29}], 
+			"variables":[
+		{"name": "i", "start": 2047, "end": 2048, "enter": 20, "leave": 32, "typeid": 3, "references": [
+			{"source": "/tmp/rd-source-debug/oscar64/nes/branches-loops/main.c", "line": 20, "column": 19},
+			{"source": "/tmp/rd-source-debug/oscar64/nes/branches-loops/main.c", "line": 20, "column": 19},
+			{"source": "/tmp/rd-source-debug/oscar64/nes/branches-loops/main.c", "line": 22, "column": 10},
+			{"source": "/tmp/rd-source-debug/oscar64/nes/branches-loops/main.c", "line": 22, "column": 17},
+			{"source": "/tmp/rd-source-debug/oscar64/nes/branches-loops/main.c", "line": 23, "column": 27},
+			{"source": "/tmp/rd-source-debug/oscar64/nes/branches-loops/main.c", "line": 22, "column": 24}]}], "references": [
+			{"source": "/tmp/rd-source-debug/oscar64/nes/branches-loops/main.c", "line": 19, "column": 5}]}
+,
+		{"name": "classify", "xname": "classify(u8)->u8", "start": 32832, "end": 32847, "typeid": 4, "source": "/tmp/rd-source-debug/oscar64/nes/branches-loops/main.c", "line": 7, "lines": [
+			{"start": 32832, "end": 32836, "source": "/tmp/rd-source-debug/oscar64/nes/branches-loops/main.c", "line": 8},
+			{"start": 32836, "end": 32838, "source": "/tmp/rd-source-debug/oscar64/nes/branches-loops/main.c", "line": 9},
+			{"start": 32838, "end": 32839, "source": "/tmp/rd-source-debug/oscar64/nes/branches-loops/main.c", "line": 16},
+			{"start": 32839, "end": 32841, "source": "/tmp/rd-source-debug/oscar64/nes/branches-loops/main.c", "line": 10},
+			{"start": 32841, "end": 32843, "source": "/tmp/rd-source-debug/oscar64/nes/branches-loops/main.c", "line": 12},
+			{"start": 32844, "end": 32846, "source": "/tmp/rd-source-debug/oscar64/nes/branches-loops/main.c", "line": 16}], 
+			"origins":[
+			{"start": 32832, "end": 32836, "source": "/tmp/rd-source-debug/oscar64/nes/branches-loops/main.c", "line": 8},
+			{"start": 32836, "end": 32838, "source": "/tmp/rd-source-debug/oscar64/nes/branches-loops/main.c", "line": 9},
+			{"start": 32838, "end": 32839, "source": "/tmp/rd-source-debug/oscar64/nes/branches-loops/main.c", "line": 16},
+			{"start": 32839, "end": 32841, "source": "/tmp/rd-source-debug/oscar64/nes/branches-loops/main.c", "line": 10},
+			{"start": 32841, "end": 32843, "source": "/tmp/rd-source-debug/oscar64/nes/branches-loops/main.c", "line": 12},
+			{"start": 32844, "end": 32846, "source": "/tmp/rd-source-debug/oscar64/nes/branches-loops/main.c", "line": 16}], 
+			"variables":[
+			{"name": "v", "start": 13, "end": 14, "typeid": 5}], "references": [
+			{"source": "/tmp/rd-source-debug/oscar64/nes/branches-loops/main.c", "line": 7, "column": 15},
+			{"source": "/tmp/rd-source-debug/oscar64/nes/branches-loops/main.c", "line": 27, "column": 18},
+			{"source": "/tmp/rd-source-debug/oscar64/nes/branches-loops/main.c", "line": 29, "column": 18}]}
+	],
+	"types": [
+		{"name": "", "typeid": 0, "size": 0},
+		{"name": "", "typeid": 1, "size": 1, "type": "uint"},
+		{"name": "", "typeid": 2, "size": 0},
+		{"name": "", "typeid": 3, "size": 1, "type": "uint"},
+		{"name": "", "typeid": 4, "size": 0},
+		{"name": "", "typeid": 5, "size": 1, "type": "uint"}	]}

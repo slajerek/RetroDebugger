@@ -1,0 +1,52 @@
+{
+  "buildDir": "/tmp/rd-source-debug/oscar64/c64/branches-loops",
+  "commit": "9408778695b5442e755832711b89243b4f94a9ff",
+  "fixedMtime": 1767225600,
+  "fixture": "branches-loops",
+  "inputs": {
+    "main.c": "1b233cca00be417d7abf18ec2446954ea62ee538fae42ec2695f3033a5c6f579"
+  },
+  "machine": "c64",
+  "outputs": {
+    "main.asm": {
+      "sha256": "cc76b78bacff98458852a9120523a33c2c9a65ddcb166738298b20b03e6d25bc",
+      "size": 4448
+    },
+    "main.dbj": {
+      "sha256": "f239bada08909b201eda90aae3a97a54c1c29c55609a08d7ef254c5cee23ad4e",
+      "size": 9954
+    },
+    "main.lbl": {
+      "sha256": "2e031e4f8bd6227998ef605c69fd737610b2bf8325790b1c03c84ee22fc27a06",
+      "size": 181
+    },
+    "main.map": {
+      "sha256": "76713fed8d89489161a69b4ee7fda107924d42a1d45c23230f2a178ac490140e",
+      "size": 1211
+    },
+    "main.prg": {
+      "sha256": "5df71629f1b7d5ab0ceb56365207f76d229c23d84551ef0c81b0ecf806145260",
+      "size": 209
+    }
+  },
+  "source": "main.c",
+  "steps": [
+    [
+      "oscar64",
+      "-tm=c64",
+      "-n",
+      "-g",
+      "-O0",
+      "-o=main.prg",
+      "main.c"
+    ]
+  ],
+  "toolDirs": {
+    "oscar64": "/home/user/toolchains/oscar64/bin"
+  },
+  "toolchain": "oscar64",
+  "version": "1.32.273",
+  "versionReported": {
+    "oscar64": "Starting oscar64 1.32.273"
+  }
+}

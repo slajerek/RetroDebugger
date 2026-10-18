@@ -1,0 +1,13 @@
+al 00f7 .ZeroEnd
+al 00f7 .ZeroStart
+al 0801 .startup
+al 0880 .main
+al 0899 .top
+al 08a4 .middle
+al 08af .leaf
+al 08b3 .spentry
+al 08b4 .BSSStart
+al 08b4 .result
+al 08b5 .BSSEnd
+al 9fff .StackEnd
+al 9fff .w

@@ -1,0 +1,11 @@
+al 00f7 .ZeroEnd
+al 00f7 .ZeroStart
+al 0801 .startup
+al 0880 .main
+al 08c0 .classify
+al 08cf .spentry
+al 08d0 .result
+al 08d0 .BSSStart
+al 08d1 .BSSEnd
+al 9fff .StackEnd
+al 9fff .i

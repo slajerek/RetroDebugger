@@ -1,0 +1,86 @@
+{	"memory": [		{"name": "ZeroEnd", "xname": "ZeroEnd", "start": 224, "end": 224, "type": "END", "source": "/home/user/toolchains/oscar64/include/crt.c", "line": 21 },
+		{"name": "ZeroStart", "xname": "ZeroStart", "start": 224, "end": 224, "type": "START", "source": "/home/user/toolchains/oscar64/include/crt.c", "line": 21 },
+		{"name": "startup", "xname": "startup", "start": 8192, "end": 8249, "type": "NATIVE_CODE", "source": "/home/user/toolchains/oscar64/include/crt.c", "line": 69 },
+		{"name": "main", "xname": "main()->i16", "start": 8320, "end": 8345, "type": "NATIVE_CODE", "source": "/tmp/rd-source-debug/oscar64/atari/nested-calls/main.c", "line": 21 },
+		{"name": "top", "xname": "top(u8)->u8", "start": 8345, "end": 8356, "type": "NATIVE_CODE", "source": "/tmp/rd-source-debug/oscar64/atari/nested-calls/main.c", "line": 17 },
+		{"name": "middle", "xname": "middle(u8)->u8", "start": 8356, "end": 8367, "type": "NATIVE_CODE", "source": "/tmp/rd-source-debug/oscar64/atari/nested-calls/main.c", "line": 12 },
+		{"name": "leaf", "xname": "leaf(u8)->u8", "start": 8367, "end": 8371, "type": "NATIVE_CODE", "source": "/tmp/rd-source-debug/oscar64/atari/nested-calls/main.c", "line": 8 },
+		{"name": "BSSStart", "xname": "BSSStart", "start": 8371, "end": 8371, "type": "START", "source": "/home/user/toolchains/oscar64/include/crt.c", "line": 21 },
+		{"name": "result", "xname": "result", "start": 8371, "end": 8372, "type": "DATA", "source": "/tmp/rd-source-debug/oscar64/atari/nested-calls/main.c", "line": 6 },
+		{"name": "BSSEnd", "xname": "BSSEnd", "start": 8372, "end": 8372, "type": "END", "source": "/home/user/toolchains/oscar64/include/crt.c", "line": 21 },
+		{"name": "w", "xname": "w", "start": 48127, "end": 48128, "type": "BSS", "source": "/tmp/rd-source-debug/oscar64/atari/nested-calls/main.c", "line": 12 },
+		{"name": "StackEnd", "xname": "StackEnd", "start": 48127, "end": 48127, "type": "END", "source": "/home/user/toolchains/oscar64/include/crt.c", "line": 21 }],
+	"variables": [
+		{"name": "BSSStart", "start": 8371, "end": 8371, "typeid": 0, "references": [
+			{"source": "/home/user/toolchains/oscar64/include/crt.c", "line": 21, "column": 28}]},
+		{"name": "BSSEnd", "start": 8372, "end": 8372, "typeid": 0, "references": [
+			{"source": "/home/user/toolchains/oscar64/include/crt.c", "line": 21, "column": 38}]},
+		{"name": "ZeroStart", "start": 224, "end": 224, "typeid": 0, "references": [
+			{"source": "/home/user/toolchains/oscar64/include/crt.c", "line": 21, "column": 66}]},
+		{"name": "ZeroEnd", "start": 224, "end": 224, "typeid": 0, "references": [
+			{"source": "/home/user/toolchains/oscar64/include/crt.c", "line": 21, "column": 77}]},
+		{"name": "StackEnd", "start": 48127, "end": 48127, "typeid": 0, "references": [
+			{"source": "/home/user/toolchains/oscar64/include/crt.c", "line": 21, "column": 18}]},
+		{"name": "result", "start": 8371, "end": 8372, "typeid": 1, "references": [
+			{"source": "/tmp/rd-source-debug/oscar64/atari/nested-calls/main.c", "line": 6, "column": 24},
+			{"source": "/tmp/rd-source-debug/oscar64/atari/nested-calls/main.c", "line": 22, "column": 5},
+			{"source": "/tmp/rd-source-debug/oscar64/atari/nested-calls/main.c", "line": 23, "column": 5},
+			{"source": "/tmp/rd-source-debug/oscar64/atari/nested-calls/main.c", "line": 23, "column": 24}]}	],
+	"functions": [
+		{"name": "main", "xname": "main()->i16", "start": 8320, "end": 8345, "typeid": 2, "source": "/tmp/rd-source-debug/oscar64/atari/nested-calls/main.c", "line": 21, "lines": [
+			{"start": 8320, "end": 8330, "source": "/tmp/rd-source-debug/oscar64/atari/nested-calls/main.c", "line": 22},
+			{"start": 8330, "end": 8342, "source": "/tmp/rd-source-debug/oscar64/atari/nested-calls/main.c", "line": 23}], 
+			"origins":[
+			{"start": 8320, "end": 8330, "source": "/tmp/rd-source-debug/oscar64/atari/nested-calls/main.c", "line": 22},
+			{"start": 8330, "end": 8342, "source": "/tmp/rd-source-debug/oscar64/atari/nested-calls/main.c", "line": 23}], 
+			"variables":[
+], "references": [
+			{"source": "/tmp/rd-source-debug/oscar64/atari/nested-calls/main.c", "line": 21, "column": 5}]}
+,
+		{"name": "top", "xname": "top(u8)->u8", "start": 8345, "end": 8356, "typeid": 3, "source": "/tmp/rd-source-debug/oscar64/atari/nested-calls/main.c", "line": 17, "lines": [
+			{"start": 8345, "end": 8356, "source": "/tmp/rd-source-debug/oscar64/atari/nested-calls/main.c", "line": 18}], 
+			"origins":[
+			{"start": 8345, "end": 8356, "source": "/tmp/rd-source-debug/oscar64/atari/nested-calls/main.c", "line": 18}], 
+			"variables":[
+			{"name": "v", "start": 141, "end": 142, "typeid": 4}], "references": [
+			{"source": "/tmp/rd-source-debug/oscar64/atari/nested-calls/main.c", "line": 17, "column": 15},
+			{"source": "/tmp/rd-source-debug/oscar64/atari/nested-calls/main.c", "line": 22, "column": 14}]}
+,
+		{"name": "middle", "xname": "middle(u8)->u8", "start": 8356, "end": 8367, "typeid": 5, "source": "/tmp/rd-source-debug/oscar64/atari/nested-calls/main.c", "line": 12, "lines": [
+			{"start": 8356, "end": 8364, "source": "/tmp/rd-source-debug/oscar64/atari/nested-calls/main.c", "line": 13},
+			{"start": 8364, "end": 8367, "source": "/tmp/rd-source-debug/oscar64/atari/nested-calls/main.c", "line": 14}], 
+			"origins":[
+			{"start": 8356, "end": 8364, "source": "/tmp/rd-source-debug/oscar64/atari/nested-calls/main.c", "line": 13},
+			{"start": 8364, "end": 8367, "source": "/tmp/rd-source-debug/oscar64/atari/nested-calls/main.c", "line": 14}], 
+			"variables":[
+			{"name": "v", "start": 140, "end": 141, "typeid": 6},
+		{"name": "w", "start": 48127, "end": 48128, "enter": 13, "leave": 15, "typeid": 7, "references": [
+			{"source": "/tmp/rd-source-debug/oscar64/atari/nested-calls/main.c", "line": 13, "column": 19},
+			{"source": "/tmp/rd-source-debug/oscar64/atari/nested-calls/main.c", "line": 13, "column": 19},
+			{"source": "/tmp/rd-source-debug/oscar64/atari/nested-calls/main.c", "line": 14, "column": 17}]}], "references": [
+			{"source": "/tmp/rd-source-debug/oscar64/atari/nested-calls/main.c", "line": 12, "column": 15},
+			{"source": "/tmp/rd-source-debug/oscar64/atari/nested-calls/main.c", "line": 18, "column": 12}]}
+,
+		{"name": "leaf", "xname": "leaf(u8)->u8", "start": 8367, "end": 8371, "typeid": 8, "source": "/tmp/rd-source-debug/oscar64/atari/nested-calls/main.c", "line": 8, "lines": [
+			{"start": 8367, "end": 8371, "source": "/tmp/rd-source-debug/oscar64/atari/nested-calls/main.c", "line": 9}], 
+			"origins":[
+			{"start": 8367, "end": 8371, "source": "/tmp/rd-source-debug/oscar64/atari/nested-calls/main.c", "line": 9}], 
+			"variables":[
+			{"name": "v", "start": 139, "end": 140, "typeid": 9}], "references": [
+			{"source": "/tmp/rd-source-debug/oscar64/atari/nested-calls/main.c", "line": 8, "column": 15},
+			{"source": "/tmp/rd-source-debug/oscar64/atari/nested-calls/main.c", "line": 13, "column": 23},
+			{"source": "/tmp/rd-source-debug/oscar64/atari/nested-calls/main.c", "line": 14, "column": 12},
+			{"source": "/tmp/rd-source-debug/oscar64/atari/nested-calls/main.c", "line": 23, "column": 14},
+			{"source": "/tmp/rd-source-debug/oscar64/atari/nested-calls/main.c", "line": 23, "column": 19}]}
+	],
+	"types": [
+		{"name": "", "typeid": 0, "size": 0},
+		{"name": "", "typeid": 1, "size": 1, "type": "uint"},
+		{"name": "", "typeid": 2, "size": 0},
+		{"name": "", "typeid": 3, "size": 0},
+		{"name": "", "typeid": 4, "size": 1, "type": "uint"},
+		{"name": "", "typeid": 5, "size": 0},
+		{"name": "", "typeid": 6, "size": 1, "type": "uint"},
+		{"name": "", "typeid": 7, "size": 1, "type": "uint"},
+		{"name": "", "typeid": 8, "size": 0},
+		{"name": "", "typeid": 9, "size": 1, "type": "uint"}	]}

@@ -1,0 +1,90 @@
+{	"memory": [		{"name": "ZeroEnd", "xname": "ZeroEnd", "start": 247, "end": 247, "type": "END", "source": "/home/user/toolchains/oscar64/include/crt.c", "line": 21 },
+		{"name": "ZeroStart", "xname": "ZeroStart", "start": 247, "end": 247, "type": "START", "source": "/home/user/toolchains/oscar64/include/crt.c", "line": 21 },
+		{"name": "startup", "xname": "startup", "start": 2049, "end": 2131, "type": "NATIVE_CODE", "source": "/home/user/toolchains/oscar64/include/crt.c", "line": 69 },
+		{"name": "main", "xname": "main()->i16", "start": 2176, "end": 2201, "type": "NATIVE_CODE", "source": "/tmp/rd-source-debug/oscar64/c64/nested-calls/main.c", "line": 21 },
+		{"name": "top", "xname": "top(u8)->u8", "start": 2201, "end": 2212, "type": "NATIVE_CODE", "source": "/tmp/rd-source-debug/oscar64/c64/nested-calls/main.c", "line": 17 },
+		{"name": "middle", "xname": "middle(u8)->u8", "start": 2212, "end": 2223, "type": "NATIVE_CODE", "source": "/tmp/rd-source-debug/oscar64/c64/nested-calls/main.c", "line": 12 },
+		{"name": "leaf", "xname": "leaf(u8)->u8", "start": 2223, "end": 2227, "type": "NATIVE_CODE", "source": "/tmp/rd-source-debug/oscar64/c64/nested-calls/main.c", "line": 8 },
+		{"name": "spentry", "xname": "spentry", "start": 2227, "end": 2228, "type": "DATA", "source": "/home/user/toolchains/oscar64/include/crt.h", "line": 4 },
+		{"name": "BSSStart", "xname": "BSSStart", "start": 2228, "end": 2228, "type": "START", "source": "/home/user/toolchains/oscar64/include/crt.c", "line": 21 },
+		{"name": "result", "xname": "result", "start": 2228, "end": 2229, "type": "DATA", "source": "/tmp/rd-source-debug/oscar64/c64/nested-calls/main.c", "line": 6 },
+		{"name": "BSSEnd", "xname": "BSSEnd", "start": 2229, "end": 2229, "type": "END", "source": "/home/user/toolchains/oscar64/include/crt.c", "line": 21 },
+		{"name": "StackEnd", "xname": "StackEnd", "start": 40959, "end": 40959, "type": "END", "source": "/home/user/toolchains/oscar64/include/crt.c", "line": 21 },
+		{"name": "w", "xname": "w", "start": 40959, "end": 40960, "type": "BSS", "source": "/tmp/rd-source-debug/oscar64/c64/nested-calls/main.c", "line": 12 }],
+	"variables": [
+		{"name": "spentry", "start": 2227, "end": 2228, "typeid": 0, "references": [
+			{"source": "/home/user/toolchains/oscar64/include/crt.h", "line": 4, "column": 13}]},
+		{"name": "BSSStart", "start": 2228, "end": 2228, "typeid": 1, "references": [
+			{"source": "/home/user/toolchains/oscar64/include/crt.c", "line": 21, "column": 28}]},
+		{"name": "BSSEnd", "start": 2229, "end": 2229, "typeid": 1, "references": [
+			{"source": "/home/user/toolchains/oscar64/include/crt.c", "line": 21, "column": 38}]},
+		{"name": "ZeroStart", "start": 247, "end": 247, "typeid": 1, "references": [
+			{"source": "/home/user/toolchains/oscar64/include/crt.c", "line": 21, "column": 66}]},
+		{"name": "ZeroEnd", "start": 247, "end": 247, "typeid": 1, "references": [
+			{"source": "/home/user/toolchains/oscar64/include/crt.c", "line": 21, "column": 77}]},
+		{"name": "StackEnd", "start": 40959, "end": 40959, "typeid": 1, "references": [
+			{"source": "/home/user/toolchains/oscar64/include/crt.c", "line": 21, "column": 18}]},
+		{"name": "result", "start": 2228, "end": 2229, "typeid": 2, "references": [
+			{"source": "/tmp/rd-source-debug/oscar64/c64/nested-calls/main.c", "line": 6, "column": 24},
+			{"source": "/tmp/rd-source-debug/oscar64/c64/nested-calls/main.c", "line": 22, "column": 5},
+			{"source": "/tmp/rd-source-debug/oscar64/c64/nested-calls/main.c", "line": 23, "column": 5},
+			{"source": "/tmp/rd-source-debug/oscar64/c64/nested-calls/main.c", "line": 23, "column": 24}]}	],
+	"functions": [
+		{"name": "main", "xname": "main()->i16", "start": 2176, "end": 2201, "typeid": 3, "source": "/tmp/rd-source-debug/oscar64/c64/nested-calls/main.c", "line": 21, "lines": [
+			{"start": 2176, "end": 2186, "source": "/tmp/rd-source-debug/oscar64/c64/nested-calls/main.c", "line": 22},
+			{"start": 2186, "end": 2198, "source": "/tmp/rd-source-debug/oscar64/c64/nested-calls/main.c", "line": 23}], 
+			"origins":[
+			{"start": 2176, "end": 2186, "source": "/tmp/rd-source-debug/oscar64/c64/nested-calls/main.c", "line": 22},
+			{"start": 2186, "end": 2198, "source": "/tmp/rd-source-debug/oscar64/c64/nested-calls/main.c", "line": 23}], 
+			"variables":[
+], "references": [
+			{"source": "/tmp/rd-source-debug/oscar64/c64/nested-calls/main.c", "line": 21, "column": 5}]}
+,
+		{"name": "top", "xname": "top(u8)->u8", "start": 2201, "end": 2212, "typeid": 4, "source": "/tmp/rd-source-debug/oscar64/c64/nested-calls/main.c", "line": 17, "lines": [
+			{"start": 2201, "end": 2212, "source": "/tmp/rd-source-debug/oscar64/c64/nested-calls/main.c", "line": 18}], 
+			"origins":[
+			{"start": 2201, "end": 2212, "source": "/tmp/rd-source-debug/oscar64/c64/nested-calls/main.c", "line": 18}], 
+			"variables":[
+			{"name": "v", "start": 15, "end": 16, "typeid": 5}], "references": [
+			{"source": "/tmp/rd-source-debug/oscar64/c64/nested-calls/main.c", "line": 17, "column": 15},
+			{"source": "/tmp/rd-source-debug/oscar64/c64/nested-calls/main.c", "line": 22, "column": 14}]}
+,
+		{"name": "middle", "xname": "middle(u8)->u8", "start": 2212, "end": 2223, "typeid": 6, "source": "/tmp/rd-source-debug/oscar64/c64/nested-calls/main.c", "line": 12, "lines": [
+			{"start": 2212, "end": 2220, "source": "/tmp/rd-source-debug/oscar64/c64/nested-calls/main.c", "line": 13},
+			{"start": 2220, "end": 2223, "source": "/tmp/rd-source-debug/oscar64/c64/nested-calls/main.c", "line": 14}], 
+			"origins":[
+			{"start": 2212, "end": 2220, "source": "/tmp/rd-source-debug/oscar64/c64/nested-calls/main.c", "line": 13},
+			{"start": 2220, "end": 2223, "source": "/tmp/rd-source-debug/oscar64/c64/nested-calls/main.c", "line": 14}], 
+			"variables":[
+			{"name": "v", "start": 14, "end": 15, "typeid": 7},
+		{"name": "w", "start": 40959, "end": 40960, "enter": 13, "leave": 15, "typeid": 8, "references": [
+			{"source": "/tmp/rd-source-debug/oscar64/c64/nested-calls/main.c", "line": 13, "column": 19},
+			{"source": "/tmp/rd-source-debug/oscar64/c64/nested-calls/main.c", "line": 13, "column": 19},
+			{"source": "/tmp/rd-source-debug/oscar64/c64/nested-calls/main.c", "line": 14, "column": 17}]}], "references": [
+			{"source": "/tmp/rd-source-debug/oscar64/c64/nested-calls/main.c", "line": 12, "column": 15},
+			{"source": "/tmp/rd-source-debug/oscar64/c64/nested-calls/main.c", "line": 18, "column": 12}]}
+,
+		{"name": "leaf", "xname": "leaf(u8)->u8", "start": 2223, "end": 2227, "typeid": 9, "source": "/tmp/rd-source-debug/oscar64/c64/nested-calls/main.c", "line": 8, "lines": [
+			{"start": 2223, "end": 2227, "source": "/tmp/rd-source-debug/oscar64/c64/nested-calls/main.c", "line": 9}], 
+			"origins":[
+			{"start": 2223, "end": 2227, "source": "/tmp/rd-source-debug/oscar64/c64/nested-calls/main.c", "line": 9}], 
+			"variables":[
+			{"name": "v", "start": 13, "end": 14, "typeid": 10}], "references": [
+			{"source": "/tmp/rd-source-debug/oscar64/c64/nested-calls/main.c", "line": 8, "column": 15},
+			{"source": "/tmp/rd-source-debug/oscar64/c64/nested-calls/main.c", "line": 13, "column": 23},
+			{"source": "/tmp/rd-source-debug/oscar64/c64/nested-calls/main.c", "line": 14, "column": 12},
+			{"source": "/tmp/rd-source-debug/oscar64/c64/nested-calls/main.c", "line": 23, "column": 14},
+			{"source": "/tmp/rd-source-debug/oscar64/c64/nested-calls/main.c", "line": 23, "column": 19}]}
+	],
+	"types": [
+		{"name": "", "typeid": 0, "size": 1, "type": "uint"},
+		{"name": "", "typeid": 1, "size": 0},
+		{"name": "", "typeid": 2, "size": 1, "type": "uint"},
+		{"name": "", "typeid": 3, "size": 0},
+		{"name": "", "typeid": 4, "size": 0},
+		{"name": "", "typeid": 5, "size": 1, "type": "uint"},
+		{"name": "", "typeid": 6, "size": 0},
+		{"name": "", "typeid": 7, "size": 1, "type": "uint"},
+		{"name": "", "typeid": 8, "size": 1, "type": "uint"},
+		{"name": "", "typeid": 9, "size": 0},
+		{"name": "", "typeid": 10, "size": 1, "type": "uint"}	]}

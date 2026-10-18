@@ -1,0 +1,52 @@
+{
+  "buildDir": "/tmp/rd-source-debug/oscar64/atari/interrupts",
+  "commit": "9408778695b5442e755832711b89243b4f94a9ff",
+  "fixedMtime": 1767225600,
+  "fixture": "interrupts",
+  "inputs": {
+    "main.c": "83264778da3296ad67c81209ad6be3716d832cc88816b466a6c0d90015e4a576"
+  },
+  "machine": "atari",
+  "outputs": {
+    "main.asm": {
+      "sha256": "b5faa4bf6247fd6388b0a3c737688e6b36e7b2b5236d7f70010c38130ee2d867",
+      "size": 2137
+    },
+    "main.dbj": {
+      "sha256": "714e7789643f9ab1f34d426dc7c1b3d9b72fc9207d277e3e43c544716003a78f",
+      "size": 5386
+    },
+    "main.lbl": {
+      "sha256": "e2d52196ae409cb5c5c4461e20f93b82d6a889739b84c10a9f251f26028a70a6",
+      "size": 149
+    },
+    "main.map": {
+      "sha256": "818f43b2927b027a564c5d59552024a4fbaf4c77e8444d16e5f261a1c2e7587d",
+      "size": 1071
+    },
+    "main.xex": {
+      "sha256": "716f8916ad386516c52ce5831ce67039a31e4a6c2eb2048a1b780352f63b205e",
+      "size": 164
+    }
+  },
+  "source": "main.c",
+  "steps": [
+    [
+      "oscar64",
+      "-tm=atari",
+      "-n",
+      "-g",
+      "-O0",
+      "-o=main.xex",
+      "main.c"
+    ]
+  ],
+  "toolDirs": {
+    "oscar64": "/home/user/toolchains/oscar64/bin"
+  },
+  "toolchain": "oscar64",
+  "version": "1.32.273",
+  "versionReported": {
+    "oscar64": "Starting oscar64 1.32.273"
+  }
+}

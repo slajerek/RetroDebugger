@@ -1,0 +1,10 @@
+al 00e0 .ZeroEnd
+al 00e0 .ZeroStart
+al 2000 .startup
+al 2080 .main
+al 20c0 .classify
+al 20cf .result
+al 20cf .BSSStart
+al 20d0 .BSSEnd
+al bbff .StackEnd
+al bbff .i

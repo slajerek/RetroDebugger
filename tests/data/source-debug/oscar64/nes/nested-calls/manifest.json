@@ -1,0 +1,52 @@
+{
+  "buildDir": "/tmp/rd-source-debug/oscar64/nes/nested-calls",
+  "commit": "9408778695b5442e755832711b89243b4f94a9ff",
+  "fixedMtime": 1767225600,
+  "fixture": "nested-calls",
+  "inputs": {
+    "main.c": "7c9b94b9021368d5800d4947ec0b1522790091db086347b3f9903aea847ef0a6"
+  },
+  "machine": "nes",
+  "outputs": {
+    "main.asm": {
+      "sha256": "88c4ec358d936493f1c60c945fb0409cee6048776196a2037c93202fa76127c4",
+      "size": 3049
+    },
+    "main.dbj": {
+      "sha256": "fc49883284220bde5b97c5c68e43dd2bae0f8ecb9ef74e6a1b03e75f6eabaf76",
+      "size": 7625
+    },
+    "main.map": {
+      "sha256": "3576bb4fa01131cf436cf3ca9bbcbb27a49c5c7d675c7beed647adc675d83864",
+      "size": 1549
+    },
+    "main.mlb": {
+      "sha256": "e760b1df1f120b5b6fa6a0315beb667516ddfa292dcf9d2b5abfa344a4f049c9",
+      "size": 276
+    },
+    "main.nes": {
+      "sha256": "22315cb5209ca821be9ed07e176ecf6484584ddf6713c928a0cc08d0f1ecff29",
+      "size": 40976
+    }
+  },
+  "source": "main.c",
+  "steps": [
+    [
+      "oscar64",
+      "-tm=nes",
+      "-n",
+      "-g",
+      "-O0",
+      "-o=main.nes",
+      "main.c"
+    ]
+  ],
+  "toolDirs": {
+    "oscar64": "/home/user/toolchains/oscar64/bin"
+  },
+  "toolchain": "oscar64",
+  "version": "1.32.273",
+  "versionReported": {
+    "oscar64": "Starting oscar64 1.32.273"
+  }
+}

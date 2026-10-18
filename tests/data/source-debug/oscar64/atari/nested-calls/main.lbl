@@ -1,0 +1,12 @@
+al 00e0 .ZeroEnd
+al 00e0 .ZeroStart
+al 2000 .startup
+al 2080 .main
+al 2099 .top
+al 20a4 .middle
+al 20af .leaf
+al 20b3 .BSSStart
+al 20b3 .result
+al 20b4 .BSSEnd
+al bbff .w
+al bbff .StackEnd

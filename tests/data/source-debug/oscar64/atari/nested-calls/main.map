@@ -1,0 +1,46 @@
+sections
+2080 - 20b3 : DATA, code
+10000 - 10000 : DATA, data
+20b3 - 20b4 : BSS, bss
+20b8 - ac00 : HEAP, heap
+ac00 - bbff : STACK, stack
+00e0 - 00e0 : ZEROPAGE, zeropage
+2000 - 2039 : DATA, startup
+bc00 - bc00 : SSTACK, sstack
+bc00 - bc00 : SSTACK, leaf@stack
+bbff - bc00 : SSTACK, middle@stack
+bbff - bbff : SSTACK, top@stack
+bbff - bbff : SSTACK, main@stack
+
+regions
+00e0 - 00ff : 0000, 0000, zeropage
+2000 - 2080 : 2039, 0039, startup
+2080 - ac00 : 20b3, 0034, main
+
+objects
+00e0 - 00e0 : ZeroEnd, END:zeropage
+00e0 - 00e0 : ZeroStart, START:zeropage
+2000 - 2039 : startup, NATIVE_CODE:startup
+2080 - 2099 : main, NATIVE_CODE:code
+2099 - 20a4 : top, NATIVE_CODE:code
+20a4 - 20af : middle, NATIVE_CODE:code
+20af - 20b3 : leaf, NATIVE_CODE:code
+20b3 - 20b3 : BSSStart, START:bss
+20b3 - 20b4 : result, DATA:bss
+20b4 - 20b4 : BSSEnd, END:bss
+bbff - bc00 : w, BSS:middle@stack
+bbff - bbff : StackEnd, END:stack
+
+objects by size
+2000 (0039) : startup, NATIVE_CODE:startup
+2080 (0019) : main, NATIVE_CODE:code
+2099 (000b) : top, NATIVE_CODE:code
+20a4 (000b) : middle, NATIVE_CODE:code
+20af (0004) : leaf, NATIVE_CODE:code
+20b3 (0001) : result, DATA:bss
+bbff (0001) : w, BSS:middle@stack
+00e0 (0000) : ZeroEnd, END:zeropage
+00e0 (0000) : ZeroStart, START:zeropage
+20b3 (0000) : BSSStart, START:bss
+20b4 (0000) : BSSEnd, END:bss
+bbff (0000) : StackEnd, END:stack

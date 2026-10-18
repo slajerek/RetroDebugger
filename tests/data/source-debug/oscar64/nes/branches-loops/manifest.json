@@ -1,0 +1,52 @@
+{
+  "buildDir": "/tmp/rd-source-debug/oscar64/nes/branches-loops",
+  "commit": "9408778695b5442e755832711b89243b4f94a9ff",
+  "fixedMtime": 1767225600,
+  "fixture": "branches-loops",
+  "inputs": {
+    "main.c": "1b233cca00be417d7abf18ec2446954ea62ee538fae42ec2695f3033a5c6f579"
+  },
+  "machine": "nes",
+  "outputs": {
+    "main.asm": {
+      "sha256": "036d2b9959541c6eaef81fd2dfb3dfc6088ea83211c75084bc5338dfa62b558e",
+      "size": 4143
+    },
+    "main.dbj": {
+      "sha256": "dcc68ca195e0a20f09b1f6a4228363178ae8ea975da79452fcb22bcce2c1f898",
+      "size": 9636
+    },
+    "main.map": {
+      "sha256": "2a4a6212afb640eb98e06e6aba605e3079f159d961d81b88ed16817cb7818694",
+      "size": 1328
+    },
+    "main.mlb": {
+      "sha256": "9672dd091b0044b3935f6d2f1ee7e6dcb7384d1f72ca16880c5c7e302f8495e4",
+      "size": 402
+    },
+    "main.nes": {
+      "sha256": "b443c8821bd56c28c42a203874e0e4e11ed6d1704bec75e0c72e6ba4699f591c",
+      "size": 40976
+    }
+  },
+  "source": "main.c",
+  "steps": [
+    [
+      "oscar64",
+      "-tm=nes",
+      "-n",
+      "-g",
+      "-O0",
+      "-o=main.nes",
+      "main.c"
+    ]
+  ],
+  "toolDirs": {
+    "oscar64": "/home/user/toolchains/oscar64/bin"
+  },
+  "toolchain": "oscar64",
+  "version": "1.32.273",
+  "versionReported": {
+    "oscar64": "Starting oscar64 1.32.273"
+  }
+}
