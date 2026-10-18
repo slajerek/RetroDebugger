@@ -2599,6 +2599,19 @@ opcode.op.op8[0] = ((o) >> 16) & 0xff; \
 					c64d_drive1541_notify_boundary(reg_pc, reg_sp);
 					viceCurrentDiskPC[0] = reg_pc;
 					c64d_debug_pause_check(0);
+					// a PC set while the drive was parked just above: the
+					// instruction there gets its breakpoint check and boundary
+					// too, instead of running unchecked from the fetch below
+					while (_c64d_new_drive_pc != -1 && reg_pc != (uint16_t)_c64d_new_drive_pc)
+					{
+						viceCurrentDiskPC[0] = _c64d_new_drive_pc;
+						cpu->cpu_regs.pc = _c64d_new_drive_pc;
+						reg_pc = _c64d_new_drive_pc;
+						_c64d_new_drive_pc = -1;
+						c64d_drive1541_check_pc_breakpoint(reg_pc);
+						c64d_drive1541_notify_boundary(reg_pc, reg_sp);
+						c64d_debug_pause_check(0);
+					}
 				}
 				}
 			}

@@ -99,9 +99,8 @@ bool CTestDriveSourceStepping::RunDrive()
 					"1541: the cc65 debug info of the drive code loads into the drive's symbols");
 
 	// into drive RAM, the drive sent there; a source breakpoint on the loop's
-	// line. Not on the first instruction: a drive PC set while the drive is
-	// parked after its breakpoint check runs the new PC's first instruction
-	// unchecked (VICE drivecpu.c applies it at the opcode fetch)
+	// line (a PC set while the drive is parked is checked at the new PC too:
+	// the step at the end)
 	CDebugSourceBreakpoint *atLoop = ok ? scratch->AddSourceBreakpoint("drive.s", 11) : NULL;
 	ok = ok && Check(atLoop && atLoop->IsResolved() && atLoop->bindings[0].address == 0x0502,
 					 "1541: a source breakpoint on drive.s:11 binds to $0502 in the drive's segment");
@@ -240,6 +239,27 @@ bool CTestDriveSourceStepping::RunDrive()
 	{
 		ok = Check(view->ShowAddress(0x050C) && view->GetSelectedLine() == 16,
 				   "1541: the 1541 Source code view shows the drive's code ($050C is drive.s:16)");
+	}
+	if (ok)
+	{
+		// the drive parked after a stop is sent to $0500, which has a PC
+		// breakpoint: it stops there, before the instruction runs (a PC set
+		// while parked used to run its first instruction unchecked)
+		u8 countBefore = di->GetByteFromRam1541(0x0600);
+		di->LockMutex();
+		scratch->currentSegment->AddBreakpointPC(0x0500);
+		di->UnlockMutex();
+		di->MakeJmpNoReset1541(0x0500);
+		di->SetDebugMode(DEBUGGER_MODE_RUNNING);
+		bool paused = waitForPause(3000);
+		u16 pc = di->GetDrive1541PC();
+		di->LockMutex();
+		scratch->currentSegment->breakpointsPC->DeleteBreakpoint(0x0500);
+		di->UnlockMutex();
+		char msg[200];
+		snprintf(msg, sizeof(msg), "1541: a drive PC set while the drive is parked stops at the breakpoint on the new PC $0500 (drive PC $%04X, count %d to %d)",
+				 pc, countBefore, di->GetByteFromRam1541(0x0600));
+		ok = Check(paused && pc == 0x0500 && di->GetByteFromRam1541(0x0600) == countBefore, msg);
 	}
 
 	// the drive back to its ROM, its RAM and the symbols back
