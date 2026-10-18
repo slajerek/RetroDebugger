@@ -58,3 +58,12 @@ machines:
       - ["{ca65}", "-t", "nes", "-g", "uxrom-crt0.s"]
       - ["{ld65}", "-C", "uxrom.cfg", "--dbgfile", "main.dbg", "-Ln", "main.lbl", "-m", "main.map", "-o", "main.nes", "uxrom.o", "uxrom-crt0.o", "nes.lib"]
     outputs: [main.nes, main.dbg, main.lbl, main.map, uxrom.s]
+  # MMC1 (mapper 1), the serially loaded mapper (RD-026); fixtures with an mmc1.c.
+  nes-mmc1:
+    source: mmc1.c
+    steps:
+      - ["{cc65}", "-t", "nes", "-g", "mmc1.c"]
+      - ["{ca65}", "-t", "nes", "-g", "mmc1.s"]
+      - ["{ca65}", "-t", "nes", "-g", "mmc1-crt0.s"]
+      - ["{ld65}", "-C", "mmc1.cfg", "--dbgfile", "main.dbg", "-Ln", "main.lbl", "-m", "main.map", "-o", "main.nes", "mmc1.o", "mmc1-crt0.o", "nes.lib"]
+    outputs: [main.nes, main.dbg, main.lbl, main.map, mmc1.s]

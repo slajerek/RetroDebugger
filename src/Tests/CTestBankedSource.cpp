@@ -64,7 +64,7 @@ bool CTestBankedSource::RunDatabase()
 	return Check(ok, "Banked database: $8000-$8007 is banked, $8008 and $C000 are not; the image offset picks bank 0 or 1, an unknown bank falls back to the mapping in effect");
 }
 
-bool CTestBankedSource::RunNes()
+bool CTestBankedSource::RunNes(const NesCartridge &cart)
 {
 #ifdef RUN_NES
 	CDebugInterface *di = viewC64->debugInterfaceNes;
@@ -80,7 +80,8 @@ bool CTestBankedSource::RunNes()
 		SYS_Sleep(1000);
 	}
 
-	std::string dir = ResolveProjectPath("tests/data/source-debug/cc65/nes-uxrom/banked");
+	std::string dir = ResolveProjectPath((std::string("tests/data/source-debug/cc65/") + cart.machine + "/banked").c_str());
+	std::string label = std::string("Banked NES ") + cart.mapper + ": ";
 	CDebugSymbols *liveSymbols = di->symbols;
 	CDebugSymbols *scratch = new CDebugSymbols(di, true);
 	scratch->SetDataAdapter(liveSymbols->dataAdapter);
@@ -96,15 +97,15 @@ bool CTestBankedSource::RunNes()
 	DebugInfoFormat format = DebugInfoLoadFile(scratch, (dir + "/main.dbg").c_str(), options);
 	bool ok = Check(format == DebugInfoFormat::Cc65Dbg && scratch->debugDatabase && scratch->debugDatabase->HasImageOffsets()
 					&& scratch->currentSegment && scratch->currentSegment->debugRegionId >= 0,
-					"Banked NES: the cc65 UxROM debug info loads with image offsets");
+					label + "the cc65 debug info loads with image offsets");
 
-	// bankB's body (line 24) and bankA's body (line 18), both at $8000 + n
-	CDebugSourceBreakpoint *onB = ok ? scratch->AddSourceBreakpoint("uxrom.c", 24) : NULL;
+	// bankB's body and bankA's body, both at $8000 + n
+	CDebugSourceBreakpoint *onB = ok ? scratch->AddSourceBreakpoint(cart.source, cart.lineB) : NULL;
 	CDebugBreakpointAddr *addressB = (onB && onB->IsResolved())
 		? scratch->currentSegment->breakpointsPC->GetBreakpoint(onB->bindings[0].address) : NULL;
 	ok = ok && Check(onB && onB->IsResolved() && onB->bindings.size() == 1 && onB->bindings[0].banked
 					 && addressB && addressB->imageOffsets.size() == 1 && addressB->imageOffsets[0] >= 0x4010,
-					 "Banked NES: the source breakpoint on bankB's line binds to one address with bank 1's image offset");
+					 label + "the source breakpoint on bankB's line binds to one address with bank 1's image offset");
 
 	auto runToPause = [&](int timeoutMs) -> bool {
 		di->SetDebugMode(DEBUGGER_MODE_RUNNING);
@@ -116,13 +117,13 @@ bool CTestBankedSource::RunNes()
 		}
 		return false;
 	};
-	// _result is the one BSS byte, at $6000 (main.map)
-	auto readResult = [&]() { u8 v = 0; bool available = false; di->GetDataAdapter()->AdapterReadByte(0x6000, &v, &available); return v; };
+	// _result is the one BSS byte (main.map)
+	auto readResult = [&]() { u8 v = 0; bool available = false; di->GetDataAdapter()->AdapterReadByte(cart.resultAddress, &v, &available); return v; };
 
 	if (ok)
 	{
 		// the cartridge loads paused at reset; run to the first stop
-		ok = Check(TestNesInsertCartridge(di, (dir + "/main.nes").c_str(), true), "Banked NES: main.nes (UxROM, 64 KB PRG) inserts");
+		ok = Check(TestNesInsertCartridge(di, (dir + "/main.nes").c_str(), true), label + "main.nes (64 KB PRG) inserts");
 	}
 	if (ok)
 	{
@@ -130,7 +131,7 @@ bool CTestBankedSource::RunNes()
 		int pc = di->GetCpuPC();
 		u8 value = readResult();
 		char msg[200];
-		snprintf(msg, sizeof(msg), "Banked NES: the bankB breakpoint stops once bank 1 is in, after bankA's first call (PC $%04X, result %d), not at bankA's code at the same address", pc, value);
+		snprintf(msg, sizeof(msg), "%sthe bankB breakpoint stops once bank 1 is in, after bankA's first call (PC $%04X, result %d), not at bankA's code at the same address", label.c_str(), pc, value);
 		ok = Check(paused && pc == onB->bindings[0].address && value == 1, msg);
 	}
 
@@ -139,9 +140,9 @@ bool CTestBankedSource::RunNes()
 	if (ok)
 	{
 		scratch->RemoveSourceBreakpoint(onB);
-		onA = scratch->AddSourceBreakpoint("uxrom.c", 18);
+		onA = scratch->AddSourceBreakpoint(cart.source, cart.lineA);
 		ok = Check(onA && onA->IsResolved() && onA->bindings.size() == 1 && onA->bindings[0].banked,
-				   "Banked NES: the source breakpoint on bankA's line binds with bank 0's image offset");
+				   label + "the source breakpoint on bankA's line binds with bank 0's image offset");
 	}
 	if (ok)
 	{
@@ -150,14 +151,14 @@ bool CTestBankedSource::RunNes()
 		int pc = di->GetCpuPC();
 		u8 value = readResult();
 		char msg[200];
-		snprintf(msg, sizeof(msg), "Banked NES: the bankA breakpoint next stops at bankA's second call (PC $%04X, result %d), skipping the rest of bankB", pc, value);
+		snprintf(msg, sizeof(msg), "%sthe bankA breakpoint next stops at bankA's second call (PC $%04X, result %d), skipping the rest of bankB", label.c_str(), pc, value);
 		ok = Check(paused && pc == onA->bindings[0].address && value == 11, msg);
 	}
 	if (ok)
 	{
 		// no third bankA call: the program loops in main
 		bool paused = runToPause(500);
-		ok = Check(!paused, "Banked NES: no further stop -- the loop in main never reaches bank 0's line again");
+		ok = Check(!paused, label + "no further stop -- the loop in main never reaches bank 0's line again");
 		di->SetDebugMode(DEBUGGER_MODE_PAUSED);
 	}
 
@@ -188,11 +189,14 @@ void CTestBankedSource::Run(ITestCallback *cb)
 	stepNum = 1;
 	failure.clear();
 
-	bool ok = RunDatabase() && RunNes();
+	// bankA's and bankB's body lines, and _result, from each build's main.map
+	const NesCartridge uxrom = { "UxROM", "nes-uxrom", "uxrom.c", 18, 24, 0x6000 };
+	const NesCartridge mmc1 = { "MMC1", "nes-mmc1", "mmc1.c", 19, 25, 0x0300 };
+	bool ok = RunDatabase() && RunNes(uxrom) && RunNes(mmc1);
 	if (!ok)
 	{
 		TestCompleted(false, failure.c_str());
 		return;
 	}
-	TestCompleted(true, "Banked code resolves and breaks by the bank in the window (UxROM, cc65)");
+	TestCompleted(true, "Banked code resolves and breaks by the bank in the window (UxROM and MMC1, cc65)");
 }

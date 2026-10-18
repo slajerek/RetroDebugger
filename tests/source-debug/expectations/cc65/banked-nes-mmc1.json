@@ -1,0 +1,139 @@
+{
+  "fixture": "banked",
+  "compiler": "cc65",
+  "optimization": "debug",
+  "machine": "nes",
+  "artifacts": "tests/data/source-debug/cc65/nes-mmc1/banked",
+  "binary": "main.nes",
+  "debugInfo": "main.dbg",
+  "note": "MMC1 (PRG mode 3): bankA() (bank 0) and bankB() (bank 1) are both linked at $8000; the bank is loaded serially by five writes to $E000; a line resolves by the bank in the window, from the image offset of the fetched byte (RD-007)",
+  "start": {
+    "file": "mmc1.c",
+    "line": 32
+  },
+  "steps": [
+    {
+      "action": "sourceInto",
+      "note": "bank 0 in the window: bankA, not bankB which was linked last at the same address",
+      "expected": {
+        "file": "mmc1.c",
+        "line": 19,
+        "function": "bankA",
+        "depth": 1
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceOut",
+      "expected": {
+        "file": "mmc1.c",
+        "line": 32,
+        "function": "main",
+        "depth": 0
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceOver",
+      "expected": {
+        "file": "mmc1.c",
+        "line": 33,
+        "function": "main",
+        "depth": 0
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceOver",
+      "expected": {
+        "file": "mmc1.c",
+        "line": 34,
+        "function": "main",
+        "depth": 0
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceInto",
+      "note": "after selectBank(1) the same $8000 is bankB",
+      "expected": {
+        "file": "mmc1.c",
+        "line": 25,
+        "function": "bankB",
+        "depth": 1
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceOut",
+      "expected": {
+        "file": "mmc1.c",
+        "line": 34,
+        "function": "main",
+        "depth": 0
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceOver",
+      "expected": {
+        "file": "mmc1.c",
+        "line": 35,
+        "function": "main",
+        "depth": 0
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceOver",
+      "expected": {
+        "file": "mmc1.c",
+        "line": 36,
+        "function": "main",
+        "depth": 0
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceInto",
+      "expected": {
+        "file": "mmc1.c",
+        "line": 19,
+        "function": "bankA",
+        "depth": 1
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceOut",
+      "expected": {
+        "file": "mmc1.c",
+        "line": 36,
+        "function": "main",
+        "depth": 0
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceOver",
+      "expected": {
+        "file": "mmc1.c",
+        "line": 37,
+        "function": "main",
+        "depth": 0
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceOver",
+      "note": "for (;;) is mapped code: one stop per iteration",
+      "expected": {
+        "file": "mmc1.c",
+        "line": 37,
+        "function": "main",
+        "depth": 0
+      },
+      "expectedReason": "completed"
+    }
+  ]
+}

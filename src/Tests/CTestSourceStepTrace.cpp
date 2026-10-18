@@ -615,7 +615,12 @@ bool CTestSourceStepTrace::RunTrace(const std::string &path)
 	std::string compiler = trace.value("compiler", "?");
 	std::string fixture = trace.value("fixture", "?");
 	std::string machineName = trace.value("machine", "");
-	std::string name = compiler + "/" + machineName + "/" + fixture;
+	// the build's directory names the cell: nes-uxrom, nes-mmc1 run on "nes"
+	std::string artifacts = trace.value("artifacts", "");
+	size_t cellEnd = artifacts.find_last_of('/');
+	size_t cellStart = cellEnd == std::string::npos ? std::string::npos : artifacts.find_last_of('/', cellEnd - 1);
+	std::string cell = cellStart == std::string::npos ? machineName : artifacts.substr(cellStart + 1, cellEnd - cellStart - 1);
+	std::string name = compiler + "/" + cell + "/" + fixture;
 	Machine *machine = GetMachine(machineName);
 	if (machine == NULL)
 	{
@@ -630,7 +635,7 @@ bool CTestSourceStepTrace::RunTrace(const std::string &path)
 	}
 	CDebugInterface *di = machine->di;
 
-	std::string dir = ResolveProjectPath(trace.value("artifacts", "").c_str());
+	std::string dir = ResolveProjectPath(artifacts.c_str());
 	std::string binaryPath = dir + "/" + trace.value("binary", "");
 	std::vector<u8> binary;
 	if (!Check(ReadFile(binaryPath, binary) && !binary.empty(), name + ": the binary reads"))

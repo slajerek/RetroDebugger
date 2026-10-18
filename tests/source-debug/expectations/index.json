@@ -32,6 +32,7 @@
     "cc65/interrupts-atari.json",
     "cc65/interrupts-nes.json",
     "cc65/banked-nes-uxrom.json",
+    "cc65/banked-nes-mmc1.json",
     "oscar64/recursion.json",
     "oscar64/indirect-calls.json",
     "oscar64/recursion-atari.json",

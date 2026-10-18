@@ -1,0 +1,89 @@
+{
+  "buildDir": "/tmp/rd-source-debug/cc65/nes-mmc1/banked",
+  "commit": null,
+  "fixedMtime": 1767225600,
+  "fixture": "banked",
+  "inputs": {
+    "mmc1-crt0.s": "028aa34ceb9a10380eb59261e5510beb12b0c520e3b967beb0103aa19119769c",
+    "mmc1.c": "dd290c49f84e2c186a9c78b86e4a672f13737f3629c300fa0d874a572697927f",
+    "mmc1.cfg": "c9445ddf2387359f7f00db3c90b27da02c0ff7e01f4cdfcf4dbc11dd731b302f",
+    "uxrom-crt0.s": "a65c7233d025c0554246505324db93b43db966b76dd1d4c3c7d451573885275b",
+    "uxrom.c": "ff7f1bfdd188f8df1fef9953a7a4b23c92812f0368d4532fe5ad21eb2fb05843",
+    "uxrom.cfg": "f0ffbc7eb485fa194a1638b76baa6a677f52a4f52be931c29c45d55646e1aa2a"
+  },
+  "machine": "nes-mmc1",
+  "outputs": {
+    "main.dbg": {
+      "sha256": "8655e24fd001c7a3efc78a67a46e08f81c59062ccd919841f0f5cbe5ffa431f0",
+      "size": 24596
+    },
+    "main.lbl": {
+      "sha256": "c2abf7501408e830371dd8ece2f59aa4c5735f5cbe76d06e0bd7b593d54b8572",
+      "size": 1736
+    },
+    "main.map": {
+      "sha256": "9e4aabd0d46b23f513c9a4fc67e33eab9eebe24eb098485f29739e6dfc89f178",
+      "size": 6721
+    },
+    "main.nes": {
+      "sha256": "5a37cebd3130014c97f7aea91c9c52e04f7ab7f3ce43587bb2b224851f45c6a8",
+      "size": 65552
+    },
+    "mmc1.s": {
+      "sha256": "fdb91e9b55136c18a65dca8a6b30c5346d73ea3a87560fc41123aa525eabeb21",
+      "size": 3524
+    }
+  },
+  "source": "mmc1.c",
+  "steps": [
+    [
+      "cc65",
+      "-t",
+      "nes",
+      "-g",
+      "mmc1.c"
+    ],
+    [
+      "ca65",
+      "-t",
+      "nes",
+      "-g",
+      "mmc1.s"
+    ],
+    [
+      "ca65",
+      "-t",
+      "nes",
+      "-g",
+      "mmc1-crt0.s"
+    ],
+    [
+      "ld65",
+      "-C",
+      "mmc1.cfg",
+      "--dbgfile",
+      "main.dbg",
+      "-Ln",
+      "main.lbl",
+      "-m",
+      "main.map",
+      "-o",
+      "main.nes",
+      "mmc1.o",
+      "mmc1-crt0.o",
+      "nes.lib"
+    ]
+  ],
+  "toolDirs": {
+    "ca65": "/opt/homebrew/Cellar/cc65/2.19/bin",
+    "cc65": "/opt/homebrew/Cellar/cc65/2.19/bin",
+    "ld65": "/opt/homebrew/Cellar/cc65/2.19/bin"
+  },
+  "toolchain": "cc65",
+  "version": "2.19",
+  "versionReported": {
+    "ca65": "ca65 V2.18 - N/A (/opt/homebrew/Cellar/cc65/2.19/bin)",
+    "cc65": "cc65 V2.18 - N/A (/opt/homebrew/Cellar/cc65/2.19/bin)",
+    "ld65": "ld65 V2.18 - N/A (/opt/homebrew/Cellar/cc65/2.19/bin)"
+  }
+}

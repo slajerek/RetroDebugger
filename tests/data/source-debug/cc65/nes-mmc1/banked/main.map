@@ -1,0 +1,141 @@
+Modules list:
+-------------
+mmc1.o:
+    CODE              Offs=000000  Size=00008F  Align=00001  Fill=0000
+    BSS               Offs=000000  Size=000001  Align=00001  Fill=0000
+    BANK0             Offs=000000  Size=000015  Align=00001  Fill=0000
+    BANK1             Offs=000000  Size=000017  Align=00001  Fill=0000
+mmc1-crt0.o:
+    HEADER            Offs=000000  Size=000010  Align=00001  Fill=0000
+    STARTUP           Offs=000000  Size=000027  Align=00001  Fill=0000
+    VECTORS           Offs=000000  Size=000006  Align=00001  Fill=0000
+/opt/homebrew/Cellar/cc65/2.19/share/cc65/lib/nes.lib(copydata.o):
+    CODE              Offs=00008F  Size=00002D  Align=00001  Fill=0000
+/opt/homebrew/Cellar/cc65/2.19/share/cc65/lib/nes.lib(decsp1.o):
+    CODE              Offs=0000BC  Size=000009  Align=00001  Fill=0000
+/opt/homebrew/Cellar/cc65/2.19/share/cc65/lib/nes.lib(incax1.o):
+    CODE              Offs=0000C5  Size=000007  Align=00001  Fill=0000
+/opt/homebrew/Cellar/cc65/2.19/share/cc65/lib/nes.lib(incaxy.o):
+    CODE              Offs=0000CC  Size=00000B  Align=00001  Fill=0000
+/opt/homebrew/Cellar/cc65/2.19/share/cc65/lib/nes.lib(incsp1.o):
+    CODE              Offs=0000D7  Size=000007  Align=00001  Fill=0000
+/opt/homebrew/Cellar/cc65/2.19/share/cc65/lib/nes.lib(incsp2.o):
+    CODE              Offs=0000DE  Size=000016  Align=00001  Fill=0000
+/opt/homebrew/Cellar/cc65/2.19/share/cc65/lib/nes.lib(makebool.o):
+    CODE              Offs=0000F4  Size=00002C  Align=00001  Fill=0000
+/opt/homebrew/Cellar/cc65/2.19/share/cc65/lib/nes.lib(pusha.o):
+    CODE              Offs=000120  Size=000016  Align=00001  Fill=0000
+/opt/homebrew/Cellar/cc65/2.19/share/cc65/lib/nes.lib(shrax1.o):
+    CODE              Offs=000136  Size=000008  Align=00001  Fill=0000
+/opt/homebrew/Cellar/cc65/2.19/share/cc65/lib/nes.lib(zerobss.o):
+    CODE              Offs=00013E  Size=000023  Align=00001  Fill=0000
+/opt/homebrew/Cellar/cc65/2.19/share/cc65/lib/nes.lib(zeropage.o):
+    ZEROPAGE          Offs=000000  Size=00001A  Align=00001  Fill=0000
+
+
+Segment list:
+-------------
+Name                   Start     End    Size  Align
+----------------------------------------------------
+HEADER                000000  00000F  000010  00001
+ZEROPAGE              000002  00001B  00001A  00001
+BSS                   000300  000300  000001  00001
+BANK0                 008000  008014  000015  00001
+BANK1                 008000  008016  000017  00001
+STARTUP               00C000  00C026  000027  00001
+CODE                  00C027  00C187  000161  00001
+VECTORS               00FFFA  00FFFF  000006  00001
+
+
+Exports list by name:
+---------------------
+__BSS_RUN__               000300 RLA    __BSS_SIZE__              000001 REA    
+__DATA_LOAD__             00C188 RLA    __DATA_RUN__              000300 RLA    
+__DATA_SIZE__             000000 REA    __SRAM_SIZE__             000300 REA    
+__SRAM_START__            000500 RLA    __STARTUP__               000001 REA    
+_main                     00C074 RLA    boolult                   00C13A RLA    
+copydata                  00C0B6 RLA    decsp1                    00C0E3 RLA    
+incax1                    00C0EC RLA    incaxy                    00C0F5 RLA    
+incsp1                    00C0FE RLA    incsp2                    00C10D RLA    
+ptr1                      00000A RLZ    ptr2                      00000C RLZ    
+pusha                     00C14B RLA    shrax1                    00C15D RLA    
+sp                        000002 RLZ    tmp1                      000012 RLZ    
+zerobss                   00C165 RLA    
+
+
+Exports list by value:
+----------------------
+__DATA_SIZE__             000000 REA    __STARTUP__               000001 REA    
+__BSS_SIZE__              000001 REA    sp                        000002 RLZ    
+ptr1                      00000A RLZ    ptr2                      00000C RLZ    
+tmp1                      000012 RLZ    __SRAM_SIZE__             000300 REA    
+__DATA_RUN__              000300 RLA    __BSS_RUN__               000300 RLA    
+__SRAM_START__            000500 RLA    _main                     00C074 RLA    
+copydata                  00C0B6 RLA    decsp1                    00C0E3 RLA    
+incax1                    00C0EC RLA    incaxy                    00C0F5 RLA    
+incsp1                    00C0FE RLA    incsp2                    00C10D RLA    
+boolult                   00C13A RLA    pusha                     00C14B RLA    
+shrax1                    00C15D RLA    zerobss                   00C165 RLA    
+__DATA_LOAD__             00C188 RLA    
+
+
+Imports list:
+-------------
+__BSS_RUN__ ([linker generated]):
+    zerobss.o                 common/zerobss.s(8)
+__BSS_SIZE__ ([linker generated]):
+    zerobss.o                 common/zerobss.s(8)
+__DATA_LOAD__ ([linker generated]):
+    copydata.o                common/copydata.s(8)
+__DATA_RUN__ ([linker generated]):
+    copydata.o                common/copydata.s(8)
+__DATA_SIZE__ ([linker generated]):
+    copydata.o                common/copydata.s(8)
+__SRAM_SIZE__ ([linker generated]):
+    mmc1-crt0.o               mmc1-crt0.s(9)
+__SRAM_START__ ([linker generated]):
+    mmc1-crt0.o               mmc1-crt0.s(9)
+__STARTUP__ (mmc1-crt0.o):
+    mmc1.o                    mmc1.s(14)
+_main (mmc1.o):
+    mmc1-crt0.o               mmc1-crt0.s(8)
+boolult (makebool.o):
+    mmc1.o                    mmc1.s(194)
+copydata (copydata.o):
+    mmc1-crt0.o               mmc1-crt0.s(8)
+decsp1 (decsp1.o):
+    mmc1.o                    mmc1.s(194)
+incax1 (incax1.o):
+    mmc1.o                    mmc1.s(194)
+incaxy (incaxy.o):
+    mmc1.o                    mmc1.s(194)
+incsp1 (incsp1.o):
+    mmc1.o                    mmc1.s(194)
+    mmc1.o                    mmc1.s(194)
+incsp2 (incsp2.o):
+    mmc1.o                    mmc1.s(194)
+ptr1 (zeropage.o):
+    zerobss.o                 common/zerobss.s(9)
+    copydata.o                common/copydata.s(9)
+ptr2 (zeropage.o):
+    copydata.o                common/copydata.s(9)
+pusha (pusha.o):
+    mmc1.o                    mmc1.s(194)
+    mmc1.o                    mmc1.s(194)
+    mmc1.o                    mmc1.s(194)
+shrax1 (shrax1.o):
+    mmc1.o                    mmc1.s(194)
+sp (zeropage.o):
+    pusha.o                   runtime/pusha.s(8)
+    incsp2.o                  runtime/incsp2.s(8)
+    incsp1.o                  runtime/incsp1.s(8)
+    decsp1.o                  runtime/decsp1.s(8)
+    mmc1-crt0.o               mmc1-crt0.s(10)
+    mmc1.o                    mmc1.s(10)
+tmp1 (zeropage.o):
+    shrax1.o                  runtime/shrax1.s(8)
+    incaxy.o                  runtime/incaxy.s(8)
+    copydata.o                common/copydata.s(9)
+zerobss (zerobss.o):
+    mmc1-crt0.o               mmc1-crt0.s(8)
+
