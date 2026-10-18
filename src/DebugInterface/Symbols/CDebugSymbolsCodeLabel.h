@@ -15,6 +15,11 @@ public:
 	virtual ~CDebugSymbolsCodeLabel();
 	void SetText(char *txt);
 	u16 address;
+
+	// RD-025: a label in one bank of banked code: the image file offset of
+	// its byte, so the label shown at address is the one of the bank in
+	bool hasImageOffset = false;
+	u64 imageOffset = 0;
 	
 	u64 textHashCode;
 	void UpdateHashCode();

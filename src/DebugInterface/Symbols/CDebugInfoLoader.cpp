@@ -1417,7 +1417,9 @@ bool DebugInfoLoadCc65(CDebugSymbols *symbols, CByteBuffer *byteBuffer, const CD
 		}
 	}
 
-	struct Label { u32 address; std::string name; };
+	// a label in a segment written to the output file has an image offset
+	// there, which tells the banks apart where they share an address (RD-025)
+	struct Label { u32 address; std::string name; bool hasImage; u64 image; };
 	std::vector<Label> labels;
 	for (auto &it : syms)
 	{
@@ -1426,8 +1428,20 @@ bool DebugInfoLoadCc65(CDebugSymbols *symbols, CByteBuffer *byteBuffer, const CD
 		if (sym.Get("type") != "lab" || name.empty() || IsCc65GeneratedLabel(name))
 			continue;
 		long value = sym.Num("val");
-		if (value >= 0 && value < maxAddress)
-			labels.push_back(Label{ (u32)value, name });
+		if (value < 0 || value >= maxAddress)
+			continue;
+		Label label{ (u32)value, name, false, 0 };
+		auto seg = sym.Has("seg") ? segs.find(sym.Num("seg")) : segs.end();
+		if (seg != segs.end() && seg->second.Get("type") == "ro" && seg->second.Num("ooffs", -1) >= 0)
+		{
+			long segStart = seg->second.Num("start", 0);
+			if (value >= segStart && value < segStart + seg->second.Num("size", 0))
+			{
+				label.hasImage = true;
+				label.image = (u64)(seg->second.Num("ooffs", 0) + (value - segStart));
+			}
+		}
+		labels.push_back(label);
 	}
 
 	// (source text was loaded before the functions, for their definition lines)
@@ -1441,7 +1455,12 @@ bool DebugInfoLoadCc65(CDebugSymbols *symbols, CByteBuffer *byteBuffer, const CD
 	segment->debugRegionId = (int)regionId;
 	symbols->segments.push_back(segment);
 	for (const Label &label : labels)
-		segment->AddCodeLabel((int)label.address, (char *)label.name.c_str());	// copies the text
+	{
+		if (label.hasImage)
+			segment->AddBankedCodeLabel((int)label.address, label.image, (char *)label.name.c_str());
+		else
+			segment->AddCodeLabel((int)label.address, (char *)label.name.c_str());	// copies the text
+	}
 
 	symbols->SetDebugDatabase(database);
 	symbols->ActivateSelectedSegment();

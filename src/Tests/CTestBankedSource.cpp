@@ -13,6 +13,7 @@
 #include "CSlrString.h"
 #include "CDebugSymbols.h"
 #include "CDebugSymbolsSegment.h"
+#include "CDebugSymbolsCodeLabel.h"
 #include "CDebugBreakpointsAddr.h"
 #include "CDebugBreakpointAddr.h"
 #include "CDebugDatabase.h"
@@ -31,6 +32,15 @@ bool CTestBankedSource::Check(bool condition, const std::string &message)
 	}
 	StepCompleted(stepNum++, true, message.c_str());
 	return true;
+}
+
+// RD-025: the label shown at ADDRESS is the one of the bank in (both banks'
+// functions start there)
+static bool LabelIs(CDebugSymbols *symbols, int address, const char *name, std::string &got)
+{
+	CDebugSymbolsCodeLabel *codeLabel = symbols->currentSegment ? symbols->currentSegment->FindLabel(address) : NULL;
+	got = codeLabel ? codeLabel->GetLabelText() : "(none)";
+	return codeLabel && got == name;
 }
 
 bool CTestBankedSource::RunDatabase()
@@ -150,6 +160,8 @@ bool CTestBankedSource::RunNes(const NesCartridge &cart)
 		char msg[200];
 		snprintf(msg, sizeof(msg), "%sthe bankB breakpoint stops once bank 1 is in, after bankA's first call (PC $%04X, result %d), not at bankA's code at the same address", label.c_str(), pc, value);
 		ok = Check(paused && pc == onB->bindings[0].address && value == 1, msg);
+		std::string got;
+		ok = ok && Check(LabelIs(scratch, 0x8000, "_bankB", got), label + "with bank 1 in, the label at $8000 is _bankB (got " + got + ")");
 	}
 
 	// bankA's line: the two calls of bankA stop, bankB's call in between does not
@@ -170,6 +182,8 @@ bool CTestBankedSource::RunNes(const NesCartridge &cart)
 		char msg[200];
 		snprintf(msg, sizeof(msg), "%sthe bankA breakpoint next stops at bankA's second call (PC $%04X, result %d), skipping the rest of bankB", label.c_str(), pc, value);
 		ok = Check(paused && pc == onA->bindings[0].address && value == 11, msg);
+		std::string got;
+		ok = ok && Check(LabelIs(scratch, 0x8000, "_bankA", got), label + "with bank 0 in, the label at $8000 is _bankA (got " + got + ")");
 	}
 	if (ok)
 	{
@@ -289,6 +303,8 @@ bool CTestBankedSource::RunC64()
 		char msg[220];
 		snprintf(msg, sizeof(msg), "%sthe cartridge attaches; the bankB breakpoint stops once bank 1 is in, after bankA's first call (PC $%04X, result %d), not at bankA's code at the same address", label.c_str(), pc, value);
 		ok = Check(paused && pc == onB->bindings[0].address && value == 1, msg);
+		std::string got;
+		ok = ok && Check(LabelIs(scratch, 0x9000, "_bankB", got), label + "with bank 1 in, the label at $9000 is _bankB (got " + got + ")");
 	}
 
 	CDebugSourceBreakpoint *onA = NULL;
@@ -308,6 +324,8 @@ bool CTestBankedSource::RunC64()
 		char msg[200];
 		snprintf(msg, sizeof(msg), "%sthe bankA breakpoint next stops at bankA's second call (PC $%04X, result %d), skipping the rest of bankB", label.c_str(), pc, value);
 		ok = Check(paused && pc == onA->bindings[0].address && value == 11, msg);
+		std::string got;
+		ok = ok && Check(LabelIs(scratch, 0x9000, "_bankA", got), label + "with bank 0 in, the label at $9000 is _bankA (got " + got + ")");
 	}
 	if (ok)
 	{
@@ -466,6 +484,8 @@ bool CTestBankedSource::RunAtari()
 		char msg[220];
 		snprintf(msg, sizeof(msg), "%sthe cartridge inserts; the bankB breakpoint stops once bank 1 is in, after bankA's first call (PC $%04X, result %d), not at bankA's code at the same address", label.c_str(), pc, value);
 		ok = Check(inserted && paused && value == 1, msg);
+		std::string got;
+		ok = ok && Check(LabelIs(scratch, 0x8000, "_bankB", got), label + "with bank 1 in, the label at $8000 is _bankB (got " + got + ")");
 	}
 
 	CDebugSourceBreakpoint *onA = NULL;
@@ -485,6 +505,8 @@ bool CTestBankedSource::RunAtari()
 		char msg[200];
 		snprintf(msg, sizeof(msg), "%sthe bankA breakpoint next stops at bankA's second call (PC $%04X, result %d), skipping the rest of bankB", label.c_str(), pc, value);
 		ok = Check(paused && pc == onA->bindings[0].address && value == 11, msg);
+		std::string got;
+		ok = ok && Check(LabelIs(scratch, 0x8000, "_bankA", got), label + "with bank 0 in, the label at $8000 is _bankA (got " + got + ")");
 	}
 	if (ok)
 	{

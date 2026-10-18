@@ -136,8 +136,11 @@ void CDebugSymbolsSegment::AddCodeLabel(CDebugSymbolsCodeLabel *codeLabel, bool 
 		u64 textHashCode = GetHashCode64(oldLabel->GetLabelText());
 		codeLabelByTextHashCode.erase(textHashCode);
 
+		bool sameBankedAddress = oldLabel->hasImageOffset && codeLabel->hasImageOffset;
 		codeLabelByAddress.erase(it);
 		delete oldLabel;
+		if (!sameBankedAddress)
+			DeleteBankedCodeLabels(codeLabel->address);	// an unbanked label replaces every bank's
 	}
 
 	codeLabelByAddress[codeLabel->address] = codeLabel;
@@ -153,8 +156,59 @@ void CDebugSymbolsSegment::AddCodeLabel(CDebugSymbolsCodeLabel *codeLabel, bool 
 	guiMain->UnlockMutex();
 }
 
+// RD-025: a label of one bank. The first label at an address is the one
+// codeLabelByAddress holds (shown when the bank cannot be told); another
+// bank's label there is kept as an alternative.
+void CDebugSymbolsSegment::AddBankedCodeLabel(int address, u64 imageOffset, char *text)
+{
+	if (text[0] == 0)
+		return;
+	guiMain->LockMutex();
+	auto it = codeLabelByAddress.find(address);
+	if (it == codeLabelByAddress.end() || !it->second->hasImageOffset || it->second->imageOffset == imageOffset)
+	{
+		CDebugSymbolsCodeLabel *codeLabel = CreateCodeLabel(address, text);
+		codeLabel->hasImageOffset = true;
+		codeLabel->imageOffset = imageOffset;
+		AddCodeLabel(codeLabel, true);
+	}
+	else
+	{
+		auto range = bankedCodeLabels.equal_range(address);
+		for (auto alt = range.first; alt != range.second; )
+		{
+			if (alt->second->imageOffset == imageOffset)
+			{
+				codeLabelByTextHashCode.erase(alt->second->textHashCode);
+				delete alt->second;
+				alt = bankedCodeLabels.erase(alt);
+			}
+			else
+				alt++;
+		}
+		CDebugSymbolsCodeLabel *codeLabel = CreateCodeLabel(address, text);
+		codeLabel->hasImageOffset = true;
+		codeLabel->imageOffset = imageOffset;
+		bankedCodeLabels.insert(std::make_pair(address, codeLabel));
+		codeLabelByTextHashCode[codeLabel->textHashCode] = codeLabel;
+	}
+	guiMain->UnlockMutex();
+}
+
+void CDebugSymbolsSegment::DeleteBankedCodeLabels(int address)
+{
+	auto range = bankedCodeLabels.equal_range(address);
+	for (auto alt = range.first; alt != range.second; alt++)
+	{
+		codeLabelByTextHashCode.erase(alt->second->textHashCode);
+		delete alt->second;
+	}
+	bankedCodeLabels.erase(range.first, range.second);
+}
+
 void CDebugSymbolsSegment::RemoveCodeLabel(CDebugSymbolsCodeLabel *codeLabel, bool updateCodeLabels)
 {
+	DeleteBankedCodeLabels(codeLabel->address);
 	codeLabelByAddress.erase(codeLabel->address);
 	codeLabelByTextHashCode.erase(codeLabel->textHashCode);
 	if (updateCodeLabels)
@@ -174,6 +228,12 @@ void CDebugSymbolsSegment::DeleteCodeLabels()
 		codeLabelByAddress.erase(it);
 		delete label;
 	}
+	for (auto &alt : bankedCodeLabels)
+	{
+		codeLabelByTextHashCode.erase(alt.second->textHashCode);
+		delete alt.second;
+	}
+	bankedCodeLabels.clear();
 	
 	UpdateCodeLabelsArray();
 	
@@ -236,6 +296,20 @@ CDebugSymbolsCodeLabel *CDebugSymbolsSegment::FindLabel(int address)
 	if (it != codeLabelByAddress.end())
 	{
 		CDebugSymbolsCodeLabel *label = it->second;
+		// RD-025: banks share this address: the label of the bank fetched there
+		if (label->hasImageOffset && !bankedCodeLabels.empty())
+		{
+			auto range = bankedCodeLabels.equal_range(address);
+			u64 imageOffset = 0;
+			if (range.first != range.second && symbols && symbols->debugInterface
+				&& symbols->debugInterface->GetFetchImageOffset((u16)address, &imageOffset)
+				&& imageOffset != label->imageOffset)
+			{
+				for (auto alt = range.first; alt != range.second; alt++)
+					if (alt->second->imageOffset == imageOffset)
+						return alt->second;
+			}
+		}
 //		LOGD(".. return %x", label);
 		return label;
 	}

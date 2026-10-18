@@ -56,11 +56,16 @@ public:
 	// labels
 	std::map<int, CDebugSymbolsCodeLabel *> codeLabelByAddress;
 	std::map<u64, CDebugSymbolsCodeLabel *> codeLabelByTextHashCode;
+	// RD-025: other banks' labels at an address codeLabelByAddress holds a
+	// banked label for; FindLabel picks by the image offset fetched there
+	std::multimap<int, CDebugSymbolsCodeLabel *> bankedCodeLabels;
 	virtual void AddCodeLabel(int address, char *text);
 	virtual void AddCodeLabel(CDebugSymbolsCodeLabel *codeLabel, bool updateCodeLabels);
 	virtual void RemoveCodeLabel(CDebugSymbolsCodeLabel *codeLabel, bool updateCodeLabels);
 	virtual CDebugSymbolsCodeLabel *CreateCodeLabel(int address, char *text);
 	virtual CDebugSymbolsCodeLabel *FindLabel(int address);
+	void AddBankedCodeLabel(int address, u64 imageOffset, char *text);
+	void DeleteBankedCodeLabels(int address);
 	virtual CDebugSymbolsCodeLabel *FindLabelByText(const char *text);
 	virtual CDebugSymbolsCodeLabel *FindNearLabel(int address, int *offset);
 	virtual bool FindLabelText(int address, char *labelText);
