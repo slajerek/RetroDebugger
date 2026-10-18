@@ -1,0 +1,87 @@
+{
+  "fixture": "recursion",
+  "compiler": "oscar64",
+  "optimization": "debug",
+  "machine": "atari",
+  "artifacts": "tests/data/source-debug/oscar64/atari/recursion",
+  "binary": "main.xex",
+  "debugInfo": "main.dbj",
+  "start": {
+    "file": "main.c",
+    "line": 14
+  },
+  "steps": [
+    {
+      "action": "sourceInto",
+      "expected": {
+        "file": "main.c",
+        "line": 8,
+        "function": "sum",
+        "depth": 1
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceOver",
+      "expected": {
+        "file": "main.c",
+        "line": 10,
+        "function": "sum",
+        "depth": 1
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceInto",
+      "expected": {
+        "file": "main.c",
+        "line": 8,
+        "function": "sum",
+        "depth": 2
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceOver",
+      "expected": {
+        "file": "main.c",
+        "line": 10,
+        "function": "sum",
+        "depth": 2
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceOut",
+      "note": "out of the second instance: back in the first, on the same line",
+      "expected": {
+        "file": "main.c",
+        "line": 10,
+        "function": "sum",
+        "depth": 1
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceOut",
+      "expected": {
+        "file": "main.c",
+        "line": 14,
+        "function": "main",
+        "depth": 0
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceOver",
+      "budget": 20000,
+      "note": "Oscar64 leaves the for (;;) jump unmapped",
+      "expected": {
+        "line": null,
+        "function": "main",
+        "depth": 0
+      },
+      "expectedReason": "budget-exceeded"
+    }
+  ]
+}

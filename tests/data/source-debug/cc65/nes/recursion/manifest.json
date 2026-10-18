@@ -1,0 +1,76 @@
+{
+  "buildDir": "/tmp/rd-source-debug/cc65/nes/recursion",
+  "commit": null,
+  "fixedMtime": 1767225600,
+  "fixture": "recursion",
+  "inputs": {
+    "main.c": "a4ac6b9c2712d703bff65169334d8f7be33f352092095df5ad674f19513aa8b9"
+  },
+  "machine": "nes",
+  "outputs": {
+    "main.dbg": {
+      "sha256": "360db33f316f59e6f36718ad991c10c0986c2bf629bc960091a99dace7984c85",
+      "size": 150835
+    },
+    "main.lbl": {
+      "sha256": "94efcd25aaa0539d5cb4a2703141544824be522a73ae326d674c3afb373ac9ef",
+      "size": 2024
+    },
+    "main.map": {
+      "sha256": "d1b32a5c6f9e95330cbedce9483c6f24d165799c7f871bb707f3e406c806e256",
+      "size": 8530
+    },
+    "main.nes": {
+      "sha256": "d4686817caaacbb8c5eca30b517a29477470ab080605e2b44303f879a690ba28",
+      "size": 40976
+    },
+    "main.s": {
+      "sha256": "5bd527ae3c84ace0478b6426c067882bc8e97dc518a7711bc26ab86f4e2820b2",
+      "size": 1780
+    }
+  },
+  "source": "main.c",
+  "steps": [
+    [
+      "cc65",
+      "-t",
+      "nes",
+      "-g",
+      "main.c"
+    ],
+    [
+      "ca65",
+      "-t",
+      "nes",
+      "-g",
+      "main.s"
+    ],
+    [
+      "ld65",
+      "-t",
+      "nes",
+      "--dbgfile",
+      "main.dbg",
+      "-Ln",
+      "main.lbl",
+      "-m",
+      "main.map",
+      "-o",
+      "main.nes",
+      "main.o",
+      "nes.lib"
+    ]
+  ],
+  "toolDirs": {
+    "ca65": "/opt/homebrew/Cellar/cc65/2.19/bin",
+    "cc65": "/opt/homebrew/Cellar/cc65/2.19/bin",
+    "ld65": "/opt/homebrew/Cellar/cc65/2.19/bin"
+  },
+  "toolchain": "cc65",
+  "version": "2.19",
+  "versionReported": {
+    "ca65": "ca65 V2.18 - N/A (/opt/homebrew/Cellar/cc65/2.19/bin)",
+    "cc65": "cc65 V2.18 - N/A (/opt/homebrew/Cellar/cc65/2.19/bin)",
+    "ld65": "ld65 V2.18 - N/A (/opt/homebrew/Cellar/cc65/2.19/bin)"
+  }
+}

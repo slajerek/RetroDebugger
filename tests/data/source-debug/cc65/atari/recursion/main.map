@@ -1,0 +1,195 @@
+Modules list:
+-------------
+main.o:
+    CODE              Offs=000000  Size=000056  Align=00001  Fill=0000
+    BSS               Offs=000000  Size=000001  Align=00001  Fill=0000
+/opt/homebrew/Cellar/cc65/2.19/share/cc65/lib/atari.lib(add.o):
+    CODE              Offs=000056  Size=00001C  Align=00001  Fill=0000
+/opt/homebrew/Cellar/cc65/2.19/share/cc65/lib/atari.lib(callmain.o):
+    CODE              Offs=000072  Size=000017  Align=00001  Fill=0000
+    DATA              Offs=000000  Size=000004  Align=00001  Fill=0000
+/opt/homebrew/Cellar/cc65/2.19/share/cc65/lib/atari.lib(condes.o):
+    CODE              Offs=000089  Size=00000C  Align=00001  Fill=0000
+    DATA              Offs=000004  Size=000025  Align=00001  Fill=0000
+    ONCE              Offs=000000  Size=00000C  Align=00001  Fill=0000
+/opt/homebrew/Cellar/cc65/2.19/share/cc65/lib/atari.lib(crt0.o):
+    BSS               Offs=000001  Size=000005  Align=00001  Fill=0000
+    STARTUP           Offs=000000  Size=000063  Align=00001  Fill=0000
+/opt/homebrew/Cellar/cc65/2.19/share/cc65/lib/atari.lib(decax1.o):
+    CODE              Offs=000095  Size=000007  Align=00001  Fill=0000
+/opt/homebrew/Cellar/cc65/2.19/share/cc65/lib/atari.lib(exehdr.o):
+    EXEHDR            Offs=000000  Size=000002  Align=00001  Fill=0000
+    MAINHDR           Offs=000000  Size=000004  Align=00001  Fill=0000
+/opt/homebrew/Cellar/cc65/2.19/share/cc65/lib/atari.lib(exetrailer.o):
+    AUTOSTRT          Offs=000000  Size=000006  Align=00001  Fill=0000
+/opt/homebrew/Cellar/cc65/2.19/share/cc65/lib/atari.lib(incsp1.o):
+    CODE              Offs=00009C  Size=000007  Align=00001  Fill=0000
+/opt/homebrew/Cellar/cc65/2.19/share/cc65/lib/atari.lib(makebool.o):
+    CODE              Offs=0000A3  Size=00002C  Align=00001  Fill=0000
+/opt/homebrew/Cellar/cc65/2.19/share/cc65/lib/atari.lib(pusha.o):
+    CODE              Offs=0000CF  Size=000016  Align=00001  Fill=0000
+/opt/homebrew/Cellar/cc65/2.19/share/cc65/lib/atari.lib(pushax.o):
+    CODE              Offs=0000E5  Size=00001A  Align=00001  Fill=0000
+/opt/homebrew/Cellar/cc65/2.19/share/cc65/lib/atari.lib(system_check.o):
+    SYSCHK            Offs=000000  Size=0000F6  Align=00001  Fill=0000
+/opt/homebrew/Cellar/cc65/2.19/share/cc65/lib/atari.lib(system_check_hdr.o):
+    SYSCHKHDR         Offs=000000  Size=000004  Align=00001  Fill=0000
+/opt/homebrew/Cellar/cc65/2.19/share/cc65/lib/atari.lib(system_check_trailer.o):
+    SYSCHKTRL         Offs=000000  Size=000006  Align=00001  Fill=0000
+/opt/homebrew/Cellar/cc65/2.19/share/cc65/lib/atari.lib(zerobss.o):
+    CODE              Offs=0000FF  Size=000023  Align=00001  Fill=0000
+/opt/homebrew/Cellar/cc65/2.19/share/cc65/lib/atari.lib(zeropage.o):
+    ZEROPAGE          Offs=000000  Size=00001A  Align=00001  Fill=0000
+
+
+Segment list:
+-------------
+Name                   Start     End    Size  Align
+----------------------------------------------------
+AUTOSTRT              000000  000005  000006  00001
+EXEHDR                000000  000001  000002  00001
+MAINHDR               000000  000003  000004  00001
+SYSCHKHDR             000000  000003  000004  00001
+SYSCHKTRL             000000  000005  000006  00001
+ZEROPAGE              000082  00009B  00001A  00001
+STARTUP               002000  002062  000063  00001
+ONCE                  002063  00206E  00000C  00001
+CODE                  00206F  002190  000122  00001
+DATA                  002191  0021B9  000029  00001
+BSS                   0021BA  0021BF  000006  00001
+SYSCHK                002E00  002EF5  0000F6  00001
+
+
+Exports list by name:
+---------------------
+__AUTOSTART__             000001 REA    __BSS_LOAD__              0021BA RLA    
+__BSS_RUN__               0021BA RLA    __BSS_SIZE__              000006 REA    
+__CONSTRUCTOR_COUNT__     000000 REA    __CONSTRUCTOR_TABLE__     00206F RLA    
+__DESTRUCTOR_COUNT__      000000 REA    __DESTRUCTOR_TABLE__      002191 RLA    
+__EXEHDR__                000001 REA    __LOWCODE_RUN__           002063 RLA    
+__LOWCODE_SIZE__          000000 REA    __MAIN_START__            002000 RLA    
+__RESERVED_MEMORY__       000000 REA    __STACKSIZE__             000800 REA    
+__STARTADDRESS__          002000 REA    __STARTUP__               000001 REA    
+__SYSCHKHDR__             000001 REA    __SYSCHKTRL__             000001 REA    
+__SYSCHK_END__            002EF6 RLA    __SYSCHK_LOAD__           002E00 RLA    
+__SYSTEM_CHECK__          002E47 REA    _main                     0020AC RLA    
+booleq                    002118 RLA    callmain                  0020E1 RLA    
+decax1                    002104 RLA    donelib                   0020F8 RLA    
+incsp1                    00210B RLA    initlib                   002063 RLA    
+ptr1                      00008A RLZ    pusha                     002142 RLA    
+pushax                    002158 RLA    sp                        000082 RLZ    
+start                     002001 RLA    tmp1                      000092 RLZ    
+tosaddax                  0020C7 RLA    zerobss                   00216E RLA    
+
+
+
+Exports list by value:
+----------------------
+__DESTRUCTOR_COUNT__      000000 REA    __RESERVED_MEMORY__       000000 REA    
+__LOWCODE_SIZE__          000000 REA    __CONSTRUCTOR_COUNT__     000000 REA    
+__EXEHDR__                000001 REA    __SYSCHKHDR__             000001 REA    
+__AUTOSTART__             000001 REA    __SYSCHKTRL__             000001 REA    
+__STARTUP__               000001 REA    __BSS_SIZE__              000006 REA    
+sp                        000082 RLZ    ptr1                      00008A RLZ    
+tmp1                      000092 RLZ    __STACKSIZE__             000800 REA    
+__MAIN_START__            002000 RLA    __STARTADDRESS__          002000 REA    
+start                     002001 RLA    initlib                   002063 RLA    
+__LOWCODE_RUN__           002063 RLA    __CONSTRUCTOR_TABLE__     00206F RLA    
+_main                     0020AC RLA    tosaddax                  0020C7 RLA    
+callmain                  0020E1 RLA    donelib                   0020F8 RLA    
+decax1                    002104 RLA    incsp1                    00210B RLA    
+booleq                    002118 RLA    pusha                     002142 RLA    
+pushax                    002158 RLA    zerobss                   00216E RLA    
+__DESTRUCTOR_TABLE__      002191 RLA    __BSS_RUN__               0021BA RLA    
+__BSS_LOAD__              0021BA RLA    __SYSCHK_LOAD__           002E00 RLA    
+__SYSTEM_CHECK__          002E47 REA    __SYSCHK_END__            002EF6 RLA    
+
+
+
+Imports list:
+-------------
+__AUTOSTART__ (exetrailer.o):
+    [linker generated]        /opt/homebrew/Cellar/cc65/2.19/share/cc65/cfg/atari.cfg(7)
+__BSS_LOAD__ ([linker generated]):
+    exehdr.o                  atari/exehdr.s(4)
+__BSS_RUN__ ([linker generated]):
+    zerobss.o                 common/zerobss.s(8)
+    system_check.o            atari/system_check.s(23)
+__BSS_SIZE__ ([linker generated]):
+    zerobss.o                 common/zerobss.s(8)
+    system_check.o            atari/system_check.s(23)
+__CONSTRUCTOR_COUNT__ ([linker generated]):
+    condes.o                  runtime/condes.s(18)
+__CONSTRUCTOR_TABLE__ ([linker generated]):
+    condes.o                  runtime/condes.s(18)
+__DESTRUCTOR_COUNT__ ([linker generated]):
+    condes.o                  runtime/condes.s(19)
+__DESTRUCTOR_TABLE__ ([linker generated]):
+    condes.o                  runtime/condes.s(19)
+__EXEHDR__ (exehdr.o):
+    [linker generated]        /opt/homebrew/Cellar/cc65/2.19/share/cc65/cfg/atari.cfg(5)
+__LOWCODE_RUN__ ([linker generated]):
+    crt0.o                    atari/crt0.s(18)
+__LOWCODE_SIZE__ ([linker generated]):
+    crt0.o                    atari/crt0.s(18)
+__MAIN_START__ ([linker generated]):
+    exehdr.o                  atari/exehdr.s(4)
+__RESERVED_MEMORY__ ([linker generated]):
+    system_check.o            atari/system_check.s(25)
+    crt0.o                    atari/crt0.s(16)
+    [linker generated]        /opt/homebrew/Cellar/cc65/2.19/share/cc65/cfg/atari.cfg(25)
+__STACKSIZE__ ([linker generated]):
+    system_check.o            atari/system_check.s(24)
+    [linker generated]        /opt/homebrew/Cellar/cc65/2.19/share/cc65/cfg/atari.cfg(25)
+__STARTADDRESS__ ([linker generated]):
+    system_check.o            atari/system_check.s(20)
+__STARTUP__ (crt0.o):
+    main.o                    main.s(14)
+__SYSCHKHDR__ (system_check_hdr.o):
+    system_check.o            atari/system_check.s(28)
+__SYSCHKTRL__ (system_check_trailer.o):
+    system_check.o            atari/system_check.s(28)
+__SYSCHK_END__ (system_check.o):
+    system_check_hdr.o        atari/system_check_hdr.s(7)
+__SYSCHK_LOAD__ ([linker generated]):
+    system_check_hdr.o        atari/system_check_hdr.s(7)
+__SYSTEM_CHECK__ (system_check.o):
+    system_check_trailer.o    atari/system_check_trailer.s(7)
+    [linker generated]        /opt/homebrew/Cellar/cc65/2.19/share/cc65/cfg/atari.cfg(6)
+_main (main.o):
+    callmain.o                runtime/callmain.s(11)
+booleq (makebool.o):
+    main.o                    main.s(100)
+callmain (callmain.o):
+    crt0.o                    atari/crt0.s(15)
+decax1 (decax1.o):
+    main.o                    main.s(100)
+donelib (condes.o):
+    crt0.o                    atari/crt0.s(14)
+incsp1 (incsp1.o):
+    main.o                    main.s(100)
+initlib (condes.o):
+    crt0.o                    atari/crt0.s(14)
+ptr1 (zeropage.o):
+    zerobss.o                 common/zerobss.s(9)
+pusha (pusha.o):
+    main.o                    main.s(100)
+pushax (pushax.o):
+    callmain.o                runtime/callmain.s(11)
+    main.o                    main.s(100)
+sp (zeropage.o):
+    pushax.o                  runtime/pushax.s(8)
+    pusha.o                   runtime/pusha.s(8)
+    incsp1.o                  runtime/incsp1.s(8)
+    crt0.o                    /private/tmp/cc65-20221106-4106-t7shur/cc65-2.19/asminc/zeropage.inc(11)
+    add.o                     runtime/add.s(12)
+    main.o                    main.s(10)
+start (crt0.o):
+    exetrailer.o              atari/exetrailer.s(4)
+tmp1 (zeropage.o):
+    add.o                     runtime/add.s(12)
+tosaddax (add.o):
+    main.o                    main.s(100)
+zerobss (zerobss.o):
+    crt0.o                    atari/crt0.s(15)
+

@@ -1,0 +1,52 @@
+{
+  "buildDir": "/tmp/rd-source-debug/oscar64/nes/indirect-calls",
+  "commit": "9408778695b5442e755832711b89243b4f94a9ff",
+  "fixedMtime": 1767225600,
+  "fixture": "indirect-calls",
+  "inputs": {
+    "main.c": "3f4657e077552884b4e262b998cca52096e3221edfd52689798b5fcd3143000f"
+  },
+  "machine": "nes",
+  "outputs": {
+    "main.asm": {
+      "sha256": "fb5f12ec06ab12413c078d853cdc90dbd862e4baa1ce076f5b5bd9b20749bb2a",
+      "size": 3740
+    },
+    "main.dbj": {
+      "sha256": "095bb7f686a61905bf6a0cbaaba789138f8924bcf03321e873e0a388a67aa227",
+      "size": 9298
+    },
+    "main.map": {
+      "sha256": "97277bfe995db740ef1f327f097846d2772e66802d05852a8c10dd753f32d1a3",
+      "size": 1601
+    },
+    "main.mlb": {
+      "sha256": "d71ea990d9ec10389886f6a986863287774bd26703e9aaa6da6e327fe33d60f1",
+      "size": 327
+    },
+    "main.nes": {
+      "sha256": "8aba6632b2f3e885d4366a46ae3faa25430890a47f7a0fe8c8dc30830a4de1ce",
+      "size": 40976
+    }
+  },
+  "source": "main.c",
+  "steps": [
+    [
+      "oscar64",
+      "-tm=nes",
+      "-n",
+      "-g",
+      "-O0",
+      "-o=main.nes",
+      "main.c"
+    ]
+  ],
+  "toolDirs": {
+    "oscar64": "/private/tmp/claude-501/-Users-mars-develop-github-RetroDebugger/53b1db2e-8b8e-4db0-8821-2827ab2f434c/scratchpad/toolchains/oscar64/bin"
+  },
+  "toolchain": "oscar64",
+  "version": "1.32.273",
+  "versionReported": {
+    "oscar64": "Starting oscar64 1.32.273"
+  }
+}

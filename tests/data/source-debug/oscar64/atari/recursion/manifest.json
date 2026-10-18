@@ -1,0 +1,52 @@
+{
+  "buildDir": "/tmp/rd-source-debug/oscar64/atari/recursion",
+  "commit": "9408778695b5442e755832711b89243b4f94a9ff",
+  "fixedMtime": 1767225600,
+  "fixture": "recursion",
+  "inputs": {
+    "main.c": "a4ac6b9c2712d703bff65169334d8f7be33f352092095df5ad674f19513aa8b9"
+  },
+  "machine": "atari",
+  "outputs": {
+    "main.asm": {
+      "sha256": "fa097a975a99be94d65f05f2428b044e7372ea8e258fd8982d8a387addbc602e",
+      "size": 3123
+    },
+    "main.dbj": {
+      "sha256": "c10ef7735ed74ddac6ff2771deb8f8a268667a7d6c3b41047a10ba2450b7922b",
+      "size": 6159
+    },
+    "main.lbl": {
+      "sha256": "7cc894c512801a869185612d18f9a2a0d952739df0f3bb5c9b398f81e31bedf8",
+      "size": 148
+    },
+    "main.map": {
+      "sha256": "9e2c35c31fdc8afb00658e52ccc003db299db2d75cc572c1ed8cde20951ab548",
+      "size": 1068
+    },
+    "main.xex": {
+      "sha256": "c95139d02857bb86e26b0ff587e99d54bcb66271f3662b998bdb885e656ae90e",
+      "size": 228
+    }
+  },
+  "source": "main.c",
+  "steps": [
+    [
+      "oscar64",
+      "-tm=atari",
+      "-n",
+      "-g",
+      "-O0",
+      "-o=main.xex",
+      "main.c"
+    ]
+  ],
+  "toolDirs": {
+    "oscar64": "/private/tmp/claude-501/-Users-mars-develop-github-RetroDebugger/53b1db2e-8b8e-4db0-8821-2827ab2f434c/scratchpad/toolchains/oscar64/bin"
+  },
+  "toolchain": "oscar64",
+  "version": "1.32.273",
+  "versionReported": {
+    "oscar64": "Starting oscar64 1.32.273"
+  }
+}

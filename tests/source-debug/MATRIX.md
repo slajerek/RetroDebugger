@@ -23,6 +23,11 @@ do not edit by hand. `ok` = built and committed under `tests/data/source-debug/`
 | branches-loops | kickass | 5.24-65ce02.e | n/a | n/a | n/a | n/a |
 | branches-loops | kickc | 0.8.6 | not built | not built | not built | n/a |
 | branches-loops | oscar64 | 1.32.273 | ok | ok | ok | n/a |
+| indirect-calls | 64tass | 1.59.3120 | n/a | n/a | n/a | n/a |
+| indirect-calls | cc65 | 2.19 | ok | ok | ok | n/a |
+| indirect-calls | kickass | 5.24-65ce02.e | n/a | n/a | n/a | n/a |
+| indirect-calls | kickc | 0.8.6 | not built | not built | not built | n/a |
+| indirect-calls | oscar64 | 1.32.273 | ok | ok | ok | n/a |
 | interrupts | 64tass | 1.59.3120 | n/a | n/a | n/a | n/a |
 | interrupts | cc65 | 2.19 | ok | ok | ok | n/a |
 | interrupts | kickass | 5.24-65ce02.e | n/a | n/a | n/a | n/a |
@@ -33,6 +38,11 @@ do not edit by hand. `ok` = built and committed under `tests/data/source-debug/`
 | nested-calls | kickass | 5.24-65ce02.e | n/a | n/a | n/a | n/a |
 | nested-calls | kickc | 0.8.6 | not built | not built | not built | n/a |
 | nested-calls | oscar64 | 1.32.273 | ok | ok | ok | n/a |
+| recursion | 64tass | 1.59.3120 | n/a | n/a | n/a | n/a |
+| recursion | cc65 | 2.19 | ok | ok | ok | n/a |
+| recursion | kickass | 5.24-65ce02.e | n/a | n/a | n/a | n/a |
+| recursion | kickc | 0.8.6 | not built | not built | not built | n/a |
+| recursion | oscar64 | 1.32.273 | ok | ok | ok | n/a |
 | same-line | 64tass | 1.59.3120 | n/a | n/a | n/a | n/a |
 | same-line | cc65 | 2.19 | ok | ok | ok | n/a |
 | same-line | kickass | 5.24-65ce02.e | n/a | n/a | n/a | n/a |

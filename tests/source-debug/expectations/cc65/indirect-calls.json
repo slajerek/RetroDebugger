@@ -1,0 +1,117 @@
+{
+  "fixture": "indirect-calls",
+  "compiler": "cc65",
+  "optimization": "debug",
+  "machine": "c64",
+  "artifacts": "tests/data/source-debug/cc65/c64/indirect-calls",
+  "binary": "main.prg",
+  "debugInfo": "main.dbg",
+  "entry": "0x080D",
+  "start": {
+    "file": "main.c",
+    "line": 21
+  },
+  "steps": [
+    {
+      "action": "sourceOver",
+      "expected": {
+        "file": "main.c",
+        "line": 22,
+        "function": "main",
+        "depth": 0
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceOver",
+      "expected": {
+        "file": "main.c",
+        "line": 23,
+        "function": "main",
+        "depth": 0
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceInto",
+      "note": "through the function pointer",
+      "expected": {
+        "file": "main.c",
+        "line": 8,
+        "function": "twice",
+        "depth": 1
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceOut",
+      "expected": {
+        "file": "main.c",
+        "line": 23,
+        "function": "main",
+        "depth": 0
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceOver",
+      "expected": {
+        "file": "main.c",
+        "line": 22,
+        "function": "main",
+        "depth": 0
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceOver",
+      "expected": {
+        "file": "main.c",
+        "line": 23,
+        "function": "main",
+        "depth": 0
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceInto",
+      "expected": {
+        "file": "main.c",
+        "line": 12,
+        "function": "plusOne",
+        "depth": 1
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceOut",
+      "expected": {
+        "file": "main.c",
+        "line": 23,
+        "function": "main",
+        "depth": 0
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceOver",
+      "expected": {
+        "file": "main.c",
+        "line": 22,
+        "function": "main",
+        "depth": 0
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceOver",
+      "expected": {
+        "file": "main.c",
+        "line": 24,
+        "function": "main",
+        "depth": 0
+      },
+      "expectedReason": "completed"
+    }
+  ]
+}

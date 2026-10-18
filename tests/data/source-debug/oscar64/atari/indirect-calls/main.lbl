@@ -1,0 +1,13 @@
+al 00e0 .ZeroEnd
+al 00e0 .ZeroStart
+al 2000 .startup
+al 2080 .main
+al 20bf .twice
+al 20c5 .plusOne
+al 20cd .bcexec
+al 20d0 .operations
+al 20d4 .result
+al 20d4 .BSSStart
+al 20d5 .BSSEnd
+al bbff .i
+al bbff .StackEnd

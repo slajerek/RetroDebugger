@@ -1,0 +1,52 @@
+{
+  "buildDir": "/tmp/rd-source-debug/oscar64/nes/recursion",
+  "commit": "9408778695b5442e755832711b89243b4f94a9ff",
+  "fixedMtime": 1767225600,
+  "fixture": "recursion",
+  "inputs": {
+    "main.c": "a4ac6b9c2712d703bff65169334d8f7be33f352092095df5ad674f19513aa8b9"
+  },
+  "machine": "nes",
+  "outputs": {
+    "main.asm": {
+      "sha256": "c9d6266e0fdc6652aeaa1207723c5e35ec971a02ad98ab788ad00d04376e0ddc",
+      "size": 3381
+    },
+    "main.dbj": {
+      "sha256": "fb69b93cdd25f98a0c8a0282490ce36e1eea026bb615d7ec1b0bbcc89cb446f0",
+      "size": 6130
+    },
+    "main.map": {
+      "sha256": "ff3eee601f6560b3df3f1826fa9bd5167417ae02b59be56e5a8300cd53bb6b96",
+      "size": 1243
+    },
+    "main.mlb": {
+      "sha256": "ccf278246b68dd8a49d4a177bd4215968dcefe79a7407016646e5472cca07faa",
+      "size": 260
+    },
+    "main.nes": {
+      "sha256": "c238b424e0d78d7b4643c665627b07683b6e5173310205a536fe093ccf24ec93",
+      "size": 40976
+    }
+  },
+  "source": "main.c",
+  "steps": [
+    [
+      "oscar64",
+      "-tm=nes",
+      "-n",
+      "-g",
+      "-O0",
+      "-o=main.nes",
+      "main.c"
+    ]
+  ],
+  "toolDirs": {
+    "oscar64": "/private/tmp/claude-501/-Users-mars-develop-github-RetroDebugger/53b1db2e-8b8e-4db0-8821-2827ab2f434c/scratchpad/toolchains/oscar64/bin"
+  },
+  "toolchain": "oscar64",
+  "version": "1.32.273",
+  "versionReported": {
+    "oscar64": "Starting oscar64 1.32.273"
+  }
+}

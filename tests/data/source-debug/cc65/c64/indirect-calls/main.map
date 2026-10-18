@@ -1,0 +1,204 @@
+Modules list:
+-------------
+main.o:
+    CODE              Offs=000000  Size=0000B3  Align=00001  Fill=0000
+    BSS               Offs=000000  Size=000001  Align=00001  Fill=0000
+    DATA              Offs=000000  Size=000004  Align=00001  Fill=0000
+/opt/homebrew/Cellar/cc65/2.19/share/cc65/lib/c64.lib(add.o):
+    CODE              Offs=0000B3  Size=00001C  Align=00001  Fill=0000
+/opt/homebrew/Cellar/cc65/2.19/share/cc65/lib/c64.lib(aslax1.o):
+    CODE              Offs=0000CF  Size=000008  Align=00001  Fill=0000
+/opt/homebrew/Cellar/cc65/2.19/share/cc65/lib/c64.lib(callmain.o):
+    CODE              Offs=0000D7  Size=000017  Align=00001  Fill=0000
+    DATA              Offs=000004  Size=000004  Align=00001  Fill=0000
+/opt/homebrew/Cellar/cc65/2.19/share/cc65/lib/c64.lib(condes.o):
+    CODE              Offs=0000EE  Size=00000C  Align=00001  Fill=0000
+    DATA              Offs=000008  Size=000025  Align=00001  Fill=0000
+    ONCE              Offs=000000  Size=00000C  Align=00001  Fill=0000
+/opt/homebrew/Cellar/cc65/2.19/share/cc65/lib/c64.lib(crt0.o):
+    STARTUP           Offs=000000  Size=000033  Align=00001  Fill=0000
+    ONCE              Offs=00000C  Size=00001A  Align=00001  Fill=0000
+    INIT              Offs=000000  Size=00001C  Align=00001  Fill=0000
+/opt/homebrew/Cellar/cc65/2.19/share/cc65/lib/c64.lib(decsp1.o):
+    CODE              Offs=0000FA  Size=000009  Align=00001  Fill=0000
+/opt/homebrew/Cellar/cc65/2.19/share/cc65/lib/c64.lib(exehdr.o):
+    EXEHDR            Offs=000000  Size=00000C  Align=00001  Fill=0000
+/opt/homebrew/Cellar/cc65/2.19/share/cc65/lib/c64.lib(incax1.o):
+    CODE              Offs=000103  Size=000007  Align=00001  Fill=0000
+/opt/homebrew/Cellar/cc65/2.19/share/cc65/lib/c64.lib(incsp1.o):
+    CODE              Offs=00010A  Size=000007  Align=00001  Fill=0000
+/opt/homebrew/Cellar/cc65/2.19/share/cc65/lib/c64.lib(incsp2.o):
+    CODE              Offs=000111  Size=000016  Align=00001  Fill=0000
+/opt/homebrew/Cellar/cc65/2.19/share/cc65/lib/c64.lib(jmpvec.o):
+    DATA              Offs=00002D  Size=000003  Align=00001  Fill=0000
+/opt/homebrew/Cellar/cc65/2.19/share/cc65/lib/c64.lib(kernal.o):
+/opt/homebrew/Cellar/cc65/2.19/share/cc65/lib/c64.lib(ldaxi.o):
+    CODE              Offs=000127  Size=00000D  Align=00001  Fill=0000
+/opt/homebrew/Cellar/cc65/2.19/share/cc65/lib/c64.lib(loadaddr.o):
+    LOADADDR          Offs=000000  Size=000002  Align=00001  Fill=0000
+/opt/homebrew/Cellar/cc65/2.19/share/cc65/lib/c64.lib(makebool.o):
+    CODE              Offs=000134  Size=00002C  Align=00001  Fill=0000
+/opt/homebrew/Cellar/cc65/2.19/share/cc65/lib/c64.lib(pusha.o):
+    CODE              Offs=000160  Size=000016  Align=00001  Fill=0000
+/opt/homebrew/Cellar/cc65/2.19/share/cc65/lib/c64.lib(pushax.o):
+    CODE              Offs=000176  Size=00001A  Align=00001  Fill=0000
+/opt/homebrew/Cellar/cc65/2.19/share/cc65/lib/c64.lib(status.o):
+/opt/homebrew/Cellar/cc65/2.19/share/cc65/lib/c64.lib(zerobss.o):
+    CODE              Offs=000190  Size=000023  Align=00001  Fill=0000
+/opt/homebrew/Cellar/cc65/2.19/share/cc65/lib/c64.lib(zeropage.o):
+    ZEROPAGE          Offs=000000  Size=00001A  Align=00001  Fill=0000
+
+
+Segment list:
+-------------
+Name                   Start     End    Size  Align
+----------------------------------------------------
+ZEROPAGE              000002  00001B  00001A  00001
+LOADADDR              0007FF  000800  000002  00001
+EXEHDR                000801  00080C  00000C  00001
+STARTUP               00080D  00083F  000033  00001
+CODE                  000840  0009F2  0001B3  00001
+DATA                  0009F3  000A22  000030  00001
+INIT                  000A23  000A3E  00001C  00001
+BSS                   000A3F  000A3F  000001  00001
+ONCE                  000A3F  000A64  000026  00001
+
+
+Exports list by name:
+---------------------
+BSOUT                     00FFD2 RLA    ST                        000090 RLZ    
+__BSS_RUN__               000A3F RLA    __BSS_SIZE__              000001 REA    
+__CONSTRUCTOR_COUNT__     000000 REA    __CONSTRUCTOR_TABLE__     000A65 RLA    
+__DESTRUCTOR_COUNT__      000000 REA    __DESTRUCTOR_TABLE__      0009F3 RLA    
+__EXEHDR__                000001 REA    __HEADER_LAST__           00080D RLA    
+__HIMEM__                 00D000 REA    __LOADADDR__              000001 REA    
+__MAIN_SIZE__             00C7F3 REA    __MAIN_START__            00080D RLA    
+__ONCE_RUN__              000A3F RLA    __STACKSIZE__             000800 REA    
+__STARTUP__               000001 REA    _main                     000873 RLA    
+aslax1                    00090F RLA    boolult                   000993 RLA    
+callmain                  000917 RLA    decsp1                    00093A RLA    
+donelib                   00092E RLA    incax1                    000943 RLA    
+incsp1                    00094A RLA    incsp2                    000959 RLA    
+initlib                   000A3F RLA    jmpvec                    000A20 RLA    
+ldaxidx                   000969 RLA    ptr1                      00000A RLZ    
+pusha                     0009A4 RLA    pushax                    0009BA RLA    
+sp                        000002 RLZ    tmp1                      000012 RLZ    
+tosaddax                  0008F5 RLA    zerobss                   0009D0 RLA    
+
+
+
+Exports list by value:
+----------------------
+__DESTRUCTOR_COUNT__      000000 REA    __CONSTRUCTOR_COUNT__     000000 REA    
+__EXEHDR__                000001 REA    __LOADADDR__              000001 REA    
+__BSS_SIZE__              000001 REA    __STARTUP__               000001 REA    
+sp                        000002 RLZ    ptr1                      00000A RLZ    
+tmp1                      000012 RLZ    ST                        000090 RLZ    
+__STACKSIZE__             000800 REA    __MAIN_START__            00080D RLA    
+__HEADER_LAST__           00080D RLA    _main                     000873 RLA    
+tosaddax                  0008F5 RLA    aslax1                    00090F RLA    
+callmain                  000917 RLA    donelib                   00092E RLA    
+decsp1                    00093A RLA    incax1                    000943 RLA    
+incsp1                    00094A RLA    incsp2                    000959 RLA    
+ldaxidx                   000969 RLA    boolult                   000993 RLA    
+pusha                     0009A4 RLA    pushax                    0009BA RLA    
+zerobss                   0009D0 RLA    __DESTRUCTOR_TABLE__      0009F3 RLA    
+jmpvec                    000A20 RLA    __BSS_RUN__               000A3F RLA    
+__ONCE_RUN__              000A3F RLA    initlib                   000A3F RLA    
+__CONSTRUCTOR_TABLE__     000A65 RLA    __MAIN_SIZE__             00C7F3 REA    
+__HIMEM__                 00D000 REA    BSOUT                     00FFD2 RLA    
+
+
+
+Imports list:
+-------------
+BSOUT (kernal.o):
+    crt0.o                    c64/crt0.s(10)
+ST (status.o):
+    crt0.o                    c64/crt0.s(13)
+__BSS_RUN__ ([linker generated]):
+    zerobss.o                 common/zerobss.s(8)
+__BSS_SIZE__ ([linker generated]):
+    zerobss.o                 common/zerobss.s(8)
+__CONSTRUCTOR_COUNT__ ([linker generated]):
+    condes.o                  runtime/condes.s(18)
+__CONSTRUCTOR_TABLE__ ([linker generated]):
+    condes.o                  runtime/condes.s(18)
+__DESTRUCTOR_COUNT__ ([linker generated]):
+    condes.o                  runtime/condes.s(19)
+__DESTRUCTOR_TABLE__ ([linker generated]):
+    condes.o                  runtime/condes.s(19)
+__EXEHDR__ (exehdr.o):
+    [linker generated]        /opt/homebrew/Cellar/cc65/2.19/share/cc65/cfg/c64.cfg(6)
+__HEADER_LAST__ ([linker generated]):
+    [linker generated]        /opt/homebrew/Cellar/cc65/2.19/share/cc65/cfg/c64.cfg(14)
+    [linker generated]        /opt/homebrew/Cellar/cc65/2.19/share/cc65/cfg/c64.cfg(14)
+__HIMEM__ ([linker generated]):
+    [linker generated]        /opt/homebrew/Cellar/cc65/2.19/share/cc65/cfg/c64.cfg(15)
+    [linker generated]        /opt/homebrew/Cellar/cc65/2.19/share/cc65/cfg/c64.cfg(14)
+__LOADADDR__ (loadaddr.o):
+    [linker generated]        /opt/homebrew/Cellar/cc65/2.19/share/cc65/cfg/c64.cfg(5)
+__MAIN_SIZE__ ([linker generated]):
+    crt0.o                    c64/crt0.s(11)
+__MAIN_START__ ([linker generated]):
+    crt0.o                    c64/crt0.s(11)
+__ONCE_RUN__ ([linker generated]):
+    [linker generated]        /opt/homebrew/Cellar/cc65/2.19/share/cc65/cfg/c64.cfg(15)
+    [linker generated]        /opt/homebrew/Cellar/cc65/2.19/share/cc65/cfg/c64.cfg(15)
+__STACKSIZE__ ([linker generated]):
+    [linker generated]        /opt/homebrew/Cellar/cc65/2.19/share/cc65/cfg/c64.cfg(15)
+__STARTUP__ (crt0.o):
+    main.o                    main.s(14)
+_main (main.o):
+    callmain.o                runtime/callmain.s(11)
+aslax1 (aslax1.o):
+    main.o                    main.s(176)
+boolult (makebool.o):
+    main.o                    main.s(176)
+callmain (callmain.o):
+    crt0.o                    c64/crt0.s(9)
+decsp1 (decsp1.o):
+    main.o                    main.s(176)
+donelib (condes.o):
+    crt0.o                    c64/crt0.s(8)
+incax1 (incax1.o):
+    main.o                    main.s(176)
+incsp1 (incsp1.o):
+    main.o                    main.s(176)
+    main.o                    main.s(176)
+    main.o                    main.s(176)
+incsp2 (incsp2.o):
+    main.o                    main.s(176)
+initlib (condes.o):
+    crt0.o                    c64/crt0.s(8)
+jmpvec (jmpvec.o):
+    main.o                    main.s(176)
+ldaxidx (ldaxi.o):
+    main.o                    main.s(176)
+ptr1 (zeropage.o):
+    zerobss.o                 common/zerobss.s(9)
+    ldaxi.o                   runtime/ldaxi.s(8)
+pusha (pusha.o):
+    main.o                    main.s(176)
+    main.o                    main.s(176)
+pushax (pushax.o):
+    callmain.o                runtime/callmain.s(11)
+    main.o                    main.s(176)
+    main.o                    main.s(176)
+sp (zeropage.o):
+    pushax.o                  runtime/pushax.s(8)
+    pusha.o                   runtime/pusha.s(8)
+    incsp2.o                  runtime/incsp2.s(8)
+    incsp1.o                  runtime/incsp1.s(8)
+    decsp1.o                  runtime/decsp1.s(8)
+    crt0.o                    /private/tmp/cc65-20221106-4106-t7shur/cc65-2.19/asminc/zeropage.inc(11)
+    add.o                     runtime/add.s(12)
+    main.o                    main.s(10)
+tmp1 (zeropage.o):
+    aslax1.o                  runtime/aslax1.s(8)
+    add.o                     runtime/add.s(12)
+tosaddax (add.o):
+    main.o                    main.s(176)
+zerobss (zerobss.o):
+    crt0.o                    c64/crt0.s(9)
+
