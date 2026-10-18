@@ -478,7 +478,9 @@ identity (RD-025) and the gutter (M2). Original plan:
   preamble (SEI, CIA1 IRQs off or the timer IRQ into a $C040 handler), the start
   reached through a source breakpoint. Oscar64 has no columns, so `same-line`
   stops once per line, not per statement.
-- Next: `nested-calls`, `branches-loops`, `interrupts` fixtures and traces; Atari/NES
+- Traces: Oscar64 C64 `basic-flow`, `same-line`, `nested-calls`, `branches-loops`,
+  `interrupts` (IRQ calling `tick()`; the runner also fails if the handler never
+  ran). Optional `expected.pc` and a free-text `note` per step. Next: Atari/NES
   drivers in the runner.
 - `CTestSourceStepTrace` reads `tests/source-debug/expectations/<compiler>/<fixture>.json`
   (spec #9.5), loads the Tier 1 binary + debug artifact, runs the steps, compares

@@ -166,14 +166,14 @@ bool CTestSourceStepTrace::RunTrace(CDebugInterfaceVice *di, const std::string &
 		di->SetByteToRamC64((u16)(loadAddress + i - 2), prg[i]);
 
 	// $C060 preamble: SEI, CIA1 interrupts off; with "irq" a timer A IRQ every
-	// timerCycles into the $C040 handler (INC $02, optional JSR to a fixture
+	// timerCycles into the $C040 handler (16-bit INC $02, optional JSR to a fixture
 	// function, ack, RTI) and CLI; then JMP entry.
 	std::vector<u8> setup = { 0x78, 0xA9, 0x7F, 0x8D, 0x0D, 0xDC, 0xAD, 0x0D, 0xDC };
 	if (trace.contains("irq"))
 	{
 		const json &irq = trace["irq"];
 		int cycles = irq.value("timerCycles", 150);
-		std::vector<u8> handler = { 0xE6, 0x02 };
+		std::vector<u8> handler = { 0xE6, 0x02, 0xD0, 0x02, 0xE6, 0x03 };	// 16-bit counter at $02
 		if (irq.contains("call"))
 		{
 			std::string callee = irq["call"].get<std::string>();
@@ -200,6 +200,7 @@ bool CTestSourceStepTrace::RunTrace(CDebugInterfaceVice *di, const std::string &
 	for (size_t i = 0; i < setup.size(); i++)
 		di->SetByteToRamC64((u16)(0xC060 + i), setup[i]);
 	di->SetByteToRamC64(0x0002, 0);
+	di->SetByteToRamC64(0x0003, 0);
 
 	// run to the start line through a source breakpoint
 	std::string startFile = trace["start"].value("file", "");
@@ -265,6 +266,8 @@ bool CTestSourceStepTrace::RunTrace(CDebugInterfaceVice *di, const std::string &
 			match = match && actualFunction == expected["function"].get<std::string>();
 		if (expected.contains("depth"))
 			match = match && depth == expected["depth"].get<int>();
+		if (expected.contains("pc"))
+			match = match && r.pc == ParseAddress(expected["pc"]);
 
 		char line[320];
 		snprintf(line, sizeof(line), "%2d %-10s -> $%04X %s:%d %s depth %d %s (%llu instructions)%s\n   expected %s %s\n",
@@ -282,6 +285,18 @@ bool CTestSourceStepTrace::RunTrace(CDebugInterfaceVice *di, const std::string &
 	}
 
 	std::string message = name + ": " + std::to_string(trace["steps"].size()) + " source steps match the trace";
+	if (ok && trace.contains("irq"))
+	{
+		// the handler's counter: the interrupt really ran during the trace
+		int irqs = di->GetByteFromRamC64(0x0002) | (di->GetByteFromRamC64(0x0003) << 8);
+		message += ", with the IRQ taken " + std::to_string(irqs) + " times";
+		if (irqs == 0)
+		{
+			ok = false;
+			mismatch = "the IRQ handler never ran";
+			log << mismatch << "\n";
+		}
+	}
 	if (!ok)
 	{
 		std::string dump = "/tmp/source-step-trace-" + compiler + "-" + fixture + ".txt";
