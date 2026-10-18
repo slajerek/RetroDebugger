@@ -1,0 +1,82 @@
+{
+  "fixture": "optimized",
+  "compiler": "oscar64",
+  "optimization": "O2",
+  "machine": "c64",
+  "artifacts": "tests/data/source-debug/oscar64/c64-O2/optimized",
+  "binary": "main.prg",
+  "debugInfo": "main.dbj",
+  "entry": "0x080D",
+  "note": "Oscar64 -O2: lines 22 and 24 (stores to scratch) and 15 (total = 0) have no code left; steps stop on the lines that still have code, in the order it runs (best effort, spec decision 7)",
+  "start": {
+    "file": "main-O2.c",
+    "line": 23
+  },
+  "steps": [
+    {
+      "action": "sourceOver",
+      "expected": {
+        "file": "main-O2.c",
+        "line": 25,
+        "function": "main",
+        "depth": 0
+      },
+      "expectedReason": "completed",
+      "note": "line 24 has no code of its own"
+    },
+    {
+      "action": "sourceInto",
+      "expected": {
+        "file": "main-O2.c",
+        "line": 16,
+        "function": "sum",
+        "depth": 1
+      },
+      "expectedReason": "completed",
+      "note": "line 15 was folded away; line 17's $0898 is the loop's setup (total = 0)"
+    },
+    {
+      "action": "sourceOver",
+      "expected": {
+        "file": "main-O2.c",
+        "line": 17,
+        "function": "sum",
+        "depth": 1
+      },
+      "expectedReason": "completed",
+      "note": "$0898: line 17 by the .dbj -- the setup the optimizer moved there"
+    },
+    {
+      "action": "sourceOver",
+      "expected": {
+        "file": "main-O2.c",
+        "line": 16,
+        "function": "sum",
+        "depth": 1
+      },
+      "expectedReason": "completed",
+      "note": "$089C: the loop body; the .dbj maps it to line 16 (the generated listing says 17: Oscar64's ranges, RD-016)"
+    },
+    {
+      "action": "sourceOver",
+      "note": "the next iteration: the same line again from its first byte, one stop per iteration",
+      "expected": {
+        "file": "main-O2.c",
+        "line": 16,
+        "function": "sum",
+        "depth": 1
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceOut",
+      "expected": {
+        "file": "main-O2.c",
+        "line": 25,
+        "function": "main",
+        "depth": 0
+      },
+      "expectedReason": "completed"
+    }
+  ]
+}

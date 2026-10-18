@@ -48,6 +48,11 @@ do not edit by hand. `ok` = built and committed under `tests/data/source-debug/`
 | nested-calls | kickass | 5.24-65ce02.e | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
 | nested-calls | kickc | 0.8.6 | ok | ok | ok | n/a | n/a | n/a | n/a | n/a | n/a |
 | nested-calls | oscar64 | 1.32.273 | ok | ok | ok | n/a | n/a | n/a | n/a | n/a | n/a |
+| optimized | 64tass | 1.59.3120 | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
+| optimized | cc65 | 2.19 | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
+| optimized | kickass | 5.24-65ce02.e | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
+| optimized | kickc | 0.8.6 | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
+| optimized | oscar64 | 1.32.273 | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | ok |
 | recursion | 64tass | 1.59.3120 | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
 | recursion | cc65 | 2.19 | ok | ok | ok | n/a | n/a | n/a | n/a | n/a | n/a |
 | recursion | kickass | 5.24-65ce02.e | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
