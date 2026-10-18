@@ -1,0 +1,98 @@
+{
+  "buildDir": "/tmp/rd-source-debug/cc65/nes-mmc3/banked",
+  "commit": null,
+  "fixedMtime": 1767225600,
+  "fixture": "banked",
+  "inputs": {
+    "magicdesk-crt0.s": "544b16fabd63ac5cb54182808356d061d9fad02a058c89dc49080cc73e0251d9",
+    "magicdesk.c": "6f1520fabd1a6701443ef3c72865d931dc71fa16c32453d325ff32f49354514b",
+    "magicdesk.cfg": "1cbc893cd8fcd005e0bf987bc29bd5bd9a4b463f783e11602e9ce3d4b235b14a",
+    "mmc1-crt0.s": "028aa34ceb9a10380eb59261e5510beb12b0c520e3b967beb0103aa19119769c",
+    "mmc1.c": "dd290c49f84e2c186a9c78b86e4a672f13737f3629c300fa0d874a572697927f",
+    "mmc1.cfg": "c9445ddf2387359f7f00db3c90b27da02c0ff7e01f4cdfcf4dbc11dd731b302f",
+    "mmc3-crt0.s": "72f66d0d0ed79a68b061eb247d014fe67cf71cac2a53d1acca58b1eaff3af630",
+    "mmc3.c": "ac0dbdf4dca7ed3bcf041931101bbca9fbb11b56b64f25635d07a246adca4d2f",
+    "mmc3.cfg": "6510f6dd6bfc3950db1e9126f531ff2b59645d0a880654f30b952f5e0a6f06a6",
+    "uxrom-crt0.s": "a65c7233d025c0554246505324db93b43db966b76dd1d4c3c7d451573885275b",
+    "uxrom.c": "ff7f1bfdd188f8df1fef9953a7a4b23c92812f0368d4532fe5ad21eb2fb05843",
+    "uxrom.cfg": "f0ffbc7eb485fa194a1638b76baa6a677f52a4f52be931c29c45d55646e1aa2a",
+    "xegs-crt0.s": "7d62391772a4b8ea2100f47d5d89c47b20d2c540caa13b9283a7b62c78654cf7",
+    "xegs.c": "37126f391620d237b0e57f7eaf4d4e707de402c3e25c4af33803987316b22bff",
+    "xegs.cfg": "d78d6b543b88a33e13b462378582d66546b0ba7550a86e6be551e99b598f52f1"
+  },
+  "machine": "nes-mmc3",
+  "outputs": {
+    "main.dbg": {
+      "sha256": "fc12f374c74407ee4882c20ade94e9e33550f952d6701eeceb9758b2237aae07",
+      "size": 18627
+    },
+    "main.lbl": {
+      "sha256": "32c0bd2e881b5a1497edc174014ce7b8e2893bc667116c8858d5857210c4a0b4",
+      "size": 1430
+    },
+    "main.map": {
+      "sha256": "cd2cb0f158df4335437fe4f9d5a3caced9568954bc423c4a8a067b20dfdbf852",
+      "size": 5496
+    },
+    "main.nes": {
+      "sha256": "46505f5fd75e40350f43e2cbd1e3c5f226b89290e714a1d18e362c346473df30",
+      "size": 32784
+    },
+    "mmc3.s": {
+      "sha256": "a4d795b685ae1a028cbd92d97e887943b200409b4936e64beefeef618f01366b",
+      "size": 3082
+    }
+  },
+  "source": "mmc3.c",
+  "steps": [
+    [
+      "cc65",
+      "-t",
+      "nes",
+      "-g",
+      "mmc3.c"
+    ],
+    [
+      "ca65",
+      "-t",
+      "nes",
+      "-g",
+      "mmc3.s"
+    ],
+    [
+      "ca65",
+      "-t",
+      "nes",
+      "-g",
+      "mmc3-crt0.s"
+    ],
+    [
+      "ld65",
+      "-C",
+      "mmc3.cfg",
+      "--dbgfile",
+      "main.dbg",
+      "-Ln",
+      "main.lbl",
+      "-m",
+      "main.map",
+      "-o",
+      "main.nes",
+      "mmc3.o",
+      "mmc3-crt0.o",
+      "nes.lib"
+    ]
+  ],
+  "toolDirs": {
+    "ca65": "/opt/homebrew/Cellar/cc65/2.19/bin",
+    "cc65": "/opt/homebrew/Cellar/cc65/2.19/bin",
+    "ld65": "/opt/homebrew/Cellar/cc65/2.19/bin"
+  },
+  "toolchain": "cc65",
+  "version": "2.19",
+  "versionReported": {
+    "ca65": "ca65 V2.18 - N/A (/opt/homebrew/Cellar/cc65/2.19/bin)",
+    "cc65": "cc65 V2.18 - N/A (/opt/homebrew/Cellar/cc65/2.19/bin)",
+    "ld65": "ld65 V2.18 - N/A (/opt/homebrew/Cellar/cc65/2.19/bin)"
+  }
+}

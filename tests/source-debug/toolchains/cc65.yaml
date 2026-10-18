@@ -95,3 +95,12 @@ machines:
       - ["{ca65}", "-g", "drive.s"]
       - ["{ld65}", "-C", "drive.cfg", "--dbgfile", "main.dbg", "-Ln", "main.lbl", "-m", "main.map", "-o", "main.bin", "drive.o"]
     outputs: [main.bin, main.dbg, main.lbl, main.map]
+  # MMC3 (mapper 4), 8 KB banks selected through R6 (RD-026); fixtures with an mmc3.c.
+  nes-mmc3:
+    source: mmc3.c
+    steps:
+      - ["{cc65}", "-t", "nes", "-g", "mmc3.c"]
+      - ["{ca65}", "-t", "nes", "-g", "mmc3.s"]
+      - ["{ca65}", "-t", "nes", "-g", "mmc3-crt0.s"]
+      - ["{ld65}", "-C", "mmc3.cfg", "--dbgfile", "main.dbg", "-Ln", "main.lbl", "-m", "main.map", "-o", "main.nes", "mmc3.o", "mmc3-crt0.o", "nes.lib"]
+    outputs: [main.nes, main.dbg, main.lbl, main.map, mmc3.s]

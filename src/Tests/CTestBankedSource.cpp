@@ -121,7 +121,7 @@ bool CTestBankedSource::RunNes(const NesCartridge &cart)
 	CDebugBreakpointAddr *addressB = (onB && onB->IsResolved())
 		? scratch->currentSegment->breakpointsPC->GetBreakpoint(onB->bindings[0].address) : NULL;
 	ok = ok && Check(onB && onB->IsResolved() && onB->bindings.size() == 1 && onB->bindings[0].banked
-					 && addressB && addressB->imageOffsets.size() == 1 && addressB->imageOffsets[0] >= 0x4010,
+					 && addressB && addressB->imageOffsets.size() == 1 && addressB->imageOffsets[0] >= cart.bank1ImageOffset,
 					 label + "the source breakpoint on bankB's line binds to one address with bank 1's image offset");
 
 	auto runToPause = [&](int timeoutMs) -> bool {
@@ -140,7 +140,7 @@ bool CTestBankedSource::RunNes(const NesCartridge &cart)
 	if (ok)
 	{
 		// the cartridge loads paused at reset; run to the first stop
-		ok = Check(TestNesInsertCartridge(di, (dir + "/main.nes").c_str(), true), label + "main.nes (64 KB PRG) inserts");
+		ok = Check(TestNesInsertCartridge(di, (dir + "/main.nes").c_str(), true), label + "main.nes inserts");
 	}
 	if (ok)
 	{
@@ -529,13 +529,14 @@ void CTestBankedSource::Run(ITestCallback *cb)
 	failure.clear();
 
 	// bankA's and bankB's body lines, and _result, from each build's main.map
-	const NesCartridge uxrom = { "UxROM", "nes-uxrom", "uxrom.c", 18, 24, 0x6000 };
-	const NesCartridge mmc1 = { "MMC1", "nes-mmc1", "mmc1.c", 19, 25, 0x0300 };
-	bool ok = RunDatabase() && RunNes(uxrom) && RunNes(mmc1) && RunC64() && RunAtari();
+	const NesCartridge uxrom = { "UxROM", "nes-uxrom", "uxrom.c", 18, 24, 0x6000, 0x4010 };
+	const NesCartridge mmc1 = { "MMC1", "nes-mmc1", "mmc1.c", 19, 25, 0x0300, 0x4010 };
+	const NesCartridge mmc3 = { "MMC3", "nes-mmc3", "mmc3.c", 17, 23, 0x0300, 0x2010 };	// 8 KB banks
+	bool ok = RunDatabase() && RunNes(uxrom) && RunNes(mmc1) && RunNes(mmc3) && RunC64() && RunAtari();
 	if (!ok)
 	{
 		TestCompleted(false, failure.c_str());
 		return;
 	}
-	TestCompleted(true, "Banked code resolves and breaks by the bank in the window (NES UxROM and MMC1, C64 Magic Desk, Atari XEGS; cc65)");
+	TestCompleted(true, "Banked code resolves and breaks by the bank in the window (NES UxROM, MMC1 and MMC3, C64 Magic Desk, Atari XEGS; cc65)");
 }

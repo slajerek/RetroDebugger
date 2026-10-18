@@ -31,6 +31,7 @@ private:
 		const char *source;
 		int lineA, lineB;
 		u16 resultAddress;
+		u32 bank1ImageOffset;	// where bank 1 starts in the .nes (16 KB or 8 KB banks)
 	};
 	bool RunDatabase();
 	bool RunNes(const NesCartridge &cart);
