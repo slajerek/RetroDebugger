@@ -153,6 +153,38 @@ def resolve_toolchain(tc, tool_dir):
     return exes, versions, None
 
 
+BINARY_OUTPUTS = (".prg", ".xex", ".nes", ".crt", ".car", ".bin")
+
+
+def normalized(text):
+    """A debug or listing file without what differs between hosts that build
+    the same code: absolute paths outside the build root (toolchain installs:
+    Homebrew vs Ubuntu cc65, an Oscar64 checkout) become their file names,
+    and file times and sizes of those files go."""
+    def path(m):
+        p = m.group(0)
+        return p if p.startswith(BUILD_ROOT) else os.path.basename(p)
+    text = text.replace("/private" + BUILD_ROOT, BUILD_ROOT)	# macOS's /tmp
+    text = re.sub(r"(?<![\w.])/(?:[\w.+-]+/)+[\w.+-]+", path, text)
+    text = re.sub(r"mtime=0x[0-9A-Fa-f]+", "mtime=", text)
+    text = re.sub(r"(cc65 v [0-9.]+) - [^\"\n]*", r"\1", text)	# "- Ubuntu 2.19-1" / "- N/A"
+    text = re.sub(r'(name="[^"/]+",)size=\d+', r"\1size=", text)
+    return text
+
+
+def same_output(committed, built):
+    """Binaries byte for byte; text outputs after normalized()."""
+    if sha256(committed) == sha256(built):
+        return True
+    if committed.endswith(BINARY_OUTPUTS):
+        return False
+    with open(committed, encoding="utf-8", errors="replace") as a, open(built, encoding="utf-8", errors="replace") as b:
+        x, y = normalized(a.read()), normalized(b.read())
+    if committed.endswith(".map"):
+        return sorted(x.split()) == sorted(y.split())	# ld65 lists its exports in no fixed order
+    return x == y
+
+
 def build_cell(tc, machine, mspec, fixture, exes, versions, check):
     """Builds one fixture for one machine. Returns ("ok"|"fail"|"diff", detail)."""
     fixture_dir = os.path.join(FIXTURES, fixture)
@@ -184,7 +216,7 @@ def build_cell(tc, machine, mspec, fixture, exes, versions, check):
     if check:
         diffs = [o for o in mspec["outputs"]
                  if not os.path.isfile(os.path.join(dest, o))
-                 or sha256(os.path.join(dest, o)) != sha256(os.path.join(build_dir, o))]
+                 or not same_output(os.path.join(dest, o), os.path.join(build_dir, o))]
         return ("diff", "differs: " + ", ".join(diffs)) if diffs else ("ok", "")
 
     shutil.rmtree(dest, ignore_errors=True)
@@ -300,6 +332,7 @@ def main():
 
     results = {}
     failed = False
+    known_failures = previous_failures()	# a cell the matrix records as failing fails again: not news
     for tc in toolchains:
         exes, versions, reason = (None, None, "--matrix-only") if args.matrix_only else resolve_toolchain(tc, args.tool_dir)
         for machine, mspec in tc["machines"].items():
@@ -313,7 +346,8 @@ def main():
                 else:
                     status, detail = build_cell(tc, machine, mspec, fixture, exes, versions, args.check)
                 results[(fixture, tc["name"], machine)] = (status, detail)
-                failed |= status in ("fail", "diff")
+                known = status == "fail" and (fixture, tc["name"], machine) in known_failures
+                failed |= status in ("fail", "diff") and not known
                 print("%-9s %-8s %-6s %-14s %s" % (status, tc["name"], machine, fixture, detail))
 
     if not args.check:

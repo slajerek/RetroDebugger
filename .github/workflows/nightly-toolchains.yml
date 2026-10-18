@@ -1,0 +1,45 @@
+name: Nightly toolchains
+
+# RD-035: the source-level debugging fixtures rebuilt from their pinned
+# toolchains (tests/source-debug/toolchains/*.yaml) and compared with the
+# committed builds (build_fixtures.py --check: binaries byte for byte, debug
+# and listing files with install paths and file times normalized). A diff
+# means a committed artifact no longer comes out of its pinned compiler, or
+# the compiler's output depends on the host. Not a gate of the regular
+# builds; the version report and the rebuilt cells are kept as artifacts.
+on:
+  schedule:
+    - cron: '17 3 * * *'
+  workflow_dispatch:
+
+jobs:
+  fixtures:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - name: Checkout RetroDebugger
+        uses: actions/checkout@v6
+
+      - name: Install packaged toolchains
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cc65 64tass maven openjdk-17-jdk-headless python3-yaml
+
+      - name: Build Oscar64 and KickC from their tags
+        run: tests/source-debug/scripts/provision_toolchains.sh "$RUNNER_TEMP/toolchains"
+
+      - name: Rebuild the fixtures and compare
+        run: |
+          set -o pipefail
+          T="$RUNNER_TEMP/toolchains"
+          RD_OSCAR64="$T/oscar64/bin/oscar64" RD_KICKC="$T/bin/kickc" RD_KICKASS="$T/bin/kickass" \
+            python3 -I tests/source-debug/scripts/build_fixtures.py --check | tee fixture-check.txt
+
+      - name: Keep the report and the rebuilt cells
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: fixture-check
+          path: |
+            fixture-check.txt
+            /tmp/rd-source-debug
