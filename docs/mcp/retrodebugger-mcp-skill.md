@@ -69,7 +69,7 @@ Use this skill when working with the RetroDebugger MCP server to debug 8-bit pro
 
 ### Memory & Breakpoints (changes emulator state)
 - `retro_memory_write` — write base64-encoded data to memory
-- `retro_breakpoint_add` — add CPU execution breakpoint (fires when PC reaches address)
+- `retro_breakpoint_add` — add CPU execution breakpoint (fires when PC reaches address). With `physical` ({kind, device, region, offset}, e.g. `{"kind":"Extended RAM","device":"atari-xe-ram","region":3,"offset":0}`, or an array) it fires only when that bank's byte is the one fetched -- for code at an address several banks share
 - `retro_breakpoint_remove` — remove CPU execution breakpoint
 - `retro_breakpoint_list` — list all CPU execution breakpoints
 - `retro_memory_breakpoint_add` — add memory write/read breakpoint; use comparison `>=`, value `0` to break on any write
