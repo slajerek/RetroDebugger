@@ -22,6 +22,7 @@ void atrd_mark_atari_cell_read(uint16 addr);
 void atrd_mark_atari_cell_write(uint16 addr, uint8 value);
 void atrd_mark_atari_cell_execute(uint16 addr, uint8 opcode);
 void atrd_check_pc_breakpoint(uint16 pc);
+void atrd_notify_cpu_reset(void);
 int atrd_debug_pause_check(int allowRestore);
 
 int atrd_is_performing_snapshot_restore();

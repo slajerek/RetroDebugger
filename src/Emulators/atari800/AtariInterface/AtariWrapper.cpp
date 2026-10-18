@@ -111,6 +111,13 @@ int atrd_is_debug_on_atari()
 
 static void atrd_evaluate_pc_breakpoints(uint16 pc);
 
+// RD-011: the CPU was reset (cold or warm start)
+void atrd_notify_cpu_reset(void)
+{
+	if (debugInterfaceAtari)
+		debugInterfaceAtari->NotifyCpuReset();
+}
+
 void atrd_check_pc_breakpoint(uint16 pc)
 {
 //	LOGD("atrd_check_pc_breakpoint: pc=%04x", pc);

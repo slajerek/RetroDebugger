@@ -190,6 +190,7 @@ namespace Nes
 
 		void Cpu::Reset(const bool on,const bool hard)
 		{
+			nesd_notify_cpu_reset();
 			nesdMainCpuCycle = 0;
 			nesdMainCpuDebugCycle = 0;
 			nesdMainCpuPreviousInstructionCycle = 0;

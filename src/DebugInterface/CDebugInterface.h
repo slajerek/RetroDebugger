@@ -250,6 +250,10 @@ public:
 	virtual bool SupportsExecutionEvents() { return false; }
 	bool IsObservingExecution() const { return executionObserved.load(std::memory_order_relaxed); }
 	void NotifyInstructionBoundary(u16 pc, u8 sp, u8 opcode);
+	// RD-011: the CPU core reset (emulation thread, or the thread that reset
+	// it): armed steps end as Cancelled, the boundary history and the stack
+	// annotation start over, observers get OnCpuReset
+	void NotifyCpuReset();
 	void AddExecutionObserver(CDebugExecutionObserver *observer);
 	void RemoveExecutionObserver(CDebugExecutionObserver *observer);
 
@@ -374,6 +378,10 @@ private:
 	void RecordSourceStepStop();
 
 	enum { BoundaryHistoryKeep, BoundaryHistoryReset, BoundaryHistorySeed };
+public:
+	// CPU resets seen by NotifyCpuReset, for tests and UI
+	std::atomic<u32> resetCount { 0 };
+private:
 	std::atomic<bool> executionObserved;
 	std::atomic<int> boundaryHistoryRestart;
 	CDebugInstructionBoundary boundaryHistorySeed;

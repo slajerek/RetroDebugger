@@ -952,6 +952,8 @@ static void cpu_reset(void)
 	
 	/* Do machine-specific initialization.  */
 	machine_reset();
+
+	c64d_c64_notify_cpu_reset();
 }
 
 void maincpu_reset(void)

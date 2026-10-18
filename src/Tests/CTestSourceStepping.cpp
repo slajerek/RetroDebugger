@@ -378,6 +378,32 @@ bool CTestSourceStepping::RunSourceBreakpoints(CDebugInterfaceVice *di)
 	return CheckStaleDebugInfo();
 }
 
+// RD-011: a CPU reset ends an armed step as Cancelled. Step Out from
+// main()'s endless loop ($0897) never returns on its own.
+bool CTestSourceStepping::RunResetCancelsStep(CDebugInterfaceVice *di)
+{
+	di->PauseEmulationBlockedWait();
+	di->MakeJmpC64(0x0897);
+	u32 resetsBefore = di->resetCount.load();
+	bool armed = di->SourceStep(SourceStepKind::Out, 1000000000ULL);
+	SYS_Sleep(100);
+	bool stillArmed = di->sourceStepper->IsArmed();
+	di->ResetHard();
+	bool ended = false;
+	for (int waited = 0; waited < 3000 && !ended; waited += 10)
+	{
+		ended = !di->sourceStepper->IsArmed();
+		if (!ended)
+			SYS_Sleep(10);
+	}
+	CSourceStepResult r = di->sourceStepper->GetLastResult();
+	char msg[200];
+	snprintf(msg, sizeof(msg), "A hard reset ends an armed Step Out as cancelled (armed %d, running %d, ended %d, reason %s, resets +%u)",
+			 armed, stillArmed, ended, SourceStepStopReasonName(r.reason), di->resetCount.load() - resetsBefore);
+	return Check(armed && stillArmed && ended && r.reason == SourceStepStopReason::Cancelled
+				 && di->resetCount.load() > resetsBefore && !di->IsObservingExecution(), msg);
+}
+
 // RD-014: stale debug info by file time, on scratch files in /tmp.
 bool CTestSourceStepping::CheckStaleDebugInfo()
 {
@@ -464,6 +490,8 @@ void CTestSourceStepping::Run(ITestCallback *cb)
 		ok = RunOscar64(di);
 		if (ok)
 			ok = RunSourceBreakpoints(di);
+		if (ok)
+			ok = RunResetCancelsStep(di);
 
 		// stop the fast IRQ: KERNAL vector back, PAL timer A latch ($4025)
 		di->PauseEmulationBlockedWait();

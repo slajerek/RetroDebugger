@@ -127,6 +127,30 @@ void CDebugInterface::NotifyInstructionBoundary(u16 pc, u8 sp, u8 opcode)
 	}
 }
 
+void CDebugInterface::NotifyCpuReset()
+{
+	bool stepping = instructionStepper->IsArmed() || sourceStepper->IsArmed();
+	instructionStepper->Cancel(DebugStepStopReason::Cancelled);
+	sourceStepper->Cancel(SourceStepStopReason::Cancelled);
+	boundaryHistoryRestart.store(BoundaryHistoryReset, std::memory_order_release);
+	mainCpuStack.Clear();
+	resetCount.fetch_add(1, std::memory_order_acq_rel);
+
+	std::vector<CDebugExecutionObserver *> observers;
+	{
+		std::lock_guard<std::mutex> lock(executionObserversMutex);
+		observers = executionObservers;
+	}
+	for (CDebugExecutionObserver *observer : observers)
+		observer->OnCpuReset(this);
+
+	if (stepping)
+	{
+		LOGD("CDebugInterface::NotifyCpuReset: %s reset ended an armed step", GetPlatformNameString());
+		UpdateExecutionObserved();
+	}
+}
+
 // RD-013/RD-037: a step that stopped leaves an entry in the events history
 // (kind, reason, where); a breakpoint event at the same cycle wins.
 void CDebugInterface::RecordInstructionStepStop()

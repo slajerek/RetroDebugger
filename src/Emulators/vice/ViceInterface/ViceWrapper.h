@@ -238,6 +238,7 @@ void c64d_debug_mode_store(int newMode);
 #endif
 
 void c64d_c64_check_pc_breakpoint(uint16 pc);
+void c64d_c64_notify_cpu_reset(void);
 void c64d_c64_check_raster_breakpoint(uint16 rasterLine);
 int c64d_c64_is_checking_irq_breakpoints_enabled();
 void c64d_drive1541_check_pc_breakpoint(uint16 pc);

@@ -2644,6 +2644,8 @@ void CPU_Reset(void)
 	
 	atrdMainCpuCycle = 0;
 	atrdMainCpuPreviousInstructionCycle = 0;
+
+	atrd_notify_cpu_reset();
 }
 
 #if !defined(BASIC) && !defined(ASAP)

@@ -846,6 +846,13 @@ int c64d_is_debug_on_drive1541()
 
 static void c64d_c64_evaluate_pc_breakpoints(uint16 pc);
 
+// RD-011: the main CPU was reset (any path: menu, cartridge, program load)
+void c64d_c64_notify_cpu_reset(void)
+{
+	if (debugInterfaceVice)
+		debugInterfaceVice->NotifyCpuReset();
+}
+
 void c64d_c64_check_pc_breakpoint(uint16 pc)
 {
 	// skip checking breakpoints when quick fast-forward/restoring snapshot

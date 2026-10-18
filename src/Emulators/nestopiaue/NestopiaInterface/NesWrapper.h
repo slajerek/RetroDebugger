@@ -58,6 +58,7 @@ void nesd_mark_cell_read(uint16 addr);
 void nesd_mark_cell_write(uint16 addr, uint8 value);
 void nesd_mark_cell_execute(uint16 addr, uint8 opcode);
 void nesd_check_pc_breakpoint(uint16 pc);
+void nesd_notify_cpu_reset();
 
 extern uint8  *nesd_main_cpu_stack_entry_types;
 extern uint8  *nesd_main_cpu_stack_irq_sources;

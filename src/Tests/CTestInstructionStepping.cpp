@@ -282,6 +282,17 @@ bool CTestInstructionStepping::RunAtari()
 	auto jump = [di](u16 addr) { di->MakeJmpNoReset(di->GetDataAdapter(), addr); };
 	bool ok = RunRecursion(di, "Atari", 0x0600, 0xCB, jump);
 
+	// RD-011: a reset reaches the interface from the CPU core
+	if (ok)
+	{
+		u32 resetsBefore = di->resetCount.load();
+		di->ResetHard();
+		di->SetDebugMode(DEBUGGER_MODE_RUNNING);
+		for (int waited = 0; waited < 2000 && di->resetCount.load() == resetsBefore; waited += 10)
+			SYS_Sleep(10);
+		ok = Check(di->resetCount.load() > resetsBefore, "Atari: a hard reset is reported by the CPU core (NotifyCpuReset)");
+	}
+
 	di->SetDebugMode(DEBUGGER_MODE_RUNNING);
 	if (!wasRunning)
 		viewC64->StopEmulationThread(di);
@@ -323,8 +334,10 @@ bool CTestInstructionStepping::RunNes()
 		SYS_Sleep(2000);
 	}
 	const char *romPath = "/tmp/retrodebugger_test_stepping.nes";
+	u32 resetsBefore = di->resetCount.load();
 	bool ok = Check(WriteSpinRom(romPath) && TestNesInsertCartridge(di, romPath, true),
 					"NES: a spinning NROM is loaded so the CPU runs");
+	ok = ok && Check(di->resetCount.load() > resetsBefore, "NES: powering the loaded cartridge is reported as a CPU reset (NotifyCpuReset)");
 	if (ok)
 	{
 		di->SetDebugMode(DEBUGGER_MODE_RUNNING);

@@ -33,6 +33,7 @@ private:
 	bool RunOscar64(CDebugInterfaceVice *di);
 	bool RunSourceBreakpoints(CDebugInterfaceVice *di);
 	bool CheckStaleDebugInfo();
+	bool RunResetCancelsStep(CDebugInterfaceVice *di);
 	bool Step(CDebugInterfaceVice *di, SourceStepKind kind, u16 expectedPc, int expectedLine,
 			  SourceStepStopReason expectedReason, u64 budget = 0);
 };

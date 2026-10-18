@@ -61,6 +61,7 @@ class CDebugExecutionObserver
 public:
 	virtual ~CDebugExecutionObserver() {}
 	virtual void OnInstructionBoundary(CDebugInterface *debugInterface, const CDebugInstructionBoundary &boundary) = 0;
+	virtual void OnCpuReset(CDebugInterface *debugInterface) {}
 };
 
 #endif

@@ -1721,6 +1721,13 @@ bool nesd_is_debug_on()
 
 static void nesd_evaluate_pc_breakpoints(uint16 pc);
 
+// RD-011: the CPU was reset (power, reset, cartridge load)
+void nesd_notify_cpu_reset()
+{
+	if (debugInterfaceNes)
+		debugInterfaceNes->NotifyCpuReset();
+}
+
 void nesd_check_pc_breakpoint(uint16 pc)
 {
 //	LOGD("nesd_check_pc_breakpoint: pc=%04x", pc);
@@ -2096,6 +2103,7 @@ void nesd_update_screen(bool lockRenderMutex) {}
 
 bool nesd_insert_cartridge(char *filePath) { return false; }
 void nesd_cartridge_lock_shared() {}
+void nesd_notify_cpu_reset() {}
 void nesd_cartridge_unlock_shared() {}
 
 void nesd_reset() {}
