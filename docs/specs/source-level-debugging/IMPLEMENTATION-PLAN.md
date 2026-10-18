@@ -481,13 +481,20 @@ identity (RD-025) and the gutter (M2). Original plan:
 - Traces: Oscar64 C64 `basic-flow`, `same-line`, `nested-calls`, `branches-loops`,
   `interrupts` (IRQ calling `tick()`; the runner also fails if the handler never
   ran). Optional `expected.pc` and a free-text `note` per step.
-- Machines: `c64` (PRG + $C060 preamble, `irq` C64 only), `atari` (XEX segments
-  poked, jump to `entry` or RUNAD), `nes` (cartridge inserted; with `entry` a
-  jump there, as Oscar64's plain NES build has no reset vector). Each machine's
-  thread is started if needed and its live symbols restored at the end. 15
-  traces: the five fixtures on all three machines.
-- Next: cc65/KickC traces, an Atari/NES interrupt driver, the remaining spec
-  #9.1 fixtures.
+- Machines: `c64` (PRG + $C060 preamble, after the KERNAL reached READY),
+  `atari` (XEX segments poked, jump to `entry` or RUNAD), `nes` (cartridge
+  inserted by VSync task; with `entry` a jump there, as Oscar64's plain NES
+  build has no reset vector). Each machine's thread is started if needed and
+  its live symbols, interrupt vectors and banking restored at the end.
+- `irq` on all three machines: C64 CIA timer A (installed before entry), Atari
+  POKEY timer 1 with the OS banked out, NES DMC with the cartridge copy's IRQ
+  vector patched (both installed at the start line, synchronised to the first
+  interrupt). `timerCycles` (C64, Atari), `call` (a fixture function); the
+  counter counts the trace's IRQs and must not stay 0.
+- 21 traces: the five Oscar64 fixtures and cc65 `basic-flow`/`same-line` on
+  all three machines.
+- Next: cc65 builds of the M3 fixtures, KickC (after RD-010), the remaining
+  spec #9.1 fixtures.
 - `CTestSourceStepTrace` reads `tests/source-debug/expectations/<compiler>/<fixture>.json`
   (spec #9.5), loads the Tier 1 binary + debug artifact, runs the steps, compares
   `(file, line, function, depth, reason)`; failures dump the machine step trace to the

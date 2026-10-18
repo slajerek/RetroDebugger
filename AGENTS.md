@@ -68,6 +68,20 @@ not active" headless), about 90 s.
   keys from `virtualkeycode` on `__APPLE__` and from `rawkey` elsewhere; the
   test now sets the input the platform reads.
 
+## Branch `c-source-debugging` (2026-10-18)
+
+Dispatched by hand only (workflow_dispatch). On f31426e: macOS both legs
+green (`39088966574`), Windows both legs green (`39088968493`), Linux logs-on
+green, logs-off segfault (`39088965038`) in `SourceStepTrace` at the NES
+cartridge insert: a paused NES thread waits inside `Execute`, which holds no
+lock, and the test swapped the board from its own thread. Fixed in 9be7c71
+(VSync tasks, the app's `InsertCartridge` path); not yet on CI. Other tests
+still call `nesd_insert_cartridge` directly (see the tracker's defect list).
+
+Docker containers on the maintainer's Mac have no network (Docker Desktop's
+proxy at `http.docker.internal:3128` did not help), so a local Linux build
+cannot fetch the workflow's apt packages.
+
 ## Known state (2026-10-06)
 
 All three platforms green at devel tip `d4bd4b0`, both macOS legs each,

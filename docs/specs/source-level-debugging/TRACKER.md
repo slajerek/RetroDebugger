@@ -22,50 +22,70 @@ definitions are in `IMPLEMENTATION-PLAN.md`.
 | M6 IDE workspace | P5 | RD-018, RD-042 (consumption), RD-019, RD-020, RD-021, **RD-045 (C64U observed mode)** | todo |
 | M7 Advanced & research | P6 | RD-022, RD-023 | todo |
 
-## Handover (2026-10-18, end of session)
+## Handover (2026-10-18, second session)
 
 Where the work stands, for whoever picks it up next. Branches: app
-`c-source-debugging` (all pushed, tree clean), engine `c-source-debugging` == engine
-`devel` at 5d61f20 (the macOS `__GLIBC_PREREQ` and Windows `Yield` fixes).
+`c-source-debugging`, **five commits ahead of `origin` and not pushed** (92aae8a,
+8db60f4, 2d8e64f, 9be7c71 and this handover: the maintainer pushes); engine `c-source-debugging` ==
+engine `devel` at 5d61f20, unchanged this session.
 
-- **Done, all with tests (Linux suite 84/84, 7 skipped; ImGui 10/15, the 5
-  failures pre-existing on Linux):** RD-040/RD-029 mapping providers (f75509a),
-  RD-011/RD-037 boundary events + stack-based step-over/out (e7f498e),
-  RD-012/RD-013 frame tracker + source stepping (7e143d0), RD-014 source
-  breakpoints (ee67677), RD-015 trace runner (`SourceStepTrace`). Tests to run
-  first: `InstructionStepping`, `SourceStepping`, `SourceStepTrace`,
+- **Done, all with tests (macOS suite 83/83, 8 skipped, on 9be7c71):** RD-040/
+  RD-029 mapping providers (f75509a), RD-011/RD-037 boundary events + stack-based
+  step-over/out (e7f498e), RD-012/RD-013 frame tracker + source stepping
+  (7e143d0), RD-014 source breakpoints (ee67677), RD-015 trace runner. Tests to
+  run first: `InstructionStepping`, `SourceStepping`, `SourceStepTrace`,
   `MachineMemoryMapping`.
-- **RD-015 state:** `CTestSourceStepTrace` replays every trace in
+- **RD-015 state:** `CTestSourceStepTrace` replays the 21 traces of
   `tests/source-debug/expectations/index.json` (format in `IMPLEMENTATION-PLAN.md`
-  RD-015) on the trace's machine: C64 (PRG poke, $C060 preamble, optional CIA
-  IRQ calling a fixture function), Atari (XEX segments poked, jump to RUNAD), NES
-  (cartridge inserted, jump to `entry`). 15 traces: Oscar64 `basic-flow`,
-  `same-line`, `nested-calls`, `branches-loops`, `interrupts` x c64/atari/nes --
-  the M3 exit set. Fixture sources in `tests/source-debug/fixtures/`, Tier 1
-  builds (Oscar64 1.32.273, `/home/user/toolchains` in the last session) in
-  `tests/data/source-debug/oscar64/<machine>/`. Findings recorded as step
-  `note`s: Oscar64 compiles `return f(x);` as a tail `JMP` even at -O0 (Step
-  Out then skips a level); the shared store after an if/else is mapped to the
-  else line; one stop per line per loop iteration; `-tm=nes` writes no vectors
-  for a plain `main.c` (the NES traces enter `startup` at $FF80). A mismatch
-  dumps the trace to `/tmp/source-step-trace-<compiler>-<machine>-<fixture>.txt`.
-- **CI:** first runs of this branch exposed two engine breaks, both fixed on
-  engine `devel` (5d61f20). On ee67677: Linux green, macOS logs-on green,
-  macOS logs-off 82/83 (`MemoryAccessTiming`, run right after `SourceStepping`,
-  which then left a 150-cycle CIA IRQ running -- fixed since: the cleanup wrote
-  the latch to RAM, now `SetByteC64`). macOS was re-dispatched on a later head;
-  Windows result on ee67677 pending. **First thing next session:** check the
-  latest macOS/Windows/Linux runs on `c-source-debugging` (workflow_dispatch
-  only, CI does not trigger on this branch by itself) and dispatch them on the
-  current head.
+  RD-015): Oscar64 `basic-flow`, `same-line`, `nested-calls`, `branches-loops`,
+  `interrupts` x c64/atari/nes, cc65 `basic-flow`, `same-line` x c64/atari/nes.
+  - Launch: C64 (PRG poke, $C060 preamble; first waits for the KERNAL's READY
+    loop, a C64 taken mid-reset kept zeroed vectors and cc65's crt0 jumped
+    through $0326 to $0000), Atari (XEX segments poked, jump to RUNAD), NES
+    (cartridge inserted by VSync task on the emulation thread, jump to `entry`).
+  - `irq` on all three: C64 CIA timer A through $0314 installed before entry;
+    Atari POKEY timer 1 and NES DMC installed at the start line from a RAM stub
+    that waits for the first interrupt, so the next lands early in the trace.
+    The counter counts the trace's IRQs only (Oscar64 c64/atari/nes
+    `interrupts`: 1/5/1, cc65 c64 `basic-flow`: 520). Atari800 runs POKEY
+    timers per 114-cycle scanline; the NES DMC period is 432 cycles.
+  - Findings as trace `note`s: Oscar64 compiles `return f(x);` as a tail `JMP`
+    even at -O0 (Step Out skips a level); the shared store after an if/else is
+    mapped to the else line; one stop per line per loop iteration; `-tm=nes`
+    writes no vectors for a plain `main.c` (NES traces enter `startup` at
+    $FF80); cc65 maps a function's prologue to its header line and its
+    epilogue to the closing brace, so Step Into stops on `add(...) {` before
+    the body and there is a stop on `}` (no prologue skipping -- see open
+    questions); cc65 has no tail calls.
+  - Fixture sources in `tests/source-debug/fixtures/`, Tier 1 builds in
+    `tests/data/source-debug/<toolchain>/<machine>/`. `MATRIX.md` is now
+    written from the committed manifests as well (`build_fixtures.py
+    --matrix-only` without toolchains): the three M3 fixtures are Oscar64-only,
+    cc65/KickC `not built`.
+- **CI:** on f31426e (remote head before this session's commits): macOS green
+  both legs (39088966574), Windows green both legs (39088968493), Linux logs-on
+  green, logs-off segfault in `SourceStepTrace` at the NES cartridge insert
+  (39088965038) -- fixed by 9be7c71 (insert/unload on the emulation thread), not
+  yet verified on CI. 0caf9b4 macOS both legs green (39087179010), confirming the
+  `MemoryAccessTiming` fix. **First thing next session:** once the five commits
+  are pushed, dispatch all three workflows on the head (workflow_dispatch only).
+  Containers on the maintainer's Mac have no network, so neither a local Linux
+  build nor the pinned toolchains (Oscar64 1.32.273, cc65 2.19) were available
+  this session.
+- **Open questions for the maintainer:** (1) prologue skipping on Step Into
+  (cc65 stops on the function header line; gdb-style skipping would need a
+  per-producer prologue end); (2) the built-in AltirraOS: `EMUOS_ALTIRRA` was
+  never defined, so a run without user ROMs (every test, CI, a fresh install)
+  has an Atari with no OS -- the runner banks the OS out and takes POKEY out of
+  init itself; (3) where the step stop reason should surface: there is no status
+  bar, and a notification per step would be noise.
 - **Next items, in suggested order:**
-  1. RD-015 leftovers: cc65/KickC traces (`basic-flow`/`same-line` artifacts exist
-     for both, see `tests/source-debug/MATRIX.md`; it does not list the three new
-     fixtures yet -- they were built with `--fixture` filters, so rerun
-     `build_fixtures.py` without filters to regenerate it), an Atari/NES interrupt driver like the C64
-     `irq`, and the `recursion`/`indirect-calls`/`optimized`/`inline` fixtures
-     of spec #9.1.
-  2. RD-013 leftovers: stop reason in the status line and an event-history
+  1. RD-015 leftovers: cc65 builds of `nested-calls`/`branches-loops`/`interrupts`
+     and their traces (needs the cc65 2.19 pin; cc65 functions take arguments on
+     the C stack, so its `irq` must not call one with parameters); KickC traces
+     wait on RD-010 (its `.dbg` maps `main.asm` lines only); the `recursion`/
+     `indirect-calls`/`optimized`/`inline` fixtures of spec #9.1.
+  2. RD-013 leftovers: stop reason in the UI (open question 3); an event-history
      entry when a step stops.
   3. RD-014 leftovers: persist source breakpoints in the workspace; stale-binary
      warning.
@@ -101,7 +121,7 @@ Where the work stands, for whoever picks it up next. Branches: app
 | RD-013 | P3 | core | Source-step state machine in the emulation-thread hook, stop reasons, budget | review(`CSourceStepController` Into/Over/Out, interrupt skip, budget, FrameExited; Oscar64 basic-flow trace green with a 150-cycle IRQ calling mapped code; Code menu, remote `source/step`, MCP `retro_source_step`; open: status-line reason, statement ids/columns, same-line fixture) | RD-007, RD-012, RD-037 | Into/Over/Out on Tier 1 Oscar64 fixture; watchdog never trips |
 | RD-025 | P3 | core | Bank-aware CPU/source/physical breakpoints + labels; mapping-driven segment activation | todo | RD-007, RD-011, RD-024 | Same-PC/different-identity breakpoint tests on 3 machines |
 | RD-014 | P3 | core | Source breakpoints + re-resolution after rebuild | in-progress(file+line intent on `CDebugSymbols`, slide within the function, N address bps per line, re-bound on every database swap, user bps shared; tests green; open: stale-binary warning, persistence in the workspace, bank identity via RD-025, gutter UI in M2) | RD-007, RD-013, RD-025 | Breakpoint survives reload; stale-binary warning test |
-| RD-015 | P3 | tests | Headless step-trace runner + golden expectations (#9.5 format) | review (15 Oscar64 traces: 5 fixtures x c64/atari/nes) | RD-002, RD-013 | `tests/source-debug/expectations/**` replayed in suite |
+| RD-015 | P3 | tests | Headless step-trace runner + golden expectations (#9.5 format) | review (21 traces: 5 Oscar64 fixtures + 2 cc65 fixtures x c64/atari/nes; `irq` on all three machines; open: cc65 builds of the M3 fixtures, KickC after RD-010, spec #9.1 recursion/indirect/optimized/inline) | RD-002, RD-013 | `tests/source-debug/expectations/**` replayed in suite |
 | RD-026 | P3 | tests | NES NROM/UxROM/MMC1-or-MMC3 banked fixtures with physical-fetch traces | todo | RD-002, RD-024, RD-025, RD-040 | #3A.6 assertion list green |
 | RD-030 | P3 | tests | C64 + Atari banked suites; shared 3-machine matrix | todo | RD-002, RD-025, RD-028, RD-029 | #3B.4 trace schema produced for every fixture |
 | RD-034 | P0 | ci | **Must fix.** Run headless suite on Linux CI (both log legs) | review(ea99097; local Linux 74/74, 7 skipped) | engine `CPianoKeyboard` fix (merged to engine `devel`, 40c95f8) | `build-linux.yml` runs `tests/run_test.sh --skip-build` under xvfb; AGENTS.md updated |
@@ -155,6 +175,8 @@ Questions 1, 2, 3, 5, 8 and 10 are answered in spec #15/#20.
 | NES: loading a cartridge after Detach Everything never reset the new board (PRG unmapped, CPU on open bus) | RD-027 (fixed in `nesd_insert_cartridge`) |
 | `tests/test-reference-files.sh` fails on three unregistered USBSID files under `vice/arch/hwsiddrv/` (since 895f4fc) | fixed on `devel` (4a362e5), merged into this branch |
 | Atari "direct RAM" adapter returns the CPU view | RD-029 |
+| `EMUOS_ALTIRRA` never defined: without user ROM files the Atari has no OS (zeroed vectors, POKEY left in init with SKCTL 0) | open question for the maintainer; `SourceStepTrace` works around it |
+| Tests swap NES cartridges with `nesd_insert_cartridge` from the test thread while the NES thread sits inside `Execute` (no lock held there): `SourceStepTrace` segfaulted on Linux CI | `SourceStepTrace` fixed (9be7c71, VSync tasks); `StackAnnotation`, `InstructionStepping`, `MachineMemoryMapping`, `CoreMappingAccessors` still call it directly |
 
 ## Change log
 
@@ -183,3 +205,8 @@ Questions 1, 2, 3, 5, 8 and 10 are answered in spec #15/#20.
 | 2026-10-18 | RD-015: fixtures `nested-calls`, `branches-loops`, `interrupts` (Oscar64 c64/atari/nes) and their C64 traces; runner checks `pc` when given and that the IRQ ran (16-bit counter). `SourceStepTrace` 5/5 |
 | 2026-10-18 | CI on ee67677 after the engine fixes: Linux green; macOS logs-on green; macOS logs-off 82/83 (`MemoryAccessTiming`: no marked writes to $0400) -- it runs right after `SourceStepping`, which on that commit left the 150-cycle CIA IRQ running (latch restored to RAM, fixed in the RD-015 commit); macOS re-dispatched on the current head to confirm; Windows pending |
 | 2026-10-18 | RD-015: runner drives the Atari (XEX) and the NES (cartridge + entry); 15 traces (5 Oscar64 fixtures x 3 machines) pass. Linux suite 84/84. Handover rewritten for the next agent |
+| 2026-10-18 | CI on f31426e: macOS and Windows green both legs; Linux logs-off segfault in `SourceStepTrace` at the NES insert. 0caf9b4 macOS both legs green |
+| 2026-10-18 | RD-015: cc65 `basic-flow`/`same-line` traces on c64/atari/nes; the runner waits for the C64 KERNAL boot and restores the 6510 port (cc65 banks BASIC out; `ViceMemoryAccess`/`ViceEmbeddedRoms` failed after it) |
+| 2026-10-18 | RD-015: `irq` on the Atari (POKEY timer 1, OS banked out, SKCTL out of init) and the NES (DMC, patched IRQ vector); counts only the trace's IRQs |
+| 2026-10-18 | RD-002: `MATRIX.md` from the committed manifests too, `--matrix-only`; the three M3 fixtures listed |
+| 2026-10-18 | `SourceStepTrace` inserts/unloads NES cartridges through VSync tasks (the Linux CI segfault). macOS suite 83/83 (8 skipped) |
