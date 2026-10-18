@@ -1,19 +1,22 @@
 {	"memory": [		{"name": "ZeroEnd", "xname": "ZeroEnd", "start": 247, "end": 247, "type": "END", "source": "/home/user/toolchains/oscar64/include/crt.c", "line": 21 },
 		{"name": "ZeroStart", "xname": "ZeroStart", "start": 247, "end": 247, "type": "START", "source": "/home/user/toolchains/oscar64/include/crt.c", "line": 21 },
 		{"name": "startup", "xname": "startup", "start": 2049, "end": 2131, "type": "NATIVE_CODE", "source": "/home/user/toolchains/oscar64/include/crt.c", "line": 69 },
-		{"name": "main", "xname": "main()->i16", "start": 2176, "end": 2190, "type": "NATIVE_CODE", "source": "/tmp/rd-source-debug/oscar64/c64/interrupts/main.c", "line": 17 },
-		{"name": "work", "xname": "work()->void", "start": 2190, "end": 2200, "type": "NATIVE_CODE", "source": "/tmp/rd-source-debug/oscar64/c64/interrupts/main.c", "line": 12 },
-		{"name": "spentry", "xname": "spentry", "start": 2200, "end": 2201, "type": "DATA", "source": "/home/user/toolchains/oscar64/include/crt.h", "line": 4 },
-		{"name": "BSSStart", "xname": "BSSStart", "start": 2201, "end": 2201, "type": "START", "source": "/home/user/toolchains/oscar64/include/crt.c", "line": 21 },
-		{"name": "result", "xname": "result", "start": 2201, "end": 2202, "type": "DATA", "source": "/tmp/rd-source-debug/oscar64/c64/interrupts/main.c", "line": 6 },
-		{"name": "BSSEnd", "xname": "BSSEnd", "start": 2202, "end": 2202, "type": "END", "source": "/home/user/toolchains/oscar64/include/crt.c", "line": 21 },
+		{"name": "main", "xname": "main()->i16", "start": 2176, "end": 2200, "type": "NATIVE_CODE", "source": "/tmp/rd-source-debug/oscar64/c64/interrupts/main.c", "line": 20 },
+		{"name": "tick", "xname": "tick()->void", "start": 2200, "end": 2204, "type": "NATIVE_CODE", "source": "/tmp/rd-source-debug/oscar64/c64/interrupts/main.c", "line": 8 },
+		{"name": "work", "xname": "work()->void", "start": 2204, "end": 2214, "type": "NATIVE_CODE", "source": "/tmp/rd-source-debug/oscar64/c64/interrupts/main.c", "line": 15 },
+		{"name": "spentry", "xname": "spentry", "start": 2214, "end": 2215, "type": "DATA", "source": "/home/user/toolchains/oscar64/include/crt.h", "line": 4 },
+		{"name": "ticks", "xname": "ticks", "start": 2215, "end": 2216, "type": "DATA", "source": "/tmp/rd-source-debug/oscar64/c64/interrupts/main.c", "line": 5 },
+		{"name": "BSSStart", "xname": "BSSStart", "start": 2215, "end": 2215, "type": "START", "source": "/home/user/toolchains/oscar64/include/crt.c", "line": 21 },
+		{"name": "interruptWork", "xname": "interruptWork", "start": 2216, "end": 2218, "type": "DATA", "source": "/tmp/rd-source-debug/oscar64/c64/interrupts/main.c", "line": 13 },
+		{"name": "result", "xname": "result", "start": 2218, "end": 2219, "type": "DATA", "source": "/tmp/rd-source-debug/oscar64/c64/interrupts/main.c", "line": 6 },
+		{"name": "BSSEnd", "xname": "BSSEnd", "start": 2219, "end": 2219, "type": "END", "source": "/home/user/toolchains/oscar64/include/crt.c", "line": 21 },
 		{"name": "StackEnd", "xname": "StackEnd", "start": 40960, "end": 40960, "type": "END", "source": "/home/user/toolchains/oscar64/include/crt.c", "line": 21 }],
 	"variables": [
-		{"name": "spentry", "start": 2200, "end": 2201, "typeid": 0, "references": [
+		{"name": "spentry", "start": 2214, "end": 2215, "typeid": 0, "references": [
 			{"source": "/home/user/toolchains/oscar64/include/crt.h", "line": 4, "column": 13}]},
-		{"name": "BSSStart", "start": 2201, "end": 2201, "typeid": 1, "references": [
+		{"name": "BSSStart", "start": 2215, "end": 2215, "typeid": 1, "references": [
 			{"source": "/home/user/toolchains/oscar64/include/crt.c", "line": 21, "column": 28}]},
-		{"name": "BSSEnd", "start": 2202, "end": 2202, "typeid": 1, "references": [
+		{"name": "BSSEnd", "start": 2219, "end": 2219, "typeid": 1, "references": [
 			{"source": "/home/user/toolchains/oscar64/include/crt.c", "line": 21, "column": 38}]},
 		{"name": "ZeroStart", "start": 247, "end": 247, "typeid": 1, "references": [
 			{"source": "/home/user/toolchains/oscar64/include/crt.c", "line": 21, "column": 66}]},
@@ -21,43 +24,66 @@
 			{"source": "/home/user/toolchains/oscar64/include/crt.c", "line": 21, "column": 77}]},
 		{"name": "StackEnd", "start": 40960, "end": 40960, "typeid": 1, "references": [
 			{"source": "/home/user/toolchains/oscar64/include/crt.c", "line": 21, "column": 18}]},
-		{"name": "result", "start": 2201, "end": 2202, "typeid": 2, "references": [
+		{"name": "ticks", "start": 2215, "end": 2216, "typeid": 2, "references": [
+			{"source": "/tmp/rd-source-debug/oscar64/c64/interrupts/main.c", "line": 5, "column": 24},
+			{"source": "/tmp/rd-source-debug/oscar64/c64/interrupts/main.c", "line": 9, "column": 5}]},
+		{"name": "interruptWork", "start": 2216, "end": 2218, "typeid": 3, "references": [
+			{"source": "/tmp/rd-source-debug/oscar64/c64/interrupts/main.c", "line": 13, "column": 18},
+			{"source": "/tmp/rd-source-debug/oscar64/c64/interrupts/main.c", "line": 21, "column": 5}]},
+		{"name": "result", "start": 2218, "end": 2219, "typeid": 4, "references": [
 			{"source": "/tmp/rd-source-debug/oscar64/c64/interrupts/main.c", "line": 6, "column": 24},
-			{"source": "/tmp/rd-source-debug/oscar64/c64/interrupts/main.c", "line": 18, "column": 5},
-			{"source": "/tmp/rd-source-debug/oscar64/c64/interrupts/main.c", "line": 13, "column": 5},
-			{"source": "/tmp/rd-source-debug/oscar64/c64/interrupts/main.c", "line": 13, "column": 14},
-			{"source": "/tmp/rd-source-debug/oscar64/c64/interrupts/main.c", "line": 14, "column": 5},
-			{"source": "/tmp/rd-source-debug/oscar64/c64/interrupts/main.c", "line": 14, "column": 14}]}	],
+			{"source": "/tmp/rd-source-debug/oscar64/c64/interrupts/main.c", "line": 22, "column": 5},
+			{"source": "/tmp/rd-source-debug/oscar64/c64/interrupts/main.c", "line": 16, "column": 5},
+			{"source": "/tmp/rd-source-debug/oscar64/c64/interrupts/main.c", "line": 16, "column": 14},
+			{"source": "/tmp/rd-source-debug/oscar64/c64/interrupts/main.c", "line": 17, "column": 5},
+			{"source": "/tmp/rd-source-debug/oscar64/c64/interrupts/main.c", "line": 17, "column": 14}]}	],
 	"functions": [
-		{"name": "main", "xname": "main()->i16", "start": 2176, "end": 2190, "typeid": 3, "source": "/tmp/rd-source-debug/oscar64/c64/interrupts/main.c", "line": 17, "lines": [
-			{"start": 2176, "end": 2181, "source": "/tmp/rd-source-debug/oscar64/c64/interrupts/main.c", "line": 18},
-			{"start": 2181, "end": 2184, "source": "/tmp/rd-source-debug/oscar64/c64/interrupts/main.c", "line": 19},
-			{"start": 2184, "end": 2187, "source": "/tmp/rd-source-debug/oscar64/c64/interrupts/main.c", "line": 20}], 
+		{"name": "main", "xname": "main()->i16", "start": 2176, "end": 2200, "typeid": 5, "source": "/tmp/rd-source-debug/oscar64/c64/interrupts/main.c", "line": 20, "lines": [
+			{"start": 2176, "end": 2186, "source": "/tmp/rd-source-debug/oscar64/c64/interrupts/main.c", "line": 21},
+			{"start": 2186, "end": 2191, "source": "/tmp/rd-source-debug/oscar64/c64/interrupts/main.c", "line": 22},
+			{"start": 2191, "end": 2194, "source": "/tmp/rd-source-debug/oscar64/c64/interrupts/main.c", "line": 23},
+			{"start": 2194, "end": 2197, "source": "/tmp/rd-source-debug/oscar64/c64/interrupts/main.c", "line": 24}], 
 			"origins":[
-			{"start": 2176, "end": 2181, "source": "/tmp/rd-source-debug/oscar64/c64/interrupts/main.c", "line": 18},
-			{"start": 2181, "end": 2184, "source": "/tmp/rd-source-debug/oscar64/c64/interrupts/main.c", "line": 19},
-			{"start": 2184, "end": 2187, "source": "/tmp/rd-source-debug/oscar64/c64/interrupts/main.c", "line": 20}], 
+			{"start": 2176, "end": 2186, "source": "/tmp/rd-source-debug/oscar64/c64/interrupts/main.c", "line": 21},
+			{"start": 2186, "end": 2191, "source": "/tmp/rd-source-debug/oscar64/c64/interrupts/main.c", "line": 22},
+			{"start": 2191, "end": 2194, "source": "/tmp/rd-source-debug/oscar64/c64/interrupts/main.c", "line": 23},
+			{"start": 2194, "end": 2197, "source": "/tmp/rd-source-debug/oscar64/c64/interrupts/main.c", "line": 24}], 
 			"variables":[
 ], "references": [
-			{"source": "/tmp/rd-source-debug/oscar64/c64/interrupts/main.c", "line": 17, "column": 5}]}
-,
-		{"name": "work", "xname": "work()->void", "start": 2190, "end": 2200, "typeid": 4, "source": "/tmp/rd-source-debug/oscar64/c64/interrupts/main.c", "line": 12, "lines": [
-			{"start": 2190, "end": 2193, "source": "/tmp/rd-source-debug/oscar64/c64/interrupts/main.c", "line": 13},
-			{"start": 2193, "end": 2199, "source": "/tmp/rd-source-debug/oscar64/c64/interrupts/main.c", "line": 14},
-			{"start": 2199, "end": 2200, "source": "/tmp/rd-source-debug/oscar64/c64/interrupts/main.c", "line": 15}], 
-			"origins":[
-			{"start": 2190, "end": 2193, "source": "/tmp/rd-source-debug/oscar64/c64/interrupts/main.c", "line": 13},
-			{"start": 2193, "end": 2199, "source": "/tmp/rd-source-debug/oscar64/c64/interrupts/main.c", "line": 14},
-			{"start": 2199, "end": 2200, "source": "/tmp/rd-source-debug/oscar64/c64/interrupts/main.c", "line": 15}], 
-			"variables":[
-], "references": [
-			{"source": "/tmp/rd-source-debug/oscar64/c64/interrupts/main.c", "line": 12, "column": 6},
-			{"source": "/tmp/rd-source-debug/oscar64/c64/interrupts/main.c", "line": 19, "column": 5},
 			{"source": "/tmp/rd-source-debug/oscar64/c64/interrupts/main.c", "line": 20, "column": 5}]}
+,
+		{"name": "tick", "xname": "tick()->void", "start": 2200, "end": 2204, "typeid": 6, "source": "/tmp/rd-source-debug/oscar64/c64/interrupts/main.c", "line": 8, "lines": [
+			{"start": 2200, "end": 2203, "source": "/tmp/rd-source-debug/oscar64/c64/interrupts/main.c", "line": 9},
+			{"start": 2203, "end": 2204, "source": "/tmp/rd-source-debug/oscar64/c64/interrupts/main.c", "line": 10}], 
+			"origins":[
+			{"start": 2200, "end": 2203, "source": "/tmp/rd-source-debug/oscar64/c64/interrupts/main.c", "line": 9},
+			{"start": 2203, "end": 2204, "source": "/tmp/rd-source-debug/oscar64/c64/interrupts/main.c", "line": 10}], 
+			"variables":[
+], "references": [
+			{"source": "/tmp/rd-source-debug/oscar64/c64/interrupts/main.c", "line": 8, "column": 6},
+			{"source": "/tmp/rd-source-debug/oscar64/c64/interrupts/main.c", "line": 21, "column": 21}]}
+,
+		{"name": "work", "xname": "work()->void", "start": 2204, "end": 2214, "typeid": 7, "source": "/tmp/rd-source-debug/oscar64/c64/interrupts/main.c", "line": 15, "lines": [
+			{"start": 2204, "end": 2207, "source": "/tmp/rd-source-debug/oscar64/c64/interrupts/main.c", "line": 16},
+			{"start": 2207, "end": 2213, "source": "/tmp/rd-source-debug/oscar64/c64/interrupts/main.c", "line": 17},
+			{"start": 2213, "end": 2214, "source": "/tmp/rd-source-debug/oscar64/c64/interrupts/main.c", "line": 18}], 
+			"origins":[
+			{"start": 2204, "end": 2207, "source": "/tmp/rd-source-debug/oscar64/c64/interrupts/main.c", "line": 16},
+			{"start": 2207, "end": 2213, "source": "/tmp/rd-source-debug/oscar64/c64/interrupts/main.c", "line": 17},
+			{"start": 2213, "end": 2214, "source": "/tmp/rd-source-debug/oscar64/c64/interrupts/main.c", "line": 18}], 
+			"variables":[
+], "references": [
+			{"source": "/tmp/rd-source-debug/oscar64/c64/interrupts/main.c", "line": 15, "column": 6},
+			{"source": "/tmp/rd-source-debug/oscar64/c64/interrupts/main.c", "line": 23, "column": 5},
+			{"source": "/tmp/rd-source-debug/oscar64/c64/interrupts/main.c", "line": 24, "column": 5}]}
 	],
 	"types": [
 		{"name": "", "typeid": 0, "size": 1, "type": "uint"},
 		{"name": "", "typeid": 1, "size": 0},
 		{"name": "", "typeid": 2, "size": 1, "type": "uint"},
-		{"name": "", "typeid": 3, "size": 0},
-		{"name": "", "typeid": 4, "size": 0}	]}
+		{"name": "", "typeid": 3, "size": 2, "type": "ptr", "eid": 8},
+		{"name": "", "typeid": 4, "size": 1, "type": "uint"},
+		{"name": "", "typeid": 5, "size": 0},
+		{"name": "", "typeid": 6, "size": 0},
+		{"name": "", "typeid": 7, "size": 0},
+		{"name": "", "typeid": 8, "size": 0}	]}

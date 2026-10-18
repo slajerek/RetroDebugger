@@ -2,9 +2,12 @@ al 00f7 .ZeroEnd
 al 00f7 .ZeroStart
 al 0801 .startup
 al 0880 .main
-al 088e .work
-al 0898 .spentry
-al 0899 .BSSStart
-al 0899 .result
-al 089a .BSSEnd
+al 0898 .tick
+al 089c .work
+al 08a6 .spentry
+al 08a7 .ticks
+al 08a7 .BSSStart
+al 08a8 .interruptWork
+al 08aa .result
+al 08ab .BSSEnd
 al a000 .StackEnd

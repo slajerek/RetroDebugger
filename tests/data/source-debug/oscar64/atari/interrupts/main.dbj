@@ -1,16 +1,19 @@
 {	"memory": [		{"name": "ZeroEnd", "xname": "ZeroEnd", "start": 224, "end": 224, "type": "END", "source": "/home/user/toolchains/oscar64/include/crt.c", "line": 21 },
 		{"name": "ZeroStart", "xname": "ZeroStart", "start": 224, "end": 224, "type": "START", "source": "/home/user/toolchains/oscar64/include/crt.c", "line": 21 },
 		{"name": "startup", "xname": "startup", "start": 8192, "end": 8249, "type": "NATIVE_CODE", "source": "/home/user/toolchains/oscar64/include/crt.c", "line": 69 },
-		{"name": "main", "xname": "main()->i16", "start": 8320, "end": 8334, "type": "NATIVE_CODE", "source": "/tmp/rd-source-debug/oscar64/atari/interrupts/main.c", "line": 17 },
-		{"name": "work", "xname": "work()->void", "start": 8334, "end": 8344, "type": "NATIVE_CODE", "source": "/tmp/rd-source-debug/oscar64/atari/interrupts/main.c", "line": 12 },
-		{"name": "BSSStart", "xname": "BSSStart", "start": 8344, "end": 8344, "type": "START", "source": "/home/user/toolchains/oscar64/include/crt.c", "line": 21 },
-		{"name": "result", "xname": "result", "start": 8344, "end": 8345, "type": "DATA", "source": "/tmp/rd-source-debug/oscar64/atari/interrupts/main.c", "line": 6 },
-		{"name": "BSSEnd", "xname": "BSSEnd", "start": 8345, "end": 8345, "type": "END", "source": "/home/user/toolchains/oscar64/include/crt.c", "line": 21 },
+		{"name": "main", "xname": "main()->i16", "start": 8320, "end": 8344, "type": "NATIVE_CODE", "source": "/tmp/rd-source-debug/oscar64/atari/interrupts/main.c", "line": 20 },
+		{"name": "tick", "xname": "tick()->void", "start": 8344, "end": 8348, "type": "NATIVE_CODE", "source": "/tmp/rd-source-debug/oscar64/atari/interrupts/main.c", "line": 8 },
+		{"name": "work", "xname": "work()->void", "start": 8348, "end": 8358, "type": "NATIVE_CODE", "source": "/tmp/rd-source-debug/oscar64/atari/interrupts/main.c", "line": 15 },
+		{"name": "ticks", "xname": "ticks", "start": 8358, "end": 8359, "type": "DATA", "source": "/tmp/rd-source-debug/oscar64/atari/interrupts/main.c", "line": 5 },
+		{"name": "BSSStart", "xname": "BSSStart", "start": 8358, "end": 8358, "type": "START", "source": "/home/user/toolchains/oscar64/include/crt.c", "line": 21 },
+		{"name": "interruptWork", "xname": "interruptWork", "start": 8359, "end": 8361, "type": "DATA", "source": "/tmp/rd-source-debug/oscar64/atari/interrupts/main.c", "line": 13 },
+		{"name": "result", "xname": "result", "start": 8361, "end": 8362, "type": "DATA", "source": "/tmp/rd-source-debug/oscar64/atari/interrupts/main.c", "line": 6 },
+		{"name": "BSSEnd", "xname": "BSSEnd", "start": 8362, "end": 8362, "type": "END", "source": "/home/user/toolchains/oscar64/include/crt.c", "line": 21 },
 		{"name": "StackEnd", "xname": "StackEnd", "start": 48128, "end": 48128, "type": "END", "source": "/home/user/toolchains/oscar64/include/crt.c", "line": 21 }],
 	"variables": [
-		{"name": "BSSStart", "start": 8344, "end": 8344, "typeid": 0, "references": [
+		{"name": "BSSStart", "start": 8358, "end": 8358, "typeid": 0, "references": [
 			{"source": "/home/user/toolchains/oscar64/include/crt.c", "line": 21, "column": 28}]},
-		{"name": "BSSEnd", "start": 8345, "end": 8345, "typeid": 0, "references": [
+		{"name": "BSSEnd", "start": 8362, "end": 8362, "typeid": 0, "references": [
 			{"source": "/home/user/toolchains/oscar64/include/crt.c", "line": 21, "column": 38}]},
 		{"name": "ZeroStart", "start": 224, "end": 224, "typeid": 0, "references": [
 			{"source": "/home/user/toolchains/oscar64/include/crt.c", "line": 21, "column": 66}]},
@@ -18,42 +21,65 @@
 			{"source": "/home/user/toolchains/oscar64/include/crt.c", "line": 21, "column": 77}]},
 		{"name": "StackEnd", "start": 48128, "end": 48128, "typeid": 0, "references": [
 			{"source": "/home/user/toolchains/oscar64/include/crt.c", "line": 21, "column": 18}]},
-		{"name": "result", "start": 8344, "end": 8345, "typeid": 1, "references": [
+		{"name": "ticks", "start": 8358, "end": 8359, "typeid": 1, "references": [
+			{"source": "/tmp/rd-source-debug/oscar64/atari/interrupts/main.c", "line": 5, "column": 24},
+			{"source": "/tmp/rd-source-debug/oscar64/atari/interrupts/main.c", "line": 9, "column": 5}]},
+		{"name": "interruptWork", "start": 8359, "end": 8361, "typeid": 2, "references": [
+			{"source": "/tmp/rd-source-debug/oscar64/atari/interrupts/main.c", "line": 13, "column": 18},
+			{"source": "/tmp/rd-source-debug/oscar64/atari/interrupts/main.c", "line": 21, "column": 5}]},
+		{"name": "result", "start": 8361, "end": 8362, "typeid": 3, "references": [
 			{"source": "/tmp/rd-source-debug/oscar64/atari/interrupts/main.c", "line": 6, "column": 24},
-			{"source": "/tmp/rd-source-debug/oscar64/atari/interrupts/main.c", "line": 18, "column": 5},
-			{"source": "/tmp/rd-source-debug/oscar64/atari/interrupts/main.c", "line": 13, "column": 5},
-			{"source": "/tmp/rd-source-debug/oscar64/atari/interrupts/main.c", "line": 13, "column": 14},
-			{"source": "/tmp/rd-source-debug/oscar64/atari/interrupts/main.c", "line": 14, "column": 5},
-			{"source": "/tmp/rd-source-debug/oscar64/atari/interrupts/main.c", "line": 14, "column": 14}]}	],
+			{"source": "/tmp/rd-source-debug/oscar64/atari/interrupts/main.c", "line": 22, "column": 5},
+			{"source": "/tmp/rd-source-debug/oscar64/atari/interrupts/main.c", "line": 16, "column": 5},
+			{"source": "/tmp/rd-source-debug/oscar64/atari/interrupts/main.c", "line": 16, "column": 14},
+			{"source": "/tmp/rd-source-debug/oscar64/atari/interrupts/main.c", "line": 17, "column": 5},
+			{"source": "/tmp/rd-source-debug/oscar64/atari/interrupts/main.c", "line": 17, "column": 14}]}	],
 	"functions": [
-		{"name": "main", "xname": "main()->i16", "start": 8320, "end": 8334, "typeid": 2, "source": "/tmp/rd-source-debug/oscar64/atari/interrupts/main.c", "line": 17, "lines": [
-			{"start": 8320, "end": 8325, "source": "/tmp/rd-source-debug/oscar64/atari/interrupts/main.c", "line": 18},
-			{"start": 8325, "end": 8328, "source": "/tmp/rd-source-debug/oscar64/atari/interrupts/main.c", "line": 19},
-			{"start": 8328, "end": 8331, "source": "/tmp/rd-source-debug/oscar64/atari/interrupts/main.c", "line": 20}], 
+		{"name": "main", "xname": "main()->i16", "start": 8320, "end": 8344, "typeid": 4, "source": "/tmp/rd-source-debug/oscar64/atari/interrupts/main.c", "line": 20, "lines": [
+			{"start": 8320, "end": 8330, "source": "/tmp/rd-source-debug/oscar64/atari/interrupts/main.c", "line": 21},
+			{"start": 8330, "end": 8335, "source": "/tmp/rd-source-debug/oscar64/atari/interrupts/main.c", "line": 22},
+			{"start": 8335, "end": 8338, "source": "/tmp/rd-source-debug/oscar64/atari/interrupts/main.c", "line": 23},
+			{"start": 8338, "end": 8341, "source": "/tmp/rd-source-debug/oscar64/atari/interrupts/main.c", "line": 24}], 
 			"origins":[
-			{"start": 8320, "end": 8325, "source": "/tmp/rd-source-debug/oscar64/atari/interrupts/main.c", "line": 18},
-			{"start": 8325, "end": 8328, "source": "/tmp/rd-source-debug/oscar64/atari/interrupts/main.c", "line": 19},
-			{"start": 8328, "end": 8331, "source": "/tmp/rd-source-debug/oscar64/atari/interrupts/main.c", "line": 20}], 
+			{"start": 8320, "end": 8330, "source": "/tmp/rd-source-debug/oscar64/atari/interrupts/main.c", "line": 21},
+			{"start": 8330, "end": 8335, "source": "/tmp/rd-source-debug/oscar64/atari/interrupts/main.c", "line": 22},
+			{"start": 8335, "end": 8338, "source": "/tmp/rd-source-debug/oscar64/atari/interrupts/main.c", "line": 23},
+			{"start": 8338, "end": 8341, "source": "/tmp/rd-source-debug/oscar64/atari/interrupts/main.c", "line": 24}], 
 			"variables":[
 ], "references": [
-			{"source": "/tmp/rd-source-debug/oscar64/atari/interrupts/main.c", "line": 17, "column": 5}]}
-,
-		{"name": "work", "xname": "work()->void", "start": 8334, "end": 8344, "typeid": 3, "source": "/tmp/rd-source-debug/oscar64/atari/interrupts/main.c", "line": 12, "lines": [
-			{"start": 8334, "end": 8337, "source": "/tmp/rd-source-debug/oscar64/atari/interrupts/main.c", "line": 13},
-			{"start": 8337, "end": 8343, "source": "/tmp/rd-source-debug/oscar64/atari/interrupts/main.c", "line": 14},
-			{"start": 8343, "end": 8344, "source": "/tmp/rd-source-debug/oscar64/atari/interrupts/main.c", "line": 15}], 
-			"origins":[
-			{"start": 8334, "end": 8337, "source": "/tmp/rd-source-debug/oscar64/atari/interrupts/main.c", "line": 13},
-			{"start": 8337, "end": 8343, "source": "/tmp/rd-source-debug/oscar64/atari/interrupts/main.c", "line": 14},
-			{"start": 8343, "end": 8344, "source": "/tmp/rd-source-debug/oscar64/atari/interrupts/main.c", "line": 15}], 
-			"variables":[
-], "references": [
-			{"source": "/tmp/rd-source-debug/oscar64/atari/interrupts/main.c", "line": 12, "column": 6},
-			{"source": "/tmp/rd-source-debug/oscar64/atari/interrupts/main.c", "line": 19, "column": 5},
 			{"source": "/tmp/rd-source-debug/oscar64/atari/interrupts/main.c", "line": 20, "column": 5}]}
+,
+		{"name": "tick", "xname": "tick()->void", "start": 8344, "end": 8348, "typeid": 5, "source": "/tmp/rd-source-debug/oscar64/atari/interrupts/main.c", "line": 8, "lines": [
+			{"start": 8344, "end": 8347, "source": "/tmp/rd-source-debug/oscar64/atari/interrupts/main.c", "line": 9},
+			{"start": 8347, "end": 8348, "source": "/tmp/rd-source-debug/oscar64/atari/interrupts/main.c", "line": 10}], 
+			"origins":[
+			{"start": 8344, "end": 8347, "source": "/tmp/rd-source-debug/oscar64/atari/interrupts/main.c", "line": 9},
+			{"start": 8347, "end": 8348, "source": "/tmp/rd-source-debug/oscar64/atari/interrupts/main.c", "line": 10}], 
+			"variables":[
+], "references": [
+			{"source": "/tmp/rd-source-debug/oscar64/atari/interrupts/main.c", "line": 8, "column": 6},
+			{"source": "/tmp/rd-source-debug/oscar64/atari/interrupts/main.c", "line": 21, "column": 21}]}
+,
+		{"name": "work", "xname": "work()->void", "start": 8348, "end": 8358, "typeid": 6, "source": "/tmp/rd-source-debug/oscar64/atari/interrupts/main.c", "line": 15, "lines": [
+			{"start": 8348, "end": 8351, "source": "/tmp/rd-source-debug/oscar64/atari/interrupts/main.c", "line": 16},
+			{"start": 8351, "end": 8357, "source": "/tmp/rd-source-debug/oscar64/atari/interrupts/main.c", "line": 17},
+			{"start": 8357, "end": 8358, "source": "/tmp/rd-source-debug/oscar64/atari/interrupts/main.c", "line": 18}], 
+			"origins":[
+			{"start": 8348, "end": 8351, "source": "/tmp/rd-source-debug/oscar64/atari/interrupts/main.c", "line": 16},
+			{"start": 8351, "end": 8357, "source": "/tmp/rd-source-debug/oscar64/atari/interrupts/main.c", "line": 17},
+			{"start": 8357, "end": 8358, "source": "/tmp/rd-source-debug/oscar64/atari/interrupts/main.c", "line": 18}], 
+			"variables":[
+], "references": [
+			{"source": "/tmp/rd-source-debug/oscar64/atari/interrupts/main.c", "line": 15, "column": 6},
+			{"source": "/tmp/rd-source-debug/oscar64/atari/interrupts/main.c", "line": 23, "column": 5},
+			{"source": "/tmp/rd-source-debug/oscar64/atari/interrupts/main.c", "line": 24, "column": 5}]}
 	],
 	"types": [
 		{"name": "", "typeid": 0, "size": 0},
 		{"name": "", "typeid": 1, "size": 1, "type": "uint"},
-		{"name": "", "typeid": 2, "size": 0},
-		{"name": "", "typeid": 3, "size": 0}	]}
+		{"name": "", "typeid": 2, "size": 2, "type": "ptr", "eid": 7},
+		{"name": "", "typeid": 3, "size": 1, "type": "uint"},
+		{"name": "", "typeid": 4, "size": 0},
+		{"name": "", "typeid": 5, "size": 0},
+		{"name": "", "typeid": 6, "size": 0},
+		{"name": "", "typeid": 7, "size": 0}	]}

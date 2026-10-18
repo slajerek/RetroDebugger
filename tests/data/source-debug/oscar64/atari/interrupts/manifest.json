@@ -4,29 +4,29 @@
   "fixedMtime": 1767225600,
   "fixture": "interrupts",
   "inputs": {
-    "main.c": "83264778da3296ad67c81209ad6be3716d832cc88816b466a6c0d90015e4a576"
+    "main.c": "ea2ba8a2c970d923eb8f0c5a24bfb9a4753bdad09cca503dc52ea76e35f2fd33"
   },
   "machine": "atari",
   "outputs": {
     "main.asm": {
-      "sha256": "b5faa4bf6247fd6388b0a3c737688e6b36e7b2b5236d7f70010c38130ee2d867",
-      "size": 2137
+      "sha256": "862200a3c009c1b67cb65b43a4a7a1fbb3fcd99ad5f4a29cae4d1e78addaeea8",
+      "size": 2895
     },
     "main.dbj": {
-      "sha256": "714e7789643f9ab1f34d426dc7c1b3d9b72fc9207d277e3e43c544716003a78f",
-      "size": 5386
+      "sha256": "1fb14435f3ccb62c1d71cd2ca6aec537fd465a920a52a10abd2a6da6c916441a",
+      "size": 7737
     },
     "main.lbl": {
-      "sha256": "e2d52196ae409cb5c5c4461e20f93b82d6a889739b84c10a9f251f26028a70a6",
-      "size": 149
+      "sha256": "9b0f78909f5f6f4fd0b2dc1851fe4feb49060408f24ed57749fc0781f77c40ed",
+      "size": 201
     },
     "main.map": {
-      "sha256": "818f43b2927b027a564c5d59552024a4fbaf4c77e8444d16e5f261a1c2e7587d",
-      "size": 1071
+      "sha256": "0ba538d24e213d53c68a92be6db9b829482b592ca6c36d37c87ec50e4d45234e",
+      "size": 1314
     },
     "main.xex": {
-      "sha256": "716f8916ad386516c52ce5831ce67039a31e4a6c2eb2048a1b780352f63b205e",
-      "size": 164
+      "sha256": "43dc3d23cf6dc032a64c0be9f9189c7a330b00cc7876b40b3b29bf6e11cb9b06",
+      "size": 178
     }
   },
   "source": "main.c",

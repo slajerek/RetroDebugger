@@ -1,16 +1,19 @@
 {	"memory": [		{"name": "ZeroEnd", "xname": "ZeroEnd", "start": 128, "end": 128, "type": "END", "source": "/home/user/toolchains/oscar64/include/crt.c", "line": 21 },
 		{"name": "ZeroStart", "xname": "ZeroStart", "start": 128, "end": 128, "type": "START", "source": "/home/user/toolchains/oscar64/include/crt.c", "line": 21 },
 		{"name": "BSSStart", "xname": "BSSStart", "start": 512, "end": 512, "type": "START", "source": "/home/user/toolchains/oscar64/include/crt.c", "line": 21 },
-		{"name": "result", "xname": "result", "start": 512, "end": 513, "type": "DATA", "source": "/tmp/rd-source-debug/oscar64/nes/interrupts/main.c", "line": 6 },
-		{"name": "BSSEnd", "xname": "BSSEnd", "start": 513, "end": 513, "type": "END", "source": "/home/user/toolchains/oscar64/include/crt.c", "line": 21 },
+		{"name": "ticks", "xname": "ticks", "start": 512, "end": 513, "type": "DATA", "source": "/tmp/rd-source-debug/oscar64/nes/interrupts/main.c", "line": 5 },
+		{"name": "interruptWork", "xname": "interruptWork", "start": 513, "end": 515, "type": "DATA", "source": "/tmp/rd-source-debug/oscar64/nes/interrupts/main.c", "line": 13 },
+		{"name": "result", "xname": "result", "start": 515, "end": 516, "type": "DATA", "source": "/tmp/rd-source-debug/oscar64/nes/interrupts/main.c", "line": 6 },
+		{"name": "BSSEnd", "xname": "BSSEnd", "start": 516, "end": 516, "type": "END", "source": "/home/user/toolchains/oscar64/include/crt.c", "line": 21 },
 		{"name": "StackEnd", "xname": "StackEnd", "start": 2048, "end": 2048, "type": "END", "source": "/home/user/toolchains/oscar64/include/crt.c", "line": 21 },
-		{"name": "main", "xname": "main()->i16", "start": 32768, "end": 32782, "type": "NATIVE_CODE", "source": "/tmp/rd-source-debug/oscar64/nes/interrupts/main.c", "line": 17 },
-		{"name": "work", "xname": "work()->void", "start": 32782, "end": 32792, "type": "NATIVE_CODE", "source": "/tmp/rd-source-debug/oscar64/nes/interrupts/main.c", "line": 12 },
+		{"name": "main", "xname": "main()->i16", "start": 32768, "end": 32792, "type": "NATIVE_CODE", "source": "/tmp/rd-source-debug/oscar64/nes/interrupts/main.c", "line": 20 },
+		{"name": "tick", "xname": "tick()->void", "start": 32792, "end": 32796, "type": "NATIVE_CODE", "source": "/tmp/rd-source-debug/oscar64/nes/interrupts/main.c", "line": 8 },
+		{"name": "work", "xname": "work()->void", "start": 32796, "end": 32806, "type": "NATIVE_CODE", "source": "/tmp/rd-source-debug/oscar64/nes/interrupts/main.c", "line": 15 },
 		{"name": "startup", "xname": "startup", "start": 65408, "end": 65467, "type": "NATIVE_CODE", "source": "/home/user/toolchains/oscar64/include/crt.c", "line": 69 }],
 	"variables": [
 		{"name": "BSSStart", "start": 512, "end": 512, "typeid": 0, "references": [
 			{"source": "/home/user/toolchains/oscar64/include/crt.c", "line": 21, "column": 28}]},
-		{"name": "BSSEnd", "start": 513, "end": 513, "typeid": 0, "references": [
+		{"name": "BSSEnd", "start": 516, "end": 516, "typeid": 0, "references": [
 			{"source": "/home/user/toolchains/oscar64/include/crt.c", "line": 21, "column": 38}]},
 		{"name": "ZeroStart", "start": 128, "end": 128, "typeid": 0, "references": [
 			{"source": "/home/user/toolchains/oscar64/include/crt.c", "line": 21, "column": 66}]},
@@ -18,42 +21,65 @@
 			{"source": "/home/user/toolchains/oscar64/include/crt.c", "line": 21, "column": 77}]},
 		{"name": "StackEnd", "start": 2048, "end": 2048, "typeid": 0, "references": [
 			{"source": "/home/user/toolchains/oscar64/include/crt.c", "line": 21, "column": 18}]},
-		{"name": "result", "start": 512, "end": 513, "typeid": 1, "references": [
+		{"name": "ticks", "start": 512, "end": 513, "typeid": 1, "references": [
+			{"source": "/tmp/rd-source-debug/oscar64/nes/interrupts/main.c", "line": 5, "column": 24},
+			{"source": "/tmp/rd-source-debug/oscar64/nes/interrupts/main.c", "line": 9, "column": 5}]},
+		{"name": "interruptWork", "start": 513, "end": 515, "typeid": 2, "references": [
+			{"source": "/tmp/rd-source-debug/oscar64/nes/interrupts/main.c", "line": 13, "column": 18},
+			{"source": "/tmp/rd-source-debug/oscar64/nes/interrupts/main.c", "line": 21, "column": 5}]},
+		{"name": "result", "start": 515, "end": 516, "typeid": 3, "references": [
 			{"source": "/tmp/rd-source-debug/oscar64/nes/interrupts/main.c", "line": 6, "column": 24},
-			{"source": "/tmp/rd-source-debug/oscar64/nes/interrupts/main.c", "line": 18, "column": 5},
-			{"source": "/tmp/rd-source-debug/oscar64/nes/interrupts/main.c", "line": 13, "column": 5},
-			{"source": "/tmp/rd-source-debug/oscar64/nes/interrupts/main.c", "line": 13, "column": 14},
-			{"source": "/tmp/rd-source-debug/oscar64/nes/interrupts/main.c", "line": 14, "column": 5},
-			{"source": "/tmp/rd-source-debug/oscar64/nes/interrupts/main.c", "line": 14, "column": 14}]}	],
+			{"source": "/tmp/rd-source-debug/oscar64/nes/interrupts/main.c", "line": 22, "column": 5},
+			{"source": "/tmp/rd-source-debug/oscar64/nes/interrupts/main.c", "line": 16, "column": 5},
+			{"source": "/tmp/rd-source-debug/oscar64/nes/interrupts/main.c", "line": 16, "column": 14},
+			{"source": "/tmp/rd-source-debug/oscar64/nes/interrupts/main.c", "line": 17, "column": 5},
+			{"source": "/tmp/rd-source-debug/oscar64/nes/interrupts/main.c", "line": 17, "column": 14}]}	],
 	"functions": [
-		{"name": "main", "xname": "main()->i16", "start": 32768, "end": 32782, "typeid": 2, "source": "/tmp/rd-source-debug/oscar64/nes/interrupts/main.c", "line": 17, "lines": [
-			{"start": 32768, "end": 32773, "source": "/tmp/rd-source-debug/oscar64/nes/interrupts/main.c", "line": 18},
-			{"start": 32773, "end": 32776, "source": "/tmp/rd-source-debug/oscar64/nes/interrupts/main.c", "line": 19},
-			{"start": 32776, "end": 32779, "source": "/tmp/rd-source-debug/oscar64/nes/interrupts/main.c", "line": 20}], 
+		{"name": "main", "xname": "main()->i16", "start": 32768, "end": 32792, "typeid": 4, "source": "/tmp/rd-source-debug/oscar64/nes/interrupts/main.c", "line": 20, "lines": [
+			{"start": 32768, "end": 32778, "source": "/tmp/rd-source-debug/oscar64/nes/interrupts/main.c", "line": 21},
+			{"start": 32778, "end": 32783, "source": "/tmp/rd-source-debug/oscar64/nes/interrupts/main.c", "line": 22},
+			{"start": 32783, "end": 32786, "source": "/tmp/rd-source-debug/oscar64/nes/interrupts/main.c", "line": 23},
+			{"start": 32786, "end": 32789, "source": "/tmp/rd-source-debug/oscar64/nes/interrupts/main.c", "line": 24}], 
 			"origins":[
-			{"start": 32768, "end": 32773, "source": "/tmp/rd-source-debug/oscar64/nes/interrupts/main.c", "line": 18},
-			{"start": 32773, "end": 32776, "source": "/tmp/rd-source-debug/oscar64/nes/interrupts/main.c", "line": 19},
-			{"start": 32776, "end": 32779, "source": "/tmp/rd-source-debug/oscar64/nes/interrupts/main.c", "line": 20}], 
+			{"start": 32768, "end": 32778, "source": "/tmp/rd-source-debug/oscar64/nes/interrupts/main.c", "line": 21},
+			{"start": 32778, "end": 32783, "source": "/tmp/rd-source-debug/oscar64/nes/interrupts/main.c", "line": 22},
+			{"start": 32783, "end": 32786, "source": "/tmp/rd-source-debug/oscar64/nes/interrupts/main.c", "line": 23},
+			{"start": 32786, "end": 32789, "source": "/tmp/rd-source-debug/oscar64/nes/interrupts/main.c", "line": 24}], 
 			"variables":[
 ], "references": [
-			{"source": "/tmp/rd-source-debug/oscar64/nes/interrupts/main.c", "line": 17, "column": 5}]}
-,
-		{"name": "work", "xname": "work()->void", "start": 32782, "end": 32792, "typeid": 3, "source": "/tmp/rd-source-debug/oscar64/nes/interrupts/main.c", "line": 12, "lines": [
-			{"start": 32782, "end": 32785, "source": "/tmp/rd-source-debug/oscar64/nes/interrupts/main.c", "line": 13},
-			{"start": 32785, "end": 32791, "source": "/tmp/rd-source-debug/oscar64/nes/interrupts/main.c", "line": 14},
-			{"start": 32791, "end": 32792, "source": "/tmp/rd-source-debug/oscar64/nes/interrupts/main.c", "line": 15}], 
-			"origins":[
-			{"start": 32782, "end": 32785, "source": "/tmp/rd-source-debug/oscar64/nes/interrupts/main.c", "line": 13},
-			{"start": 32785, "end": 32791, "source": "/tmp/rd-source-debug/oscar64/nes/interrupts/main.c", "line": 14},
-			{"start": 32791, "end": 32792, "source": "/tmp/rd-source-debug/oscar64/nes/interrupts/main.c", "line": 15}], 
-			"variables":[
-], "references": [
-			{"source": "/tmp/rd-source-debug/oscar64/nes/interrupts/main.c", "line": 12, "column": 6},
-			{"source": "/tmp/rd-source-debug/oscar64/nes/interrupts/main.c", "line": 19, "column": 5},
 			{"source": "/tmp/rd-source-debug/oscar64/nes/interrupts/main.c", "line": 20, "column": 5}]}
+,
+		{"name": "tick", "xname": "tick()->void", "start": 32792, "end": 32796, "typeid": 5, "source": "/tmp/rd-source-debug/oscar64/nes/interrupts/main.c", "line": 8, "lines": [
+			{"start": 32792, "end": 32795, "source": "/tmp/rd-source-debug/oscar64/nes/interrupts/main.c", "line": 9},
+			{"start": 32795, "end": 32796, "source": "/tmp/rd-source-debug/oscar64/nes/interrupts/main.c", "line": 10}], 
+			"origins":[
+			{"start": 32792, "end": 32795, "source": "/tmp/rd-source-debug/oscar64/nes/interrupts/main.c", "line": 9},
+			{"start": 32795, "end": 32796, "source": "/tmp/rd-source-debug/oscar64/nes/interrupts/main.c", "line": 10}], 
+			"variables":[
+], "references": [
+			{"source": "/tmp/rd-source-debug/oscar64/nes/interrupts/main.c", "line": 8, "column": 6},
+			{"source": "/tmp/rd-source-debug/oscar64/nes/interrupts/main.c", "line": 21, "column": 21}]}
+,
+		{"name": "work", "xname": "work()->void", "start": 32796, "end": 32806, "typeid": 6, "source": "/tmp/rd-source-debug/oscar64/nes/interrupts/main.c", "line": 15, "lines": [
+			{"start": 32796, "end": 32799, "source": "/tmp/rd-source-debug/oscar64/nes/interrupts/main.c", "line": 16},
+			{"start": 32799, "end": 32805, "source": "/tmp/rd-source-debug/oscar64/nes/interrupts/main.c", "line": 17},
+			{"start": 32805, "end": 32806, "source": "/tmp/rd-source-debug/oscar64/nes/interrupts/main.c", "line": 18}], 
+			"origins":[
+			{"start": 32796, "end": 32799, "source": "/tmp/rd-source-debug/oscar64/nes/interrupts/main.c", "line": 16},
+			{"start": 32799, "end": 32805, "source": "/tmp/rd-source-debug/oscar64/nes/interrupts/main.c", "line": 17},
+			{"start": 32805, "end": 32806, "source": "/tmp/rd-source-debug/oscar64/nes/interrupts/main.c", "line": 18}], 
+			"variables":[
+], "references": [
+			{"source": "/tmp/rd-source-debug/oscar64/nes/interrupts/main.c", "line": 15, "column": 6},
+			{"source": "/tmp/rd-source-debug/oscar64/nes/interrupts/main.c", "line": 23, "column": 5},
+			{"source": "/tmp/rd-source-debug/oscar64/nes/interrupts/main.c", "line": 24, "column": 5}]}
 	],
 	"types": [
 		{"name": "", "typeid": 0, "size": 0},
 		{"name": "", "typeid": 1, "size": 1, "type": "uint"},
-		{"name": "", "typeid": 2, "size": 0},
-		{"name": "", "typeid": 3, "size": 0}	]}
+		{"name": "", "typeid": 2, "size": 2, "type": "ptr", "eid": 7},
+		{"name": "", "typeid": 3, "size": 1, "type": "uint"},
+		{"name": "", "typeid": 4, "size": 0},
+		{"name": "", "typeid": 5, "size": 0},
+		{"name": "", "typeid": 6, "size": 0},
+		{"name": "", "typeid": 7, "size": 0}	]}

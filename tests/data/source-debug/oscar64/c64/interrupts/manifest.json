@@ -4,29 +4,29 @@
   "fixedMtime": 1767225600,
   "fixture": "interrupts",
   "inputs": {
-    "main.c": "83264778da3296ad67c81209ad6be3716d832cc88816b466a6c0d90015e4a576"
+    "main.c": "ea2ba8a2c970d923eb8f0c5a24bfb9a4753bdad09cca503dc52ea76e35f2fd33"
   },
   "machine": "c64",
   "outputs": {
     "main.asm": {
-      "sha256": "2e5c6743c240c4c823e49bb0b03326aa7d92e737c3f8c93126fe72d63852d2f8",
-      "size": 2671
+      "sha256": "c00ef66b06690ea755212ec667348c299725b24c289aa6726f971461cebe0ce3",
+      "size": 3421
     },
     "main.dbj": {
-      "sha256": "358d6e0d5a5df652650f13e94522e2d5a283e7b7d8ae165fd04510654754ef5c",
-      "size": 5712
+      "sha256": "21bd8d5b5020784ce63fd7bf9f3f3ebf7db79bc699bc5f464d7d06a0d9e1875e",
+      "size": 8031
     },
     "main.lbl": {
-      "sha256": "4e6daaa99ca97eb43fb3a12b5c0303229578d12f89a29d1ea139eb7ad3e42ab6",
-      "size": 166
+      "sha256": "279e5bd41fb828fa83091784f58633f9c5c9a9f32b456dd9694ea5358e222dd3",
+      "size": 218
     },
     "main.map": {
-      "sha256": "98365c6e3d815c21790aca3654abdd91245d6a57a4565df3d1f8217c1edc0c9d",
-      "size": 1135
+      "sha256": "b48e56076f7eac36bea8c7e7dff00e0d5c67208f6c89762bb47e9cf7de2e9fc5",
+      "size": 1378
     },
     "main.prg": {
-      "sha256": "e8da10ee4a45c2ecbd5989c27b4943bdd796834a4b40e82d20a2e2ef1595a536",
-      "size": 154
+      "sha256": "54c5f662e6ad5704c281b148e4667167c88b527b2c37cb870b4785209f66acdb",
+      "size": 168
     }
   },
   "source": "main.c",

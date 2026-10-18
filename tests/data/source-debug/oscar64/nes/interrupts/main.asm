@@ -1,32 +1,52 @@
 ; Compiled with 1.32.273
 --------------------------------------------------------------------
-result:
+ticks:
 0200 : __ __ __ BSS	1
 --------------------------------------------------------------------
+interruptWork:
+0201 : __ __ __ BSS	2
+--------------------------------------------------------------------
+result:
+0203 : __ __ __ BSS	1
+--------------------------------------------------------------------
 main: ; main()->i16
-;  17, "/tmp/rd-source-debug/oscar64/nes/interrupts/main.c"
-.s4:
-;  18, "/tmp/rd-source-debug/oscar64/nes/interrupts/main.c"
-00:8000 : a9 00 __ LDA #$00
-00:8002 : 8d 00 02 STA $0200 ; (result + 0)
-;  19, "/tmp/rd-source-debug/oscar64/nes/interrupts/main.c"
-00:8005 : 20 0e 80 JSR $800e ; (work.s4 + 0)
 ;  20, "/tmp/rd-source-debug/oscar64/nes/interrupts/main.c"
-00:8008 : 20 0e 80 JSR $800e ; (work.s4 + 0)
+.s4:
+;  21, "/tmp/rd-source-debug/oscar64/nes/interrupts/main.c"
+00:8000 : a9 18 __ LDA #$18
+00:8002 : 8d 01 02 STA $0201 ; (interruptWork + 0)
+00:8005 : a9 80 __ LDA #$80
+00:8007 : 8d 02 02 STA $0202 ; (interruptWork + 1)
+;  22, "/tmp/rd-source-debug/oscar64/nes/interrupts/main.c"
+00:800a : a9 00 __ LDA #$00
+00:800c : 8d 03 02 STA $0203 ; (result + 0)
+;  23, "/tmp/rd-source-debug/oscar64/nes/interrupts/main.c"
+00:800f : 20 1c 80 JSR $801c ; (work.s4 + 0)
+;  24, "/tmp/rd-source-debug/oscar64/nes/interrupts/main.c"
+00:8012 : 20 1c 80 JSR $801c ; (work.s4 + 0)
 .l5:
-00:800b : 4c 0b 80 JMP $800b ; (main.l5 + 0)
+00:8015 : 4c 15 80 JMP $8015 ; (main.l5 + 0)
+--------------------------------------------------------------------
+tick: ; tick()->void
+;   8, "/tmp/rd-source-debug/oscar64/nes/interrupts/main.c"
+.s4:
+;   9, "/tmp/rd-source-debug/oscar64/nes/interrupts/main.c"
+00:8018 : ee 00 02 INC $0200 ; (ticks + 0)
+.s3:
+;  10, "/tmp/rd-source-debug/oscar64/nes/interrupts/main.c"
+00:801b : 60 __ __ RTS
 --------------------------------------------------------------------
 work: ; work()->void
-;  12, "/tmp/rd-source-debug/oscar64/nes/interrupts/main.c"
-.s4:
-;  13, "/tmp/rd-source-debug/oscar64/nes/interrupts/main.c"
-00:800e : ee 00 02 INC $0200 ; (result + 0)
-;  14, "/tmp/rd-source-debug/oscar64/nes/interrupts/main.c"
-00:8011 : ee 00 02 INC $0200 ; (result + 0)
-00:8014 : ee 00 02 INC $0200 ; (result + 0)
-.s3:
 ;  15, "/tmp/rd-source-debug/oscar64/nes/interrupts/main.c"
-00:8017 : 60 __ __ RTS
+.s4:
+;  16, "/tmp/rd-source-debug/oscar64/nes/interrupts/main.c"
+00:801c : ee 03 02 INC $0203 ; (result + 0)
+;  17, "/tmp/rd-source-debug/oscar64/nes/interrupts/main.c"
+00:801f : ee 03 02 INC $0203 ; (result + 0)
+00:8022 : ee 03 02 INC $0203 ; (result + 0)
+.s3:
+;  18, "/tmp/rd-source-debug/oscar64/nes/interrupts/main.c"
+00:8025 : 60 __ __ RTS
 --------------------------------------------------------------------
 startup: ; startup
 00:ff80 : 78 __ __ SEI
@@ -45,7 +65,7 @@ startup: ; startup
 00:ff96 : d0 f2 __ BNE $ff8a ; (startup + 10)
 00:ff98 : 91 25 __ STA (IP + 0),y 
 00:ff9a : c8 __ __ INY
-00:ff9b : c0 01 __ CPY #$01
+00:ff9b : c0 04 __ CPY #$04
 00:ff9d : d0 f9 __ BNE $ff98 ; (startup + 24)
 00:ff9f : a9 00 __ LDA #$00
 00:ffa1 : a2 80 __ LDX #$80

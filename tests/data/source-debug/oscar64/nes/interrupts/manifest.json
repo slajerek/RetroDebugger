@@ -4,28 +4,28 @@
   "fixedMtime": 1767225600,
   "fixture": "interrupts",
   "inputs": {
-    "main.c": "83264778da3296ad67c81209ad6be3716d832cc88816b466a6c0d90015e4a576"
+    "main.c": "ea2ba8a2c970d923eb8f0c5a24bfb9a4753bdad09cca503dc52ea76e35f2fd33"
   },
   "machine": "nes",
   "outputs": {
     "main.asm": {
-      "sha256": "32bd3d1628c781f5534e6249dbd932b3567ecea1acab5480b2776de2dd6a0d90",
-      "size": 2285
+      "sha256": "110cc929a81c7f909427cb2bafc38440fd825f4463724bd046e10f311267b5fb",
+      "size": 3053
     },
     "main.dbj": {
-      "sha256": "d54dfbd1f6a2ac8d68a8029f1959d4e8b73c4ac48139b74ab07384966ccf3c6b",
-      "size": 5350
+      "sha256": "697ce4ab52ae6aab2ab5b41a94662ea8d7b6670190659fe9a2a4ec88be7c598d",
+      "size": 7677
     },
     "main.map": {
-      "sha256": "fa8c48272773942cb6a2c2f39c5039afee786bdcb42d134ca388a6f2d246f299",
-      "size": 1246
+      "sha256": "bcd3599101d1a421dcc2464dbd284f19cc5c99fd17da223083ac514e95bc7d05",
+      "size": 1507
     },
     "main.mlb": {
-      "sha256": "ef89a5240c5cc8c921b4b77f50060a8fbc7853a5f5c9b1ad0da95df4ea5fcf9e",
-      "size": 206
+      "sha256": "d8f8d29f3821fc6cb236fd83a6e97835bca7fc46e3f00a51962350f93ba1f1fd",
+      "size": 287
     },
     "main.nes": {
-      "sha256": "5cd2c7d551ec3758a97dbad29a330ece8cb73ce833bff16d1ff1217a8b143b7e",
+      "sha256": "f86bb8ef61e7a70909730623b5d639d27f11fd63b3551cecc580b4688365862e",
       "size": 40976
     }
   },

@@ -2,7 +2,7 @@
 --------------------------------------------------------------------
 startup: ; startup
 2000 : a2 20 __ LDX #$20
-2002 : a0 98 __ LDY #$98
+2002 : a0 a6 __ LDY #$a6
 2004 : a9 00 __ LDA #$00
 2006 : 85 97 __ STA IP + 0 
 2008 : 86 98 __ STX IP + 1 
@@ -15,7 +15,7 @@ startup: ; startup
 2014 : d0 f2 __ BNE $2008 ; (startup + 8)
 2016 : 91 97 __ STA (IP + 0),y 
 2018 : c8 __ __ INY
-2019 : c0 99 __ CPY #$99
+2019 : c0 aa __ CPY #$aa
 201b : d0 f9 __ BNE $2016 ; (startup + 22)
 201d : a9 00 __ LDA #$00
 201f : a2 e0 __ LDX #$e0
@@ -33,29 +33,49 @@ startup: ; startup
 2038 : 60 __ __ RTS
 --------------------------------------------------------------------
 main: ; main()->i16
-;  17, "/tmp/rd-source-debug/oscar64/atari/interrupts/main.c"
-.s4:
-;  18, "/tmp/rd-source-debug/oscar64/atari/interrupts/main.c"
-2080 : a9 00 __ LDA #$00
-2082 : 8d 98 20 STA $2098 ; (result + 0)
-;  19, "/tmp/rd-source-debug/oscar64/atari/interrupts/main.c"
-2085 : 20 8e 20 JSR $208e ; (work.s4 + 0)
 ;  20, "/tmp/rd-source-debug/oscar64/atari/interrupts/main.c"
-2088 : 20 8e 20 JSR $208e ; (work.s4 + 0)
+.s4:
+;  21, "/tmp/rd-source-debug/oscar64/atari/interrupts/main.c"
+2080 : a9 98 __ LDA #$98
+2082 : 8d a7 20 STA $20a7 ; (interruptWork + 0)
+2085 : a9 20 __ LDA #$20
+2087 : 8d a8 20 STA $20a8 ; (interruptWork + 1)
+;  22, "/tmp/rd-source-debug/oscar64/atari/interrupts/main.c"
+208a : a9 00 __ LDA #$00
+208c : 8d a9 20 STA $20a9 ; (result + 0)
+;  23, "/tmp/rd-source-debug/oscar64/atari/interrupts/main.c"
+208f : 20 9c 20 JSR $209c ; (work.s4 + 0)
+;  24, "/tmp/rd-source-debug/oscar64/atari/interrupts/main.c"
+2092 : 20 9c 20 JSR $209c ; (work.s4 + 0)
 .l5:
-208b : 4c 8b 20 JMP $208b ; (main.l5 + 0)
+2095 : 4c 95 20 JMP $2095 ; (main.l5 + 0)
+--------------------------------------------------------------------
+tick: ; tick()->void
+;   8, "/tmp/rd-source-debug/oscar64/atari/interrupts/main.c"
+.s4:
+;   9, "/tmp/rd-source-debug/oscar64/atari/interrupts/main.c"
+2098 : ee a6 20 INC $20a6 ; (ticks + 0)
+.s3:
+;  10, "/tmp/rd-source-debug/oscar64/atari/interrupts/main.c"
+209b : 60 __ __ RTS
 --------------------------------------------------------------------
 work: ; work()->void
-;  12, "/tmp/rd-source-debug/oscar64/atari/interrupts/main.c"
-.s4:
-;  13, "/tmp/rd-source-debug/oscar64/atari/interrupts/main.c"
-208e : ee 98 20 INC $2098 ; (result + 0)
-;  14, "/tmp/rd-source-debug/oscar64/atari/interrupts/main.c"
-2091 : ee 98 20 INC $2098 ; (result + 0)
-2094 : ee 98 20 INC $2098 ; (result + 0)
-.s3:
 ;  15, "/tmp/rd-source-debug/oscar64/atari/interrupts/main.c"
-2097 : 60 __ __ RTS
+.s4:
+;  16, "/tmp/rd-source-debug/oscar64/atari/interrupts/main.c"
+209c : ee a9 20 INC $20a9 ; (result + 0)
+;  17, "/tmp/rd-source-debug/oscar64/atari/interrupts/main.c"
+209f : ee a9 20 INC $20a9 ; (result + 0)
+20a2 : ee a9 20 INC $20a9 ; (result + 0)
+.s3:
+;  18, "/tmp/rd-source-debug/oscar64/atari/interrupts/main.c"
+20a5 : 60 __ __ RTS
+--------------------------------------------------------------------
+ticks:
+20a6 : __ __ __ BSS	1
+--------------------------------------------------------------------
+interruptWork:
+20a7 : __ __ __ BSS	2
 --------------------------------------------------------------------
 result:
-2098 : __ __ __ BSS	1
+20a9 : __ __ __ BSS	1

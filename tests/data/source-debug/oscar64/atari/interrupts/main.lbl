@@ -2,8 +2,11 @@ al 00e0 .ZeroEnd
 al 00e0 .ZeroStart
 al 2000 .startup
 al 2080 .main
-al 208e .work
-al 2098 .BSSStart
-al 2098 .result
-al 2099 .BSSEnd
+al 2098 .tick
+al 209c .work
+al 20a6 .ticks
+al 20a6 .BSSStart
+al 20a7 .interruptWork
+al 20a9 .result
+al 20aa .BSSEnd
 al bc00 .StackEnd
