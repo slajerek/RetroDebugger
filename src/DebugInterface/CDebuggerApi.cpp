@@ -238,6 +238,14 @@ static nlohmann::json VariableJson(const CDebugDatabase *database, const CDebugV
 	v["quality"] = QualityName(r.quality);
 	if (!r.reason.empty())
 		v["reason"] = r.reason;
+	if (r.variable && r.variable->location == DebugVariableLocation::Register)
+	{
+		v["register"] = std::string(1, r.variable->cpuRegister ? r.variable->cpuRegister : '?');
+		if (!r.bytes.empty())
+			v["value"] = r.bytes[0];
+	}
+	if (r.variable && r.variable->location == DebugVariableLocation::Constant)
+		v["constant"] = r.variable->constantValue;
 	if (r.hasAddress)
 	{
 		v["address"] = r.address;

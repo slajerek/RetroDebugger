@@ -146,6 +146,9 @@ struct CDebugVariable
 	i32 enterLine = 0;				// FixedScoped: the source lines of its scope
 	i32 leaveLine = 0;
 	u32 regionId = 0;
+	char cpuRegister = 0;			// Register: 'A', 'X' or 'Y' -- at the function's entry
+	i64 constantValue = 0;			// Constant: the folded value
+	std::string note;				// why a Fixed address is only approximate ("" when not)
 };
 
 // RD-017: one call an inlined function's code came from -- the caller's
@@ -227,7 +230,7 @@ public:
 	const CDebugFunction *FindFunctionImage(u32 regionId, u32 address, bool hasImageOffset, u64 imageOffset) const;
 	const std::vector<CDebugFunction> &Functions() const { return functions; }
 
-	// RD-022: variables (globals first, in producer order) and their types
+	// RD-022: variables, in producer order, and their types
 	const std::vector<CDebugVariable> &Variables() const { return variables; }
 	const CDebugType *GetType(u32 typeId) const;
 	const std::map<u32, CDebugType> &Types() const { return types; }

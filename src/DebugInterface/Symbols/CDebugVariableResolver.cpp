@@ -62,8 +62,10 @@ static CDebugVariableResolution Resolve(const CDebugDatabase *database, CDebugIn
 		case DebugVariableLocation::Fixed:
 			r.hasAddress = true;
 			r.address = variable.address;
-			r.quality = variable.sizeApproximate ? DebugMappingQuality::Approximate : DebugMappingQuality::Exact;
-			if (variable.sizeApproximate)
+			r.quality = (variable.sizeApproximate || !variable.note.empty()) ? DebugMappingQuality::Approximate : DebugMappingQuality::Exact;
+			if (!variable.note.empty())
+				r.reason = variable.note;
+			else if (variable.sizeApproximate)
 				r.reason = "the size is not recorded: up to the next label";
 			break;
 
@@ -120,10 +122,21 @@ static CDebugVariableResolution Resolve(const CDebugDatabase *database, CDebugIn
 		}
 
 		case DebugVariableLocation::Register:
-			r.reason = "held in a CPU register";
+			if (function && pc == function->start && variable.cpuRegister)
+			{
+				u16 regPc;
+				u8 a, x, y, p, sp;
+				debugInterface->GetCpuRegs(&regPc, &a, &x, &y, &p, &sp);
+				r.bytes.push_back(variable.cpuRegister == 'X' ? x : variable.cpuRegister == 'Y' ? y : a);
+				r.size = 1;
+				r.quality = DebugMappingQuality::Exact;
+			}
+			else
+				r.reason = std::string("held in register ") + (variable.cpuRegister ? variable.cpuRegister : '?')
+					+ " at the function's entry; the compiler may change it after";
 			break;
 		case DebugVariableLocation::Constant:
-			r.reason = "a folded constant: no memory location";
+			r.reason = "a folded constant (" + std::to_string(variable.constantValue) + "): no memory location";
 			break;
 		case DebugVariableLocation::Absent:
 			r.reason = "optimized out";

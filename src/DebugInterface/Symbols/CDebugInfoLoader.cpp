@@ -2,6 +2,7 @@
 #include "CDebugDatabase.h"
 #include "CDebugSymbols.h"
 #include "CDebugSymbolsSegment.h"
+#include "CDebugSymbolsCodeLabel.h"
 #include "CDebugInterface.h"
 #include "CDebugDataAdapter.h"
 #include "CByteBuffer.h"
@@ -397,7 +398,11 @@ static bool ParseKickCLineComment(const std::string &text, std::string &path, i3
 	return line > 0;
 }
 
-static void AddKickCSourceMappings(CDebugDatabase *database, const CDebugInfoLoadOptions &options)
+static void ClassifyKickCLabels(CDebugDatabase *database, const std::vector<u32> &asmFiles,
+								std::vector<std::pair<std::string, u32>> &constants);
+
+static void AddKickCSourceMappings(CDebugDatabase *database, const CDebugInfoLoadOptions &options,
+								   std::vector<std::pair<std::string, u32>> &constantLabels)
 {
 	std::vector<CDebugSourceMapping> asmMappings = database->Mappings();
 	u32 nextFileId = 0;
@@ -535,6 +540,206 @@ static void AddKickCSourceMappings(CDebugDatabase *database, const CDebugInfoLoa
 	database->capabilities.functions = true;
 	LOGM("DebugInfoLoadKickAss: KickC -Sl comments: %d C file(s), %d scope(s), %d function(s)",
 		 (int)cFiles.size(), (int)scopes.size(), (int)database->Functions().size());
+
+	ClassifyKickCLabels(database, asmFiles, constantLabels);
+}
+
+// RD-022 (RESEARCH-c-symbols.md #2.3, its RD-049): KickC's variables from its
+// .asm. A ".label name = value" is a zero-page variable when an instruction
+// uses it as a memory operand, a folded constant when only as an immediate
+// ("lda #top.v": the label at $0001 names the CPU port by accident). The
+// "// __register(A) char add(__register(X) char left, ...)" line before a
+// function names its register parameters. KickC records no sizes or types.
+static bool KickCIdentifier(char c)
+{
+	return isalnum((unsigned char)c) || c == '_';
+}
+
+static void ClassifyKickCLabels(CDebugDatabase *database, const std::vector<u32> &asmFiles,
+								std::vector<std::pair<std::string, u32>> &constants)
+{
+	struct LabelDef { std::string scope, name; u32 value; bool memory = false, immediate = false; };
+	std::vector<LabelDef> defs;
+	struct RegisterParam { std::string scope, name; char cpuRegister; };
+	std::vector<RegisterParam> registerParams;
+	std::vector<std::pair<std::string, std::string>> codeLines;		// scope, line
+
+	for (u32 asmFileId : asmFiles)
+	{
+		const CDebugSourceFile *asmFile = database->GetFile(asmFileId);
+		if (asmFile == NULL)
+			continue;
+		std::string scope, signature;
+		for (size_t n = 1; n < asmFile->lines.size(); n++)
+		{
+			char *raw = asmFile->lines[n] ? asmFile->lines[n]->GetStdASCII() : NULL;
+			std::string text = raw ? raw : "";
+			delete [] raw;
+			size_t first = text.find_first_not_of(" \t");
+			if (first == std::string::npos)
+				continue;
+			text = text.substr(first);
+			if (text.compare(0, 2, "//") == 0)
+			{
+				if (text.find('(') != std::string::npos && text.find(')') != std::string::npos)
+					signature = text;
+				continue;
+			}
+			size_t brace = text.find('{'), colon = text.find(':');
+			if (scope.empty() && brace != std::string::npos && colon != std::string::npos && colon < brace)
+			{
+				scope = text.substr(0, colon);
+				// the signature comment right before it: its __register parameters
+				size_t open = signature.find(scope + "(");
+				if (open != std::string::npos)
+				{
+					std::string params = signature.substr(open + scope.size() + 1);
+					params = params.substr(0, params.find(')') == std::string::npos ? params.size() : params.rfind(')'));
+					size_t start = 0;
+					while (start <= params.size())
+					{
+						size_t comma = params.find(',', start);
+						std::string param = params.substr(start, comma == std::string::npos ? std::string::npos : comma - start);
+						size_t reg = param.find("__register(");
+						size_t end = param.find_last_not_of(" \t");
+						if (reg != std::string::npos && end != std::string::npos && reg + 11 < param.size())
+						{
+							size_t nameStart = end;
+							while (nameStart > 0 && KickCIdentifier(param[nameStart - 1]))
+								nameStart--;
+							registerParams.push_back({ scope, param.substr(nameStart, end + 1 - nameStart), param[reg + 11] });
+						}
+						if (comma == std::string::npos)
+							break;
+						start = comma + 1;
+					}
+				}
+				signature.clear();
+				continue;
+			}
+			if (!scope.empty() && text[0] == '}')
+			{
+				scope.clear();
+				continue;
+			}
+			if (text.compare(0, 7, ".label ") == 0)
+			{
+				size_t equals = text.find('=');
+				if (equals == std::string::npos)
+					continue;
+				std::string name = text.substr(7, equals - 7);
+				name.erase(name.find_last_not_of(" \t") + 1);
+				std::string valueText = text.substr(equals + 1);
+				valueText.erase(0, valueText.find_first_not_of(" \t"));
+				char *endPtr = NULL;
+				long value = valueText[0] == '$' ? strtol(valueText.c_str() + 1, &endPtr, 16) : strtol(valueText.c_str(), &endPtr, 10);
+				if (endPtr && endPtr != valueText.c_str() && (*endPtr == 0 || isspace((unsigned char)*endPtr)))
+					defs.push_back({ scope, name, (u32)value });
+				continue;
+			}
+			codeLines.push_back(std::make_pair(scope, text));
+		}
+	}
+
+	// every identifier an instruction's operand names: "#x" immediate, else memory
+	for (auto &line : codeLines)
+	{
+		const std::string &text = line.second;
+		size_t operand = text.find_first_of(" \t");
+		if (operand == std::string::npos || text.find(':') != std::string::npos)
+			continue;
+		operand = text.find_first_not_of(" \t", operand);
+		if (operand == std::string::npos)
+			continue;
+		bool immediate = text[operand] == '#';
+		for (size_t i = operand; i < text.size(); )
+		{
+			if (!(isalpha((unsigned char)text[i]) || text[i] == '_') || (i > 0 && (KickCIdentifier(text[i - 1]) || text[i - 1] == '.')))
+			{
+				i++;
+				continue;
+			}
+			size_t end = i;
+			while (end < text.size() && (KickCIdentifier(text[end]) || text[end] == '.'))
+				end++;
+			std::string token = text.substr(i, end - i);
+			std::string scope = line.first, name = token;
+			size_t dot = token.find('.');
+			if (dot != std::string::npos)
+			{
+				scope = token.substr(0, dot);
+				name = token.substr(dot + 1);
+			}
+			// the scope's own label first, then a global one
+			LabelDef *found = NULL;
+			for (LabelDef &def : defs)
+				if (def.name == name && def.scope == scope)
+					found = &def;
+			if (!found && dot == std::string::npos)
+				for (LabelDef &def : defs)
+					if (def.name == name && def.scope.empty())
+						found = &def;
+			if (found)
+				(immediate ? found->immediate : found->memory) = true;
+			i = end;
+		}
+	}
+
+	auto functionsNamed = [&](const std::string &name) {
+		std::vector<i32> indices;
+		for (u32 i = 0; i < database->Functions().size(); i++)
+			if (database->Functions()[i].name == name)
+				indices.push_back((i32)i);
+		return indices;
+	};
+	for (const LabelDef &def : defs)
+	{
+		if (!def.memory && !def.immediate)
+			continue;
+		CDebugVariable variable;
+		variable.name = def.name;
+		if (def.memory)
+		{
+			variable.location = DebugVariableLocation::Fixed;
+			variable.address = def.value;
+			variable.sizeApproximate = true;
+			variable.note = def.scope.empty() ? "KickC records no size or type"
+				: "KickC allocates locals statically and may share their zero page between functions: valid while this one runs";
+		}
+		else
+		{
+			variable.location = DebugVariableLocation::Constant;
+			variable.constantValue = def.value;
+			constants.push_back(std::make_pair(def.name, def.value));
+		}
+		if (def.scope.empty())
+		{
+			database->AddVariable(variable);
+			database->capabilities.variables = true;
+			continue;
+		}
+		for (i32 index : functionsNamed(def.scope))
+		{
+			variable.functionIndex = index;
+			variable.regionId = database->Functions()[index].regionId;
+			database->AddVariable(variable);
+			database->capabilities.localVariables = true;
+		}
+	}
+	for (const RegisterParam &param : registerParams)
+	{
+		for (i32 index : functionsNamed(param.scope))
+		{
+			CDebugVariable variable;
+			variable.name = param.name;
+			variable.functionIndex = index;
+			variable.location = DebugVariableLocation::Register;
+			variable.cpuRegister = (char)toupper((unsigned char)param.cpuRegister);
+			variable.regionId = database->Functions()[index].regionId;
+			database->AddVariable(variable);
+			database->capabilities.localVariables = true;
+		}
+	}
 }
 
 bool DebugInfoLoadKickAss(CDebugSymbols *symbols, CByteBuffer *byteBuffer, const char *debugFileDir)
@@ -989,7 +1194,21 @@ bool DebugInfoLoadKickAss(CDebugSymbols *symbols, CByteBuffer *byteBuffer, const
 		LoadSourceTextFor(it.second, options);
 
 	// RD-010: C lines of KickC output (-Sl comments in the .asm)
-	AddKickCSourceMappings(database.get(), options);
+	std::vector<std::pair<std::string, u32>> constantLabels;
+	AddKickCSourceMappings(database.get(), options, constantLabels);
+	// RD-022: a folded constant is no address: not a label (KickC's "v" at $0001)
+	for (const std::pair<std::string, u32> &constant : constantLabels)
+	{
+		for (CDebugSymbolsSegment *segment : symbols->segments)
+		{
+			CDebugSymbolsCodeLabel *label = segment->FindLabel((int)constant.second);
+			if (label && constant.first == label->GetLabelText())
+			{
+				segment->RemoveCodeLabel(label, true);
+				delete label;
+			}
+		}
+	}
 
 	database->Finalize();
 	symbols->SetDebugDatabase(database);

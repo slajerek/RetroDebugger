@@ -10,7 +10,9 @@
 // zero-page parameters at a function's entry, a static-stack local inside
 // and outside its lines, a frame-relative parameter through a recursion
 // (missing in the prologue), a local of another function out of scope.
-// cc65: a global and a stack local, approximate with their reasons.
+// cc65: a global and a stack local, approximate with their reasons. KickC:
+// a register parameter at the entry, a folded constant (no longer a label),
+// a zero-page global.
 class CTestSourceVariables : public CTest
 {
 public:

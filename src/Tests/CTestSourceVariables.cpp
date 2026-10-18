@@ -5,6 +5,7 @@
 #include "CDebuggerApi.h"
 #include "CDebugSymbols.h"
 #include "CDebugSymbolsSegment.h"
+#include "CDebugSymbolsCodeLabel.h"
 #include "CDebugBreakpointsAddr.h"
 #include "CDebugInfoLoader.h"
 #include "CDebugDatabase.h"
@@ -234,6 +235,32 @@ void CTestSourceVariables::Run(ITestCallback *cb)
 						 "cc65: sum's n is word(sp) + 0, approximate: the stack depth is not recorded (" + v.dump() + ")");
 	}
 
+	// KickC nested-calls: "result" a zero-page global (.label result = 2);
+	// leaf(__register(A) char v): at its entry ($082C) from middle, v = A =
+	// top.v = 1; top's ".label v = 1" is a folded constant, not a label at $0001
+	ok = ok && Load("kickc", "nested-calls", "main.dbg");
+	if (ok)
+	{
+		CDebugSymbolsCodeLabel *atPort = di->symbols->currentSegment->FindLabel(0x0001);
+		ok = Check(atPort == NULL, "KickC: the folded constant v is not a label at $0001 (the CPU port)");
+	}
+	ok = ok && RunTo(0x080D, 0x082C, true);
+	if (ok)
+	{
+		nlohmann::json v = Variable("v"), result = Variable("result");
+		ok = Check(Is(v, "exact", 1) && v.value("location", "") == "register" && v.value("register", "") == "A",
+				   "KickC: at leaf's entry its register parameter v is A, exact: 1 (" + v.dump() + ")")
+			&& Check(result.value("location", "") == "fixed" && result["address"] == 2 && result.value("quality", "") == "approximate",
+					 "KickC: the global result is fixed at $02, approximate: KickC records no size (" + result.dump() + ")");
+	}
+	ok = ok && RunTo(0x080D, 0x0825, true);
+	if (ok)
+	{
+		nlohmann::json v = Variable("v");
+		ok = Check(v.value("location", "") == "constant" && v.value("constant", -1) == 1 && v.value("quality", "") == "missing",
+				   "KickC: in top, v is the folded constant 1, no memory location (" + v.dump() + ")");
+	}
+
 	di->PauseEmulationBlockedWait();
 	guiMain->LockMutex();
 	di->LockMutex();
@@ -254,6 +281,6 @@ void CTestSourceVariables::Run(ITestCallback *cb)
 	if (!ok)
 		TestCompleted(false, failure.c_str());
 	else
-		TestCompleted(true, "C variables resolve with their locations, values and qualities (Oscar64, cc65)");
+		TestCompleted(true, "C variables resolve with their locations, values and qualities (Oscar64, cc65, KickC)");
 #endif
 }
