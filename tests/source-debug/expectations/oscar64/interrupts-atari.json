@@ -6,6 +6,8 @@
   "artifacts": "tests/data/source-debug/oscar64/atari/interrupts",
   "binary": "main.xex",
   "debugInfo": "main.dbj",
+  "irq": {"timerCycles": 40, "call": "tick"},
+  "note": "Atari800 runs POKEY timers once per scanline: any period under 114 cycles is one IRQ per line, the runner synchronises so the first lands early in the trace",
   "start": {
     "file": "main.c",
     "line": 21

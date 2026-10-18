@@ -13,7 +13,8 @@ class CDebugDatabase;
 // RD-015: the step-trace runner. Replays every trace listed in
 // tests/source-debug/expectations/index.json (spec #9.5 format plus the
 // machine (c64, atari, nes), the Tier 1 artifacts, the entry point and an
-// optional C64 IRQ): loads
+// optional fast interrupt -- C64 CIA timer A, Atari POKEY timer 1, NES DMC --
+// whose handler can call a fixture function): loads
 // the binary and its debug info into scratch symbols, runs to the start line
 // through a source breakpoint, then issues each source step and compares
 // (file, line, function, depth, reason). A failing trace writes the actual
@@ -38,7 +39,12 @@ private:
 		CDebugInterface *di = NULL;
 		bool started = false;
 		CDebugSymbols *liveSymbols = NULL;
-		u8 savedVector[2] = { 0, 0 };
+		u8 savedVector[2] = { 0, 0 };	// C64 $0314
+		u8 savedPort[2] = { 0x2F, 0x37 };	// C64 6510 port: cc65's crt0 banks BASIC out
+		// Atari: the interrupt banks the OS out and owns the CPU vectors
+		bool atariInterrupt = false;
+		u8 atariPortb = 0xFF, atariPbctl = 0, atariSkctl = 0;
+		u8 atariVectors[6] = {};
 	};
 	std::vector<Machine> machines;
 	Machine *GetMachine(const std::string &name);
@@ -51,4 +57,7 @@ private:
 					 const std::string &name);
 	bool LaunchNes(CDebugInterface *di, const nlohmann::json &trace, const std::string &binaryPath,
 				   const std::string &name);
+	bool InstallInterrupt(Machine &machine, const nlohmann::json &trace, const CDebugDatabase *database,
+						  u16 startAddress, const std::string &name);
+	void RemoveAtariInterrupt(Machine &machine);
 };

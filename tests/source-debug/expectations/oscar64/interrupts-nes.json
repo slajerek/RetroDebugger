@@ -7,7 +7,8 @@
   "binary": "main.nes",
   "debugInfo": "main.dbj",
   "entry": "0xFF80",
-  "note": "Oscar64 1.32.273 -tm=nes writes no vectors for a plain main.c; the runner enters the startup section directly",
+  "note": "Oscar64 1.32.273 -tm=nes writes no vectors for a plain main.c; the runner enters the startup section directly; the IRQ is the DMC (432 cycles), so about one lands in this short trace",
+  "irq": {"call": "tick"},
   "start": {
     "file": "main.c",
     "line": 21

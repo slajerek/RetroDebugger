@@ -6,6 +6,7 @@
 #include "CDebugInterfaceAtari.h"
 #include "CDebugInterfaceNes.h"
 #include "NesWrapper.h"
+#include "AtariWrapper.h"
 #include "CDebugSymbols.h"
 #include "CDebugSymbolsC64.h"
 #include "CDebugSymbolsSegment.h"
@@ -128,6 +129,24 @@ static const CDebugFunction *FindFunction(const CDebugDatabase *database, u32 re
 	return NULL;
 }
 
+static const CDebugFunction *FindFunctionByName(const CDebugDatabase *database, const std::string &name)
+{
+	for (const CDebugFunction &function : database->Functions())
+	{
+		if (function.name == name)
+			return &function;
+	}
+	return NULL;
+}
+
+// where each machine's interrupt handler counts itself (16 bit)
+static u16 InterruptCounterAddress(const std::string &machine)
+{
+	if (machine == "atari")	return 0x06F0;	// page 6, free for the user
+	if (machine == "nes")	return 0x04F0;	// RAM neither Oscar64 nor cc65 places anything in
+	return 0x0002;
+}
+
 static bool WaitForPause(CDebugInterface *di, int timeoutMs)
 {
 	for (int waited = 0; waited < timeoutMs; waited += 10)
@@ -219,6 +238,8 @@ CTestSourceStepTrace::Machine *CTestSourceStepTrace::GetMachine(const std::strin
 	{
 		machine.savedVector[0] = Peek(di, 0x0314);
 		machine.savedVector[1] = Peek(di, 0x0315);
+		machine.savedPort[0] = ((CDebugInterfaceVice *)di)->GetByteC64(0x0000);
+		machine.savedPort[1] = ((CDebugInterfaceVice *)di)->GetByteC64(0x0001);
 	}
 	machines.push_back(machine);
 	return &machines.back();
@@ -232,15 +253,19 @@ void CTestSourceStepTrace::RestoreMachines()
 		di->SetDebugMode(DEBUGGER_MODE_PAUSED);
 		if (machine.name == "c64")
 		{
-			// KERNAL vector, PAL timer A latch ($4025) and the timer A IRQ back
+			// KERNAL vector, 6510 port, PAL timer A latch ($4025) and the timer A IRQ back
 			CDebugInterfaceVice *vice = (CDebugInterfaceVice *)di;
 			vice->PauseEmulationBlockedWait();
+			vice->SetByteC64(0x0000, machine.savedPort[0]);
+			vice->SetByteC64(0x0001, machine.savedPort[1]);
 			vice->SetByteToRamC64(0x0314, machine.savedVector[0]);
 			vice->SetByteToRamC64(0x0315, machine.savedVector[1]);
 			vice->SetByteC64(0xDC04, 0x25);
 			vice->SetByteC64(0xDC05, 0x40);
 			vice->SetByteC64(0xDC0D, 0x81);
 		}
+		else if (machine.name == "atari")
+			RemoveAtariInterrupt(machine);
 #ifdef RUN_NES
 		if (machine.name == "nes")
 			nesd_unload_cartridge();
@@ -282,12 +307,7 @@ bool CTestSourceStepTrace::LaunchC64(CDebugInterface *debugInterface, const json
 		if (irq.contains("call"))
 		{
 			std::string callee = irq["call"].get<std::string>();
-			const CDebugFunction *function = NULL;
-			for (const CDebugFunction &f : database->Functions())
-			{
-				if (f.name == callee)
-					function = &f;
-			}
+			const CDebugFunction *function = FindFunctionByName(database, callee);
 			if (!Check(function != NULL, name + ": the IRQ handler's callee " + callee + " is a function of the debug info"))
 				return false;
 			handler.insert(handler.end(), { 0x20, (u8)(function->start & 0xFF), (u8)(function->start >> 8) });
@@ -352,7 +372,22 @@ bool CTestSourceStepTrace::LaunchNes(CDebugInterface *di, const json &trace, con
 									 const std::string &name)
 {
 #ifdef RUN_NES
-	if (!Check(nesd_insert_cartridge((char *)binaryPath.c_str()), name + ": the cartridge inserts"))
+	std::string cartridge = binaryPath;
+	if (trace.contains("irq"))
+	{
+		// the IRQ vector (the last PRG bank's $FFFE) to the handler at $0400, in a copy
+		std::vector<u8> image;
+		ReadFile(binaryPath, image);
+		size_t prgEnd = image.size() >= 16 ? 16 + ((image[6] & 0x04) ? 512 : 0) + (size_t)image[4] * 16384 : 0;
+		if (!Check(image.size() >= 16 && memcmp(image.data(), "NES\x1A", 4) == 0 && image[4] > 0 && prgEnd <= image.size(),
+				   name + ": the cartridge has an iNES header and its PRG ROM"))
+			return false;
+		image[prgEnd - 2] = 0x00;
+		image[prgEnd - 1] = 0x04;
+		cartridge = "/tmp/source-step-trace-irq.nes";
+		std::ofstream(cartridge, std::ios::binary).write((const char *)image.data(), (std::streamsize)image.size());
+	}
+	if (!Check(nesd_insert_cartridge((char *)cartridge.c_str()), name + ": the cartridge inserts"))
 		return false;
 	if (trace.contains("entry"))
 	{
@@ -365,6 +400,133 @@ bool CTestSourceStepTrace::LaunchNes(CDebugInterface *di, const json &trace, con
 #else
 	return false;
 #endif
+}
+
+// Atari and NES: the interrupt is installed at the start line, after the
+// program's own startup ran (Oscar64's NES startup does SEI). A stub at
+// handler + $40 -- the registers saved, the timer set up, CLI and a wait
+// until the handler counted once, the registers back, CLI, JMP start -- runs
+// back to the start breakpoint with only the I flag changed and the next
+// interrupt due within the trace's first cycles (Atari800 runs POKEY timers
+// once per 114-cycle scanline; a trace runs about as long). The
+// handler saves A/X/Y, counts itself, calls the "call" function and
+// acknowledges.
+//  - Atari: POKEY timer 1 at 1.79 MHz (period AUDF1 + 4 cycles), handler at
+//    $0600. Without the OS: a build has no OS ROM unless the user supplies
+//    one (EMUOS_ALTIRRA is not defined, so no built-in AltirraOS), so the OS
+//    is banked out through PORTB (XL/XE) and the CPU vectors at $FFFA-$FFFF
+//    are RAM: IRQ to the handler, NMI to an RTI at $063F. Nor did an OS take
+//    POKEY out of its init state: SKCTL 0 stops the timers, so the stub sets 3.
+//  - NES: the DMC, one byte sample at the fastest rate, refilled from the
+//    handler at $0400 (the cartridge copy's IRQ vector); frame IRQ off. The
+//    period is 8 x 54 = 432 cycles whatever timerCycles says.
+bool CTestSourceStepTrace::InstallInterrupt(Machine &machine, const json &trace, const CDebugDatabase *database,
+											u16 startAddress, const std::string &name)
+{
+	CDebugInterface *di = machine.di;
+	bool atari = machine.name == "atari";
+	const json &irq = trace["irq"];
+	u16 handlerAddress = atari ? 0x0600 : 0x0400;
+	u16 counter = InterruptCounterAddress(machine.name);
+	u8 counterLo = (u8)(counter & 0xFF), counterHi = (u8)(counter >> 8);
+
+	std::vector<u8> handler = { 0x48, 0x8A, 0x48, 0x98, 0x48,				// PHA TXA PHA TYA PHA
+								0xEE, counterLo, counterHi, 0xD0, 0x03,	// INC counter, BNE
+								0xEE, (u8)(counterLo + 1), counterHi };
+	if (irq.contains("call"))
+	{
+		std::string callee = irq["call"].get<std::string>();
+		const CDebugFunction *function = FindFunctionByName(database, callee);
+		if (!Check(function != NULL, name + ": the interrupt handler's callee " + callee + " is a function of the debug info"))
+			return false;
+		handler.insert(handler.end(), { 0x20, (u8)(function->start & 0xFF), (u8)(function->start >> 8) });
+	}
+	if (atari)
+		handler.insert(handler.end(), { 0xA9, 0x00, 0x8D, 0x0E, 0xD2,			// IRQEN off and on: acknowledged
+										0xA9, 0x01, 0x8D, 0x0E, 0xD2 });
+	else
+		handler.insert(handler.end(), { 0xA9, 0x8F, 0x8D, 0x10, 0x40,			// DMC IRQ on, rate 15
+										0xA9, 0x10, 0x8D, 0x15, 0x40 });		// restart, acknowledged
+	handler.insert(handler.end(), { 0x68, 0xA8, 0x68, 0xAA, 0x68, 0x40 });		// PLA TAY PLA TAX PLA RTI
+
+	std::vector<u8> stub = { 0x08, 0x48, 0x8A, 0x48 };						// PHP PHA TXA PHA
+	if (atari)
+	{
+		int machineType, ramSizeKb, portb, portbMask;
+		atrd_get_banking_state(&machineType, &ramSizeKb, &portb, &portbMask, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+		if (!Check(machineType == 1, name + ": the Atari is an XL/XE, whose PORTB banks the OS out for the interrupt vectors"))
+			return false;
+		// DDRB all outputs (PBCTL bit 2 clear selects it), then PORTB bit 0 clear: RAM under the OS
+		machine.atariPortb = (u8)portb;
+		machine.atariPbctl = ((CDebugInterfaceAtari *)di)->GetPiaRegister(0x03);
+		Poke(di, 0xD303, { (u8)(machine.atariPbctl & ~0x04) });
+		Poke(di, 0xD301, { 0xFF });
+		Poke(di, 0xD303, { (u8)(machine.atariPbctl | 0x04) });
+		Poke(di, 0xD301, { (u8)(portb & ~0x01) });
+		for (int i = 0; i < 6; i++)
+			machine.atariVectors[i] = Peek(di, (u16)(0xFFFA + i));
+		machine.atariSkctl = ((CDebugInterfaceAtari *)di)->GetPokeyRegister(0x0F);
+		machine.atariInterrupt = true;
+		u16 rti = (u16)(handlerAddress + 0x3F);
+		Poke(di, rti, { 0x40 });
+		Poke(di, 0xFFFA, { (u8)(rti & 0xFF), (u8)(rti >> 8) });
+		Poke(di, 0xFFFE, { (u8)(handlerAddress & 0xFF), (u8)(handlerAddress >> 8) });
+
+		int cycles = irq.value("timerCycles", 150);
+		u8 audf = (u8)(cycles < 5 ? 1 : cycles > 259 ? 255 : cycles - 4);
+		stub.insert(stub.end(), { 0xA9, 0x03, 0x8D, 0x0F, 0xD2,				// SKCTL out of init: the timers count
+								  0xA9, 0x40, 0x8D, 0x08, 0xD2,				// AUDCTL: channel 1 at 1.79 MHz
+								  0xA9, audf, 0x8D, 0x00, 0xD2,				// AUDF1
+								  0xA9, 0xA0, 0x8D, 0x01, 0xD2,				// AUDC1 silent
+								  0xA9, 0x01, 0x8D, 0x0E, 0xD2,				// IRQEN: timer 1
+								  0x8D, 0x09, 0xD2 });						// STIMER
+	}
+	else
+	{
+		stub.insert(stub.end(), { 0xA9, 0x40, 0x8D, 0x17, 0x40,				// frame IRQ off
+								  0xA9, 0x8F, 0x8D, 0x10, 0x40,				// DMC IRQ on, rate 15
+								  0xA9, 0x00, 0x8D, 0x12, 0x40,				// sample at $C000
+								  0x8D, 0x13, 0x40,							// one byte
+								  0xA9, 0x10, 0x8D, 0x15, 0x40 });			// start
+	}
+	// interrupts on until the handler counted (Atari: once; NES: twice, the DMC
+	// is periodic from the first refill on, then 64 x 5 cycles of its 432), so
+	// the next one is due early in the trace; the counter then starts at zero
+	u8 syncCount = atari ? 1 : 2;
+	stub.insert(stub.end(), { 0x58,											// CLI
+							  0xAD, counterLo, counterHi, 0xC9, syncCount, 0x90, 0xF9 });	// LDA counter, CMP, BCC wait
+	if (!atari)
+		stub.insert(stub.end(), { 0xA2, 0x40, 0xCA, 0xD0, 0xFD });			// LDX #64, DEX, BNE
+	stub.insert(stub.end(), { 0x78,											// SEI
+							  0xA9, 0x00, 0x8D, counterLo, counterHi, 0x8D, (u8)(counterLo + 1), counterHi,
+							  0x68, 0xAA, 0x68, 0x28, 0x58,					// PLA TAX PLA PLP CLI
+							  0x4C, (u8)(startAddress & 0xFF), (u8)(startAddress >> 8) });	// JMP start
+
+	Poke(di, handlerAddress, handler);
+	Poke(di, (u16)(handlerAddress + 0x40), stub);
+	Poke(di, counter, { 0, 0 });
+	di->MakeJmpNoReset(di->GetDataAdapter(), (u16)(handlerAddress + 0x40));
+	di->SetDebugMode(DEBUGGER_MODE_RUNNING);
+	bool paused = WaitForPause(di, 5000);
+	u16 pc;
+	u8 a, x, y, p, sp;
+	di->GetCpuRegs(&pc, &a, &x, &y, &p, &sp);
+	return Check(paused && pc == startAddress, name + ": the interrupt is installed and the program is back at the start line");
+}
+
+// timer IRQ off, the vectors and PORTB back; the machine is paused
+void CTestSourceStepTrace::RemoveAtariInterrupt(Machine &machine)
+{
+	if (!machine.atariInterrupt)
+		return;
+	CDebugInterface *di = machine.di;
+	Poke(di, 0xD20E, { 0x00 });
+	Poke(di, 0xD20F, { machine.atariSkctl });
+	for (int i = 0; i < 6; i++)
+		Poke(di, (u16)(0xFFFA + i), { machine.atariVectors[i] });
+	Poke(di, 0xD301, { machine.atariPortb });
+	Poke(di, 0xD303, { machine.atariPbctl });
+	machine.atariInterrupt = false;
 }
 
 bool CTestSourceStepTrace::RunTrace(const std::string &path)
@@ -391,8 +553,6 @@ bool CTestSourceStepTrace::RunTrace(const std::string &path)
 		return Check(false, name + ": unknown machine " + machineName);
 	}
 	CDebugInterface *di = machine->di;
-	if (!Check(!trace.contains("irq") || machineName == "c64", name + ": \"irq\" is only driven on the C64"))
-		return false;
 
 	std::string dir = ResolveProjectPath(trace.value("artifacts", "").c_str());
 	std::string binaryPath = dir + "/" + trace.value("binary", "");
@@ -440,7 +600,10 @@ bool CTestSourceStepTrace::RunTrace(const std::string &path)
 	if (machineName == "c64")
 		launched = LaunchC64(di, trace, binary, database.get(), name);
 	else if (machineName == "atari")
+	{
+		RemoveAtariInterrupt(*machine);		// its handler would call into code about to be overwritten
 		launched = LaunchAtari(di, trace, binary, name);
+	}
 #ifdef RUN_NES
 	else if (machineName == "nes")
 		launched = LaunchNes(di, trace, binaryPath, name);
@@ -449,7 +612,6 @@ bool CTestSourceStepTrace::RunTrace(const std::string &path)
 		return false;
 	di->SetDebugMode(DEBUGGER_MODE_RUNNING);
 	bool paused = WaitForPause(di, 5000);
-	scratch->RemoveSourceBreakpoint(startBp);
 	u16 pc;
 	u8 a, x, y, p, sp;
 	di->GetCpuRegs(&pc, &a, &x, &y, &p, &sp);
@@ -458,6 +620,11 @@ bool CTestSourceStepTrace::RunTrace(const std::string &path)
 	snprintf(got, sizeof(got), "PC $%04X, mode %d", pc, (int)di->GetDebugMode());
 	if (!Check(paused && pc == startAddress, name + ": the program stops at the start line (" + hex + "; " + got + ")"))
 		return false;
+	if (trace.contains("irq") && machineName != "c64" && !InstallInterrupt(*machine, trace, database.get(), (u16)startAddress, name))
+		return false;
+	if (machineName == "c64")
+		Poke(di, InterruptCounterAddress(machineName), { 0, 0 });	// the IRQs of the trace, not of the startup
+	scratch->RemoveSourceBreakpoint(startBp);
 
 	// replay
 	std::ostringstream log;
@@ -525,7 +692,8 @@ bool CTestSourceStepTrace::RunTrace(const std::string &path)
 	if (ok && trace.contains("irq"))
 	{
 		// the handler's counter: the interrupt really ran during the trace
-		int irqs = Peek(di, 0x0002) | (Peek(di, 0x0003) << 8);
+		u16 counter = InterruptCounterAddress(machineName);
+		int irqs = Peek(di, counter) | (Peek(di, (u16)(counter + 1)) << 8);
 		message += ", with the IRQ taken " + std::to_string(irqs) + " times";
 		if (irqs == 0)
 		{
