@@ -11,6 +11,8 @@ static const int kAttribRom = 1;
 static const int kAttribHardware = 2;
 static const int kCartStd8 = 1;
 static const int kCartStd16 = 2;
+static const int kCartXegs32 = 12;
+static const int kCartSwXegs32 = 33;
 
 const char *CAtariMemoryMappingResolver::GetMachineVariant()
 {
@@ -79,19 +81,26 @@ CDebugMappedAddress CAtariMemoryMappingResolver::Resolve(u16 cpuAddress, DebugMe
 		else if ((cpuAddress >= 0xA000 && cpuAddress < 0xC000 && cartA0bf)
 				 || (cpuAddress >= 0x8000 && cpuAddress < 0xA000 && cart809f))
 		{
+			bool known = true;
 			if (cartType == kCartStd8 && cpuAddress >= 0xA000)
-			{
-				p.kind = DebugMemoryKind::CartridgeRom;
-				p.device = "atari-cart";
 				p.offset = cpuAddress - 0xA000;
-			}
 			else if (cartType == kCartStd16)
+				p.offset = cpuAddress - 0x8000;
+			else if ((cartType == kCartXegs32 || cartType == kCartSwXegs32) && !(cartState & 0x80))
+			{
+				// a-cartridge.c set_bank_809F: $8000 is bank `state`, $A000 the last bank
+				p.offset = cpuAddress >= 0xA000 ? 0x6000 + (cpuAddress - 0xA000)
+												: (u32)(cartState & 0x03) * 0x2000 + (cpuAddress - 0x8000);
+			}
+			else
+				known = false;	// other cartridge types bank on their own: Unknown until profiled
+			if (known)
 			{
 				p.kind = DebugMemoryKind::CartridgeRom;
 				p.device = "atari-cart";
-				p.offset = cpuAddress - 0x8000;
+				mapped.hasImageOffset = true;		// the byte's offset in the cartridge file (RD-030)
+				mapped.imageOffset = (u64)atrd_get_cart_file_header_size() + p.offset;
 			}
-			// other cartridge types bank on their own: Unknown until profiled
 		}
 		else if (cpuAddress >= 0xA000 && cpuAddress < 0xC000 && builtinA000 != 0)
 		{

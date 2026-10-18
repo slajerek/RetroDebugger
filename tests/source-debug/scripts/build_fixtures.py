@@ -64,7 +64,7 @@ MATRIX = os.path.join(SOURCE_DEBUG, "MATRIX.md")
 BUILD_ROOT = "/tmp/rd-source-debug"
 FIXED_MTIME = 1767225600  # 2026-01-01T00:00:00Z
 STEP_TIMEOUT = 300
-MACHINES = ["c64", "atari", "nes", "c64-magicdesk", "nes-uxrom", "nes-mmc1"]	# c64-magicdesk, nes-uxrom, nes-mmc1: banked cartridge builds (RD-026, RD-030)
+MACHINES = ["c64", "atari", "nes", "c64-magicdesk", "atari-xegs", "nes-uxrom", "nes-mmc1"]	# banked cartridge builds (RD-026, RD-030)
 
 
 def sha256(path):
@@ -100,6 +100,9 @@ def expand(argv, exes, fixture):
         # {toolchains}: tests/source-debug/toolchains, for per-toolchain
         # companion sources (kickc-nes-vectors.c)
         arg = arg.replace("{toolchains}", os.path.join(ROOT, "tests", "source-debug", "toolchains"))
+        # {python} {scripts}: this interpreter and tests/source-debug/scripts,
+        # for post-link steps (car_checksum.py)
+        arg = arg.replace("{python}", sys.executable).replace("{scripts}", os.path.join(SOURCE_DEBUG, "scripts"))
         out.append(arg.replace("{fixture}", fixture))
     return out
 
@@ -108,7 +111,9 @@ def portable_argv(argv, exes):
     """argv with executable paths replaced by their names, for the manifest."""
     by_path = {path: name for name, path in exes.items()}
     toolchains = os.path.join(ROOT, "tests", "source-debug", "toolchains")
-    return [by_path.get(arg, arg).replace(toolchains, "{toolchains}") for arg in argv]
+    scripts = os.path.join(SOURCE_DEBUG, "scripts")
+    by_path[sys.executable] = "{python}"
+    return [by_path.get(arg, arg).replace(toolchains, "{toolchains}").replace(scripts, "{scripts}") for arg in argv]
 
 
 def run(argv, cwd):

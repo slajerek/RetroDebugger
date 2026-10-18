@@ -165,6 +165,7 @@ typedef struct CARTRIDGE_image_t {
 	int size; /* Size of the image, in kilobytes */
 	UBYTE *image;
 	char filename[FILENAME_MAX];
+	int file_header_size; /* C64D (RD-030): bytes before the image in the file, 16 for a .car */
 } CARTRIDGE_image_t;
 
 extern CARTRIDGE_image_t CARTRIDGE_main;

@@ -1461,6 +1461,7 @@ static int InsertCartridge(const char *filename, CARTRIDGE_image_t *cart)
 		/* Save Filename for state save */
 		strcpy(cart->filename, filename);
 
+	cart->file_header_size = 0;
 	/* if full kilobytes, assume it is raw image */
 	if ((len & 0x3ff) == 0) {
 		/* alloc memory and read data */
@@ -1519,6 +1520,7 @@ static int InsertCartridge(const char *filename, CARTRIDGE_image_t *cart)
 				(header[10] << 8) |
 				header[11];
 			cart->type = type;
+			cart->file_header_size = 16;
 			result = checksum == CARTRIDGE_Checksum(cart->image, len) ? 0 : CARTRIDGE_BAD_CHECKSUM;
 			InitCartridge(cart);
 			return result;

@@ -1,0 +1,139 @@
+{
+  "fixture": "banked",
+  "compiler": "cc65",
+  "optimization": "debug",
+  "machine": "atari",
+  "artifacts": "tests/data/source-debug/cc65/atari-xegs/banked",
+  "binary": "main.car",
+  "debugInfo": "main.dbg",
+  "note": "Atari XEGS 32 KB: bankA() (bank 0) and bankB() (bank 1) are both linked at $8000 and both bodies start at $8003; a line resolves by the bank in the $8000 window, from the .car file offset of the fetched byte (RD-007, RD-030)",
+  "start": {
+    "file": "xegs.c",
+    "line": 28
+  },
+  "steps": [
+    {
+      "action": "sourceInto",
+      "note": "bank 0 in the window: bankA, not bankB which was linked last at the same address",
+      "expected": {
+        "file": "xegs.c",
+        "line": 15,
+        "function": "bankA",
+        "depth": 1
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceOut",
+      "expected": {
+        "file": "xegs.c",
+        "line": 28,
+        "function": "main",
+        "depth": 0
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceOver",
+      "expected": {
+        "file": "xegs.c",
+        "line": 29,
+        "function": "main",
+        "depth": 0
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceOver",
+      "expected": {
+        "file": "xegs.c",
+        "line": 30,
+        "function": "main",
+        "depth": 0
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceInto",
+      "note": "after selectBank(1) the same $8000 is bankB",
+      "expected": {
+        "file": "xegs.c",
+        "line": 21,
+        "function": "bankB",
+        "depth": 1
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceOut",
+      "expected": {
+        "file": "xegs.c",
+        "line": 30,
+        "function": "main",
+        "depth": 0
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceOver",
+      "expected": {
+        "file": "xegs.c",
+        "line": 31,
+        "function": "main",
+        "depth": 0
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceOver",
+      "expected": {
+        "file": "xegs.c",
+        "line": 32,
+        "function": "main",
+        "depth": 0
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceInto",
+      "expected": {
+        "file": "xegs.c",
+        "line": 15,
+        "function": "bankA",
+        "depth": 1
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceOut",
+      "expected": {
+        "file": "xegs.c",
+        "line": 32,
+        "function": "main",
+        "depth": 0
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceOver",
+      "expected": {
+        "file": "xegs.c",
+        "line": 33,
+        "function": "main",
+        "depth": 0
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceOver",
+      "note": "for (;;) is mapped code: one stop per iteration",
+      "expected": {
+        "file": "xegs.c",
+        "line": 33,
+        "function": "main",
+        "depth": 0
+      },
+      "expectedReason": "completed"
+    }
+  ]
+}

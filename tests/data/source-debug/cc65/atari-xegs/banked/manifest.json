@@ -1,0 +1,101 @@
+{
+  "buildDir": "/tmp/rd-source-debug/cc65/atari-xegs/banked",
+  "commit": null,
+  "fixedMtime": 1767225600,
+  "fixture": "banked",
+  "inputs": {
+    "magicdesk-crt0.s": "544b16fabd63ac5cb54182808356d061d9fad02a058c89dc49080cc73e0251d9",
+    "magicdesk.c": "6f1520fabd1a6701443ef3c72865d931dc71fa16c32453d325ff32f49354514b",
+    "magicdesk.cfg": "1cbc893cd8fcd005e0bf987bc29bd5bd9a4b463f783e11602e9ce3d4b235b14a",
+    "mmc1-crt0.s": "028aa34ceb9a10380eb59261e5510beb12b0c520e3b967beb0103aa19119769c",
+    "mmc1.c": "dd290c49f84e2c186a9c78b86e4a672f13737f3629c300fa0d874a572697927f",
+    "mmc1.cfg": "c9445ddf2387359f7f00db3c90b27da02c0ff7e01f4cdfcf4dbc11dd731b302f",
+    "uxrom-crt0.s": "a65c7233d025c0554246505324db93b43db966b76dd1d4c3c7d451573885275b",
+    "uxrom.c": "ff7f1bfdd188f8df1fef9953a7a4b23c92812f0368d4532fe5ad21eb2fb05843",
+    "uxrom.cfg": "f0ffbc7eb485fa194a1638b76baa6a677f52a4f52be931c29c45d55646e1aa2a",
+    "xegs-crt0.s": "7d62391772a4b8ea2100f47d5d89c47b20d2c540caa13b9283a7b62c78654cf7",
+    "xegs.c": "37126f391620d237b0e57f7eaf4d4e707de402c3e25c4af33803987316b22bff",
+    "xegs.cfg": "d78d6b543b88a33e13b462378582d66546b0ba7550a86e6be551e99b598f52f1"
+  },
+  "machine": "atari-xegs",
+  "outputs": {
+    "main.car": {
+      "sha256": "7dfd4bbe65f39131230e3204ff8e9b5f4ace732c5f12b5074c5f4301a169d628",
+      "size": 32784
+    },
+    "main.dbg": {
+      "sha256": "c3d148806a011fcee5af95eb868900aae347c6ee6159e5ed6dfd969f94f75752",
+      "size": 17840
+    },
+    "main.lbl": {
+      "sha256": "a70979c4bf853b347118b75ccc2ce77e652d98efab9a8c7dd5dcdcae7e98917e",
+      "size": 1420
+    },
+    "main.map": {
+      "sha256": "e581505ee9c01f3940d604280861c825b5ea5fdfb298e6ae3ec8fe8b6a59052b",
+      "size": 5514
+    },
+    "xegs.s": {
+      "sha256": "de0c52b4239f6b154e918d31ea05270780b43701c6cc80cfefab52968b2dba9e",
+      "size": 3012
+    }
+  },
+  "source": "xegs.c",
+  "steps": [
+    [
+      "cc65",
+      "-t",
+      "atari",
+      "-g",
+      "xegs.c"
+    ],
+    [
+      "ca65",
+      "-t",
+      "atari",
+      "-g",
+      "xegs.s"
+    ],
+    [
+      "ca65",
+      "-t",
+      "atari",
+      "-g",
+      "xegs-crt0.s"
+    ],
+    [
+      "ld65",
+      "-C",
+      "xegs.cfg",
+      "--dbgfile",
+      "main.dbg",
+      "-Ln",
+      "main.lbl",
+      "-m",
+      "main.map",
+      "-o",
+      "main.car",
+      "xegs.o",
+      "xegs-crt0.o",
+      "atari.lib"
+    ],
+    [
+      "{python}",
+      "-I",
+      "{scripts}/car_checksum.py",
+      "main.car"
+    ]
+  ],
+  "toolDirs": {
+    "ca65": "/opt/homebrew/Cellar/cc65/2.19/bin",
+    "cc65": "/opt/homebrew/Cellar/cc65/2.19/bin",
+    "ld65": "/opt/homebrew/Cellar/cc65/2.19/bin"
+  },
+  "toolchain": "cc65",
+  "version": "2.19",
+  "versionReported": {
+    "ca65": "ca65 V2.18 - N/A (/opt/homebrew/Cellar/cc65/2.19/bin)",
+    "cc65": "cc65 V2.18 - N/A (/opt/homebrew/Cellar/cc65/2.19/bin)",
+    "ld65": "ld65 V2.18 - N/A (/opt/homebrew/Cellar/cc65/2.19/bin)"
+  }
+}

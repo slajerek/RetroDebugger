@@ -16,7 +16,7 @@ class CSlrString;
 // machine (c64, atari, nes), the Tier 1 artifacts, the entry point and an
 // optional fast interrupt -- C64 CIA timer A, Atari POKEY timer 1, NES DMC --
 // whose handler can call a fixture function): loads
-// the binary (a C64 .crt is attached) and its debug info into scratch symbols, runs to the start line
+// the binary (a C64 .crt or an Atari .car is inserted) and its debug info into scratch symbols, runs to the start line
 // through a source breakpoint, then issues each source step and compares
 // (file, line, function, depth, reason). A failing trace writes the actual
 // trace next to the expected one to
@@ -49,6 +49,7 @@ private:
 		bool atariInterrupt = false;
 		u8 atariPortb = 0xFF, atariPbctl = 0, atariSkctl = 0;
 		u8 atariVectors[6] = {};
+		bool atariCartridge = false;	// a trace's .car inserted
 	};
 	std::vector<Machine> machines;
 	Machine *GetMachine(const std::string &name);
@@ -59,6 +60,8 @@ private:
 				   const CDebugDatabase *database, const std::string &name);
 	bool LaunchC64Cartridge(Machine &machine, const std::string &binaryPath, u16 startAddress, const std::string &name);
 	bool DetachC64Cartridge(Machine &machine);
+	bool LaunchAtariCartridge(Machine &machine, const std::string &binaryPath, u16 startAddress, const std::string &name);
+	bool RemoveAtariCartridge(Machine &machine);
 	bool LaunchAtari(CDebugInterface *di, const nlohmann::json &trace, const std::vector<u8> &binary,
 					 const std::string &name);
 	bool LaunchNes(CDebugInterface *di, const nlohmann::json &trace, const std::string &binaryPath,

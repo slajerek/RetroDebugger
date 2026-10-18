@@ -12,7 +12,10 @@
     "mmc1.cfg": "c9445ddf2387359f7f00db3c90b27da02c0ff7e01f4cdfcf4dbc11dd731b302f",
     "uxrom-crt0.s": "a65c7233d025c0554246505324db93b43db966b76dd1d4c3c7d451573885275b",
     "uxrom.c": "ff7f1bfdd188f8df1fef9953a7a4b23c92812f0368d4532fe5ad21eb2fb05843",
-    "uxrom.cfg": "f0ffbc7eb485fa194a1638b76baa6a677f52a4f52be931c29c45d55646e1aa2a"
+    "uxrom.cfg": "f0ffbc7eb485fa194a1638b76baa6a677f52a4f52be931c29c45d55646e1aa2a",
+    "xegs-crt0.s": "7d62391772a4b8ea2100f47d5d89c47b20d2c540caa13b9283a7b62c78654cf7",
+    "xegs.c": "37126f391620d237b0e57f7eaf4d4e707de402c3e25c4af33803987316b22bff",
+    "xegs.cfg": "d78d6b543b88a33e13b462378582d66546b0ba7550a86e6be551e99b598f52f1"
   },
   "machine": "c64-magicdesk",
   "outputs": {

@@ -6,6 +6,8 @@
 #include "CDebugInterface.h"
 #include "CDebugInterfaceNes.h"
 #include "CDebugInterfaceVice.h"
+#include "CDebugInterfaceAtari.h"
+#include "CDebugInterfaceTask.h"
 #include "CDebugSymbolsC64.h"
 #include "C64SettingsStorage.h"
 #include "CSlrString.h"
@@ -65,7 +67,18 @@ bool CTestBankedSource::RunDatabase()
 		&& bank0 && bank0->lineStart == 10 && bank1 && bank1->lineStart == 20
 		&& bank0Only && bank0Only->lineStart == 10
 		&& unknown && unknown->lineStart == 20;	// no bank known: the address's mapping in effect
-	return Check(ok, "Banked database: $8000-$8007 is banked, $8008 and $C000 are not; the image offset picks bank 0 or 1, an unknown bank falls back to the mapping in effect");
+	if (!Check(ok, "Banked database: $8000-$8007 is banked, $8008 and $C000 are not; the image offset picks bank 0 or 1, an unknown bank falls back to the mapping in effect"))
+		return false;
+
+	// both banks' lines start at $8000: each line resolves to its own bank's
+	// range (the binder once kept only the range a by-address lookup picked)
+	std::vector<const CDebugSourceMapping *> line10, line20;
+	i32 resolved10 = 0, resolved20 = 0;
+	DebugResolveSourceLine(&database, "banked.c", 10, &resolved10, line10);
+	DebugResolveSourceLine(&database, "banked.c", 20, &resolved20, line20);
+	ok = resolved10 == 10 && line10.size() == 1 && line10[0]->imageOffset == 0x0010
+		&& resolved20 == 20 && line20.size() == 1 && line20[0]->imageOffset == 0x4010;
+	return Check(ok, "Banked database: lines 10 and 20, both starting at $8000 in banks 0 and 1, each resolve to their own bank's range");
 }
 
 bool CTestBankedSource::RunNes(const NesCartridge &cart)
@@ -332,6 +345,181 @@ bool CTestBankedSource::RunC64()
 #endif
 }
 
+#ifdef RUN_ATARI
+// Atari cartridge changes on the emulation thread, between two frames
+class CTaskInsertAtariCartridge : public CDebugInterfaceTask
+{
+public:
+	CTaskInsertAtariCartridge(CDebugInterfaceAtari *di, const std::string &path) : di(di), path(path) {}
+	virtual void ExecuteTask() override { di->InsertCartridge((char *)path.c_str(), true); }
+private:
+	CDebugInterfaceAtari *di;
+	std::string path;
+};
+
+class CTaskDetachAtariCartridge : public CDebugInterfaceTask
+{
+public:
+	CTaskDetachAtariCartridge(CDebugInterfaceAtari *di) : di(di) {}
+	virtual void ExecuteTask() override { di->DetachCartridge(); }
+private:
+	CDebugInterfaceAtari *di;
+};
+#endif
+
+// the machine running: until every queued VSync task has run
+static bool WaitForVSyncTasks(CDebugInterface *di, int timeoutMs)
+{
+	for (int waited = 0; waited < timeoutMs; waited += 10)
+	{
+		di->LockTasksMutex();
+		bool empty = di->vsyncTasks.empty();
+		di->UnlockTasksMutex();
+		if (empty)
+			return true;
+		SYS_Sleep(10);
+	}
+	return false;
+}
+
+// The Atari: the XEGS build (main.car is ld65's output, so the debug info's
+// image offsets are .car file offsets) inserted on the emulation thread;
+// the machine cold starts and the OS runs the cartridge. bankA (bank 0) and
+// bankB (bank 1) are at $8000, main() in the fixed bank at $A000.
+bool CTestBankedSource::RunAtari()
+{
+#ifdef RUN_ATARI
+	CDebugInterfaceAtari *di = (CDebugInterfaceAtari *)viewC64->debugInterfaceAtari;
+	if (!di)
+	{
+		ReportRequiredGap("Atari not created");
+		return true;
+	}
+	bool wasRunning = di->isRunning;
+	if (!wasRunning)
+	{
+		viewC64->StartEmulationThread(di);
+		SYS_Sleep(2000);
+	}
+	const std::string label = "Banked Atari XEGS: ";
+	std::string dir = ResolveProjectPath("tests/data/source-debug/cc65/atari-xegs/banked");
+
+	di->PauseEmulationBlockedWait();
+	CDebugSymbols *liveSymbols = di->symbols;
+	CDebugSymbols *scratch = new CDebugSymbols(di, true);
+	scratch->SetDataAdapter(liveSymbols->dataAdapter);
+	scratch->CreateDefaultSegment();
+	guiMain->LockMutex();
+	di->LockMutex();
+	di->symbols = scratch;
+	di->UnlockMutex();
+	guiMain->UnlockMutex();
+
+	CDebugInfoLoadOptions options;
+	options.sourceRoots.push_back(ResolveProjectPath("tests/source-debug/fixtures/banked"));
+	DebugInfoFormat format = DebugInfoLoadFile(scratch, (dir + "/main.dbg").c_str(), options);
+	bool ok = Check(format == DebugInfoFormat::Cc65Dbg && scratch->debugDatabase && scratch->debugDatabase->HasImageOffsets()
+					&& scratch->currentSegment && scratch->currentSegment->debugRegionId >= 0,
+					label + "the cc65 debug info loads with image offsets");
+
+	// bankB's body (line 21) and bankA's body (line 15), both at $8000 + n
+	CDebugSourceBreakpoint *onB = ok ? scratch->AddSourceBreakpoint("xegs.c", 21) : NULL;
+	CDebugBreakpointAddr *addressB = (onB && onB->IsResolved())
+		? scratch->currentSegment->breakpointsPC->GetBreakpoint(onB->bindings[0].address) : NULL;
+	char bound[160] = "";
+	if (onB && onB->IsResolved())
+		snprintf(bound, sizeof(bound), " (%d bindings, $%04X, banked %d, %d image offsets, first $%llX)", (int)onB->bindings.size(),
+				 onB->bindings[0].address, (int)onB->bindings[0].banked, addressB ? (int)addressB->imageOffsets.size() : -1,
+				 (unsigned long long)(addressB && !addressB->imageOffsets.empty() ? addressB->imageOffsets[0] : 0));
+	ok = ok && Check(onB && onB->IsResolved() && onB->bindings.size() == 1 && onB->bindings[0].banked
+					 && addressB && addressB->imageOffsets.size() == 1 && addressB->imageOffsets[0] >= 0x2010,
+					 label + "the source breakpoint on bankB's line binds to one address with bank 1's .car offset" + bound);
+
+	auto runToPause = [&](int timeoutMs) -> bool {
+		di->SetDebugMode(DEBUGGER_MODE_RUNNING);
+		for (int waited = 0; waited < timeoutMs; waited += 10)
+		{
+			SYS_Sleep(10);
+			if (di->GetDebugMode() == DEBUGGER_MODE_PAUSED)
+				return true;
+		}
+		return false;
+	};
+	// _result is the one BSS byte, at $3000 (main.map)
+	auto readResult = [&]() { u8 v = 0; bool available = false; di->GetDataAdapter()->AdapterReadByte(0x3000, &v, &available); return v; };
+
+	bool inserted = false;
+	if (ok)
+	{
+		// the insert cold starts the machine; the OS runs the cartridge to the first stop
+		di->AddVSyncTask(new CTaskInsertAtariCartridge(di, dir + "/main.car"));
+		di->SetDebugMode(DEBUGGER_MODE_RUNNING);
+		inserted = WaitForVSyncTasks(di, 5000);
+		bool paused = false;
+		for (int waited = 0; inserted && waited < 5000 && !paused; waited += 10)
+		{
+			SYS_Sleep(10);
+			paused = di->GetDebugMode() == DEBUGGER_MODE_PAUSED && (u16)di->GetCpuPC() == onB->bindings[0].address;
+		}
+		u16 pc = (u16)di->GetCpuPC();
+		u8 value = readResult();
+		char msg[220];
+		snprintf(msg, sizeof(msg), "%sthe cartridge inserts; the bankB breakpoint stops once bank 1 is in, after bankA's first call (PC $%04X, result %d), not at bankA's code at the same address", label.c_str(), pc, value);
+		ok = Check(inserted && paused && value == 1, msg);
+	}
+
+	CDebugSourceBreakpoint *onA = NULL;
+	if (ok)
+	{
+		scratch->RemoveSourceBreakpoint(onB);
+		onB = NULL;
+		onA = scratch->AddSourceBreakpoint("xegs.c", 15);
+		ok = Check(onA && onA->IsResolved() && onA->bindings.size() == 1 && onA->bindings[0].banked,
+				   label + "the source breakpoint on bankA's line binds with bank 0's .car offset");
+	}
+	if (ok)
+	{
+		bool paused = runToPause(3000);
+		u16 pc = (u16)di->GetCpuPC();
+		u8 value = readResult();
+		char msg[200];
+		snprintf(msg, sizeof(msg), "%sthe bankA breakpoint next stops at bankA's second call (PC $%04X, result %d), skipping the rest of bankB", label.c_str(), pc, value);
+		ok = Check(paused && pc == onA->bindings[0].address && value == 11, msg);
+	}
+	if (ok)
+	{
+		bool paused = runToPause(500);
+		ok = Check(!paused, label + "no further stop -- the loop in main never reaches bank 0's line again");
+	}
+
+	if (onA)
+		scratch->RemoveSourceBreakpoint(onA);
+	if (onB)
+		scratch->RemoveSourceBreakpoint(onB);
+	if (inserted)
+	{
+		di->AddVSyncTask(new CTaskDetachAtariCartridge(di));		// resets the machine
+		di->SetDebugMode(DEBUGGER_MODE_RUNNING);
+		if (!WaitForVSyncTasks(di, 5000))
+			LOGError("CTestBankedSource: the Atari cartridge detach task never ran");
+	}
+	di->PauseEmulationBlockedWait();
+	guiMain->LockMutex();
+	di->LockMutex();
+	di->symbols = liveSymbols;
+	di->UnlockMutex();
+	guiMain->UnlockMutex();
+	// scratch leaked on purpose, see CTestSymbolLoaders
+	di->SetDebugMode(DEBUGGER_MODE_RUNNING);
+	if (!wasRunning)
+		viewC64->StopEmulationThread(di);
+	return ok;
+#else
+	ReportRequiredGap("Atari emulation not compiled in");
+	return true;
+#endif
+}
+
 void CTestBankedSource::Run(ITestCallback *cb)
 {
 	this->callback = cb;
@@ -343,11 +531,11 @@ void CTestBankedSource::Run(ITestCallback *cb)
 	// bankA's and bankB's body lines, and _result, from each build's main.map
 	const NesCartridge uxrom = { "UxROM", "nes-uxrom", "uxrom.c", 18, 24, 0x6000 };
 	const NesCartridge mmc1 = { "MMC1", "nes-mmc1", "mmc1.c", 19, 25, 0x0300 };
-	bool ok = RunDatabase() && RunNes(uxrom) && RunNes(mmc1) && RunC64();
+	bool ok = RunDatabase() && RunNes(uxrom) && RunNes(mmc1) && RunC64() && RunAtari();
 	if (!ok)
 	{
 		TestCompleted(false, failure.c_str());
 		return;
 	}
-	TestCompleted(true, "Banked code resolves and breaks by the bank in the window (NES UxROM and MMC1, C64 Magic Desk; cc65)");
+	TestCompleted(true, "Banked code resolves and breaks by the bank in the window (NES UxROM and MMC1, C64 Magic Desk, Atari XEGS; cc65)");
 }

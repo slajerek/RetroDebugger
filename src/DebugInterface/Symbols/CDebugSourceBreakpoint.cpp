@@ -55,14 +55,20 @@ void DebugResolveSourceLine(const CDebugDatabase *database, const std::string &p
 		database->ResolveSource(file->id, candidate, mappings);
 		for (const CDebugSourceMapping *m : mappings)
 		{
-			// in effect at its first address, and not the continuation of
-			// another range of the same line
-			if (database->Resolve(m->regionId, m->start) != m)
+			// in effect at its first address -- in its own bank, where banks
+			// share the address and their lines start at the same byte -- and
+			// not the continuation of another range of the same line in that bank
+			const CDebugSourceMapping *inEffect = m->hasImageOffset
+				? database->ResolveImage(m->regionId, m->start, true, m->imageOffset)
+				: database->Resolve(m->regionId, m->start);
+			if (inEffect != m)
 				continue;
 			bool continuation = false;
 			for (const CDebugSourceMapping *other : mappings)
 			{
-				if (other != m && other->regionId == m->regionId && other->end == m->start)
+				bool sameBank = !m->hasImageOffset || !other->hasImageOffset
+					|| other->imageOffset + (other->end - other->start) == m->imageOffset;
+				if (other != m && other->regionId == m->regionId && other->end == m->start && sameBank)
 					continuation = true;
 			}
 			if (!continuation)

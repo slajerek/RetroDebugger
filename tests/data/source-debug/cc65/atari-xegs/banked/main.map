@@ -1,0 +1,119 @@
+Modules list:
+-------------
+xegs.o:
+    CODE              Offs=000000  Size=000052  Align=00001  Fill=0000
+    BSS               Offs=000000  Size=000001  Align=00001  Fill=0000
+    BANK0             Offs=000000  Size=000015  Align=00001  Fill=0000
+    BANK1             Offs=000000  Size=000017  Align=00001  Fill=0000
+xegs-crt0.o:
+    CARHEADER         Offs=000000  Size=000010  Align=00001  Fill=0000
+    STARTUP           Offs=000000  Size=000016  Align=00001  Fill=0000
+    CARTVECTORS       Offs=000000  Size=000006  Align=00001  Fill=0000
+/opt/homebrew/Cellar/cc65/2.19/share/cc65/lib/atari.lib(copydata.o):
+    CODE              Offs=000052  Size=00002D  Align=00001  Fill=0000
+/opt/homebrew/Cellar/cc65/2.19/share/cc65/lib/atari.lib(incax1.o):
+    CODE              Offs=00007F  Size=000007  Align=00001  Fill=0000
+/opt/homebrew/Cellar/cc65/2.19/share/cc65/lib/atari.lib(incaxy.o):
+    CODE              Offs=000086  Size=00000B  Align=00001  Fill=0000
+/opt/homebrew/Cellar/cc65/2.19/share/cc65/lib/atari.lib(incsp1.o):
+    CODE              Offs=000091  Size=000007  Align=00001  Fill=0000
+/opt/homebrew/Cellar/cc65/2.19/share/cc65/lib/atari.lib(pusha.o):
+    CODE              Offs=000098  Size=000016  Align=00001  Fill=0000
+/opt/homebrew/Cellar/cc65/2.19/share/cc65/lib/atari.lib(zerobss.o):
+    CODE              Offs=0000AE  Size=000023  Align=00001  Fill=0000
+/opt/homebrew/Cellar/cc65/2.19/share/cc65/lib/atari.lib(zeropage.o):
+    ZEROPAGE          Offs=000000  Size=00001A  Align=00001  Fill=0000
+
+
+Segment list:
+-------------
+Name                   Start     End    Size  Align
+----------------------------------------------------
+CARHEADER             000000  00000F  000010  00001
+ZEROPAGE              000082  00009B  00001A  00001
+BSS                   003000  003000  000001  00001
+BANK0                 008000  008014  000015  00001
+BANK1                 008000  008016  000017  00001
+STARTUP               00A000  00A015  000016  00001
+CODE                  00A016  00A0E6  0000D1  00001
+CARTVECTORS           00BFFA  00BFFF  000006  00001
+
+
+Exports list by name:
+---------------------
+__BSS_RUN__               003000 RLA    __BSS_SIZE__              000001 REA    
+__DATA_LOAD__             00A0E7 RLA    __DATA_RUN__              003000 RLA    
+__DATA_SIZE__             000000 REA    __STACK_SIZE__            001000 REA    
+__STACK_START__           007000 RLA    __STARTUP__               000001 REA    
+_main                     00A026 RLA    copydata                  00A068 RLA    
+incax1                    00A095 RLA    incaxy                    00A09E RLA    
+incsp1                    00A0A7 RLA    ptr1                      00008A RLZ    
+ptr2                      00008C RLZ    pusha                     00A0B2 RLA    
+sp                        000082 RLZ    tmp1                      000092 RLZ    
+zerobss                   00A0C4 RLA    
+
+
+Exports list by value:
+----------------------
+__DATA_SIZE__             000000 REA    __BSS_SIZE__              000001 REA    
+__STARTUP__               000001 REA    sp                        000082 RLZ    
+ptr1                      00008A RLZ    ptr2                      00008C RLZ    
+tmp1                      000092 RLZ    __STACK_SIZE__            001000 REA    
+__BSS_RUN__               003000 RLA    __DATA_RUN__              003000 RLA    
+__STACK_START__           007000 RLA    _main                     00A026 RLA    
+copydata                  00A068 RLA    incax1                    00A095 RLA    
+incaxy                    00A09E RLA    incsp1                    00A0A7 RLA    
+pusha                     00A0B2 RLA    zerobss                   00A0C4 RLA    
+__DATA_LOAD__             00A0E7 RLA    
+
+
+Imports list:
+-------------
+__BSS_RUN__ ([linker generated]):
+    zerobss.o                 common/zerobss.s(8)
+__BSS_SIZE__ ([linker generated]):
+    zerobss.o                 common/zerobss.s(8)
+__DATA_LOAD__ ([linker generated]):
+    copydata.o                common/copydata.s(8)
+__DATA_RUN__ ([linker generated]):
+    copydata.o                common/copydata.s(8)
+__DATA_SIZE__ ([linker generated]):
+    copydata.o                common/copydata.s(8)
+__STACK_SIZE__ ([linker generated]):
+    xegs-crt0.o               xegs-crt0.s(10)
+__STACK_START__ ([linker generated]):
+    xegs-crt0.o               xegs-crt0.s(10)
+__STARTUP__ (xegs-crt0.o):
+    xegs.o                    xegs.s(14)
+_main (xegs.o):
+    xegs-crt0.o               xegs-crt0.s(9)
+copydata (copydata.o):
+    xegs-crt0.o               xegs-crt0.s(9)
+incax1 (incax1.o):
+    xegs.o                    xegs.s(162)
+incaxy (incaxy.o):
+    xegs.o                    xegs.s(162)
+incsp1 (incsp1.o):
+    xegs.o                    xegs.s(162)
+    xegs.o                    xegs.s(162)
+    xegs.o                    xegs.s(162)
+ptr1 (zeropage.o):
+    zerobss.o                 common/zerobss.s(9)
+    copydata.o                common/copydata.s(9)
+ptr2 (zeropage.o):
+    copydata.o                common/copydata.s(9)
+pusha (pusha.o):
+    xegs.o                    xegs.s(162)
+    xegs.o                    xegs.s(162)
+    xegs.o                    xegs.s(162)
+sp (zeropage.o):
+    pusha.o                   runtime/pusha.s(8)
+    incsp1.o                  runtime/incsp1.s(8)
+    xegs-crt0.o               xegs-crt0.s(11)
+    xegs.o                    xegs.s(10)
+tmp1 (zeropage.o):
+    incaxy.o                  runtime/incaxy.s(8)
+    copydata.o                common/copydata.s(9)
+zerobss (zerobss.o):
+    xegs-crt0.o               xegs-crt0.s(9)
+

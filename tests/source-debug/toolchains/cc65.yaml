@@ -77,3 +77,14 @@ machines:
       - ["{ca65}", "-t", "c64", "-g", "magicdesk-crt0.s"]
       - ["{ld65}", "-C", "magicdesk.cfg", "--dbgfile", "main.dbg", "-Ln", "main.lbl", "-m", "main.map", "-o", "main.crt", "magicdesk.o", "magicdesk-crt0.o", "c64.lib"]
     outputs: [main.crt, main.dbg, main.lbl, main.map, magicdesk.s]
+  # Atari XEGS 32 KB cartridge (RD-030): the .car is ld65's output, header
+  # included; car_checksum.py fills in its checksum. Fixtures with an xegs.c.
+  atari-xegs:
+    source: xegs.c
+    steps:
+      - ["{cc65}", "-t", "atari", "-g", "xegs.c"]
+      - ["{ca65}", "-t", "atari", "-g", "xegs.s"]
+      - ["{ca65}", "-t", "atari", "-g", "xegs-crt0.s"]
+      - ["{ld65}", "-C", "xegs.cfg", "--dbgfile", "main.dbg", "-Ln", "main.lbl", "-m", "main.map", "-o", "main.car", "xegs.o", "xegs-crt0.o", "atari.lib"]
+      - ["{python}", "-I", "{scripts}/car_checksum.py", "main.car"]
+    outputs: [main.car, main.dbg, main.lbl, main.map, xegs.s]

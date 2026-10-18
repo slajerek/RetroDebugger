@@ -1280,6 +1280,13 @@ void atrd_get_banking_state(int *machineType, int *ramSizeKb, int *portb, int *p
 	if (cartSizeKb) *cartSizeKb = CARTRIDGE_main.size;
 }
 
+/* RD-030: bytes before CARTRIDGE_main's image in its file (16 for a .car,
+   0 for a raw image), so an image offset becomes a file offset */
+int atrd_get_cart_file_header_size(void)
+{
+	return CARTRIDGE_main.file_header_size;
+}
+
 /* What the CPU finds at ADDR for reads: MEMORY_RAM, MEMORY_ROM (writes are
    dropped) or MEMORY_HARDWARE. -1 when attributes are paged (PAGED_ATTRIB). */
 int atrd_get_memory_attrib(int addr)

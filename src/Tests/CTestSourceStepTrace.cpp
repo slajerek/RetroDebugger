@@ -324,7 +324,11 @@ void CTestSourceStepTrace::RestoreMachines()
 			vice->SetByteC64(0xDC0D, 0x81);
 		}
 		else if (machine.name == "atari")
+		{
 			RemoveAtariInterrupt(machine);
+			if (machine.atariCartridge && !RemoveAtariCartridge(machine))
+				LOGError("CTestSourceStepTrace: the Atari cartridge removal task never ran");
+		}
 #ifdef RUN_NES
 		if (machine.name == "nes")
 			di->AddVSyncTask(new CTaskUnloadNes());		// runs once the machine runs again, below
@@ -439,6 +443,78 @@ bool CTestSourceStepTrace::DetachC64Cartridge(Machine &machine)
 	return ready;
 }
 
+#ifdef RUN_ATARI
+// Atari cartridge changes on the emulation thread, between two frames
+class CTaskInsertAtariCartridge : public CDebugInterfaceTask
+{
+public:
+	CTaskInsertAtariCartridge(CDebugInterfaceAtari *di, const std::string &path) : di(di), path(path) {}
+	virtual void ExecuteTask() override { di->InsertCartridge((char *)path.c_str(), true); }
+private:
+	CDebugInterfaceAtari *di;
+	std::string path;
+};
+
+class CTaskDetachAtariCartridge : public CDebugInterfaceTask
+{
+public:
+	CTaskDetachAtariCartridge(CDebugInterfaceAtari *di) : di(di) {}
+	virtual void ExecuteTask() override { di->DetachCartridge(); }
+private:
+	CDebugInterfaceAtari *di;
+};
+#endif
+
+// An Atari .car: inserted on the emulation thread (a cold start), so the
+// fetched ROM bytes have their .car file offsets; the OS runs the cartridge
+// to the start breakpoint.
+bool CTestSourceStepTrace::LaunchAtariCartridge(Machine &machine, const std::string &binaryPath, u16 startAddress,
+												const std::string &name)
+{
+#ifdef RUN_ATARI
+	CDebugInterface *di = machine.di;
+	machine.atariCartridge = true;
+	di->AddVSyncTask(new CTaskInsertAtariCartridge((CDebugInterfaceAtari *)di, binaryPath));
+	di->SetDebugMode(DEBUGGER_MODE_RUNNING);
+	if (!Check(WaitForVSyncTasks(di, 5000), name + ": the cartridge inserts"))
+		return false;
+	for (int waited = 0; waited < 5000; waited += 10)
+	{
+		SYS_Sleep(10);
+		if (di->GetDebugMode() == DEBUGGER_MODE_PAUSED && (u16)di->GetCpuPC() == startAddress)
+			return true;
+	}
+	return Check(false, name + ": the cartridge runs to the start line");
+#else
+	return false;
+#endif
+}
+
+// the cartridge out (a cold start); the machine is left paused
+bool CTestSourceStepTrace::RemoveAtariCartridge(Machine &machine)
+{
+#ifdef RUN_ATARI
+	CDebugInterface *di = machine.di;
+	machine.atariCartridge = false;
+	di->AddVSyncTask(new CTaskDetachAtariCartridge((CDebugInterfaceAtari *)di));
+	di->SetDebugMode(DEBUGGER_MODE_RUNNING);
+	bool done = WaitForVSyncTasks(di, 5000);
+	// until the OS has booted without it: cc65's startup takes its C stack
+	// from MEMTOP ($02E5), which the cartridge's boot left below $8000
+	u16 memtop = 0;
+	for (int waited = 0; done && waited < 5000 && memtop < 0x8000; waited += 10)
+	{
+		SYS_Sleep(10);
+		memtop = (u16)(Peek(di, 0x02E5) | (Peek(di, 0x02E6) << 8));
+	}
+	SYS_Sleep(200);
+	di->PauseEmulationBlockedWait();
+	return done && memtop >= 0x8000;
+#else
+	return true;
+#endif
+}
+
 // An Atari XEX: its segments go straight into memory, then a jump to the
 // trace's entry or the RUNAD ($02E0) segment.
 bool CTestSourceStepTrace::LaunchAtari(CDebugInterface *di, const json &trace, const std::vector<u8> &binary,
@@ -500,7 +576,10 @@ bool CTestSourceStepTrace::LaunchNes(CDebugInterface *di, const json &trace, con
 	((CDebugInterfaceNes *)di)->InsertCartridge((char *)cartridge.c_str());
 	di->AddVSyncTask(new CTaskPauseNes(di));
 	di->SetDebugMode(DEBUGGER_MODE_RUNNING);
-	if (!Check(WaitForVSyncTasks(di, 5000) && WaitForPause(di, 2000), name + ": the cartridge inserts, paused at its reset"))
+	bool inserted = WaitForVSyncTasks(di, 5000) && WaitForPause(di, 2000);
+	char at[16];
+	snprintf(at, sizeof(at), "PC $%04X", (unsigned)di->GetCpuPC());
+	if (!Check(inserted, name + ": the cartridge inserts, paused at its reset (" + at + ")"))
 		return false;
 	if (trace.contains("entry"))
 		di->MakeJmpNoReset(di->GetDataAdapter(), (u16)ParseAddress(trace["entry"]));
@@ -733,7 +812,10 @@ bool CTestSourceStepTrace::RunTrace(const std::string &path)
 	int startAddress = startBp->bindings[0].address;
 
 	bool launched = false;
-	bool cartridge = binaryPath.size() > 4 && binaryPath.compare(binaryPath.size() - 4, 4, ".crt") == 0;
+	auto hasExtension = [&](const char *extension) {
+		return binaryPath.size() > 4 && binaryPath.compare(binaryPath.size() - 4, 4, extension) == 0;
+	};
+	bool cartridge = (machineName == "c64" && hasExtension(".crt")) || (machineName == "atari" && hasExtension(".car"));
 	if (machineName == "c64" && cartridge)
 		launched = LaunchC64Cartridge(*machine, binaryPath, (u16)startAddress, name);
 	else if (machineName == "c64")
@@ -746,7 +828,15 @@ bool CTestSourceStepTrace::RunTrace(const std::string &path)
 	else if (machineName == "atari")
 	{
 		RemoveAtariInterrupt(*machine);		// its handler would call into code about to be overwritten
-		launched = LaunchAtari(di, trace, binary, name);
+		if (cartridge)
+			launched = LaunchAtariCartridge(*machine, binaryPath, (u16)startAddress, name);
+		else
+		{
+			// a cartridge a previous trace inserted: out, the machine cold started
+			if (machine->atariCartridge && !RemoveAtariCartridge(*machine))
+				return Check(false, name + ": the previous trace's cartridge comes out");
+			launched = LaunchAtari(di, trace, binary, name);
+		}
 	}
 #ifdef RUN_NES
 	else if (machineName == "nes")
@@ -754,8 +844,11 @@ bool CTestSourceStepTrace::RunTrace(const std::string &path)
 #endif
 	if (!launched)
 		return false;
-	bool paused = true;		// a cartridge launch waits for the start line itself
-	if (!cartridge)
+	// a cartridge launch waits for the start line itself; a NES pause after
+	// the insert lands at the end of that frame, so the start breakpoint can
+	// have stopped the CPU already -- resuming would step past it
+	bool paused = cartridge || (di->GetDebugMode() == DEBUGGER_MODE_PAUSED && (u16)di->GetCpuPC() == startAddress);
+	if (!paused)
 	{
 		di->SetDebugMode(DEBUGGER_MODE_RUNNING);
 		paused = WaitForPause(di, 5000);
