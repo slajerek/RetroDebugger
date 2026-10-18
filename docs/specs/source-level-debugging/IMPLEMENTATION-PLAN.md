@@ -480,8 +480,14 @@ identity (RD-025) and the gutter (M2). Original plan:
   stops once per line, not per statement.
 - Traces: Oscar64 C64 `basic-flow`, `same-line`, `nested-calls`, `branches-loops`,
   `interrupts` (IRQ calling `tick()`; the runner also fails if the handler never
-  ran). Optional `expected.pc` and a free-text `note` per step. Next: Atari/NES
-  drivers in the runner.
+  ran). Optional `expected.pc` and a free-text `note` per step.
+- Machines: `c64` (PRG + $C060 preamble, `irq` C64 only), `atari` (XEX segments
+  poked, jump to `entry` or RUNAD), `nes` (cartridge inserted; with `entry` a
+  jump there, as Oscar64's plain NES build has no reset vector). Each machine's
+  thread is started if needed and its live symbols restored at the end. 15
+  traces: the five fixtures on all three machines.
+- Next: cc65/KickC traces, an Atari/NES interrupt driver, the remaining spec
+  #9.1 fixtures.
 - `CTestSourceStepTrace` reads `tests/source-debug/expectations/<compiler>/<fixture>.json`
   (spec #9.5), loads the Tier 1 binary + debug artifact, runs the steps, compares
   `(file, line, function, depth, reason)`; failures dump the machine step trace to the
