@@ -125,6 +125,25 @@ std::vector<std::string> CSourceDocumentRegistry::Candidates(const std::string &
 	return candidates;
 }
 
+std::shared_ptr<const CSourceDocument> CSourceDocumentRegistry::OpenText(const std::string &key, const void *textId,
+																		 const std::string &text)
+{
+	auto it = texts.find(key);
+	if (it != texts.end() && it->second.first == textId)
+		return it->second.second;
+	std::shared_ptr<CSourceDocument> document = std::make_shared<CSourceDocument>();
+	document->LoadFromText(text);
+	document->path = key;
+	texts[key] = std::make_pair(textId, document);
+	return document;
+}
+
+bool CSourceDocumentRegistry::HasText(const std::string &key, const void *textId) const
+{
+	auto it = texts.find(key);
+	return it != texts.end() && it->second.first == textId;
+}
+
 std::shared_ptr<const CSourceDocument> CSourceDocumentRegistry::Open(const std::string &recordedPath, const std::string &hintPath)
 {
 	for (const std::string &candidate : Candidates(recordedPath, hintPath))

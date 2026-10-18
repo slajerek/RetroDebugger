@@ -1293,11 +1293,21 @@ void CDebuggerServerApi::RegisterEndpoints(CDebuggerServer *server)
 	RegisterEndpoint(server, buf, plat, "analysis", "Assemble 6502 instructions and write to memory",
 	[this, server](const string token, json params, unsigned char *binaryData, int binaryDataSize) -> vector<char>*
 	{
-		int address = params.at("address").get<int>();
 		string code = params.at("code").get<string>();
+		// "64tass": a whole source (labels, directives) through the embedded
+		// assembler, whose labels and line map join the symbols (RD-043)
+		string assembler = params.value("assembler", "line");
 
 		json result;
+		if (assembler == "64tass")
 		{
+			int address = params.contains("address") ? params.at("address").get<int>() : -1;
+			CDebugInterfaceMutexGuard lock(debugInterface);
+			result = debuggerApi->Assemble64TassJson(code, address);
+		}
+		else
+		{
+			int address = params.at("address").get<int>();
 			CDebugInterfaceMutexGuard lock(debugInterface);
 			result = debuggerApi->AssembleCode(address, code);
 		}

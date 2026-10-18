@@ -7,7 +7,9 @@
 #include "CDebugInterface.h"
 #include "SYS_Threading.h"
 #include "CImageData.h"
+#include <map>
 #include <string>
+#include <vector>
 
 class CGuiView;
 class CDebugInterface;
@@ -125,6 +127,30 @@ public:
 	virtual bool Assemble64TassToRam(int *codeStartAddr, int *codeSize);
 	virtual bool Assemble64TassToRam(int *codeStartAddr, int *codeSize, char *storeAsmFileName, bool quiet);
 	virtual void Assemble64TassAddLine(const char *format, ...);
+
+	// RD-043: what the embedded 64tass reported for its last pass (its C
+	// callbacks, c64debugger_assemble_* in CDebuggerApi.cpp)
+	std::map<u32, i32> assembledLines;		// logical address -> source line
+	struct AssembledLabel
+	{
+		std::string name;
+		u32 value;
+		bool isCode;	// a label, not a constant (name = value)
+	};
+	std::vector<AssembledLabel> assembledLabels;
+	// one assembled byte for the machine (VICE: to the assemble target's RAM)
+	virtual void AssembleResultToMemory(int addr, u8 value);
+	// the symbols assembled code is described in; NULL when the bytes go
+	// nowhere the debugger shows (VICE: no target)
+	virtual CDebugSymbols *GetAssembleSymbols();
+	// the last assembly's text (NAME, or "64tass-<start>.asm"), line map and
+	// code labels into GetAssembleSymbols(): the source view shows the text
+	// with the PC line, the disassembly the labels
+	void RegisterAssembledSource(const char *text, size_t length, const char *name);
+	// RD-043, remote: CODE, a whole 64tass source (origin "*=ADDRESS"
+	// prepended when ADDRESS >= 0), assembled into memory; the result names
+	// the address range, the labels and the line ranges
+	nlohmann::json Assemble64TassJson(const std::string &code, int address);
 	
 	//
 	virtual void AddWatch(CSlrString *segmentName, int address, CSlrString *watchName, uint8 representation, int numberOfValues);

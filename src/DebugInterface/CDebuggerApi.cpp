@@ -569,6 +569,65 @@ extern "C" {
 	void assemble_64tass_setquiet(int isQuiet);
 }
 
+extern "C" {
+	// 64tass.c's callbacks; USERDATA is the CDebuggerApi that assembles
+	void c64debugger_set_assemble_result_to_memory(void *userData, int addr, unsigned char v)
+	{
+		((CDebuggerApi *)userData)->AssembleResultToMemory(addr, v);
+	}
+	void c64debugger_assemble_pass_begin(void *userData)
+	{
+		CDebuggerApi *api = (CDebuggerApi *)userData;
+		api->assembledLines.clear();
+		api->assembledLabels.clear();
+	}
+	void c64debugger_assemble_source_byte(void *userData, int address, int line)
+	{
+		((CDebuggerApi *)userData)->assembledLines[(u32)address & 0xFFFF] = (i32)line;
+	}
+	void c64debugger_assemble_label(void *userData, const char *name, int value, int isCode)
+	{
+		CDebuggerApi::AssembledLabel label;
+		label.name = name;
+		label.value = (u32)value;
+		label.isCode = isCode != 0;
+		((CDebuggerApi *)userData)->assembledLabels.push_back(label);
+	}
+}
+
+void CDebuggerApi::AssembleResultToMemory(int addr, u8 value)
+{
+	// the callers write the returned buffer themselves (Assemble64TassToRam)
+}
+
+CDebugSymbols *CDebuggerApi::GetAssembleSymbols()
+{
+	return debugInterface->symbols;
+}
+
+void CDebuggerApi::RegisterAssembledSource(const char *text, size_t length, const char *name)
+{
+	CDebugSymbols *symbols = GetAssembleSymbols();
+	if (symbols == NULL || assembledLines.empty())
+		return;
+	u32 start = assembledLines.begin()->first;
+	u32 end = assembledLines.rbegin()->first + 1;
+	char defaultName[32];
+	if (name == NULL || name[0] == 0)
+	{
+		snprintf(defaultName, sizeof(defaultName), "64tass-%04X.asm", start);
+		name = defaultName;
+	}
+	std::shared_ptr<CDebugDatabase> fragment = DebugInfoFromAssembly(name, text, length, assembledLines);
+	std::vector<std::pair<std::string, u32>> codeLabels;
+	for (const AssembledLabel &label : assembledLabels)
+	{
+		if (label.isCode && label.value <= 0xFFFF)
+			codeLabels.push_back(std::make_pair(label.name, label.value));
+	}
+	symbols->AddAssembledSource(fragment, start, end, codeLabels);
+}
+
 u8 *CDebuggerApi::Assemble64Tass(char *assembleText, int *codeStartAddr, int *codeSize)
 {
 	u8 *buf = assemble_64tass((void*)this, assembleText, strlen(assembleText), codeStartAddr, codeSize);
@@ -580,6 +639,7 @@ u8 *CDebuggerApi::Assemble64Tass(char *assembleText, int *codeStartAddr, int *co
 		LOGError("CDebuggerAPI::Assemble64Tass: assemble failed");
 		return NULL;
 	}
+	RegisterAssembledSource(assembleText, strlen(assembleText), NULL);
 
 	return buf;
 }
@@ -676,10 +736,70 @@ u8 *CDebuggerApi::Assemble64Tass(int *codeStartAddr, int *codeSize, const char *
 		LOGError("CDebuggerAPI::Assemble64Tass: assemble failed");
 		return NULL;
 	}
+	RegisterAssembledSource(assembleText, byteBufferAssembleText->length - 1, storeAsmFileName);
 	
 	byteBufferAssembleText->Reset();
 	
 	return buf;
+}
+
+nlohmann::json CDebuggerApi::Assemble64TassJson(const std::string &code, int address)
+{
+	std::string text = code;
+	if (address >= 0)
+	{
+		char origin[24];
+		snprintf(origin, sizeof(origin), "*=$%04x\n", address & 0xFFFF);
+		text = origin + code;
+	}
+	int start = 0, size = 0;
+	assemble_64tass_setquiet(true);
+	u8 *buf = Assemble64Tass((char *)text.c_str(), &start, &size);
+	if (buf == NULL)
+		return nlohmann::json({{"error", "assemble_error"}, {"message", "64tass failed; its messages are in the log"}});
+	for (int i = 0; i < size; i++)
+		SetByteToRam(start + i, buf[i]);
+	free(buf);
+
+	nlohmann::json result;
+	char hex[8];
+	snprintf(hex, sizeof(hex), "%04X", start);
+	result["address"] = hex;
+	result["size"] = size;
+	nlohmann::json labels = nlohmann::json::array();
+	for (const AssembledLabel &label : assembledLabels)
+	{
+		snprintf(hex, sizeof(hex), "%04X", label.value & 0xFFFF);
+		labels.push_back({{"name", label.name}, {"address", hex}, {"code", label.isCode}});
+	}
+	result["labels"] = labels;
+	// line ranges, as the source view maps them (offset by one when an origin was prepended)
+	nlohmann::json lines = nlohmann::json::array();
+	int lineOffset = address >= 0 ? 1 : 0;
+	auto it = assembledLines.begin();
+	while (it != assembledLines.end())
+	{
+		u32 rangeStart = it->first, rangeEnd = it->first + 1;
+		i32 line = it->second;
+		++it;
+		while (it != assembledLines.end() && it->first == rangeEnd && it->second == line)
+		{
+			rangeEnd++;
+			++it;
+		}
+		char startHex[8], endHex[8];
+		snprintf(startHex, sizeof(startHex), "%04X", rangeStart);
+		snprintf(endHex, sizeof(endHex), "%04X", rangeEnd - 1);
+		lines.push_back({{"line", line - lineOffset}, {"start", startHex}, {"end", endHex}});
+	}
+	result["lines"] = lines;
+	if (!assembledLines.empty())
+	{
+		char name[32];
+		snprintf(name, sizeof(name), "64tass-%04X.asm", assembledLines.begin()->first);
+		result["file"] = name;
+	}
+	return result;
 }
 
 int CDebuggerApi::Assemble(int addr, char *assembleText)

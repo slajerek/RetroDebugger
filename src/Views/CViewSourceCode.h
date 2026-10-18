@@ -67,6 +67,9 @@ public:
 	u32 GetFileId() const { return fileId; }
 	i32 GetPcLine() const { return pcLine; }
 	i32 GetSelectedLine() const { return selectedLine; }
+	// the document of a database file's own text, for a source with no file
+	// on disk (code the embedded assembler assembled, RD-043)
+	std::shared_ptr<const CSourceDocument> OpenFileText(const CDebugSourceFile *file);
 
 	// a click on line LINE's gutter: toggles a source breakpoint there (or
 	// removes the address breakpoints a user set on its code)

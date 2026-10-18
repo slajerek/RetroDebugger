@@ -180,6 +180,40 @@ DebugInfoFormat DebugInfoLoadFile(CDebugSymbols *symbols, const char *cPath, con
 }
 
 // Reads a source file's text, 1-based, tabs expanded to four spaces.
+static void SetSourceText(CDebugSourceFile *sourceFile, const u8 *data, size_t length, const char *what)
+{
+	std_membuf mb((unsigned char *)data, length);
+	std::istream reader(&mb);
+	std::string line;
+
+	sourceFile->lines.push_back(new CSlrString(""));
+	CSlrString *strTabs = new CSlrString("    ");
+	unsigned lineNum = 1;
+	while (getline(reader, line))
+	{
+		std::string::iterator endIt = utf8::find_invalid(line.begin(), line.end());
+		if (endIt != line.end())
+			LOGError("LoadSourceText: invalid UTF-8 in %s line %u", what, lineNum);
+
+		std::vector<unsigned short> utf16line;
+		utf8::utf8to16(line.begin(), endIt, back_inserter(utf16line));
+		CSlrString *strLine = new CSlrString(utf16line);
+		strLine->RemoveEndLineCharacter();
+		strLine->ReplaceCharacter((u16)'\t', strTabs);
+		sourceFile->lines.push_back(strLine);
+		lineNum++;
+	}
+	delete strTabs;
+}
+
+void DebugSourceFileSetText(CDebugSourceFile *file, const char *text, size_t length)
+{
+	for (CSlrString *line : file->lines)
+		delete line;
+	file->lines.clear();
+	SetSourceText(file, (const u8 *)text, length, file->originalPath.c_str());
+}
+
 static bool LoadSourceText(CDebugSourceFile *sourceFile, const std::string &path)
 {
 	CSlrFileFromOS *file = new CSlrFileFromOS((char *)path.c_str());
@@ -191,28 +225,7 @@ static bool LoadSourceText(CDebugSourceFile *sourceFile, const std::string &path
 	CByteBuffer *byteBuffer = file->GetWholeFileAsByteBuffer();
 	delete file;
 
-	std_membuf mb(byteBuffer->data, byteBuffer->length);
-	std::istream reader(&mb);
-	std::string line;
-
-	sourceFile->lines.push_back(new CSlrString(""));
-	CSlrString *strTabs = new CSlrString("    ");
-	unsigned lineNum = 1;
-	while (getline(reader, line))
-	{
-		std::string::iterator endIt = utf8::find_invalid(line.begin(), line.end());
-		if (endIt != line.end())
-			LOGError("LoadSourceText: invalid UTF-8 in %s line %u", path.c_str(), lineNum);
-
-		std::vector<unsigned short> utf16line;
-		utf8::utf8to16(line.begin(), endIt, back_inserter(utf16line));
-		CSlrString *strLine = new CSlrString(utf16line);
-		strLine->RemoveEndLineCharacter();
-		strLine->ReplaceCharacter((u16)'\t', strTabs);
-		sourceFile->lines.push_back(strLine);
-		lineNum++;
-	}
-	delete strTabs;
+	SetSourceText(sourceFile, byteBuffer->data, (size_t)byteBuffer->length, path.c_str());
 	delete byteBuffer;
 	sourceFile->loadedPath = path;
 	return true;
@@ -1407,4 +1420,42 @@ std::vector<std::string> DebugInfoCheckStale(const CDebugDatabase *database, con
 			reasons.push_back(debugName + " is newer than " + programName + ": the program is from an older build");
 	}
 	return reasons;
+}
+
+std::shared_ptr<CDebugDatabase> DebugInfoFromAssembly(const char *name, const char *text, size_t length,
+													  const std::map<u32, i32> &lines)
+{
+	std::shared_ptr<CDebugDatabase> database = std::make_shared<CDebugDatabase>("64tass");
+	database->capabilities.lineMappings = true;
+	u32 regionId = database->AddRegion("Default", "");
+	u32 blockId = database->AddBlock("", regionId);
+	CDebugSourceFile *file = database->AddFile(0, name);
+	DebugSourceFileSetText(file, text, length);
+
+	// one mapping per run of consecutive addresses from one line
+	CDebugSourceMapping mapping;
+	bool open = false;
+	for (auto &it : lines)
+	{
+		if (open && it.first == mapping.end && it.second == mapping.lineStart)
+		{
+			mapping.end++;
+			continue;
+		}
+		if (open)
+			database->AddMapping(mapping);
+		mapping = CDebugSourceMapping();
+		mapping.start = it.first;
+		mapping.end = it.first + 1;
+		mapping.regionId = regionId;
+		mapping.blockId = blockId;
+		mapping.fileId = 0;
+		mapping.lineStart = mapping.lineEnd = it.second;
+		mapping.quality = DebugMappingQuality::Exact;
+		open = true;
+	}
+	if (open)
+		database->AddMapping(mapping);
+	database->Finalize();
+	return database;
 }

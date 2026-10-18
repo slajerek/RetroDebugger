@@ -402,12 +402,23 @@ static void memcomp(void) {
     qsort(memblocks.data, memblocks.p, sizeof(*memblocks.data), memblockcomp);
 }
 
+// C64D (RD-043): the in-process assembler (assemble_64tass) reports, per
+// pass, the source line of every byte it emits at its logical address, and
+// after the last pass every label, through these callbacks (CDebuggerApi.cpp).
+// The command-line assembler reports nothing.
+void c64debugger_assemble_pass_begin(void *userData);
+void c64debugger_assemble_source_byte(void *userData, int address, int line);
+void c64debugger_assemble_label(void *userData, const char *name, int value, int isCode);
+static void *c64d_source_map_user_data = NULL;
+
 // ---------------------------------------------------------------------------
 /*
  * output one byte
  */
 static void pokeb(uint8_t byte)
 {
+    if (c64d_source_map_user_data && fixeddig && current_section->dooutput)
+        c64debugger_assemble_source_byte(c64d_source_map_user_data, (int)current_section->l_address, (int)sline);
 
     if (fixeddig && current_section->dooutput)
     {
@@ -3068,6 +3079,20 @@ void buffer_fwrite(unsigned char *buf, int addrStart, int len)
 	}
 }
 
+/* C64D (RD-043): every numeric label of the root scope, as labelprint() lists them */
+static void c64d_report_labels(void *userData)
+{
+    const struct avltree_node *n = avltree_first(&root_label.members);
+    while (n) {
+        const struct label_s *l = avltree_container_of(n, struct label_s, node);
+        n = avltree_next(n);
+        if (l->name[0]=='-' || l->name[0]=='+' || l->name[0]=='.' || l->name[0]=='#') continue;
+        if (l->type != L_LABEL && l->type != L_CONST) continue;
+        if (l->value.type != T_NUM && l->value.type != T_UINT && l->value.type != T_SINT) continue;
+        c64debugger_assemble_label(userData, l->name, (int)l->value.u.num.val, l->type == L_LABEL);
+    }
+}
+
 void assemble_64tass_setquiet(int isQuiet)
 {
 	arguments.quiet = isQuiet ? 0:1;
@@ -3100,8 +3125,10 @@ unsigned char *assemble_64tass(void *userData, char *assembleText, int assembleT
 			 "64TASS comes with ABSOLUTELY NO WARRANTY; This is free software, and you\n"
 			 "are welcome to redistribute it under certain conditions; See LICENSE!\n");
 	
+	c64d_source_map_user_data = userData;
 	do {
 		if (pass++>20) {err_msg(ERROR_TOO_MANY_PASS, NULL);break;}
+		c64debugger_assemble_pass_begin(userData);	/* C64D: the last pass's line map is the one kept */
 				
 		fixeddig=1;conderrors=warnings=0;freeerrorlist(0);
 		mem.p=0;memblocklastp=0;memblocks.p=0;memblocklaststart=0;
@@ -3142,9 +3169,10 @@ unsigned char *assemble_64tass(void *userData, char *assembleText, int assembleT
 			}
 			exitfile();
 		}
-		if (errors) {memcomp();status();return NULL;}
+		if (errors) {c64d_source_map_user_data = NULL;memcomp();status();return NULL;}
 		if (conderrors && !arguments.list && pass==1) fixeddig=0;
 	} while (!fixeddig || pass==1);
+	c64d_source_map_user_data = NULL;
 	
 //	// assemble again to create listing
 //	if (arguments.list) {
@@ -3214,6 +3242,7 @@ unsigned char *assemble_64tass(void *userData, char *assembleText, int assembleT
 	if (arguments.label) labelprint();
 	
 	if (errors || conderrors) {status();return NULL;}
+	c64d_report_labels(userData);
 
 	// output file
 	assemble_64tass_bufferOutIndex = 0;

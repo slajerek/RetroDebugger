@@ -79,6 +79,13 @@ Use this skill when working with the RetroDebugger MCP server to debug 8-bit pro
 - `retro_symbols_load` — load symbols / debug info by content (KickAssembler or cc65 `.dbg`,
   Oscar64 `.dbj`, VICE/64tass labels); returns counts and `warnings` for stale debug info
   (a source edited after the build, or a program and debug file from different builds)
+- `retro_assemble` — assemble 6502 code into memory. Default `assembler:"line"`: one
+  instruction per line, atomic. `assembler:"64tass"`: a whole 64tass source (labels,
+  directives, `*=` origin; `address` is prepended as the origin when given). Its code labels
+  and line map join the symbols, so disassembly shows the labels and `retro_source_location`
+  / the source view show the text (`64tass-<start>.asm`) with the PC line; the result lists
+  `labels` and `lines` (line ranges). Assembling over the same addresses replaces that text;
+  loading debug info drops it
 
 ### Session control (ends the session)
 - `retro_shutdown` — quit RetroDebugger through its normal File > Quit path.

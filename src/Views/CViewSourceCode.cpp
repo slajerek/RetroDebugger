@@ -530,6 +530,8 @@ void CViewSourceCode::RenderImGui()
 	if (file)
 	{
 		std::shared_ptr<const CSourceDocument> document = documents.Open(file->originalPath, file->loadedPath);
+		if (!document && file->HasText() && file->loadedPath.empty())
+			document = OpenFileText(file);		// a source with no file: assembled in memory (RD-043)
 		if (document)
 			RenderDocument(file, document.get());
 		else
@@ -539,6 +541,25 @@ void CViewSourceCode::RenderImGui()
 
 	database.reset();
 	PostRenderImGui();
+}
+
+std::shared_ptr<const CSourceDocument> CViewSourceCode::OpenFileText(const CDebugSourceFile *file)
+{
+	// the file object is new with every database: its text's version
+	std::string key = "memory:" + file->originalPath;
+	if (!documents.HasText(key, file))
+	{
+		std::string text;
+		for (size_t i = 1; i < file->lines.size(); i++)
+		{
+			char *line = file->lines[i]->GetStdASCII();
+			text += line;
+			text += "\n";
+			delete [] line;
+		}
+		return documents.OpenText(key, file, text);
+	}
+	return documents.OpenText(key, file, std::string());
 }
 
 bool CViewSourceCode::HasContextMenuItems()

@@ -2190,23 +2190,27 @@ void CMCPServer::RegisterDebuggerTools(CDebuggerServer *server)
 	{
 		MCPToolDescriptor tool;
 		tool.name = "retro_assemble";
-		tool.description = "Assemble 6502 instructions and write them to memory. Accepts multiple instructions separated by newlines. Atomic: if any line fails, nothing is written.";
+		tool.description = "Assemble 6502 code and write it to memory. assembler \"line\" (default): instructions separated by newlines, atomic: if any line fails, nothing is written. assembler \"64tass\": a whole 64tass source (labels, directives, *= origin; address, when given, is prepended as the origin), whose labels and line map join the debugger's symbols, so the source view shows the text with the PC line; the result lists the labels and line ranges.";
 		tool.inputSchema = {
 			{"type", "object"},
 			{"properties", {
 				{"platform", {{"type", "string"}, {"description", "Platform name (c64, atari800, nes)"}}},
-				{"address", {{"type", "integer"}, {"description", "Start address to write assembled code"}}},
-				{"code", {{"type", "string"}, {"description", "Assembly code (multiple instructions separated by newline). Example: \"LDA #$42\\nSTA $D020\\nRTS\""}}}
+				{"address", {{"type", "integer"}, {"description", "Start address to write assembled code (optional with 64tass)"}}},
+				{"code", {{"type", "string"}, {"description", "Assembly code (multiple instructions separated by newline). Example: \"LDA #$42\\nSTA $D020\\nRTS\""}}},
+				{"assembler", {{"type", "string"}, {"enum", json::array({"line", "64tass"})}, {"description", "line (default) or 64tass"}}}
 			}},
-			{"required", json::array({"platform", "address", "code"})}
+			{"required", json::array({"platform", "code"})}
 		};
 		tool.handler = [server](const json &params) -> json
 		{
 			string platform = params.value("platform", "c64");
 			string fn = platform + "/cpu/assemble";
 			json endpointParams;
-			endpointParams["address"] = params.at("address");
+			if (params.contains("address"))
+				endpointParams["address"] = params.at("address");
 			endpointParams["code"] = params.at("code");
+			if (params.contains("assembler"))
+				endpointParams["assembler"] = params.at("assembler");
 			vector<char> *result = server->RunEndpointFunction(fn, "", endpointParams, nullptr, 0);
 			if (!result || result->empty())
 			{

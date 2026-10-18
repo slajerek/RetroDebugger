@@ -51,10 +51,17 @@ public:
 	// every candidate Open would try, in order (the "locate" UI lists them)
 	std::vector<std::string> Candidates(const std::string &recordedPath, const std::string &hintPath) const;
 
-	void Clear() { documents.clear(); }
+	// RD-043: a document from text in memory, for a source with no file (code
+	// the embedded assembler assembled): one per KEY, built from TEXT again
+	// only when TEXTID, which names that text's version, changes
+	std::shared_ptr<const CSourceDocument> OpenText(const std::string &key, const void *textId, const std::string &text);
+	bool HasText(const std::string &key, const void *textId) const;
+
+	void Clear() { documents.clear(); texts.clear(); }
 
 private:
 	std::map<std::string, std::shared_ptr<CSourceDocument>> documents;	// by the path it was read from
+	std::map<std::string, std::pair<const void *, std::shared_ptr<CSourceDocument>>> texts;
 };
 
 std::string SourceDocumentFileName(const std::string &path);

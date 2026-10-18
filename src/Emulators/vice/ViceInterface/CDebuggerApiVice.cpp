@@ -307,26 +307,26 @@ void CDebuggerApiVice::SetAssembleTarget(u8 target)
 	this->assembleTarget = target;
 }
 
-extern "C" {
-	void c64debugger_set_assemble_result_to_memory(void *userData, int addr, unsigned char v)
+void CDebuggerApiVice::AssembleResultToMemory(int addr, u8 v)
+{
+	if (assembleTarget == ASSEMBLE_TARGET_NONE)
 	{
-//		LOGD("c64debugger_set_assemble_result_to_memory: %04x %02x", addr, v);
-		
-		CDebuggerApiVice *debuggerAPI = (CDebuggerApiVice*)userData;
-		if (debuggerAPI->assembleTarget == ASSEMBLE_TARGET_NONE)
-		{
-			// skip
-		}
-		else if (debuggerAPI->assembleTarget == ASSEMBLE_TARGET_MAIN_CPU)
-		{
-			debuggerAPI->SetByteToRamC64(addr, v);
-		}
-		else
-		{
-			SYS_FatalExit("TODO: assemble target");
-		}
+		// skip
 	}
-};
+	else if (assembleTarget == ASSEMBLE_TARGET_MAIN_CPU)
+	{
+		SetByteToRamC64(addr, v);
+	}
+	else
+	{
+		SYS_FatalExit("TODO: assemble target");
+	}
+}
+
+CDebugSymbols *CDebuggerApiVice::GetAssembleSymbols()
+{
+	return assembleTarget == ASSEMBLE_TARGET_MAIN_CPU ? debugInterface->symbols : NULL;
+}
 
 
 int CDebuggerApiVice::Assemble(int addr, char *assembleText)

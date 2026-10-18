@@ -341,3 +341,67 @@ const CDebugBlock *CDebugDatabase::GetBlock(u32 blockId) const
 {
 	return blockId < blocks.size() ? blocks[blockId] : NULL;
 }
+
+static CDebugSourceFile *CopyFile(CDebugDatabase *to, u32 id, const CDebugSourceFile *file)
+{
+	CDebugSourceFile *copy = to->AddFile(id, file->originalPath);
+	copy->loadedPath = file->loadedPath;
+	for (CSlrString *line : file->lines)
+		copy->lines.push_back(new CSlrString(line));
+	return copy;
+}
+
+std::shared_ptr<CDebugDatabase> DebugDatabaseMerge(const CDebugDatabase *base,
+												   const std::vector<std::shared_ptr<const CDebugDatabase>> &fragments,
+												   int *regionId)
+{
+	std::shared_ptr<CDebugDatabase> merged = std::make_shared<CDebugDatabase>(base ? base->producer.c_str() : "64tass");
+	u32 nextFileId = 0;
+	if (base)
+	{
+		merged->capabilities = base->capabilities;
+		for (u32 i = 0; i < (u32)base->NumRegions(); i++)
+			merged->AddRegion(base->GetRegion(i)->name, base->GetRegion(i)->dest);
+		for (u32 i = 0; i < (u32)base->NumBlocks(); i++)
+			merged->AddBlock(base->GetBlock(i)->name, base->GetBlock(i)->regionId);
+		for (auto &it : base->Files())
+		{
+			CopyFile(merged.get(), it.first, it.second);
+			nextFileId = std::max(nextFileId, it.first + 1);
+		}
+		for (const CDebugSourceMapping &mapping : base->Mappings())
+			merged->AddMapping(mapping);
+		for (const CDebugFunction &function : base->Functions())
+			merged->AddFunction(function);
+	}
+	merged->capabilities.lineMappings = true;
+	if (*regionId < 0 || *regionId >= (int)merged->NumRegions())
+		*regionId = (int)merged->AddRegion("Default", "");
+	u32 region = (u32)*regionId;
+
+	for (const std::shared_ptr<const CDebugDatabase> &fragment : fragments)
+	{
+		u32 block = merged->AddBlock("", region);
+		std::map<u32, u32> fileIds;
+		for (auto &it : fragment->Files())
+		{
+			fileIds[it.first] = nextFileId;
+			CopyFile(merged.get(), nextFileId++, it.second);
+		}
+		for (CDebugSourceMapping mapping : fragment->Mappings())
+		{
+			mapping.regionId = region;
+			mapping.blockId = block;
+			mapping.fileId = fileIds[mapping.fileId];
+			merged->AddMapping(mapping);
+		}
+		for (CDebugFunction function : fragment->Functions())
+		{
+			function.regionId = region;
+			function.fileId = fileIds[function.fileId];
+			merged->AddFunction(function);
+		}
+	}
+	merged->Finalize();
+	return merged;
+}

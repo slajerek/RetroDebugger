@@ -47,8 +47,25 @@ public:
 	std::shared_ptr<const CDebugDatabase> debugDatabase;
 
 	// Swaps the database and re-resolves the source breakpoints against it
-	// (NULL unloads). Loaders call this instead of assigning debugDatabase.
+	// (NULL unloads). Loaders call this instead of assigning debugDatabase;
+	// it drops the assembled sources below.
 	void SetDebugDatabase(std::shared_ptr<const CDebugDatabase> database);
+	void ApplyDebugDatabase(std::shared_ptr<const CDebugDatabase> database);	// keeps the base and assembled sources
+
+	// RD-043: code the embedded 64tass assembled at run time, with its line
+	// map and text (DebugInfoFromAssembly). debugDatabase is the loaded one
+	// (baseDebugDatabase) with these merged into the current segment's
+	// region; a newer one drops those whose code it overwrote, a load drops
+	// them all. CODELABELS go to the current segment.
+	struct AssembledSource
+	{
+		std::shared_ptr<const CDebugDatabase> database;
+		u32 start, end;		// half-open, the assembled bytes
+	};
+	std::shared_ptr<const CDebugDatabase> baseDebugDatabase;
+	std::vector<AssembledSource> assembledSources;
+	void AddAssembledSource(std::shared_ptr<const CDebugDatabase> fragment, u32 start, u32 end,
+							const std::vector<std::pair<std::string, u32>> &codeLabels);
 
 	// The debug file the database came from, and why it may not match the
 	// program or the sources (DebugInfoCheckStale); empty when it matches.

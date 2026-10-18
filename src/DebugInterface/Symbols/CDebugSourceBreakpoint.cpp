@@ -5,6 +5,7 @@
 #include "CDebugBreakpointsAddr.h"
 #include "CDebugBreakpointAddr.h"
 #include "CDebugInterface.h"
+#include "CGuiMain.h"
 #include "DBG_Log.h"
 #include <algorithm>
 
@@ -124,6 +125,48 @@ void CDebugSymbols::RemoveSourceBreakpoint(CDebugSourceBreakpoint *breakpoint)
 }
 
 void CDebugSymbols::SetDebugDatabase(std::shared_ptr<const CDebugDatabase> database)
+{
+	debugInterface->LockMutex();
+	baseDebugDatabase = database;
+	assembledSources.clear();
+	ApplyDebugDatabase(database);
+	debugInterface->UnlockMutex();
+}
+
+void CDebugSymbols::AddAssembledSource(std::shared_ptr<const CDebugDatabase> fragment, u32 start, u32 end,
+									   const std::vector<std::pair<std::string, u32>> &codeLabels)
+{
+	guiMain->LockMutex();
+	debugInterface->LockMutex();
+	if (currentSegment)
+	{
+		// the code it overwrote is gone, and so is that code's source
+		for (size_t i = 0; i < assembledSources.size(); )
+		{
+			if (assembledSources[i].start < end && start < assembledSources[i].end)
+				assembledSources.erase(assembledSources.begin() + i);
+			else
+				i++;
+		}
+		assembledSources.push_back({ fragment, start, end });
+
+		std::vector<std::shared_ptr<const CDebugDatabase>> fragments;
+		for (const AssembledSource &source : assembledSources)
+			fragments.push_back(source.database);
+		int regionId = currentSegment->debugRegionId;
+		std::shared_ptr<const CDebugDatabase> merged = DebugDatabaseMerge(baseDebugDatabase.get(), fragments, &regionId);
+		currentSegment->debugRegionId = regionId;
+		ApplyDebugDatabase(merged);
+
+		for (const std::pair<std::string, u32> &label : codeLabels)
+			currentSegment->AddCodeLabel(currentSegment->CreateCodeLabel((int)label.second, (char *)label.first.c_str()), false);
+		currentSegment->UpdateCodeLabelsArray();
+	}
+	debugInterface->UnlockMutex();
+	guiMain->UnlockMutex();
+}
+
+void CDebugSymbols::ApplyDebugDatabase(std::shared_ptr<const CDebugDatabase> database)
 {
 	debugInterface->LockMutex();
 	for (CDebugSourceBreakpoint *breakpoint : sourceBreakpoints)

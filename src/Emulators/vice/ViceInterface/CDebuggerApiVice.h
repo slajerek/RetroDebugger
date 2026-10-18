@@ -119,6 +119,8 @@ public:
 	//
 	u8 assembleTarget;
 	void SetAssembleTarget(u8 target);
+	virtual void AssembleResultToMemory(int addr, u8 v);
+	virtual CDebugSymbols *GetAssembleSymbols();
 	int Assemble(int addr, char *assembleText);
 	
 	//

@@ -19,6 +19,7 @@
 #include "CTestSourceStepTrace.h"
 #include "CTestSourceDocument.h"
 #include "CTestBankedSource.h"
+#include "CTestAssembledSource.h"
 #include "CTestAutoloadD64.h"
 #include "CTestDiskDetach.h"
 #include "CTestDiskAttach.h"
@@ -126,6 +127,7 @@ void CTestSuiteRegisterRetroDebuggerTests(std::vector<std::unique_ptr<CTest> > &
 	tests.push_back(std::make_unique<CTestSourceStepTrace>());
 	tests.push_back(std::make_unique<CTestSourceDocument>());
 	tests.push_back(std::make_unique<CTestBankedSource>());
+	tests.push_back(std::make_unique<CTestAssembledSource>());
 	// TODO(autoload-d64): Re-enable once the cold-reset fastloader wedge
 	// in bitbreaker.d64 is fixed. The test reliably reproduces the bug
 	// (drvPC stuck at $0400 spinning JMP ($1800), C64 stuck on

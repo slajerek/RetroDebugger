@@ -6,6 +6,8 @@
 // cc65/ld65 and KickAssembler both name theirs .dbg.
 
 #include "SYS_Defs.h"
+#include <map>
+#include <memory>
 #include <string>
 #include <utility>
 #include <vector>
@@ -14,6 +16,7 @@ class CByteBuffer;
 class CSlrString;
 class CDebugSymbols;
 class CDebugDatabase;
+class CDebugSourceFile;
 
 enum class DebugInfoFormat : u8
 {
@@ -71,6 +74,17 @@ bool DebugInfoLoadOscar64(CDebugSymbols *symbols, CByteBuffer *byteBuffer, const
 // candidate; functions from C symbols with external linkage via their asm
 // scope; labels from asm labels except cc65's generated Lxxxx ones. No columns.
 bool DebugInfoLoadCc65(CDebugSymbols *symbols, CByteBuffer *byteBuffer, const CDebugInfoLoadOptions &options);
+
+// The text of FILE from memory, as LoadSourceText reads a file: [0] empty,
+// line n at [n], tabs expanded to four spaces (RD-043).
+void DebugSourceFileSetText(CDebugSourceFile *file, const char *text, size_t length);
+
+// RD-043: a database for code the embedded 64tass assembled: one file NAME
+// holding TEXT, one region and block, and a line mapping per run of
+// consecutive bytes from one line (LINES: logical address -> source line,
+// what the assembler reported for its last pass). Producer "64tass".
+std::shared_ptr<CDebugDatabase> DebugInfoFromAssembly(const char *name, const char *text, size_t length,
+													  const std::map<u32, i32> &lines);
 
 // Stale debug info (RD-014, spec #6.1): none of the supported producers
 // records a build id or a hash of the binary, so the check is by file time.

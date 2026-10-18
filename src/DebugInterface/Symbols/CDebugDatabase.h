@@ -16,6 +16,7 @@
 
 #include "SYS_Defs.h"
 #include <map>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -159,6 +160,7 @@ public:
 	const CDebugBlock *GetBlock(u32 blockId) const;
 	size_t NumFiles() const { return files.size(); }
 	size_t NumRegions() const { return regions.size(); }
+	size_t NumBlocks() const { return blocks.size(); }
 	size_t NumMappings() const { return mappings.size(); }
 	const std::vector<CDebugSourceMapping> &Mappings() const { return mappings; }
 	const std::map<u32, CDebugSourceFile *> &Files() const { return files; }
@@ -193,5 +195,15 @@ private:
 	std::map<std::pair<u32, i32>, std::vector<u32>> bySourceLine;
 	bool finalized;
 };
+
+// RD-043: BASE (may be NULL) with FRAGMENTS added on top -- each a database
+// of one region, e.g. DebugInfoFromAssembly's -- in order, so where they
+// overlap the later fragment's mappings are in effect. Fragment mappings go
+// into region *REGIONID of the result; with *REGIONID < 0 a "Default" region
+// is added for them and *REGIONID set to it. File ids are renumbered past
+// BASE's. The result is finalized.
+std::shared_ptr<CDebugDatabase> DebugDatabaseMerge(const CDebugDatabase *base,
+												   const std::vector<std::shared_ptr<const CDebugDatabase>> &fragments,
+												   int *regionId);
 
 #endif
