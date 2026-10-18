@@ -5,8 +5,14 @@
 #include "CDebugMemoryMapping.h"
 #include "DebuggerDefs.h"
 #include "SYS_Main.h"
+#include "CSlrString.h"
+#include "GUI_Main.h"
+#include <cstring>
 #include <cstdio>
 #include <string>
+#include <vector>
+
+extern CSlrString *c64SettingsPathToCartridge;
 
 extern "C"
 {
@@ -22,6 +28,185 @@ extern "C"
 static bool Is(const CDebugMappedAddress &m, DebugMemoryKind kind, const char *device)
 {
 	return m.physical.kind == kind && (device == NULL || m.physical.device == device);
+}
+
+// A .crt: the 64-byte header, then one CHIP packet per 8 KB bank (each 16
+// bytes of packet header and the data). Bank N's data carries 0xB0+N at $100.
+struct CrtChip { u16 type, bank, start; std::vector<u8> data; };
+
+static u32 CrtChipDataOffset(int chipIndex)
+{
+	return 0x40 + chipIndex * (0x10 + 0x2000) + 0x10;
+}
+
+static bool WriteCrt(const std::string &path, u16 hardwareType, u8 exrom, u8 game, const std::vector<CrtChip> &chips)
+{
+	std::vector<u8> out(0x40, 0);
+	memcpy(&out[0], "C64 CARTRIDGE   ", 16);
+	out[0x13] = 0x40;
+	out[0x14] = 0x01;
+	out[0x16] = (u8)(hardwareType >> 8);	out[0x17] = (u8)hardwareType;
+	out[0x18] = exrom;						out[0x19] = game;
+	memcpy(&out[0x20], "RD MAPPING TEST", 15);
+	for (const CrtChip &chip : chips)
+	{
+		const u8 header[16] = { 'C', 'H', 'I', 'P', 0x00, 0x00, 0x20, 0x10, (u8)(chip.type >> 8), (u8)chip.type,
+								(u8)(chip.bank >> 8), (u8)chip.bank, (u8)(chip.start >> 8), (u8)chip.start, 0x20, 0x00 };
+		out.insert(out.end(), header, header + 16);
+		out.insert(out.end(), chip.data.begin(), chip.data.end());
+	}
+	FILE *f = fopen(path.c_str(), "wb");
+	if (f == NULL)
+		return false;
+	bool ok = fwrite(out.data(), 1, out.size(), f) == out.size();
+	fclose(f);
+	return ok;
+}
+
+static std::vector<u8> CrtBank(int bank)
+{
+	std::vector<u8> data(0x2000, 0xFF);
+	data[0x100] = (u8)(0xB0 + bank);
+	return data;
+}
+
+// at the KERNAL's READY loop with its vectors set (after a cartridge detach reset)
+static bool WaitForReady(CDebugInterfaceC64 *c64)
+{
+	for (int waited = 0; waited < 10000; waited += 20)
+	{
+		u16 pc = (u16)c64->GetCpuPC();
+		if (c64->GetByteFromRamC64(0x0326) == 0xCA && c64->GetByteFromRamC64(0x0327) == 0xF1 && pc >= 0xE5CD && pc <= 0xE5D5)
+			return true;
+		SYS_Sleep(20);
+	}
+	return false;
+}
+
+static bool AttachAndPauseAt(CDebugInterfaceC64 *c64, const std::string &path, u16 loopPc)
+{
+	c64->SetDebugMode(DEBUGGER_MODE_RUNNING);
+	CSlrString *p = new CSlrString(path.c_str());
+	c64->AttachCartridge(p);
+	delete p;
+	for (int waited = 0; waited < 5000; waited += 20)
+	{
+		SYS_Sleep(20);
+		if ((u16)c64->GetCpuPC() == loopPc)
+		{
+			c64->PauseEmulationBlockedWait();
+			if ((u16)c64->GetCpuPC() == loopPc)
+				return true;
+			c64->SetDebugMode(DEBUGGER_MODE_RUNNING);
+		}
+	}
+	return false;
+}
+
+static bool DetachAndBoot(CDebugInterfaceC64 *c64)
+{
+	c64->SetDebugMode(DEBUGGER_MODE_RUNNING);
+	c64->DetachCartridge();
+	bool detached = false;
+	for (int waited = 0; waited < 5000 && !detached; waited += 10)
+	{
+		C64StateCartridge state;
+		state.exrom = state.game = 0;
+		c64->GetC64CartridgeState(&state);
+		detached = state.exrom == 1 && state.game == 1;
+		if (!detached)
+			SYS_Sleep(10);
+	}
+	bool ready = detached && WaitForReady(c64);
+	c64->PauseEmulationBlockedWait();
+	return ready;
+}
+
+static bool IsCart(const CDebugMappedAddress &m, int region, u32 offset, u32 imageOffset)
+{
+	return m.physical.kind == DebugMemoryKind::CartridgeRom && m.physical.device == "c64-cart" && m.physical.region == region
+		&& m.physical.offset == offset && m.hasImageOffset && m.imageOffset == imageOffset;
+}
+
+bool CTestC64MemoryMapping::RunBankedCartridges(int &stepNum, std::string &failed)
+{
+	CDebugInterfaceC64 *c64 = viewC64->debugInterfaceC64;
+	CDebugMemoryMappingResolver *resolver = c64->GetMemoryMappingResolver();
+	guiMain->LockMutex();
+	CSlrString *savedCartridgePath = c64SettingsPathToCartridge;
+	c64SettingsPathToCartridge = NULL;
+	guiMain->UnlockMutex();
+	bool attached = false;
+	auto check = [&](bool condition, const char *msg) {
+		if (!condition && failed.empty())
+			failed = msg;
+		else if (condition)
+			StepCompleted(stepNum++, true, msg);
+		return condition;
+	};
+
+	// Ocean (type 5), 4 x 8 KB, 16 KB mode: $8000 and $A000 both read the ROML
+	// bank. Bank 0 is a CBM80 cartridge whose cold start loops at $8009.
+	std::string oceanPath = "/tmp/rd-mapping-ocean.crt";
+	std::vector<CrtChip> ocean;
+	for (int bank = 0; bank < 4; bank++)
+		ocean.push_back({ 0, (u16)bank, 0x8000, CrtBank(bank) });
+	const u8 boot[] = { 0x09, 0x80, 0x09, 0x80, 0xC3, 0xC2, 0xCD, 0x38, 0x30, 0x4C, 0x09, 0x80 };
+	memcpy(ocean[0].data.data(), boot, sizeof(boot));
+	bool ok = check(WriteCrt(oceanPath, 5, 0, 0, ocean), "Ocean: a four-bank .crt is written")
+		&& check(attached = AttachAndPauseAt(c64, oceanPath, 0x8009), "Ocean: the cartridge attaches and runs to its loop at $8009");
+	if (ok)
+	{
+		CDebugMappedAddress bank0 = resolver->ResolveFetch(0x8009);
+		c64->SetByteC64(0xDE00, 2);
+		CDebugMappedAddress low2 = resolver->ResolveFetch(0x8100);
+		CDebugMappedAddress high2 = resolver->ResolveRead(0xA100);
+		ok = check(IsCart(bank0, 0, 0x0009, CrtChipDataOffset(0) + 0x0009), "Ocean: $8009 is bank 0, at its .crt file offset")
+			&& check(IsCart(low2, 0, 2 * 0x2000 + 0x100, CrtChipDataOffset(2) + 0x100) && c64->GetByteC64(0x8100) == 0xB2,
+					 "Ocean: after $DE00=2, $8100 is bank 2 and reads its marker byte")
+			&& check(high2.physical == low2.physical && high2.imageOffset == low2.imageOffset,
+					 "Ocean: $A100 reads the same ROML bank byte as $8100");
+		c64->SetByteC64(0xDE00, 0);
+	}
+	if (attached)
+		ok = check(DetachAndBoot(c64), "Ocean: the cartridge detaches and the C64 boots to READY") && ok;
+	attached = false;
+
+	// EasyFlash (type 32): boots in Ultimax with ROMH bank 0 at $E000 (reset
+	// vector -> a loop at $E000); $DE02=7 is the 16 KB mode, $DE00 the bank.
+	std::string easyFlashPath = "/tmp/rd-mapping-easyflash.crt";
+	std::vector<CrtChip> easyFlash = {
+		{ 2, 0, 0x8000, CrtBank(0) }, { 2, 0, 0xE000, CrtBank(0) },
+		{ 2, 1, 0x8000, CrtBank(1) }, { 2, 1, 0xA000, CrtBank(1) },
+	};
+	easyFlash[1].data[0x0000] = 0x4C;	easyFlash[1].data[0x0001] = 0x00;	easyFlash[1].data[0x0002] = 0xE0;
+	easyFlash[1].data[0x1FFC] = 0x00;	easyFlash[1].data[0x1FFD] = 0xE0;
+	easyFlash[3].data[0x100] = 0xC1;	// bank 1's ROMH marker
+	if (ok)
+		ok = check(WriteCrt(easyFlashPath, 32, 1, 0, easyFlash), "EasyFlash: a two-bank .crt is written")
+			&& check(attached = AttachAndPauseAt(c64, easyFlashPath, 0xE000), "EasyFlash: the cartridge boots in Ultimax to its loop at $E000");
+	if (ok)
+	{
+		CDebugMappedAddress romh0 = resolver->ResolveFetch(0xE000);
+		c64->SetByteC64(0xDE00, 1);
+		c64->SetByteC64(0xDE02, 7);
+		CDebugMappedAddress roml1 = resolver->ResolveRead(0x8100);
+		CDebugMappedAddress romh1 = resolver->ResolveRead(0xA100);
+		ok = check(IsCart(romh0, 1, 0x0000, CrtChipDataOffset(1)), "EasyFlash: in Ultimax $E000 is ROMH bank 0, at its .crt file offset")
+			&& check(IsCart(roml1, 0, 0x2000 + 0x100, CrtChipDataOffset(2) + 0x100) && c64->GetByteC64(0x8100) == 0xB1,
+					 "EasyFlash: in 16 KB mode with bank 1, $8100 is ROML bank 1 and reads its marker byte")
+			&& check(IsCart(romh1, 1, 0x2000 + 0x100, CrtChipDataOffset(3) + 0x100) && c64->GetByteC64(0xA100) == 0xC1,
+					 "EasyFlash: $A100 is ROMH bank 1 at the interleaved .crt offset");
+	}
+	if (attached)
+		ok = check(DetachAndBoot(c64), "EasyFlash: the cartridge detaches and the C64 boots to READY") && ok;
+
+	guiMain->LockMutex();
+	if (c64SettingsPathToCartridge)
+		delete c64SettingsPathToCartridge;
+	c64SettingsPathToCartridge = savedCartridgePath;
+	guiMain->UnlockMutex();
+	return ok;
 }
 
 void CTestC64MemoryMapping::Run(ITestCallback *cb)
@@ -126,6 +311,14 @@ void CTestC64MemoryMapping::Run(ITestCallback *cb)
 		MM_CHECK(resolver->Resolve(0xD000, DebugMemoryAccess::Read, DebugMemoryBusMaster::Vic).physical.kind == DebugMemoryKind::Unknown,
 				 "the VIC-II's view is Unknown until it is modelled, not the CPU's answer");
 	}
+	c64->SetByteC64(0x0000, savedDdr);
+	c64->SetByteC64(0x0001, savedPort);
+	RunBankedCartridges(stepNum, failed);
+	TestCompleted(failed.empty(), failed.empty() ? "C64 mapping provider follows VICE's 6510 port configurations and banked cartridges" : failed.c_str());
+	c64->SetDebugMode(DEBUGGER_MODE_RUNNING);
+	if (!wasRunning)
+		viewC64->StopEmulationThread(c64);
+	return;
 
 done:
 	c64->SetByteC64(0x0000, savedDdr);

@@ -273,25 +273,50 @@ static int c64d_generic_cartridge_only(void)
            && cart_getid_slot0() == CARTRIDGE_NONE && cart_getid_slot1() == CARTRIDGE_NONE;
 }
 
-/* RD-030: main-slot banked cartridges whose ROML reads are generic_roml_read
-   from roml_banks at roml_bank (c64cartmem.c's default case) and whose raw
-   image is roml_banks as loaded (magicdesk.c copies it 1:1) */
-static int c64d_generic_roml_bank_cartridge(void)
+/* RD-030: main-slot banked cartridges whose ROML reads come from roml_banks
+   at roml_bank: Magic Desk and Ocean through c64cartmem.c's default
+   generic_roml_read, EasyFlash through its flash040 core, whose data is
+   roml_banks (easyflash_config_setup) */
+static int c64d_banked_roml_cartridge(void)
 {
-    return mem_cartridge_type == CARTRIDGE_MAGIC_DESK
+    return (mem_cartridge_type == CARTRIDGE_MAGIC_DESK || mem_cartridge_type == CARTRIDGE_OCEAN
+            || mem_cartridge_type == CARTRIDGE_EASYFLASH)
            && cart_getid_slot0() == CARTRIDGE_NONE && cart_getid_slot1() == CARTRIDGE_NONE;
 }
 
-/* RD-030: the .crt file offset of a ROML byte at OFFSET (c64d_resolve_access's
-   C64D_ACCESS_ROML offset), for the cartridges whose raw image is laid out
-   as roml_banks; 0 when not known */
+static int c64d_main_slot_only(int cartType)
+{
+    return mem_cartridge_type == cartType
+           && cart_getid_slot0() == CARTRIDGE_NONE && cart_getid_slot1() == CARTRIDGE_NONE;
+}
+
+/* RD-030: the .crt file offset of a cartridge ROM byte, OFFSET being the
+   c64d_resolve_access offset (into roml_banks for C64D_ACCESS_ROML, romh_banks
+   for C64D_ACCESS_ROMH). The raw image crt.c recorded is roml_banks as loaded
+   for generic, Magic Desk and Ocean carts (romh_banks at $2000 for a generic
+   16 KB one); EasyFlash interleaves it, bank N's ROML at N * $4000 and its
+   ROMH $2000 above (easyflash_crt_attach). 0 when not known */
 extern int c64d_crt_file_offset(uint32_t rawOffset, uint32_t *fileOffset);
 int c64d_cartridge_roml_file_offset(uint32_t offset, uint32_t *fileOffset)
 {
-    if (!(c64d_generic_cartridge_only() || c64d_generic_roml_bank_cartridge()) || export_ram) {
+    if (!(c64d_generic_cartridge_only() || c64d_banked_roml_cartridge()) || export_ram) {
         return 0;
     }
+    if (mem_cartridge_type == CARTRIDGE_EASYFLASH) {
+        offset = ((offset >> 13) << 14) | (offset & 0x1fff);
+    }
     return c64d_crt_file_offset(offset, fileOffset);
+}
+
+int c64d_cartridge_romh_file_offset(uint32_t offset, uint32_t *fileOffset)
+{
+    if (c64d_main_slot_only(CARTRIDGE_EASYFLASH)) {
+        return c64d_crt_file_offset(((offset >> 13) << 14) | 0x2000 | (offset & 0x1fff), fileOffset);
+    }
+    if (c64d_main_slot_only(CARTRIDGE_GENERIC_16KB)) {
+        return c64d_crt_file_offset(0x2000 + offset, fileOffset);
+    }
+    return 0;
 }
 
 void c64d_resolve_access(uint16_t addr, int isWrite, int *kind, uint32_t *offset)
@@ -327,12 +352,16 @@ void c64d_resolve_access(uint16_t addr, int isWrite, int *kind, uint32_t *offset
             off = addr - 0xd000;
         } else if (f == void_read) {
             k = C64D_ACCESS_UNMAPPED;
-        } else if (f == roml_read && (c64d_generic_cartridge_only() || c64d_generic_roml_bank_cartridge())) {
+        } else if (f == roml_read && (c64d_generic_cartridge_only() || c64d_banked_roml_cartridge())) {
             k = export_ram ? C64D_ACCESS_CART_RAM : C64D_ACCESS_ROML;
             off = export_ram ? (uint32_t)(addr & 0x1fff) : (uint32_t)((roml_bank << 13) + (addr & 0x1fff));
-        } else if ((f == romh_read || f == ultimax_romh_read_hirom) && c64d_generic_cartridge_only()) {
+        } else if ((f == romh_read || f == ultimax_romh_read_hirom)
+                   && (c64d_generic_cartridge_only() || c64d_main_slot_only(CARTRIDGE_EASYFLASH))) {
             k = C64D_ACCESS_ROMH;
             off = (uint32_t)((romh_bank << 13) + (addr & 0x1fff));
+        } else if (f == romh_read && c64d_main_slot_only(CARTRIDGE_OCEAN)) {
+            k = C64D_ACCESS_ROML;    /* ocean_romh_read: $A000 reads the ROML bank too */
+            off = (uint32_t)((roml_bank << 13) + (addr & 0x1fff));
         }
     } else {
         store_func_ptr_t s = mem_write_tab[mem_config][page];
