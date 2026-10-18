@@ -1796,6 +1796,7 @@ add_executable(retrodebugger
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Tools/libpsid64/libpsid-screen.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Tools/C64SIDFrequencies.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Tools/Shaders/CRenderShaderCRTMonitorOpenGL4.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CTestSourceVerify.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/DebugInterface/C64/C64BankingModes.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CTestAtariXeBanks.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CTestWorkspace.cpp"

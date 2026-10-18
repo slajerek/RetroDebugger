@@ -93,6 +93,7 @@ bool CWorkspaceSession::LoadBuild(const CBuildTaskRun &run, std::string *error)
 		// the program and its debug info come from this build: check both
 		di->symbols->debugInfoWarnings = DebugInfoCheckStale(di->symbols->debugDatabase.get(), task.debugInfo.c_str(),
 															 task.program.empty() ? NULL : task.program.c_str());
+		di->symbols->programPath = task.program;
 	}
 	return true;
 }

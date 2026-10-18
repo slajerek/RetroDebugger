@@ -15,6 +15,7 @@
 #include "CTestC64MemoryMapping.h"
 #include "CTestMachineMemoryMapping.h"
 #include "CTestAtariXeBanks.h"
+#include "CTestSourceVerify.h"
 #include "CTestInstructionStepping.h"
 #include "CTestSourceStepping.h"
 #include "CTestSourceStepTrace.h"
@@ -127,6 +128,7 @@ void CTestSuiteRegisterRetroDebuggerTests(std::vector<std::unique_ptr<CTest> > &
 	tests.push_back(std::make_unique<CTestC64MemoryMapping>());
 	tests.push_back(std::make_unique<CTestMachineMemoryMapping>());
 	tests.push_back(std::make_unique<CTestAtariXeBanks>());
+	tests.push_back(std::make_unique<CTestSourceVerify>());
 	tests.push_back(std::make_unique<CTestInstructionStepping>());
 	tests.push_back(std::make_unique<CTestSourceStepping>());
 	tests.push_back(std::make_unique<CTestSourceStepTrace>());

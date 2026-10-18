@@ -71,6 +71,9 @@ public:
 	// program or the sources (DebugInfoCheckStale); empty when it matches.
 	std::string debugInfoPath;
 	std::vector<std::string> debugInfoWarnings;
+	// the program file the debug info was loaded for, when known (RD-007's
+	// code check, DebugInfoCheckCode)
+	std::string programPath;
 
 	// Source breakpoints (RD-014, CDebugSourceBreakpoint.h): file + line,
 	// resolved to address breakpoints in the segments of the loaded database.

@@ -53,6 +53,9 @@ public:
 	// RD-036: source queries on the loaded debug info (current segment's region)
 	// ADDRESS (-1: the PC) -> file, line, function and every candidate mapping
 	virtual nlohmann::json GetSourceLocationJson(int address, const std::string &cpu = "");
+	// RD-007: the code in memory against the program file (default: the one
+	// the debug info was loaded for)
+	nlohmann::json VerifySourceCodeJson(const std::string &programPath);
 	// RD-045: recording on/off, the capabilities, and the COUNT lines executed last
 	virtual nlohmann::json GetSourceTraceJson(int count);
 	// FILE:LINE -> the line actually used and its first addresses

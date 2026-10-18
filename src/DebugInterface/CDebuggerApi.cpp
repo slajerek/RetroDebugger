@@ -180,6 +180,39 @@ static nlohmann::json MappingJson(const CDebugDatabase *database, const CDebugSo
 
 static void AddInlineChain(nlohmann::json &j, const CDebugDatabase *database, const CDebugSourceMapping *m);
 
+nlohmann::json CDebuggerApi::VerifySourceCodeJson(const std::string &programPath)
+{
+	nlohmann::json j;
+	debugInterface->LockMutex();
+	CDebugSymbols *symbols = debugInterface->symbols;
+	std::shared_ptr<const CDebugDatabase> database = symbols ? symbols->debugDatabase : NULL;
+	std::string program = !programPath.empty() ? programPath : (symbols ? symbols->programPath : std::string());
+	debugInterface->UnlockMutex();
+	if (database == NULL)
+	{
+		j["error"] = "no debug info is loaded";
+		return j;
+	}
+	if (program.empty())
+	{
+		j["error"] = "the program file is not known: give \"program\"";
+		return j;
+	}
+	CDebugCodeCheck check = DebugInfoCheckCode(database.get(), debugInterface, program.c_str());
+	j["program"] = program;
+	j["checked"] = check.checked;
+	j["differing"] = check.differing;
+	j["matches"] = check.programRead && check.differing == 0;
+	j["firstDiffering"] = nlohmann::json::array();
+	for (u32 address : check.firstDiffering)
+		j["firstDiffering"].push_back(address);
+	if (!check.warning.empty())
+		j["warning"] = check.warning;
+	else if (check.checked == 0)
+		j["warning"] = "no mapping records its offset in the program file (or none of its banks is in): nothing was compared";
+	return j;
+}
+
 nlohmann::json CDebuggerApi::GetSourceLocationJson(int address, const std::string &cpu)
 {
 	nlohmann::json j;

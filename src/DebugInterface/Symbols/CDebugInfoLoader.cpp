@@ -17,6 +17,9 @@
 #include <cctype>
 #include <cstdlib>
 #include <filesystem>
+#include <fstream>
+#include <iterator>
+#include <set>
 #include <system_error>
 #include <istream>
 #include <list>
@@ -170,6 +173,7 @@ DebugInfoFormat DebugInfoLoadFile(CDebugSymbols *symbols, const char *cPath, con
 	{
 		// the program is not known here; the autoload next to it adds that check
 		symbols->debugInfoPath = cPath;
+		symbols->programPath.clear();		// the autoload and the workspace set it
 		symbols->debugInfoWarnings = DebugInfoCheckStale(symbols->debugDatabase.get(), cPath, NULL);
 		for (const std::string &warning : symbols->debugInfoWarnings)
 			LOGWarning("DebugInfoLoadFile: %s", warning.c_str());
@@ -1564,3 +1568,84 @@ std::shared_ptr<CDebugDatabase> DebugInfoFromAssembly(const char *name, const ch
 	database->Finalize();
 	return database;
 }
+
+CDebugCodeCheck DebugInfoCheckCode(const CDebugDatabase *database, CDebugInterface *debugInterface, const char *programPath)
+{
+	CDebugCodeCheck check;
+	std::vector<u8> program;
+	if (programPath)
+	{
+		std::ifstream in(Utf8Path(programPath), std::ios::binary);
+		if (in)
+		{
+			program.assign(std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>());
+			check.programRead = true;
+		}
+	}
+	std::string programName = programPath ? FileNameOf(programPath) : std::string("the program");
+	if (!check.programRead)
+	{
+		check.warning = "cannot read " + programName + " to compare the code in memory with it";
+		return check;
+	}
+	if (database == NULL || debugInterface == NULL)
+		return check;
+
+	// A cartridge build: some mapped code is fetched from the cartridge image
+	// right now. Then only bytes fetched from the very image offset the debug
+	// info gives are compared -- that is the bank in, and never the producer's
+	// segments that are not CPU memory (cc65's iNES HEADER "at" $0000). A
+	// program in RAM (PRG, XEX) has no image behind its code: every byte.
+	bool imageBacked = false;
+	for (const CDebugSourceMapping &mapping : database->Mappings())
+	{
+		u64 fetched = 0;
+		if (mapping.hasImageOffset && mapping.start < 0x10000 && debugInterface->GetFetchImageOffset((u16)mapping.start, &fetched))
+		{
+			imageBacked = true;
+			break;
+		}
+	}
+
+	CDebugDataAdapter *memory = debugInterface->GetDataAdapter();
+	std::set<u32> compared;		// a byte several mappings cover counts once
+	for (const CDebugSourceMapping &mapping : database->Mappings())
+	{
+		if (!mapping.hasImageOffset || mapping.end <= mapping.start)
+			continue;
+		for (u32 address = mapping.start; address < mapping.end && address < 0x10000; address++)
+		{
+			u64 offset = mapping.imageOffset + (address - mapping.start);
+			if (offset >= program.size() || compared.count(address))
+				continue;
+			if (imageBacked)
+			{
+				u64 fetched = 0;
+				if (!debugInterface->GetFetchImageOffset((u16)address, &fetched) || fetched != offset)
+					continue;		// another bank is in, or not cartridge memory
+			}
+			compared.insert(address);
+			u8 value = 0;
+			bool available = false;
+			memory->AdapterReadByte((int)address, &value, &available);
+			if (!available)
+				continue;
+			check.checked++;
+			if (value != program[offset])
+			{
+				check.differing++;
+				if (check.firstDiffering.size() < 8)
+					check.firstDiffering.push_back(address);
+			}
+		}
+	}
+	if (check.differing > 0)
+	{
+		char buf[64];
+		snprintf(buf, sizeof(buf), "$%04X", check.firstDiffering[0]);
+		check.warning = std::to_string(check.differing) + " of " + std::to_string(check.checked) + " code bytes in memory differ from "
+			+ programName + " (first at " + buf + "): another build is loaded, or the code was changed at run time";
+	}
+	return check;
+}
+

@@ -1481,6 +1481,8 @@
     <ClCompile Include="..\..\..\src\Tools\libpsid64\libpsid-sidid.cpp" />
     <ClCompile Include="..\..\..\src\Tools\libpsid64\libpsid-theme.cpp" />
     <ClCompile Include="..\..\..\src\Tools\Shaders\CRenderShaderCRTMonitorOpenGL4.cpp" />
+    <ClCompile Include="..\..\..\src\Tests\CTestSourceVerify.cpp" />
+    <ClInclude Include="..\..\..\src\Tests\CTestSourceVerify.h" />
     <ClCompile Include="..\..\..\src\DebugInterface\C64\C64BankingModes.cpp" />
     <ClInclude Include="..\..\..\src\DebugInterface\C64\C64BankingModes.h" />
     <ClCompile Include="..\..\..\src\Tests\CTestAtariXeBanks.cpp" />

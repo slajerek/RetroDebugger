@@ -96,4 +96,20 @@ static const int kDebugInfoBuildSkewSeconds = 120;
 std::vector<std::string> DebugInfoCheckStale(const CDebugDatabase *database, const char *debugFilePath,
 											 const char *programPath);
 
+// RD-007 identity check: the code the debug info maps, in the emulator's
+// memory, against PROGRAMPATH's bytes at the mappings' image offsets (the
+// producer's file offsets, cc65's ooffs). For a cartridge build only bytes
+// fetched from the expected image offset count (the bank in). Differing bytes mean another build is loaded, or the
+// code was changed at run time. Not having image offsets checks nothing.
+struct CDebugCodeCheck
+{
+	bool programRead = false;
+	int checked = 0;					// bytes compared
+	int differing = 0;
+	std::vector<u32> firstDiffering;	// up to 8 CPU addresses
+	std::string warning;				// one sentence, empty when it matches
+};
+class CDebugInterface;
+CDebugCodeCheck DebugInfoCheckCode(const CDebugDatabase *database, CDebugInterface *debugInterface, const char *programPath);
+
 #endif

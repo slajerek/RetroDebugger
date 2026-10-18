@@ -1734,6 +1734,7 @@ void CMainMenuHelper::LoadLabelsAndWatches(CSlrString *path, CDebugInterface *de
 			// RD-014: debug info and program from different builds
 			char *cProgramPath = path->GetStdASCII();
 			debugInterface->symbols->debugInfoWarnings = DebugInfoCheckStale(debugInterface->symbols->debugDatabase.get(), buf, cProgramPath);
+			debugInterface->symbols->programPath = cProgramPath;
 			STRFREE(cProgramPath);
 			if (!debugInterface->symbols->debugInfoWarnings.empty())
 				viewC64->ShowMessageWarning("Stale debug info: %s", debugInterface->symbols->debugInfoWarnings.front().c_str());

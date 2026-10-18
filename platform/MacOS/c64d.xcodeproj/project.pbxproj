@@ -84,6 +84,7 @@
 		4111C8BD262EE4380092E150 /* C64DebuggerPluginGoatTracker.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4111C8BC262EE4370092E150 /* C64DebuggerPluginGoatTracker.cpp */; };
 		4113F62629E2C5B7002FE970 /* CViewC64KeyMap.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4113F62429E2C5B7002FE970 /* CViewC64KeyMap.cpp */; };
 		411D2E402D71D4D3007714A9 /* CRenderShaderCRTMonitorOpenGL4.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4150D9DB2D71D15B0068351B /* CRenderShaderCRTMonitorOpenGL4.cpp */; };
+		79970CE999068BF0BC878713 /* CTestSourceVerify.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8DBE44C618CB1D49E6D959DE /* CTestSourceVerify.cpp */; };
 		50B3E0CE80EAAFA9486E7959 /* C64BankingModes.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F03338D816354233FD8D864D /* C64BankingModes.cpp */; };
 		AEC489C3EF2F504D8614B57C /* CTestAtariXeBanks.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5F683DB264CA64CF4C597E9C /* CTestAtariXeBanks.cpp */; };
 		F6039B4D18CF3D70CB52C7F0 /* CTestWorkspace.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 959E5CCC228D56EF1D94574C /* CTestWorkspace.cpp */; };
@@ -1738,6 +1739,8 @@
 		414AD73728797F1200244453 /* CViewC64ScreenViewfinder.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = "$(SRCROOT)/../../src/Views/C64/CViewC64ScreenViewfinder.cpp"; sourceTree = "<absolute>"; };
 		414AD73828797F1200244453 /* CViewC64ScreenViewfinder.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "$(SRCROOT)/../../src/Views/C64/CViewC64ScreenViewfinder.h"; sourceTree = "<absolute>"; };
 		4150D9DB2D71D15B0068351B /* CRenderShaderCRTMonitorOpenGL4.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = "$(SRCROOT)/../../src/Tools/Shaders/CRenderShaderCRTMonitorOpenGL4.cpp"; sourceTree = "<absolute>"; };
+		8DBE44C618CB1D49E6D959DE /* CTestSourceVerify.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CTestSourceVerify.cpp; path = ../../src/Tests/CTestSourceVerify.cpp; sourceTree = SOURCE_ROOT; };
+		C675E2151EFE01CEF0CB4021 /* CTestSourceVerify.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = CTestSourceVerify.h; path = ../../src/Tests/CTestSourceVerify.h; sourceTree = SOURCE_ROOT; };
 		F03338D816354233FD8D864D /* C64BankingModes.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = C64BankingModes.cpp; path = ../../src/DebugInterface/C64/C64BankingModes.cpp; sourceTree = SOURCE_ROOT; };
 		1A2591C7D4FAE57604B0C27A /* C64BankingModes.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = C64BankingModes.h; path = ../../src/DebugInterface/C64/C64BankingModes.h; sourceTree = SOURCE_ROOT; };
 		5F683DB264CA64CF4C597E9C /* CTestAtariXeBanks.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CTestAtariXeBanks.cpp; path = ../../src/Tests/CTestAtariXeBanks.cpp; sourceTree = SOURCE_ROOT; };
@@ -5008,6 +5011,8 @@
 			isa = PBXGroup;
 			children = (
 				4150D9DB2D71D15B0068351B /* CRenderShaderCRTMonitorOpenGL4.cpp */,
+				8DBE44C618CB1D49E6D959DE /* CTestSourceVerify.cpp */,
+				C675E2151EFE01CEF0CB4021 /* CTestSourceVerify.h */,
 				F03338D816354233FD8D864D /* C64BankingModes.cpp */,
 				1A2591C7D4FAE57604B0C27A /* C64BankingModes.h */,
 				5F683DB264CA64CF4C597E9C /* CTestAtariXeBanks.cpp */,
@@ -8900,6 +8905,7 @@
 				05B51DEEE6500A4D5D45DD85 /* events_posix.c in Sources */,
 				05B51D3B2773C59545583663 /* threads_posix.c in Sources */,
 				411D2E402D71D4D3007714A9 /* CRenderShaderCRTMonitorOpenGL4.cpp in Sources */,
+				79970CE999068BF0BC878713 /* CTestSourceVerify.cpp in Sources */,
 				50B3E0CE80EAAFA9486E7959 /* C64BankingModes.cpp in Sources */,
 				AEC489C3EF2F504D8614B57C /* CTestAtariXeBanks.cpp in Sources */,
 				F6039B4D18CF3D70CB52C7F0 /* CTestWorkspace.cpp in Sources */,

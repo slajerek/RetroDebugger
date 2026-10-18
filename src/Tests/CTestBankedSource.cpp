@@ -18,6 +18,7 @@
 #include "CDebugBreakpointAddr.h"
 #include "CDebugDatabase.h"
 #include "CDebugInfoLoader.h"
+#include "CDebuggerApi.h"
 #include "CDebugSourceBreakpoint.h"
 #include "DebuggerDefs.h"
 #include "SYS_Main.h"
@@ -162,6 +163,10 @@ bool CTestBankedSource::RunNes(const NesCartridge &cart)
 		ok = Check(paused && pc == onB->bindings[0].address && value == 1, msg);
 		std::string got;
 		ok = ok && Check(LabelIs(scratch, 0x8000, "_bankB", got), label + "with bank 1 in, the label at $8000 is _bankB (got " + got + ")");
+		// RD-007: the code check counts the bank in, not the other one at $8000
+		nlohmann::json verify = di->GetDebuggerApi()->VerifySourceCodeJson(dir + "/main.nes");
+		ok = ok && Check(verify.value("matches", false) && verify.value("checked", 0) > 0,
+						 label + "the code in memory matches main.nes, bank 1's code compared while bank 1 is in (" + verify.dump() + ")");
 	}
 
 	// bankA's line: the two calls of bankA stop, bankB's call in between does not
