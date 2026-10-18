@@ -45,6 +45,8 @@
 #include "cartridge.h"
 #include "cmdline.h"
 #include "crt.h"
+void c64d_cartridge_lock_exclusive(void);
+void c64d_cartridge_unlock_exclusive(void);
 #include "export.h"
 #include "interrupt.h"
 #include "lib.h"
@@ -1067,7 +1069,19 @@ static int crt_attach(const char *filename, uint8_t *rawcart)
 
     returns -1 on error, 0 on success
 */
+static int cartridge_attach_image_unlocked(int type, const char *filename);
+
+/* C64D: the cartridge's lifetime lock around the attach (ViceWrapper.cpp) */
 int cartridge_attach_image(int type, const char *filename)
+{
+    int result;
+    c64d_cartridge_lock_exclusive();
+    result = cartridge_attach_image_unlocked(type, filename);
+    c64d_cartridge_unlock_exclusive();
+    return result;
+}
+
+static int cartridge_attach_image_unlocked(int type, const char *filename)
 {
     uint8_t *rawcart;
     char *abs_filename;
@@ -1255,7 +1269,17 @@ void cart_detach_slotmain(void)
     - carts not in "Main Slot" must make sure their detach hook does not
       fail when it is called and the cart is not actually attached.
 */
+static void cartridge_detach_image_unlocked(int type);
+
+/* C64D: the cartridge's lifetime lock around the detach (ViceWrapper.cpp) */
 void cartridge_detach_image(int type)
+{
+    c64d_cartridge_lock_exclusive();
+    cartridge_detach_image_unlocked(type);
+    c64d_cartridge_unlock_exclusive();
+}
+
+static void cartridge_detach_image_unlocked(int type)
 {
     if (type == 0) {
         DBG(("CART: detach MAIN ID: %d\n", type));

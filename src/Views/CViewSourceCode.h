@@ -18,6 +18,7 @@
 
 #include "CGuiView.h"
 #include "CSourceDocument.h"
+#include <functional>
 #include <memory>
 #include <string>
 #include <vector>
@@ -28,6 +29,8 @@ class CDebugDatabase;
 class CDebugSourceFile;
 class CViewDisassembly;
 class CSyntaxLexer;
+class CSourceStepController;
+struct CDebugSourceMapping;
 
 enum class SourceViewFollow : u8
 {
@@ -51,6 +54,13 @@ public:
 	CViewDisassembly *viewDisassembly;
 	CDebugSymbols *debugSymbols;
 	CDebugInterface *debugInterface;
+
+	// The CPU the view follows: by default the debug interface's main CPU,
+	// with its bank-aware lookups (RD-007) and its source stepper. The 1541
+	// instance (RD-044) reads the drive's PC and stepper and resolves plainly.
+	std::function<int()> cpuPc;
+	CSourceStepController *stepper;
+	bool bankAware;
 
 	CSourceDocumentRegistry documents;
 	SourceViewFollow follow;
@@ -99,8 +109,11 @@ private:
 	char sourceRootInput[512];
 
 	void UpdatePosition();
+	const CDebugSourceMapping *ResolveAt(const CDebugDatabase *database, u32 regionId, u16 address) const;
 	const CDebugSourceFile *CurrentFile() const;
 	void RenderHeader(const CDebugSourceFile *file);
+	static const size_t kSourceTraceShown = 12;
+	void RenderSourceTrace();
 	void RenderMissing(const CDebugSourceFile *file);
 	void RenderDocument(const CDebugSourceFile *file, const CSourceDocument *document);
 	void RenderLineText(const std::string &text, const CSyntaxLexer *lexer, int *state);

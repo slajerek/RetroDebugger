@@ -313,6 +313,7 @@ CViewC64::CViewC64(float posX, float posY, float posZ, float sizeX, float sizeY)
 	
 	this->debugInterfaceC64 = NULL;
 	this->debugInterfaceC64U = NULL;
+	this->viewC64USourceCode = NULL;
 	this->emulationThreadC64 = NULL;
 	this->viewC64UScreen = NULL;
 	this->viewC64UScreenViewfinder = NULL;
@@ -1221,6 +1222,16 @@ void CViewC64::InitViceViews()
 	viewDrive1541Stack->readSPContext = debugInterfaceC64;
 	viewDrive1541Stack->viewDisassembly = viewDrive1541Disassembly;
 
+	// RD-044: the drive's own debug info, PC and source steps; no banks
+	viewDrive1541SourceCode = new CViewSourceCode("1541 Source code", 50, 80, posZ, 500, 350,
+												  debugInterfaceC64, debugInterfaceC64->symbolsDrive1541, viewDrive1541Disassembly);
+	{
+		CDebugInterfaceVice *vice = (CDebugInterfaceVice *)debugInterfaceC64;
+		viewDrive1541SourceCode->cpuPc = [vice]() { return vice->GetDrive1541PC(); };
+		viewDrive1541SourceCode->stepper = vice->driveSourceStepper;
+		viewDrive1541SourceCode->bankAware = false;
+	}
+
 	// set first drive data dump as main to be controlled by drive memory map
 	viewDrive1541MemoryMap->SetDataDumpView(viewDrive1541MemoryDataDump);
 	viewDrive1541MemoryMapMinimalRam->SetDataDumpView(viewDrive1541MemoryDataDump);
@@ -1381,6 +1392,8 @@ void CViewC64::InitViceViews()
 	viewDrive1541Disassembly->visible = false;
 	AddEmulatorMenuItemViewToFolder(debugInterfaceC64, folderDrive1541, viewDrive1541Disassembly2);
 	viewDrive1541Disassembly2->visible = false;
+	AddEmulatorMenuItemViewToFolder(debugInterfaceC64, folderDrive1541, viewDrive1541SourceCode);
+	viewDrive1541SourceCode->visible = false;
 	AddEmulatorMenuItemViewToFolder(debugInterfaceC64, folderDrive1541, viewDrive1541MemoryDataDump);
 	viewDrive1541MemoryDataDump->visible = false;
 	AddEmulatorMenuItemViewToFolder(debugInterfaceC64, folderDrive1541, viewDrive1541MemoryDataDump2);
@@ -1471,6 +1484,10 @@ void CViewC64::InitC64UViews()
 	AddEmulatorMenuItemView(debugInterfaceC64U, viewC64UMediaStatus);
 	AddEmulatorMenuItemView(debugInterfaceC64U, viewC64UScreenViewfinder);
 	AddEmulatorMenuItemView(debugInterfaceC64U, viewC64UDisassembly);
+	// RD-045: observed only -- labels, mapping and the executed lines from the bus trace
+	viewC64USourceCode = new CViewSourceCode("C64U Source code", 40, 70, posZ, 500, 350,
+											 debugInterfaceC64U, debugInterfaceC64U->symbols, viewC64UDisassembly);
+	AddEmulatorMenuItemView(debugInterfaceC64U, viewC64USourceCode);
 	AddEmulatorMenuItemView(debugInterfaceC64U, viewC64UMemoryDataDump);
 	AddEmulatorMenuItemView(debugInterfaceC64U, viewC64UMemoryMap);
 	AddEmulatorMenuItemView(debugInterfaceC64U, viewC64UMemoryDataWatch);
@@ -1532,6 +1549,7 @@ void CViewC64::InitC64UViews()
 	viewC64UModeStatus->visible = false;
 	viewC64UMediaStatus->visible = false;
 	viewC64UDisassembly->visible = false;
+	viewC64USourceCode->visible = false;
 	viewC64UMemoryDataDump->visible = false;
 	viewC64UMemoryMap->visible = false;
 	viewC64UMemoryDataWatch->visible = false;
@@ -2499,6 +2517,9 @@ void CViewC64::RenderImGui()
 		if (debugInterface->symbols && !debugInterface->symbols->retiredSegments.empty())
 			debugInterface->symbols->DeleteRetiredSegments();
 	}
+	// and the 1541's, which has debug info of its own (RD-044)
+	if (debugInterfaceC64 && debugInterfaceC64->symbolsDrive1541 && !debugInterfaceC64->symbolsDrive1541->retiredSegments.empty())
+		debugInterfaceC64->symbolsDrive1541->DeleteRetiredSegments();
 
 	if (userFontsNeedRecreation)
 	{
@@ -2693,12 +2714,22 @@ void CViewC64::StepOutSubroutine()
 	}
 }
 
+bool CViewC64::CanSourceStep()
+{
+	for (CDebugInterface *debugInterface : debugInterfaces)
+	{
+		if (debugInterface->isRunning && debugInterface->GetExecutionCapabilities().sourceStep)
+			return true;
+	}
+	return false;
+}
+
 void CViewC64::SourceStep(SourceStepKind kind)
 {
 	for (std::vector<CDebugInterface *>::iterator it = debugInterfaces.begin(); it != debugInterfaces.end(); it++)
 	{
 		CDebugInterface *debugInterface = *it;
-		if (!debugInterface->isRunning || !debugInterface->SupportsExecutionEvents())
+		if (!debugInterface->isRunning || !debugInterface->GetExecutionCapabilities().sourceStep)
 			continue;
 		if (!debugInterface->SourceStep(kind)
 			&& debugInterface->sourceStepper->GetLastResult().reason == SourceStepStopReason::NoSource)

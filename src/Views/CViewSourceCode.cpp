@@ -1,4 +1,5 @@
 #include "CViewSourceCode.h"
+#include "CDebugSourceTrace.h"
 #include "CSyntaxLexer.h"
 #include "CViewDisassembly.h"
 #include "CDebugInterface.h"
@@ -51,6 +52,8 @@ CViewSourceCode::CViewSourceCode(const char *name, float posX, float posY, float
 	this->viewDisassembly = viewDisassembly;
 	this->debugSymbols = debugSymbols;
 	this->debugInterface = debugInterface;
+	stepper = NULL;
+	bankAware = true;
 
 	follow = SourceViewFollow::Pc;
 	showLineNumbers = true;
@@ -93,12 +96,19 @@ bool CViewSourceCode::ShowAddress(int address)
 	std::shared_ptr<const CDebugDatabase> db = debugSymbols->debugDatabase;
 	if (!db || !debugSymbols->currentSegment || debugSymbols->currentSegment->debugRegionId < 0)
 		return false;
-	const CDebugSourceMapping *mapping = debugInterface->ResolveSourceAt(db.get(), (u32)debugSymbols->currentSegment->debugRegionId, (u16)address);
+	const CDebugSourceMapping *mapping = ResolveAt(db.get(), (u32)debugSymbols->currentSegment->debugRegionId, (u16)address);
 	if (mapping == NULL)
 		return false;
 	follow = SourceViewFollow::Off;
 	ShowLine(mapping->fileId, mapping->lineStart);
 	return true;
+}
+
+const CDebugSourceMapping *CViewSourceCode::ResolveAt(const CDebugDatabase *database, u32 regionId, u16 address) const
+{
+	if (bankAware)
+		return debugInterface->ResolveSourceAt(database, regionId, address);
+	return database ? database->Resolve(regionId, address) : NULL;
 }
 
 // The PC line (always, for the arrow) and what the follow mode shows.
@@ -109,8 +119,8 @@ void CViewSourceCode::UpdatePosition()
 	if (!database || regionId < 0)
 		return;
 
-	int pc = debugInterface->GetCpuPC();
-	const CDebugSourceMapping *pcMapping = (pc >= 0) ? debugInterface->ResolveSourceAt(database.get(), (u32)regionId, (u16)pc) : NULL;
+	int pc = cpuPc ? cpuPc() : debugInterface->GetCpuPC();
+	const CDebugSourceMapping *pcMapping = (pc >= 0) ? ResolveAt(database.get(), (u32)regionId, (u16)pc) : NULL;
 	if (pcMapping)
 	{
 		std::vector<const CDebugSourceMapping *> candidates;
@@ -126,7 +136,7 @@ void CViewSourceCode::UpdatePosition()
 
 	if (followAddress >= 0 && followAddress != lastFollowAddress)
 	{
-		const CDebugSourceMapping *mapping = debugInterface->ResolveSourceAt(database.get(), (u32)regionId, (u16)followAddress);
+		const CDebugSourceMapping *mapping = ResolveAt(database.get(), (u32)regionId, (u16)followAddress);
 		if (mapping)
 		{
 			bool moved = !hasFile || mapping->fileId != fileId || mapping->lineStart != selectedLine;
@@ -327,7 +337,7 @@ void CViewSourceCode::RenderHeader(const CDebugSourceFile *file)
 		if (ImGui::IsItemHovered())
 			ImGui::SetTooltip("%d source ranges cover the PC; showing the one in effect", pcCandidates);
 	}
-	CSourceStepResult step = debugInterface->sourceStepper->GetLastResult();
+	CSourceStepResult step = (stepper ? stepper : debugInterface->sourceStepper)->GetLastResult();
 	if (step.reason != SourceStepStopReason::None)
 	{
 		ImGui::SameLine();
@@ -527,6 +537,7 @@ void CViewSourceCode::RenderImGui()
 
 	debugInterface->LockMutex();
 	RenderHeader(file);
+	RenderSourceTrace();
 	if (file)
 	{
 		std::shared_ptr<const CSourceDocument> document = documents.Open(file->originalPath, file->loadedPath);
@@ -577,6 +588,41 @@ void CViewSourceCode::RenderContextMenuItems()
 		follow = SourceViewFollow::Cursor;
 	if (ImGui::MenuItem("Follow off", NULL, follow == SourceViewFollow::Off))
 		follow = SourceViewFollow::Off;
+	// RD-045: the main CPU's executed lines, live or from a replayed trace
+	if (!cpuPc)
+	{
+		ImGui::Separator();
+		bool recording = debugInterface->IsRecordingSourceTrace();
+		if (ImGui::MenuItem("Record executed lines", NULL, recording))
+			debugInterface->SetSourceTraceRecording(!recording);
+	}
+}
+
+// RD-045: the latest executed source lines, newest first; a click shows one
+void CViewSourceCode::RenderSourceTrace()
+{
+	if (cpuPc || !debugInterface->IsRecordingSourceTrace() || debugInterface->sourceTrace == NULL)
+		return;
+	std::vector<CDebugSourceTraceEntry> entries = debugInterface->sourceTrace->GetEntries(kSourceTraceShown);
+	if (!ImGui::CollapsingHeader("Executed lines##sourceTrace", ImGuiTreeNodeFlags_DefaultOpen))
+		return;
+	float height = ImGui::GetTextLineHeightWithSpacing() * (float)(kSourceTraceShown / 2);
+	ImGui::BeginChild("##sourceTraceList", ImVec2(0, height), true);
+	for (auto it = entries.rbegin(); it != entries.rend(); ++it)
+	{
+		char label[160];
+		if (it->mapped)
+			snprintf(label, sizeof(label), "%s:%d  $%04X  x%llu##%p", it->fileName.c_str(), it->line, it->pc,
+					 (unsigned long long)it->instructions, (void *)&(*it));
+		else
+			snprintf(label, sizeof(label), "(no source)  $%04X  x%llu##%p", it->pc, (unsigned long long)it->instructions, (void *)&(*it));
+		if (ImGui::Selectable(label) && it->mapped)
+		{
+			follow = SourceViewFollow::Off;
+			ShowLine(it->fileId, it->line);
+		}
+	}
+	ImGui::EndChild();
 }
 
 // Layout

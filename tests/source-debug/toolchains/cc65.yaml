@@ -88,3 +88,10 @@ machines:
       - ["{ld65}", "-C", "xegs.cfg", "--dbgfile", "main.dbg", "-Ln", "main.lbl", "-m", "main.map", "-o", "main.car", "xegs.o", "xegs-crt0.o", "atari.lib"]
       - ["{python}", "-I", "{scripts}/car_checksum.py", "main.car"]
     outputs: [main.car, main.dbg, main.lbl, main.map, xegs.s]
+  # The 1541 drive CPU (RD-044): ca65 code for drive RAM; fixtures with a drive.s.
+  drive1541:
+    source: drive.s
+    steps:
+      - ["{ca65}", "-g", "drive.s"]
+      - ["{ld65}", "-C", "drive.cfg", "--dbgfile", "main.dbg", "-Ln", "main.lbl", "-m", "main.map", "-o", "main.bin", "drive.o"]
+    outputs: [main.bin, main.dbg, main.lbl, main.map]

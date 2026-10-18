@@ -1508,6 +1508,7 @@ void CMCPServer::RegisterDebuggerTools(CDebuggerServer *server)
 			{"properties", {
 				{"platform", {{"type", "string"}}},
 				{"kind", {{"type", "string"}, {"enum", json::array({"into", "over", "out", "status"})}}},
+				{"cpu", {{"type", "string"}, {"description", "c64 only: drive1541 for the 1541 drive CPU and its own debug info (default: the main CPU)"}}},
 				{"budget", {{"type", "integer"}}}
 			}},
 			{"required", json::array({"platform", "kind"})}
@@ -1520,6 +1521,8 @@ void CMCPServer::RegisterDebuggerTools(CDebuggerServer *server)
 			json args = {{"kind", kind}};
 			if (params.contains("budget"))
 				args["budget"] = params["budget"];
+			if (params.contains("cpu"))
+				args["cpu"] = params["cpu"];
 			vector<char> *result = server->RunEndpointFunction(fn, "", args, nullptr, 0);
 			if (!result || result->empty()) { delete result; return json::object(); }
 			string raw(result->data(), result->size());
@@ -1541,6 +1544,7 @@ void CMCPServer::RegisterDebuggerTools(CDebuggerServer *server)
 			{"properties", {
 				{"platform", {{"type", "string"}}},
 				{"address", {{"type", "integer"}}},
+				{"cpu", {{"type", "string"}, {"description", "c64 only: drive1541 for the 1541 drive CPU and its own debug info (default: the main CPU)"}}},
 				{"file", {{"type", "string"}}},
 				{"line", {{"type", "integer"}}}
 			}},
@@ -1561,6 +1565,8 @@ void CMCPServer::RegisterDebuggerTools(CDebuggerServer *server)
 			{
 				args["address"] = params["address"];
 			}
+			if (params.contains("cpu"))
+				args["cpu"] = params["cpu"];
 			vector<char> *result = server->RunEndpointFunction(fn, "", args, nullptr, 0);
 			if (!result || result->empty()) { delete result; return json::object(); }
 			string raw(result->data(), result->size());
@@ -1582,6 +1588,7 @@ void CMCPServer::RegisterDebuggerTools(CDebuggerServer *server)
 			{"properties", {
 				{"platform", {{"type", "string"}}},
 				{"action", {{"type", "string"}, {"enum", json::array({"add", "remove", "list"})}}},
+				{"cpu", {{"type", "string"}, {"description", "c64 only: drive1541 for the 1541 drive CPU and its own debug info (default: the main CPU)"}}},
 				{"file", {{"type", "string"}}},
 				{"line", {{"type", "integer"}}}
 			}},
@@ -1594,8 +1601,43 @@ void CMCPServer::RegisterDebuggerTools(CDebuggerServer *server)
 			json args = json::object();
 			if (params.contains("file")) args["file"] = params["file"];
 			if (params.contains("line")) args["line"] = params["line"];
+			if (params.contains("cpu")) args["cpu"] = params["cpu"];
 			string fn = platform + "/source/breakpoint/" + (action == "add" || action == "remove" ? action : string("list"));
 			vector<char> *result = server->RunEndpointFunction(fn, "", args, nullptr, 0);
+			if (!result || result->empty()) { delete result; return json::object(); }
+			string raw(result->data(), result->size());
+			delete result;
+			return json::parse(raw, nullptr, false);
+		};
+		RegisterTool(tool);
+	}
+
+	// Executed source lines, live or from a replayed trace (RD-045)
+	{
+		MCPToolDescriptor tool;
+		tool.name = "retro_source_trace";
+		tool.description = "The source lines a platform executed last, newest last, each with its first PC and how many "
+			"instructions ran on it; 'record' true/false starts and stops recording (it costs a check per instruction). "
+			"Works where stepping does not: the C64 Ultimate's bus trace is decoded and replayed. Also returns the "
+			"platform's execution capabilities (sourceStep false: observed only).";
+		tool.inputSchema = {
+			{"type", "object"},
+			{"properties", {
+				{"platform", {{"type", "string"}}},
+				{"record", {{"type", "boolean"}}},
+				{"count", {{"type", "integer"}}}
+			}},
+			{"required", json::array({"platform"})}
+		};
+		tool.handler = [server](const json &params) -> json
+		{
+			string platform = params.value("platform", "c64");
+			json args = json::object();
+			if (params.contains("record"))
+				args["record"] = params["record"];
+			if (params.contains("count"))
+				args["count"] = params["count"];
+			vector<char> *result = server->RunEndpointFunction(platform + "/source/trace", "", args, nullptr, 0);
 			if (!result || result->empty()) { delete result; return json::object(); }
 			string raw(result->data(), result->size());
 			delete result;
@@ -1639,6 +1681,7 @@ void CMCPServer::RegisterDebuggerTools(CDebuggerServer *server)
 			{"type", "object"},
 			{"properties", {
 				{"platform", {{"type", "string"}}},
+				{"cpu", {{"type", "string"}, {"description", "c64 only: drive1541 for the 1541 drive CPU and its own debug info (default: the main CPU)"}}},
 				{"path", {{"type", "string"}}}
 			}},
 			{"required", json::array({"platform", "path"})}
@@ -1647,6 +1690,8 @@ void CMCPServer::RegisterDebuggerTools(CDebuggerServer *server)
 		{
 			string platform = params.value("platform", "c64");
 			json args = {{"path", params.value("path", "")}};
+			if (params.contains("cpu"))
+				args["cpu"] = params["cpu"];
 			vector<char> *result = server->RunEndpointFunction(platform + "/symbols/load", "", args, nullptr, 0);
 			if (!result || result->empty()) { delete result; return json::object(); }
 			string raw(result->data(), result->size());

@@ -39,6 +39,7 @@ struct CDebugFunction;
 class CDebugDatabase;
 class CDebugInstructionStepper;
 class CSourceStepController;
+class CDebugSourceTraceRecorder;
 enum class SourceStepKind : u8;
 
 class CViewEmulatorScreen;
@@ -261,6 +262,30 @@ public:
 	virtual bool SupportsExecutionEvents() { return false; }
 	bool IsObservingExecution() const { return executionObserved.load(std::memory_order_relaxed); }
 	void NotifyInstructionBoundary(u16 pc, u8 sp, u8 opcode);
+	// RD-045: a boundary from a recorded trace, for the observers only (no
+	// stepping: the machine cannot be stopped there); the thread that decodes
+	// the trace calls it, only while HasExecutionObservers()
+	void ReplayInstructionBoundary(u16 pc, u8 sp, u8 opcode);
+	bool HasExecutionObservers();
+
+	// What execution control this machine has (spec #20.8 guard 2): the UI and
+	// remote endpoints refuse what it lacks instead of assuming VICE.
+	struct CDebugBackendCapabilities
+	{
+		bool instructionHook = false;	// live boundaries (NotifyInstructionBoundary)
+		bool stepInstruction = false;
+		bool stepOut = false;
+		bool sourceStep = false;
+		bool fetchMapping = false;		// a memory mapping resolver
+		bool executionTrace = false;	// replayed boundaries from a recorded trace
+	};
+	virtual CDebugBackendCapabilities GetExecutionCapabilities();
+
+	// RD-045: the source lines executed last, recorded from live or replayed
+	// boundaries while enabled (CDebugSourceTrace.h); NULL until first enabled
+	CDebugSourceTraceRecorder *sourceTrace = NULL;
+	void SetSourceTraceRecording(bool record);
+	bool IsRecordingSourceTrace() const { return sourceTraceRecording; }
 	// RD-011: the CPU core reset (emulation thread, or the thread that reset
 	// it): armed steps end as Cancelled, the boundary history and the stack
 	// annotation start over, observers get OnCpuReset
@@ -388,20 +413,15 @@ private:
 	void RecordInstructionStepStop();
 	void RecordSourceStepStop();
 
-	enum { BoundaryHistoryKeep, BoundaryHistoryReset, BoundaryHistorySeed };
 public:
 	// CPU resets seen by NotifyCpuReset, for tests and UI
 	std::atomic<u32> resetCount { 0 };
 private:
 	std::atomic<bool> executionObserved;
-	std::atomic<int> boundaryHistoryRestart;
-	CDebugInstructionBoundary boundaryHistorySeed;
+	bool sourceTraceRecording = false;
+	CDebugBoundaryHistory boundaryHistory;
 	std::mutex executionObserversMutex;
 	std::vector<CDebugExecutionObserver *> executionObservers;
-	// emulation thread only
-	CDebugInstructionBoundary lastBoundary;
-	bool hasLastBoundary;
-	u64 boundarySequence;
 
 };
 

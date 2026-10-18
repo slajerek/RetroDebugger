@@ -84,6 +84,9 @@
 		4111C8BD262EE4380092E150 /* C64DebuggerPluginGoatTracker.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4111C8BC262EE4370092E150 /* C64DebuggerPluginGoatTracker.cpp */; };
 		4113F62629E2C5B7002FE970 /* CViewC64KeyMap.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4113F62429E2C5B7002FE970 /* CViewC64KeyMap.cpp */; };
 		411D2E402D71D4D3007714A9 /* CRenderShaderCRTMonitorOpenGL4.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4150D9DB2D71D15B0068351B /* CRenderShaderCRTMonitorOpenGL4.cpp */; };
+		564CE7C9CAF9A8BE278B8FCD /* CTestSourceTrace.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 78D2588DDA336E7B1872EC83 /* CTestSourceTrace.cpp */; };
+		29492DA805BFE93299702823 /* CTestDriveSourceStepping.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3D97B3D47F0F101B58844975 /* CTestDriveSourceStepping.cpp */; };
+		F3289D6E697FFB65DA0CA4A3 /* CDebugSourceTrace.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3F245BABA7F5A133D406A070 /* CDebugSourceTrace.cpp */; };
 		1E4E2069AC79725238CD49F2 /* CTestAssembledSource.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 255E93CAFD90B670AE9E95E3 /* CTestAssembledSource.cpp */; };
 		EC107093EBA70361513681C5 /* CTestBankedSource.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BE3D55D379AF8FDBF43EB4FE /* CTestBankedSource.cpp */; };
 		C317AB100F5E8338ADFDEA4C /* CTestNesCartridge.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 36596FC3AE122E8DDCF6B5D5 /* CTestNesCartridge.cpp */; };
@@ -1726,6 +1729,12 @@
 		414AD73728797F1200244453 /* CViewC64ScreenViewfinder.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = "$(SRCROOT)/../../src/Views/C64/CViewC64ScreenViewfinder.cpp"; sourceTree = "<absolute>"; };
 		414AD73828797F1200244453 /* CViewC64ScreenViewfinder.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "$(SRCROOT)/../../src/Views/C64/CViewC64ScreenViewfinder.h"; sourceTree = "<absolute>"; };
 		4150D9DB2D71D15B0068351B /* CRenderShaderCRTMonitorOpenGL4.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = "$(SRCROOT)/../../src/Tools/Shaders/CRenderShaderCRTMonitorOpenGL4.cpp"; sourceTree = "<absolute>"; };
+		78D2588DDA336E7B1872EC83 /* CTestSourceTrace.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CTestSourceTrace.cpp; path = ../../src/Tests/CTestSourceTrace.cpp; sourceTree = SOURCE_ROOT; };
+		F72974F438B66F8DFDFAF558 /* CTestSourceTrace.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = CTestSourceTrace.h; path = ../../src/Tests/CTestSourceTrace.h; sourceTree = SOURCE_ROOT; };
+		3D97B3D47F0F101B58844975 /* CTestDriveSourceStepping.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CTestDriveSourceStepping.cpp; path = ../../src/Tests/CTestDriveSourceStepping.cpp; sourceTree = SOURCE_ROOT; };
+		06C8B453322FF58A1D46E351 /* CTestDriveSourceStepping.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = CTestDriveSourceStepping.h; path = ../../src/Tests/CTestDriveSourceStepping.h; sourceTree = SOURCE_ROOT; };
+		3F245BABA7F5A133D406A070 /* CDebugSourceTrace.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CDebugSourceTrace.cpp; path = ../../src/DebugInterface/CDebugSourceTrace.cpp; sourceTree = SOURCE_ROOT; };
+		AC85DC8F53DD28AF03384B07 /* CDebugSourceTrace.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = CDebugSourceTrace.h; path = ../../src/DebugInterface/CDebugSourceTrace.h; sourceTree = SOURCE_ROOT; };
 		255E93CAFD90B670AE9E95E3 /* CTestAssembledSource.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CTestAssembledSource.cpp; path = ../../src/Tests/CTestAssembledSource.cpp; sourceTree = SOURCE_ROOT; };
 		4203F2EC83886F6286C5BF95 /* CTestAssembledSource.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = CTestAssembledSource.h; path = ../../src/Tests/CTestAssembledSource.h; sourceTree = SOURCE_ROOT; };
 		BE3D55D379AF8FDBF43EB4FE /* CTestBankedSource.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CTestBankedSource.cpp; path = ../../src/Tests/CTestBankedSource.cpp; sourceTree = SOURCE_ROOT; };
@@ -4972,6 +4981,12 @@
 			isa = PBXGroup;
 			children = (
 				4150D9DB2D71D15B0068351B /* CRenderShaderCRTMonitorOpenGL4.cpp */,
+				78D2588DDA336E7B1872EC83 /* CTestSourceTrace.cpp */,
+				F72974F438B66F8DFDFAF558 /* CTestSourceTrace.h */,
+				3D97B3D47F0F101B58844975 /* CTestDriveSourceStepping.cpp */,
+				06C8B453322FF58A1D46E351 /* CTestDriveSourceStepping.h */,
+				3F245BABA7F5A133D406A070 /* CDebugSourceTrace.cpp */,
+				AC85DC8F53DD28AF03384B07 /* CDebugSourceTrace.h */,
 				255E93CAFD90B670AE9E95E3 /* CTestAssembledSource.cpp */,
 				4203F2EC83886F6286C5BF95 /* CTestAssembledSource.h */,
 				BE3D55D379AF8FDBF43EB4FE /* CTestBankedSource.cpp */,
@@ -8840,6 +8855,9 @@
 				05B51DEEE6500A4D5D45DD85 /* events_posix.c in Sources */,
 				05B51D3B2773C59545583663 /* threads_posix.c in Sources */,
 				411D2E402D71D4D3007714A9 /* CRenderShaderCRTMonitorOpenGL4.cpp in Sources */,
+				564CE7C9CAF9A8BE278B8FCD /* CTestSourceTrace.cpp in Sources */,
+				29492DA805BFE93299702823 /* CTestDriveSourceStepping.cpp in Sources */,
+				F3289D6E697FFB65DA0CA4A3 /* CDebugSourceTrace.cpp in Sources */,
 				1E4E2069AC79725238CD49F2 /* CTestAssembledSource.cpp in Sources */,
 				EC107093EBA70361513681C5 /* CTestBankedSource.cpp in Sources */,
 				C317AB100F5E8338ADFDEA4C /* CTestNesCartridge.cpp in Sources */,

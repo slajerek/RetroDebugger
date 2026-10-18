@@ -71,10 +71,19 @@ CDebugEventStep *CDebugEventsHistory::CreateEventStep(const char *description)
 
 	mutex->Lock();
 	CDebugEventStep *event = NULL;
-	if (events.find(currentCycle) == events.end())
+	auto it = events.find(currentCycle);
+	if (it == events.end())
 	{
 		event = new CDebugEventStep(description, debugSymbols->currentSegment, currentCycle, currentFrame);
 		events[currentCycle] = event;
+	}
+	else if (it->second->eventType == DEBUG_EVENT_TYPE_STEP)
+	{
+		// a later stop at the same C64 cycle: the 1541 runs in catch-up slices,
+		// several of its steps can end within one (RD-044); the last one stays
+		event = (CDebugEventStep *)it->second;
+		strncpy(event->description, description, sizeof(event->description) - 1);
+		event->description[sizeof(event->description) - 1] = 0;
 	}
 	mutex->Unlock();
 

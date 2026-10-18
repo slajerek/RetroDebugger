@@ -120,6 +120,9 @@ public:
 	u8 assembleTarget;
 	void SetAssembleTarget(u8 target);
 	virtual void AssembleResultToMemory(int addr, u8 v);
+	// RD-044: CPU "drive1541", the 1541's CPU and debug info
+	virtual bool GetSourceCpu(const std::string &cpu, SourceCpu *out) override;
+	virtual bool SourceStep(const std::string &kind, u64 budget = 0, const std::string &cpu = "") override;
 	virtual CDebugSymbols *GetAssembleSymbols();
 	int Assemble(int addr, char *assembleText);
 	

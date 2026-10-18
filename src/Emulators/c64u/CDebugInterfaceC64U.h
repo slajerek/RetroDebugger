@@ -51,6 +51,9 @@ public:
 	virtual bool GetSettingIsWarpSpeed() override;
 	virtual void SetSettingIsWarpSpeed(bool isWarpSpeed) override;
 	virtual CDebuggerApi *GetDebuggerApi() override;
+	// RD-045: observed only -- no stepping or breakpoints; the decoded bus
+	// trace is replayed to execution observers (CDebugSourceTrace.h)
+	virtual CDebugBackendCapabilities GetExecutionCapabilities() override;
 
 	void Connect();
 	void Disconnect();
@@ -113,8 +116,13 @@ protected:
 	int endpointHttpPort;
 	int endpointTcpPort;
 	int endpointVideoPort;
-	void DrainTraceBusData();
 	uint64_t traceMemoryDrainIndex;
+public:
+	// trace mode, once per frame: the bus entries received since the last
+	// drain into the memory cache, the memory map and, while observed, the
+	// execution observers as replayed instruction boundaries (tests call it)
+	void DrainTraceBusData();
+protected:
 
 	C64URestClient *restClient;
 	C64UPort64Client *port64Client;

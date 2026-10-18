@@ -245,6 +245,12 @@ void c64d_c64_notify_cpu_reset(void);
 void c64d_c64_check_raster_breakpoint(uint16 rasterLine);
 int c64d_c64_is_checking_irq_breakpoints_enabled();
 void c64d_drive1541_check_pc_breakpoint(uint16 pc);
+// RD-044: the drive CPU is about to execute the opcode at PC (once per instruction)
+void c64d_drive1541_notify_boundary(uint16 pc, uint8 sp);
+void c64d_drive1541_trigger_reset(void);
+// the C64 cartridge's lifetime lock (ViceWrapper.cpp): attach/detach exclusive
+void c64d_cartridge_lock_exclusive(void);
+void c64d_cartridge_unlock_exclusive(void);
 int c64d_drive1541_is_checking_irq_breakpoints_enabled();
 void c64d_drive1541_check_irqiec_breakpoint();
 void c64d_drive1541_check_irqvia1_breakpoint();

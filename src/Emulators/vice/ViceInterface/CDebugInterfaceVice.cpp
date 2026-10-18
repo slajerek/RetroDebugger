@@ -70,6 +70,11 @@ extern "C" {
 #include "CWaveformData.h"
 #include "CViewDataMap.h"
 #include "CDebugEventsHistory.h"
+#include "CSourceStepController.h"
+#include "CDebugInterfaceTask.h"
+#include "CDebugInstructionStepper.h"
+#include "CDebugDatabase.h"
+#include "CDebugSymbolsSegment.h"
 #include "CDebuggerServerApiVice.h"
 
 // 44100/50*5
@@ -195,6 +200,7 @@ CDebugInterfaceVice::CDebugInterfaceVice(CViewC64 *viewC64, uint8 *c64memory, bo
 
 	symbolsDrive1541->SetDataAdapter(dataAdapterDrive1541);
 	symbolsDrive1541->CreateDefaultSegment();
+	driveSourceStepper = new CSourceStepController(NULL);	// flat address space: no bank lookups
 
 	dataAdapterViceDrive1541DirectRam = new CDataAdapterViceDrive1541DirectRam(symbolsDrive1541);
 	dataAdapterDrive1541DirectRam = dataAdapterViceDrive1541DirectRam;
@@ -2347,8 +2353,23 @@ extern "C" {
 }
 
 /***********/
+bool c64d_cartridge_lock_shared(void);
+void c64d_cartridge_unlock_shared(void);
+
+// a peek through the cartridge's handlers, safe against an attach or detach
+// on another thread (ViceWrapper.cpp)
+class CViceCartridgeReadGuard
+{
+public:
+	CViceCartridgeReadGuard() : locked(c64d_cartridge_lock_shared()) {}
+	~CViceCartridgeReadGuard() { if (locked) c64d_cartridge_unlock_shared(); }
+private:
+	bool locked;
+};
+
 uint8 CDebugInterfaceVice::GetByteC64(uint16 addr)
 {
+	CViceCartridgeReadGuard guard;
 	return c64d_peek_c64(addr);
 }
 
@@ -2360,6 +2381,7 @@ uint8 CDebugInterfaceVice::GetByteFromRamC64(uint16 addr)
 
 uint8 CDebugInterfaceVice::GetByteC64ForCycleState(uint16 addr, uint8 memory0001, uint8 exrom, uint8 game)
 {
+	CViceCartridgeReadGuard guard;
 	return c64d_peek_c64_for_cycle(addr, memory0001, exrom, game);
 }
 
@@ -2837,6 +2859,7 @@ void CDebugInterfaceVice::MakeJmpNoReset1541(uint16 addr)
 
 void CDebugInterfaceVice::GetWholeMemoryMap(uint8 *buffer)
 {
+	CViceCartridgeReadGuard guard;
 	c64d_peek_whole_map_c64(buffer);
 }
 
@@ -2858,6 +2881,7 @@ void CDebugInterfaceVice::GetWholeMemoryMapFromRam1541(uint8 *buffer)
 
 void CDebugInterfaceVice::GetMemoryC64(uint8 *buffer, int addrStart, int addrEnd)
 {
+	CViceCartridgeReadGuard guard;
 	c64d_peek_memory_c64(buffer, addrStart, addrEnd);
 }
 
@@ -4267,4 +4291,96 @@ void ViceKeyMapInitDefault()
 //	 6     /   ^   =  SHR HOM  ;   *   £
 //	 7    R/S  Q   C= SPC  2  CTL  <-  1
 
+}
+
+// RD-044: source stepping on the 1541 drive CPU
+
+class CDebugInterfaceViceTaskResetDrive1541 : public CDebugInterfaceTask
+{
+public:
+	virtual void ExecuteTask() override { c64d_drive1541_trigger_reset(); }
+};
+
+void CDebugInterfaceVice::ResetDrive1541()
+{
+	CancelDriveSourceStep();
+	AddVSyncTask(new CDebugInterfaceViceTaskResetDrive1541());
+}
+
+bool CDebugInterfaceVice::SourceStepDrive(SourceStepKind kind, u64 budget)
+{
+	if (GetDebugMode() == DEBUGGER_MODE_RUNNING)
+	{
+		SetDebugMode(DEBUGGER_MODE_PAUSED);
+		return false;
+	}
+
+	LockMutex();
+	u8 a, x, y, p, sp;
+	u16 pc;
+	c64d_get_drivecpu_regs(0, &a, &x, &y, &p, &sp, &pc);
+	u8 opcode = c64d_peek_drive(0, pc);
+
+	std::shared_ptr<const CDebugDatabase> database = symbolsDrive1541->debugDatabase;
+	int regionId = symbolsDrive1541->currentSegment ? symbolsDrive1541->currentSegment->debugRegionId : -1;
+	if (regionId < 0)
+		database.reset();
+
+	// one step at a time: the main CPU's steps end
+	instructionStepper->Cancel(DebugStepStopReason::Cancelled);
+	sourceStepper->Cancel(SourceStepStopReason::Cancelled);
+	bool armed = driveSourceStepper->Arm(kind, database, regionId < 0 ? 0 : (u32)regionId, pc, sp,
+										 budget ? budget : CSourceStepController::kDefaultBudget);
+	if (armed)
+	{
+		// the emulation thread is parked: the seed is in place before it runs
+		driveBoundaryHistory.RequestSeed(pc, sp, opcode);
+		driveExecutionObserved.store(true, std::memory_order_release);
+		SetDebugMode(DEBUGGER_MODE_RUNNING);
+	}
+	UnlockMutex();
+	return armed;
+}
+
+void CDebugInterfaceVice::NotifyDriveInstructionBoundary(u16 pc, u8 sp, u8 opcode)
+{
+	CDebugInstructionBoundary boundary = driveBoundaryHistory.Next(pc, sp, opcode);
+	if (!driveSourceStepper->IsArmed())
+	{
+		driveExecutionObserved.store(false, std::memory_order_release);
+		return;
+	}
+	if (driveSourceStepper->OnInstructionBoundary(this, boundary))
+		SetDebugMode(DEBUGGER_MODE_PAUSED);
+	if (!driveSourceStepper->IsArmed())
+	{
+		RecordDriveSourceStepStop();
+		driveExecutionObserved.store(false, std::memory_order_release);
+	}
+}
+
+void CDebugInterfaceVice::CancelDriveSourceStep()
+{
+	if (driveSourceStepper->IsArmed())
+	{
+		driveSourceStepper->Cancel(SourceStepStopReason::Cancelled);
+		RecordDriveSourceStepStop();
+	}
+	driveBoundaryHistory.RequestReset();
+}
+
+void CDebugInterfaceVice::RecordDriveSourceStepStop()
+{
+	if (!symbolsDrive1541 || !symbolsDrive1541->debugEventsHistory)
+		return;
+	CSourceStepResult result = driveSourceStepper->GetLastResult();
+	char description[DEBUG_EVENTS_HISTORY_MAX_DESCRIPTION_LENGTH];
+	const char *kindName = result.kind == SourceStepKind::Into ? "Into" : result.kind == SourceStepKind::Out ? "Out" : "Over";
+	if (result.mapped)
+		snprintf(description, sizeof(description), "1541 Source %s: %s at %s:%d ($%04X)", kindName,
+				 SourceStepStopReasonName(result.reason), result.fileName.c_str(), result.line, result.pc);
+	else
+		snprintf(description, sizeof(description), "1541 Source %s: %s at $%04X", kindName,
+				 SourceStepStopReasonName(result.reason), result.pc);
+	symbolsDrive1541->debugEventsHistory->CreateEventStep(description);
 }

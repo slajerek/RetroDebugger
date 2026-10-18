@@ -202,6 +202,14 @@ CC64BackendCapabilities CDebugInterfaceC64U::GetC64BackendCapabilities()
 	return capabilities;
 }
 
+CDebugInterface::CDebugBackendCapabilities CDebugInterfaceC64U::GetExecutionCapabilities()
+{
+	CDebugBackendCapabilities capabilities;
+	capabilities.fetchMapping = GetMemoryMappingResolver() != NULL;
+	capabilities.executionTrace = true;
+	return capabilities;
+}
+
 int CDebugInterfaceC64U::GetScreenSizeX()
 {
 	return 384;
@@ -356,6 +364,7 @@ void CDebugInterfaceC64U::DrainTraceBusData()
 		endIndex = traceMemoryDrainIndex + maxDrainPerFrame;
 
 	CDebugMemory *debugMemory = symbolsC64->memory;
+	bool observed = HasExecutionObservers();
 
 	for (uint64_t idx = traceMemoryDrainIndex; idx < endIndex; idx++)
 	{
@@ -389,6 +398,10 @@ void CDebugInterfaceC64U::DrainTraceBusData()
 		}
 		else if (annotated && ann.type == C64UDecoderAnnotation::OPCODE_FETCH)
 		{
+			// RD-045: the instruction boundary, after the fact
+			if (observed)
+				ReplayInstructionBoundary((u16)address, decoder6510->AreRegsValid() ? decoder6510->GetRegSP() : 0xFF, entry.data);
+
 			// Opcode fetch: mark this cell as execute code.
 			// CellExecute also marks the argument bytes (addr+1, addr+2) based
 			// on the opcode's addressing length — same as the VICE C64 backend.

@@ -30,9 +30,6 @@ CDebugInterface::CDebugInterface(CViewC64 *viewC64)
 	instructionStepper = new CDebugInstructionStepper();
 	sourceStepper = new CSourceStepController(this);
 	executionObserved.store(false, std::memory_order_relaxed);
-	boundaryHistoryRestart.store(BoundaryHistoryReset, std::memory_order_relaxed);
-	hasLastBoundary = false;
-	boundarySequence = 0;
 	
 	isRunning = false;
 	isSelected = false;

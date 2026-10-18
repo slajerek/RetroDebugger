@@ -303,23 +303,39 @@ void CDebuggerServerApi::RegisterEndpoints(CDebuggerServer *server)
 	});
 
 	sprintf(buf, "%s/source/step", plat);
-	RegisterEndpoint(server, buf, plat, "cpu", "Source-level step: kind into, over or out (optional budget in instructions)",
+	RegisterEndpoint(server, buf, plat, "cpu", "Source-level step: kind into, over or out (optional budget in instructions; cpu drive1541 on the C64)",
 	[this, server](const string token, json params, unsigned char *binaryData, int binaryDataSize) -> vector<char>*
 	{
 		string kind = params.value("kind", "");
 		u64 budget = params.value("budget", (u64)0);
+		string cpu = params.value("cpu", "");
 		if (kind != "into" && kind != "over" && kind != "out")
 			return server->PrepareResult(HTTP_BAD_REQUEST, token, json{{"error", "kind must be into, over or out"}}, NULL, 0);
-		if (!debuggerApi->SourceStep(kind, budget))
-			return server->PrepareResult(HTTP_BAD_REQUEST, token, debuggerApi->GetSourceStepStatusJson(), NULL, 0);
-		return server->PrepareResult(HTTP_OK, token, debuggerApi->GetSourceStepStatusJson(), NULL, 0);
+		CDebuggerApi::SourceCpu target;
+		if (!debuggerApi->GetSourceCpu(cpu, &target))
+			return server->PrepareResult(HTTP_BAD_REQUEST, token, json{{"error", "unknown cpu " + cpu}}, NULL, 0);
+		if (!debugInterface->GetExecutionCapabilities().sourceStep)
+			return server->PrepareResult(HTTP_BAD_REQUEST, token, json{{"error", string(debugInterface->GetPlatformNameString())
+				+ " is observed only: no source stepping (its executed lines: source/trace)"}}, NULL, 0);
+		if (!debuggerApi->SourceStep(kind, budget, cpu))
+			return server->PrepareResult(HTTP_BAD_REQUEST, token, debuggerApi->GetSourceStepStatusJson(cpu), NULL, 0);
+		return server->PrepareResult(HTTP_OK, token, debuggerApi->GetSourceStepStatusJson(cpu), NULL, 0);
+	});
+
+	sprintf(buf, "%s/source/trace", plat);
+	RegisterEndpoint(server, buf, plat, "source", "The source lines executed last, newest last (record:true/false starts and stops recording; live, or replayed from a C64U bus trace)",
+	[this, server](const string token, json params, unsigned char *binaryData, int binaryDataSize) -> vector<char>*
+	{
+		if (params.contains("record"))
+			debugInterface->SetSourceTraceRecording(params.value("record", false));
+		return server->PrepareResult(HTTP_OK, token, debuggerApi->GetSourceTraceJson(params.value("count", 32)), NULL, 0);
 	});
 
 	sprintf(buf, "%s/source/step/status", plat);
 	RegisterEndpoint(server, buf, plat, "cpu", "The last source-level step: armed, kind, stop reason, PC, file and line",
 	[this, server](const string token, json params, unsigned char *binaryData, int binaryDataSize) -> vector<char>*
 	{
-		return server->PrepareResult(HTTP_OK, token, debuggerApi->GetSourceStepStatusJson(), NULL, 0);
+		return server->PrepareResult(HTTP_OK, token, debuggerApi->GetSourceStepStatusJson(params.value("cpu", "")), NULL, 0);
 	});
 
 	// RD-036: source queries and source breakpoints on the loaded debug info
@@ -328,7 +344,7 @@ void CDebuggerServerApi::RegisterEndpoints(CDebuggerServer *server)
 	[this, server](const string token, json params, unsigned char *binaryData, int binaryDataSize) -> vector<char>*
 	{
 		int address = params.value("address", -1);
-		return server->PrepareResult(HTTP_OK, token, debuggerApi->GetSourceLocationJson(address), NULL, 0);
+		return server->PrepareResult(HTTP_OK, token, debuggerApi->GetSourceLocationJson(address, params.value("cpu", "")), NULL, 0);
 	});
 
 	sprintf(buf, "%s/source/resolve", plat);
@@ -339,7 +355,7 @@ void CDebuggerServerApi::RegisterEndpoints(CDebuggerServer *server)
 		int line = params.value("line", 0);
 		if (file.empty() || line <= 0)
 			return server->PrepareResult(HTTP_BAD_REQUEST, token, json{{"error", "file and line are required"}}, NULL, 0);
-		return server->PrepareResult(HTTP_OK, token, debuggerApi->ResolveSourceLineJson(file, line), NULL, 0);
+		return server->PrepareResult(HTTP_OK, token, debuggerApi->ResolveSourceLineJson(file, line, params.value("cpu", "")), NULL, 0);
 	});
 
 	sprintf(buf, "%s/source/breakpoint/add", plat);
@@ -350,7 +366,7 @@ void CDebuggerServerApi::RegisterEndpoints(CDebuggerServer *server)
 		int line = params.value("line", 0);
 		if (file.empty() || line <= 0)
 			return server->PrepareResult(HTTP_BAD_REQUEST, token, json{{"error", "file and line are required"}}, NULL, 0);
-		return server->PrepareResult(HTTP_OK, token, debuggerApi->AddSourceBreakpointJson(file, line), NULL, 0);
+		return server->PrepareResult(HTTP_OK, token, debuggerApi->AddSourceBreakpointJson(file, line, params.value("cpu", "")), NULL, 0);
 	});
 
 	sprintf(buf, "%s/source/breakpoint/remove", plat);
@@ -359,7 +375,7 @@ void CDebuggerServerApi::RegisterEndpoints(CDebuggerServer *server)
 	{
 		string file = params.value("file", "");
 		int line = params.value("line", 0);
-		if (!debuggerApi->RemoveSourceBreakpoint(file, line))
+		if (!debuggerApi->RemoveSourceBreakpoint(file, line, params.value("cpu", "")))
 			return server->PrepareResult(HTTP_NOT_FOUND, token, json{{"error", "no source breakpoint at that file and line"}}, NULL, 0);
 		return server->PrepareResult(HTTP_OK, token, json(), NULL, 0);
 	});
@@ -368,7 +384,7 @@ void CDebuggerServerApi::RegisterEndpoints(CDebuggerServer *server)
 	RegisterEndpoint(server, buf, plat, "source", "List source breakpoints with their resolved line and addresses",
 	[this, server](const string token, json params, unsigned char *binaryData, int binaryDataSize) -> vector<char>*
 	{
-		return server->PrepareResult(HTTP_OK, token, json{{"breakpoints", debuggerApi->ListSourceBreakpointsJson()}}, NULL, 0);
+		return server->PrepareResult(HTTP_OK, token, json{{"breakpoints", debuggerApi->ListSourceBreakpointsJson(params.value("cpu", ""))}}, NULL, 0);
 	});
 
 	sprintf(buf, "%s/cpu/callstack", plat);
@@ -385,7 +401,7 @@ void CDebuggerServerApi::RegisterEndpoints(CDebuggerServer *server)
 		string path = params.value("path", "");
 		if (path.empty())
 			return server->PrepareResult(HTTP_BAD_REQUEST, token, json{{"error", "path is required"}}, NULL, 0);
-		json result = debuggerApi->LoadDebugInfoJson(path);
+		json result = debuggerApi->LoadDebugInfoJson(path, params.value("cpu", ""));
 		return server->PrepareResult(result.contains("error") ? HTTP_BAD_REQUEST : HTTP_OK, token, result, NULL, 0);
 	});
 

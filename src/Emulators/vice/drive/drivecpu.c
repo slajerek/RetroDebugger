@@ -2594,6 +2594,9 @@ opcode.op.op8[0] = ((o) >> 16) & 0xff; \
 				{
 					// c64d check PC breakpoint after IRQ or trap
 					c64d_drive1541_check_pc_breakpoint(reg_pc);
+					// the boundary for a drive source step (RD-044): here only,
+					// the post-instruction check would report each PC twice
+					c64d_drive1541_notify_boundary(reg_pc, reg_sp);
 					viceCurrentDiskPC[0] = reg_pc;
 					c64d_debug_pause_check(0);
 				}

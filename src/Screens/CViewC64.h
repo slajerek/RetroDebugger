@@ -366,6 +366,8 @@ public:
 	CViewDebugEventsHistory *viewC64DebugEventsHistory;
 
 	CViewSourceCode *viewC64SourceCode;
+	CViewSourceCode *viewDrive1541SourceCode;	// RD-044: the drive CPU's PC and steps
+	CViewSourceCode *viewC64USourceCode;		// RD-045: observed C64 Ultimate
 	
 	CViewC64StateCIA *viewC64StateCIA;
 	CViewC64StateSID *viewC64StateSID;
@@ -564,6 +566,7 @@ public:
 	void StepOverInstruction();
 	void StepOverSubroutine();
 	void StepOutSubroutine();
+	bool CanSourceStep();	// a running machine can (RD-045: capabilities)
 	void SourceStep(SourceStepKind kind);
 	void StepOneCycle();
 	void StepBackInstruction();

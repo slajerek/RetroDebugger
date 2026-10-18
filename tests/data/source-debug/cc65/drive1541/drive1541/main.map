@@ -1,0 +1,28 @@
+Modules list:
+-------------
+drive.o:
+    CODE              Offs=000000  Size=000023  Align=00001  Fill=0000
+    BSS               Offs=000000  Size=000001  Align=00001  Fill=0000
+
+
+Segment list:
+-------------
+Name                   Start     End    Size  Align
+----------------------------------------------------
+CODE                  000500  000522  000023  00001
+BSS                   000600  000600  000001  00001
+
+
+Exports list by name:
+---------------------
+
+
+
+Exports list by value:
+----------------------
+
+
+
+Imports list:
+-------------
+

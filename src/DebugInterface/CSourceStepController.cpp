@@ -31,6 +31,22 @@ const char *SourceStepStopReasonName(SourceStepStopReason reason)
 	return "?";
 }
 
+// the owner's bank-aware lookups (RD-007); without an owner -- the 1541
+// drive CPU, whose address space is flat -- the plain ones
+static const CDebugSourceMapping *ResolveAt(CDebugInterface *owner, const CDebugDatabase *database, u32 regionId, u16 pc)
+{
+	if (owner)
+		return owner->ResolveSourceAt(database, regionId, pc);
+	return database ? database->Resolve(regionId, pc) : NULL;
+}
+
+static const CDebugFunction *FunctionAt(CDebugInterface *owner, const CDebugDatabase *database, u32 regionId, u16 pc)
+{
+	if (owner)
+		return owner->FindFunctionAt(database, regionId, pc);
+	return database ? database->FindFunction(regionId, pc) : NULL;
+}
+
 CSourceStepController::CSourceStepController(CDebugInterface *owner)
 {
 	this->owner = owner;
@@ -51,7 +67,7 @@ bool CSourceStepController::Arm(SourceStepKind kind, std::shared_ptr<const CDebu
 {
 	Cancel(SourceStepStopReason::Cancelled);
 
-	const CDebugSourceMapping *start = owner->ResolveSourceAt(database.get(), regionId, pc);
+	const CDebugSourceMapping *start = ResolveAt(owner, database.get(), regionId, pc);
 	if (start == NULL && kind != SourceStepKind::Out)
 	{
 		std::lock_guard<std::mutex> lock(resultMutex);
@@ -120,7 +136,7 @@ void CSourceStepController::Finish(SourceStepStopReason reason, u16 pc, const CD
 // has a line of its own after it (a one-line function's only line is its body)
 bool CSourceStepController::IsPrologue(const CDebugSourceMapping *location, u16 pc) const
 {
-	const CDebugFunction *function = owner->FindFunctionAt(database.get(), regionId, pc);
+	const CDebugFunction *function = FunctionAt(owner, database.get(), regionId, pc);
 	if (function == NULL || !function->lineIsDefinition || function->line <= 0 || location->fileId != function->fileId
 		|| location->lineStart != function->line)
 		return false;
@@ -154,7 +170,7 @@ bool CSourceStepController::OnInstructionBoundary(CDebugInterface *debugInterfac
 	tracker.Apply(boundary);
 	instructions++;
 
-	const CDebugSourceMapping *location = owner->ResolveSourceAt(database.get(), regionId, boundary.pc);
+	const CDebugSourceMapping *location = ResolveAt(owner, database.get(), regionId, boundary.pc);
 
 	if (debugInterface->GetDebugMode() != DEBUGGER_MODE_RUNNING)
 	{

@@ -28,6 +28,11 @@ Use this skill when working with the RetroDebugger MCP server to debug 8-bit pro
 - `retro_source_location` — code to source and back on the loaded debug info: with `address`
   (default: the PC) the file, line and function in effect plus every candidate mapping; with
   `file` and `line` the line actually used and its addresses
+- `retro_source_trace` — the source lines executed last (newest last, first PC and instruction
+  count per run); `record:true` starts recording (a check per instruction), `record:false` stops.
+  The way to follow a C64 Ultimate (`platform:"c64u"`), which cannot step: its bus trace is
+  decoded and replayed (`replayed:true`, trace mode). Also returns the platform's execution
+  `capabilities`; `sourceStep:false` means stepping and source breakpoints are unavailable
 
 ### Control (changes emulator state)
 - `retro_pause` — pause emulation
@@ -230,6 +235,12 @@ Call `retro_memory_last_access(platform:"c64", address:1024)` (also `atari800` o
    reason "completed" is a normal stop, "budget-exceeded" means no mapped line was reached
    (an endless loop or unmapped code), "frame-exited" means the function returned first
 ```
+
+The C64's 1541 drive CPU has its own symbols and debug info: pass `cpu:"drive1541"` to
+`retro_symbols_load`, `retro_source_breakpoint`, `retro_source_location` and
+`retro_source_step` (drive code assembled for drive RAM, e.g. ca65 `.dbg`). Pausing stops
+both CPUs; the drive runs in catch-up slices behind the C64, so a short drive step may
+end without the C64's cycle counter moving.
 
 ## Workflow: Find Game State Variable (e.g. lives counter)
 

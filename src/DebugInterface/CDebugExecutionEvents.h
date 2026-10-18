@@ -8,9 +8,10 @@
 // previous opcode and the stack pointer movement. Nothing is reported, and the
 // hook costs one relaxed atomic load, while no observer is armed.
 //
-// Main CPU only; the 1541 drive CPU does not report boundaries.
+// Main CPU, and the 1541 drive CPU while a drive source step is armed (RD-044).
 
 #include "SYS_Defs.h"
+#include <atomic>
 
 class CDebugInterface;
 
@@ -40,6 +41,7 @@ struct CDebugInstructionBoundary
 	u8 previousSp = 0;
 
 	u64 sequence = 0;			// boundaries since the observation was armed
+	bool replayed = false;		// from a recorded trace (C64U): the machine cannot be stopped here
 };
 
 // The 6502 stack pointer change an instruction makes by itself, without an
@@ -53,9 +55,34 @@ DebugExecutionEvent DebugClassifyBoundary(u8 previousOpcode, u8 previousSp, u8 s
 // positive when TO is above FROM (the stack has shrunk).
 inline int DebugStackDistance(u8 from, u8 to) { return (int)(i8)(u8)(to - from); }
 
+// The boundary stream of one CPU: each boundary classified from the one
+// before it. A restart (reset, or a seed: the boundary a step starts from, so
+// the first instruction it runs is classified too) is requested from any
+// thread and applied by the emulation thread at its next boundary.
+class CDebugBoundaryHistory
+{
+public:
+	CDebugBoundaryHistory();
+	CDebugInstructionBoundary Next(u16 pc, u8 sp, u8 opcode);	// emulation thread
+	void RequestReset();
+	// with the emulation thread parked (the seed is in place before it runs)
+	void RequestSeed(u16 pc, u8 sp, u8 opcode);
+
+private:
+	enum { Keep, Reset, Seed };
+	std::atomic<int> restart;
+	CDebugInstructionBoundary seed;
+	// emulation thread only
+	CDebugInstructionBoundary last;
+	bool hasLast;
+	u64 sequence;
+};
+
 // Observers run on the emulation thread inside the CPU loop: they must not
 // block, may read machine state and may call SetDebugMode(PAUSED), which
-// pauses at this boundary, before the opcode at pc executes.
+// pauses at this boundary, before the opcode at pc executes. A replayed
+// boundary (spec #20.8 guard 3: a recorded trace, e.g. the C64U's bus trace
+// decoded) comes the same way, after the fact; nothing stops there.
 class CDebugExecutionObserver
 {
 public:

@@ -815,17 +815,19 @@ void CMainMenuBar::RenderImGui()
 				kbsStepOutSubroutine->Run();
 			}
 
-			if (ImGui::MenuItem("Source Step Into"))
+			// greyed out when no running machine can source step (the C64U is observed only)
+			bool canSourceStep = viewC64->CanSourceStep();
+			if (ImGui::MenuItem("Source Step Into", NULL, false, canSourceStep))
 			{
 				viewC64->SourceStep(SourceStepKind::Into);
 			}
 
-			if (ImGui::MenuItem("Source Step Over"))
+			if (ImGui::MenuItem("Source Step Over", NULL, false, canSourceStep))
 			{
 				viewC64->SourceStep(SourceStepKind::Over);
 			}
 
-			if (ImGui::MenuItem("Source Step Out"))
+			if (ImGui::MenuItem("Source Step Out", NULL, false, canSourceStep))
 			{
 				viewC64->SourceStep(SourceStepKind::Out);
 			}

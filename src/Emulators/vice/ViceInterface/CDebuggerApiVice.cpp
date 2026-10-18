@@ -1,3 +1,5 @@
+#include "CSourceStepController.h"
+#include "CDebugSymbolsDrive1541.h"
 #include "CDebuggerApiVice.h"
 #include "CDebugInterfaceVice.h"
 #include "ViceWrapper.h"
@@ -321,6 +323,34 @@ void CDebuggerApiVice::AssembleResultToMemory(int addr, u8 v)
 	{
 		SYS_FatalExit("TODO: assemble target");
 	}
+}
+
+bool CDebuggerApiVice::GetSourceCpu(const std::string &cpu, SourceCpu *out)
+{
+	if (cpu != "drive1541")
+		return CDebuggerApi::GetSourceCpu(cpu, out);
+	CDebugInterfaceVice *vice = (CDebugInterfaceVice *)debugInterface;
+	out->symbols = vice->symbolsDrive1541;
+	out->stepper = vice->driveSourceStepper;
+	out->pc = vice->GetDrive1541PC();
+	out->bankAware = false;		// flat address space
+	return true;
+}
+
+bool CDebuggerApiVice::SourceStep(const std::string &kind, u64 budget, const std::string &cpu)
+{
+	if (cpu != "drive1541")
+		return CDebuggerApi::SourceStep(kind, budget, cpu);
+	SourceStepKind stepKind;
+	if (kind == "into")
+		stepKind = SourceStepKind::Into;
+	else if (kind == "over")
+		stepKind = SourceStepKind::Over;
+	else if (kind == "out")
+		stepKind = SourceStepKind::Out;
+	else
+		return false;
+	return ((CDebugInterfaceVice *)debugInterface)->SourceStepDrive(stepKind, budget);
 }
 
 CDebugSymbols *CDebuggerApiVice::GetAssembleSymbols()

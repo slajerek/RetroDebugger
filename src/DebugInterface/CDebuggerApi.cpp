@@ -1,4 +1,5 @@
 #include "CSourceStepController.h"
+#include "CDebugSourceTrace.h"
 #include "CDebugDatabase.h"
 #include "CDebugSymbols.h"
 #include "CDebugSourceBreakpoint.h"
@@ -98,7 +99,34 @@ bool CDebuggerApi::StepOutSubroutine()
 	return debugInterface->StepOutSubroutine();
 }
 
-bool CDebuggerApi::SourceStep(const std::string &kind, u64 budget)
+bool CDebuggerApi::GetSourceCpu(const std::string &cpu, SourceCpu *out)
+{
+	if (!cpu.empty() && cpu != "main")
+		return false;
+	out->symbols = debugInterface->symbols;
+	out->stepper = debugInterface->sourceStepper;
+	out->pc = debugInterface->GetCpuPC();
+	out->bankAware = true;
+	return true;
+}
+
+static const CDebugSourceMapping *ResolveFor(CDebugInterface *debugInterface, const CDebuggerApi::SourceCpu &target,
+											 const CDebugDatabase *database, u32 regionId, u16 address)
+{
+	if (target.bankAware)
+		return debugInterface->ResolveSourceAt(database, regionId, address);
+	return database->Resolve(regionId, address);
+}
+
+static const CDebugFunction *FunctionFor(CDebugInterface *debugInterface, const CDebuggerApi::SourceCpu &target,
+										 const CDebugDatabase *database, u32 regionId, u16 address)
+{
+	if (target.bankAware)
+		return debugInterface->FindFunctionAt(database, regionId, address);
+	return database->FindFunction(regionId, address);
+}
+
+bool CDebuggerApi::SourceStep(const std::string &kind, u64 budget, const std::string &cpu)
 {
 	SourceStepKind stepKind;
 	if (kind == "into")
@@ -109,14 +137,19 @@ bool CDebuggerApi::SourceStep(const std::string &kind, u64 budget)
 		stepKind = SourceStepKind::Out;
 	else
 		return false;
+	if (!cpu.empty() && cpu != "main")
+		return false;
 	return debugInterface->SourceStep(stepKind, budget);
 }
 
-nlohmann::json CDebuggerApi::GetSourceStepStatusJson()
+nlohmann::json CDebuggerApi::GetSourceStepStatusJson(const std::string &cpu)
 {
-	CSourceStepResult result = debugInterface->sourceStepper->GetLastResult();
+	SourceCpu target;
+	if (!GetSourceCpu(cpu, &target))
+		return nlohmann::json{{"error", "unknown cpu " + cpu}};
+	CSourceStepResult result = target.stepper->GetLastResult();
 	nlohmann::json status;
-	status["armed"] = debugInterface->sourceStepper->IsArmed();
+	status["armed"] = target.stepper->IsArmed();
 	status["kind"] = SourceStepKindName(result.kind);
 	status["reason"] = SourceStepStopReasonName(result.reason);
 	status["pc"] = result.pc;
@@ -125,7 +158,7 @@ nlohmann::json CDebuggerApi::GetSourceStepStatusJson()
 	if (result.mapped)
 	{
 		status["line"] = result.line;
-		std::shared_ptr<const CDebugDatabase> database = debugInterface->symbols ? debugInterface->symbols->debugDatabase : nullptr;
+		std::shared_ptr<const CDebugDatabase> database = target.symbols ? target.symbols->debugDatabase : nullptr;
 		const CDebugSourceFile *file = database ? database->GetFile(result.fileId) : NULL;
 		if (file)
 			status["file"] = file->originalPath;
@@ -145,15 +178,18 @@ static nlohmann::json MappingJson(const CDebugDatabase *database, const CDebugSo
 	return j;
 }
 
-nlohmann::json CDebuggerApi::GetSourceLocationJson(int address)
+nlohmann::json CDebuggerApi::GetSourceLocationJson(int address, const std::string &cpu)
 {
 	nlohmann::json j;
+	SourceCpu target;
+	if (!GetSourceCpu(cpu, &target))
+		return nlohmann::json{{"error", "unknown cpu " + cpu}};
 	if (address < 0)
-		address = debugInterface->GetCpuPC();
+		address = target.pc;
 	j["address"] = address;
 	j["mapped"] = false;
 
-	CDebugSymbols *symbols = debugInterface->symbols;
+	CDebugSymbols *symbols = target.symbols;
 	std::shared_ptr<const CDebugDatabase> database = symbols ? symbols->debugDatabase : nullptr;
 	if (!database || !symbols->currentSegment || symbols->currentSegment->debugRegionId < 0)
 	{
@@ -161,7 +197,7 @@ nlohmann::json CDebuggerApi::GetSourceLocationJson(int address)
 		return j;
 	}
 	u32 regionId = (u32)symbols->currentSegment->debugRegionId;
-	const CDebugSourceMapping *m = debugInterface->ResolveSourceAt(database.get(), regionId, (u16)address);
+	const CDebugSourceMapping *m = ResolveFor(debugInterface, target, database.get(), regionId, (u16)address);
 	if (m)
 	{
 		const CDebugSourceFile *file = database->GetFile(m->fileId);
@@ -169,7 +205,7 @@ nlohmann::json CDebuggerApi::GetSourceLocationJson(int address)
 		j["file"] = file ? file->originalPath : "";
 		j["fileName"] = file ? file->fileName : "";
 		j["line"] = m->lineStart;
-		const CDebugFunction *function = debugInterface->FindFunctionAt(database.get(), regionId, (u16)address);
+		const CDebugFunction *function = FunctionFor(debugInterface, target, database.get(), regionId, (u16)address);
 		if (function)
 			j["function"] = function->name;
 	}
@@ -181,12 +217,40 @@ nlohmann::json CDebuggerApi::GetSourceLocationJson(int address)
 	return j;
 }
 
-nlohmann::json CDebuggerApi::ResolveSourceLineJson(const std::string &file, int line)
+nlohmann::json CDebuggerApi::GetSourceTraceJson(int count)
 {
+	nlohmann::json j;
+	CDebugInterface::CDebugBackendCapabilities capabilities = debugInterface->GetExecutionCapabilities();
+	j["recording"] = debugInterface->IsRecordingSourceTrace();
+	j["capabilities"] = { {"instructionHook", capabilities.instructionHook}, {"sourceStep", capabilities.sourceStep},
+						  {"stepOut", capabilities.stepOut}, {"fetchMapping", capabilities.fetchMapping},
+						  {"executionTrace", capabilities.executionTrace} };
+	j["lines"] = nlohmann::json::array();
+	if (debugInterface->sourceTrace && count > 0)
+	{
+		for (const CDebugSourceTraceEntry &entry : debugInterface->sourceTrace->GetEntries((size_t)count))
+		{
+			nlohmann::json e = { {"pc", entry.pc}, {"instructions", entry.instructions}, {"replayed", entry.replayed} };
+			if (entry.mapped)
+			{
+				e["file"] = entry.fileName;
+				e["line"] = entry.line;
+			}
+			j["lines"].push_back(e);
+		}
+	}
+	return j;
+}
+
+nlohmann::json CDebuggerApi::ResolveSourceLineJson(const std::string &file, int line, const std::string &cpu)
+{
+	SourceCpu target;
+	if (!GetSourceCpu(cpu, &target))
+		return nlohmann::json{{"error", "unknown cpu " + cpu}};
 	nlohmann::json j;
 	j["file"] = file;
 	j["line"] = line;
-	std::shared_ptr<const CDebugDatabase> database = debugInterface->symbols ? debugInterface->symbols->debugDatabase : nullptr;
+	std::shared_ptr<const CDebugDatabase> database = target.symbols ? target.symbols->debugDatabase : nullptr;
 	i32 resolvedLine = 0;
 	std::vector<const CDebugSourceMapping *> mappings;
 	DebugResolveSourceLine(database.get(), file, line, &resolvedLine, mappings);
@@ -210,56 +274,62 @@ static nlohmann::json SourceBreakpointJson(const CDebugSourceBreakpoint *breakpo
 	return j;
 }
 
-nlohmann::json CDebuggerApi::AddSourceBreakpointJson(const std::string &file, int line)
+nlohmann::json CDebuggerApi::AddSourceBreakpointJson(const std::string &file, int line, const std::string &cpu)
 {
-	if (!debugInterface->symbols || file.empty() || line <= 0)
+	SourceCpu target;
+	if (!GetSourceCpu(cpu, &target))
+		return nlohmann::json{{"error", "unknown cpu " + cpu}};
+	if (!target.symbols || file.empty() || line <= 0)
 		return nlohmann::json{{"error", "file and a positive line are required"}};
-	CDebugSourceBreakpoint *breakpoint = debugInterface->symbols->AddSourceBreakpoint(file.c_str(), line);
-	debugInterface->symbols->UpdateRenderBreakpoints();
+	CDebugSourceBreakpoint *breakpoint = target.symbols->AddSourceBreakpoint(file.c_str(), line);
+	target.symbols->UpdateRenderBreakpoints();
 	return SourceBreakpointJson(breakpoint);
 }
 
-bool CDebuggerApi::RemoveSourceBreakpoint(const std::string &file, int line)
+bool CDebuggerApi::RemoveSourceBreakpoint(const std::string &file, int line, const std::string &cpu)
 {
-	if (!debugInterface->symbols)
+	SourceCpu target;
+	if (!GetSourceCpu(cpu, &target) || !target.symbols)
 		return false;
-	CDebugSourceBreakpoint *breakpoint = debugInterface->symbols->FindSourceBreakpoint(file.c_str(), line);
+	CDebugSourceBreakpoint *breakpoint = target.symbols->FindSourceBreakpoint(file.c_str(), line);
 	if (!breakpoint)
 		return false;
-	debugInterface->symbols->RemoveSourceBreakpoint(breakpoint);
-	debugInterface->symbols->UpdateRenderBreakpoints();
+	target.symbols->RemoveSourceBreakpoint(breakpoint);
+	target.symbols->UpdateRenderBreakpoints();
 	return true;
 }
 
-nlohmann::json CDebuggerApi::ListSourceBreakpointsJson()
+nlohmann::json CDebuggerApi::ListSourceBreakpointsJson(const std::string &cpu)
 {
 	nlohmann::json list = nlohmann::json::array();
-	if (!debugInterface->symbols)
+	SourceCpu target;
+	if (!GetSourceCpu(cpu, &target) || !target.symbols)
 		return list;
 	debugInterface->LockMutex();
-	for (CDebugSourceBreakpoint *breakpoint : debugInterface->symbols->sourceBreakpoints)
+	for (CDebugSourceBreakpoint *breakpoint : target.symbols->sourceBreakpoints)
 		list.push_back(SourceBreakpointJson(breakpoint));
 	debugInterface->UnlockMutex();
 	return list;
 }
 
-nlohmann::json CDebuggerApi::LoadDebugInfoJson(const std::string &path)
+nlohmann::json CDebuggerApi::LoadDebugInfoJson(const std::string &path, const std::string &cpu)
 {
 	nlohmann::json j;
 	j["path"] = path;
-	if (!debugInterface->symbols)
+	SourceCpu target;
+	if (!GetSourceCpu(cpu, &target) || !target.symbols)
 	{
-		j["error"] = "no symbols for this platform";
+		j["error"] = cpu.empty() ? "no symbols for this platform" : "unknown cpu " + cpu;
 		return j;
 	}
-	DebugInfoFormat format = DebugInfoLoadFile(debugInterface->symbols, path.c_str());
+	DebugInfoFormat format = DebugInfoLoadFile(target.symbols, path.c_str());
 	j["format"] = DebugInfoFormatName(format);
 	if (format == DebugInfoFormat::Unknown)
 	{
 		j["error"] = "missing or unrecognized file";
 		return j;
 	}
-	std::shared_ptr<const CDebugDatabase> database = debugInterface->symbols->debugDatabase;
+	std::shared_ptr<const CDebugDatabase> database = target.symbols->debugDatabase;
 	if (database)
 	{
 		j["producer"] = database->producer;
@@ -267,7 +337,7 @@ nlohmann::json CDebuggerApi::LoadDebugInfoJson(const std::string &path)
 		j["mappings"] = (int)database->NumMappings();
 		j["functions"] = (int)database->Functions().size();
 	}
-	j["warnings"] = debugInterface->symbols->debugInfoWarnings;
+	j["warnings"] = target.symbols->debugInfoWarnings;
 	return j;
 }
 

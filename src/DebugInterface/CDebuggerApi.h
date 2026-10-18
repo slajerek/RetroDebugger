@@ -13,6 +13,7 @@
 
 class CGuiView;
 class CDebugInterface;
+class CSourceStepController;
 
 class CDebuggerApi
 {
@@ -32,22 +33,36 @@ public:
 	virtual void StepOverInstruction();
 	virtual void StepOverSubroutine();	// step over JSR
 	virtual bool StepOutSubroutine();	// run until the current frame returns
+	// RD-044: the CPU a source step or query is about. CPU "" or "main" is the
+	// machine's CPU; the C64 also has "drive1541" (CDebuggerApiVice). False
+	// for a CPU this machine does not have.
+	struct SourceCpu
+	{
+		CDebugSymbols *symbols = NULL;
+		CSourceStepController *stepper = NULL;
+		int pc = -1;
+		bool bankAware = true;		// its fetches have banks (RD-007)
+	};
+	virtual bool GetSourceCpu(const std::string &cpu, SourceCpu *out);
+
 	// Source-level step (RD-013): KIND "into", "over" or "out"; false when not armed.
-	virtual bool SourceStep(const std::string &kind, u64 budget = 0);
+	virtual bool SourceStep(const std::string &kind, u64 budget = 0, const std::string &cpu = "");
 	// The last source step: armed, kind, reason, pc and, when mapped, file and line.
-	virtual nlohmann::json GetSourceStepStatusJson();
+	virtual nlohmann::json GetSourceStepStatusJson(const std::string &cpu = "");
 
 	// RD-036: source queries on the loaded debug info (current segment's region)
 	// ADDRESS (-1: the PC) -> file, line, function and every candidate mapping
-	virtual nlohmann::json GetSourceLocationJson(int address);
+	virtual nlohmann::json GetSourceLocationJson(int address, const std::string &cpu = "");
+	// RD-045: recording on/off, the capabilities, and the COUNT lines executed last
+	virtual nlohmann::json GetSourceTraceJson(int count);
 	// FILE:LINE -> the line actually used and its first addresses
-	virtual nlohmann::json ResolveSourceLineJson(const std::string &file, int line);
+	virtual nlohmann::json ResolveSourceLineJson(const std::string &file, int line, const std::string &cpu = "");
 	// source breakpoints: add / remove by file + line, list with their resolution
-	virtual nlohmann::json AddSourceBreakpointJson(const std::string &file, int line);
-	virtual bool RemoveSourceBreakpoint(const std::string &file, int line);
-	virtual nlohmann::json ListSourceBreakpointsJson();
+	virtual nlohmann::json AddSourceBreakpointJson(const std::string &file, int line, const std::string &cpu = "");
+	virtual bool RemoveSourceBreakpoint(const std::string &file, int line, const std::string &cpu = "");
+	virtual nlohmann::json ListSourceBreakpointsJson(const std::string &cpu = "");
 	// loads a symbols / debug info file by content (DebugInfoLoadFile)
-	virtual nlohmann::json LoadDebugInfoJson(const std::string &path);
+	virtual nlohmann::json LoadDebugInfoJson(const std::string &path, const std::string &cpu = "");
 	// RD-012: the frames on the stack now, innermost first, from the stack
 	// annotation; each with its return address and, when mapped, function/line
 	virtual nlohmann::json GetCallStackJson();

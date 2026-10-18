@@ -74,7 +74,8 @@ public:
 	CDebugEventBreakpoint *CreateEventBreakpoint(CDebugBreakpoint *breakpoint, u32 condition, CDebugSymbolsSegment *segment);
 	CDebugEventManual *CreateEventManual();
 	// emulation thread, the machine stopping; NULL when another event already
-	// owns this cycle (a breakpoint that ended the step says more)
+	// owns this cycle (a breakpoint that ended the step says more). A step
+	// entry at the cycle is replaced: the 1541's steps can share a C64 cycle
 	CDebugEventStep *CreateEventStep(const char *description);
 	void DeleteEvent(CDebugEventBreakpoint *event);
 	// a segment is going away: events keep their cycle, frame and text, and

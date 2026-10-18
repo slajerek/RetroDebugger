@@ -45,6 +45,8 @@ extern "C" {
 #include "CDebugMemory.h"
 #include "CDebugEventsHistory.h"
 #include "SND_SoundEngine.h"
+#include <shared_mutex>
+#include <thread>
 
 std::atomic<int> c64d_debug_mode{DEBUGGER_MODE_RUNNING};
 static int pauseRefreshDone = 0;  // Flag to ensure refresh happens only once when pausing
@@ -850,7 +852,67 @@ static void c64d_c64_evaluate_pc_breakpoints(uint16 pc);
 void c64d_c64_notify_cpu_reset(void)
 {
 	if (debugInterfaceVice)
+	{
 		debugInterfaceVice->NotifyCpuReset();
+		debugInterfaceVice->CancelDriveSourceStep();
+	}
+}
+
+// The C64 cartridge's lifetime (the NES has the same in NesWrapper.cpp):
+// VICE's cartridge_attach_image / cartridge_detach_image free and replace the
+// cartridge's ROM and its handlers -- on the emulation thread, or the caller's
+// when paused -- while other threads peek C64 memory through them (the
+// memory map view's thread: CViewDataMap::UpdateWholeMap -> c64d_peek_memory_c64
+// -> cartridge_peek_mem -> flash040core_read crashed in the suite). Attach and
+// detach hold it exclusively (re-entrantly: attaching detaches first), the
+// debugger's cross-thread peeks shared; a peek from the thread that holds it
+// exclusively takes nothing.
+static std::shared_mutex c64dCartridgeMutex;
+static std::atomic<std::thread::id> c64dCartridgeOwner;
+static int c64dCartridgeDepth = 0;		// the owner's only
+
+void c64d_cartridge_lock_exclusive(void)
+{
+	if (c64dCartridgeOwner.load() == std::this_thread::get_id())
+	{
+		c64dCartridgeDepth++;
+		return;
+	}
+	c64dCartridgeMutex.lock();
+	c64dCartridgeOwner.store(std::this_thread::get_id());
+	c64dCartridgeDepth = 1;
+}
+
+void c64d_cartridge_unlock_exclusive(void)
+{
+	if (--c64dCartridgeDepth > 0)
+		return;
+	c64dCartridgeOwner.store(std::thread::id());
+	c64dCartridgeMutex.unlock();
+}
+
+bool c64d_cartridge_lock_shared(void)
+{
+	if (c64dCartridgeOwner.load() == std::this_thread::get_id())
+		return false;
+	c64dCartridgeMutex.lock_shared();
+	return true;
+}
+
+void c64d_cartridge_unlock_shared(void)
+{
+	c64dCartridgeMutex.unlock_shared();
+}
+
+void c64d_drive1541_trigger_reset(void)
+{
+	drive_cpu_trigger_reset(0);
+}
+
+void c64d_drive1541_notify_boundary(uint16 pc, uint8 sp)
+{
+	if (debugInterfaceVice && debugInterfaceVice->IsObservingDriveExecution())
+		debugInterfaceVice->NotifyDriveInstructionBoundary(pc, sp, c64d_peek_drive(0, pc));
 }
 
 void c64d_c64_check_pc_breakpoint(uint16 pc)

@@ -1,4 +1,5 @@
 #include "CDebugExecutionEvents.h"
+#include "CDebugSourceTrace.h"
 #include "CDebugInstructionStepper.h"
 #include "CSourceStepController.h"
 #include "CDebugSymbols.h"
@@ -65,35 +66,62 @@ DebugExecutionEvent DebugClassifyBoundary(u8 previousOpcode, u8 previousSp, u8 s
 	}
 }
 
-// CDebugInterface side (RD-011): the boundary history and the observer list.
-
-void CDebugInterface::NotifyInstructionBoundary(u16 pc, u8 sp, u8 opcode)
+CDebugBoundaryHistory::CDebugBoundaryHistory()
 {
-	int restart = boundaryHistoryRestart.exchange(BoundaryHistoryKeep, std::memory_order_acq_rel);
-	if (restart != BoundaryHistoryKeep)
+	restart.store(Reset, std::memory_order_relaxed);
+	hasLast = false;
+	sequence = 0;
+}
+
+void CDebugBoundaryHistory::RequestReset()
+{
+	restart.store(Reset, std::memory_order_release);
+}
+
+void CDebugBoundaryHistory::RequestSeed(u16 pc, u8 sp, u8 opcode)
+{
+	seed = CDebugInstructionBoundary();
+	seed.pc = pc;
+	seed.sp = sp;
+	seed.opcode = opcode;
+	restart.store(Seed, std::memory_order_release);
+}
+
+CDebugInstructionBoundary CDebugBoundaryHistory::Next(u16 pc, u8 sp, u8 opcode)
+{
+	int restartKind = restart.exchange(Keep, std::memory_order_acq_rel);
+	if (restartKind != Keep)
 	{
 		// A step seeds the history with the boundary it starts from, so the
 		// first instruction it runs is classified too (an IRQ taken right
 		// after it is an interrupt entry, not an unexplained first boundary).
-		hasLastBoundary = (restart == BoundaryHistorySeed);
-		lastBoundary = boundaryHistorySeed;
-		boundarySequence = 0;
+		hasLast = (restartKind == Seed);
+		last = seed;
+		sequence = 0;
 	}
 
 	CDebugInstructionBoundary boundary;
 	boundary.pc = pc;
 	boundary.sp = sp;
 	boundary.opcode = opcode;
-	boundary.sequence = boundarySequence++;
-	if (hasLastBoundary)
+	boundary.sequence = sequence++;
+	if (hasLast)
 	{
-		boundary.previousPc = lastBoundary.pc;
-		boundary.previousOpcode = lastBoundary.opcode;
-		boundary.previousSp = lastBoundary.sp;
-		boundary.event = DebugClassifyBoundary(lastBoundary.opcode, lastBoundary.sp, sp);
+		boundary.previousPc = last.pc;
+		boundary.previousOpcode = last.opcode;
+		boundary.previousSp = last.sp;
+		boundary.event = DebugClassifyBoundary(last.opcode, last.sp, sp);
 	}
-	lastBoundary = boundary;
-	hasLastBoundary = true;
+	last = boundary;
+	hasLast = true;
+	return boundary;
+}
+
+// CDebugInterface side (RD-011): the boundary history and the observer list.
+
+void CDebugInterface::NotifyInstructionBoundary(u16 pc, u8 sp, u8 opcode)
+{
+	CDebugInstructionBoundary boundary = boundaryHistory.Next(pc, sp, opcode);
 
 	bool instructionStepArmed = instructionStepper->IsArmed();
 	bool sourceStepArmed = sourceStepper->IsArmed();
@@ -129,12 +157,58 @@ void CDebugInterface::NotifyInstructionBoundary(u16 pc, u8 sp, u8 opcode)
 	}
 }
 
+void CDebugInterface::ReplayInstructionBoundary(u16 pc, u8 sp, u8 opcode)
+{
+	CDebugInstructionBoundary boundary = boundaryHistory.Next(pc, sp, opcode);
+	boundary.replayed = true;
+	std::vector<CDebugExecutionObserver *> observers;
+	{
+		std::lock_guard<std::mutex> lock(executionObserversMutex);
+		observers = executionObservers;
+	}
+	for (CDebugExecutionObserver *observer : observers)
+		observer->OnInstructionBoundary(this, boundary);
+}
+
+bool CDebugInterface::HasExecutionObservers()
+{
+	std::lock_guard<std::mutex> lock(executionObserversMutex);
+	return !executionObservers.empty();
+}
+
+CDebugInterface::CDebugBackendCapabilities CDebugInterface::GetExecutionCapabilities()
+{
+	CDebugBackendCapabilities capabilities;
+	capabilities.instructionHook = SupportsExecutionEvents();
+	capabilities.stepInstruction = SupportsExecutionEvents();
+	capabilities.stepOut = SupportsExecutionEvents();
+	capabilities.sourceStep = SupportsExecutionEvents();
+	capabilities.fetchMapping = GetMemoryMappingResolver() != NULL;
+	return capabilities;
+}
+
+void CDebugInterface::SetSourceTraceRecording(bool record)
+{
+	if (record == sourceTraceRecording)
+		return;
+	if (sourceTrace == NULL)
+		sourceTrace = new CDebugSourceTraceRecorder();
+	sourceTraceRecording = record;
+	if (record)
+	{
+		sourceTrace->Clear();
+		AddExecutionObserver(sourceTrace);
+	}
+	else
+		RemoveExecutionObserver(sourceTrace);
+}
+
 void CDebugInterface::NotifyCpuReset()
 {
 	bool stepping = instructionStepper->IsArmed() || sourceStepper->IsArmed();
 	instructionStepper->Cancel(DebugStepStopReason::Cancelled);
 	sourceStepper->Cancel(SourceStepStopReason::Cancelled);
-	boundaryHistoryRestart.store(BoundaryHistoryReset, std::memory_order_release);
+	boundaryHistory.RequestReset();
 	mainCpuStack.Clear();
 	resetCount.fetch_add(1, std::memory_order_acq_rel);
 
@@ -189,7 +263,7 @@ void CDebugInterface::AddExecutionObserver(CDebugExecutionObserver *observer)
 		executionObservers.push_back(observer);
 	}
 	if (!instructionStepper->IsArmed())
-		boundaryHistoryRestart.store(BoundaryHistoryReset, std::memory_order_release);
+		boundaryHistory.RequestReset();
 	UpdateExecutionObserved();
 }
 
@@ -246,11 +320,7 @@ bool CDebugInterface::BeginInstructionStep(u16 *pc, u8 *sp, u8 *opcode)
 		*opcode = 0xEA;		// unreadable: classify the first instruction as plain
 
 	// The emulation thread is parked, so the seed is in place before RUNNING.
-	boundaryHistorySeed = CDebugInstructionBoundary();
-	boundaryHistorySeed.pc = *pc;
-	boundaryHistorySeed.sp = *sp;
-	boundaryHistorySeed.opcode = *opcode;
-	boundaryHistoryRestart.store(BoundaryHistorySeed, std::memory_order_release);
+	boundaryHistory.RequestSeed(*pc, *sp, *opcode);
 	return true;
 }
 

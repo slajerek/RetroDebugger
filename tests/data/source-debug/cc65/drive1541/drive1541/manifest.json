@@ -1,0 +1,63 @@
+{
+  "buildDir": "/tmp/rd-source-debug/cc65/drive1541/drive1541",
+  "commit": null,
+  "fixedMtime": 1767225600,
+  "fixture": "drive1541",
+  "inputs": {
+    "drive.cfg": "805de152f652c680e515822f7d68771a831053e6a2f8661272f180db42eeb568",
+    "drive.s": "854b523729713d2a51d9785ab5328f6fb1c2d23949ff701d8323011663a33be3"
+  },
+  "machine": "drive1541",
+  "outputs": {
+    "main.bin": {
+      "sha256": "4b58e192030c7122f916459ef0ef8e5eccc477e9c726a66413faf19dd40c7686",
+      "size": 35
+    },
+    "main.dbg": {
+      "sha256": "d726b3ef4f8dcb0c75b8784d4ee90f33e8cb5c605c52b5ef933edae969e9bef8",
+      "size": 2650
+    },
+    "main.lbl": {
+      "sha256": "448247079fdaa1178a7c193a055124bdcb82e793d6521c99b4011deb51af7aa6",
+      "size": 204
+    },
+    "main.map": {
+      "sha256": "54ff56719d4349dfbefa87ab4c804475f1ad4d1f030bb7f1cfad3c5520c925c8",
+      "size": 545
+    }
+  },
+  "source": "drive.s",
+  "steps": [
+    [
+      "ca65",
+      "-g",
+      "drive.s"
+    ],
+    [
+      "ld65",
+      "-C",
+      "drive.cfg",
+      "--dbgfile",
+      "main.dbg",
+      "-Ln",
+      "main.lbl",
+      "-m",
+      "main.map",
+      "-o",
+      "main.bin",
+      "drive.o"
+    ]
+  ],
+  "toolDirs": {
+    "ca65": "/opt/homebrew/Cellar/cc65/2.19/bin",
+    "cc65": "/opt/homebrew/Cellar/cc65/2.19/bin",
+    "ld65": "/opt/homebrew/Cellar/cc65/2.19/bin"
+  },
+  "toolchain": "cc65",
+  "version": "2.19",
+  "versionReported": {
+    "ca65": "ca65 V2.18 - N/A (/opt/homebrew/Cellar/cc65/2.19/bin)",
+    "cc65": "cc65 V2.18 - N/A (/opt/homebrew/Cellar/cc65/2.19/bin)",
+    "ld65": "ld65 V2.18 - N/A (/opt/homebrew/Cellar/cc65/2.19/bin)"
+  }
+}

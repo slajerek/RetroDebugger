@@ -1343,6 +1343,10 @@ void CTestMCPProtocol::Run(ITestCallback *cb)
 			{ "retro_source_breakpoint", {{"platform", "c64"}, {"action", "list"}}, "c64/source/breakpoint/list", json::object() },
 			{ "retro_symbols_load", {{"platform", "c64"}, {"path", "/tmp/main.dbj"}}, "c64/symbols/load", {{"path", "/tmp/main.dbj"}} },
 			{ "retro_callstack", {{"platform", "nes"}}, "nes/cpu/callstack", json::object() },
+			// RD-044: the 1541 by name; RD-045: executed lines
+			{ "retro_source_step", {{"platform", "c64"}, {"kind", "over"}, {"cpu", "drive1541"}}, "c64/source/step", {{"kind", "over"}, {"cpu", "drive1541"}} },
+			{ "retro_symbols_load", {{"platform", "c64"}, {"path", "/tmp/drive.dbg"}, {"cpu", "drive1541"}}, "c64/symbols/load", {{"path", "/tmp/drive.dbg"}, {"cpu", "drive1541"}} },
+			{ "retro_source_trace", {{"platform", "c64u"}, {"record", true}}, "c64u/source/trace", {{"record", true}} },
 		};
 		for (const Route &route : routes)
 		{

@@ -1,0 +1,11 @@
+al 000600 .__BSS_LOAD__
+al 000600 .__BSS_RUN__
+al 000001 .__BSS_SIZE__
+al 000500 .start
+al 00051A .wait
+al 000518 .outer
+al 000600 .count
+al 000516 .delay
+al 00050C .bump
+al 000502 .loop
+al 000500 .start

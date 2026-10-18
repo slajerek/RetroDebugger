@@ -409,6 +409,19 @@ public:
 	//
 	virtual void SupportsBreakpoints(bool *writeBreakpoint, bool *readBreakpoint);
 	virtual bool SupportsExecutionEvents() override { return true; }
+
+	// RD-044: source stepping on the 1541 drive CPU, on symbolsDrive1541's
+	// debug info. The drive's hook reports its boundaries only while a drive
+	// step is armed; pausing stops both CPUs (they share the debug mode), and
+	// arming cancels a main CPU step. False when the machine was running (it
+	// is paused instead) or there is no source at the drive's PC (Into/Over).
+	CSourceStepController *driveSourceStepper;
+	bool SourceStepDrive(SourceStepKind kind, u64 budget = 0);
+	bool IsObservingDriveExecution() const { return driveExecutionObserved.load(std::memory_order_relaxed); }
+	void NotifyDriveInstructionBoundary(u16 pc, u8 sp, u8 opcode);	// emulation thread
+	void CancelDriveSourceStep();
+	// the drive CPU reset, at the next frame on the emulation thread
+	void ResetDrive1541();
 	
 	//
 	virtual CDebuggerApi *GetDebuggerApi();
@@ -416,6 +429,11 @@ public:
 
 	//
 	virtual void Shutdown();
+
+private:
+	CDebugBoundaryHistory driveBoundaryHistory;
+	std::atomic<bool> driveExecutionObserved { false };
+	void RecordDriveSourceStepStop();
 };
 
 #define C64_NUM_SID_REGISTERS 0x20
