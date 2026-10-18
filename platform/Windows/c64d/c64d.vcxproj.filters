@@ -4888,6 +4888,12 @@
     <ClCompile Include="..\..\..\src\Tools\Shaders\CRenderShaderCRTMonitorOpenGL4.cpp">
       <Filter>Source Files\src\Tools\Shaders</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\src\DebugInterface\C64\C64BankingModes.cpp">
+      <Filter>src\DebugInterface\C64</Filter>
+    </ClCompile>
+    <ClInclude Include="..\..\..\src\DebugInterface\C64\C64BankingModes.h">
+      <Filter>src\DebugInterface\C64</Filter>
+    </ClInclude>
     <ClCompile Include="..\..\..\src\Tests\CTestAtariXeBanks.cpp">
       <Filter>src\Tests</Filter>
     </ClCompile>

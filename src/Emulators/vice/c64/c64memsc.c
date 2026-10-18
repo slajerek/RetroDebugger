@@ -359,6 +359,18 @@ void c64d_resolve_access(uint16_t addr, int isWrite, int *kind, uint32_t *offset
                    && (c64d_generic_cartridge_only() || c64d_main_slot_only(CARTRIDGE_EASYFLASH))) {
             k = C64D_ACCESS_ROMH;
             off = (uint32_t)((romh_bank << 13) + (addr & 0x1fff));
+        } else if ((f == ultimax_1000_7fff_read || f == ultimax_a000_bfff_read || f == ultimax_c000_cfff_read)
+                   && (c64d_generic_cartridge_only() || c64d_banked_roml_cartridge())) {
+            k = C64D_ACCESS_UNMAPPED;    /* Ultimax: for these carts the handler's default, open bus */
+        } else if (f == ultimax_d000_dfff_read && (c64d_generic_cartridge_only() || c64d_banked_roml_cartridge())) {
+            /* Ultimax: read_bank_io, the C64's I/O and color RAM whatever $01 says */
+            if (page >= 0xd8 && page <= 0xdb) {
+                k = C64D_ACCESS_COLORRAM;
+                off = addr & 0x03ff;
+            } else {
+                k = C64D_ACCESS_IO;
+                off = addr - 0xd000;
+            }
         } else if (f == romh_read && c64d_main_slot_only(CARTRIDGE_OCEAN)) {
             k = C64D_ACCESS_ROML;    /* ocean_romh_read: $A000 reads the ROML bank too */
             off = (uint32_t)((roml_bank << 13) + (addr & 0x1fff));

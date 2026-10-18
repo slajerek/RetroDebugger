@@ -3,6 +3,7 @@
 #include "CViewC64.h"
 #include "CDebugInterfaceC64.h"
 #include "CDebugMemoryMapping.h"
+#include "C64BankingModes.h"
 #include "DebuggerDefs.h"
 #include "SYS_Main.h"
 #include "CSlrString.h"
@@ -197,6 +198,49 @@ bool CTestC64MemoryMapping::RunBankedCartridges(int &stepNum, std::string &faile
 					 "EasyFlash: in 16 KB mode with bank 1, $8100 is ROML bank 1 and reads its marker byte")
 			&& check(IsCart(romh1, 1, 0x2000 + 0x100, CrtChipDataOffset(3) + 0x100) && c64->GetByteC64(0xA100) == 0xC1,
 					 "EasyFlash: $A100 is ROMH bank 1 at the interleaved .crt offset");
+	}
+	if (ok)
+	{
+		// RD-028: the shared 32-mode table (memory bank view, VIC editor) against
+		// VICE's own read tables. EasyFlash's $DE02 with the mode bit gives every
+		// EXROM/GAME pair: 4 = none, 5 = Ultimax, 6 = 8 KB, 7 = 16 KB.
+		struct { u8 de02, exrom, game; } pairs[] = { { 6, 0, 1 }, { 7, 0, 0 }, { 5, 1, 0 }, { 4, 1, 1 } };
+		const u16 regionAddress[C64BANK_NUM_REGIONS] = { 0x8100, 0xA100, 0xC100, 0xD100, 0xE100 };
+		std::string mismatches;
+		c64->SetByteC64(0x0000, 0x2F);
+		for (auto &pair : pairs)
+		{
+			for (u8 port = 0; port < 8; port++)
+			{
+				c64->SetByteC64(0x0001, 0x37);		// I/O in to reach $DE02 (every pair at $x7)
+				c64->SetByteC64(0xDE02, pair.de02);
+				c64->SetByteC64(0x0001, (u8)(0x30 | port));
+				int mode = C64BankingMode(pair.exrom, pair.game, port);
+				for (int region = 0; region < C64BANK_NUM_REGIONS; region++)
+				{
+					CDebugMappedAddress m = resolver->ResolveRead(regionAddress[region]);
+					C64BankEntry expected = C64BankingEntry(mode, region);
+					const char *device = m.physical.device.c_str();
+					C64BankEntry got = m.physical.kind == DebugMemoryKind::Unmapped ? C64BANK_OPEN
+						: !strcmp(device, "c64-ram") ? C64BANK_RAM : !strcmp(device, "c64-basic") ? C64BANK_BASIC_ROM
+						: !strcmp(device, "c64-kernal") ? C64BANK_KERNAL_ROM : !strcmp(device, "c64-chargen") ? C64BANK_CHAR_ROM
+						: !strcmp(device, "c64-io") ? C64BANK_IO
+						: (!strcmp(device, "c64-cart") && m.physical.region == 0) ? C64BANK_CART_LO
+						: (!strcmp(device, "c64-cart") && m.physical.region == 1) ? C64BANK_CART_HI : (C64BankEntry)0xFF;
+					if (got != expected)
+					{
+						char buf[160];
+						snprintf(buf, sizeof(buf), " mode %d %s: table %s, VICE %s;", mode, C64BankRegionName(region),
+								 C64BankEntryName(expected), got == (C64BankEntry)0xFF ? m.physical.device.c_str() : C64BankEntryName(got));
+						mismatches += buf;
+					}
+				}
+			}
+		}
+		c64->SetByteC64(0x0001, 0x37);
+		c64->SetByteC64(0xDE02, 0);
+		ok = check(mismatches.empty(), mismatches.empty() ? "the 32-mode banking table matches VICE in every EXROM/GAME/$01 mode"
+				   : ("the 32-mode banking table differs from VICE:" + mismatches).c_str());
 	}
 	if (attached)
 		ok = check(DetachAndBoot(c64), "EasyFlash: the cartridge detaches and the C64 boots to READY") && ok;

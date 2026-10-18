@@ -7,6 +7,7 @@
 #include "VID_ImageBinding.h"
 #include "CConfigStorageHjson.h"
 #include "C64SettingsStorage.h"
+#include "C64BankingModes.h"
 #include <cstring>
 #include <cmath>
 #include <set>
@@ -20,48 +21,6 @@ extern "C"
 #define VICII_FULL_BORDERS   1
 #define VICII_DEBUG_BORDERS  2
 #define VICII_NO_BORDERS     3
-
-// 32-mode lookup table: mode = (exrom << 4) | (game << 3) | (port & 7)
-// Each entry: { $8000, $A000, $C000, $D000, $E000 }
-// 0=RAM, 1=BASIC_ROM, 2=KERNAL_ROM, 3=CHAR_ROM, 4=IO, 5=CART_LO, 6=CART_HI, 7=OPEN
-static const uint8_t bankingModes[32][5] = {
-	// EXROM=0, GAME=0
-	{ 0, 0, 0, 0, 0 },  //  0
-	{ 0, 0, 0, 0, 0 },  //  1
-	{ 0, 0, 0, 3, 2 },  //  2
-	{ 5, 6, 0, 3, 2 },  //  3
-	{ 0, 0, 0, 0, 0 },  //  4
-	{ 0, 0, 0, 4, 0 },  //  5
-	{ 0, 0, 0, 4, 2 },  //  6
-	{ 5, 6, 0, 4, 2 },  //  7
-	// EXROM=0, GAME=1
-	{ 0, 0, 0, 0, 0 },  //  8
-	{ 0, 0, 0, 0, 0 },  //  9
-	{ 0, 0, 0, 3, 2 },  // 10
-	{ 5, 1, 0, 3, 2 },  // 11
-	{ 0, 0, 0, 0, 0 },  // 12
-	{ 0, 0, 0, 4, 0 },  // 13
-	{ 0, 0, 0, 4, 2 },  // 14
-	{ 5, 1, 0, 4, 2 },  // 15
-	// EXROM=1, GAME=0 (Ultimax)
-	{ 7, 7, 7, 7, 6 },  // 16
-	{ 7, 7, 7, 7, 6 },  // 17
-	{ 5, 7, 7, 3, 6 },  // 18
-	{ 5, 7, 7, 3, 6 },  // 19
-	{ 7, 7, 7, 7, 6 },  // 20
-	{ 5, 7, 7, 4, 6 },  // 21
-	{ 5, 7, 7, 4, 6 },  // 22
-	{ 5, 7, 7, 4, 6 },  // 23
-	// EXROM=1, GAME=1 (no cartridge)
-	{ 0, 0, 0, 0, 0 },  // 24
-	{ 0, 0, 0, 0, 0 },  // 25
-	{ 0, 0, 0, 3, 2 },  // 26
-	{ 0, 1, 0, 3, 2 },  // 27
-	{ 0, 0, 0, 0, 0 },  // 28
-	{ 0, 0, 0, 4, 0 },  // 29
-	{ 0, 0, 0, 4, 2 },  // 30
-	{ 0, 1, 0, 4, 2 },  // 31
-};
 
 CVicEditorLayerMemoryAccess::CVicEditorLayerMemoryAccess(CViewC64VicEditor *vicEditor)
 : CVicEditorLayer(vicEditor, "Memory Access")
@@ -135,26 +94,12 @@ int CVicEditorLayerMemoryAccess::FindEntryForAddress(uint16_t addr)
 
 bool CVicEditorLayerMemoryAccess::IsRomAtAddress(vicii_cycle_state_t *state, uint16_t addr)
 {
-	if (addr < 0x8000)
+	int region = C64BankingRegion(addr);
+	if (region < 0)
 		return false;
-
-	int mode = (state->exrom << 4) | (state->game << 3) | (state->memory0001 & 0x07);
-
-	int region;
-	if (addr < 0xA000)
-		region = 0;      // $8000-$9FFF
-	else if (addr < 0xC000)
-		region = 1;      // $A000-$BFFF
-	else if (addr < 0xD000)
-		region = 2;      // $C000-$CFFF
-	else if (addr < 0xE000)
-		region = 3;      // $D000-$DFFF
-	else
-		region = 4;      // $E000-$FFFF
-
-	uint8_t what = bankingModes[mode][region];
-	// 0=RAM, 1=BASIC_ROM, 2=KERNAL_ROM, 3=CHAR_ROM, 4=IO, 5=CART_LO, 6=CART_HI, 7=OPEN
-	return (what == 1 || what == 2 || what == 3 || what == 5 || what == 6);
+	C64BankEntry what = C64BankingEntry(C64BankingMode(state->exrom, state->game, state->memory0001), region);
+	return what == C64BANK_BASIC_ROM || what == C64BANK_KERNAL_ROM || what == C64BANK_CHAR_ROM
+		|| what == C64BANK_CART_LO || what == C64BANK_CART_HI;
 }
 
 void CVicEditorLayerMemoryAccess::RefreshImage()

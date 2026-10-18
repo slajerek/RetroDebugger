@@ -7,90 +7,8 @@
 #include "CViewC64StateVIC.h"
 #include "CLayoutParameter.h"
 #include "MT_UiScale.h"
-
-// Memory region contents
-enum MemMapEntry
-{
-	RAM,
-	BASIC_ROM,
-	KERNAL_ROM,
-	CHAR_ROM,
-	IO,
-	CART_LO,
-	CART_HI,
-	OPEN		// Ultimax: unmapped, directly accesses the bus
-};
-
-static const char *memMapEntryNames[] = {
-	"RAM",
-	"BASIC ROM",
-	"KERNAL ROM",
-	"CHAR ROM",
-	"I/O",
-	"CART ROM LO",
-	"CART ROM HI",
-	"OPEN"
-};
-
-// Region address labels
-static const char *memMapRegionNames[] = {
-	"$8000-$9FFF",		// 0: 8K at $8000
-	"$A000-$BFFF",		// 1: 8K at $A000
-	"$C000-$CFFF",		// 2: 4K at $C000
-	"$D000-$DFFF",		// 3: 4K at $D000
-	"$E000-$FFFF"		// 4: 8K at $E000
-};
-
-// 32-mode lookup table: mode = (exrom << 4) | (game << 3) | (port & 7)
-// Each entry: { $8000, $A000, $C000, $D000, $E000 }
-// Based on https://www.c64-wiki.com/wiki/Bank_Switching
-static const MemMapEntry memoryModes[32][5] = {
-	// EXROM=0, GAME=0 (modes 0-7)
-	{ RAM,     RAM,      RAM,     RAM,      RAM      },  //  0: $x0
-	{ RAM,     RAM,      RAM,     RAM,      RAM      },  //  1: $x1
-	{ RAM,     RAM,      RAM,     CHAR_ROM, KERNAL_ROM }, //  2: $x2
-	{ CART_LO, CART_HI,  RAM,     CHAR_ROM, KERNAL_ROM }, //  3: $x3
-	{ RAM,     RAM,      RAM,     RAM,      RAM      },  //  4: $x4
-	{ RAM,     RAM,      RAM,     IO,       RAM      },  //  5: $x5
-	{ RAM,     RAM,      RAM,     IO,       KERNAL_ROM }, //  6: $x6
-	{ CART_LO, CART_HI,  RAM,     IO,       KERNAL_ROM }, //  7: $x7
-
-	// EXROM=0, GAME=1 (modes 8-15)
-	{ RAM,     RAM,      RAM,     RAM,      RAM      },  //  8: $x0
-	{ RAM,     RAM,      RAM,     RAM,      RAM      },  //  9: $x1
-	{ RAM,     RAM,      RAM,     CHAR_ROM, KERNAL_ROM }, // 10: $x2
-	{ CART_LO, BASIC_ROM,RAM,     CHAR_ROM, KERNAL_ROM }, // 11: $x3
-	{ RAM,     RAM,      RAM,     RAM,      RAM      },  // 12: $x4
-	{ RAM,     RAM,      RAM,     IO,       RAM      },  // 13: $x5
-	{ RAM,     RAM,      RAM,     IO,       KERNAL_ROM }, // 14: $x6
-	{ CART_LO, BASIC_ROM,RAM,     IO,       KERNAL_ROM }, // 15: $x7
-
-	// EXROM=1, GAME=0 — Ultimax mode (modes 16-23)
-	{ OPEN,    OPEN,     OPEN,    OPEN,     CART_HI  },  // 16: $x0
-	{ OPEN,    OPEN,     OPEN,    OPEN,     CART_HI  },  // 17: $x1
-	{ CART_LO, OPEN,     OPEN,    CHAR_ROM, CART_HI  },  // 18: $x2
-	{ CART_LO, OPEN,     OPEN,    CHAR_ROM, CART_HI  },  // 19: $x3
-	{ OPEN,    OPEN,     OPEN,    OPEN,     CART_HI  },  // 20: $x4
-	{ CART_LO, OPEN,     OPEN,    IO,       CART_HI  },  // 21: $x5
-	{ CART_LO, OPEN,     OPEN,    IO,       CART_HI  },  // 22: $x6
-	{ CART_LO, OPEN,     OPEN,    IO,       CART_HI  },  // 23: $x7
-
-	// EXROM=1, GAME=1 — normal, no cartridge (modes 24-31)
-	{ RAM,     RAM,      RAM,     RAM,      RAM      },  // 24: $x0
-	{ RAM,     RAM,      RAM,     RAM,      RAM      },  // 25: $x1
-	{ RAM,     RAM,      RAM,     CHAR_ROM, KERNAL_ROM }, // 26: $x2
-	{ RAM,     BASIC_ROM,RAM,     CHAR_ROM, KERNAL_ROM }, // 27: $x3
-	{ RAM,     RAM,      RAM,     RAM,      RAM      },  // 28: $x4
-	{ RAM,     RAM,      RAM,     IO,       RAM      },  // 29: $x5
-	{ RAM,     RAM,      RAM,     IO,       KERNAL_ROM }, // 30: $x6
-	{ RAM,     BASIC_ROM,RAM,     IO,       KERNAL_ROM }, // 31: $x7 (default)
-};
-
-// Ultimax mode also affects $1000-$7FFF (unmapped)
-static bool IsUltimaxMode(int mode)
-{
-	return (mode >= 16 && mode <= 23);
-}
+#include "C64BankingModes.h"
+#include "CDebugMemoryMapping.h"
 
 CViewC64MemoryBank::CViewC64MemoryBank(const char *name, float posX, float posY, float posZ, float sizeX, float sizeY, CDebugInterfaceC64 *debugInterface)
 : CGuiView(name, posX, posY, posZ, sizeX, sizeY)
@@ -159,7 +77,7 @@ void CViewC64MemoryBank::RenderImGui()
 	PostRenderImGui();
 }
 
-// Color per entry type: { r, g, b }
+// Color per C64BankEntry: { r, g, b }
 static const float memMapEntryColors[][3] = {
 	{ 0.0f, 0.8f, 0.0f },		// RAM        — green
 	{ 0.9f, 0.5f, 0.1f },		// BASIC_ROM  — orange
@@ -187,7 +105,7 @@ void CViewC64MemoryBank::Render()
 	u8 exrom = viewC64->viciiStateToShow.exrom;
 	u8 game = viewC64->viciiStateToShow.game;
 
-	int mode = (exrom << 4) | (game << 3) | (port & 0x07);
+	int mode = C64BankingMode(exrom, game, port);
 
 	char buf[64];
 
@@ -219,20 +137,30 @@ void CViewC64MemoryBank::Render()
 	py += fontSize * 0.5f;
 
 	// Memory map: all regions, color-coded
-	const MemMapEntry *regions = memoryModes[mode];
-
-	if (IsUltimaxMode(mode))
+	if (C64BankingIsUltimax(mode))
 	{
-		sprintf(buf, "$1000-$7FFF  %s", memMapEntryNames[OPEN]);
-		const float *c = memMapEntryColors[OPEN];
+		sprintf(buf, "$1000-$7FFF  %s", C64BankEntryName(C64BANK_OPEN));
+		const float *c = memMapEntryColors[C64BANK_OPEN];
 		fontBytes->BlitTextColor(buf, px, py, posZ, fontSize, c[0], c[1], c[2], 1.0f);
 		py += fontSize;
 	}
 
-	for (int r = 0; r < 5; r++)
+	// the live machine (not a locked VIC-II state): the cartridge bank in
+	// each window, from the mapping resolver (RD-028)
+	CDebugMemoryMappingResolver *resolver = viewC64->viewC64StateVIC->GetIsLockedState() ? NULL
+		: debugInterface->GetMemoryMappingResolver();
+	static const u16 regionAddress[C64BANK_NUM_REGIONS] = { 0x8000, 0xA000, 0xC000, 0xD000, 0xE000 };
+
+	for (int r = 0; r < C64BANK_NUM_REGIONS; r++)
 	{
-		MemMapEntry entry = regions[r];
-		sprintf(buf, "%s  %s", memMapRegionNames[r], memMapEntryNames[entry]);
+		C64BankEntry entry = C64BankingEntry(mode, r);
+		sprintf(buf, "%s  %s", C64BankRegionName(r), C64BankEntryName(entry));
+		if (resolver && (entry == C64BANK_CART_LO || entry == C64BANK_CART_HI))
+		{
+			CDebugMappedAddress mapped = resolver->ResolveRead(regionAddress[r]);
+			if (mapped.physical.device == "c64-cart")
+				sprintf(buf + strlen(buf), " BANK %u", mapped.physical.offset >> 13);
+		}
 		const float *c = memMapEntryColors[entry];
 		fontBytes->BlitTextColor(buf, px, py, posZ, fontSize, c[0], c[1], c[2], 1.0f);
 		py += fontSize;
