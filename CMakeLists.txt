@@ -334,6 +334,7 @@ include_directories(
 
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests"
     "${CMAKE_CURRENT_SOURCE_DIR}/../MTEngineSDL/src/Engine/Tests"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../MTEngineSDL/src/Engine/Tools"
 
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Tools"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Tools/64tass"
