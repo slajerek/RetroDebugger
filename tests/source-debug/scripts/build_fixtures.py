@@ -3,7 +3,7 @@
 
 Usage (from the repository root; run Python isolated):
     python3 -I tests/source-debug/scripts/build_fixtures.py [--tool-dir DIR]
-        [--toolchain NAME ...] [--fixture NAME ...] [--check]
+        [--toolchain NAME ...] [--fixture NAME ...] [--check | --matrix-only]
 
 For every toolchain in tests/source-debug/toolchains/*.yaml, every machine it
 lists, and every fixture directory under tests/source-debug/fixtures/ that has
@@ -31,6 +31,12 @@ and the executables' directories so a loader test can remap the paths.
 
 --check rebuilds into the fixed directories and compares with the committed
 artifacts instead of overwriting them; it exits 1 on any difference.
+
+A cell this run did not build (filtered out, or its toolchain skipped) is
+taken from its committed manifest: `ok` when the manifest's version is the
+pin's and its input hashes are the fixture's current files, `stale` when
+not, `not built` without one. --matrix-only builds nothing and rewrites
+MATRIX.md from the manifests alone, for a machine without the toolchains.
 """
 
 import argparse
@@ -190,14 +196,31 @@ def build_cell(tc, machine, mspec, fixture, exes, versions, check):
     return "ok", ""
 
 
+def committed_status(tc, machine, fixture):
+    """The status of a cell from its committed manifest, without building it."""
+    path = os.path.join(DATA, tc["name"], machine, fixture, "manifest.json")
+    if not os.path.isfile(path):
+        return "not built", ""
+    with open(path) as f:
+        manifest = json.load(f)
+    fixture_dir = os.path.join(FIXTURES, fixture)
+    inputs = {name: sha256(os.path.join(fixture_dir, name)) for name in sorted(os.listdir(fixture_dir))}
+    if manifest.get("version") != tc["version"]:
+        return "stale", "committed with %s %s, pinned %s" % (tc["name"], manifest.get("version"), tc["version"])
+    if manifest.get("inputs") != inputs:
+        return "stale", "the fixture changed since the committed build"
+    return "ok", ""
+
+
 def write_matrix(results, fixtures, toolchains):
     lines = [
         "# Compiler x machine matrix (generated)",
         "",
-        "Written by `tests/source-debug/scripts/build_fixtures.py` from actual builds;",
+        "Written by `tests/source-debug/scripts/build_fixtures.py` from actual builds and",
+        "the manifests they committed (a toolchain-less `--matrix-only` run reads only those);",
         "do not edit by hand. `ok` = built and committed under `tests/data/source-debug/`;",
         "`n/a` = the toolchain or fixture has no source for that machine;",
-        "`skip` / `fail` carry the reason.",
+        "`not built` = no committed build yet; `stale` / `skip` / `fail` carry the reason.",
         "",
         "| Fixture | Toolchain | Version | " + " | ".join(MACHINES) + " |",
         "|---|---|---|" + "---|" * len(MACHINES),
@@ -225,7 +248,10 @@ def main():
     parser.add_argument("--toolchain", action="append", help="only these toolchains")
     parser.add_argument("--fixture", action="append", help="only these fixtures")
     parser.add_argument("--check", action="store_true", help="compare with committed artifacts, write nothing")
+    parser.add_argument("--matrix-only", action="store_true", help="build nothing, rewrite MATRIX.md from the manifests")
     args = parser.parse_args()
+    if args.check and args.matrix_only:
+        parser.error("--check and --matrix-only exclude each other")
 
     toolchains = []
     for name in sorted(os.listdir(TOOLCHAINS)):
@@ -241,21 +267,41 @@ def main():
     results = {}
     failed = False
     for tc in toolchains:
-        exes, versions, reason = resolve_toolchain(tc, args.tool_dir)
+        exes, versions, reason = (None, None, "--matrix-only") if args.matrix_only else resolve_toolchain(tc, args.tool_dir)
         for machine, mspec in tc["machines"].items():
             for fixture in fixtures:
                 if not os.path.isfile(os.path.join(FIXTURES, fixture, mspec["source"])):
                     continue
-                if exes is None:
+                if args.matrix_only:
+                    status, detail = committed_status(tc, machine, fixture)
+                elif exes is None:
                     status, detail = "skip", reason
                 else:
                     status, detail = build_cell(tc, machine, mspec, fixture, exes, versions, args.check)
                 results[(fixture, tc["name"], machine)] = (status, detail)
                 failed |= status in ("fail", "diff")
-                print("%-6s %-8s %-6s %-12s %s" % (status, tc["name"], machine, fixture, detail))
+                print("%-9s %-8s %-6s %-14s %s" % (status, tc["name"], machine, fixture, detail))
 
-    if not args.check and not args.toolchain and not args.fixture:
-        write_matrix(results, fixtures, toolchains)
+    if not args.check:
+        # the whole matrix, whatever this run was filtered to: cells it did
+        # not build (or whose toolchain it skipped) come from the manifests
+        all_toolchains = []
+        for name in sorted(os.listdir(TOOLCHAINS)):
+            if name.endswith(".yaml"):
+                with open(os.path.join(TOOLCHAINS, name)) as f:
+                    all_toolchains.append(yaml.safe_load(f))
+        all_fixtures = sorted(d for d in os.listdir(FIXTURES) if os.path.isdir(os.path.join(FIXTURES, d)))
+        for tc in all_toolchains:
+            for machine, mspec in tc["machines"].items():
+                for fixture in all_fixtures:
+                    key = (fixture, tc["name"], machine)
+                    if not os.path.isfile(os.path.join(FIXTURES, fixture, mspec["source"])):
+                        continue
+                    if key not in results or results[key][0] == "skip":
+                        committed = committed_status(tc, machine, fixture)
+                        if key not in results or committed[0] == "ok":
+                            results[key] = committed
+        write_matrix(results, all_fixtures, all_toolchains)
     return 1 if failed else 0
 
 

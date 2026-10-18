@@ -20,7 +20,14 @@ Fixtures and pinned toolchains for the source-level debugging programme
 ```bash
 python3 -I tests/source-debug/scripts/build_fixtures.py --tool-dir <dir>
 python3 -I tests/source-debug/scripts/build_fixtures.py --tool-dir <dir> --check
+python3 -I tests/source-debug/scripts/build_fixtures.py --matrix-only
 ```
+
+Every run rewrites `MATRIX.md` whole (`--check` excepted): cells it did not
+build -- filtered out with `--toolchain`/`--fixture`, or a toolchain it
+skipped -- come from the committed `manifest.json`, `ok` only when its
+version is the pin and its input hashes are the fixture's current files.
+`--matrix-only` builds nothing, for a machine without the toolchains.
 
 `--tool-dir` holds the toolchains the yaml `candidates` name (for example
 `oscar64/bin/oscar64`, `bin/kickc`, `bin/kickass`); anything else is found on
