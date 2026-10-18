@@ -1,0 +1,22 @@
+1:0 comment ; ca65
+2:0 directive .segment
+2:9 string "CODE"
+3:0 label _main:
+3:8 mnemonic lda
+3:12 operator #
+3:13 operator <
+3:14 text msg
+4:0 label @loop:
+4:8 mnemonic sta
+4:12 number $0400
+4:17 operator ,
+4:18 text x
+5:8 mnemonic inx
+6:8 mnemonic bne
+6:12 text @loop
+7:8 mnemonic rts
+8:0 label msg:
+8:8 directive .byte
+8:14 string "hello"
+8:21 operator ,
+8:23 number 0

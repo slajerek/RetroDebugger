@@ -18,6 +18,7 @@ class CSlrMutex;
 class CSlrString;
 class CDebugBreakpointAddr;
 class CViewDataDump;
+class CViewSourceCode;
 class CDebugSymbols;
 class CDebugMemory;
 class CSlrKeyboardShortcut;
@@ -112,6 +113,9 @@ public:
 	void ScrollToAddress(int addr);
 	
 	int currentPC;
+
+	// the Source Code view of the same symbols, for "Show source" (set by it)
+	CViewSourceCode *viewSourceCode = NULL;
 
 	// these point to real breakpoints via symbols->currentSegment (emulation mutex will be locked when these are edited)
 	CDebugSymbols *symbols;

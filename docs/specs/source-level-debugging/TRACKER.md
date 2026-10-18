@@ -15,7 +15,7 @@ definitions are in `IMPLEMENTATION-PLAN.md`.
 |---|---|---|---|
 | M0 Discovery & safety net | P0 | RD-001, RD-038, RD-002, RD-024, RD-027, **RD-034**, **RD-042 (engine)** | RD-001 done; all other M0 items in review (remaining gates: CI on 3 platforms, maintainer review of RD-024) |
 | M1 Canonical model & loaders | P2 (core) | RD-006, RD-031, RD-032, RD-007, RD-008, RD-033 | RD-006, RD-031 in review; RD-032 in progress |
-| M2 Source document & view | P1 | RD-003, RD-004, RD-005 | todo |
+| M2 Source document & view | P1 | RD-003, RD-004, RD-005 | review (view, lexers, gutter, navigation; tests green on macOS) |
 | M3 Execution events & stepping engine | P2/P3 | RD-011, RD-037, RD-012, RD-013, RD-014, RD-015 | in-progress |
 | M4 Machine mapping providers | P2/P3 | RD-028, RD-040, RD-029, RD-025, RD-026, RD-030, RD-034 | in-progress |
 | M5 Compiler coverage & remote | P3/P4 | RD-009, RD-010, RD-036, RD-016, RD-017, RD-035, **RD-043 (64tass symbols)**, **RD-044 (1541)** | todo |
@@ -109,9 +109,9 @@ engine `devel` at 5d61f20, unchanged this session.
 | RD-007 | P2 | core | Bank-aware address indexes, source remapping, binary/cartridge identity checks | todo | RD-006, RD-024 | Lookup tests: multi-span, missing, ambiguous, same-PC two identities |
 | RD-008 | P2 | compiler | Oscar64 `.dbj` adapter + contract tests | review(`DebugInfoLoadOscar64`; DebugInfoFormats steps 20-26 green on Linux) | RD-002, RD-006, RD-031 | Tier 1 Oscar64 fixture resolves file:line for known addresses |
 | RD-033 | P3 | core | Generalize loading entry points (NES `-debuginfo`/autoload, CLI `nes`/`-ines`, NES source slot) | review(autoload, `-ines`, CLI target machine, NES layout; DefaultWorkspaceSpecs green) | RD-031 | NES loads `.dbg` from CLI and menu; workspace test updated |
-| RD-003 | P1 | ui | Document registry + read-only `SourceDocumentView` replacing `CViewSourceCode` internals | todo | RD-001, RD-038 | ImGui test `source_view_opens_and_scrolls`; C64/Atari/NES instances |
-| RD-004 | P1 | ui | C lexer + 6502 dialect profiles (KickAss, 64tass, ca65, Oscar64 asm) | todo | RD-003 | Lexer snapshot tests (golden tokens) |
-| RD-005 | P1 | ui | PC/breakpoint/selection decorations + bidirectional navigation | todo | RD-003, RD-006 | ImGui test: click line → disassembly address; PC line follows pause |
+| RD-003 | P1 | ui | Document registry + read-only `SourceDocumentView` replacing `CViewSourceCode` internals | review(`CSourceDocument`/`CSourceDocumentRegistry` in `src/Views/SourceDocument/`; `CViewSourceCode` rewritten on ImGui: file combo, missing-file panel with candidates and source roots, gutter; `SourceDocument` CTest, ImGui `source_view_opens_and_scrolls`) | RD-001, RD-038 | ImGui test `source_view_opens_and_scrolls`; C64/Atari/NES instances |
+| RD-004 | P1 | ui | C lexer + 6502 dialect profiles (KickAss, 64tass, ca65, Oscar64 asm) | review(`CSyntaxLexerC`, `CSyntaxLexer6502` KickAss/64tass/ca65; golden tokens in `tests/data/source-debug/lexer/`, `MT_UPDATE_GOLDEN=1` rewrites) | RD-003 | Lexer snapshot tests (golden tokens) |
+| RD-005 | P1 | ui | PC/breakpoint/selection decorations + bidirectional navigation | review(PC arrow + line, ambiguous badge, bound/unresolved breakpoint marks, code dots; follow PC/cursor/off; double-click to disassembly with a popup for several ranges; disassembly "Show source line"; last step reason + stale warnings in the header) | RD-003, RD-006 | ImGui test: click line → disassembly address; PC line follows pause |
 | RD-011 | P2 | core | Generic execution events at existing hook points (+ RTS/RTI/reset/interrupt-entry) | in-progress(boundary events on C64/Atari/NES CPUs, classifier + C64 event counts green, pacing gate green; open: reset/mapping-changed events, 1541) | RD-001, RD-024 | Event-order test per machine; no perf regression vs `VicePlatformAbstraction` pacing gate |
 | RD-037 | P2 | core | Step-over/step-out in `CDebugInterface`; proper temporary breakpoint with priorities | review(stack-based step-over/out on 3 machines, user bp wins; `CTestInstructionStepping` 18 steps; open: event-history entry for step stops, 1541 still PC+3) | RD-011 | `CTestStepOverRecursion`, `CTestStepOut`, user bp beats temp bp |
 | RD-028 | P2 | c64 | C64 mapping provider (6510 port/PLA/cart/Ultimax), unify `CViewC64MemoryBank` table | in-progress(provider from VICE tables, no-cart tests green; open: cart fixtures/profiles, view unification) | RD-024, RD-027 | #3B.2 "Required C64 tests" pass |
@@ -210,4 +210,5 @@ Questions 1, 2, 3, 5, 8 and 10 are answered in spec #15/#20.
 | 2026-10-18 | RD-015: `irq` on the Atari (POKEY timer 1, OS banked out, SKCTL out of init) and the NES (DMC, patched IRQ vector); counts only the trace's IRQs |
 | 2026-10-18 | RD-002: `MATRIX.md` from the committed manifests too, `--matrix-only`; the three M3 fixtures listed |
 | 2026-10-18 | `SourceStepTrace` inserts/unloads NES cartridges through VSync tasks (the Linux CI segfault). macOS suite 83/83 (8 skipped) |
+| 2026-10-18 | M2: source document registry, C/6502 lexers, ImGui source view with gutter and navigation (`SourceDocument`, `source_view_opens_and_scrolls`). macOS suite 84/84; ImGui 12/16, the 4 failures pre-existing (`tests/SKIPPED_TESTS.md`) |
 | 2026-10-18 | RD-013/RD-037: step stops in the events history; RD-014: source breakpoints persisted in the breakpoints file, stale debug info warning. `SourceStepping` 25 steps |

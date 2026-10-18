@@ -1097,10 +1097,16 @@ bool DebugInfoLoadCc65(CDebugSymbols *symbols, CByteBuffer *byteBuffer, const CD
 }
 
 // RD-014: stale debug info, by file time (see the header).
+// a UTF-8 path (u8path is deprecated in C++20)
+static std::filesystem::path Utf8Path(const std::string &path)
+{
+	return std::filesystem::path(std::u8string(path.begin(), path.end()));
+}
+
 static bool FileTime(const std::string &path, std::filesystem::file_time_type *time)
 {
 	std::error_code error;
-	*time = std::filesystem::last_write_time(std::filesystem::u8path(path), error);
+	*time = std::filesystem::last_write_time(Utf8Path(path), error);
 	return !error;
 }
 

@@ -1,0 +1,18 @@
+1:0 comment ; 64tass
+2:8 directive * =
+2:12 number $1000
+3:0 label start
+3:8 mnemonic ldx
+3:12 operator #
+3:13 number 0
+4:0 label loop
+4:8 mnemonic lda
+4:12 text text
+4:16 operator ,
+4:17 text x
+5:8 mnemonic sax
+5:12 number $fb
+6:8 mnemonic rts
+7:0 label text
+7:8 directive .text
+7:14 string "ok"

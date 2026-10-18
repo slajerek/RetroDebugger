@@ -1,5 +1,6 @@
 #include "VID_Main.h"
 #include "CViewDisassembly.h"
+#include "CViewSourceCode.h"
 #include "CColorsTheme.h"
 #include "CGuiMain.h"
 #include "CDebugDataAdapter.h"
@@ -4903,6 +4904,16 @@ void CViewDisassembly::RenderContextMenuItems()
 	}
 
 	char *buf = SYS_GetCharBuf();
+
+	// RD-005: the source line of the cursor, when the debug info maps it
+	if (viewSourceCode && ImGui::MenuItem("Show source line"))
+	{
+		if (viewSourceCode->ShowAddress(cursorAddress))
+			viewSourceCode->SetVisible(true);
+		else
+			viewC64->ShowMessageInfo("No source line at $%04X", cursorAddress);
+	}
+
 	sprintf(buf, "Address %04X", cursorAddress);
 	ImGui::Text(buf);
 	

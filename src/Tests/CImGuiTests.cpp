@@ -23,6 +23,10 @@
 #include "CDebugSymbolsC64.h"
 #include "CDebugSymbolsSegment.h"
 #include "CDebugBreakpointsData.h"
+#include "CDebugBreakpointsAddr.h"
+#include "CDebugSourceBreakpoint.h"
+#include "CDebugInfoLoader.h"
+#include "CViewSourceCode.h"
 #include "../DebugInterface/MenuItems/CDebugInterfaceMenuItem.h"
 #include "../Emulators/c64u/C64UTestFixture.h"
 #include "../Plugins/GoatTracker/C64DebuggerPluginGoatTracker.h"
@@ -731,6 +735,82 @@ void RegisterRetroDebuggerTests(ImGuiTestEngine *engine)
 
 			ctx->Yield(10);  // let cleanup settle
 		};
+
+	// RD-003/RD-005: the Source Code view renders the Oscar64 basic-flow
+	// source, scrolls to a line, and a gutter click toggles a breakpoint
+	ImGuiTest *tSourceView = IM_REGISTER_TEST(engine, "ui", "source_view_opens_and_scrolls");
+	tSourceView->TestFunc = [](ImGuiTestContext *ctx)
+	{
+		CDebugInterfaceC64 *diC64 = (CDebugInterfaceC64 *)viewC64->debugInterfaceC64;
+		CViewSourceCode *view = viewC64->viewC64SourceCode;
+		IM_CHECK(diC64 != NULL && view != NULL);
+
+		CDebugSymbols *scratch = new CDebugSymbolsC64(diC64);
+		scratch->SetDataAdapter(diC64->dataAdapterC64);
+		scratch->CreateDefaultSegment();
+		std::string dir = CTest::ResolveProjectPath("tests/data/source-debug/oscar64/c64/basic-flow");
+		IM_CHECK(DebugInfoLoadFile(scratch, (dir + "/main.dbj").c_str()) == DebugInfoFormat::Oscar64Dbj);
+
+		CDebugSymbols *liveSymbols = view->debugSymbols;
+		bool wasVisible = view->visible;
+		std::vector<std::string> roots = view->documents.sourceRoots;
+		SourceViewFollow follow = view->follow;
+		view->debugSymbols = scratch;
+		view->documents.sourceRoots.push_back(CTest::ResolveProjectPath("tests/source-debug/fixtures/basic-flow"));
+		view->ShowAddress(0x089A);		// line 12, doSomething's body
+		view->SetVisible(true);
+		ctx->Yield(10);
+
+		ImGuiWindow *window = ctx->GetWindowByRef("C64 Source code");
+		IM_CHECK(window != NULL);
+		bool shown = view->HasFile() && view->GetSelectedLine() == 12;
+
+		// line 12's gutter
+		ctx->SetRef("C64 Source code");
+		ctx->ItemClick("**/$$12/##gutter");
+		ctx->Yield(2);
+		bool added = scratch->sourceBreakpoints.size() == 1 && scratch->sourceBreakpoints[0]->resolvedLine == 12
+			&& scratch->currentSegment->breakpointsPC->GetBreakpoint(0x089A) != NULL;
+
+		// highlighted text, gutter marks: many colours, not one flat fill
+		// (an absolute window path: the ref above would prefix a plain name)
+		std::vector<unsigned int> pixels;
+		int w = 0, h = 0, distinct = 0;
+		std::string captureName = std::string("//") + window->Name;
+		bool captured = MT_CaptureWindowRGBA(ctx, captureName.c_str(), &pixels, &w, &h);
+		if (captured)
+		{
+			MT_NonBackgroundFraction(pixels, pixels[0], 8, &distinct);
+			MT_WriteCaptureArtifact("/tmp/source-view.rgba", pixels, w, h);
+		}
+		else
+		{
+			ctx->LogError("source view capture failed");
+		}
+
+		ctx->ItemClick("**/$$12/##gutter");
+		ctx->Yield(2);
+		bool removed = scratch->sourceBreakpoints.empty() && scratch->currentSegment->breakpointsPC->GetBreakpoint(0x089A) == NULL;
+
+		// scrolling to the last line keeps the view on the document
+		view->ShowLine(view->GetFileId(), 21);
+		ctx->Yield(3);
+		bool scrolled = view->GetSelectedLine() == 21;
+
+		view->SetVisible(wasVisible);
+		ctx->Yield(2);
+		view->debugSymbols = liveSymbols;
+		view->documents.sourceRoots = roots;
+		view->follow = follow;
+		view->documents.Clear();
+		// scratch leaked on purpose, see CTestSymbolLoaders
+
+		IM_CHECK(shown);
+		IM_CHECK(added);
+		IM_CHECK(captured && distinct > 6);
+		IM_CHECK(removed);
+		IM_CHECK(scrolled);
+	};
 
 	ImGuiTest *tMemBpEnter = IM_REGISTER_TEST(engine, "ui", "memory_breakpoint_enter_creates");
 	tMemBpEnter->TestFunc = [](ImGuiTestContext *ctx)

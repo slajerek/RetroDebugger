@@ -1,0 +1,77 @@
+1:0 preprocessor #include <stdio.h>
+2:0 preprocessor #define BORDER ((volatile unsigned char *)0xd020)
+3:0 comment /* a block comment
+4:0 comment    over two lines */
+5:0 keyword static
+5:7 keyword const
+5:13 type char
+5:18 operator *
+5:19 text message
+5:27 operator =
+5:29 string "hi \"there\""
+5:43 operator ;
+6:0 type unsigned
+6:9 type char
+6:14 text add
+6:17 operator (
+6:18 type unsigned
+6:27 type char
+6:32 text left
+6:36 operator ,
+6:38 type unsigned
+6:47 type char
+6:52 text right
+6:57 operator )
+6:59 operator {
+7:4 keyword return
+7:11 text left
+7:16 operator +
+7:18 text right
+7:23 operator ;
+7:25 comment // trailing
+8:0 operator }
+9:0 keyword __interrupt
+9:12 type void
+9:17 text irq
+9:20 operator (
+9:21 type void
+9:25 operator )
+9:27 operator {
+9:29 operator *
+9:30 text BORDER
+9:37 operator =
+9:39 string 'x'
+9:42 operator ;
+9:44 operator }
+10:0 type int
+10:4 text main
+10:8 operator (
+10:9 type void
+10:13 operator )
+10:15 operator {
+10:17 keyword for
+10:21 operator (
+10:22 type int
+10:26 text i
+10:28 operator =
+10:30 number 0
+10:31 operator ;
+10:33 text i
+10:35 operator <
+10:37 number 10
+10:39 operator ;
+10:41 text i
+10:42 operator +
+10:43 operator +
+10:44 operator )
+10:46 text add
+10:49 operator (
+10:50 text i
+10:51 operator ,
+10:53 number 0x1F
+10:57 operator )
+10:58 operator ;
+10:60 keyword return
+10:67 number 0
+10:68 operator ;
+10:70 operator }

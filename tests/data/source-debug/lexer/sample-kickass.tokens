@@ -1,0 +1,28 @@
+1:0 comment // KickAssembler
+2:0 preprocessor #import
+2:8 string "lib.asm"
+3:0 directive *=
+3:3 number $0801
+4:0 label start:
+4:8 mnemonic lda
+4:12 operator #
+4:13 number $01
+4:24 comment ; load
+5:8 mnemonic sta
+5:12 number $d020
+6:0 label !loop:
+6:8 mnemonic dex
+7:8 mnemonic bne
+7:12 text !loop-
+8:8 mnemonic jsr
+8:12 text add.sub
+9:0 comment /* block
+10:0 comment    comment */
+10:14 directive .byte
+10:20 number %1010
+10:25 operator ,
+10:27 number 12
+10:29 operator ,
+10:31 string "AB"
+11:0 label label2
+11:8 mnemonic rts

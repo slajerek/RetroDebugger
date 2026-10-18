@@ -1,0 +1,7 @@
+; 64tass
+        * = $1000
+start   ldx #0
+loop    lda text,x
+        sax $fb
+        rts
+text    .text "ok"
