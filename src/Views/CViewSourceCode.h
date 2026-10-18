@@ -101,6 +101,7 @@ private:
 	u32 fileId;
 	i32 pcLine;				// 0 when the PC is not in this file
 	int pcCandidates;		// mappings covering the PC (more than one: ambiguous)
+	std::string pcInline;	// RD-017: where the PC's inlined code was inlined, "" when not
 	i32 selectedLine;
 	i32 scrollToLine;		// 0: no request
 	int lastFollowAddress;

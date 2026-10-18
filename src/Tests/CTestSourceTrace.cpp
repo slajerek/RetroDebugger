@@ -142,6 +142,52 @@ static uint32_t BusRead(u16 address, u8 data)
 	return (uint32_t)address | ((uint32_t)data << 16) | (1u << 24) | (1u << 31);
 }
 
+// RD-017: remote source locations name the logical function and its inline calls
+bool CTestSourceTrace::RunInlineLocation()
+{
+#ifdef RUN_COMMODORE64
+	CDebugInterfaceVice *di = (CDebugInterfaceVice *)viewC64->debugInterfaceC64;
+	if (!di)
+	{
+		ReportRequiredGap("C64 not created");
+		return true;
+	}
+	CDebugSymbols *liveSymbols = di->symbols;
+	CDebugSymbols *scratch = new CDebugSymbolsC64(di);
+	scratch->SetDataAdapter(di->dataAdapterC64);
+	scratch->CreateDefaultSegment();
+	CDebugInfoLoadOptions options;
+	options.sourceRoots.push_back(ResolveProjectPath("tests/source-debug/fixtures/inline"));
+	DebugInfoLoadFile(scratch, ResolveProjectPath("tests/data/source-debug/oscar64/c64-O2/inline/main.dbj").c_str(), options);
+	guiMain->LockMutex();
+	di->LockMutex();
+	di->symbols = scratch;
+	di->UnlockMutex();
+	guiMain->UnlockMutex();
+
+	CDebuggerApi *api = di->GetDebuggerApi();
+	nlohmann::json inlined = api->GetSourceLocationJson(0x0888);		// line 19, work() inlined into main at 24
+	nlohmann::json own = api->GetSourceLocationJson(0x0891);			// line 25, main's own
+	bool ok = Check(inlined.value("line", 0) == 19 && inlined.value("function", "") == "work"
+					&& inlined.contains("inlined") && inlined["inlined"].size() == 1
+					&& inlined["inlined"][0].value("function", "") == "work"
+					&& inlined["inlined"][0]["calledFrom"].value("line", 0) == 24
+					&& own.value("function", "") == "main" && !own.contains("inlined"),
+					"Oscar64 -O2: the location of inlined code names the logical function work() and the call at main-O2.c:24; main's own line has no inline chain");
+
+	guiMain->LockMutex();
+	di->LockMutex();
+	di->symbols = liveSymbols;
+	di->UnlockMutex();
+	guiMain->UnlockMutex();
+	// scratch leaked on purpose, see CTestSymbolLoaders
+	return ok;
+#else
+	ReportRequiredGap("C64 emulation not compiled in");
+	return true;
+#endif
+}
+
 bool CTestSourceTrace::RunReplayedC64U()
 {
 	CDebugInterfaceC64U *di = (CDebugInterfaceC64U *)viewC64->debugInterfaceC64U;
@@ -218,7 +264,7 @@ void CTestSourceTrace::Run(ITestCallback *cb)
 	stepNum = 1;
 	failure.clear();
 
-	bool ok = RunLiveC64() && RunReplayedC64U();
+	bool ok = RunLiveC64() && RunReplayedC64U() && RunInlineLocation();
 	if (!ok)
 	{
 		TestCompleted(false, failure.c_str());

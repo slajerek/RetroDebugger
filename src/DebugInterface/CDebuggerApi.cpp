@@ -178,6 +178,8 @@ static nlohmann::json MappingJson(const CDebugDatabase *database, const CDebugSo
 	return j;
 }
 
+static void AddInlineChain(nlohmann::json &j, const CDebugDatabase *database, const CDebugSourceMapping *m);
+
 nlohmann::json CDebuggerApi::GetSourceLocationJson(int address, const std::string &cpu)
 {
 	nlohmann::json j;
@@ -208,6 +210,7 @@ nlohmann::json CDebuggerApi::GetSourceLocationJson(int address, const std::strin
 		const CDebugFunction *function = FunctionFor(debugInterface, target, database.get(), regionId, (u16)address);
 		if (function)
 			j["function"] = function->name;
+		AddInlineChain(j, database.get(), m);
 	}
 	std::vector<const CDebugSourceMapping *> candidates;
 	database->ResolveCandidates(regionId, (u32)address, candidates);
@@ -342,6 +345,24 @@ nlohmann::json CDebuggerApi::LoadDebugInfoJson(const std::string &path, const st
 }
 
 // the function and line an address is in, when the debug info maps it
+// RD-017: the inline calls of mapping M, innermost first, and the logical
+// function (the innermost inlined one) into J["function"]
+static void AddInlineChain(nlohmann::json &j, const CDebugDatabase *database, const CDebugSourceMapping *m)
+{
+	const std::vector<CDebugInlineSite> &chain = database->InlineChain(m);
+	if (chain.empty())
+		return;
+	nlohmann::json inlined = nlohmann::json::array();
+	for (const CDebugInlineSite &site : chain)
+	{
+		const CDebugSourceFile *file = database->GetFile(site.fileId);
+		inlined.push_back({ {"function", site.function}, {"calledFrom", { {"file", file ? file->fileName : ""}, {"line", site.line} }} });
+	}
+	j["inlined"] = inlined;
+	if (!chain[0].function.empty())
+		j["function"] = chain[0].function;
+}
+
 static void AddSourceOf(nlohmann::json &j, CDebugSymbols *symbols, const CDebugDatabase *database, u16 address)
 {
 	CDebugInterface *debugInterface = symbols ? symbols->debugInterface : NULL;
@@ -357,6 +378,7 @@ static void AddSourceOf(nlohmann::json &j, CDebugSymbols *symbols, const CDebugD
 		const CDebugSourceFile *file = database->GetFile(m->fileId);
 		j["file"] = file ? file->fileName : "";
 		j["line"] = m->lineStart;
+		AddInlineChain(j, database, m);
 	}
 }
 

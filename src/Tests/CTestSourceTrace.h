@@ -22,4 +22,5 @@ private:
 	bool Check(bool condition, const std::string &message);
 	bool RunLiveC64();
 	bool RunReplayedC64U();
+	bool RunInlineLocation();
 };

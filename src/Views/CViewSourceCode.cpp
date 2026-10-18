@@ -94,6 +94,7 @@ void CViewSourceCode::UpdatePosition()
 {
 	pcLine = 0;
 	pcCandidates = 0;
+	pcInline.clear();
 	if (!database || regionId < 0)
 		return;
 
@@ -101,6 +102,14 @@ void CViewSourceCode::UpdatePosition()
 	const CDebugSourceMapping *pcMapping = (pc >= 0) ? ResolveAt(database.get(), (u32)regionId, (u16)pc) : NULL;
 	if (pcMapping)
 	{
+		// RD-017: "in twice() inlined at main.c:24"
+		const std::vector<CDebugInlineSite> &chain = database->InlineChain(pcMapping);
+		if (!chain.empty())
+		{
+			const CDebugSourceFile *callerFile = database->GetFile(chain[0].fileId);
+			pcInline = "in " + (chain[0].function.empty() ? std::string("inlined code") : chain[0].function + "()")
+				+ " inlined at " + (callerFile ? callerFile->fileName : std::string("?")) + ":" + std::to_string(chain[0].line);
+		}
 		std::vector<const CDebugSourceMapping *> candidates;
 		database->ResolveCandidates((u32)regionId, (u32)pc, candidates);
 		pcCandidates = (int)candidates.size();
@@ -308,6 +317,11 @@ void CViewSourceCode::RenderHeader(const CDebugSourceFile *file)
 	}
 
 	// PC position and the last step, on the same row
+	if (!pcInline.empty())
+	{
+		ImGui::SameLine();
+		ImGui::TextColored(kColorLineNumber, "PC %s", pcInline.c_str());
+	}
 	if (pcCandidates > 1)
 	{
 		ImGui::SameLine();
