@@ -1,4 +1,5 @@
 #include "CTestInstructionStepping.h"
+#include "CTestNesCartridge.h"
 #include "EmulatorsConfig.h"
 #include "CViewC64.h"
 #include "CDebugInterface.h"
@@ -321,11 +322,8 @@ bool CTestInstructionStepping::RunNes()
 		viewC64->StartEmulationThread(di);
 		SYS_Sleep(2000);
 	}
-	di->SetDebugMode(DEBUGGER_MODE_PAUSED);
-	SYS_Sleep(200);
-
 	const char *romPath = "/tmp/retrodebugger_test_stepping.nes";
-	bool ok = Check(WriteSpinRom(romPath) && nesd_insert_cartridge((char *)romPath),
+	bool ok = Check(WriteSpinRom(romPath) && TestNesInsertCartridge(di, romPath, true),
 					"NES: a spinning NROM is loaded so the CPU runs");
 	if (ok)
 	{
@@ -335,7 +333,7 @@ bool CTestInstructionStepping::RunNes()
 
 		auto jump = [di](u16 addr) { di->MakeJmpNoReset(di->GetDataAdapter(), addr); };
 		ok = RunRecursion(di, "NES", 0x0300, 0x10, jump);
-		nesd_unload_cartridge();
+		TestNesUnloadCartridge(di, true);
 	}
 	remove(romPath);
 

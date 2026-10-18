@@ -12,6 +12,10 @@ bool NestopiaUE_Initialize();
 bool NestopiaUE_PostInitialize();
 bool NestopiaUE_Run();
 
+// the cartridge board's lifetime lock, shared side: hold it across any read
+// of cartridge space or the board from outside the emulation thread
+void nesd_cartridge_lock_shared();
+void nesd_cartridge_unlock_shared();
 bool nesd_insert_cartridge(char *filePath);
 bool nesd_unload_cartridge();
 

@@ -70,18 +70,16 @@ not active" headless), about 90 s.
 
 ## Branch `c-source-debugging` (2026-10-18)
 
-Dispatched by hand only (workflow_dispatch). On f31426e: macOS both legs
-green (`39088966574`), Windows both legs green (`39088968493`), Linux logs-on
-green, logs-off segfault (`39088965038`) in `SourceStepTrace` at the NES
-cartridge insert: a paused NES thread waits inside `Execute`, which holds no
-lock, and the test swapped the board from its own thread. Fixed in 9be7c71
-(VSync tasks, the app's `InsertCartridge` path). On 0f53335 Linux both legs
-green (`39107892318`, the NES fix holds), Windows both legs green
-(`39107897287`), macOS logs-off green, logs-on failed (`39107894988`): the
-step traces' KERNAL boot wait found the C64 that `SourceStepping` left in its
-program, page 3 overwritten, auto-paused on a BRK; the wait now hard resets
-it (09085f8, not yet on CI). Other tests still call
-`nesd_insert_cartridge` directly (see the tracker's defect list).
+Dispatched by hand only (workflow_dispatch). An intermittent Linux-only
+segfault at NES cartridge loads (f31426e logs-off in `SourceStepTrace`,
+ddc6dbf logs-on in `NesInputReplay`, 15c2d2b logs-off in `StackAnnotation`)
+was root-caused from the core backtrace the Linux workflow now prints
+(edfc875: core_pattern `/tmp/core.%p`, gdb `thread apply all bt` in
+`run_test.sh`): `nesd_insert_cartridge` deleted the board while the NES
+memory map view's thread (`CViewDataMap::UpdateWholeMap`) peeked it. Fixed
+with a cartridge lifetime lock in `NesWrapper.cpp`. Moving the inserts to
+VSync tasks (9be7c71) was not the fix. 15c2d2b otherwise: macOS and Windows
+green on both legs, Linux logs-on green.
 
 Docker containers on the maintainer's Mac have no network (Docker Desktop's
 proxy at `http.docker.internal:3128` did not help), so a local Linux build

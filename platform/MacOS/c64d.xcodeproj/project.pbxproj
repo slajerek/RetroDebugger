@@ -84,6 +84,7 @@
 		4111C8BD262EE4380092E150 /* C64DebuggerPluginGoatTracker.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4111C8BC262EE4370092E150 /* C64DebuggerPluginGoatTracker.cpp */; };
 		4113F62629E2C5B7002FE970 /* CViewC64KeyMap.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4113F62429E2C5B7002FE970 /* CViewC64KeyMap.cpp */; };
 		411D2E402D71D4D3007714A9 /* CRenderShaderCRTMonitorOpenGL4.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4150D9DB2D71D15B0068351B /* CRenderShaderCRTMonitorOpenGL4.cpp */; };
+		C317AB100F5E8338ADFDEA4C /* CTestNesCartridge.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 36596FC3AE122E8DDCF6B5D5 /* CTestNesCartridge.cpp */; };
 		67BEDD63EA093A40E600DB37 /* CTestSourceDocument.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AE190ADDF70D6090418FCDE7 /* CTestSourceDocument.cpp */; };
 		3E5A029D30C98E683528A688 /* CSyntaxLexer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = FC72D6E1CBE9FA05F5779FD9 /* CSyntaxLexer.cpp */; };
 		8CE8E6D6FC27B3AB4F12B096 /* CSourceDocument.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C3F4D6AC3D79991E17D6B85B /* CSourceDocument.cpp */; };
@@ -1723,6 +1724,8 @@
 		414AD73728797F1200244453 /* CViewC64ScreenViewfinder.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = "$(SRCROOT)/../../src/Views/C64/CViewC64ScreenViewfinder.cpp"; sourceTree = "<absolute>"; };
 		414AD73828797F1200244453 /* CViewC64ScreenViewfinder.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "$(SRCROOT)/../../src/Views/C64/CViewC64ScreenViewfinder.h"; sourceTree = "<absolute>"; };
 		4150D9DB2D71D15B0068351B /* CRenderShaderCRTMonitorOpenGL4.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = "$(SRCROOT)/../../src/Tools/Shaders/CRenderShaderCRTMonitorOpenGL4.cpp"; sourceTree = "<absolute>"; };
+		36596FC3AE122E8DDCF6B5D5 /* CTestNesCartridge.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CTestNesCartridge.cpp; path = ../../src/Tests/CTestNesCartridge.cpp; sourceTree = SOURCE_ROOT; };
+		6ADF4505D595BABD38A6FA88 /* CTestNesCartridge.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = CTestNesCartridge.h; path = ../../src/Tests/CTestNesCartridge.h; sourceTree = SOURCE_ROOT; };
 		AE190ADDF70D6090418FCDE7 /* CTestSourceDocument.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CTestSourceDocument.cpp; path = ../../src/Tests/CTestSourceDocument.cpp; sourceTree = SOURCE_ROOT; };
 		2D214A90A9421A72C6EB665C /* CTestSourceDocument.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = CTestSourceDocument.h; path = ../../src/Tests/CTestSourceDocument.h; sourceTree = SOURCE_ROOT; };
 		FC72D6E1CBE9FA05F5779FD9 /* CSyntaxLexer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CSyntaxLexer.cpp; path = ../../src/Views/SourceDocument/CSyntaxLexer.cpp; sourceTree = SOURCE_ROOT; };
@@ -4963,6 +4966,8 @@
 			isa = PBXGroup;
 			children = (
 				4150D9DB2D71D15B0068351B /* CRenderShaderCRTMonitorOpenGL4.cpp */,
+				36596FC3AE122E8DDCF6B5D5 /* CTestNesCartridge.cpp */,
+				6ADF4505D595BABD38A6FA88 /* CTestNesCartridge.h */,
 				AE190ADDF70D6090418FCDE7 /* CTestSourceDocument.cpp */,
 				2D214A90A9421A72C6EB665C /* CTestSourceDocument.h */,
 				FC72D6E1CBE9FA05F5779FD9 /* CSyntaxLexer.cpp */,
@@ -8825,6 +8830,7 @@
 				05B51DEEE6500A4D5D45DD85 /* events_posix.c in Sources */,
 				05B51D3B2773C59545583663 /* threads_posix.c in Sources */,
 				411D2E402D71D4D3007714A9 /* CRenderShaderCRTMonitorOpenGL4.cpp in Sources */,
+				C317AB100F5E8338ADFDEA4C /* CTestNesCartridge.cpp in Sources */,
 				67BEDD63EA093A40E600DB37 /* CTestSourceDocument.cpp in Sources */,
 				3E5A029D30C98E683528A688 /* CSyntaxLexer.cpp in Sources */,
 				8CE8E6D6FC27B3AB4F12B096 /* CSourceDocument.cpp in Sources */,

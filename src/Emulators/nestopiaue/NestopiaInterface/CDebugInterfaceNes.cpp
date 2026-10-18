@@ -278,11 +278,9 @@ uint8 CDebugInterfaceNes::GetByte(uint16 addr)
 //
 //	v = nesd_peek_io(addr);
 	
-//	LockRenderScreenMutex();
-//	LockMutex();
+	nesd_cartridge_lock_shared();
 	v = nesd_peek_safe_io(addr);
-//	UnlockMutex();
-//	UnlockRenderScreenMutex();
+	nesd_cartridge_unlock_shared();
 	
 	return v;
 }
@@ -293,10 +291,12 @@ void CDebugInterfaceNes::GetMemory(uint8 *buffer, int addrStart, int addrEnd)
 //
 	int addr;
 	u8 *bufPtr = buffer + addrStart;
+	nesd_cartridge_lock_shared();
 	for (addr = addrStart; addr < addrEnd; addr++)
 	{
-		*bufPtr++ = GetByte(addr);
+		*bufPtr++ = nesd_peek_safe_io(addr);
 	}
+	nesd_cartridge_unlock_shared();
 }
 
 int CDebugInterfaceNes::GetCpuPC()

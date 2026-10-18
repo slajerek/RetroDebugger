@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <sstream>
 #include <fstream>
+#include <shared_mutex>
 
 #include "M_Circlebuf.h"
 
@@ -324,10 +325,28 @@ double nesd_get_cpu_clock_frquency()
 }
 
 
+// The cartridge board's lifetime: Unload() deletes the board and Load()
+// makes a new one, while debugger reads from other threads (the memory map
+// view's thread, the mapping resolvers) walk its page tables. Insert/unload
+// hold it exclusively, those reads shared (Linux CI segfault in
+// Board::Peek_Prg_C from CViewDataMap::UpdateWholeMap during an insert).
+static std::shared_mutex nesdCartridgeMutex;
+
+void nesd_cartridge_lock_shared()
+{
+	nesdCartridgeMutex.lock_shared();
+}
+
+void nesd_cartridge_unlock_shared()
+{
+	nesdCartridgeMutex.unlock_shared();
+}
+
 bool nesd_insert_cartridge(char *filePath)
 {
 	debugInterfaceNes->LockMutex();
 	nesd_sound_lock("nesd_insert_cartridge");
+	std::unique_lock<std::shared_mutex> cartridgeLock(nesdCartridgeMutex);
 	
 	machine->Unload();
 	// Power off explicitly: after nesd_unload_cartridge the machine is ON with
@@ -341,6 +360,7 @@ bool nesd_insert_cartridge(char *filePath)
 	if (machine->Load(file, favsystem))
 	{
 		LOGError("Nestopia: Load failed");
+		cartridgeLock.unlock();
 		nesd_sound_unlock("nesd_insert_cartridge");
 		debugInterfaceNes->UnlockMutex();
 		return false;
@@ -358,6 +378,7 @@ bool nesd_insert_cartridge(char *filePath)
 	debugInterfaceNes->ResetEmulationFrameCounter();
 	debugInterfaceNes->ResetClockCounters();
 
+	cartridgeLock.unlock();
 	nesd_sound_unlock("nesd_insert_cartridge");
 	debugInterfaceNes->UnlockMutex();
 	return true;
@@ -367,6 +388,7 @@ bool nesd_unload_cartridge()
 {
 	debugInterfaceNes->LockMutex();
 	nesd_sound_lock("nesd_insert_cartridge");
+	std::unique_lock<std::shared_mutex> cartridgeLock(nesdCartridgeMutex);
 
 	machine->Unload();
 
@@ -376,6 +398,7 @@ bool nesd_unload_cartridge()
 	debugInterfaceNes->ResetEmulationFrameCounter();
 	debugInterfaceNes->ResetClockCounters();
 
+	cartridgeLock.unlock();
 	nesd_sound_unlock("nesd_insert_cartridge");
 	debugInterfaceNes->UnlockMutex();
 	return true;
@@ -1085,6 +1108,7 @@ u8 nesd_peek_safe_io(u16 addr)
 // the window has no backing memory.
 int nesd_get_prg_mapping(unsigned short addr, int *isWrk, int *source, unsigned int *offset, int *writable)
 {
+	std::shared_lock<std::shared_mutex> cartridgeLock(nesdCartridgeMutex);
 	Core::Machine& machine = nesEmulator;
 	if (machine.image == NULL || machine.image->GetType() != Core::Image::CARTRIDGE)
 		return 0;
@@ -1111,6 +1135,7 @@ int nesd_get_prg_mapping(unsigned short addr, int *isWrk, int *source, unsigned 
 // Returns 0 when no cartridge is loaded.
 int nesd_get_cartridge_info(int *mapper, int *subMapper, unsigned int *prgRomSize)
 {
+	std::shared_lock<std::shared_mutex> cartridgeLock(nesdCartridgeMutex);
 	Core::Machine& machine = nesEmulator;
 	if (machine.image == NULL || machine.image->GetType() != Core::Image::CARTRIDGE)
 		return 0;
@@ -2070,6 +2095,8 @@ bool NestopiaUE_Run() { return false; }
 void nesd_update_screen(bool lockRenderMutex) {}
 
 bool nesd_insert_cartridge(char *filePath) { return false; }
+void nesd_cartridge_lock_shared() {}
+void nesd_cartridge_unlock_shared() {}
 
 void nesd_reset() {}
 unsigned char *nesd_get_ram() { return NULL; }

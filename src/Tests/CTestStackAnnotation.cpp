@@ -1,4 +1,5 @@
 #include "CTestStackAnnotation.h"
+#include "CTestNesCartridge.h"
 #include "EmulatorsConfig.h"
 #include "CViewC64.h"
 #include "CDebugInterfaceC64.h"
@@ -496,7 +497,8 @@ bool CTestStackAnnotation::TestNesStack()
 		return false;
 	}
 
-	if (!nesd_insert_cartridge((char *)NES_TEST_ROM_PATH))
+	// on the emulation thread, left paused (CTestNesCartridge.h)
+	if (!TestNesInsertCartridge(di, NES_TEST_ROM_PATH, true))
 	{
 		sprintf(failureMsg, "NES: failed to load test ROM");
 		remove(NES_TEST_ROM_PATH);
@@ -532,7 +534,7 @@ bool CTestStackAnnotation::TestNesStack()
 	if (sp != 0xFB)
 	{
 		sprintf(failureMsg, "NES: SP=$%02X PC=$%04X (tries=%d)", sp, pc, tries);
-		nesd_unload_cartridge();
+		TestNesUnloadCartridge(di, true);
 		remove(NES_TEST_ROM_PATH);
 		StepCompleted(3, false, failureMsg);
 		return false;
@@ -546,7 +548,7 @@ bool CTestStackAnnotation::TestNesStack()
 	{
 		sprintf(failureMsg, "NES: $FF expected VALUE origin=$C00D, got type=%d origin=$%04X",
 				sa->entryTypes[0xFF], sa->originPC[0xFF]);
-		nesd_unload_cartridge();
+		TestNesUnloadCartridge(di, true);
 		remove(NES_TEST_ROM_PATH);
 		StepCompleted(3, false, failureMsg);
 		return false;
@@ -557,7 +559,7 @@ bool CTestStackAnnotation::TestNesStack()
 	{
 		sprintf(failureMsg, "NES: $FE expected STATUS origin=$C00E, got type=%d origin=$%04X",
 				sa->entryTypes[0xFE], sa->originPC[0xFE]);
-		nesd_unload_cartridge();
+		TestNesUnloadCartridge(di, true);
 		remove(NES_TEST_ROM_PATH);
 		StepCompleted(3, false, failureMsg);
 		return false;
@@ -568,7 +570,7 @@ bool CTestStackAnnotation::TestNesStack()
 	{
 		sprintf(failureMsg, "NES: $FD expected JSR_PCH origin=$C012, got type=%d origin=$%04X",
 				sa->entryTypes[0xFD], sa->originPC[0xFD]);
-		nesd_unload_cartridge();
+		TestNesUnloadCartridge(di, true);
 		remove(NES_TEST_ROM_PATH);
 		StepCompleted(3, false, failureMsg);
 		return false;
@@ -579,7 +581,7 @@ bool CTestStackAnnotation::TestNesStack()
 	{
 		sprintf(failureMsg, "NES: $FC expected JSR_PCL origin=$C012, got type=%d origin=$%04X",
 				sa->entryTypes[0xFC], sa->originPC[0xFC]);
-		nesd_unload_cartridge();
+		TestNesUnloadCartridge(di, true);
 		remove(NES_TEST_ROM_PATH);
 		StepCompleted(3, false, failureMsg);
 		return false;
@@ -591,14 +593,14 @@ bool CTestStackAnnotation::TestNesStack()
 	if (val != 0x30)
 	{
 		sprintf(failureMsg, "NES: Stack [$01FF] expected $30, got $%02X", val);
-		nesd_unload_cartridge();
+		TestNesUnloadCartridge(di, true);
 		remove(NES_TEST_ROM_PATH);
 		StepCompleted(3, false, failureMsg);
 		return false;
 	}
 
 	// Cleanup: unload cartridge and remove temp file
-	nesd_unload_cartridge();
+	TestNesUnloadCartridge(di, true);
 	remove(NES_TEST_ROM_PATH);
 
 	// Stop emulator if we started it

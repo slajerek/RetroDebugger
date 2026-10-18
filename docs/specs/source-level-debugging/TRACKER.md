@@ -176,7 +176,7 @@ Questions 1, 2, 3, 5, 8 and 10 are answered in spec #15/#20.
 | `tests/test-reference-files.sh` fails on three unregistered USBSID files under `vice/arch/hwsiddrv/` (since 895f4fc) | fixed on `devel` (4a362e5), merged into this branch |
 | Atari "direct RAM" adapter returns the CPU view | RD-029 |
 | `EMUOS_ALTIRRA` never defined: without user ROM files the Atari has no OS (zeroed vectors, POKEY left in init with SKCTL 0) | open question for the maintainer; `SourceStepTrace` works around it |
-| Tests swap NES cartridges with `nesd_insert_cartridge` from the test thread while the NES thread sits inside `Execute` (no lock held there): `SourceStepTrace` segfaulted on Linux CI | `SourceStepTrace` fixed (9be7c71, VSync tasks); `StackAnnotation`, `InstructionStepping`, `MachineMemoryMapping`, `CoreMappingAccessors` still call it directly |
+| NES cartridge insert/unload deleted the board while the memory map view's thread read it (`CViewDataMap::UpdateWholeMap` -> `GetMemory` -> `Board::Peek_Prg_C`): intermittent Linux CI segfaults in `SourceStepTrace`, `NesInputReplay`, `StackAnnotation` (core backtrace, run 39115276371) | fixed: a cartridge lifetime lock in `NesWrapper.cpp` (insert/unload exclusive; `GetByte`/`GetMemory`/`nesd_get_prg_mapping`/`nesd_get_cartridge_info` shared); tests swap cartridges through VSync tasks (`CTestNesCartridge.h`) |
 
 ## Change log
 
@@ -210,5 +210,6 @@ Questions 1, 2, 3, 5, 8 and 10 are answered in spec #15/#20.
 | 2026-10-18 | RD-015: `irq` on the Atari (POKEY timer 1, OS banked out, SKCTL out of init) and the NES (DMC, patched IRQ vector); counts only the trace's IRQs |
 | 2026-10-18 | RD-002: `MATRIX.md` from the committed manifests too, `--matrix-only`; the three M3 fixtures listed |
 | 2026-10-18 | `SourceStepTrace` inserts/unloads NES cartridges through VSync tasks (the Linux CI segfault). macOS suite 83/83 (8 skipped) |
+| 2026-10-18 | Linux CI NES segfault root-caused from the core dump (edfc875 prints it): the memory map thread read a board an insert was deleting; cartridge lifetime lock + `CTestNesCartridge` helper for the five tests. macOS suite 84/84 |
 | 2026-10-18 | M2: source document registry, C/6502 lexers, ImGui source view with gutter and navigation (`SourceDocument`, `source_view_opens_and_scrolls`). macOS suite 84/84; ImGui 12/16, the 4 failures pre-existing (`tests/SKIPPED_TESTS.md`) |
 | 2026-10-18 | RD-013/RD-037: step stops in the events history; RD-014: source breakpoints persisted in the breakpoints file, stale debug info warning. `SourceStepping` 25 steps |

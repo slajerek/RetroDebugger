@@ -1,4 +1,5 @@
 #include "CTestCoreMappingAccessors.h"
+#include "CTestNesCartridge.h"
 #include "EmulatorsConfig.h"
 #include "CViewC64.h"
 #include "CDebugInterfaceC64.h"
@@ -132,12 +133,10 @@ void CTestCoreMappingAccessors::Run(ITestCallback *cb)
 				SYS_Sleep(2000);
 			}
 
-			// Load synchronously while paused (as CTestStackAnnotation does):
+			// Load on the emulation thread and stay paused (CTestNesCartridge.h):
 			// nesd_insert_cartridge loads AND powers the machine, so the board's
 			// page tables are mapped when it returns.
-			nes->SetDebugMode(DEBUGGER_MODE_PAUSED);
-			SYS_Sleep(500);
-			bool loaded = nes->isRunning && nesd_insert_cartridge((char *)romPath.c_str())
+			bool loaded = nes->isRunning && TestNesInsertCartridge(nes, romPath.c_str(), true)
 				&& nesd_get_cartridge_info(&mapper, &subMapper, &prgRomSize);
 
 			unsigned int at8000 = 1, atC000 = 1, atFFFC = 0;
@@ -148,7 +147,7 @@ void CTestCoreMappingAccessors::Run(ITestCallback *cb)
 				ok8000 = nesd_get_prg_mapping(0x8000, &wrk8000, &src8000, &at8000, &wr8000);
 				okC000 = nesd_get_prg_mapping(0xC000, NULL, &srcC000, &atC000, NULL);
 				okFFFC = nesd_get_prg_mapping(0xFFFC, NULL, &srcFFFC, &atFFFC, NULL);
-				nesd_unload_cartridge();
+				TestNesUnloadCartridge(nes, false);
 			}
 			nes->SetDebugMode(DEBUGGER_MODE_RUNNING);
 			if (!wasRunning)

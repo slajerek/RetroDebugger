@@ -1,4 +1,5 @@
 #include "CTestMachineMemoryMapping.h"
+#include "CTestNesCartridge.h"
 #include "EmulatorsConfig.h"
 #include "CViewC64.h"
 #include "CDebugInterfaceNes.h"
@@ -71,13 +72,10 @@ bool CTestMachineMemoryMapping::RunNes()
 		viewC64->StartEmulationThread(nes);
 		SYS_Sleep(2000);
 	}
-	nes->SetDebugMode(DEBUGGER_MODE_PAUSED);
-	SYS_Sleep(500);
-
 	bool ok = true;
 	int mapper = -1;
 	unsigned int prgSize = 0;
-	ok = nesd_insert_cartridge((char *)romPath) && nesd_get_cartridge_info(&mapper, NULL, &prgSize)
+	ok = TestNesInsertCartridge(nes, romPath, true) && nesd_get_cartridge_info(&mapper, NULL, &prgSize)
 		&& Check(mapper == 2 && prgSize == 4 * 0x4000, "NES: the UxROM image loads as mapper 2 with 64 KB PRG");
 
 	if (ok)
@@ -116,7 +114,7 @@ bool CTestMachineMemoryMapping::RunNes()
 				&& Check(resolver->ResolveRead(0x5000).physical.kind == DebugMemoryKind::Unknown,
 						 "NES: the expansion area $4020-$5FFF is Unknown, not guessed");
 		}
-		nesd_unload_cartridge();
+		TestNesUnloadCartridge(nes, true);
 		if (ok)
 		{
 			ok = Check(resolver->ResolveFetch(0x8000).physical.kind == DebugMemoryKind::Unknown,
