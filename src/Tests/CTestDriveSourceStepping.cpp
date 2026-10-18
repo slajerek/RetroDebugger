@@ -13,6 +13,7 @@
 #include "CDebugSourceBreakpoint.h"
 #include "CDebugEventsHistory.h"
 #include "CSourceStepController.h"
+#include "CDebugInstructionStepper.h"
 #include "DebuggerDefs.h"
 #include "C64SettingsStorage.h"
 #include "CSnapshotsManager.h"
@@ -189,20 +190,51 @@ bool CTestDriveSourceStepping::RunDrive()
 				   "1541 remote: cpu drive1541 locates the drive PC at drive.s:12 and steps over it to 13; an unknown cpu is refused");
 	}
 
-	// the drive's events history and the 1541 Source code view
+	// RD-037 on the drive: Step Over the JSR at $0506 runs delay() to its
+	// return ($0509); then into bump() and Step Out to its caller's $0505
 	if (ok)
 	{
-		bool recorded = false;
+		auto waitForStep = [&]() {
+			for (int waited = 0; waited < 3000; waited += 10)
+			{
+				if (di->GetDebugMode() == DEBUGGER_MODE_PAUSED && !di->driveInstructionStepper->IsArmed()
+					&& !di->driveSourceStepper->IsArmed())
+					return true;
+				SYS_Sleep(10);
+			}
+			return false;
+		};
+		bool over = di->GetDrive1541PC() == 0x0506 && di->StepOverDrive() && waitForStep() && di->GetDrive1541PC() == 0x0509;
+		bool intoBump = di->SourceStepDrive(SourceStepKind::Over) && waitForStep()		// jmp loop -> line 11
+			&& di->SourceStepDrive(SourceStepKind::Into) && waitForStep() && di->GetDrive1541PC() == 0x050C;
+		bool out = intoBump && di->StepOutDrive() && waitForStep() && di->GetDrive1541PC() == 0x0505;
+		bool notJsr = !di->StepOverDrive();		// at $0505 (inx): not a JSR, not armed
+		char msg[200];
+		snprintf(msg, sizeof(msg), "1541: instruction Step Over a JSR runs to its return ($0509), Step Out of bump() to $0505; no Step Over arms at a non-JSR (PC $%04X)",
+				 di->GetDrive1541PC());
+		ok = Check(over && intoBump && out && notJsr, msg);
+	}
+
+	// the drive's events history: source and instruction steps leave entries
+	// (one per C64 cycle: the drive's steps within one catch-up slice share it)
+	if (ok)
+	{
+		int source = 0, instruction = 0;
+		bool lastOut = false;
 		CDebugEventsHistory *history = scratch->debugEventsHistory;
 		history->mutex->Lock();
 		for (auto &it : history->events)
 		{
-			if (it.second->eventType == DEBUG_EVENT_TYPE_STEP
-				&& std::string(((CDebugEventStep *)it.second)->description).find("1541 Source Over: completed at drive.s:13") == 0)
-				recorded = true;
+			if (it.second->eventType != DEBUG_EVENT_TYPE_STEP)
+				continue;
+			std::string description = ((CDebugEventStep *)it.second)->description;
+			source += description.compare(0, 12, "1541 Source ") == 0;
+			instruction += description.compare(0, 10, "1541 Step ") == 0;
+			lastOut = description == "1541 Step Out: returned at $0505";
 		}
 		history->mutex->Unlock();
-		ok = Check(recorded, "1541: the drive's events history has the step's entry (1541 Source Over: completed at drive.s:13)");
+		ok = Check(source > 0 && instruction > 0 && lastOut,
+				   "1541: the drive's events history has source and instruction step entries, the last 1541 Step Out: returned at $0505");
 	}
 	if (ok)
 	{

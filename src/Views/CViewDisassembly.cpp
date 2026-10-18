@@ -1,5 +1,8 @@
 #include "VID_Main.h"
 #include "CViewDisassembly.h"
+#include "CDebugInterfaceVice.h"
+#include "CDebugSymbolsDrive1541.h"
+#include "EmulatorsConfig.h"
 #include "CViewSourceCode.h"
 #include "CColorsTheme.h"
 #include "CGuiMain.h"
@@ -3228,13 +3231,19 @@ void CViewDisassembly::StepOverJsr()
 {
 //	LOGD("CViewDisassembly::StepOverJsr");
 
-	// The main CPU steps over on execution events (RD-037); the drive CPU
-	// and machines without them keep the temporary breakpoint at PC+3.
+	// The main CPU steps over on execution events (RD-037), the 1541 on its
+	// own boundaries; machines without them keep the temporary breakpoint at PC+3.
 	if (symbols == debugInterface->symbols && debugInterface->SupportsExecutionEvents())
 	{
 		debugInterface->StepOverSubroutineObserved();
 		return;
 	}
+#ifdef RUN_COMMODORE64
+	if (debugInterface->GetEmulatorType() == EMULATOR_TYPE_C64_VICE
+		&& symbols == (CDebugSymbols *)((CDebugInterfaceVice *)debugInterface)->symbolsDrive1541
+		&& ((CDebugInterfaceVice *)debugInterface)->StepOverDrive())
+		return;
+#endif
 
 	// step over JSR
 	debugInterface->LockMutex();

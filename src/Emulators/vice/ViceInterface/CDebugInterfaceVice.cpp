@@ -201,6 +201,7 @@ CDebugInterfaceVice::CDebugInterfaceVice(CViewC64 *viewC64, uint8 *c64memory, bo
 	symbolsDrive1541->SetDataAdapter(dataAdapterDrive1541);
 	symbolsDrive1541->CreateDefaultSegment();
 	driveSourceStepper = new CSourceStepController(NULL);	// flat address space: no bank lookups
+	driveInstructionStepper = new CDebugInstructionStepper();
 
 	dataAdapterViceDrive1541DirectRam = new CDataAdapterViceDrive1541DirectRam(symbolsDrive1541);
 	dataAdapterDrive1541DirectRam = dataAdapterViceDrive1541DirectRam;
@@ -4307,6 +4308,72 @@ void CDebugInterfaceVice::ResetDrive1541()
 	AddVSyncTask(new CDebugInterfaceViceTaskResetDrive1541());
 }
 
+// the drive paused at a boundary: its PC, SP and opcode; the main CPU's steps
+// end, the drive's boundary history starts from here. False when running (it
+// is paused instead).
+bool CDebugInterfaceVice::BeginDriveStep(u16 *pc, u8 *sp, u8 *opcode)
+{
+	if (GetDebugMode() == DEBUGGER_MODE_RUNNING)
+	{
+		SetDebugMode(DEBUGGER_MODE_PAUSED);
+		return false;
+	}
+	u8 a, x, y, p;
+	c64d_get_drivecpu_regs(0, &a, &x, &y, &p, sp, pc);
+	*opcode = c64d_peek_drive(0, *pc);
+	instructionStepper->Cancel(DebugStepStopReason::Cancelled);
+	sourceStepper->Cancel(SourceStepStopReason::Cancelled);
+	driveSourceStepper->Cancel(SourceStepStopReason::Cancelled);
+	driveInstructionStepper->Cancel(DebugStepStopReason::Cancelled);
+	driveBoundaryHistory.RequestSeed(*pc, *sp, *opcode);
+	return true;
+}
+
+bool CDebugInterfaceVice::StepOverDrive()
+{
+	LockMutex();
+	u16 pc;
+	u8 sp, opcode;
+	bool armed = false;
+	if (BeginDriveStep(&pc, &sp, &opcode) && opcode == 0x20)
+	{
+		driveInstructionStepper->ArmStepOver(pc, (u16)(pc + 3), sp);
+		driveExecutionObserved.store(true, std::memory_order_release);
+		SetDebugMode(DEBUGGER_MODE_RUNNING);
+		armed = true;
+	}
+	UnlockMutex();
+	return armed;
+}
+
+bool CDebugInterfaceVice::StepOutDrive()
+{
+	LockMutex();
+	u16 pc;
+	u8 sp, opcode;
+	bool armed = false;
+	if (BeginDriveStep(&pc, &sp, &opcode))
+	{
+		driveInstructionStepper->ArmStepOut(pc, sp);
+		driveExecutionObserved.store(true, std::memory_order_release);
+		SetDebugMode(DEBUGGER_MODE_RUNNING);
+		armed = true;
+	}
+	UnlockMutex();
+	return armed;
+}
+
+void CDebugInterfaceVice::RecordDriveInstructionStepStop()
+{
+	if (!symbolsDrive1541 || !symbolsDrive1541->debugEventsHistory)
+		return;
+	char description[DEBUG_EVENTS_HISTORY_MAX_DESCRIPTION_LENGTH];
+	snprintf(description, sizeof(description), "1541 Step %s: %s at $%04X",
+			 driveInstructionStepper->GetLastKind() == DebugStepKind::StepOut ? "Out" : "Over",
+			 DebugStepStopReasonName(driveInstructionStepper->GetLastStopReason()), driveInstructionStepper->GetLastStopPc());
+	symbolsDrive1541->debugEventsHistory->CreateEventStep(description);
+}
+
 bool CDebugInterfaceVice::SourceStepDrive(SourceStepKind kind, u64 budget)
 {
 	if (GetDebugMode() == DEBUGGER_MODE_RUNNING)
@@ -4329,6 +4396,7 @@ bool CDebugInterfaceVice::SourceStepDrive(SourceStepKind kind, u64 budget)
 	// one step at a time: the main CPU's steps end
 	instructionStepper->Cancel(DebugStepStopReason::Cancelled);
 	sourceStepper->Cancel(SourceStepStopReason::Cancelled);
+	driveInstructionStepper->Cancel(DebugStepStopReason::Cancelled);
 	bool armed = driveSourceStepper->Arm(kind, database, regionId < 0 ? 0 : (u32)regionId, pc, sp,
 										 budget ? budget : CSourceStepController::kDefaultBudget);
 	if (armed)
@@ -4345,22 +4413,30 @@ bool CDebugInterfaceVice::SourceStepDrive(SourceStepKind kind, u64 budget)
 void CDebugInterfaceVice::NotifyDriveInstructionBoundary(u16 pc, u8 sp, u8 opcode)
 {
 	CDebugInstructionBoundary boundary = driveBoundaryHistory.Next(pc, sp, opcode);
-	if (!driveSourceStepper->IsArmed())
+	if (driveInstructionStepper->IsArmed())
 	{
-		driveExecutionObserved.store(false, std::memory_order_release);
-		return;
+		driveInstructionStepper->OnInstructionBoundary(this, boundary);		// pauses when it stops
+		if (!driveInstructionStepper->IsArmed())
+			RecordDriveInstructionStepStop();
 	}
-	if (driveSourceStepper->OnInstructionBoundary(this, boundary))
-		SetDebugMode(DEBUGGER_MODE_PAUSED);
-	if (!driveSourceStepper->IsArmed())
+	if (driveSourceStepper->IsArmed())
 	{
-		RecordDriveSourceStepStop();
-		driveExecutionObserved.store(false, std::memory_order_release);
+		if (driveSourceStepper->OnInstructionBoundary(this, boundary))
+			SetDebugMode(DEBUGGER_MODE_PAUSED);
+		if (!driveSourceStepper->IsArmed())
+			RecordDriveSourceStepStop();
 	}
+	if (!driveSourceStepper->IsArmed() && !driveInstructionStepper->IsArmed())
+		driveExecutionObserved.store(false, std::memory_order_release);
 }
 
 void CDebugInterfaceVice::CancelDriveSourceStep()
 {
+	if (driveInstructionStepper->IsArmed())
+	{
+		driveInstructionStepper->Cancel(DebugStepStopReason::Cancelled);
+		RecordDriveInstructionStepStop();
+	}
 	if (driveSourceStepper->IsArmed())
 	{
 		driveSourceStepper->Cancel(SourceStepStopReason::Cancelled);

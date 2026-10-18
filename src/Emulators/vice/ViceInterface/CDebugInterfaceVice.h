@@ -417,6 +417,12 @@ public:
 	// is paused instead) or there is no source at the drive's PC (Into/Over).
 	CSourceStepController *driveSourceStepper;
 	bool SourceStepDrive(SourceStepKind kind, u64 budget = 0);
+	// RD-037 on the drive: Step Over a JSR runs to its return (recursion and
+	// interrupts do not stop it early), Step Out to the frame's RTS/RTI, on
+	// the drive's boundaries. False when not armed (StepOverDrive: not at a JSR)
+	CDebugInstructionStepper *driveInstructionStepper;
+	bool StepOverDrive();
+	bool StepOutDrive();
 	bool IsObservingDriveExecution() const { return driveExecutionObserved.load(std::memory_order_relaxed); }
 	void NotifyDriveInstructionBoundary(u16 pc, u8 sp, u8 opcode);	// emulation thread
 	void CancelDriveSourceStep();
@@ -434,6 +440,8 @@ private:
 	CDebugBoundaryHistory driveBoundaryHistory;
 	std::atomic<bool> driveExecutionObserved { false };
 	void RecordDriveSourceStepStop();
+	void RecordDriveInstructionStepStop();
+	bool BeginDriveStep(u16 *pc, u8 *sp, u8 *opcode);
 };
 
 #define C64_NUM_SID_REGISTERS 0x20
