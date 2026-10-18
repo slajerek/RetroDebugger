@@ -86,6 +86,8 @@ struct CDebugFunction
 	u32 fileId = 0;
 	i32 line = 0;			// line of the definition (or of the entry when unknown)
 	bool lineIsDefinition = false;	// the producer or the source text said so
+	bool hasImageOffset = false;	// where start's byte is in the program file (RD-007)
+	u64 imageOffset = 0;
 };
 
 struct CDebugSourceMapping
@@ -100,6 +102,11 @@ struct CDebugSourceMapping
 	i32 lineEnd = 0;
 	i32 columnEnd = 0;
 	DebugMappingQuality quality = DebugMappingQuality::Exact;
+	// RD-007: the offset of start's byte in the program file (a cartridge
+	// image) when the producer records it (cc65 segments' ooffs). Banks that
+	// share CPU addresses differ here: it is the bank-independent identity.
+	bool hasImageOffset = false;
+	u64 imageOffset = 0;
 };
 
 class CDebugDatabase
@@ -132,6 +139,18 @@ public:
 
 	// The function whose range holds ADDRESS in REGION, or NULL. O(log n).
 	const CDebugFunction *FindFunction(u32 regionId, u32 address) const;
+
+	// RD-007, banked code: some mappings carry image offsets. With the fetch's
+	// image offset known (the machine's resolver), the mapping or function
+	// whose bytes are the ones in the CPU window at ADDRESS; without it, or
+	// when nothing matches, the same as Resolve/FindFunction.
+	bool HasImageOffsets() const { return !imageEffective.empty(); }
+	// ADDRESS in REGION is covered by code of more than one bank (mappings
+	// whose image offsets differ for the same CPU address): only there does
+	// the bank in the window decide. O(log n).
+	bool IsBankedAddress(u32 regionId, u32 address) const;
+	const CDebugSourceMapping *ResolveImage(u32 regionId, u32 address, bool hasImageOffset, u64 imageOffset) const;
+	const CDebugFunction *FindFunctionImage(u32 regionId, u32 address, bool hasImageOffset, u64 imageOffset) const;
 	const std::vector<CDebugFunction> &Functions() const { return functions; }
 
 	int FindRegion(const char *name) const;
@@ -161,6 +180,14 @@ private:
 
 	// Per region: non-overlapping, sorted intervals naming the mapping in effect.
 	std::vector<std::vector<Interval>> effective;
+	struct ImageInterval
+	{
+		u64 start;
+		u64 end;
+		u32 mapping;
+	};
+	std::vector<ImageInterval> imageEffective;	// over image offsets, later mappings win
+	std::vector<std::vector<std::pair<u32, u32>>> bankedRanges;	// per region, sorted, merged [start, end)
 	// (fileId, lineStart) -> mapping indices
 	std::map<std::pair<u32, i32>, std::vector<u32>> bySourceLine;
 	bool finalized;

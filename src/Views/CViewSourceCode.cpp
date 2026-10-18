@@ -93,7 +93,7 @@ bool CViewSourceCode::ShowAddress(int address)
 	std::shared_ptr<const CDebugDatabase> db = debugSymbols->debugDatabase;
 	if (!db || !debugSymbols->currentSegment || debugSymbols->currentSegment->debugRegionId < 0)
 		return false;
-	const CDebugSourceMapping *mapping = db->Resolve((u32)debugSymbols->currentSegment->debugRegionId, (u32)address);
+	const CDebugSourceMapping *mapping = debugInterface->ResolveSourceAt(db.get(), (u32)debugSymbols->currentSegment->debugRegionId, (u16)address);
 	if (mapping == NULL)
 		return false;
 	follow = SourceViewFollow::Off;
@@ -110,7 +110,7 @@ void CViewSourceCode::UpdatePosition()
 		return;
 
 	int pc = debugInterface->GetCpuPC();
-	const CDebugSourceMapping *pcMapping = (pc >= 0) ? database->Resolve((u32)regionId, (u32)pc) : NULL;
+	const CDebugSourceMapping *pcMapping = (pc >= 0) ? debugInterface->ResolveSourceAt(database.get(), (u32)regionId, (u16)pc) : NULL;
 	if (pcMapping)
 	{
 		std::vector<const CDebugSourceMapping *> candidates;
@@ -126,7 +126,7 @@ void CViewSourceCode::UpdatePosition()
 
 	if (followAddress >= 0 && followAddress != lastFollowAddress)
 	{
-		const CDebugSourceMapping *mapping = database->Resolve((u32)regionId, (u32)followAddress);
+		const CDebugSourceMapping *mapping = debugInterface->ResolveSourceAt(database.get(), (u32)regionId, (u16)followAddress);
 		if (mapping)
 		{
 			bool moved = !hasFile || mapping->fileId != fileId || mapping->lineStart != selectedLine;

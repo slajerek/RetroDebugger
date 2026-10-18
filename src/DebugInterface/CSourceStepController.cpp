@@ -31,8 +31,9 @@ const char *SourceStepStopReasonName(SourceStepStopReason reason)
 	return "?";
 }
 
-CSourceStepController::CSourceStepController()
+CSourceStepController::CSourceStepController(CDebugInterface *owner)
 {
+	this->owner = owner;
 	armed.store(false);
 	kind = SourceStepKind::None;
 	regionId = 0;
@@ -50,7 +51,7 @@ bool CSourceStepController::Arm(SourceStepKind kind, std::shared_ptr<const CDebu
 {
 	Cancel(SourceStepStopReason::Cancelled);
 
-	const CDebugSourceMapping *start = database ? database->Resolve(regionId, pc) : NULL;
+	const CDebugSourceMapping *start = owner->ResolveSourceAt(database.get(), regionId, pc);
 	if (start == NULL && kind != SourceStepKind::Out)
 	{
 		std::lock_guard<std::mutex> lock(resultMutex);
@@ -119,13 +120,15 @@ void CSourceStepController::Finish(SourceStepStopReason reason, u16 pc, const CD
 // has a line of its own after it (a one-line function's only line is its body)
 bool CSourceStepController::IsPrologue(const CDebugSourceMapping *location, u16 pc) const
 {
-	const CDebugFunction *function = database->FindFunction(regionId, pc);
+	const CDebugFunction *function = owner->FindFunctionAt(database.get(), regionId, pc);
 	if (function == NULL || !function->lineIsDefinition || function->line <= 0 || location->fileId != function->fileId
 		|| location->lineStart != function->line)
 		return false;
 	for (u32 address = location->end; address < function->end; )
 	{
-		const CDebugSourceMapping *next = database->Resolve(regionId, address);
+		const CDebugSourceMapping *next = function->hasImageOffset
+			? database->ResolveImage(regionId, address, true, function->imageOffset + (address - function->start))
+			: database->Resolve(regionId, address);
 		if (next == NULL)
 		{
 			address++;
@@ -151,7 +154,7 @@ bool CSourceStepController::OnInstructionBoundary(CDebugInterface *debugInterfac
 	tracker.Apply(boundary);
 	instructions++;
 
-	const CDebugSourceMapping *location = database ? database->Resolve(regionId, boundary.pc) : NULL;
+	const CDebugSourceMapping *location = owner->ResolveSourceAt(database.get(), regionId, boundary.pc);
 
 	if (debugInterface->GetDebugMode() != DEBUGGER_MODE_RUNNING)
 	{

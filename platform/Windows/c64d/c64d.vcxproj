@@ -1481,6 +1481,8 @@
     <ClCompile Include="..\..\..\src\Tools\libpsid64\libpsid-sidid.cpp" />
     <ClCompile Include="..\..\..\src\Tools\libpsid64\libpsid-theme.cpp" />
     <ClCompile Include="..\..\..\src\Tools\Shaders\CRenderShaderCRTMonitorOpenGL4.cpp" />
+    <ClCompile Include="..\..\..\src\Tests\CTestBankedSource.cpp" />
+    <ClInclude Include="..\..\..\src\Tests\CTestBankedSource.h" />
     <ClCompile Include="..\..\..\src\Tests\CTestNesCartridge.cpp" />
     <ClInclude Include="..\..\..\src\Tests\CTestNesCartridge.h" />
     <ClCompile Include="..\..\..\src\Tests\CTestSourceDocument.cpp" />

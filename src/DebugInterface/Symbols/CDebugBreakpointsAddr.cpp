@@ -1,5 +1,6 @@
 #include "CDebugBreakpointAddr.h"
 #include "CDebugBreakpointsAddr.h"
+#include <algorithm>
 #include "CDebugBreakpoint.h"
 #include "CViewDisassembly.h"
 #include "CDebugInterface.h"
@@ -193,6 +194,16 @@ CDebugBreakpointAddr *CDebugBreakpointsAddr::EvaluateBreakpoint(int addr)
 		CDebugBreakpointAddr *breakpoint = it->second;
 		if (breakpoint->isActive == false)
 			return NULL;
+
+		// RD-025: a breakpoint bound to bank(s) of a banked image
+		if (!breakpoint->imageOffsets.empty())
+		{
+			u64 imageOffset = 0;
+			CDebugInterface *debugInterface = (segment && segment->symbols) ? segment->symbols->debugInterface : NULL;
+			if (debugInterface == NULL || !debugInterface->GetFetchImageOffset((u16)addr, &imageOffset)
+				|| std::find(breakpoint->imageOffsets.begin(), breakpoint->imageOffsets.end(), imageOffset) == breakpoint->imageOffsets.end())
+				return NULL;
+		}
 		
 		if (breakpoint->callback)
 		{

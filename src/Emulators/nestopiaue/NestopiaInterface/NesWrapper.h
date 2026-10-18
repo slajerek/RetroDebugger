@@ -16,6 +16,8 @@ bool NestopiaUE_Run();
 // of cartridge space or the board from outside the emulation thread
 void nesd_cartridge_lock_shared();
 void nesd_cartridge_unlock_shared();
+// RD-007: the file offset of PRG-ROM byte 0 in the loaded iNES image; 0 when unknown
+int nesd_get_prg_image_start(unsigned long long *start);
 bool nesd_insert_cartridge(char *filePath);
 bool nesd_unload_cartridge();
 

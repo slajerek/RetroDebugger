@@ -28,7 +28,7 @@ CDebugInterface::CDebugInterface(CViewC64 *viewC64)
 	hasPendingCpuDebugInterruptTasks = false;
 
 	instructionStepper = new CDebugInstructionStepper();
-	sourceStepper = new CSourceStepController();
+	sourceStepper = new CSourceStepController(this);
 	executionObserved.store(false, std::memory_order_relaxed);
 	boundaryHistoryRestart.store(BoundaryHistoryReset, std::memory_order_relaxed);
 	hasLastBoundary = false;

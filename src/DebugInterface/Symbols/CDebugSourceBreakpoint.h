@@ -27,6 +27,8 @@ struct CDebugSourceBreakpointBinding
 	CDebugSymbolsSegment *segment = NULL;
 	int address = 0;
 	bool created = false;	// the address breakpoint was added for this source breakpoint
+	bool banked = false;	// RD-025: bound to one bank's bytes at a shared address
+	u64 imageOffset = 0;
 };
 
 class CDebugSourceBreakpoint

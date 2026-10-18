@@ -120,16 +120,6 @@ static std::string NormalizeReason(const std::string &reason)
 	return r;
 }
 
-static const CDebugFunction *FindFunction(const CDebugDatabase *database, u32 regionId, u16 pc)
-{
-	for (const CDebugFunction &function : database->Functions())
-	{
-		if (function.regionId == regionId && pc >= function.start && pc < function.end)
-			return &function;
-	}
-	return NULL;
-}
-
 static const CDebugFunction *FindFunctionByName(const CDebugDatabase *database, const std::string &name)
 {
 	for (const CDebugFunction &function : database->Functions())
@@ -715,7 +705,7 @@ bool CTestSourceStepTrace::RunTrace(const std::string &path)
 			depth += r.depth;
 
 		const CDebugSourceFile *file = r.mapped ? database->GetFile(r.fileId) : NULL;
-		const CDebugFunction *function = FindFunction(database.get(), regionId, r.pc);
+		const CDebugFunction *function = di->FindFunctionAt(database.get(), regionId, r.pc);
 		std::string actualFile = file ? file->fileName : "";
 		std::string actualFunction = function ? function->name : "";
 		std::string actualReason = SourceStepStopReasonName(r.reason);

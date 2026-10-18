@@ -48,3 +48,13 @@ machines:
       - ["{ca65}", "-t", "nes", "-g", "main.s"]
       - ["{ld65}", "-t", "nes", "--dbgfile", "main.dbg", "-Ln", "main.lbl", "-m", "main.map", "-o", "main.nes", "main.o", "nes.lib"]
     outputs: [main.nes, main.dbg, main.lbl, main.map, main.s]
+  # A banked cartridge (RD-026): UxROM with the fixture's own startup and
+  # linker config; only fixtures with a uxrom.c build it.
+  nes-uxrom:
+    source: uxrom.c
+    steps:
+      - ["{cc65}", "-t", "nes", "-g", "uxrom.c"]
+      - ["{ca65}", "-t", "nes", "-g", "uxrom.s"]
+      - ["{ca65}", "-t", "nes", "-g", "uxrom-crt0.s"]
+      - ["{ld65}", "-C", "uxrom.cfg", "--dbgfile", "main.dbg", "-Ln", "main.lbl", "-m", "main.map", "-o", "main.nes", "uxrom.o", "uxrom-crt0.o", "nes.lib"]
+    outputs: [main.nes, main.dbg, main.lbl, main.map, uxrom.s]

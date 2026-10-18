@@ -3,6 +3,7 @@
 #include "CDebugSymbols.h"
 #include "CDebugSymbolsSegment.h"
 #include "CDebugBreakpointsAddr.h"
+#include "CDebugBreakpointAddr.h"
 #include "CDebugInterface.h"
 #include "DBG_Log.h"
 #include <algorithm>
@@ -132,9 +133,20 @@ void CDebugSymbols::UnbindSourceBreakpoint(CDebugSourceBreakpoint *breakpoint)
 	for (const CDebugSourceBreakpointBinding &binding : breakpoint->bindings)
 	{
 		// a segment a reload replaced is gone from the list, with its breakpoints
-		if (!binding.created
-			|| std::find(segments.begin(), segments.end(), binding.segment) == segments.end())
+		if (std::find(segments.begin(), segments.end(), binding.segment) == segments.end())
 			continue;
+		if (!binding.created)
+		{
+			// RD-025: this bank's condition comes off the breakpoint it joined
+			CDebugBreakpointAddr *joined = binding.banked ? binding.segment->breakpointsPC->GetBreakpoint(binding.address) : NULL;
+			if (joined)
+			{
+				auto it = std::find(joined->imageOffsets.begin(), joined->imageOffsets.end(), binding.imageOffset);
+				if (it != joined->imageOffsets.end())
+					joined->imageOffsets.erase(it);
+			}
+			continue;
+		}
 
 		// another source breakpoint on the same address takes the ownership over
 		bool shared = false;
@@ -152,7 +164,21 @@ void CDebugSymbols::UnbindSourceBreakpoint(CDebugSourceBreakpoint *breakpoint)
 			}
 		}
 		if (!shared)
+		{
 			binding.segment->breakpointsPC->DeleteBreakpoint(binding.address);
+		}
+		else if (binding.banked)
+		{
+			// the other bank's source breakpoint keeps the address breakpoint
+			CDebugBreakpointAddr *addressBreakpoint = binding.segment->breakpointsPC->GetBreakpoint(binding.address);
+			if (addressBreakpoint)
+			{
+				auto &offsets = addressBreakpoint->imageOffsets;
+				auto it = std::find(offsets.begin(), offsets.end(), binding.imageOffset);
+				if (it != offsets.end())
+					offsets.erase(it);
+			}
+		}
 	}
 	breakpoint->bindings.clear();
 	breakpoint->resolvedLine = 0;
@@ -181,9 +207,22 @@ void CDebugSymbols::BindSourceBreakpoint(CDebugSourceBreakpoint *breakpoint)
 		CDebugSourceBreakpointBinding binding;
 		binding.segment = segment;
 		binding.address = (int)m->start;
-		binding.created = (segment->breakpointsPC->GetBreakpoint(binding.address) == NULL);
+		// RD-025: where banks share the address, only this bank's bytes stop
+		binding.banked = m->hasImageOffset && debugDatabase->IsBankedAddress(m->regionId, m->start);
+		binding.imageOffset = m->imageOffset;
+		CDebugBreakpointAddr *existing = segment->breakpointsPC->GetBreakpoint(binding.address);
+		binding.created = (existing == NULL);
 		if (binding.created)
+		{
 			segment->AddBreakpointPC(binding.address);
+			if (binding.banked)
+				segment->breakpointsPC->GetBreakpoint(binding.address)->imageOffsets.push_back(binding.imageOffset);
+		}
+		else if (binding.banked && !existing->imageOffsets.empty())
+		{
+			// another bank's source breakpoint made it: this bank stops there too
+			existing->imageOffsets.push_back(binding.imageOffset);
+		}
 		breakpoint->bindings.push_back(binding);
 	}
 	if (!breakpoint->bindings.empty())

@@ -1,0 +1,142 @@
+Modules list:
+-------------
+uxrom.o:
+    CODE              Offs=000000  Size=000063  Align=00001  Fill=0000
+    RODATA            Offs=000000  Size=000003  Align=00001  Fill=0000
+    BSS               Offs=000000  Size=000001  Align=00001  Fill=0000
+    BANK0             Offs=000000  Size=000015  Align=00001  Fill=0000
+    BANK1             Offs=000000  Size=000017  Align=00001  Fill=0000
+uxrom-crt0.o:
+    HEADER            Offs=000000  Size=000010  Align=00001  Fill=0000
+    STARTUP           Offs=000000  Size=000022  Align=00001  Fill=0000
+    VECTORS           Offs=000000  Size=000006  Align=00001  Fill=0000
+/opt/homebrew/Cellar/cc65/2.19/share/cc65/lib/nes.lib(copydata.o):
+    CODE              Offs=000063  Size=00002D  Align=00001  Fill=0000
+/opt/homebrew/Cellar/cc65/2.19/share/cc65/lib/nes.lib(incax1.o):
+    CODE              Offs=000090  Size=000007  Align=00001  Fill=0000
+/opt/homebrew/Cellar/cc65/2.19/share/cc65/lib/nes.lib(incaxy.o):
+    CODE              Offs=000097  Size=00000B  Align=00001  Fill=0000
+/opt/homebrew/Cellar/cc65/2.19/share/cc65/lib/nes.lib(incsp1.o):
+    CODE              Offs=0000A2  Size=000007  Align=00001  Fill=0000
+/opt/homebrew/Cellar/cc65/2.19/share/cc65/lib/nes.lib(incsp2.o):
+    CODE              Offs=0000A9  Size=000016  Align=00001  Fill=0000
+/opt/homebrew/Cellar/cc65/2.19/share/cc65/lib/nes.lib(pusha.o):
+    CODE              Offs=0000BF  Size=000016  Align=00001  Fill=0000
+/opt/homebrew/Cellar/cc65/2.19/share/cc65/lib/nes.lib(pushax.o):
+    CODE              Offs=0000D5  Size=00001A  Align=00001  Fill=0000
+/opt/homebrew/Cellar/cc65/2.19/share/cc65/lib/nes.lib(staspidx.o):
+    CODE              Offs=0000EF  Size=000016  Align=00001  Fill=0000
+/opt/homebrew/Cellar/cc65/2.19/share/cc65/lib/nes.lib(zerobss.o):
+    CODE              Offs=000105  Size=000023  Align=00001  Fill=0000
+/opt/homebrew/Cellar/cc65/2.19/share/cc65/lib/nes.lib(zeropage.o):
+    ZEROPAGE          Offs=000000  Size=00001A  Align=00001  Fill=0000
+
+
+Segment list:
+-------------
+Name                   Start     End    Size  Align
+----------------------------------------------------
+HEADER                000000  00000F  000010  00001
+ZEROPAGE              000002  00001B  00001A  00001
+BSS                   006000  006000  000001  00001
+BANK0                 008000  008014  000015  00001
+BANK1                 008000  008016  000017  00001
+STARTUP               00C000  00C021  000022  00001
+CODE                  00C022  00C149  000128  00001
+RODATA                00C14A  00C14C  000003  00001
+VECTORS               00FFFA  00FFFF  000006  00001
+
+
+Exports list by name:
+---------------------
+__BSS_RUN__               006000 RLA    __BSS_SIZE__              000001 REA    
+__DATA_LOAD__             00C14D RLA    __DATA_RUN__              006000 RLA    
+__DATA_SIZE__             000000 REA    __SRAM_SIZE__             000300 REA    
+__SRAM_START__            000500 RLA    __STARTUP__               000001 REA    
+_main                     00C043 RLA    copydata                  00C085 RLA    
+incax1                    00C0B2 RLA    incaxy                    00C0BB RLA    
+incsp1                    00C0C4 RLA    incsp2                    00C0D3 RLA    
+ptr1                      00000A RLZ    ptr2                      00000C RLZ    
+pusha                     00C0E5 RLA    pushax                    00C0FB RLA    
+sp                        000002 RLZ    staspidx                  00C111 RLA    
+tmp1                      000012 RLZ    zerobss                   00C127 RLA    
+
+
+
+Exports list by value:
+----------------------
+__DATA_SIZE__             000000 REA    __STARTUP__               000001 REA    
+__BSS_SIZE__              000001 REA    sp                        000002 RLZ    
+ptr1                      00000A RLZ    ptr2                      00000C RLZ    
+tmp1                      000012 RLZ    __SRAM_SIZE__             000300 REA    
+__SRAM_START__            000500 RLA    __BSS_RUN__               006000 RLA    
+__DATA_RUN__              006000 RLA    _main                     00C043 RLA    
+copydata                  00C085 RLA    incax1                    00C0B2 RLA    
+incaxy                    00C0BB RLA    incsp1                    00C0C4 RLA    
+incsp2                    00C0D3 RLA    pusha                     00C0E5 RLA    
+pushax                    00C0FB RLA    staspidx                  00C111 RLA    
+zerobss                   00C127 RLA    __DATA_LOAD__             00C14D RLA    
+
+
+
+Imports list:
+-------------
+__BSS_RUN__ ([linker generated]):
+    zerobss.o                 common/zerobss.s(8)
+__BSS_SIZE__ ([linker generated]):
+    zerobss.o                 common/zerobss.s(8)
+__DATA_LOAD__ ([linker generated]):
+    copydata.o                common/copydata.s(8)
+__DATA_RUN__ ([linker generated]):
+    copydata.o                common/copydata.s(8)
+__DATA_SIZE__ ([linker generated]):
+    copydata.o                common/copydata.s(8)
+__SRAM_SIZE__ ([linker generated]):
+    uxrom-crt0.o              uxrom-crt0.s(8)
+__SRAM_START__ ([linker generated]):
+    uxrom-crt0.o              uxrom-crt0.s(8)
+__STARTUP__ (uxrom-crt0.o):
+    uxrom.o                   uxrom.s(14)
+_main (uxrom.o):
+    uxrom-crt0.o              uxrom-crt0.s(7)
+copydata (copydata.o):
+    uxrom-crt0.o              uxrom-crt0.s(7)
+incax1 (incax1.o):
+    uxrom.o                   uxrom.s(178)
+incaxy (incaxy.o):
+    uxrom.o                   uxrom.s(178)
+incsp1 (incsp1.o):
+    uxrom.o                   uxrom.s(178)
+    uxrom.o                   uxrom.s(178)
+    uxrom.o                   uxrom.s(178)
+incsp2 (incsp2.o):
+    staspidx.o                runtime/staspidx.s(8)
+ptr1 (zeropage.o):
+    zerobss.o                 common/zerobss.s(9)
+    staspidx.o                runtime/staspidx.s(9)
+    copydata.o                common/copydata.s(9)
+ptr2 (zeropage.o):
+    copydata.o                common/copydata.s(9)
+pusha (pusha.o):
+    uxrom.o                   uxrom.s(178)
+    uxrom.o                   uxrom.s(178)
+    uxrom.o                   uxrom.s(178)
+pushax (pushax.o):
+    uxrom.o                   uxrom.s(178)
+sp (zeropage.o):
+    incsp2.o                  runtime/incsp2.s(8)
+    staspidx.o                runtime/staspidx.s(9)
+    pushax.o                  runtime/pushax.s(8)
+    pusha.o                   runtime/pusha.s(8)
+    incsp1.o                  runtime/incsp1.s(8)
+    uxrom-crt0.o              uxrom-crt0.s(9)
+    uxrom.o                   uxrom.s(10)
+staspidx (staspidx.o):
+    uxrom.o                   uxrom.s(178)
+tmp1 (zeropage.o):
+    staspidx.o                runtime/staspidx.s(9)
+    incaxy.o                  runtime/incaxy.s(8)
+    copydata.o                common/copydata.s(9)
+zerobss (zerobss.o):
+    uxrom-crt0.o              uxrom-crt0.s(7)
+

@@ -34,6 +34,9 @@ class CSnapshotsManager;
 class CDebugSymbols;
 class CDebugSymbolsSegment;
 class CDebugMemoryMappingResolver;
+struct CDebugSourceMapping;
+struct CDebugFunction;
+class CDebugDatabase;
 class CDebugInstructionStepper;
 class CSourceStepController;
 enum class SourceStepKind : u8;
@@ -75,6 +78,14 @@ public:
 	// while the machine has no mapping provider: callers then treat every
 	// mapping as Unknown, never as "the obvious bank".
 	virtual CDebugMemoryMappingResolver *GetMemoryMappingResolver() { return NULL; }
+
+	// RD-007: the image file offset of the byte the CPU fetches at PC (banked
+	// cartridges), from the resolver; false when the machine cannot tell
+	bool GetFetchImageOffset(u16 pc, u64 *imageOffset);
+	// the source mapping / function at PC: by the bank in the window where
+	// the debug info has code of several banks at PC, by address elsewhere
+	const CDebugSourceMapping *ResolveSourceAt(const CDebugDatabase *database, u32 regionId, u16 pc);
+	const CDebugFunction *FindFunctionAt(const CDebugDatabase *database, u32 regionId, u16 pc);
 
 	virtual int GetEmulatorType();
 	virtual CSlrString *GetEmulatorVersionString();

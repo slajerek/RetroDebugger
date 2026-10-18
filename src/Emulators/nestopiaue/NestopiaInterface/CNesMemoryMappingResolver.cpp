@@ -77,6 +77,13 @@ CDebugMappedAddress CNesMemoryMappingResolver::Resolve(u16 cpuAddress, DebugMemo
 			p.device = "nes-prg";
 			p.region = (u32)source;
 			p.offset = offset;
+			// PRG-ROM bytes come from the image file at a known offset (RD-007)
+			unsigned long long prgStart = 0;
+			if (source == 0 && !writable && nesd_get_prg_image_start(&prgStart))
+			{
+				mapped.hasImageOffset = true;
+				mapped.imageOffset = prgStart + offset;
+			}
 		}
 	}
 	return mapped;

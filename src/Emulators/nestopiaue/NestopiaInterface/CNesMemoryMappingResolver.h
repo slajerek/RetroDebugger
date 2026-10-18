@@ -15,8 +15,9 @@
 //   nes-mapper 0 (a write to PRG-ROM space reaches the mapper's registers, offset
 //   from $8000).
 // $4020-$5FFF (expansion area) and boards that answer windows with their own
-// handlers (MMC5 and similar) are Unknown. The iNES file offset is not given:
-// the cartridge profile does not keep the header's trainer flag.
+// handlers (MMC5 and similar) are Unknown. PRG-ROM fetches and reads carry the
+// iNES file offset (16-byte header, plus a 512-byte trainer when present),
+// which the wrapper reads from the file's header at insert.
 class CNesMemoryMappingResolver : public CDebugMemoryMappingResolver
 {
 public:

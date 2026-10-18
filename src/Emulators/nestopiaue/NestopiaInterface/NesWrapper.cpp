@@ -342,6 +342,30 @@ void nesd_cartridge_unlock_shared()
 	nesdCartridgeMutex.unlock_shared();
 }
 
+// RD-007: where PRG-ROM starts in the loaded file (iNES: 16-byte header, a
+// 512-byte trainer when flags 6 bit 2 says so); -1 when not an iNES image
+static long long nesdPrgImageStart = -1;
+
+static long long nesd_read_prg_image_start(const char *filePath)
+{
+	std::ifstream header(filePath, std::ios::in | std::ios::binary);
+	unsigned char bytes[16];
+	if (!header.read((char *)bytes, sizeof(bytes)))
+		return -1;
+	if (bytes[0] != 'N' || bytes[1] != 'E' || bytes[2] != 'S' || bytes[3] != 0x1A)
+		return -1;
+	return 16 + ((bytes[6] & 0x04) ? 512 : 0);
+}
+
+int nesd_get_prg_image_start(unsigned long long *start)
+{
+	std::shared_lock<std::shared_mutex> cartridgeLock(nesdCartridgeMutex);
+	if (nesdPrgImageStart < 0)
+		return 0;
+	*start = (unsigned long long)nesdPrgImageStart;
+	return 1;
+}
+
 bool nesd_insert_cartridge(char *filePath)
 {
 	debugInterfaceNes->LockMutex();
@@ -354,6 +378,7 @@ bool nesd_insert_cartridge(char *filePath)
 	// Power(true) below saw "already on" -- the new board was never reset, so
 	// its PRG banks stayed unmapped and the CPU ran open bus.
 	machine->Power(false);
+	nesdPrgImageStart = nesd_read_prg_image_start(filePath);
 		
 	std::ifstream file(filePath, std::ios::in|std::ios::binary);
 	
@@ -391,6 +416,7 @@ bool nesd_unload_cartridge()
 	std::unique_lock<std::shared_mutex> cartridgeLock(nesdCartridgeMutex);
 
 	machine->Unload();
+	nesdPrgImageStart = -1;
 
 	nesd_set_defaults();
 	machine->Power(true);
@@ -2103,6 +2129,7 @@ void nesd_update_screen(bool lockRenderMutex) {}
 
 bool nesd_insert_cartridge(char *filePath) { return false; }
 void nesd_cartridge_lock_shared() {}
+int nesd_get_prg_image_start(unsigned long long *start) { return 0; }
 void nesd_notify_cpu_reset() {}
 void nesd_cartridge_unlock_shared() {}
 

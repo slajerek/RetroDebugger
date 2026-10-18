@@ -150,7 +150,122 @@ void CDebugDatabase::Finalize()
 		for (auto &it : painted[r])
 			effective[r].push_back(it.second);
 	}
+
+	// the same painting over image offsets, for mappings that have them
+	std::map<u64, ImageInterval> imagePainted;
+	for (u32 index = 0; index < mappings.size(); index++)
+	{
+		const CDebugSourceMapping &m = mappings[index];
+		if (!m.hasImageOffset || m.end <= m.start)
+			continue;
+		u64 start = m.imageOffset, end = m.imageOffset + (m.end - m.start);
+		auto it = imagePainted.lower_bound(start);
+		if (it != imagePainted.begin())
+		{
+			auto prev = std::prev(it);
+			if (prev->second.end > start)
+				it = prev;
+		}
+		while (it != imagePainted.end() && it->second.start < end)
+		{
+			ImageInterval old = it->second;
+			it = imagePainted.erase(it);
+			if (old.start < start)
+				imagePainted[old.start] = ImageInterval{ old.start, start, old.mapping };
+			if (old.end > end)
+				imagePainted[end] = ImageInterval{ end, old.end, old.mapping };
+		}
+		imagePainted[start] = ImageInterval{ start, end, index };
+	}
+	for (auto &it : imagePainted)
+		imageEffective.push_back(it.second);
+
+	// CPU ranges where two banks' code overlap (different image offset for
+	// the same address)
+	bankedRanges.resize(regions.size());
+	if (!imageEffective.empty())
+	{
+		for (size_t r = 0; r < regions.size(); r++)
+		{
+			std::vector<const CDebugSourceMapping *> withImage;
+			for (const CDebugSourceMapping &m : mappings)
+			{
+				if (m.regionId == r && m.hasImageOffset && m.end > m.start)
+					withImage.push_back(&m);
+			}
+			std::sort(withImage.begin(), withImage.end(),
+					  [](const CDebugSourceMapping *a, const CDebugSourceMapping *b) { return a->start < b->start; });
+			std::vector<std::pair<u32, u32>> overlaps;
+			for (size_t i = 0; i < withImage.size(); i++)
+			{
+				const CDebugSourceMapping *a = withImage[i];
+				for (size_t j = i + 1; j < withImage.size() && withImage[j]->start < a->end; j++)
+				{
+					const CDebugSourceMapping *b = withImage[j];
+					if ((i64)a->imageOffset - (i64)a->start != (i64)b->imageOffset - (i64)b->start)
+						overlaps.push_back(std::make_pair(b->start, std::min(a->end, b->end)));
+				}
+			}
+			std::sort(overlaps.begin(), overlaps.end());
+			for (const auto &o : overlaps)
+			{
+				if (!bankedRanges[r].empty() && o.first <= bankedRanges[r].back().second)
+					bankedRanges[r].back().second = std::max(bankedRanges[r].back().second, o.second);
+				else
+					bankedRanges[r].push_back(o);
+			}
+		}
+	}
 	finalized = true;
+}
+
+bool CDebugDatabase::IsBankedAddress(u32 regionId, u32 address) const
+{
+	if (regionId >= bankedRanges.size())
+		return false;
+	const std::vector<std::pair<u32, u32>> &ranges = bankedRanges[regionId];
+	auto it = std::upper_bound(ranges.begin(), ranges.end(), address,
+							   [](u32 a, const std::pair<u32, u32> &range) { return a < range.first; });
+	if (it == ranges.begin())
+		return false;
+	--it;
+	return address < it->second;
+}
+
+const CDebugSourceMapping *CDebugDatabase::ResolveImage(u32 regionId, u32 address, bool hasImageOffset, u64 imageOffset) const
+{
+	if (hasImageOffset && finalized && !imageEffective.empty())
+	{
+		auto it = std::upper_bound(imageEffective.begin(), imageEffective.end(), imageOffset,
+								   [](u64 a, const ImageInterval &interval) { return a < interval.start; });
+		if (it != imageEffective.begin())
+		{
+			--it;
+			if (imageOffset < it->end)
+			{
+				const CDebugSourceMapping &m = mappings[it->mapping];
+				// the same byte seen at the same CPU address: banked code, not a copy
+				if (m.regionId == regionId && m.start + (u32)(imageOffset - m.imageOffset) == address)
+					return &m;
+			}
+		}
+	}
+	return Resolve(regionId, address);
+}
+
+const CDebugFunction *CDebugDatabase::FindFunctionImage(u32 regionId, u32 address, bool hasImageOffset, u64 imageOffset) const
+{
+	if (hasImageOffset && !imageEffective.empty())
+	{
+		for (const CDebugFunction &function : functions)
+		{
+			if (function.regionId == regionId && function.hasImageOffset
+				&& address >= function.start && address < function.end
+				&& function.imageOffset + (address - function.start) == imageOffset)
+				return &function;
+		}
+	}
+	return FindFunction(regionId, address);
 }
 
 const CDebugSourceMapping *CDebugDatabase::Resolve(u32 regionId, u32 address) const

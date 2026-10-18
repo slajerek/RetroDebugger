@@ -30,6 +30,7 @@
     "cc65/branches-loops-nes.json",
     "cc65/interrupts.json",
     "cc65/interrupts-atari.json",
-    "cc65/interrupts-nes.json"
+    "cc65/interrupts-nes.json",
+    "cc65/banked-nes-uxrom.json"
   ]
 }

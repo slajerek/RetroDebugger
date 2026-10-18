@@ -161,7 +161,7 @@ nlohmann::json CDebuggerApi::GetSourceLocationJson(int address)
 		return j;
 	}
 	u32 regionId = (u32)symbols->currentSegment->debugRegionId;
-	const CDebugSourceMapping *m = database->Resolve(regionId, (u32)address);
+	const CDebugSourceMapping *m = debugInterface->ResolveSourceAt(database.get(), regionId, (u16)address);
 	if (m)
 	{
 		const CDebugSourceFile *file = database->GetFile(m->fileId);
@@ -169,7 +169,7 @@ nlohmann::json CDebuggerApi::GetSourceLocationJson(int address)
 		j["file"] = file ? file->originalPath : "";
 		j["fileName"] = file ? file->fileName : "";
 		j["line"] = m->lineStart;
-		const CDebugFunction *function = database->FindFunction(regionId, (u32)address);
+		const CDebugFunction *function = debugInterface->FindFunctionAt(database.get(), regionId, (u16)address);
 		if (function)
 			j["function"] = function->name;
 	}
@@ -274,13 +274,14 @@ nlohmann::json CDebuggerApi::LoadDebugInfoJson(const std::string &path)
 // the function and line an address is in, when the debug info maps it
 static void AddSourceOf(nlohmann::json &j, CDebugSymbols *symbols, const CDebugDatabase *database, u16 address)
 {
+	CDebugInterface *debugInterface = symbols ? symbols->debugInterface : NULL;
 	if (!database || !symbols || !symbols->currentSegment || symbols->currentSegment->debugRegionId < 0)
 		return;
 	u32 regionId = (u32)symbols->currentSegment->debugRegionId;
-	const CDebugFunction *function = database->FindFunction(regionId, address);
+	const CDebugFunction *function = debugInterface->FindFunctionAt(database, regionId, address);
 	if (function)
 		j["function"] = function->name;
-	const CDebugSourceMapping *m = database->Resolve(regionId, address);
+	const CDebugSourceMapping *m = debugInterface->ResolveSourceAt(database, regionId, address);
 	if (m)
 	{
 		const CDebugSourceFile *file = database->GetFile(m->fileId);

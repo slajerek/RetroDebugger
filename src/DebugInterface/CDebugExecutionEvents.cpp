@@ -6,6 +6,8 @@
 #include "CDebugInterface.h"
 #include "CSnapshotsManager.h"
 #include "CDebugEventsHistory.h"
+#include "CDebugMemoryMapping.h"
+#include "CDebugDatabase.h"
 #include "DBG_Log.h"
 
 const char *DebugExecutionEventName(DebugExecutionEvent event)
@@ -335,4 +337,44 @@ bool CDebugInterface::SourceStep(SourceStepKind kind, u64 budget)
 	}
 	UnlockMutex();
 	return armed;
+}
+
+// RD-007: banked code resolves by the bank in the window
+
+bool CDebugInterface::GetFetchImageOffset(u16 pc, u64 *imageOffset)
+{
+	CDebugMemoryMappingResolver *resolver = GetMemoryMappingResolver();
+	if (resolver == NULL)
+		return false;
+	CDebugMappedAddress fetch = resolver->ResolveFetch(pc);
+	if (!fetch.hasImageOffset)
+		return false;
+	*imageOffset = fetch.imageOffset;
+	return true;
+}
+
+const CDebugSourceMapping *CDebugInterface::ResolveSourceAt(const CDebugDatabase *database, u32 regionId, u16 pc)
+{
+	if (database == NULL)
+		return NULL;
+	if (database->HasImageOffsets() && database->IsBankedAddress(regionId, pc))
+	{
+		u64 imageOffset = 0;
+		bool known = GetFetchImageOffset(pc, &imageOffset);
+		return database->ResolveImage(regionId, pc, known, imageOffset);
+	}
+	return database->Resolve(regionId, pc);
+}
+
+const CDebugFunction *CDebugInterface::FindFunctionAt(const CDebugDatabase *database, u32 regionId, u16 pc)
+{
+	if (database == NULL)
+		return NULL;
+	if (database->HasImageOffsets() && database->IsBankedAddress(regionId, pc))
+	{
+		u64 imageOffset = 0;
+		bool known = GetFetchImageOffset(pc, &imageOffset);
+		return database->FindFunctionImage(regionId, pc, known, imageOffset);
+	}
+	return database->FindFunction(regionId, pc);
 }

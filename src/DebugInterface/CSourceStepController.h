@@ -33,6 +33,7 @@
 #include <string>
 
 class CDebugDatabase;
+class CDebugInterface;
 struct CDebugSourceMapping;
 
 enum class SourceStepKind : u8
@@ -75,7 +76,7 @@ class CSourceStepController
 public:
 	static const u64 kDefaultBudget = 2000000;
 
-	CSourceStepController();
+	explicit CSourceStepController(CDebugInterface *owner);
 
 	// UI thread, CPU paused. Returns false, with reason NoSource, when
 	// Into/Over start where there is no source mapping (Out needs none).
@@ -95,6 +96,7 @@ private:
 	bool IsStartStatement(const CDebugSourceMapping *location) const;
 	bool IsPrologue(const CDebugSourceMapping *location, u16 pc) const;
 
+	CDebugInterface *owner;
 	std::atomic<bool> armed;
 	SourceStepKind kind;
 	std::shared_ptr<const CDebugDatabase> database;

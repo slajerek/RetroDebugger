@@ -1,0 +1,198 @@
+#include "CTestBankedSource.h"
+#include "CTestNesCartridge.h"
+#include "EmulatorsConfig.h"
+#include "CViewC64.h"
+#include "CGuiMain.h"
+#include "CDebugInterface.h"
+#include "CDebugInterfaceNes.h"
+#include "CDebugSymbols.h"
+#include "CDebugSymbolsSegment.h"
+#include "CDebugBreakpointsAddr.h"
+#include "CDebugBreakpointAddr.h"
+#include "CDebugDatabase.h"
+#include "CDebugInfoLoader.h"
+#include "CDebugSourceBreakpoint.h"
+#include "DebuggerDefs.h"
+#include "SYS_Main.h"
+#include <cstdio>
+
+bool CTestBankedSource::Check(bool condition, const std::string &message)
+{
+	if (!condition)
+	{
+		failure = message;
+		return false;
+	}
+	StepCompleted(stepNum++, true, message.c_str());
+	return true;
+}
+
+bool CTestBankedSource::RunDatabase()
+{
+	// bank 0 code at $8000-$8010 from image offset $0010, bank 1 at
+	// $8000-$8008 from $4010, fixed code at $C000 from $C010
+	CDebugDatabase database("test");
+	u32 region = database.AddRegion("Default", "");
+	u32 block = database.AddBlock("", region);
+	database.AddFile(0, "banked.c");
+	auto add = [&](u32 start, u32 end, i32 line, u64 image) {
+		CDebugSourceMapping m;
+		m.start = start;
+		m.end = end;
+		m.regionId = region;
+		m.blockId = block;
+		m.lineStart = m.lineEnd = line;
+		m.hasImageOffset = true;
+		m.imageOffset = image;
+		database.AddMapping(m);
+	};
+	add(0x8000, 0x8010, 10, 0x0010);
+	add(0x8000, 0x8008, 20, 0x4010);
+	add(0xC000, 0xC004, 30, 0xC010);
+	database.Finalize();
+
+	const CDebugSourceMapping *bank0 = database.ResolveImage(region, 0x8004, true, 0x0014);
+	const CDebugSourceMapping *bank1 = database.ResolveImage(region, 0x8004, true, 0x4014);
+	const CDebugSourceMapping *bank0Only = database.ResolveImage(region, 0x800C, true, 0x001C);
+	const CDebugSourceMapping *unknown = database.ResolveImage(region, 0x8004, false, 0);
+	bool ok = database.HasImageOffsets()
+		&& database.IsBankedAddress(region, 0x8000) && database.IsBankedAddress(region, 0x8007)
+		&& !database.IsBankedAddress(region, 0x8008) && !database.IsBankedAddress(region, 0xC000)
+		&& bank0 && bank0->lineStart == 10 && bank1 && bank1->lineStart == 20
+		&& bank0Only && bank0Only->lineStart == 10
+		&& unknown && unknown->lineStart == 20;	// no bank known: the address's mapping in effect
+	return Check(ok, "Banked database: $8000-$8007 is banked, $8008 and $C000 are not; the image offset picks bank 0 or 1, an unknown bank falls back to the mapping in effect");
+}
+
+bool CTestBankedSource::RunNes()
+{
+#ifdef RUN_NES
+	CDebugInterface *di = viewC64->debugInterfaceNes;
+	if (!di)
+	{
+		ReportRequiredGap("NES not created");
+		return true;
+	}
+	bool wasRunning = di->isRunning;
+	if (!wasRunning)
+	{
+		viewC64->StartEmulationThread(di);
+		SYS_Sleep(1000);
+	}
+
+	std::string dir = ResolveProjectPath("tests/data/source-debug/cc65/nes-uxrom/banked");
+	CDebugSymbols *liveSymbols = di->symbols;
+	CDebugSymbols *scratch = new CDebugSymbols(di, true);
+	scratch->SetDataAdapter(liveSymbols->dataAdapter);
+	scratch->CreateDefaultSegment();
+	guiMain->LockMutex();
+	di->LockMutex();
+	di->symbols = scratch;
+	di->UnlockMutex();
+	guiMain->UnlockMutex();
+
+	CDebugInfoLoadOptions options;
+	options.sourceRoots.push_back(ResolveProjectPath("tests/source-debug/fixtures/banked"));
+	DebugInfoFormat format = DebugInfoLoadFile(scratch, (dir + "/main.dbg").c_str(), options);
+	bool ok = Check(format == DebugInfoFormat::Cc65Dbg && scratch->debugDatabase && scratch->debugDatabase->HasImageOffsets()
+					&& scratch->currentSegment && scratch->currentSegment->debugRegionId >= 0,
+					"Banked NES: the cc65 UxROM debug info loads with image offsets");
+
+	// bankB's body (line 24) and bankA's body (line 18), both at $8000 + n
+	CDebugSourceBreakpoint *onB = ok ? scratch->AddSourceBreakpoint("uxrom.c", 24) : NULL;
+	CDebugBreakpointAddr *addressB = (onB && onB->IsResolved())
+		? scratch->currentSegment->breakpointsPC->GetBreakpoint(onB->bindings[0].address) : NULL;
+	ok = ok && Check(onB && onB->IsResolved() && onB->bindings.size() == 1 && onB->bindings[0].banked
+					 && addressB && addressB->imageOffsets.size() == 1 && addressB->imageOffsets[0] >= 0x4010,
+					 "Banked NES: the source breakpoint on bankB's line binds to one address with bank 1's image offset");
+
+	auto runToPause = [&](int timeoutMs) -> bool {
+		di->SetDebugMode(DEBUGGER_MODE_RUNNING);
+		for (int waited = 0; waited < timeoutMs; waited += 10)
+		{
+			SYS_Sleep(10);
+			if (di->GetDebugMode() == DEBUGGER_MODE_PAUSED)
+				return true;
+		}
+		return false;
+	};
+	// _result is the one BSS byte, at $6000 (main.map)
+	auto readResult = [&]() { u8 v = 0; bool available = false; di->GetDataAdapter()->AdapterReadByte(0x6000, &v, &available); return v; };
+
+	if (ok)
+	{
+		// the cartridge loads paused at reset; run to the first stop
+		ok = Check(TestNesInsertCartridge(di, (dir + "/main.nes").c_str(), true), "Banked NES: main.nes (UxROM, 64 KB PRG) inserts");
+	}
+	if (ok)
+	{
+		bool paused = runToPause(3000);
+		int pc = di->GetCpuPC();
+		u8 value = readResult();
+		char msg[200];
+		snprintf(msg, sizeof(msg), "Banked NES: the bankB breakpoint stops once bank 1 is in, after bankA's first call (PC $%04X, result %d), not at bankA's code at the same address", pc, value);
+		ok = Check(paused && pc == onB->bindings[0].address && value == 1, msg);
+	}
+
+	// bankA's line: the two calls of bankA stop, bankB's call in between does not
+	CDebugSourceBreakpoint *onA = NULL;
+	if (ok)
+	{
+		scratch->RemoveSourceBreakpoint(onB);
+		onA = scratch->AddSourceBreakpoint("uxrom.c", 18);
+		ok = Check(onA && onA->IsResolved() && onA->bindings.size() == 1 && onA->bindings[0].banked,
+				   "Banked NES: the source breakpoint on bankA's line binds with bank 0's image offset");
+	}
+	if (ok)
+	{
+		// from the bankB stop: bankB returns (11), bankA's second call stops
+		bool paused = runToPause(3000);
+		int pc = di->GetCpuPC();
+		u8 value = readResult();
+		char msg[200];
+		snprintf(msg, sizeof(msg), "Banked NES: the bankA breakpoint next stops at bankA's second call (PC $%04X, result %d), skipping the rest of bankB", pc, value);
+		ok = Check(paused && pc == onA->bindings[0].address && value == 11, msg);
+	}
+	if (ok)
+	{
+		// no third bankA call: the program loops in main
+		bool paused = runToPause(500);
+		ok = Check(!paused, "Banked NES: no further stop -- the loop in main never reaches bank 0's line again");
+		di->SetDebugMode(DEBUGGER_MODE_PAUSED);
+	}
+
+	if (onA)
+		scratch->RemoveSourceBreakpoint(onA);
+	TestNesUnloadCartridge(di, false);
+	guiMain->LockMutex();
+	di->LockMutex();
+	di->symbols = liveSymbols;
+	di->UnlockMutex();
+	guiMain->UnlockMutex();
+	// scratch leaked on purpose, see CTestSymbolLoaders
+	di->SetDebugMode(DEBUGGER_MODE_RUNNING);
+	if (!wasRunning)
+		viewC64->StopEmulationThread(di);
+	return ok;
+#else
+	ReportRequiredGap("NES emulation not compiled in");
+	return true;
+#endif
+}
+
+void CTestBankedSource::Run(ITestCallback *cb)
+{
+	this->callback = cb;
+	this->isRunning = true;
+	this->currentStep = 0;
+	stepNum = 1;
+	failure.clear();
+
+	bool ok = RunDatabase() && RunNes();
+	if (!ok)
+	{
+		TestCompleted(false, failure.c_str());
+		return;
+	}
+	TestCompleted(true, "Banked code resolves and breaks by the bank in the window (UxROM, cc65)");
+}

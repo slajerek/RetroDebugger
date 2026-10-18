@@ -1022,8 +1022,10 @@ bool DebugInfoLoadCc65(CDebugSymbols *symbols, CByteBuffer *byteBuffer, const CD
 	for (auto &it : database->Files())
 		LoadSourceTextFor(it.second, options);
 
-	// address range of a span: segment start + span start, size bytes
-	auto spanRange = [&](long spanId, u32 &start, u32 &end) -> bool {
+	// address range of a span: segment start + span start, size bytes; and
+	// where it is in the output file when the segment was written to one
+	// (ooffs), the identity of banked code (RD-007)
+	auto spanRange = [&](long spanId, u32 &start, u32 &end, bool *hasImage = NULL, u64 *image = NULL) -> bool {
 		auto span = spans.find(spanId);
 		if (span == spans.end())
 			return false;
@@ -1035,11 +1037,17 @@ bool DebugInfoLoadCc65(CDebugSymbols *symbols, CByteBuffer *byteBuffer, const CD
 			return false;
 		start = (u32)(seg->second.Num("start", 0) + span->second.Num("start", 0));
 		end = start + (u32)size;
+		long ooffs = seg->second.Num("ooffs", -1);
+		if (hasImage)
+			*hasImage = (ooffs >= 0 && seg->second.Get("type") == "ro");
+		if (image)
+			*image = (ooffs >= 0) ? (u64)(ooffs + span->second.Num("start", 0)) : 0;
 		return start < (u32)maxAddress;
 	};
 
 	// asm (type 0) and macro (type 2) lines first, C (type 1) last: later wins
 	std::map<u32, std::pair<u32, i32>> cLineAtAddress;	// start -> (file, line), for function lines
+	std::map<u64, std::pair<u32, i32>> cLineAtImage;	// the same by image offset: banks share addresses
 	for (int pass = 0; pass < 2; pass++)
 	{
 		for (const Cc65Record &line : lines)
@@ -1050,7 +1058,7 @@ bool DebugInfoLoadCc65(CDebugSymbols *symbols, CByteBuffer *byteBuffer, const CD
 			for (long spanId : line.List("span"))
 			{
 				CDebugSourceMapping mapping;
-				if (!spanRange(spanId, mapping.start, mapping.end))
+				if (!spanRange(spanId, mapping.start, mapping.end, &mapping.hasImageOffset, &mapping.imageOffset))
 					continue;
 				if (mapping.end > (u32)maxAddress)
 					mapping.end = (u32)maxAddress;
@@ -1062,7 +1070,11 @@ bool DebugInfoLoadCc65(CDebugSymbols *symbols, CByteBuffer *byteBuffer, const CD
 				mapping.quality = DebugMappingQuality::Exact;
 				database->AddMapping(mapping);
 				if (isC)
+				{
 					cLineAtAddress[mapping.start] = std::make_pair(mapping.fileId, mapping.lineStart);
+					if (mapping.hasImageOffset)
+						cLineAtImage[mapping.imageOffset] = std::make_pair(mapping.fileId, mapping.lineStart);
+				}
 			}
 		}
 	}
@@ -1087,8 +1099,15 @@ bool DebugInfoLoadCc65(CDebugSymbols *symbols, CByteBuffer *byteBuffer, const CD
 			for (long spanId : scope.List("span"))
 			{
 				u32 start, end;
-				if (!spanRange(spanId, start, end))
+				bool hasImage = false;
+				u64 image = 0;
+				if (!spanRange(spanId, start, end, &hasImage, &image))
 					continue;
+				if (!any || start < function.start)
+				{
+					function.hasImageOffset = hasImage;
+					function.imageOffset = image;
+				}
 				if (!any || start < function.start)
 					function.start = start;
 				if (!any || end > function.end)
@@ -1100,11 +1119,17 @@ bool DebugInfoLoadCc65(CDebugSymbols *symbols, CByteBuffer *byteBuffer, const CD
 			// the function's line: the C line mapped at its entry, when there is
 			// one -- the definition line when cc65 maps the prologue there, the
 			// first statement when the function has no prologue; the text decides
-			auto entry = cLineAtAddress.find(function.start);
-			if (entry != cLineAtAddress.end())
+			std::pair<u32, i32> entryLine(0, 0);
+			auto byImage = function.hasImageOffset ? cLineAtImage.find(function.imageOffset) : cLineAtImage.end();
+			auto byAddress = cLineAtAddress.find(function.start);
+			if (byImage != cLineAtImage.end())
+				entryLine = byImage->second;
+			else if (byAddress != cLineAtAddress.end())
+				entryLine = byAddress->second;
+			if (entryLine.second > 0)
 			{
-				function.fileId = entry->second.first;
-				function.line = Cc65DefinitionLine(database->GetFile(function.fileId), function.name, entry->second.second,
+				function.fileId = entryLine.first;
+				function.line = Cc65DefinitionLine(database->GetFile(function.fileId), function.name, entryLine.second,
 												   &function.lineIsDefinition);
 			}
 			database->AddFunction(function);

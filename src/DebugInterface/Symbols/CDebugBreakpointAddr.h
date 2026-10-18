@@ -2,6 +2,7 @@
 #define _CDebugBreakpointAddr_h_
 
 #include "CDebugBreakpoint.h"
+#include <vector>
 
 class CDebugBreakpointAddr : public CDebugBreakpoint
 {
@@ -15,6 +16,11 @@ public:
 	int addr;
 	u32 actions;
 	u8 data;
+
+	// RD-025: when not empty, the breakpoint fires only when the byte the CPU
+	// fetches at addr comes from one of these image file offsets (a source
+	// breakpoint in one bank of a banked cartridge); empty: any bank
+	std::vector<u64> imageOffsets;
 	
 	virtual void Serialize(Hjson::Value hjsonRoot);
 	virtual void Deserialize(Hjson::Value hjsonRoot);
