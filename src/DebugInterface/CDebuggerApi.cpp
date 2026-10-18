@@ -1,6 +1,8 @@
 #include "CSourceStepController.h"
 #include "CDebugDatabase.h"
 #include "CDebugSymbols.h"
+#include "CDebugSourceBreakpoint.h"
+#include "CDebugInfoLoader.h"
 #include "CDebuggerApi.h"
 #include "CViewC64.h"
 #include "CViewMonitorConsole.h"
@@ -127,6 +129,144 @@ nlohmann::json CDebuggerApi::GetSourceStepStatusJson()
 			status["file"] = file->originalPath;
 	}
 	return status;
+}
+
+static nlohmann::json MappingJson(const CDebugDatabase *database, const CDebugSourceMapping *m)
+{
+	nlohmann::json j;
+	const CDebugSourceFile *file = database->GetFile(m->fileId);
+	j["file"] = file ? file->originalPath : "";
+	j["line"] = m->lineStart;
+	j["lineEnd"] = m->lineEnd;
+	j["start"] = m->start;
+	j["end"] = m->end;
+	return j;
+}
+
+nlohmann::json CDebuggerApi::GetSourceLocationJson(int address)
+{
+	nlohmann::json j;
+	if (address < 0)
+		address = debugInterface->GetCpuPC();
+	j["address"] = address;
+	j["mapped"] = false;
+
+	CDebugSymbols *symbols = debugInterface->symbols;
+	std::shared_ptr<const CDebugDatabase> database = symbols ? symbols->debugDatabase : nullptr;
+	if (!database || !symbols->currentSegment || symbols->currentSegment->debugRegionId < 0)
+	{
+		j["error"] = "no debug info loaded";
+		return j;
+	}
+	u32 regionId = (u32)symbols->currentSegment->debugRegionId;
+	const CDebugSourceMapping *m = database->Resolve(regionId, (u32)address);
+	if (m)
+	{
+		const CDebugSourceFile *file = database->GetFile(m->fileId);
+		j["mapped"] = true;
+		j["file"] = file ? file->originalPath : "";
+		j["fileName"] = file ? file->fileName : "";
+		j["line"] = m->lineStart;
+		const CDebugFunction *function = database->FindFunction(regionId, (u32)address);
+		if (function)
+			j["function"] = function->name;
+	}
+	std::vector<const CDebugSourceMapping *> candidates;
+	database->ResolveCandidates(regionId, (u32)address, candidates);
+	j["candidates"] = nlohmann::json::array();
+	for (const CDebugSourceMapping *candidate : candidates)
+		j["candidates"].push_back(MappingJson(database.get(), candidate));
+	return j;
+}
+
+nlohmann::json CDebuggerApi::ResolveSourceLineJson(const std::string &file, int line)
+{
+	nlohmann::json j;
+	j["file"] = file;
+	j["line"] = line;
+	std::shared_ptr<const CDebugDatabase> database = debugInterface->symbols ? debugInterface->symbols->debugDatabase : nullptr;
+	i32 resolvedLine = 0;
+	std::vector<const CDebugSourceMapping *> mappings;
+	DebugResolveSourceLine(database.get(), file, line, &resolvedLine, mappings);
+	j["resolvedLine"] = resolvedLine;
+	j["addresses"] = nlohmann::json::array();
+	for (const CDebugSourceMapping *m : mappings)
+		j["addresses"].push_back(m->start);
+	return j;
+}
+
+static nlohmann::json SourceBreakpointJson(const CDebugSourceBreakpoint *breakpoint)
+{
+	nlohmann::json j;
+	j["file"] = breakpoint->path;
+	j["line"] = breakpoint->line;
+	j["resolved"] = breakpoint->IsResolved();
+	j["resolvedLine"] = breakpoint->resolvedLine;
+	j["addresses"] = nlohmann::json::array();
+	for (const CDebugSourceBreakpointBinding &binding : breakpoint->bindings)
+		j["addresses"].push_back(binding.address);
+	return j;
+}
+
+nlohmann::json CDebuggerApi::AddSourceBreakpointJson(const std::string &file, int line)
+{
+	if (!debugInterface->symbols || file.empty() || line <= 0)
+		return nlohmann::json{{"error", "file and a positive line are required"}};
+	CDebugSourceBreakpoint *breakpoint = debugInterface->symbols->AddSourceBreakpoint(file.c_str(), line);
+	debugInterface->symbols->UpdateRenderBreakpoints();
+	return SourceBreakpointJson(breakpoint);
+}
+
+bool CDebuggerApi::RemoveSourceBreakpoint(const std::string &file, int line)
+{
+	if (!debugInterface->symbols)
+		return false;
+	CDebugSourceBreakpoint *breakpoint = debugInterface->symbols->FindSourceBreakpoint(file.c_str(), line);
+	if (!breakpoint)
+		return false;
+	debugInterface->symbols->RemoveSourceBreakpoint(breakpoint);
+	debugInterface->symbols->UpdateRenderBreakpoints();
+	return true;
+}
+
+nlohmann::json CDebuggerApi::ListSourceBreakpointsJson()
+{
+	nlohmann::json list = nlohmann::json::array();
+	if (!debugInterface->symbols)
+		return list;
+	debugInterface->LockMutex();
+	for (CDebugSourceBreakpoint *breakpoint : debugInterface->symbols->sourceBreakpoints)
+		list.push_back(SourceBreakpointJson(breakpoint));
+	debugInterface->UnlockMutex();
+	return list;
+}
+
+nlohmann::json CDebuggerApi::LoadDebugInfoJson(const std::string &path)
+{
+	nlohmann::json j;
+	j["path"] = path;
+	if (!debugInterface->symbols)
+	{
+		j["error"] = "no symbols for this platform";
+		return j;
+	}
+	DebugInfoFormat format = DebugInfoLoadFile(debugInterface->symbols, path.c_str());
+	j["format"] = DebugInfoFormatName(format);
+	if (format == DebugInfoFormat::Unknown)
+	{
+		j["error"] = "missing or unrecognized file";
+		return j;
+	}
+	std::shared_ptr<const CDebugDatabase> database = debugInterface->symbols->debugDatabase;
+	if (database)
+	{
+		j["producer"] = database->producer;
+		j["files"] = (int)database->NumFiles();
+		j["mappings"] = (int)database->NumMappings();
+		j["functions"] = (int)database->Functions().size();
+	}
+	j["warnings"] = debugInterface->symbols->debugInfoWarnings;
+	return j;
 }
 
 u64 CDebuggerApi::GetMainCpuCycleCounter()

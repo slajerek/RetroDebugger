@@ -322,6 +322,66 @@ void CDebuggerServerApi::RegisterEndpoints(CDebuggerServer *server)
 		return server->PrepareResult(HTTP_OK, token, debuggerApi->GetSourceStepStatusJson(), NULL, 0);
 	});
 
+	// RD-036: source queries and source breakpoints on the loaded debug info
+	sprintf(buf, "%s/source/location", plat);
+	RegisterEndpoint(server, buf, plat, "source", "Source location of an address (default: the PC): file, line, function and every candidate mapping",
+	[this, server](const string token, json params, unsigned char *binaryData, int binaryDataSize) -> vector<char>*
+	{
+		int address = params.value("address", -1);
+		return server->PrepareResult(HTTP_OK, token, debuggerApi->GetSourceLocationJson(address), NULL, 0);
+	});
+
+	sprintf(buf, "%s/source/resolve", plat);
+	RegisterEndpoint(server, buf, plat, "source", "Addresses of a source line: file (path or name) and line; a line without code slides to the next one in its function",
+	[this, server](const string token, json params, unsigned char *binaryData, int binaryDataSize) -> vector<char>*
+	{
+		string file = params.value("file", "");
+		int line = params.value("line", 0);
+		if (file.empty() || line <= 0)
+			return server->PrepareResult(HTTP_BAD_REQUEST, token, json{{"error", "file and line are required"}}, NULL, 0);
+		return server->PrepareResult(HTTP_OK, token, debuggerApi->ResolveSourceLineJson(file, line), NULL, 0);
+	});
+
+	sprintf(buf, "%s/source/breakpoint/add", plat);
+	RegisterEndpoint(server, buf, plat, "source", "Add a source breakpoint at file:line; it follows reloads of the debug info",
+	[this, server](const string token, json params, unsigned char *binaryData, int binaryDataSize) -> vector<char>*
+	{
+		string file = params.value("file", "");
+		int line = params.value("line", 0);
+		if (file.empty() || line <= 0)
+			return server->PrepareResult(HTTP_BAD_REQUEST, token, json{{"error", "file and line are required"}}, NULL, 0);
+		return server->PrepareResult(HTTP_OK, token, debuggerApi->AddSourceBreakpointJson(file, line), NULL, 0);
+	});
+
+	sprintf(buf, "%s/source/breakpoint/remove", plat);
+	RegisterEndpoint(server, buf, plat, "source", "Remove the source breakpoint at file:line (as it was added)",
+	[this, server](const string token, json params, unsigned char *binaryData, int binaryDataSize) -> vector<char>*
+	{
+		string file = params.value("file", "");
+		int line = params.value("line", 0);
+		if (!debuggerApi->RemoveSourceBreakpoint(file, line))
+			return server->PrepareResult(HTTP_NOT_FOUND, token, json{{"error", "no source breakpoint at that file and line"}}, NULL, 0);
+		return server->PrepareResult(HTTP_OK, token, json(), NULL, 0);
+	});
+
+	sprintf(buf, "%s/source/breakpoint/list", plat);
+	RegisterEndpoint(server, buf, plat, "source", "List source breakpoints with their resolved line and addresses",
+	[this, server](const string token, json params, unsigned char *binaryData, int binaryDataSize) -> vector<char>*
+	{
+		return server->PrepareResult(HTTP_OK, token, json{{"breakpoints", debuggerApi->ListSourceBreakpointsJson()}}, NULL, 0);
+	});
+
+	sprintf(buf, "%s/symbols/load", plat);
+	RegisterEndpoint(server, buf, plat, "source", "Load a symbols or debug info file by its content (KickAssembler/cc65 .dbg, Oscar64 .dbj, VICE/64tass labels)",
+	[this, server](const string token, json params, unsigned char *binaryData, int binaryDataSize) -> vector<char>*
+	{
+		string path = params.value("path", "");
+		if (path.empty())
+			return server->PrepareResult(HTTP_BAD_REQUEST, token, json{{"error", "path is required"}}, NULL, 0);
+		json result = debuggerApi->LoadDebugInfoJson(path);
+		return server->PrepareResult(result.contains("error") ? HTTP_BAD_REQUEST : HTTP_OK, token, result, NULL, 0);
+	});
+
 	sprintf(buf, "%s/step/out", plat);
 	RegisterEndpoint(server, buf, plat, "cpu", "Step out of the current subroutine",
 	[this, server](const string token, json params, unsigned char *binaryData, int binaryDataSize) -> vector<char>*

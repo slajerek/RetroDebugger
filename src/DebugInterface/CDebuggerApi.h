@@ -35,6 +35,18 @@ public:
 	// The last source step: armed, kind, reason, pc and, when mapped, file and line.
 	virtual nlohmann::json GetSourceStepStatusJson();
 
+	// RD-036: source queries on the loaded debug info (current segment's region)
+	// ADDRESS (-1: the PC) -> file, line, function and every candidate mapping
+	virtual nlohmann::json GetSourceLocationJson(int address);
+	// FILE:LINE -> the line actually used and its first addresses
+	virtual nlohmann::json ResolveSourceLineJson(const std::string &file, int line);
+	// source breakpoints: add / remove by file + line, list with their resolution
+	virtual nlohmann::json AddSourceBreakpointJson(const std::string &file, int line);
+	virtual bool RemoveSourceBreakpoint(const std::string &file, int line);
+	virtual nlohmann::json ListSourceBreakpointsJson();
+	// loads a symbols / debug info file by content (DebugInfoLoadFile)
+	virtual nlohmann::json LoadDebugInfoJson(const std::string &path);
+
 	virtual u64 GetMainCpuCycleCounter();
 	virtual u64 GetMainCpuInstructionCycleCounter();
 	virtual unsigned int GetEmulationFrameNumber();

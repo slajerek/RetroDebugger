@@ -1529,6 +1529,109 @@ void CMCPServer::RegisterDebuggerTools(CDebuggerServer *server)
 		RegisterTool(tool);
 	}
 
+	// Source location / resolution (RD-036)
+	{
+		MCPToolDescriptor tool;
+		tool.name = "retro_source_location";
+		tool.description = "Map between code and source on the loaded debug info. With 'address' (default: the PC) returns the "
+			"file, line and function in effect there and every candidate mapping; with 'file' and 'line' returns the line "
+			"actually used (a line without code slides to the next one in its function) and its addresses.";
+		tool.inputSchema = {
+			{"type", "object"},
+			{"properties", {
+				{"platform", {{"type", "string"}}},
+				{"address", {{"type", "integer"}}},
+				{"file", {{"type", "string"}}},
+				{"line", {{"type", "integer"}}}
+			}},
+			{"required", json::array({"platform"})}
+		};
+		tool.handler = [server](const json &params) -> json
+		{
+			string platform = params.value("platform", "c64");
+			json args = json::object();
+			string fn = platform + "/source/location";
+			if (params.contains("file") && params.contains("line"))
+			{
+				fn = platform + "/source/resolve";
+				args["file"] = params["file"];
+				args["line"] = params["line"];
+			}
+			else if (params.contains("address"))
+			{
+				args["address"] = params["address"];
+			}
+			vector<char> *result = server->RunEndpointFunction(fn, "", args, nullptr, 0);
+			if (!result || result->empty()) { delete result; return json::object(); }
+			string raw(result->data(), result->size());
+			delete result;
+			return json::parse(raw, nullptr, false);
+		};
+		RegisterTool(tool);
+	}
+
+	// Source breakpoints (RD-036)
+	{
+		MCPToolDescriptor tool;
+		tool.name = "retro_source_breakpoint";
+		tool.description = "Source breakpoints on the loaded debug info: action 'add' or 'remove' at file:line (path or file name), "
+			"'list' returns each with its resolved line and addresses. A source breakpoint follows reloads and rebuilds; "
+			"one that resolves to nothing stays as an unresolved intent.";
+		tool.inputSchema = {
+			{"type", "object"},
+			{"properties", {
+				{"platform", {{"type", "string"}}},
+				{"action", {{"type", "string"}, {"enum", json::array({"add", "remove", "list"})}}},
+				{"file", {{"type", "string"}}},
+				{"line", {{"type", "integer"}}}
+			}},
+			{"required", json::array({"platform", "action"})}
+		};
+		tool.handler = [server](const json &params) -> json
+		{
+			string platform = params.value("platform", "c64");
+			string action = params.value("action", "list");
+			json args = json::object();
+			if (params.contains("file")) args["file"] = params["file"];
+			if (params.contains("line")) args["line"] = params["line"];
+			string fn = platform + "/source/breakpoint/" + (action == "add" || action == "remove" ? action : string("list"));
+			vector<char> *result = server->RunEndpointFunction(fn, "", args, nullptr, 0);
+			if (!result || result->empty()) { delete result; return json::object(); }
+			string raw(result->data(), result->size());
+			delete result;
+			return json::parse(raw, nullptr, false);
+		};
+		RegisterTool(tool);
+	}
+
+	// Load symbols / debug info by content (RD-036)
+	{
+		MCPToolDescriptor tool;
+		tool.name = "retro_symbols_load";
+		tool.description = "Load a symbols or debug info file into a platform's symbols; the format is decided by the content: "
+			"KickAssembler or cc65 .dbg, Oscar64 .dbj, VICE or 64tass labels. Returns the format, the numbers of files, "
+			"mappings and functions, and stale debug info warnings.";
+		tool.inputSchema = {
+			{"type", "object"},
+			{"properties", {
+				{"platform", {{"type", "string"}}},
+				{"path", {{"type", "string"}}}
+			}},
+			{"required", json::array({"platform", "path"})}
+		};
+		tool.handler = [server](const json &params) -> json
+		{
+			string platform = params.value("platform", "c64");
+			json args = {{"path", params.value("path", "")}};
+			vector<char> *result = server->RunEndpointFunction(platform + "/symbols/load", "", args, nullptr, 0);
+			if (!result || result->empty()) { delete result; return json::object(); }
+			string raw(result->data(), result->size());
+			delete result;
+			return json::parse(raw, nullptr, false);
+		};
+		RegisterTool(tool);
+	}
+
 	// Step out of the current subroutine
 	{
 		MCPToolDescriptor tool;

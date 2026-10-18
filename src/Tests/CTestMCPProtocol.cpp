@@ -1331,7 +1331,37 @@ void CTestMCPProtocol::Run(ITestCallback *cb)
 		}
 	}
 
-	TestCompleted(true, "All MCP protocol tests passed (37/37)");
+	// --- Test 38: RD-036 source tools route to their endpoints with their arguments ---
+	{
+		struct Route { const char *tool; json args; const char *endpoint; json params; };
+		const Route routes[] = {
+			{ "retro_source_location", {{"platform", "c64"}}, "c64/source/location", json::object() },
+			{ "retro_source_location", {{"platform", "nes"}, {"address", 0xC000}}, "nes/source/location", {{"address", 0xC000}} },
+			{ "retro_source_location", {{"platform", "c64"}, {"file", "main.c"}, {"line", 12}}, "c64/source/resolve", {{"file", "main.c"}, {"line", 12}} },
+			{ "retro_source_breakpoint", {{"platform", "c64"}, {"action", "add"}, {"file", "main.c"}, {"line", 11}}, "c64/source/breakpoint/add", {{"file", "main.c"}, {"line", 11}} },
+			{ "retro_source_breakpoint", {{"platform", "atari"}, {"action", "remove"}, {"file", "main.c"}, {"line", 11}}, "atari/source/breakpoint/remove", {{"file", "main.c"}, {"line", 11}} },
+			{ "retro_source_breakpoint", {{"platform", "c64"}, {"action", "list"}}, "c64/source/breakpoint/list", json::object() },
+			{ "retro_symbols_load", {{"platform", "c64"}, {"path", "/tmp/main.dbj"}}, "c64/symbols/load", {{"path", "/tmp/main.dbj"}} },
+		};
+		for (const Route &route : routes)
+		{
+			json payload = {{"ok", true}};
+			CCannedDebuggerServer debuggerServer({{"status", HTTP_OK}, {"result", payload}});
+			CMCPServer server;
+			PrepareToolTestServer(server, debuggerServer);
+			CallTool(server, 38, route.tool, route.args);
+			if (debuggerServer.callCount != 1 || debuggerServer.lastEndpointName != route.endpoint
+				|| debuggerServer.lastParams != route.params)
+			{
+				sprintf(failureMsg, "Test 38 FAIL: %s called %s with %s", route.tool,
+						debuggerServer.lastEndpointName.c_str(), debuggerServer.lastParams.dump().c_str());
+				TestCompleted(false, failureMsg);
+				return;
+			}
+		}
+	}
+
+	TestCompleted(true, "All MCP protocol tests passed (38/38)");
 }
 
 void CTestMCPProtocol::Cancel()

@@ -22,6 +22,9 @@ Use this skill when working with the RetroDebugger MCP server to debug 8-bit pro
 - `retro_watch_list` — list all data watches
 - `retro_machine_state` — platform state (running/paused, PC) — **use this for pre-flight check, not retro_list_platforms**
 - `retro_snapshot_save` — save emulator state (file path)
+- `retro_source_location` — code to source and back on the loaded debug info: with `address`
+  (default: the PC) the file, line and function in effect plus every candidate mapping; with
+  `file` and `line` the line actually used and its addresses
 
 ### Control (changes emulator state)
 - `retro_pause` — pause emulation
@@ -67,6 +70,12 @@ Use this skill when working with the RetroDebugger MCP server to debug 8-bit pro
 - `retro_watch_add` — add data watch at address
 - `retro_watch_remove` — remove data watch
 - `retro_snapshot_load` — restore emulator state from base64 snapshot
+- `retro_source_breakpoint` — source breakpoints (`action`: `add`, `remove` at `file`+`line`;
+  `list`). They follow reloads and rebuilds of the debug info; one on a line without code binds
+  to the next line with code in that function; `resolved:false` means nothing matched yet
+- `retro_symbols_load` — load symbols / debug info by content (KickAssembler or cc65 `.dbg`,
+  Oscar64 `.dbj`, VICE/64tass labels); returns counts and `warnings` for stale debug info
+  (a source edited after the build, or a program and debug file from different builds)
 
 ### Session control (ends the session)
 - `retro_shutdown` — quit RetroDebugger through its normal File > Quit path.
@@ -198,6 +207,18 @@ Call `retro_memory_last_access(platform:"c64", address:1024)` (also `atari800` o
 7. retro_memory_read → inspect relevant memory
 8. retro_step_instruction → step through suspected code
 9. Analyze and report findings
+```
+
+## Workflow: Debug a C program by source line
+
+```
+1. retro_symbols_load(platform:"c64", path:"<build>/main.dbj") → check warnings is empty
+2. retro_source_breakpoint(platform:"c64", action:"add", file:"main.c", line:12)
+3. retro_continue → runs until the line's code is reached
+4. retro_source_location(platform:"c64") → file, line and function at the PC
+5. retro_source_step(platform:"c64", kind:"over") → then kind:"status" until armed is false;
+   reason "completed" is a normal stop, "budget-exceeded" means no mapped line was reached
+   (an endless loop or unmapped code), "frame-exited" means the function returned first
 ```
 
 ## Workflow: Find Game State Variable (e.g. lives counter)

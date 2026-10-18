@@ -1,5 +1,6 @@
 #include "CTestSourceStepping.h"
 #include "CDebugEventsHistory.h"
+#include "CDebuggerApi.h"
 #include "EmulatorsConfig.h"
 #include "CViewC64.h"
 #include "CGuiMain.h"
@@ -318,6 +319,22 @@ bool CTestSourceStepping::RunSourceBreakpoints(CDebugInterfaceVice *di)
 		symbols->RemoveSourceBreakpoint(loaded);
 	ok = ok && !HasPcBreakpoint(symbols, 0x089A) && symbols->sourceBreakpoints.empty();
 	if (!Check(ok, "Source breakpoints save to the breakpoints file as file + line and bind again when it loads"))
+		return false;
+
+	// RD-036: the remote/MCP queries on the same data
+	CDebuggerApi *api = di->GetDebuggerApi();
+	nlohmann::json location = api->GetSourceLocationJson(0x0885);
+	nlohmann::json resolved = api->ResolveSourceLineJson("main.c", 11);
+	nlohmann::json added = api->AddSourceBreakpointJson("main.c", 11);
+	nlohmann::json listed = api->ListSourceBreakpointsJson();
+	bool removedBp = api->RemoveSourceBreakpoint("main.c", 11);
+	ok = location.value("mapped", false) && location.value("line", 0) == 17 && location.value("function", "") == "main"
+		&& location["candidates"].size() >= 1
+		&& resolved.value("resolvedLine", 0) == 12 && resolved["addresses"] == nlohmann::json::array({0x089A})
+		&& added.value("resolved", false) && added.value("resolvedLine", 0) == 12
+		&& listed.size() == 1 && listed[0]["addresses"] == nlohmann::json::array({0x089A})
+		&& removedBp && api->ListSourceBreakpointsJson().empty() && !api->RemoveSourceBreakpoint("main.c", 11);
+	if (!Check(ok, "Remote/MCP queries: $0885 is main.c:17 in main(); main.c:11 resolves to line 12 at $089A; a source breakpoint adds, lists and removes"))
 		return false;
 
 	return CheckStaleDebugInfo();

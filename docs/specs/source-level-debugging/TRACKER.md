@@ -125,7 +125,7 @@ engine `devel` at 5d61f20, unchanged this session.
 | RD-026 | P3 | tests | NES NROM/UxROM/MMC1-or-MMC3 banked fixtures with physical-fetch traces | todo | RD-002, RD-024, RD-025, RD-040 | #3A.6 assertion list green |
 | RD-030 | P3 | tests | C64 + Atari banked suites; shared 3-machine matrix | todo | RD-002, RD-025, RD-028, RD-029 | #3B.4 trace schema produced for every fixture |
 | RD-034 | P0 | ci | **Must fix.** Run headless suite on Linux CI (both log legs) | review(ea99097; local Linux 74/74, 7 skipped) | engine `CPianoKeyboard` fix (merged to engine `devel`, 40c95f8) | `build-linux.yml` runs `tests/run_test.sh --skip-build` under xvfb; AGENTS.md updated |
-| RD-036 | P3 | remote | Remote/MCP: `step/source/*`, `step/out`, `source/location`, `symbols/load`; skill doc | todo | RD-013, RD-031 | `CTestMCPProtocol` extended; `docs/mcp/retrodebugger-mcp-skill.md` updated |
+| RD-036 | P3 | remote | Remote/MCP: `step/source/*`, `step/out`, `source/location`, `symbols/load`; skill doc | review(endpoints `source/step`, `source/step/status`, `step/out` (RD-013/037), `source/location`, `source/resolve`, `source/breakpoint/{add,remove,list}`, `symbols/load`; MCP `retro_source_step`, `retro_step_out`, `retro_source_location`, `retro_source_breakpoint`, `retro_symbols_load`; `MCPProtocol` test 38 routes, `SourceStepping` checks the API on Oscar64 data; skill doc workflow) | RD-013, RD-031 | `CTestMCPProtocol` extended; `docs/mcp/retrodebugger-mcp-skill.md` updated |
 | RD-009 | P2 | compiler | cc65 `.dbg` adapter + contract tests | review(`DebugInfoLoadCc65`; DebugInfoFormats steps 27-35 green on Linux) | RD-002, RD-006, RD-031 | Tier 1 cc65 fixture (C64, Atari, NES where target builds) |
 | RD-010 | P2 | compiler | KickC artifact audit + supported subset | todo | RD-002, RD-006, RD-031 | Capability flags documented; `Approximate` where only line mapping |
 | RD-016 | P4 | compiler | Oscar64 upstream: range coalescing/column export | todo | RD-008 | Upstream PR link; before/after `.dbj` fixture |
@@ -210,6 +210,7 @@ Questions 1, 2, 3, 5, 8 and 10 are answered in spec #15/#20.
 | 2026-10-18 | RD-015: `irq` on the Atari (POKEY timer 1, OS banked out, SKCTL out of init) and the NES (DMC, patched IRQ vector); counts only the trace's IRQs |
 | 2026-10-18 | RD-002: `MATRIX.md` from the committed manifests too, `--matrix-only`; the three M3 fixtures listed |
 | 2026-10-18 | `SourceStepTrace` inserts/unloads NES cartridges through VSync tasks (the Linux CI segfault). macOS suite 83/83 (8 skipped) |
+| 2026-10-18 | RD-036: source location/resolve/breakpoint/symbols-load endpoints and MCP tools (54 tools), skill doc. macOS suite green |
 | 2026-10-18 | Linux CI NES segfault root-caused from the core dump (edfc875 prints it): the memory map thread read a board an insert was deleting; cartridge lifetime lock + `CTestNesCartridge` helper for the five tests. macOS suite 84/84 |
 | 2026-10-18 | M2: source document registry, C/6502 lexers, ImGui source view with gutter and navigation (`SourceDocument`, `source_view_opens_and_scrolls`). macOS suite 84/84; ImGui 12/16, the 4 failures pre-existing (`tests/SKIPPED_TESTS.md`) |
 | 2026-10-18 | RD-013/RD-037: step stops in the events history; RD-014: source breakpoints persisted in the breakpoints file, stale debug info warning. `SourceStepping` 25 steps |
