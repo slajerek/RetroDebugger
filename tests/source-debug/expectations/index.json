@@ -15,6 +15,12 @@
     "oscar64/same-line-nes.json",
     "oscar64/nested-calls-nes.json",
     "oscar64/branches-loops-nes.json",
-    "oscar64/interrupts-nes.json"
+    "oscar64/interrupts-nes.json",
+    "cc65/basic-flow.json",
+    "cc65/basic-flow-atari.json",
+    "cc65/basic-flow-nes.json",
+    "cc65/same-line.json",
+    "cc65/same-line-atari.json",
+    "cc65/same-line-nes.json"
   ]
 }
