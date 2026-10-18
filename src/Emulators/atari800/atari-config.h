@@ -57,6 +57,11 @@
 /* Define to enable DOS style drives support. */
 /* #undef DOS_DRIVES */
 
+/* Built-in AltirraOS/ATBASIC when no OS ROM file is configured: without it
+   the Atari ran with no OS at all (zero vectors, POKEY left in init, no
+   MEMTOP for cc65's C stack). User ROM files still win. */
+#define EMUOS_ALTIRRA 1
+
 /* Define to enable event recording. */
 #ifndef WIN32
 #define EVENT_RECORDING 1
