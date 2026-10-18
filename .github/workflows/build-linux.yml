@@ -42,6 +42,7 @@ jobs:
             cmake \
             nasm \
             xvfb \
+            gdb \
             libheif-dev \
             git \
             libsdl2-dev \
@@ -80,6 +81,9 @@ jobs:
           # unseen. GitHub's Ubuntu runners have no display and no ALSA
           # sequencer: Xvfb provides the GL context, and the engine must not
           # need /dev/snd/seq (CPianoKeyboard used to crash without it).
+          # A crash leaves /tmp/core.<pid>; run_test.sh prints its backtrace
+          # (apport, the runner default, keeps no core for an unpackaged binary).
+          sudo sysctl -w kernel.core_pattern=/tmp/core.%p
           chmod +x ./tests/run_test.sh
           xvfb-run -a -s "-screen 0 1280x800x24" ./tests/run_test.sh --skip-build
 

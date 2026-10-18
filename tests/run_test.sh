@@ -519,6 +519,13 @@ else
     export C64D_IN_SUITE=1
 fi
 
+# Linux: let a crash leave a core, the runner's own core_pattern decides
+# where (CI points it at /tmp/core.<pid>, see build-linux.yml); the backtrace
+# below reads it without slowing the run the way a debugger launch does.
+if [ "$(uname -s)" = "Linux" ]; then
+    ulimit -c unlimited 2>/dev/null || true
+fi
+
 # Launch UNDER lldb when asked: a segfault that reproduces only on the CI
 # runners must produce a backtrace there, not just an exit code. `bt all`
 # prints every thread's frames when the process stops on the signal; without
@@ -625,6 +632,24 @@ else:
 PY_REPORT
     else
         echo "(no crash report found for the failed run; exit status $APP_STATUS)"
+    fi
+fi
+
+# Linux counterpart: every thread's frames from the core the crash left.
+if [ "$APP_STATUS" != "0" ] && [ "$TIMED_OUT" = false ] && [ "$(uname -s)" = "Linux" ]; then
+    CORE_FILE=""
+    for _ in 1 2 3 4 5; do
+        CORE_FILE=$( { ls -t /tmp/core.* "$PROJECT_DIR"/core* 2>/dev/null || true; } | head -1 )
+        [ -n "$CORE_FILE" ] && break
+        sleep 1
+    done
+    if [ -n "$CORE_FILE" ] && command -v gdb >/dev/null 2>&1; then
+        echo "=== Core found: $CORE_FILE (app exit status $APP_STATUS) ==="
+        gdb -batch -nx -ex "info signals SIGSEGV" -ex "thread apply all bt 40" \
+            "$APP_BINARY" "$CORE_FILE" 2>&1 | grep -v "^warning:" || true
+    else
+        echo "(no core or no gdb for the failed run; exit status $APP_STATUS," \
+             "core_pattern: $(cat /proc/sys/kernel/core_pattern 2>/dev/null))"
     fi
 fi
 
