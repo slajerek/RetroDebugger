@@ -1786,6 +1786,7 @@ add_executable(retrodebugger
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Tools/CSnapshotsManager.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Tools/CTimelineNavigation.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Tools/CDrive1541Control.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Tools/CDrive1541Target.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Tools/C64SettingsStorage.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Tools/C64DUiScale.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Tools/C64KeyMap.cpp"

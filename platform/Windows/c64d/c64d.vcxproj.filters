@@ -7189,6 +7189,9 @@
     <ClInclude Include="..\..\..\src\Tools\CDrive1541Control.h">
       <Filter>Source Files\src\Tools</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\src\Tools\CDrive1541Target.h">
+      <Filter>Source Files\src\Tools</Filter>
+    </ClInclude>
     <ClInclude Include="..\..\..\src\Tools\64tass\64tass-encoding.h">
       <Filter>Source Files\src\Tools\64tass</Filter>
     </ClInclude>
