@@ -1,0 +1,76 @@
+{
+  "buildDir": "/tmp/rd-source-debug/cc65/atari/interrupts",
+  "commit": null,
+  "fixedMtime": 1767225600,
+  "fixture": "interrupts",
+  "inputs": {
+    "main.c": "ea2ba8a2c970d923eb8f0c5a24bfb9a4753bdad09cca503dc52ea76e35f2fd33"
+  },
+  "machine": "atari",
+  "outputs": {
+    "main.dbg": {
+      "sha256": "24ec6c69262663d60a7d1fa60de27882c2679d012af52f6f14c0c6ee378629ff",
+      "size": 128239
+    },
+    "main.lbl": {
+      "sha256": "f5e22161b6cb6f91356a9847f0b40574ded407c99959c04204411c1d591d7157",
+      "size": 1765
+    },
+    "main.map": {
+      "sha256": "75647afa358d277ec7853dfd8a6028c296eaaeb521dbbeed1258407bdc39b50e",
+      "size": 9042
+    },
+    "main.s": {
+      "sha256": "e9343414e341e52a37d936fc5e040b0018e4409defa66df42e347b2192207d51",
+      "size": 2154
+    },
+    "main.xex": {
+      "sha256": "4fe5c5b03679397fb5323ee3e9fc5a3960ebc7d321a9eb99afa321d4ff4c6869",
+      "size": 606
+    }
+  },
+  "source": "main.c",
+  "steps": [
+    [
+      "cc65",
+      "-t",
+      "atari",
+      "-g",
+      "main.c"
+    ],
+    [
+      "ca65",
+      "-t",
+      "atari",
+      "-g",
+      "main.s"
+    ],
+    [
+      "ld65",
+      "-t",
+      "atari",
+      "--dbgfile",
+      "main.dbg",
+      "-Ln",
+      "main.lbl",
+      "-m",
+      "main.map",
+      "-o",
+      "main.xex",
+      "main.o",
+      "atari.lib"
+    ]
+  ],
+  "toolDirs": {
+    "ca65": "/opt/homebrew/Cellar/cc65/2.19/bin",
+    "cc65": "/opt/homebrew/Cellar/cc65/2.19/bin",
+    "ld65": "/opt/homebrew/Cellar/cc65/2.19/bin"
+  },
+  "toolchain": "cc65",
+  "version": "2.19",
+  "versionReported": {
+    "ca65": "ca65 V2.18 - N/A (/opt/homebrew/Cellar/cc65/2.19/bin)",
+    "cc65": "cc65 V2.18 - N/A (/opt/homebrew/Cellar/cc65/2.19/bin)",
+    "ld65": "ld65 V2.18 - N/A (/opt/homebrew/Cellar/cc65/2.19/bin)"
+  }
+}

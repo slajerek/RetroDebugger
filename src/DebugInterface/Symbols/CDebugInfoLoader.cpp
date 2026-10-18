@@ -237,8 +237,14 @@ static void LoadSourceTextFor(CDebugSourceFile *sourceFile, const CDebugInfoLoad
 		return;
 	if (LoadSourceText(sourceFile, path))
 		return;
-	if (!options.debugFileDir.empty() && !sourceFile->fileName.empty())
-		LoadSourceText(sourceFile, options.debugFileDir + "/" + sourceFile->fileName);
+	if (!options.debugFileDir.empty() && !sourceFile->fileName.empty()
+		&& LoadSourceText(sourceFile, options.debugFileDir + "/" + sourceFile->fileName))
+		return;
+	for (const std::string &root : options.sourceRoots)
+	{
+		if (!root.empty() && !sourceFile->fileName.empty() && LoadSourceText(sourceFile, root + "/" + sourceFile->fileName))
+			return;
+	}
 }
 
 static std::string ToStd(CSlrString *str)
@@ -770,6 +776,7 @@ bool DebugInfoLoadOscar64(CDebugSymbols *symbols, CByteBuffer *byteBuffer, const
 		function.regionId = regionId;
 		function.fileId = fileIdFor(f["source"].to_string());
 		function.line = (i32)f["line"].to_int64();
+		function.lineIsDefinition = true;	// Oscar64 records the definition line
 		if (function.start >= (u32)maxAddress)
 		{
 			LOGError("DebugInfoLoadOscar64: %s at %x is out of memory range", function.name.c_str(), function.start);
@@ -925,6 +932,46 @@ static bool IsCc65GeneratedLabel(const std::string &name)
 	return true;
 }
 
+// cc65 records no definition line. From the line mapped at a function's
+// entry upwards, the first line naming the function before a '(' and without
+// a ';' (not a call statement); the entry line when the text is missing or
+// nothing matches within 50 lines.
+static i32 Cc65DefinitionLine(const CDebugSourceFile *file, const std::string &name, i32 entryLine, bool *found)
+{
+	*found = false;
+	if (file == NULL || name.empty())
+		return entryLine;
+	for (i32 line = entryLine; line >= 1 && line > entryLine - 50; line--)
+	{
+		if (line >= (i32)file->lines.size() || file->lines[line] == NULL)
+			continue;
+		char *text = file->lines[line]->GetStdASCII();
+		std::string s(text);
+		delete [] text;
+		size_t at = s.find(name);
+		bool named = false;
+		while (at != std::string::npos)
+		{
+			size_t after = at + name.size();
+			while (after < s.size() && s[after] == ' ')
+				after++;
+			bool wordStart = (at == 0 || !(isalnum((unsigned char)s[at - 1]) || s[at - 1] == '_'));
+			if (wordStart && after < s.size() && s[after] == '(')
+			{
+				named = true;
+				break;
+			}
+			at = s.find(name, at + 1);
+		}
+		if (named && s.find(';') == std::string::npos)
+		{
+			*found = true;
+			return line;
+		}
+	}
+	return entryLine;
+}
+
 bool DebugInfoLoadCc65(CDebugSymbols *symbols, CByteBuffer *byteBuffer, const CDebugInfoLoadOptions &options)
 {
 	std::map<long, Cc65Record> files, segs, spans, scopes, syms;
@@ -971,6 +1018,9 @@ bool DebugInfoLoadCc65(CDebugSymbols *symbols, CByteBuffer *byteBuffer, const CD
 
 	for (auto &it : files)
 		database->AddFile((u32)it.first, it.second.Get("name"));
+	// the text now: function definition lines below are found in it
+	for (auto &it : database->Files())
+		LoadSourceTextFor(it.second, options);
 
 	// address range of a span: segment start + span start, size bytes
 	auto spanRange = [&](long spanId, u32 &start, u32 &end) -> bool {
@@ -1047,12 +1097,15 @@ bool DebugInfoLoadCc65(CDebugSymbols *symbols, CByteBuffer *byteBuffer, const CD
 			}
 			if (!any)
 				continue;
-			// the function's line: the C line mapped at its entry, when there is one
+			// the function's line: the C line mapped at its entry, when there is
+			// one -- the definition line when cc65 maps the prologue there, the
+			// first statement when the function has no prologue; the text decides
 			auto entry = cLineAtAddress.find(function.start);
 			if (entry != cLineAtAddress.end())
 			{
 				function.fileId = entry->second.first;
-				function.line = entry->second.second;
+				function.line = Cc65DefinitionLine(database->GetFile(function.fileId), function.name, entry->second.second,
+												   &function.lineIsDefinition);
 			}
 			database->AddFunction(function);
 		}
@@ -1071,8 +1124,7 @@ bool DebugInfoLoadCc65(CDebugSymbols *symbols, CByteBuffer *byteBuffer, const CD
 			labels.push_back(Label{ (u32)value, name });
 	}
 
-	for (auto &it : database->Files())
-		LoadSourceTextFor(it.second, options);
+	// (source text was loaded before the functions, for their definition lines)
 	database->Finalize();
 
 	guiMain->LockMutex();

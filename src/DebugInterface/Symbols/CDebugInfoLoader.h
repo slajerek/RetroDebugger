@@ -31,11 +31,13 @@ const char *DebugInfoFormatName(DebugInfoFormat format);
 // looked up (1) through each remap rule whose FROM prefixes its recorded path
 // (FROM replaced by TO: a build directory that moved, another machine's
 // checkout), (2) a relative recorded path against debugFileDir, (3) at its
-// recorded path, (4) by file name in debugFileDir.
+// recorded path, (4) by file name in debugFileDir, (5) by file name in each
+// of sourceRoots.
 struct CDebugInfoLoadOptions
 {
 	std::string debugFileDir;
 	std::vector<std::pair<std::string, std::string>> pathRemaps;
+	std::vector<std::string> sourceRoots;
 };
 
 // Decides the format from the first bytes of a file.

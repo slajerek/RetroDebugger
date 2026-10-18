@@ -18,7 +18,9 @@ Executables are looked up, in order: the toolchain's environment variable
 (e.g. RD_OSCAR64), each `candidates` entry under --tool-dir (or $RD_TOOL_DIR),
 then each candidate on PATH. A toolchain whose executable is missing or whose
 version does not match its pin is reported as skipped, never built with
-whatever happens to be installed.
+whatever happens to be installed. `version_path_match` accepts a build whose
+version text is wrong when its resolved path names the version (Homebrew's
+cc65 2.19 prints "V2.18 - N/A" from .../Cellar/cc65/2.19/bin).
 
 Reproducibility: each cell builds in the fixed directory
 /tmp/rd-source-debug/<toolchain>/<machine>/<fixture> with every input's mtime
@@ -128,6 +130,13 @@ def resolve_toolchain(tc, tool_dir):
         except (OSError, subprocess.TimeoutExpired) as e:
             return None, None, "%s version check failed: %s" % (name, e)
         line = next((l.strip() for l in text.splitlines() if spec["version_match"] in l), None)
+        if line is None and spec.get("version_path_match"):
+            # a build that reports a wrong number (upstream cc65 2.19 prints
+            # V2.18) is accepted from an install directory naming the version
+            real = os.path.realpath(exes[name])
+            if spec["version_path_match"] in real:
+                first = next((l.strip() for l in text.splitlines() if l.strip()), "")
+                line = "%s (%s)" % (first, os.path.dirname(real))
         if line is None:
             return None, None, "%s is not version %s" % (name, spec["version_match"])
         versions[name] = line

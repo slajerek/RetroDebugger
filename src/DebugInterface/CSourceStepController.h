@@ -17,7 +17,9 @@
 //    of a mapped range of another line, or at the start of the starting
 //    line's own range again (a loop iteration);
 //  - Into: as Over, but also stop at the start of a mapped range in any
-//    deeper frame (a callee with source; unmapped helpers run through);
+//    deeper frame (a callee with source; unmapped helpers run through),
+//    except on the callee's definition line when it has a body line after
+//    it: the prologue runs to the first statement (cc65 maps it there);
 //  - Over/Into whose starting frame returns first: FrameExited, at the
 //    caller.
 // Unmapped code in the starting frame keeps running until the budget, which
@@ -91,6 +93,7 @@ public:
 private:
 	void Finish(SourceStepStopReason reason, u16 pc, const CDebugSourceMapping *location);
 	bool IsStartStatement(const CDebugSourceMapping *location) const;
+	bool IsPrologue(const CDebugSourceMapping *location, u16 pc) const;
 
 	std::atomic<bool> armed;
 	SourceStepKind kind;

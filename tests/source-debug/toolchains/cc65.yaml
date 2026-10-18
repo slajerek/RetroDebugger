@@ -2,23 +2,26 @@
 name: cc65
 language: c
 version: "2.19"
-obtain: "Ubuntu 24.04 package cc65 2.19-1 (apt-get install cc65); the tools report V2.18 - Ubuntu 2.19-1"
+obtain: "Ubuntu 24.04 package cc65 2.19-1 (apt-get install cc65; the tools report V2.18 - Ubuntu 2.19-1) or Homebrew cc65 2.19 (reports V2.18 - N/A; accepted by its Cellar path)"
 executables:
   cc65:
     env: RD_CC65
     candidates: [cc65]
     version_argv: ["{cc65}", "-V"]
     version_match: "2.19"
+    version_path_match: "/cc65/2.19/"
   ca65:
     env: RD_CA65
     candidates: [ca65]
     version_argv: ["{ca65}", "-V"]
     version_match: "2.19"
+    version_path_match: "/cc65/2.19/"
   ld65:
     env: RD_LD65
     candidates: [ld65]
     version_argv: ["{ld65}", "-V"]
     version_match: "2.19"
+    version_path_match: "/cc65/2.19/"
 # Compiler, assembler and linker as separate steps (what cl65 does in one), so
 # the intermediate main.s gets a pinned mtime before ca65 records it. No -O:
 # unoptimized. -g carries C line info through ca65 into ld65's --dbgfile,

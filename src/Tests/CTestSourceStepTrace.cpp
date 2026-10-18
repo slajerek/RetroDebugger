@@ -145,7 +145,9 @@ static u16 InterruptCounterAddress(const std::string &machine)
 {
 	if (machine == "atari")	return 0x06F0;	// page 6, free for the user
 	if (machine == "nes")	return 0x04F0;	// RAM neither Oscar64 nor cc65 places anything in
-	return 0x0002;
+	// not zero page: cc65 keeps its C stack pointer at $02/$03, and an IRQ
+	// counting there corrupted every local and argument (RD-015)
+	return 0x02A7;	// C64: $02A7-$02FF are unused by the KERNAL and both compilers
 }
 
 static bool WaitForPause(CDebugInterface *di, int timeoutMs)
@@ -368,7 +370,9 @@ bool CTestSourceStepTrace::LaunchC64(CDebugInterface *debugInterface, const json
 	{
 		const json &irq = trace["irq"];
 		int cycles = irq.value("timerCycles", 150);
-		std::vector<u8> handler = { 0xE6, 0x02, 0xD0, 0x02, 0xE6, 0x03 };	// 16-bit counter at $02
+		u16 counter = InterruptCounterAddress("c64");
+		std::vector<u8> handler = { 0xEE, (u8)(counter & 0xFF), (u8)(counter >> 8), 0xD0, 0x03,	// 16-bit counter
+									0xEE, (u8)((counter + 1) & 0xFF), (u8)((counter + 1) >> 8) };
 		if (irq.contains("call"))
 		{
 			std::string callee = irq["call"].get<std::string>();
@@ -389,8 +393,7 @@ bool CTestSourceStepTrace::LaunchC64(CDebugInterface *debugInterface, const json
 	setup.insert(setup.end(), { 0x4C, (u8)(entry & 0xFF), (u8)(entry >> 8) });
 	for (size_t i = 0; i < setup.size(); i++)
 		di->SetByteToRamC64((u16)(0xC060 + i), setup[i]);
-	di->SetByteToRamC64(0x0002, 0);
-	di->SetByteToRamC64(0x0003, 0);
+	Poke(di, InterruptCounterAddress("c64"), { 0, 0 });
 	di->MakeJmpC64(0xC060);
 	return true;
 }
@@ -476,11 +479,11 @@ bool CTestSourceStepTrace::LaunchNes(CDebugInterface *di, const json &trace, con
 // handler saves A/X/Y, counts itself, calls the "call" function and
 // acknowledges.
 //  - Atari: POKEY timer 1 at 1.79 MHz (period AUDF1 + 4 cycles), handler at
-//    $0600. Without the OS: a build has no OS ROM unless the user supplies
-//    one (EMUOS_ALTIRRA is not defined, so no built-in AltirraOS), so the OS
-//    is banked out through PORTB (XL/XE) and the CPU vectors at $FFFA-$FFFF
-//    are RAM: IRQ to the handler, NMI to an RTI at $063F. Nor did an OS take
-//    POKEY out of its init state: SKCTL 0 stops the timers, so the stub sets 3.
+//    $0600. The OS (AltirraOS without user ROMs) is banked out through PORTB
+//    (XL/XE), so the CPU vectors at $FFFA-$FFFF are RAM the test owns: IRQ to
+//    the handler, NMI to an RTI at $063F, no OS dispatch in between. The stub
+//    sets SKCTL 3 itself, so it does not depend on the OS having taken POKEY
+//    out of its init state (SKCTL 0 stops the timers).
 //  - NES: the DMC, one byte sample at the fastest rate, refilled from the
 //    handler at $0400 (the cartridge copy's IRQ vector); frame IRQ off. The
 //    period is 8 x 54 = 432 cycles whatever timerCycles says.
@@ -643,8 +646,11 @@ bool CTestSourceStepTrace::RunTrace(const std::string &path)
 	di->UnlockMutex();
 	guiMain->UnlockMutex();
 
+	// the fixture's sources: the artifacts hold only what the build wrote
 	std::string debugInfo = dir + "/" + trace.value("debugInfo", "");
-	DebugInfoLoadFile(scratch, debugInfo.c_str());
+	CDebugInfoLoadOptions loadOptions;
+	loadOptions.sourceRoots.push_back(ResolveProjectPath(("tests/source-debug/fixtures/" + trace.value("fixture", "")).c_str()));
+	DebugInfoLoadFile(scratch, debugInfo.c_str(), loadOptions);
 	std::shared_ptr<const CDebugDatabase> database = scratch->debugDatabase;
 	if (!Check(database && scratch->currentSegment && scratch->currentSegment->debugRegionId >= 0,
 			   name + ": " + trace.value("debugInfo", "") + " loads with a region for the current segment"))

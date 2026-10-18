@@ -84,7 +84,8 @@ struct CDebugFunction
 	u32 end = 0;
 	u32 regionId = 0;
 	u32 fileId = 0;
-	i32 line = 0;			// line of the definition
+	i32 line = 0;			// line of the definition (or of the entry when unknown)
+	bool lineIsDefinition = false;	// the producer or the source text said so
 };
 
 struct CDebugSourceMapping

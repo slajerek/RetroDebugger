@@ -1,0 +1,190 @@
+{
+  "fixture": "nested-calls",
+  "compiler": "cc65",
+  "optimization": "debug",
+  "machine": "nes",
+  "artifacts": "tests/data/source-debug/cc65/nes/nested-calls",
+  "binary": "main.nes",
+  "debugInfo": "main.dbg",
+  "start": {
+    "file": "main.c",
+    "line": 22
+  },
+  "steps": [
+    {
+      "action": "sourceInto",
+      "expected": {
+        "file": "main.c",
+        "line": 18,
+        "function": "top",
+        "depth": 1
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceInto",
+      "expected": {
+        "file": "main.c",
+        "line": 13,
+        "function": "middle",
+        "depth": 2
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceInto",
+      "expected": {
+        "file": "main.c",
+        "line": 9,
+        "function": "leaf",
+        "depth": 3
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceOut",
+      "expected": {
+        "file": "main.c",
+        "line": 13,
+        "function": "middle",
+        "depth": 2
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceOver",
+      "expected": {
+        "file": "main.c",
+        "line": 14,
+        "function": "middle",
+        "depth": 2
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceInto",
+      "note": "no tail call in cc65: return leaf(w) calls leaf one level deeper (Oscar64 jumps)",
+      "expected": {
+        "file": "main.c",
+        "line": 9,
+        "function": "leaf",
+        "depth": 3
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceOut",
+      "note": "back in middle(): the rest of line 14 after the call",
+      "expected": {
+        "file": "main.c",
+        "line": 14,
+        "function": "middle",
+        "depth": 2
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceOut",
+      "expected": {
+        "file": "main.c",
+        "line": 18,
+        "function": "top",
+        "depth": 1
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceOver",
+      "note": "the epilogue of top()",
+      "expected": {
+        "file": "main.c",
+        "line": 19,
+        "function": "top",
+        "depth": 1
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceOver",
+      "expected": {
+        "file": "main.c",
+        "line": 22,
+        "function": "main",
+        "depth": 0
+      },
+      "expectedReason": "frame-exited"
+    },
+    {
+      "action": "sourceOver",
+      "expected": {
+        "file": "main.c",
+        "line": 23,
+        "function": "main",
+        "depth": 0
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceInto",
+      "expected": {
+        "file": "main.c",
+        "line": 9,
+        "function": "leaf",
+        "depth": 1
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceOut",
+      "expected": {
+        "file": "main.c",
+        "line": 23,
+        "function": "main",
+        "depth": 0
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceInto",
+      "expected": {
+        "file": "main.c",
+        "line": 9,
+        "function": "leaf",
+        "depth": 1
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceOut",
+      "expected": {
+        "file": "main.c",
+        "line": 23,
+        "function": "main",
+        "depth": 0
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceOver",
+      "expected": {
+        "file": "main.c",
+        "line": 24,
+        "function": "main",
+        "depth": 0
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceOver",
+      "note": "for (;;) is mapped code: one stop per iteration",
+      "expected": {
+        "file": "main.c",
+        "line": 24,
+        "function": "main",
+        "depth": 0
+      },
+      "expectedReason": "completed"
+    }
+  ],
+  "note": "cc65 2.19: no tail calls; each function's epilogue maps to its closing brace"
+}

@@ -21,6 +21,15 @@
     "cc65/basic-flow-nes.json",
     "cc65/same-line.json",
     "cc65/same-line-atari.json",
-    "cc65/same-line-nes.json"
+    "cc65/same-line-nes.json",
+    "cc65/nested-calls.json",
+    "cc65/nested-calls-atari.json",
+    "cc65/nested-calls-nes.json",
+    "cc65/branches-loops.json",
+    "cc65/branches-loops-atari.json",
+    "cc65/branches-loops-nes.json",
+    "cc65/interrupts.json",
+    "cc65/interrupts-atari.json",
+    "cc65/interrupts-nes.json"
   ]
 }

@@ -1,0 +1,121 @@
+{
+  "fixture": "interrupts",
+  "compiler": "cc65",
+  "optimization": "debug",
+  "machine": "nes",
+  "artifacts": "tests/data/source-debug/cc65/nes/interrupts",
+  "binary": "main.nes",
+  "debugInfo": "main.dbg",
+  "irq": {
+    "call": "tick"
+  },
+  "start": {
+    "file": "main.c",
+    "line": 21
+  },
+  "steps": [
+    {
+      "action": "sourceOver",
+      "expected": {
+        "file": "main.c",
+        "line": 22,
+        "function": "main",
+        "depth": 0
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceOver",
+      "expected": {
+        "file": "main.c",
+        "line": 23,
+        "function": "main",
+        "depth": 0
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceInto",
+      "expected": {
+        "file": "main.c",
+        "line": 16,
+        "function": "work",
+        "depth": 1
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceOver",
+      "expected": {
+        "file": "main.c",
+        "line": 17,
+        "function": "work",
+        "depth": 1
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceOut",
+      "expected": {
+        "file": "main.c",
+        "line": 24,
+        "function": "main",
+        "depth": 0
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceInto",
+      "expected": {
+        "file": "main.c",
+        "line": 16,
+        "function": "work",
+        "depth": 1
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceOver",
+      "expected": {
+        "file": "main.c",
+        "line": 17,
+        "function": "work",
+        "depth": 1
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceOver",
+      "expected": {
+        "file": "main.c",
+        "line": 18,
+        "function": "work",
+        "depth": 1
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceOver",
+      "note": "work() returns into main; for (;;) is mapped code in cc65",
+      "expected": {
+        "file": "main.c",
+        "line": 25,
+        "function": "main",
+        "depth": 0
+      },
+      "expectedReason": "frame-exited"
+    },
+    {
+      "action": "sourceOver",
+      "note": "one stop per iteration of the mapped loop",
+      "expected": {
+        "file": "main.c",
+        "line": 25,
+        "function": "main",
+        "depth": 0
+      },
+      "expectedReason": "completed"
+    }
+  ],
+  "note": "cc65 2.19: tick() takes no arguments, so the interrupt handler can call it without touching the C stack; for (;;) is mapped code"
+}

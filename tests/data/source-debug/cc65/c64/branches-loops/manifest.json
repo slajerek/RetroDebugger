@@ -1,0 +1,76 @@
+{
+  "buildDir": "/tmp/rd-source-debug/cc65/c64/branches-loops",
+  "commit": null,
+  "fixedMtime": 1767225600,
+  "fixture": "branches-loops",
+  "inputs": {
+    "main.c": "1b233cca00be417d7abf18ec2446954ea62ee538fae42ec2695f3033a5c6f579"
+  },
+  "machine": "c64",
+  "outputs": {
+    "main.dbg": {
+      "sha256": "ff894eba33fa523a1c889cfa3ee89e594f003d5170910f2de86cd0d485a33991",
+      "size": 33387
+    },
+    "main.lbl": {
+      "sha256": "ab2172de0ff7eac73afa0281aacbcdbef9eacdb9bcf709c3a8e6c054200572fc",
+      "size": 2493
+    },
+    "main.map": {
+      "sha256": "0809d2e7954f73201b9be5ef0cdb854cb2c5147b0581eef7724bfce1217a7059",
+      "size": 9349
+    },
+    "main.prg": {
+      "sha256": "8d928bdd669d55dfa1ac6080ecea754efacd15430e9c5ce22be7c8b5f3633508",
+      "size": 612
+    },
+    "main.s": {
+      "sha256": "66c172f8ef968975b8fa8212d2491db234db798d812be53281cc83f242ee8eef",
+      "size": 3092
+    }
+  },
+  "source": "main.c",
+  "steps": [
+    [
+      "cc65",
+      "-t",
+      "c64",
+      "-g",
+      "main.c"
+    ],
+    [
+      "ca65",
+      "-t",
+      "c64",
+      "-g",
+      "main.s"
+    ],
+    [
+      "ld65",
+      "-t",
+      "c64",
+      "--dbgfile",
+      "main.dbg",
+      "-Ln",
+      "main.lbl",
+      "-m",
+      "main.map",
+      "-o",
+      "main.prg",
+      "main.o",
+      "c64.lib"
+    ]
+  ],
+  "toolDirs": {
+    "ca65": "/opt/homebrew/Cellar/cc65/2.19/bin",
+    "cc65": "/opt/homebrew/Cellar/cc65/2.19/bin",
+    "ld65": "/opt/homebrew/Cellar/cc65/2.19/bin"
+  },
+  "toolchain": "cc65",
+  "version": "2.19",
+  "versionReported": {
+    "ca65": "ca65 V2.18 - N/A (/opt/homebrew/Cellar/cc65/2.19/bin)",
+    "cc65": "cc65 V2.18 - N/A (/opt/homebrew/Cellar/cc65/2.19/bin)",
+    "ld65": "ld65 V2.18 - N/A (/opt/homebrew/Cellar/cc65/2.19/bin)"
+  }
+}

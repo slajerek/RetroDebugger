@@ -1,0 +1,167 @@
+Modules list:
+-------------
+main.o:
+    CODE              Offs=000000  Size=00006B  Align=00001  Fill=0000
+    BSS               Offs=000000  Size=000001  Align=00001  Fill=0000
+/opt/homebrew/Cellar/cc65/2.19/share/cc65/lib/nes.lib(callmain.o):
+    CODE              Offs=00006B  Size=000017  Align=00001  Fill=0000
+    DATA              Offs=000000  Size=000004  Align=00001  Fill=0000
+/opt/homebrew/Cellar/cc65/2.19/share/cc65/lib/nes.lib(condes.o):
+    CODE              Offs=000082  Size=00000C  Align=00001  Fill=0000
+    DATA              Offs=000004  Size=000025  Align=00001  Fill=0000
+    ONCE              Offs=000000  Size=00000C  Align=00001  Fill=0000
+/opt/homebrew/Cellar/cc65/2.19/share/cc65/lib/nes.lib(copydata.o):
+    CODE              Offs=00008E  Size=00002D  Align=00001  Fill=0000
+/opt/homebrew/Cellar/cc65/2.19/share/cc65/lib/nes.lib(crt0.o):
+    HEADER            Offs=000000  Size=000010  Align=00001  Fill=0000
+    STARTUP           Offs=000000  Size=00005D  Align=00001  Fill=0000
+    VECTORS           Offs=000000  Size=000006  Align=00001  Fill=0000
+/opt/homebrew/Cellar/cc65/2.19/share/cc65/lib/nes.lib(incax1.o):
+    CODE              Offs=0000BB  Size=000007  Align=00001  Fill=0000
+/opt/homebrew/Cellar/cc65/2.19/share/cc65/lib/nes.lib(incsp1.o):
+    CODE              Offs=0000C2  Size=000007  Align=00001  Fill=0000
+/opt/homebrew/Cellar/cc65/2.19/share/cc65/lib/nes.lib(incsp2.o):
+    CODE              Offs=0000C9  Size=000016  Align=00001  Fill=0000
+/opt/homebrew/Cellar/cc65/2.19/share/cc65/lib/nes.lib(neschar.o):
+    CHARS             Offs=000000  Size=001000  Align=00001  Fill=0000
+/opt/homebrew/Cellar/cc65/2.19/share/cc65/lib/nes.lib(ppubuf.o):
+    CODE              Offs=0000DF  Size=0000B0  Align=00001  Fill=0000
+    BSS               Offs=000001  Size=000001  Align=00001  Fill=0000
+/opt/homebrew/Cellar/cc65/2.19/share/cc65/lib/nes.lib(pusha.o):
+    CODE              Offs=00018F  Size=000016  Align=00001  Fill=0000
+/opt/homebrew/Cellar/cc65/2.19/share/cc65/lib/nes.lib(pushax.o):
+    CODE              Offs=0001A5  Size=00001A  Align=00001  Fill=0000
+/opt/homebrew/Cellar/cc65/2.19/share/cc65/lib/nes.lib(zerobss.o):
+    CODE              Offs=0001BF  Size=000023  Align=00001  Fill=0000
+/opt/homebrew/Cellar/cc65/2.19/share/cc65/lib/nes.lib(zeropage.o):
+    ZEROPAGE          Offs=000000  Size=00001A  Align=00001  Fill=0000
+
+
+Segment list:
+-------------
+Name                   Start     End    Size  Align
+----------------------------------------------------
+CHARS                 000000  000FFF  001000  00001
+HEADER                000000  00000F  000010  00001
+ZEROPAGE              000002  00001B  00001A  00001
+DATA                  006000  006028  000029  00001
+BSS                   006029  00602A  000002  00001
+STARTUP               008000  00805C  00005D  00001
+ONCE                  00805D  008068  00000C  00001
+CODE                  008069  00824A  0001E2  00001
+VECTORS               00FFFA  00FFFF  000006  00001
+
+
+Exports list by name:
+---------------------
+NESfont                   000000 RLA    __BSS_RUN__               006029 RLA    
+__BSS_SIZE__              000002 REA    __CONSTRUCTOR_COUNT__     000000 REA    
+__CONSTRUCTOR_TABLE__     008069 RLA    __DATA_LOAD__             00824B RLA    
+__DATA_RUN__              006000 RLA    __DATA_SIZE__             000029 REA    
+__DESTRUCTOR_COUNT__      000000 REA    __DESTRUCTOR_TABLE__      00824B RLA    
+__SRAM_SIZE__             000300 REA    __SRAM_START__            000500 RLA    
+__STACKSIZE__             000300 REA    __STARTUP__               000001 REA    
+_main                     0080AF RLA    callmain                  0080D4 RLA    
+copydata                  0080F7 RLA    donelib                   0080EB RLA    
+incax1                    008124 RLA    incsp1                    00812B RLA    
+incsp2                    00813A RLA    initlib                   00805D RLA    
+ppubuf_flush              008174 RLA    ptr1                      00000A RLZ    
+ptr2                      00000C RLZ    pusha                     0081FC RLA    
+pushax                    008212 RLA    sp                        000002 RLZ    
+tmp1                      000012 RLZ    zerobss                   008228 RLA    
+
+
+
+Exports list by value:
+----------------------
+__CONSTRUCTOR_COUNT__     000000 REA    NESfont                   000000 RLA    
+__DESTRUCTOR_COUNT__      000000 REA    __STARTUP__               000001 REA    
+__BSS_SIZE__              000002 REA    sp                        000002 RLZ    
+ptr1                      00000A RLZ    ptr2                      00000C RLZ    
+tmp1                      000012 RLZ    __DATA_SIZE__             000029 REA    
+__SRAM_SIZE__             000300 REA    __STACKSIZE__             000300 REA    
+__SRAM_START__            000500 RLA    __DATA_RUN__              006000 RLA    
+__BSS_RUN__               006029 RLA    initlib                   00805D RLA    
+__CONSTRUCTOR_TABLE__     008069 RLA    _main                     0080AF RLA    
+callmain                  0080D4 RLA    donelib                   0080EB RLA    
+copydata                  0080F7 RLA    incax1                    008124 RLA    
+incsp1                    00812B RLA    incsp2                    00813A RLA    
+ppubuf_flush              008174 RLA    pusha                     0081FC RLA    
+pushax                    008212 RLA    zerobss                   008228 RLA    
+__DESTRUCTOR_TABLE__      00824B RLA    __DATA_LOAD__             00824B RLA    
+
+
+
+Imports list:
+-------------
+NESfont (neschar.o):
+    crt0.o                    nes/crt0.s(26)
+__BSS_RUN__ ([linker generated]):
+    zerobss.o                 common/zerobss.s(8)
+__BSS_SIZE__ ([linker generated]):
+    zerobss.o                 common/zerobss.s(8)
+__CONSTRUCTOR_COUNT__ ([linker generated]):
+    condes.o                  runtime/condes.s(18)
+__CONSTRUCTOR_TABLE__ ([linker generated]):
+    condes.o                  runtime/condes.s(18)
+__DATA_LOAD__ ([linker generated]):
+    copydata.o                common/copydata.s(8)
+__DATA_RUN__ ([linker generated]):
+    copydata.o                common/copydata.s(8)
+__DATA_SIZE__ ([linker generated]):
+    copydata.o                common/copydata.s(8)
+__DESTRUCTOR_COUNT__ ([linker generated]):
+    condes.o                  runtime/condes.s(19)
+__DESTRUCTOR_TABLE__ ([linker generated]):
+    condes.o                  runtime/condes.s(19)
+__SRAM_SIZE__ ([linker generated]):
+    crt0.o                    nes/crt0.s(17)
+__SRAM_START__ ([linker generated]):
+    crt0.o                    nes/crt0.s(17)
+__STACKSIZE__ ([linker generated]):
+    [linker generated]        /opt/homebrew/Cellar/cc65/2.19/share/cc65/cfg/nes.cfg(27)
+__STARTUP__ (crt0.o):
+    main.o                    main.s(14)
+_main (main.o):
+    callmain.o                runtime/callmain.s(11)
+callmain (callmain.o):
+    crt0.o                    nes/crt0.s(11)
+copydata (copydata.o):
+    crt0.o                    nes/crt0.s(12)
+donelib (condes.o):
+    crt0.o                    nes/crt0.s(11)
+incax1 (incax1.o):
+    main.o                    main.s(151)
+    main.o                    main.s(151)
+incsp1 (incsp1.o):
+    main.o                    main.s(151)
+    main.o                    main.s(151)
+incsp2 (incsp2.o):
+    main.o                    main.s(151)
+initlib (condes.o):
+    crt0.o                    nes/crt0.s(11)
+ppubuf_flush (ppubuf.o):
+    crt0.o                    nes/crt0.s(13)
+ptr1 (zeropage.o):
+    copydata.o                common/copydata.s(9)
+    zerobss.o                 common/zerobss.s(9)
+ptr2 (zeropage.o):
+    copydata.o                common/copydata.s(9)
+pusha (pusha.o):
+    main.o                    main.s(151)
+    main.o                    main.s(151)
+    main.o                    main.s(151)
+pushax (pushax.o):
+    callmain.o                runtime/callmain.s(11)
+sp (zeropage.o):
+    pushax.o                  runtime/pushax.s(8)
+    pusha.o                   runtime/pusha.s(8)
+    incsp2.o                  runtime/incsp2.s(8)
+    incsp1.o                  runtime/incsp1.s(8)
+    crt0.o                    /private/tmp/cc65-20221106-4106-t7shur/cc65-2.19/asminc/zeropage.inc(11)
+    main.o                    main.s(10)
+tmp1 (zeropage.o):
+    copydata.o                common/copydata.s(9)
+zerobss (zerobss.o):
+    crt0.o                    nes/crt0.s(12)
+

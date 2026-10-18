@@ -1,0 +1,233 @@
+{
+  "fixture": "branches-loops",
+  "compiler": "cc65",
+  "optimization": "debug",
+  "machine": "atari",
+  "artifacts": "tests/data/source-debug/cc65/atari/branches-loops",
+  "binary": "main.xex",
+  "debugInfo": "main.dbg",
+  "start": {
+    "file": "main.c",
+    "line": 21
+  },
+  "steps": [
+    {
+      "action": "sourceOver",
+      "expected": {
+        "file": "main.c",
+        "line": 22,
+        "function": "main",
+        "depth": 0
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceOver",
+      "note": "line 22 is two ranges: init + condition, and the increment",
+      "expected": {
+        "file": "main.c",
+        "line": 23,
+        "function": "main",
+        "depth": 0
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceOver",
+      "expected": {
+        "file": "main.c",
+        "line": 22,
+        "function": "main",
+        "depth": 0
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceOver",
+      "expected": {
+        "file": "main.c",
+        "line": 23,
+        "function": "main",
+        "depth": 0
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceOver",
+      "expected": {
+        "file": "main.c",
+        "line": 22,
+        "function": "main",
+        "depth": 0
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceOver",
+      "expected": {
+        "file": "main.c",
+        "line": 23,
+        "function": "main",
+        "depth": 0
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceOver",
+      "expected": {
+        "file": "main.c",
+        "line": 22,
+        "function": "main",
+        "depth": 0
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceOver",
+      "note": "the condition after the last increment is inside the first range: no stop, out to the while",
+      "expected": {
+        "file": "main.c",
+        "line": 24,
+        "function": "main",
+        "depth": 0
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceOver",
+      "expected": {
+        "file": "main.c",
+        "line": 25,
+        "function": "main",
+        "depth": 0
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceOver",
+      "expected": {
+        "file": "main.c",
+        "line": 24,
+        "function": "main",
+        "depth": 0
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceOver",
+      "expected": {
+        "file": "main.c",
+        "line": 26,
+        "function": "main",
+        "depth": 0
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceOver",
+      "expected": {
+        "file": "main.c",
+        "line": 27,
+        "function": "main",
+        "depth": 0
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceInto",
+      "note": "classify()'s prologue (line 7) runs to its first statement",
+      "expected": {
+        "file": "main.c",
+        "line": 8,
+        "function": "classify",
+        "depth": 1
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceOver",
+      "expected": {
+        "file": "main.c",
+        "line": 10,
+        "function": "classify",
+        "depth": 1
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceOver",
+      "note": "the switch's dispatch (compare and jump) is mapped to the switch's closing brace",
+      "expected": {
+        "file": "main.c",
+        "line": 15,
+        "function": "classify",
+        "depth": 1
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceOver",
+      "expected": {
+        "file": "main.c",
+        "line": 12,
+        "function": "classify",
+        "depth": 1
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceOver",
+      "note": "return 2 jumps to the epilogue, mapped to the closing brace",
+      "expected": {
+        "file": "main.c",
+        "line": 17,
+        "function": "classify",
+        "depth": 1
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceOver",
+      "expected": {
+        "file": "main.c",
+        "line": 27,
+        "function": "main",
+        "depth": 0
+      },
+      "expectedReason": "frame-exited"
+    },
+    {
+      "action": "sourceOver",
+      "note": "the jump over the else branch is mapped to the else line",
+      "expected": {
+        "file": "main.c",
+        "line": 28,
+        "function": "main",
+        "depth": 0
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceOver",
+      "expected": {
+        "file": "main.c",
+        "line": 30,
+        "function": "main",
+        "depth": 0
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceOver",
+      "note": "for (;;) is mapped code: one stop per iteration",
+      "expected": {
+        "file": "main.c",
+        "line": 30,
+        "function": "main",
+        "depth": 0
+      },
+      "expectedReason": "completed"
+    }
+  ],
+  "note": "cc65 2.19 line mapping: the for loop is two ranges, a switch dispatches from its closing brace, the jump over an else is the else line, each function's epilogue is its closing brace"
+}

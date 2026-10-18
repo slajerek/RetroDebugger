@@ -115,6 +115,29 @@ void CSourceStepController::Finish(SourceStepStopReason reason, u16 pc, const CD
 	Cancel(reason);
 }
 
+// LOCATION is on the definition line of the function at PC, and the function
+// has a line of its own after it (a one-line function's only line is its body)
+bool CSourceStepController::IsPrologue(const CDebugSourceMapping *location, u16 pc) const
+{
+	const CDebugFunction *function = database->FindFunction(regionId, pc);
+	if (function == NULL || !function->lineIsDefinition || function->line <= 0 || location->fileId != function->fileId
+		|| location->lineStart != function->line)
+		return false;
+	for (u32 address = location->end; address < function->end; )
+	{
+		const CDebugSourceMapping *next = database->Resolve(regionId, address);
+		if (next == NULL)
+		{
+			address++;
+			continue;
+		}
+		if (next->fileId == function->fileId && next->lineStart != function->line)
+			return true;
+		address = next->end > address ? next->end : address + 1;
+	}
+	return false;
+}
+
 bool CSourceStepController::IsStartStatement(const CDebugSourceMapping *location) const
 {
 	return startMapped && location->fileId == startFileId && location->lineStart == startLine;
@@ -160,6 +183,11 @@ bool CSourceStepController::OnInstructionBoundary(CDebugInterface *debugInterfac
 
 	bool deeper = tracker.GetCallDepth() > 0;
 	if (deeper && kind == SourceStepKind::Over)
+		return false;
+
+	// Into a function: run its prologue (cc65 maps it to the definition
+	// line) to the first statement, as gdb does
+	if (deeper && kind == SourceStepKind::Into && IsPrologue(location, boundary.pc))
 		return false;
 
 	if (deeper || !IsStartStatement(location) || boundary.pc == startRangeStart)
