@@ -1,4 +1,5 @@
 #include "CViewSourceCode.h"
+#include "CDebugVariableResolver.h"
 #include "CSourceRendering.h"
 #include "CDebugSourceTrace.h"
 #include "CSyntaxLexer.h"
@@ -367,7 +368,52 @@ void CViewSourceCode::RenderMissing(const CDebugSourceFile *file)
 
 void CViewSourceCode::RenderLineText(const std::string &text, const CSyntaxLexer *lexer, int *state)
 {
-	SourceRenderLineText(text, lexer, state);
+	std::string hovered;
+	SourceRenderLineText(text, lexer, state, &hovered);
+	if (!hovered.empty())
+		ShowVariableTooltip(hovered);
+}
+
+// RD-022: a C variable under the mouse, resolved at the paused PC of the main
+// CPU: where it is, its value and how far that can be trusted
+void CViewSourceCode::ShowVariableTooltip(const std::string &name)
+{
+	if (!bankAware || debugSymbols != debugInterface->symbols || debugInterface->GetDebugMode() != DEBUGGER_MODE_PAUSED
+		|| !database || !(database->capabilities.variables || database->capabilities.localVariables)
+		|| !debugSymbols->currentSegment || debugSymbols->currentSegment->debugRegionId < 0)
+		return;
+	CDebugVariableResolution r = DebugResolveVariable(database.get(), debugInterface, (u32)debugSymbols->currentSegment->debugRegionId,
+													  name, (u16)cpuPc());
+	if (r.variable == NULL)
+		return;		// not a variable: keywords, functions, macros
+	std::string text = r.name + (r.function.empty() ? "" : " (" + r.function + ")") + "  " + r.type
+		+ "  " + DebugVariableLocationName(r.variable->location);
+	char buf[48];
+	if (r.hasAddress)
+	{
+		snprintf(buf, sizeof(buf), "  $%04X", r.address);
+		text += buf;
+	}
+	if (!r.bytes.empty())
+	{
+		text += "  =";
+		for (size_t i = 0; i < r.bytes.size() && i < 16; i++)
+		{
+			snprintf(buf, sizeof(buf), " %02X", r.bytes[i]);
+			text += buf;
+		}
+		if (r.bytes.size() == 1)
+		{
+			snprintf(buf, sizeof(buf), " (%u)", r.bytes[0]);
+			text += buf;
+		}
+	}
+	if (r.variable->location == DebugVariableLocation::Constant)
+		text += "  = " + std::to_string(r.variable->constantValue);
+	const char *quality = r.quality == DebugMappingQuality::Exact ? "exact"
+		: r.quality == DebugMappingQuality::Approximate ? "approximate" : "not available";
+	text += std::string("\n") + quality + (r.reason.empty() ? "" : ": " + r.reason);
+	ImGui::SetTooltip("%s", text.c_str());
 }
 
 void CViewSourceCode::RenderDocument(const CDebugSourceFile *file, const CSourceDocument *document)

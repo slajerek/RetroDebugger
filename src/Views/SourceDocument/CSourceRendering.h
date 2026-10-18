@@ -20,6 +20,7 @@ extern const ImVec4 kColorLineNumber;
 extern const ImVec4 kColorWarning;
 
 // TEXT as one row of coloured runs; STATE carries the lexer across lines
-void SourceRenderLineText(const std::string &text, const CSyntaxLexer *lexer, int *state);
+// HOVERED (may be NULL): set to the identifier under the mouse, if any (RD-022)
+void SourceRenderLineText(const std::string &text, const CSyntaxLexer *lexer, int *state, std::string *hovered = NULL);
 
 #endif

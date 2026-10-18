@@ -118,6 +118,7 @@ private:
 	void RenderMissing(const CDebugSourceFile *file);
 	void RenderDocument(const CDebugSourceFile *file, const CSourceDocument *document);
 	void RenderLineText(const std::string &text, const CSyntaxLexer *lexer, int *state);
+	void ShowVariableTooltip(const std::string &name);
 
 	// line states for the gutter
 	bool LineHasCode(i32 line) const;
