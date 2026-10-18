@@ -75,8 +75,13 @@ green (`39088966574`), Windows both legs green (`39088968493`), Linux logs-on
 green, logs-off segfault (`39088965038`) in `SourceStepTrace` at the NES
 cartridge insert: a paused NES thread waits inside `Execute`, which holds no
 lock, and the test swapped the board from its own thread. Fixed in 9be7c71
-(VSync tasks, the app's `InsertCartridge` path); not yet on CI. Other tests
-still call `nesd_insert_cartridge` directly (see the tracker's defect list).
+(VSync tasks, the app's `InsertCartridge` path). On 0f53335 Linux both legs
+green (`39107892318`, the NES fix holds), Windows both legs green
+(`39107897287`), macOS logs-off green, logs-on failed (`39107894988`): the
+step traces' KERNAL boot wait found the C64 that `SourceStepping` left in its
+program, page 3 overwritten, auto-paused on a BRK; the wait now hard resets
+it (09085f8, not yet on CI). Other tests still call
+`nesd_insert_cartridge` directly (see the tracker's defect list).
 
 Docker containers on the maintainer's Mac have no network (Docker Desktop's
 proxy at `http.docker.internal:3128` did not help), so a local Linux build
