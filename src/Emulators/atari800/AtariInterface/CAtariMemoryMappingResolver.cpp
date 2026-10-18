@@ -14,6 +14,20 @@ static const int kCartStd16 = 2;
 static const int kCartXegs32 = 12;
 static const int kCartSwXegs32 = 33;
 
+// a-cartridge.c set_bank_809F: an 8 KB bank at $8000 (state), the last bank
+// at $A000; state bit 7 switches the cartridge off (the switchable ones)
+static bool IsXegs(int cartType)
+{
+	return cartType == kCartXegs32 || cartType == 13 /* XEGS_07_64 */ || cartType == 14 /* XEGS_128 */
+		|| (cartType >= 23 && cartType <= 25) /* XEGS_256..1024 */ || (cartType >= kCartSwXegs32 && cartType <= 38) /* SWXEGS_32..1024 */;
+}
+
+// a-cartridge.c set_bank_80BF: one 16 KB bank at $8000-$BFFF (state & $7F)
+static bool IsMegaCart(int cartType)
+{
+	return (cartType >= 26 && cartType <= 32) /* MEGA_16..1024 */ || cartType == 64 /* MEGA_2048 */;
+}
+
 const char *CAtariMemoryMappingResolver::GetMachineVariant()
 {
 	int machineType = 0, ramSizeKb = 0;
@@ -86,11 +100,15 @@ CDebugMappedAddress CAtariMemoryMappingResolver::Resolve(u16 cpuAddress, DebugMe
 				p.offset = cpuAddress - 0xA000;
 			else if (cartType == kCartStd16)
 				p.offset = cpuAddress - 0x8000;
-			else if ((cartType == kCartXegs32 || cartType == kCartSwXegs32) && !(cartState & 0x80))
+			else if (IsXegs(cartType) && !(cartState & 0x80) && cartSizeKb >= 32)
 			{
-				// a-cartridge.c set_bank_809F: $8000 is bank `state`, $A000 the last bank
-				p.offset = cpuAddress >= 0xA000 ? 0x6000 + (cpuAddress - 0xA000)
-												: (u32)(cartState & 0x03) * 0x2000 + (cpuAddress - 0x8000);
+				// $8000 is bank `state` (masked to the size when written), $A000 the last bank
+				p.offset = cpuAddress >= 0xA000 ? (u32)cartSizeKb * 1024 - 0x2000 + (cpuAddress - 0xA000)
+												: (u32)cartState * 0x2000 + (cpuAddress - 0x8000);
+			}
+			else if (IsMegaCart(cartType) && !(cartState & 0x80))
+			{
+				p.offset = (u32)(cartState & 0x7F) * 0x4000 + (cpuAddress - 0x8000);
 			}
 			else
 				known = false;	// other cartridge types bank on their own: Unknown until profiled

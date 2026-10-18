@@ -10,6 +10,7 @@
 #include "DebuggerDefs.h"
 #include "SYS_Main.h"
 #include "C64SettingsStorage.h"
+#include "CDebugInterfaceTask.h"
 #include <cstdio>
 #include <cstring>
 #include <vector>
@@ -260,6 +261,148 @@ bool CTestMachineMemoryMapping::RunAtari()
 	return ok;
 }
 
+#ifdef RUN_ATARI
+namespace
+{
+// cartridge changes on the emulation thread, between two frames
+class CTaskMappingInsertAtariCart : public CDebugInterfaceTask
+{
+public:
+	CTaskMappingInsertAtariCart(CDebugInterfaceAtari *di, const std::string &path) : di(di), path(path) {}
+	virtual void ExecuteTask() override { di->InsertCartridge((char *)path.c_str(), true); }
+private:
+	CDebugInterfaceAtari *di;
+	std::string path;
+};
+
+class CTaskMappingDetachAtariCart : public CDebugInterfaceTask
+{
+public:
+	CTaskMappingDetachAtariCart(CDebugInterfaceAtari *di) : di(di) {}
+	virtual void ExecuteTask() override { di->DetachCartridge(); }
+private:
+	CDebugInterfaceAtari *di;
+};
+}
+
+// A .car: "CART", the type, the checksum (the sum of the data bytes), then
+// the image. Bank N (bankSize bytes) carries 0xB0+N at +$100; the bank seen
+// at $A000 at power-on loops at $A000 and is a boot cartridge.
+static bool WriteAtariCar(const char *path, int type, int sizeKb, int bankSize, u32 bootBankOffset)
+{
+	std::vector<u8> image((size_t)sizeKb * 1024, 0xFF);
+	for (int bank = 0; bank * bankSize < (int)image.size(); bank++)
+		image[(size_t)bank * bankSize + 0x100] = (u8)(0xB0 + bank);
+	u8 *boot = &image[bootBankOffset];					// $A000-$BFFF at power-on
+	boot[0x0000] = 0x4C; boot[0x0001] = 0x00; boot[0x0002] = 0xA0;	// $A000: JMP $A000
+	boot[0x0003] = 0x60;											// $A003: RTS (init)
+	boot[0x1FFA] = 0x00; boot[0x1FFB] = 0xA0;						// start $A000
+	boot[0x1FFC] = 0x00;											// a cartridge is present
+	boot[0x1FFD] = 0x04;											// run it after init
+	boot[0x1FFE] = 0x03; boot[0x1FFF] = 0xA0;						// init $A003
+	u32 sum = 0;
+	for (u8 b : image)
+		sum += b;
+	u8 header[16] = { 'C', 'A', 'R', 'T', 0, 0, 0, (u8)type, (u8)(sum >> 24), (u8)(sum >> 16), (u8)(sum >> 8), (u8)sum, 0, 0, 0, 0 };
+	FILE *f = fopen(path, "wb");
+	if (f == NULL)
+		return false;
+	bool ok = fwrite(header, 1, 16, f) == 16 && fwrite(image.data(), 1, image.size(), f) == image.size();
+	fclose(f);
+	return ok;
+}
+
+static bool WaitForAtariTasks(CDebugInterfaceAtari *atari, int timeoutMs)
+{
+	for (int waited = 0; waited < timeoutMs; waited += 10)
+	{
+		if (atari->vsyncTasks.empty())
+			return true;
+		SYS_Sleep(10);
+	}
+	return false;
+}
+
+static bool IsCartByte(const CDebugMappedAddress &m, u32 offset)
+{
+	return m.physical.kind == DebugMemoryKind::CartridgeRom && m.physical.device == "atari-cart" && m.physical.offset == offset
+		&& m.hasImageOffset && m.imageOffset == 16 + (u64)offset;
+}
+
+bool CTestMachineMemoryMapping::RunAtariCartridges()
+{
+	CDebugInterfaceAtari *atari = viewC64->debugInterfaceAtari;
+	CDebugMemoryMappingResolver *resolver = atari->GetMemoryMappingResolver();
+	bool wasRunning = atari->isRunning;
+	if (!wasRunning)
+	{
+		viewC64->StartEmulationThread(atari);
+		SYS_Sleep(2000);
+	}
+
+	struct Cart { const char *name; int type, sizeKb, bankSize; u32 bootBankOffset; const char *path; };
+	const Cart carts[] = {
+		{ "XEGS 128 KB", 14, 128, 0x2000, 0x1E000, "/tmp/retrodebugger_test_xegs128.car" },
+		{ "MegaCart 64 KB", 28, 64, 0x4000, 0x2000, "/tmp/retrodebugger_test_mega64.car" },
+	};
+	bool ok = true;
+	for (const Cart &cart : carts)
+	{
+		std::string label = std::string("Atari ") + cart.name + ": ";
+		ok = Check(WriteAtariCar(cart.path, cart.type, cart.sizeKb, cart.bankSize, cart.bootBankOffset),
+				   (label + "the .car image is written").c_str());
+		if (!ok)
+			break;
+		atari->SetDebugMode(DEBUGGER_MODE_RUNNING);
+		atari->AddVSyncTask(new CTaskMappingInsertAtariCart(atari, cart.path));
+		bool booted = WaitForAtariTasks(atari, 5000);
+		for (int waited = 0; booted && waited < 5000 && (u16)atari->GetCpuPC() != 0xA000; waited += 10)
+			SYS_Sleep(10);
+		atari->PauseEmulationBlockedWait();
+		ok = Check(booted && (u16)atari->GetCpuPC() == 0xA000, (label + "the cartridge inserts and runs to its loop at $A000").c_str());
+
+		if (ok && cart.bankSize == 0x2000)
+		{
+			// $8000 the bank in $D500, $A000 the last bank
+			CDebugMappedAddress boot8000 = resolver->ResolveFetch(0x8000);
+			atari->SetByte(0xD500, 5);
+			CDebugMappedAddress low = resolver->ResolveRead(0x8100);
+			CDebugMappedAddress high = resolver->ResolveRead(0xA100);
+			ok = Check(IsCartByte(boot8000, 0) && IsCartByte(low, 5 * 0x2000 + 0x100) && atari->GetByte(0x8100) == 0xB5
+					   && IsCartByte(high, 0x1E100) && atari->GetByte(0xA100) == 0xBF,
+					   (label + "$8000 is bank 0 at power-on; after $D500=5, $8100 is bank 5 and $A100 the last bank, at their .car offsets").c_str());
+		}
+		else if (ok)
+		{
+			// $8000-$BFFF one 16 KB bank; bit 7 switches the cartridge off
+			CDebugMappedAddress boot = resolver->ResolveFetch(0xA000);
+			atari->SetByte(0xD500, 2);
+			CDebugMappedAddress low = resolver->ResolveRead(0x8100);
+			CDebugMappedAddress high = resolver->ResolveRead(0xA100);
+			bool banked = IsCartByte(boot, 0x2000) && IsCartByte(low, 2 * 0x4000 + 0x100) && atari->GetByte(0x8100) == 0xB2
+				&& IsCartByte(high, 2 * 0x4000 + 0x2100);
+			atari->SetByte(0xD500, 0x80);
+			CDebugMappedAddress off = resolver->ResolveRead(0x8100);
+			ok = Check(banked && off.physical.kind == DebugMemoryKind::Ram,
+					   (label + "after $D500=2, $8000-$BFFF is 16 KB bank 2 at its .car offsets; $D500=$80 switches it off (RAM)").c_str());
+		}
+
+		atari->AddVSyncTask(new CTaskMappingDetachAtariCart(atari));	// resets the machine
+		atari->SetDebugMode(DEBUGGER_MODE_RUNNING);
+		if (!WaitForAtariTasks(atari, 5000))
+			ok = ok && Check(false, (label + "the cartridge detach task runs").c_str());
+		SYS_Sleep(1500);		// the OS cold start without the cartridge
+		if (!ok)
+			break;
+	}
+
+	atari->SetDebugMode(DEBUGGER_MODE_RUNNING);
+	if (!wasRunning)
+		viewC64->StopEmulationThread(atari);
+	return ok;
+}
+#endif
+
 void CTestMachineMemoryMapping::Run(ITestCallback *cb)
 {
 	this->callback = cb;
@@ -277,6 +420,8 @@ void CTestMachineMemoryMapping::Run(ITestCallback *cb)
 #ifdef RUN_ATARI
 	if (ok)
 		ok = RunAtari();
+	if (ok)
+		ok = RunAtariCartridges();
 #else
 	ReportRequiredGap("Atari emulation not compiled in");
 #endif
