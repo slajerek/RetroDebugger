@@ -14,6 +14,7 @@
 #include "CDebugInfoLoader.h"
 #include "CDebugSourceBreakpoint.h"
 #include "CSourceStepController.h"
+#include "CDebugInterfaceTask.h"
 #include "DebuggerDefs.h"
 #include "SYS_Main.h"
 #include "json.hpp"
@@ -184,6 +185,42 @@ static bool WaitForKernalBoot(CDebugInterfaceVice *di)
 	return vectorsSet();
 }
 
+#ifdef RUN_NES
+// NES cartridge changes run between two frames on the emulation thread, the
+// app's InsertCartridge path: a paused NES thread sits inside Execute, and a
+// board swapped from another thread under it crashed (Linux CI)
+class CTaskPauseNes : public CDebugInterfaceTask
+{
+public:
+	CTaskPauseNes(CDebugInterface *di) : di(di) {}
+	virtual void ExecuteTask() override { di->SetDebugMode(DEBUGGER_MODE_PAUSED); }
+private:
+	CDebugInterface *di;
+};
+
+class CTaskUnloadNes : public CDebugInterfaceTask
+{
+public:
+	virtual void ExecuteTask() override { nesd_unload_cartridge(); }
+};
+#endif
+
+// the machine running: until every queued VSync task has run (each runs and
+// is deleted under the tasks mutex)
+static bool WaitForVSyncTasks(CDebugInterface *di, int timeoutMs)
+{
+	for (int waited = 0; waited < timeoutMs; waited += 10)
+	{
+		di->LockTasksMutex();
+		bool empty = di->vsyncTasks.empty();
+		di->UnlockTasksMutex();
+		if (empty)
+			return true;
+		SYS_Sleep(10);
+	}
+	return false;
+}
+
 CTestSourceStepTrace::Machine *CTestSourceStepTrace::GetMachine(const std::string &name)
 {
 	for (Machine &machine : machines)
@@ -268,7 +305,7 @@ void CTestSourceStepTrace::RestoreMachines()
 			RemoveAtariInterrupt(machine);
 #ifdef RUN_NES
 		if (machine.name == "nes")
-			nesd_unload_cartridge();
+			di->AddVSyncTask(new CTaskUnloadNes());		// runs once the machine runs again, below
 #endif
 		guiMain->LockMutex();
 		di->LockMutex();
@@ -278,6 +315,8 @@ void CTestSourceStepTrace::RestoreMachines()
 		// scratch symbols leaked on purpose, see CTestSymbolLoaders
 
 		di->SetDebugMode(DEBUGGER_MODE_RUNNING);
+		if (machine.name == "nes" && !WaitForVSyncTasks(di, 5000))
+			LOGError("CTestSourceStepTrace: the NES cartridge unload task never ran");
 		if (machine.started)
 			viewC64->StopEmulationThread(di);
 	}
@@ -387,15 +426,14 @@ bool CTestSourceStepTrace::LaunchNes(CDebugInterface *di, const json &trace, con
 		cartridge = "/tmp/source-step-trace-irq.nes";
 		std::ofstream(cartridge, std::ios::binary).write((const char *)image.data(), (std::streamsize)image.size());
 	}
-	if (!Check(nesd_insert_cartridge((char *)cartridge.c_str()), name + ": the cartridge inserts"))
+	// on the emulation thread; the second task pauses the new board at its reset
+	((CDebugInterfaceNes *)di)->InsertCartridge((char *)cartridge.c_str());
+	di->AddVSyncTask(new CTaskPauseNes(di));
+	di->SetDebugMode(DEBUGGER_MODE_RUNNING);
+	if (!Check(WaitForVSyncTasks(di, 5000) && WaitForPause(di, 2000), name + ": the cartridge inserts, paused at its reset"))
 		return false;
 	if (trace.contains("entry"))
-	{
-		di->SetDebugMode(DEBUGGER_MODE_RUNNING);
-		SYS_Sleep(200);
-		di->PauseEmulationBlockedWait();
 		di->MakeJmpNoReset(di->GetDataAdapter(), (u16)ParseAddress(trace["entry"]));
-	}
 	return true;
 #else
 	return false;
