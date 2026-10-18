@@ -732,6 +732,7 @@ static int crt_attach(const char *filename, uint8_t *rawcart)
     if (fd == NULL) {
         return -1;
     }
+    c64d_crt_chips_clear();   /* C64D: the chips' file offsets are this image's (crt.c) */
 
     new_crttype = header.type;
 

@@ -53,6 +53,8 @@ FILE *crt_open(const char *filename, crt_header_t *header);
 int crt_getid(const char *filename);
 int crt_read_chip_header(crt_chip_header_t *header, FILE *fd);
 int crt_read_chip(uint8_t *rawcart, int offset, crt_chip_header_t *chip, FILE *fd);
+void c64d_crt_chips_clear(void);  /* C64D (RD-030), crt.c */
+int c64d_crt_file_offset(uint32_t rawOffset, uint32_t *fileOffset);
 int crt_write_chip(uint8_t *data, crt_chip_header_t *header, FILE *fd);
 
 /* create classic v1.0 header */

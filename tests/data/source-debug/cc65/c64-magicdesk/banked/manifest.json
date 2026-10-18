@@ -1,0 +1,92 @@
+{
+  "buildDir": "/tmp/rd-source-debug/cc65/c64-magicdesk/banked",
+  "commit": null,
+  "fixedMtime": 1767225600,
+  "fixture": "banked",
+  "inputs": {
+    "magicdesk-crt0.s": "544b16fabd63ac5cb54182808356d061d9fad02a058c89dc49080cc73e0251d9",
+    "magicdesk.c": "6f1520fabd1a6701443ef3c72865d931dc71fa16c32453d325ff32f49354514b",
+    "magicdesk.cfg": "1cbc893cd8fcd005e0bf987bc29bd5bd9a4b463f783e11602e9ce3d4b235b14a",
+    "mmc1-crt0.s": "028aa34ceb9a10380eb59261e5510beb12b0c520e3b967beb0103aa19119769c",
+    "mmc1.c": "dd290c49f84e2c186a9c78b86e4a672f13737f3629c300fa0d874a572697927f",
+    "mmc1.cfg": "c9445ddf2387359f7f00db3c90b27da02c0ff7e01f4cdfcf4dbc11dd731b302f",
+    "uxrom-crt0.s": "a65c7233d025c0554246505324db93b43db966b76dd1d4c3c7d451573885275b",
+    "uxrom.c": "ff7f1bfdd188f8df1fef9953a7a4b23c92812f0368d4532fe5ad21eb2fb05843",
+    "uxrom.cfg": "f0ffbc7eb485fa194a1638b76baa6a677f52a4f52be931c29c45d55646e1aa2a"
+  },
+  "machine": "c64-magicdesk",
+  "outputs": {
+    "magicdesk.s": {
+      "sha256": "7e32290c9efe560f13015915ea9c76c99c482787b6ed643e538577d693510e63",
+      "size": 3114
+    },
+    "main.crt": {
+      "sha256": "34017d3b324579721bc397808fee5a33a7ca070038cdde245396e3aed7c2f9a1",
+      "size": 16480
+    },
+    "main.dbg": {
+      "sha256": "93b568ec50eca88e7d69a4ed4a37c232ac9d14febf2d1191b6559635eac86248",
+      "size": 25848
+    },
+    "main.lbl": {
+      "sha256": "ad02821afe58f9410aa6b7477b2ba8aed9f68997ed819b7e603c9cedab5f7d41",
+      "size": 1502
+    },
+    "main.map": {
+      "sha256": "81f5f1b89573e7109702d12933e9caf10e322eee9cc3e2d80f45dda921694431",
+      "size": 7166
+    }
+  },
+  "source": "magicdesk.c",
+  "steps": [
+    [
+      "cc65",
+      "-t",
+      "c64",
+      "-g",
+      "magicdesk.c"
+    ],
+    [
+      "ca65",
+      "-t",
+      "c64",
+      "-g",
+      "magicdesk.s"
+    ],
+    [
+      "ca65",
+      "-t",
+      "c64",
+      "-g",
+      "magicdesk-crt0.s"
+    ],
+    [
+      "ld65",
+      "-C",
+      "magicdesk.cfg",
+      "--dbgfile",
+      "main.dbg",
+      "-Ln",
+      "main.lbl",
+      "-m",
+      "main.map",
+      "-o",
+      "main.crt",
+      "magicdesk.o",
+      "magicdesk-crt0.o",
+      "c64.lib"
+    ]
+  ],
+  "toolDirs": {
+    "ca65": "/opt/homebrew/Cellar/cc65/2.19/bin",
+    "cc65": "/opt/homebrew/Cellar/cc65/2.19/bin",
+    "ld65": "/opt/homebrew/Cellar/cc65/2.19/bin"
+  },
+  "toolchain": "cc65",
+  "version": "2.19",
+  "versionReported": {
+    "ca65": "ca65 V2.18 - N/A (/opt/homebrew/Cellar/cc65/2.19/bin)",
+    "cc65": "cc65 V2.18 - N/A (/opt/homebrew/Cellar/cc65/2.19/bin)",
+    "ld65": "ld65 V2.18 - N/A (/opt/homebrew/Cellar/cc65/2.19/bin)"
+  }
+}

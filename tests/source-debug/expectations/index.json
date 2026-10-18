@@ -33,6 +33,7 @@
     "cc65/interrupts-nes.json",
     "cc65/banked-nes-uxrom.json",
     "cc65/banked-nes-mmc1.json",
+    "cc65/banked-c64-magicdesk.json",
     "oscar64/recursion.json",
     "oscar64/indirect-calls.json",
     "oscar64/recursion-atari.json",

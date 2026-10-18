@@ -4,6 +4,9 @@
   "fixedMtime": 1767225600,
   "fixture": "banked",
   "inputs": {
+    "magicdesk-crt0.s": "544b16fabd63ac5cb54182808356d061d9fad02a058c89dc49080cc73e0251d9",
+    "magicdesk.c": "6f1520fabd1a6701443ef3c72865d931dc71fa16c32453d325ff32f49354514b",
+    "magicdesk.cfg": "1cbc893cd8fcd005e0bf987bc29bd5bd9a4b463f783e11602e9ce3d4b235b14a",
     "mmc1-crt0.s": "028aa34ceb9a10380eb59261e5510beb12b0c520e3b967beb0103aa19119769c",
     "mmc1.c": "dd290c49f84e2c186a9c78b86e4a672f13737f3629c300fa0d874a572697927f",
     "mmc1.cfg": "c9445ddf2387359f7f00db3c90b27da02c0ff7e01f4cdfcf4dbc11dd731b302f",

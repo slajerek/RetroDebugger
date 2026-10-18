@@ -37,7 +37,17 @@ CDebugMappedAddress CViceMemoryMappingResolver::Resolve(u16 cpuAddress, DebugMem
 		case C64D_ACCESS_CHARGEN:	p.kind = DebugMemoryKind::Rom;			p.device = "c64-chargen";	break;
 		case C64D_ACCESS_IO:		p.kind = DebugMemoryKind::Io;			p.device = "c64-io";		break;
 		case C64D_ACCESS_COLORRAM:	p.kind = DebugMemoryKind::Ram;			p.device = "c64-color-ram";	break;
-		case C64D_ACCESS_ROML:		p.kind = DebugMemoryKind::CartridgeRom;	p.device = "c64-cart";		p.region = 0; break;
+		case C64D_ACCESS_ROML:
+		{
+			p.kind = DebugMemoryKind::CartridgeRom;	p.device = "c64-cart";		p.region = 0;
+			uint32 fileOffset = 0;
+			if (c64d_cartridge_roml_file_offset(offset, &fileOffset))
+			{
+				mapped.hasImageOffset = true;	// the byte's offset in the attached .crt (RD-030)
+				mapped.imageOffset = fileOffset;
+			}
+			break;
+		}
 		case C64D_ACCESS_ROMH:		p.kind = DebugMemoryKind::CartridgeRom;	p.device = "c64-cart";		p.region = 1; break;
 		case C64D_ACCESS_CART_RAM:	p.kind = DebugMemoryKind::CartridgeRam;	p.device = "c64-cart-ram";	break;
 		case C64D_ACCESS_UNMAPPED:	p.kind = DebugMemoryKind::Unmapped;		p.offset = 0;				break;

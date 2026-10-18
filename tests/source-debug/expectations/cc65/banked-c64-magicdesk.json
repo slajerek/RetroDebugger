@@ -1,0 +1,139 @@
+{
+  "fixture": "banked",
+  "compiler": "cc65",
+  "optimization": "debug",
+  "machine": "c64",
+  "artifacts": "tests/data/source-debug/cc65/c64-magicdesk/banked",
+  "binary": "main.crt",
+  "debugInfo": "main.dbg",
+  "note": "C64 Magic Desk: bankA() (bank 0) and bankB() (bank 1) are both linked at $9000; main() runs from RAM; a line resolves by the bank in the ROML window, from the .crt file offset of the fetched byte (RD-007, RD-030)",
+  "start": {
+    "file": "magicdesk.c",
+    "line": 29
+  },
+  "steps": [
+    {
+      "action": "sourceInto",
+      "note": "bank 0 in the window: bankA, not bankB which was linked last at the same address",
+      "expected": {
+        "file": "magicdesk.c",
+        "line": 16,
+        "function": "bankA",
+        "depth": 1
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceOut",
+      "expected": {
+        "file": "magicdesk.c",
+        "line": 29,
+        "function": "main",
+        "depth": 0
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceOver",
+      "expected": {
+        "file": "magicdesk.c",
+        "line": 30,
+        "function": "main",
+        "depth": 0
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceOver",
+      "expected": {
+        "file": "magicdesk.c",
+        "line": 31,
+        "function": "main",
+        "depth": 0
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceInto",
+      "note": "after selectBank(1) the same $9000 is bankB",
+      "expected": {
+        "file": "magicdesk.c",
+        "line": 22,
+        "function": "bankB",
+        "depth": 1
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceOut",
+      "expected": {
+        "file": "magicdesk.c",
+        "line": 31,
+        "function": "main",
+        "depth": 0
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceOver",
+      "expected": {
+        "file": "magicdesk.c",
+        "line": 32,
+        "function": "main",
+        "depth": 0
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceOver",
+      "expected": {
+        "file": "magicdesk.c",
+        "line": 33,
+        "function": "main",
+        "depth": 0
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceInto",
+      "expected": {
+        "file": "magicdesk.c",
+        "line": 16,
+        "function": "bankA",
+        "depth": 1
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceOut",
+      "expected": {
+        "file": "magicdesk.c",
+        "line": 33,
+        "function": "main",
+        "depth": 0
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceOver",
+      "expected": {
+        "file": "magicdesk.c",
+        "line": 34,
+        "function": "main",
+        "depth": 0
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceOver",
+      "note": "for (;;) is mapped code: one stop per iteration",
+      "expected": {
+        "file": "magicdesk.c",
+        "line": 34,
+        "function": "main",
+        "depth": 0
+      },
+      "expectedReason": "completed"
+    }
+  ]
+}

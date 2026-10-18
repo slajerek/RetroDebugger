@@ -273,6 +273,27 @@ static int c64d_generic_cartridge_only(void)
            && cart_getid_slot0() == CARTRIDGE_NONE && cart_getid_slot1() == CARTRIDGE_NONE;
 }
 
+/* RD-030: main-slot banked cartridges whose ROML reads are generic_roml_read
+   from roml_banks at roml_bank (c64cartmem.c's default case) and whose raw
+   image is roml_banks as loaded (magicdesk.c copies it 1:1) */
+static int c64d_generic_roml_bank_cartridge(void)
+{
+    return mem_cartridge_type == CARTRIDGE_MAGIC_DESK
+           && cart_getid_slot0() == CARTRIDGE_NONE && cart_getid_slot1() == CARTRIDGE_NONE;
+}
+
+/* RD-030: the .crt file offset of a ROML byte at OFFSET (c64d_resolve_access's
+   C64D_ACCESS_ROML offset), for the cartridges whose raw image is laid out
+   as roml_banks; 0 when not known */
+extern int c64d_crt_file_offset(uint32_t rawOffset, uint32_t *fileOffset);
+int c64d_cartridge_roml_file_offset(uint32_t offset, uint32_t *fileOffset)
+{
+    if (!(c64d_generic_cartridge_only() || c64d_generic_roml_bank_cartridge()) || export_ram) {
+        return 0;
+    }
+    return c64d_crt_file_offset(offset, fileOffset);
+}
+
 void c64d_resolve_access(uint16_t addr, int isWrite, int *kind, uint32_t *offset)
 {
     int page = addr >> 8;
@@ -306,7 +327,7 @@ void c64d_resolve_access(uint16_t addr, int isWrite, int *kind, uint32_t *offset
             off = addr - 0xd000;
         } else if (f == void_read) {
             k = C64D_ACCESS_UNMAPPED;
-        } else if (f == roml_read && c64d_generic_cartridge_only()) {
+        } else if (f == roml_read && (c64d_generic_cartridge_only() || c64d_generic_roml_bank_cartridge())) {
             k = export_ram ? C64D_ACCESS_CART_RAM : C64D_ACCESS_ROML;
             off = export_ram ? (uint32_t)(addr & 0x1fff) : (uint32_t)((roml_bank << 13) + (addr & 0x1fff));
         } else if ((f == romh_read || f == ultimax_romh_read_hirom) && c64d_generic_cartridge_only()) {

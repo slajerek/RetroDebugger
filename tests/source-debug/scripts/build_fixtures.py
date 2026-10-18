@@ -45,6 +45,7 @@ import argparse
 import hashlib
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -63,7 +64,7 @@ MATRIX = os.path.join(SOURCE_DEBUG, "MATRIX.md")
 BUILD_ROOT = "/tmp/rd-source-debug"
 FIXED_MTIME = 1767225600  # 2026-01-01T00:00:00Z
 STEP_TIMEOUT = 300
-MACHINES = ["c64", "atari", "nes", "nes-uxrom", "nes-mmc1"]	# nes-uxrom, nes-mmc1: banked cartridge builds (RD-026)
+MACHINES = ["c64", "atari", "nes", "c64-magicdesk", "nes-uxrom", "nes-mmc1"]	# c64-magicdesk, nes-uxrom, nes-mmc1: banked cartridge builds (RD-026, RD-030)
 
 
 def sha256(path):
@@ -225,6 +226,21 @@ def committed_status(tc, machine, fixture):
     return "ok", ""
 
 
+def previous_failures():
+    """The failed cells of the current MATRIX.md, from its notes: a failed
+    build commits no manifest, so a run filtered to other toolchains or
+    fixtures would otherwise forget them."""
+    failures = {}
+    if not os.path.isfile(MATRIX):
+        return failures
+    with open(MATRIX) as f:
+        for line in f:
+            m = re.match(r"^\[\d+\] (\S+) / (\S+) / (\S+): fail (.*)$", line.rstrip("\n"))
+            if m:
+                failures[(m.group(1), m.group(2), m.group(3))] = ("fail", m.group(4))
+    return failures
+
+
 def write_matrix(results, fixtures, toolchains):
     lines = [
         "# Compiler x machine matrix (generated)",
@@ -296,6 +312,7 @@ def main():
                 print("%-9s %-8s %-6s %-14s %s" % (status, tc["name"], machine, fixture, detail))
 
     if not args.check:
+        failures = previous_failures()
         # the whole matrix, whatever this run was filtered to: cells it did
         # not build (or whose toolchain it skipped) come from the manifests
         all_toolchains = []
@@ -312,6 +329,8 @@ def main():
                         continue
                     if key not in results or results[key][0] == "skip":
                         committed = committed_status(tc, machine, fixture)
+                        if committed[0] == "not built" and key in failures:
+                            committed = failures[key]
                         if key not in results or committed[0] == "ok":
                             results[key] = committed
         write_matrix(results, all_fixtures, all_toolchains)

@@ -15,6 +15,8 @@
 #include "CDebugSourceBreakpoint.h"
 #include "CSourceStepController.h"
 #include "CDebugInterfaceTask.h"
+#include "C64SettingsStorage.h"
+#include "CSlrString.h"
 #include "DebuggerDefs.h"
 #include "SYS_Main.h"
 #include "json.hpp"
@@ -308,6 +310,8 @@ void CTestSourceStepTrace::RestoreMachines()
 		di->SetDebugMode(DEBUGGER_MODE_PAUSED);
 		if (machine.name == "c64")
 		{
+			if (machine.c64Cartridge && !DetachC64Cartridge(machine))
+				LOGError("CTestSourceStepTrace: the C64 did not boot to READY after the cartridge detach");
 			// KERNAL vector, 6510 port, PAL timer A latch ($4025) and the timer A IRQ back
 			CDebugInterfaceVice *vice = (CDebugInterfaceVice *)di;
 			vice->PauseEmulationBlockedWait();
@@ -385,6 +389,54 @@ bool CTestSourceStepTrace::LaunchC64(CDebugInterface *debugInterface, const json
 	Poke(di, InterruptCounterAddress("c64"), { 0, 0 });
 	di->MakeJmpC64(0xC060);
 	return true;
+}
+
+// A C64 .crt: attached from the file (VICE resets into it), so the fetched
+// ROM bytes have their .crt file offsets. The attach pauses briefly by itself
+// while it resets: the launch waits for the pause at the start breakpoint.
+// The user's cartridge setting is kept aside until RestoreMachines.
+bool CTestSourceStepTrace::LaunchC64Cartridge(Machine &machine, const std::string &binaryPath, u16 startAddress,
+											  const std::string &name)
+{
+	CDebugInterfaceVice *di = (CDebugInterfaceVice *)machine.di;
+	if (!machine.c64Cartridge)
+	{
+		guiMain->LockMutex();
+		machine.savedCartridgePath = c64SettingsPathToCartridge;
+		c64SettingsPathToCartridge = NULL;
+		guiMain->UnlockMutex();
+		machine.c64Cartridge = true;
+	}
+	di->SetDebugMode(DEBUGGER_MODE_RUNNING);
+	CSlrString *path = new CSlrString(binaryPath.c_str());
+	di->AttachCartridge(path);
+	delete path;
+	for (int waited = 0; waited < 5000; waited += 10)
+	{
+		SYS_Sleep(10);
+		if (di->GetDebugMode() == DEBUGGER_MODE_PAUSED && (u16)di->GetCpuPC() == startAddress)
+			return true;
+	}
+	return Check(false, name + ": the cartridge attaches and runs to the start line");
+}
+
+// the cartridge off (VICE resets), the C64 back at the READY prompt, paused
+bool CTestSourceStepTrace::DetachC64Cartridge(Machine &machine)
+{
+	CDebugInterfaceVice *di = (CDebugInterfaceVice *)machine.di;
+	di->SetDebugMode(DEBUGGER_MODE_RUNNING);
+	di->DetachCartridge();
+	machine.c64Cartridge = false;
+	guiMain->LockMutex();
+	if (c64SettingsPathToCartridge)
+		delete c64SettingsPathToCartridge;
+	c64SettingsPathToCartridge = machine.savedCartridgePath;
+	machine.savedCartridgePath = NULL;
+	guiMain->UnlockMutex();
+	SYS_Sleep(200);
+	bool ready = WaitForKernalBoot(di);
+	di->PauseEmulationBlockedWait();
+	return ready;
 }
 
 // An Atari XEX: its segments go straight into memory, then a jump to the
@@ -681,8 +733,16 @@ bool CTestSourceStepTrace::RunTrace(const std::string &path)
 	int startAddress = startBp->bindings[0].address;
 
 	bool launched = false;
-	if (machineName == "c64")
+	bool cartridge = binaryPath.size() > 4 && binaryPath.compare(binaryPath.size() - 4, 4, ".crt") == 0;
+	if (machineName == "c64" && cartridge)
+		launched = LaunchC64Cartridge(*machine, binaryPath, (u16)startAddress, name);
+	else if (machineName == "c64")
+	{
+		// a cartridge a previous trace attached: off, back to the READY prompt
+		if (machine->c64Cartridge && !DetachC64Cartridge(*machine))
+			return Check(false, name + ": the previous trace's cartridge detaches and the C64 boots to READY");
 		launched = LaunchC64(di, trace, binary, database.get(), name);
+	}
 	else if (machineName == "atari")
 	{
 		RemoveAtariInterrupt(*machine);		// its handler would call into code about to be overwritten
@@ -694,8 +754,12 @@ bool CTestSourceStepTrace::RunTrace(const std::string &path)
 #endif
 	if (!launched)
 		return false;
-	di->SetDebugMode(DEBUGGER_MODE_RUNNING);
-	bool paused = WaitForPause(di, 5000);
+	bool paused = true;		// a cartridge launch waits for the start line itself
+	if (!cartridge)
+	{
+		di->SetDebugMode(DEBUGGER_MODE_RUNNING);
+		paused = WaitForPause(di, 5000);
+	}
 	u16 pc;
 	u8 a, x, y, p, sp;
 	di->GetCpuRegs(&pc, &a, &x, &y, &p, &sp);

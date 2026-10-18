@@ -145,6 +145,9 @@ void c64d_mark_c64_cell_write(uint16 addr, uint8 value);
 #define C64D_ACCESS_CART_RAM	10	// offset in export_ram0
 #define C64D_ACCESS_UNMAPPED	11	// nothing answers (open bus)
 void c64d_resolve_access(uint16 addr, int isWrite, int *kind, uint32 *offset);
+// RD-030: the .crt file offset of a C64D_ACCESS_ROML offset (generic and Magic
+// Desk cartridges attached from a .crt); 0 when unknown.
+int c64d_cartridge_roml_file_offset(uint32 offset, uint32 *fileOffset);
 
 // RD-027: VICE's live banking state (definition and field meanings in c64memsc.c).
 void c64d_get_banking_state(int *memConfig, int *cartType, int *exrom, int *game,

@@ -67,3 +67,13 @@ machines:
       - ["{ca65}", "-t", "nes", "-g", "mmc1-crt0.s"]
       - ["{ld65}", "-C", "mmc1.cfg", "--dbgfile", "main.dbg", "-Ln", "main.lbl", "-m", "main.map", "-o", "main.nes", "mmc1.o", "mmc1-crt0.o", "nes.lib"]
     outputs: [main.nes, main.dbg, main.lbl, main.map, mmc1.s]
+  # C64 Magic Desk cartridge (RD-030): the .crt is ld65's output, header and
+  # CHIP packets included; fixtures with a magicdesk.c.
+  c64-magicdesk:
+    source: magicdesk.c
+    steps:
+      - ["{cc65}", "-t", "c64", "-g", "magicdesk.c"]
+      - ["{ca65}", "-t", "c64", "-g", "magicdesk.s"]
+      - ["{ca65}", "-t", "c64", "-g", "magicdesk-crt0.s"]
+      - ["{ld65}", "-C", "magicdesk.cfg", "--dbgfile", "main.dbg", "-Ln", "main.lbl", "-m", "main.map", "-o", "main.crt", "magicdesk.o", "magicdesk-crt0.o", "c64.lib"]
+    outputs: [main.crt, main.dbg, main.lbl, main.map, magicdesk.s]

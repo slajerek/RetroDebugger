@@ -9,13 +9,14 @@
 class CDebugInterface;
 class CDebugSymbols;
 class CDebugDatabase;
+class CSlrString;
 
 // RD-015: the step-trace runner. Replays every trace listed in
 // tests/source-debug/expectations/index.json (spec #9.5 format plus the
 // machine (c64, atari, nes), the Tier 1 artifacts, the entry point and an
 // optional fast interrupt -- C64 CIA timer A, Atari POKEY timer 1, NES DMC --
 // whose handler can call a fixture function): loads
-// the binary and its debug info into scratch symbols, runs to the start line
+// the binary (a C64 .crt is attached) and its debug info into scratch symbols, runs to the start line
 // through a source breakpoint, then issues each source step and compares
 // (file, line, function, depth, reason). A failing trace writes the actual
 // trace next to the expected one to
@@ -41,6 +42,9 @@ private:
 		CDebugSymbols *liveSymbols = NULL;
 		u8 savedVector[2] = { 0, 0 };	// C64 $0314
 		u8 savedPort[2] = { 0x2F, 0x37 };	// C64 6510 port: cc65's crt0 banks BASIC out
+		// C64: a trace's .crt attached, the user's cartridge setting kept aside
+		bool c64Cartridge = false;
+		CSlrString *savedCartridgePath = NULL;
 		// Atari: the interrupt banks the OS out and owns the CPU vectors
 		bool atariInterrupt = false;
 		u8 atariPortb = 0xFF, atariPbctl = 0, atariSkctl = 0;
@@ -53,6 +57,8 @@ private:
 	bool RunTrace(const std::string &path);
 	bool LaunchC64(CDebugInterface *di, const nlohmann::json &trace, const std::vector<u8> &binary,
 				   const CDebugDatabase *database, const std::string &name);
+	bool LaunchC64Cartridge(Machine &machine, const std::string &binaryPath, u16 startAddress, const std::string &name);
+	bool DetachC64Cartridge(Machine &machine);
 	bool LaunchAtari(CDebugInterface *di, const nlohmann::json &trace, const std::vector<u8> &binary,
 					 const std::string &name);
 	bool LaunchNes(CDebugInterface *di, const nlohmann::json &trace, const std::string &binaryPath,

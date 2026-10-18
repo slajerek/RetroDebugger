@@ -254,10 +254,43 @@ int crt_read_chip_header(crt_chip_header_t *header, FILE *fd)
 /*
     Read chip data, return -1 on error
 */
+/* C64D (RD-030): where each chip's data sits in the .crt file, by its offset
+   in the raw cartridge image, so the debugger can name the file offset of a
+   fetched cartridge byte. Cleared by crt_attach for every new image. */
+#define C64D_CRT_MAX_CHIPS 256
+static struct { uint32_t rawOffset, fileOffset, size; } c64d_crt_chips[C64D_CRT_MAX_CHIPS];
+static int c64d_crt_num_chips = 0;
+
+void c64d_crt_chips_clear(void)
+{
+    c64d_crt_num_chips = 0;
+}
+
+int c64d_crt_file_offset(uint32_t rawOffset, uint32_t *fileOffset)
+{
+    int i;
+    for (i = 0; i < c64d_crt_num_chips; i++) {
+        if (rawOffset >= c64d_crt_chips[i].rawOffset && rawOffset - c64d_crt_chips[i].rawOffset < c64d_crt_chips[i].size) {
+            *fileOffset = c64d_crt_chips[i].fileOffset + (rawOffset - c64d_crt_chips[i].rawOffset);
+            return 1;
+        }
+    }
+    return 0;
+}
+
 int crt_read_chip(uint8_t *rawcart, int offset, crt_chip_header_t *chip, FILE *fd)
 {
+    long position;
+
     if (offset + chip->size > C64CART_IMAGE_LIMIT) {
         return -1; /* overflow */
+    }
+    position = ftell(fd);
+    if (position >= 0 && c64d_crt_num_chips < C64D_CRT_MAX_CHIPS) {
+        c64d_crt_chips[c64d_crt_num_chips].rawOffset = (uint32_t)offset;
+        c64d_crt_chips[c64d_crt_num_chips].fileOffset = (uint32_t)position;
+        c64d_crt_chips[c64d_crt_num_chips].size = chip->size;
+        c64d_crt_num_chips++;
     }
     if (fread(&rawcart[offset], chip->size, 1, fd) < 1) {
         return -1; /* eof?! */

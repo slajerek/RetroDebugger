@@ -1,0 +1,148 @@
+Modules list:
+-------------
+magicdesk.o:
+    CODE              Offs=000000  Size=000052  Align=00001  Fill=0000
+    BSS               Offs=000000  Size=000001  Align=00001  Fill=0000
+    BANK0             Offs=000000  Size=000015  Align=00001  Fill=0000
+    BANK1             Offs=000000  Size=000017  Align=00001  Fill=0000
+magicdesk-crt0.o:
+    CRTHEADER         Offs=000000  Size=000040  Align=00001  Fill=0000
+    CHIP0             Offs=000000  Size=000010  Align=00001  Fill=0000
+    CHIP1             Offs=000000  Size=000010  Align=00001  Fill=0000
+    CARTHDR           Offs=000000  Size=000009  Align=00001  Fill=0000
+    STARTUP           Offs=000000  Size=00007F  Align=00001  Fill=0000
+/opt/homebrew/Cellar/cc65/2.19/share/cc65/lib/c64.lib(copydata.o):
+    CODE              Offs=000052  Size=00002D  Align=00001  Fill=0000
+/opt/homebrew/Cellar/cc65/2.19/share/cc65/lib/c64.lib(incax1.o):
+    CODE              Offs=00007F  Size=000007  Align=00001  Fill=0000
+/opt/homebrew/Cellar/cc65/2.19/share/cc65/lib/c64.lib(incaxy.o):
+    CODE              Offs=000086  Size=00000B  Align=00001  Fill=0000
+/opt/homebrew/Cellar/cc65/2.19/share/cc65/lib/c64.lib(incsp1.o):
+    CODE              Offs=000091  Size=000007  Align=00001  Fill=0000
+/opt/homebrew/Cellar/cc65/2.19/share/cc65/lib/c64.lib(pusha.o):
+    CODE              Offs=000098  Size=000016  Align=00001  Fill=0000
+/opt/homebrew/Cellar/cc65/2.19/share/cc65/lib/c64.lib(zerobss.o):
+    CODE              Offs=0000AE  Size=000023  Align=00001  Fill=0000
+/opt/homebrew/Cellar/cc65/2.19/share/cc65/lib/c64.lib(zeropage.o):
+    ZEROPAGE          Offs=000000  Size=00001A  Align=00001  Fill=0000
+
+
+Segment list:
+-------------
+Name                   Start     End    Size  Align
+----------------------------------------------------
+CHIP0                 000000  00000F  000010  00001
+CHIP1                 000000  00000F  000010  00001
+CRTHEADER             000000  00003F  000040  00001
+ZEROPAGE              000002  00001B  00001A  00001
+CODE                  000800  0008D0  0000D1  00001
+BSS                   0008D1  0008D1  000001  00001
+CARTHDR               008000  008008  000009  00001
+STARTUP               008009  008087  00007F  00001
+BANK0                 009000  009014  000015  00001
+BANK1                 009000  009016  000017  00001
+
+
+Exports list by name:
+---------------------
+__BSS_RUN__               0008D1 RLA    __BSS_SIZE__              000001 REA    
+__CODE_LOAD__             008088 RLA    __CODE_RUN__              000800 RLA    
+__CODE_SIZE__             0000D1 REA    __DATA_LOAD__             008159 RLA    
+__DATA_RUN__              0008D1 RLA    __DATA_SIZE__             000000 REA    
+__RODATA_LOAD__           008159 RLA    __RODATA_RUN__            0008D1 RLA    
+__RODATA_SIZE__           000000 REA    __STACK_SIZE__            000800 REA    
+__STACK_START__           007800 RLA    __STARTUP__               000001 REA    
+_main                     000810 RLA    copydata                  000852 RLA    
+incax1                    00087F RLA    incaxy                    000888 RLA    
+incsp1                    000891 RLA    ptr1                      00000A RLZ    
+ptr2                      00000C RLZ    pusha                     00089C RLA    
+sp                        000002 RLZ    tmp1                      000012 RLZ    
+tmp2                      000013 RLZ    zerobss                   0008AE RLA    
+
+
+
+Exports list by value:
+----------------------
+__DATA_SIZE__             000000 REA    __RODATA_SIZE__           000000 REA    
+__STARTUP__               000001 REA    __BSS_SIZE__              000001 REA    
+sp                        000002 RLZ    ptr1                      00000A RLZ    
+ptr2                      00000C RLZ    tmp1                      000012 RLZ    
+tmp2                      000013 RLZ    __CODE_SIZE__             0000D1 REA    
+__CODE_RUN__              000800 RLA    __STACK_SIZE__            000800 REA    
+_main                     000810 RLA    copydata                  000852 RLA    
+incax1                    00087F RLA    incaxy                    000888 RLA    
+incsp1                    000891 RLA    pusha                     00089C RLA    
+zerobss                   0008AE RLA    __DATA_RUN__              0008D1 RLA    
+__BSS_RUN__               0008D1 RLA    __RODATA_RUN__            0008D1 RLA    
+__STACK_START__           007800 RLA    __CODE_LOAD__             008088 RLA    
+__RODATA_LOAD__           008159 RLA    __DATA_LOAD__             008159 RLA    
+
+
+
+Imports list:
+-------------
+__BSS_RUN__ ([linker generated]):
+    zerobss.o                 common/zerobss.s(8)
+__BSS_SIZE__ ([linker generated]):
+    zerobss.o                 common/zerobss.s(8)
+__CODE_LOAD__ ([linker generated]):
+    magicdesk-crt0.o          magicdesk-crt0.s(11)
+__CODE_RUN__ ([linker generated]):
+    magicdesk-crt0.o          magicdesk-crt0.s(11)
+__CODE_SIZE__ ([linker generated]):
+    magicdesk-crt0.o          magicdesk-crt0.s(11)
+__DATA_LOAD__ ([linker generated]):
+    copydata.o                common/copydata.s(8)
+__DATA_RUN__ ([linker generated]):
+    copydata.o                common/copydata.s(8)
+__DATA_SIZE__ ([linker generated]):
+    copydata.o                common/copydata.s(8)
+__RODATA_LOAD__ ([linker generated]):
+    magicdesk-crt0.o          magicdesk-crt0.s(12)
+__RODATA_RUN__ ([linker generated]):
+    magicdesk-crt0.o          magicdesk-crt0.s(12)
+__RODATA_SIZE__ ([linker generated]):
+    magicdesk-crt0.o          magicdesk-crt0.s(12)
+__STACK_SIZE__ ([linker generated]):
+    magicdesk-crt0.o          magicdesk-crt0.s(13)
+__STACK_START__ ([linker generated]):
+    magicdesk-crt0.o          magicdesk-crt0.s(13)
+__STARTUP__ (magicdesk-crt0.o):
+    magicdesk.o               magicdesk.s(14)
+_main (magicdesk.o):
+    magicdesk-crt0.o          magicdesk-crt0.s(10)
+copydata (copydata.o):
+    magicdesk-crt0.o          magicdesk-crt0.s(10)
+incax1 (incax1.o):
+    magicdesk.o               magicdesk.s(162)
+incaxy (incaxy.o):
+    magicdesk.o               magicdesk.s(162)
+incsp1 (incsp1.o):
+    magicdesk.o               magicdesk.s(162)
+    magicdesk.o               magicdesk.s(162)
+    magicdesk.o               magicdesk.s(162)
+ptr1 (zeropage.o):
+    zerobss.o                 common/zerobss.s(9)
+    copydata.o                common/copydata.s(9)
+    magicdesk-crt0.o          magicdesk-crt0.s(14)
+ptr2 (zeropage.o):
+    copydata.o                common/copydata.s(9)
+    magicdesk-crt0.o          magicdesk-crt0.s(14)
+pusha (pusha.o):
+    magicdesk.o               magicdesk.s(162)
+    magicdesk.o               magicdesk.s(162)
+    magicdesk.o               magicdesk.s(162)
+sp (zeropage.o):
+    pusha.o                   runtime/pusha.s(8)
+    incsp1.o                  runtime/incsp1.s(8)
+    magicdesk-crt0.o          magicdesk-crt0.s(14)
+    magicdesk.o               magicdesk.s(10)
+tmp1 (zeropage.o):
+    incaxy.o                  runtime/incaxy.s(8)
+    copydata.o                common/copydata.s(9)
+    magicdesk-crt0.o          magicdesk-crt0.s(14)
+tmp2 (zeropage.o):
+    magicdesk-crt0.o          magicdesk-crt0.s(14)
+zerobss (zerobss.o):
+    magicdesk-crt0.o          magicdesk-crt0.s(10)
+
