@@ -81,6 +81,21 @@ CDebugEventStep *CDebugEventsHistory::CreateEventStep(const char *description)
 	return event;
 }
 
+void CDebugEventsHistory::ForgetSegment(CDebugSymbolsSegment *segment)
+{
+	mutex->Lock();
+	for (auto &it : events)
+	{
+		CDebugEvent *event = it.second;
+		if (event->segment != segment)
+			continue;
+		event->segment = NULL;
+		if (event->eventType == DEBUG_EVENT_TYPE_BREAKPOINT)
+			((CDebugEventBreakpoint *)event)->breakpoint = NULL;
+	}
+	mutex->Unlock();
+}
+
 void CDebugEventsHistory::DeleteEvent(CDebugEventBreakpoint *event)
 {
 	mutex->Lock();

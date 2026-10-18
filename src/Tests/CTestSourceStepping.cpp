@@ -378,6 +378,49 @@ bool CTestSourceStepping::RunSourceBreakpoints(CDebugInterfaceVice *di)
 	return CheckStaleDebugInfo();
 }
 
+// RD-032: segments a reload replaces are deleted once the emulation thread
+// has passed a frame boundary; events drop their pointers into them.
+bool CTestSourceStepping::RunSegmentRetirement(CDebugInterfaceVice *di)
+{
+	CDebugSymbols *symbols = di->symbols;
+	std::string dbj = ResolveProjectPath("tests/data/source-debug/oscar64/c64/basic-flow/main.dbj");
+
+	di->SetDebugMode(DEBUGGER_MODE_RUNNING);
+	SYS_Sleep(50);		// off the cycle of the last step's event
+	CDebugEventStep *event = symbols->debugEventsHistory->CreateEventStep("RD-032 marker");
+	CDebugSymbolsSegment *old = symbols->currentSegment;
+	bool pointed = event && event->segment == old;
+	u32 deletedBefore = symbols->numDeletedSegments;
+	for (int i = 0; i < 3; i++)
+		DebugInfoLoadFile(symbols, dbj.c_str());
+	bool forgotten = event && event->segment == NULL;
+
+	// a frame for the VSync task, then what the UI frame loop does (headless
+	// runs have no UI frames; there the next load deletes them)
+	bool safe = false;
+	for (int waited = 0; waited < 3000 && !safe; waited += 20)
+	{
+		safe = symbols->safeGeneration.load() == symbols->retireGeneration;
+		if (!safe)
+			SYS_Sleep(20);
+	}
+	symbols->DeleteRetiredSegments();
+	bool deleted = safe && symbols->numDeletedSegments >= deletedBefore + 3 && symbols->retiredSegments.empty();
+	bool usable = symbols->currentSegment && symbols->currentSegment != old;
+	if (usable)
+	{
+		symbols->currentSegment->AddBreakpointPC(0x0880);
+		usable = symbols->currentSegment->breakpointsPC->GetBreakpoint(0x0880) != NULL;
+		symbols->currentSegment->breakpointsPC->DeleteBreakpoint(0x0880);
+	}
+	di->PauseEmulationBlockedWait();
+
+	char msg[200];
+	snprintf(msg, sizeof(msg), "Three reloads while running: the replaced segments are deleted after a frame (%u deleted), events forget them, the new segment works (pointed %d forgotten %d deleted %d usable %d)",
+			 symbols->numDeletedSegments - deletedBefore, pointed, forgotten, deleted, usable);
+	return Check(pointed && forgotten && deleted && usable, msg);
+}
+
 // RD-011: a CPU reset ends an armed step as Cancelled. Step Out from
 // main()'s endless loop ($0897) never returns on its own.
 bool CTestSourceStepping::RunResetCancelsStep(CDebugInterfaceVice *di)
@@ -490,6 +533,8 @@ void CTestSourceStepping::Run(ITestCallback *cb)
 		ok = RunOscar64(di);
 		if (ok)
 			ok = RunSourceBreakpoints(di);
+		if (ok)
+			ok = RunSegmentRetirement(di);
 		if (ok)
 			ok = RunResetCancelsStep(di);
 

@@ -105,7 +105,7 @@ engine `devel` at 5d61f20, unchanged this session.
 | RD-027 | P0 | core | Audit + accessor patches in VICE/Nestopia/Atari800 cores (fetch/read/write, bus master) | review(accessors + fixes; `CoreMappingAccessors` 15 steps green on Linux) | RD-001, RD-024 | Accessors compiled on 3 platforms; `tests/test-reference-files.sh` still green |
 | RD-006 | P2 | core | Canonical debug database + capability model; migrate `CDebugAsmSource` | review(`CDebugDatabase`; `CDebugAsmSource` removed; SymbolLoaders + DebugDatabase green on Linux) | RD-001, RD-038 | RD-038 tests unchanged and green; interval index unit tests |
 | RD-031 | P2 | core | **Must fix.** Loader registry with content sniffing (`.dbg` XML vs text, `.dbj`) | review(`DebugInfoProbe`/`DebugInfoLoadFile`, all dispatch sites; DebugInfoFormats green on Linux) | RD-006 | Menu/autoload/CLI go through registry; sniff unit test |
-| RD-032 | P2 | core | Symbol lifetime fixes (segments, re-import, dtor, `D:` labels, Watchpoints layout) | in-progress(done: line ownership, re-import, `SetSegment`, `D:` labels, Watchpoints; open: deleting replaced segments, blocked on purging `CDebugEventsHistory` pointers) | RD-006 | ASan/valgrind-clean re-import test |
+| RD-032 | P2 | core | Symbol lifetime fixes (segments, re-import, dtor, `D:` labels, Watchpoints layout) | review(done: line ownership, re-import, `SetSegment`, `D:` labels, Watchpoints; replaced segments are retired: events forget them, a VSync task marks when the emulation thread (which reads `currentSegment` per instruction without a lock) has passed a frame, the UI frame loop or the next load deletes them; `CDebugInterface::DoFrame` now drains VSync tasks on every machine (only the NES did); `SourceStepping` reloads 3x while running; ASan run not done) | RD-006 | ASan/valgrind-clean re-import test |
 | RD-007 | P2 | core | Bank-aware address indexes, source remapping, binary/cartridge identity checks | todo | RD-006, RD-024 | Lookup tests: multi-span, missing, ambiguous, same-PC two identities |
 | RD-008 | P2 | compiler | Oscar64 `.dbj` adapter + contract tests | review(`DebugInfoLoadOscar64`; DebugInfoFormats steps 20-26 green on Linux) | RD-002, RD-006, RD-031 | Tier 1 Oscar64 fixture resolves file:line for known addresses |
 | RD-033 | P3 | core | Generalize loading entry points (NES `-debuginfo`/autoload, CLI `nes`/`-ines`, NES source slot) | review(autoload, `-ines`, CLI target machine, NES layout; DefaultWorkspaceSpecs green) | RD-031 | NES loads `.dbg` from CLI and menu; workspace test updated |
@@ -161,7 +161,7 @@ Questions 1, 2, 3, 5, 8 and 10 are answered in spec #15/#20.
 
 | Defect | Closed by |
 |---|---|
-| Segments never deleted; `.dbg` re-import dangling pointers; segment dtor double delete | RD-032 |
+| Segments never deleted; `.dbg` re-import dangling pointers; segment dtor double delete | RD-032 (fixed: retired, deleted after the emulation thread's next frame) |
 | `.vs` `D:` labels ignored; newer `<Watchpoints>` layout misparsed | RD-032 (fixed) |
 | Menu "Import labels" with a `.dbg` skips `DeleteAllSymbols`: stale same-name segments keep freed source lines and `ActivateSelectedSegment` picks the stale one (use-after-free) | RD-032 (fixed: segments hold no line pointers, a `.dbg` load replaces the segment set) |
 | `.dbg` `<Sources>` paths: split on every comma; a Windows path is not split into a file name on macOS/Linux (`GetFileNameComponentFromPath` uses the host separator); relative paths resolve against the process cwd, not the `.dbg` folder | RD-006 (file names from both separators; a source missing at its path is looked up next to the `.dbg`; comma split remains) |
@@ -210,6 +210,7 @@ Questions 1, 2, 3, 5, 8 and 10 are answered in spec #15/#20.
 | 2026-10-18 | RD-015: `irq` on the Atari (POKEY timer 1, OS banked out, SKCTL out of init) and the NES (DMC, patched IRQ vector); counts only the trace's IRQs |
 | 2026-10-18 | RD-002: `MATRIX.md` from the committed manifests too, `--matrix-only`; the three M3 fixtures listed |
 | 2026-10-18 | `SourceStepTrace` inserts/unloads NES cartridges through VSync tasks (the Linux CI segfault). macOS suite 83/83 (8 skipped) |
+| 2026-10-18 | RD-032: replaced segments deleted safely; VSync tasks drained on C64 and Atari too. macOS suite 84/84, ImGui 12/16 (pre-existing 4) |
 | 2026-10-18 | RD-011: CPU reset events on all three machines; a reset cancels an armed step. macOS suite 84/84 |
 | 2026-10-18 | RD-012: frames seeded from the stack annotation, call stack endpoint + `retro_callstack` (55 tools) |
 | 2026-10-18 | RD-036: source location/resolve/breakpoint/symbols-load endpoints and MCP tools (54 tools), skill doc. macOS suite green |

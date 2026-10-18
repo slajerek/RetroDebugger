@@ -77,6 +77,9 @@ public:
 	// owns this cycle (a breakpoint that ended the step says more)
 	CDebugEventStep *CreateEventStep(const char *description);
 	void DeleteEvent(CDebugEventBreakpoint *event);
+	// a segment is going away: events keep their cycle, frame and text, and
+	// drop their pointers into it (its breakpoints go with it)
+	void ForgetSegment(CDebugSymbolsSegment *segment);
 	
 	void DeleteAllEvents();
 };

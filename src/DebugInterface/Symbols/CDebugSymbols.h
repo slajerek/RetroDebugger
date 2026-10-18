@@ -3,6 +3,7 @@
 
 #include "SYS_Defs.h"
 #include "hjson.h"
+#include <atomic>
 #include <list>
 #include <memory>
 #include <string>
@@ -63,6 +64,20 @@ public:
 	
 	std::vector<CDebugSymbolsSegment *> segments;
 	CDebugSymbolsSegment *currentSegment;
+
+	// RD-032: segments a reload replaced. The emulation thread reads
+	// currentSegment and its breakpoints at every instruction without a lock,
+	// so a retired segment is deleted only once that thread has passed a
+	// frame boundary after the swap (a VSync task marks it), or at once when
+	// the machine is not running. Deletion itself runs on the UI side
+	// (DeleteRetiredSegments from the frame loop and from loads): the
+	// segment's destructor takes the GUI mutex.
+	std::vector<std::pair<CDebugSymbolsSegment *, u32>> retiredSegments;	// segment, generation
+	u32 retireGeneration = 0;
+	std::atomic<u32> safeGeneration { 0 };
+	void RetireSegment(CDebugSymbolsSegment *segment);
+	void DeleteRetiredSegments();
+	u32 numDeletedSegments = 0;		// for tests
 	CSlrString *previousSegmentName;
 	int currentSegmentNum;
 	CDebugSymbolsSegment *FindSegment(CSlrString *segmentName);

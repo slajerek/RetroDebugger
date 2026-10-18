@@ -2493,6 +2493,13 @@ void CViewC64::Render()
 
 void CViewC64::RenderImGui()
 {
+	// RD-032: segments replaced by a reload, once the emulation threads let go
+	for (CDebugInterface *debugInterface : debugInterfaces)
+	{
+		if (debugInterface->symbols && !debugInterface->symbols->retiredSegments.empty())
+			debugInterface->symbols->DeleteRetiredSegments();
+	}
+
 	if (userFontsNeedRecreation)
 	{
 		RecreateUserFonts();

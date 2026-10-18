@@ -167,6 +167,10 @@ void CDebugInterface::DoVSync()
 // frame is painted on canvas and ready to be consumed
 void CDebugInterface::DoFrame()
 {
+	// every machine's emulation thread runs here once per frame: VSync tasks
+	// queued for any machine run now (the NES also drains them earlier)
+	ExecuteVSyncTasks();
+
 	for (std::list<CDebuggerEmulatorPlugin *>::iterator it = this->plugins.begin(); it != this->plugins.end(); it++)
 	{
 		CDebuggerEmulatorPlugin *plugin = *it;

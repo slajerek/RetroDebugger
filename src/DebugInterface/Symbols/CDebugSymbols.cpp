@@ -15,6 +15,8 @@
 #include "CGuiMain.h"
 #include "CDebugSymbols.h"
 #include "CDebugSourceBreakpoint.h"
+#include "CDebugInterfaceTask.h"
+#include "CDebugEventsHistory.h"
 #include "CDebugSymbolsSegment.h"
 #include "CDebugSymbolsSegmentC64.h"
 #include "CDebugDataAdapter.h"
@@ -58,17 +60,61 @@ CDebugSymbols::~CDebugSymbols()
 
 	delete debugEventsHistory;
 
-	while (!segments.empty())
+	// the emulation thread has stopped using these by now (the interface
+	// is destroyed after its thread)
+	for (CDebugSymbolsSegment *segment : segments)
+		delete segment;
+	segments.clear();
+	for (auto &retired : retiredSegments)
+		delete retired.first;
+	retiredSegments.clear();
+}
+
+void CDebugSymbols::RetireSegment(CDebugSymbolsSegment *segment)
+{
+	// events keep the segment and its breakpoints only to name them
+	if (debugEventsHistory)
+		debugEventsHistory->ForgetSegment(segment);
+	retiredSegments.push_back(std::make_pair(segment, retireGeneration));
+}
+
+// on the emulation thread between two frames: it holds no segment pointer
+// from before the swap any more
+class CDebugSymbolsTaskSegmentsSafe : public CDebugInterfaceTask
+{
+public:
+	CDebugSymbolsTaskSegmentsSafe(CDebugSymbols *symbols, u32 generation) : symbols(symbols), generation(generation) {}
+	virtual void ExecuteTask() override
 	{
-		CDebugSymbolsSegment *segment = segments.back();
-		segments.pop_back();
-		
-		// TODO: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA THE BUG!
-		//       observation: on macOS when here segment is deleted then POKEY wavetables stop receiving channels data
-		//		 this is memory leak on purpose, because in other way it breaks debugger
-		//		 ... I guess we have some dangling pointers somewhere ...
-		//delete segment;
+		symbols->safeGeneration.store(generation, std::memory_order_release);
 	}
+private:
+	CDebugSymbols *symbols;
+	u32 generation;
+};
+
+void CDebugSymbols::DeleteRetiredSegments()
+{
+	if (retiredSegments.empty())
+		return;
+	u32 safe = safeGeneration.load(std::memory_order_acquire);
+	guiMain->LockMutex();
+	debugInterface->LockMutex();
+	for (auto it = retiredSegments.begin(); it != retiredSegments.end(); )
+	{
+		if ((i32)(it->second - safe) <= 0)
+		{
+			delete it->first;
+			numDeletedSegments++;
+			it = retiredSegments.erase(it);
+		}
+		else
+		{
+			it++;
+		}
+	}
+	debugInterface->UnlockMutex();
+	guiMain->UnlockMutex();
 }
 
 void CDebugSymbols::ParseSymbols(CSlrString *fileName)
@@ -104,17 +150,27 @@ void CDebugSymbols::ParseSymbols(CSlrFile *file)
 // this should be used by ParseSymbols with
 void CDebugSymbols::DeleteAllSymbols()
 {
+	bool retired = !segments.empty();
+	if (retired)
+		retireGeneration++;
 	while (!segments.empty())
 	{
 		CDebugSymbolsSegment *segment = segments.back();
 		segments.pop_back();
-		
-		// TODO: On windows delete segment crashes on -pass   needs to be investigated, what about Linux and valgrind? Xcode sanitizer shows nothing
-		// TODO: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA THE BUG!
-		//delete segment;
+		RetireSegment(segment);
 	}
 	
 	currentSegment = NULL;
+
+	// RD-032: deleted once nothing can still be reading them
+	if (retired)
+	{
+		if (debugInterface && debugInterface->isRunning)
+			debugInterface->AddVSyncTask(new CDebugSymbolsTaskSegmentsSafe(this, retireGeneration));
+		else
+			safeGeneration.store(retireGeneration, std::memory_order_release);
+	}
+	DeleteRetiredSegments();
 }
 
 // parse Vice's vs format
