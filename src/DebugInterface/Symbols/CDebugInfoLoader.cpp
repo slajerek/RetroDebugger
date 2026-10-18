@@ -15,6 +15,8 @@
 #include "utf8.h"
 #include <cstring>
 #include <cctype>
+#include <cstdio>
+#include <algorithm>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
@@ -142,6 +144,7 @@ DebugInfoFormat DebugInfoLoadFile(CDebugSymbols *symbols, const char *cPath, con
 	LOGM("DebugInfoLoadFile: %s is %s", cPath, DebugInfoFormatName(format));
 
 	CDebugInfoLoadOptions options = loadOptions;
+	options.debugFilePath = cPath;
 	if (options.debugFileDir.empty())
 	{
 		std::string dir(cPath);
@@ -1067,8 +1070,45 @@ bool DebugInfoLoadOscar64(CDebugSymbols *symbols, CByteBuffer *byteBuffer, const
 		}
 		if (function.end > (u32)maxAddress)
 			function.end = (u32)maxAddress;
-		database->AddFunction(function);
+		u32 functionIndex = database->AddFunction(function);
 		labels.push_back(Label{ function.start, function.name });
+
+		// RD-022: parameters and locals, in the three shapes of
+		// RESEARCH-c-symbols.md #2.1: "base" = frame-relative to the 16-bit
+		// stack pointer at that zero-page address; "enter"/"leave" = static
+		// stack, valid on those lines; neither = a zero-page parameter register
+		const Hjson::Value &locals = f["variables"];
+		for (size_t v = 0; locals.type() == Hjson::Type::Vector && v < locals.size(); v++)
+		{
+			const Hjson::Value &local = locals[(int)v];
+			CDebugVariable variable;
+			variable.name = local["name"].to_string();
+			variable.functionIndex = (i32)functionIndex;
+			variable.typeId = local["typeid"].defined() ? (u32)local["typeid"].to_int64() : kNoDebugType;
+			variable.address = (u32)local["start"].to_int64();
+			i64 end = local["end"].to_int64();
+			variable.size = end > (i64)variable.address ? (u32)(end - variable.address) : 0;
+			variable.regionId = regionId;
+			if (local["base"].defined())
+			{
+				variable.location = DebugVariableLocation::FrameRelative;
+				variable.baseZp = (u32)local["base"].to_int64();
+				variable.frameExactAtLineStarts = true;		// the prologue has no line; the epilogue ends the last one
+			}
+			else if (local["enter"].defined())
+			{
+				variable.location = DebugVariableLocation::FixedScoped;
+				variable.enterLine = (i32)local["enter"].to_int64();
+				variable.leaveLine = (i32)local["leave"].to_int64();
+			}
+			else
+				variable.location = DebugVariableLocation::ZpParam;
+			if (!variable.name.empty())
+			{
+				database->AddVariable(variable);
+				database->capabilities.localVariables = true;
+			}
+		}
 
 		u32 blockId = database->AddBlock(function.name, regionId);
 		// RD-017: "origins" repeats each range with the lines it came from,
@@ -1106,13 +1146,67 @@ bool DebugInfoLoadOscar64(CDebugSymbols *symbols, CByteBuffer *byteBuffer, const
 		}
 	}
 
+	// RD-022: types ("uint"/"int"/"ptr"/"array" with "eid"; names are empty)
+	Hjson::Value typeList = root["types"];
+	for (size_t i = 0; typeList.type() == Hjson::Type::Vector && i < typeList.size(); i++)
+	{
+		const Hjson::Value &t = typeList[(int)i];
+		CDebugType type;
+		type.id = (u32)t["typeid"].to_int64();
+		type.size = (u32)t["size"].to_int64();
+		type.name = t["name"].to_string();
+		std::string kind = t["type"].defined() ? t["type"].to_string() : std::string();
+		type.kind = kind == "uint" ? DebugTypeKind::UInt : kind == "int" ? DebugTypeKind::SInt
+			: kind == "ptr" ? DebugTypeKind::Pointer : kind == "array" ? DebugTypeKind::Array
+			: kind == "struct" ? DebugTypeKind::Struct : DebugTypeKind::Unknown;
+		if (t["eid"].defined())
+			type.elementType = (u32)t["eid"].to_int64();
+		database->AddType(type);
+		database->capabilities.types = true;
+	}
+	for (auto &it : database->Types())
+	{
+		if (it.second.kind != DebugTypeKind::Array)
+			continue;
+		const CDebugType *element = database->GetType(it.second.elementType);
+		if (element && element->size > 0)
+		{
+			CDebugType array = it.second;
+			array.count = array.size / element->size;
+			database->AddType(array);
+		}
+	}
+
+	// linker markers (BSSStart, ZeroEnd...) are "memory" entries of type START
+	// or END: labels, never variables
+	std::set<std::pair<std::string, u32>> markers;
+	Hjson::Value memoryList = root["memory"];
+	for (size_t i = 0; memoryList.type() == Hjson::Type::Vector && i < memoryList.size(); i++)
+	{
+		std::string kind = memoryList[(int)i]["type"].to_string();
+		if (kind == "START" || kind == "END")
+			markers.insert(std::make_pair(memoryList[(int)i]["name"].to_string(), (u32)memoryList[(int)i]["start"].to_int64()));
+	}
+
 	Hjson::Value variables = root["variables"];
 	for (size_t i = 0; i < variables.size(); i++)
 	{
 		const Hjson::Value &v = variables[(int)i];
 		u32 start = (u32)v["start"].to_int64();
+		std::string name = v["name"].to_string();
 		if (start < (u32)maxAddress)
-			labels.push_back(Label{ start, v["name"].to_string() });
+			labels.push_back(Label{ start, name });
+		if (name.empty() || markers.count(std::make_pair(name, start)))
+			continue;
+		CDebugVariable variable;
+		variable.name = name;
+		variable.typeId = v["typeid"].defined() ? (u32)v["typeid"].to_int64() : kNoDebugType;
+		variable.address = start;
+		i64 end = v["end"].to_int64();
+		variable.size = end > (i64)start ? (u32)(end - start) : 0;
+		variable.regionId = regionId;
+		database->AddVariable(variable);
+		database->capabilities.variables = true;
 	}
 
 	for (auto &it : database->Files())
@@ -1257,6 +1351,8 @@ static bool IsCc65GeneratedLabel(const std::string &name)
 	return true;
 }
 
+static std::filesystem::path Utf8Path(const std::string &path);
+
 bool DebugInfoLoadCc65(CDebugSymbols *symbols, CByteBuffer *byteBuffer, const CDebugInfoLoadOptions &options)
 {
 	std::map<long, Cc65Record> files, segs, spans, scopes, syms;
@@ -1364,6 +1460,8 @@ bool DebugInfoLoadCc65(CDebugSymbols *symbols, CByteBuffer *byteBuffer, const CD
 		}
 	}
 
+	std::map<long, i32> scopeFunction;		// scope id -> function index (RD-022)
+
 	// Functions: a C symbol with external linkage names an asm symbol, whose
 	// scope ("_add") spans the function's code.
 	for (const Cc65Record &csym : csyms)
@@ -1417,7 +1515,51 @@ bool DebugInfoLoadCc65(CDebugSymbols *symbols, CByteBuffer *byteBuffer, const CD
 				function.line = DefinitionLineFromText(database->GetFile(function.fileId), function.name, entryLine.second,
 												   &function.lineIsDefinition);
 			}
-			database->AddFunction(function);
+			scopeFunction[it.first] = (i32)database->AddFunction(function);
+		}
+	}
+
+	// RD-022: C locals and parameters, "auto" csyms at offs from cc65's
+	// software stack pointer sp -- an import here, its address only in the
+	// .lbl beside the .dbg. cc65 records no stack depth per PC: the offsets
+	// hold once the function's own pushes are done and no call's arguments
+	// are being pushed, so they are never claimed Exact (RESEARCH #2.2).
+	u32 spAddress = 0xFFFFFFFF;
+	if (!options.debugFilePath.empty())
+	{
+		std::string lblPath = options.debugFilePath;
+		size_t dot = lblPath.find_last_of('.');
+		size_t slash = lblPath.find_last_of("/\\");
+		if (dot != std::string::npos && (slash == std::string::npos || dot > slash))
+			lblPath = lblPath.substr(0, dot);
+		std::ifstream lbl(Utf8Path(lblPath + ".lbl"));
+		std::string lblLine;
+		while (std::getline(lbl, lblLine))
+		{
+			unsigned value = 0;
+			char name[64] = "";
+			if (sscanf(lblLine.c_str(), "al %x .%63s", &value, name) == 2 && !strcmp(name, "sp"))
+				spAddress = value;
+		}
+	}
+	for (const Cc65Record &csym : csyms)
+	{
+		if (csym.Get("sc") != "auto")
+			continue;
+		auto owner = scopeFunction.find(csym.Num("scope", -1));
+		if (owner == scopeFunction.end())
+			continue;
+		CDebugVariable variable;
+		variable.name = csym.Get("name");
+		variable.functionIndex = owner->second;
+		variable.location = DebugVariableLocation::FrameRelative;
+		variable.address = (u32)csym.Num("offs", 0);		// omitted when 0; may be negative
+		variable.baseZp = spAddress;
+		variable.regionId = regionId;
+		if (!variable.name.empty())
+		{
+			database->AddVariable(variable);
+			database->capabilities.localVariables = true;
 		}
 	}
 
@@ -1446,6 +1588,46 @@ bool DebugInfoLoadCc65(CDebugSymbols *symbols, CByteBuffer *byteBuffer, const CD
 			}
 		}
 		labels.push_back(label);
+	}
+
+	// RD-022: C globals. cc65 writes no csym for them: an "_"-prefixed data
+	// label (a segment that is not code: rw, or RODATA) is the C name with
+	// cc65's "_". Its size is not recorded: up to the next label in its
+	// segment, or the segment's end -- approximate.
+	{
+		std::set<long> functionSyms;
+		for (const Cc65Record &csym : csyms)
+			if (csym.Get("sc") == "ext" && csym.Has("sym"))
+				functionSyms.insert(csym.Num("sym"));
+		std::map<long, std::vector<long>> labelsBySeg;		// seg -> label values
+		for (auto &it : syms)
+			if (it.second.Get("type") == "lab" && it.second.Has("seg"))
+				labelsBySeg[it.second.Num("seg")].push_back(it.second.Num("val"));
+		for (auto &it : labelsBySeg)
+			std::sort(it.second.begin(), it.second.end());
+		for (auto &it : syms)
+		{
+			const Cc65Record &sym = it.second;
+			std::string name = sym.Get("name");
+			if (sym.Get("type") != "lab" || name.size() < 2 || name[0] != '_' || functionSyms.count(it.first) || !sym.Has("seg"))
+				continue;
+			auto segIt = segs.find(sym.Num("seg"));
+			if (segIt == segs.end() || !(segIt->second.Get("type") == "rw" || segIt->second.Get("name") == "RODATA"))
+				continue;
+			long value = sym.Num("val");
+			long segEnd = segIt->second.Num("start", 0) + segIt->second.Num("size", 0);
+			long next = segEnd;
+			for (long other : labelsBySeg[sym.Num("seg")])
+				if (other > value) { next = std::min(next, other); break; }
+			CDebugVariable variable;
+			variable.name = name.substr(1);
+			variable.address = (u32)value;
+			variable.size = next > value ? (u32)(next - value) : 0;
+			variable.sizeApproximate = true;
+			variable.regionId = regionId;
+			database->AddVariable(variable);
+			database->capabilities.variables = true;
+		}
 	}
 
 	// (source text was loaded before the functions, for their definition lines)

@@ -28,6 +28,7 @@ Use this skill when working with the RetroDebugger MCP server to debug 8-bit pro
 - `retro_source_location` — code to source and back on the loaded debug info: with `address`
   (default: the PC) the file, line and function in effect plus every candidate mapping; with
   `file` and `line` the line actually used and its addresses
+- `retro_source_variables` — C variables at the PC (or `address`) from the loaded debug info: with `name` one, else every one in scope (the function's parameters and locals, then globals), each with location, type, address, value and a quality. Trust a value only when its quality is `exact`; `approximate`/`missing` come with the reason (a cc65 local: the stack depth is not recorded; an Oscar64 frame local in the prologue: not set up yet). Only the innermost frame's locals are resolved.
 - `retro_source_trace` — the source lines executed last (newest last, first PC and instruction
   count per run); `record:true` starts recording (a check per instruction), `record:false` stops.
   The way to follow a C64 Ultimate (`platform:"c64u"`), which cannot step: its bus trace is

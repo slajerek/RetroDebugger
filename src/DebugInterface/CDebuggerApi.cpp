@@ -6,6 +6,7 @@
 #include "CDebugExecutionContext.h"
 #include "CDebugDataAdapter.h"
 #include "CDebugInfoLoader.h"
+#include "CDebugVariableResolver.h"
 #include "CDebuggerApi.h"
 #include "CViewC64.h"
 #include "CViewMonitorConsole.h"
@@ -210,6 +211,82 @@ nlohmann::json CDebuggerApi::VerifySourceCodeJson(const std::string &programPath
 		j["warning"] = check.warning;
 	else if (check.checked == 0)
 		j["warning"] = "no mapping records its offset in the program file (or none of its banks is in): nothing was compared";
+	return j;
+}
+
+static const char *QualityName(DebugMappingQuality quality)
+{
+	switch (quality)
+	{
+		case DebugMappingQuality::Exact:		return "exact";
+		case DebugMappingQuality::Approximate:	return "approximate";
+		case DebugMappingQuality::Ambiguous:	return "ambiguous";
+		case DebugMappingQuality::Missing:		return "missing";
+	}
+	return "?";
+}
+
+static nlohmann::json VariableJson(const CDebugDatabase *database, const CDebugVariableResolution &r)
+{
+	nlohmann::json v;
+	v["name"] = r.name;
+	if (!r.function.empty())
+		v["function"] = r.function;
+	if (r.variable)
+		v["location"] = DebugVariableLocationName(r.variable->location);
+	v["type"] = r.type;
+	v["quality"] = QualityName(r.quality);
+	if (!r.reason.empty())
+		v["reason"] = r.reason;
+	if (r.hasAddress)
+	{
+		v["address"] = r.address;
+		v["size"] = r.size;
+		v["bytes"] = r.bytes;
+		// an integer or a pointer of up to 4 bytes: its little-endian value
+		const CDebugType *type = (database && r.variable) ? database->GetType(r.variable->typeId) : NULL;
+		if (type && (type->kind == DebugTypeKind::UInt || type->kind == DebugTypeKind::SInt || type->kind == DebugTypeKind::Pointer)
+			&& type->size >= 1 && type->size <= 4 && r.bytes.size() >= type->size)
+		{
+			u32 value = 0;
+			for (u32 i = 0; i < type->size; i++)
+				value |= (u32)r.bytes[i] << (8 * i);
+			if (type->kind == DebugTypeKind::SInt && type->size < 4 && (value & (1u << (type->size * 8 - 1))))
+				v["value"] = (i64)value - ((i64)1 << (type->size * 8));
+			else
+				v["value"] = value;
+		}
+	}
+	return v;
+}
+
+nlohmann::json CDebuggerApi::GetSourceVariablesJson(const std::string &name, int address, const std::string &cpu)
+{
+	SourceCpu target;
+	if (!GetSourceCpu(cpu, &target))
+		return nlohmann::json{{"error", "unknown cpu " + cpu}};
+	if (target.symbols != debugInterface->symbols)
+		return nlohmann::json{{"error", "variables are resolved for the main CPU only"}};
+	if (address < 0)
+		address = target.pc;
+	CDebugSymbols *symbols = target.symbols;
+	std::shared_ptr<const CDebugDatabase> database = symbols ? symbols->debugDatabase : nullptr;
+	if (!database || !symbols->currentSegment || symbols->currentSegment->debugRegionId < 0)
+		return nlohmann::json{{"error", "no debug info loaded"}};
+	u32 regionId = (u32)symbols->currentSegment->debugRegionId;
+
+	nlohmann::json j;
+	j["address"] = address;
+	j["capabilities"] = { {"variables", database->capabilities.variables}, {"localVariables", database->capabilities.localVariables},
+						  {"types", database->capabilities.types} };
+	if (!name.empty())
+	{
+		j["variable"] = VariableJson(database.get(), DebugResolveVariable(database.get(), debugInterface, regionId, name, (u16)address));
+		return j;
+	}
+	j["variables"] = nlohmann::json::array();
+	for (const CDebugVariableResolution &r : DebugVariablesInScope(database.get(), debugInterface, regionId, (u16)address))
+		j["variables"].push_back(VariableJson(database.get(), r));
 	return j;
 }
 

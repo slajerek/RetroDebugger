@@ -347,6 +347,14 @@ void CDebuggerServerApi::RegisterEndpoints(CDebuggerServer *server)
 		return server->PrepareResult(HTTP_OK, token, debuggerApi->GetSourceLocationJson(address, params.value("cpu", "")), NULL, 0);
 	});
 
+	sprintf(buf, "%s/source/variables", plat);
+	RegisterEndpoint(server, buf, plat, "source", "C variables at an address (default: the PC): \"name\" for one, else every one in scope -- location, type, address, value, quality and why",
+	[this, server](const string token, json params, unsigned char *binaryData, int binaryDataSize) -> vector<char>*
+	{
+		json j = debuggerApi->GetSourceVariablesJson(params.value("name", ""), params.value("address", -1), params.value("cpu", ""));
+		return server->PrepareResult(j.contains("error") ? HTTP_BAD_REQUEST : HTTP_OK, token, j, NULL, 0);
+	});
+
 	sprintf(buf, "%s/source/verify", plat);
 	RegisterEndpoint(server, buf, plat, "source", "Compare the code the debug info maps, in memory, with the program file (\"program\", default: the one it was loaded for): checked and differing bytes",
 	[this, server](const string token, json params, unsigned char *binaryData, int binaryDataSize) -> vector<char>*

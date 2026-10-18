@@ -1580,6 +1580,41 @@ void CMCPServer::RegisterDebuggerTools(CDebuggerServer *server)
 		RegisterTool(tool);
 	}
 
+	// C variables (RD-022)
+	{
+		MCPToolDescriptor tool;
+		tool.name = "retro_source_variables";
+		tool.description = "C variables from the loaded debug info at an address (default: the PC): with 'name' one variable, "
+			"else every one in scope (the PC's function's parameters and locals, then the globals). Each has its location "
+			"(fixed, static stack, zero-page parameter, stack frame), type, address, bytes and value, and a quality: exact, "
+			"or approximate/missing with the reason (e.g. a cc65 local: the stack depth is not recorded). Only the innermost "
+			"frame's locals are resolved.";
+		tool.inputSchema = {
+			{"type", "object"},
+			{"properties", {
+				{"platform", {{"type", "string"}}},
+				{"name", {{"type", "string"}}},
+				{"address", {{"type", "integer"}}}
+			}},
+			{"required", json::array({"platform"})}
+		};
+		tool.handler = [server](const json &params) -> json
+		{
+			string platform = params.value("platform", "c64");
+			json args = json::object();
+			if (params.contains("name"))
+				args["name"] = params["name"];
+			if (params.contains("address"))
+				args["address"] = params["address"];
+			vector<char> *result = server->RunEndpointFunction(platform + "/source/variables", "", args, nullptr, 0);
+			if (!result || result->empty()) { delete result; return json::object(); }
+			string raw(result->data(), result->size());
+			delete result;
+			return json::parse(raw, nullptr, false);
+		};
+		RegisterTool(tool);
+	}
+
 	// Source breakpoints (RD-036)
 	{
 		MCPToolDescriptor tool;

@@ -39,6 +39,7 @@ const char *DebugInfoFormatName(DebugInfoFormat format);
 struct CDebugInfoLoadOptions
 {
 	std::string debugFileDir;
+	std::string debugFilePath;		// set by DebugInfoLoadFile
 	std::vector<std::pair<std::string, std::string>> pathRemaps;
 	std::vector<std::string> sourceRoots;
 };

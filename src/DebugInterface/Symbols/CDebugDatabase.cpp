@@ -112,6 +112,22 @@ u32 CDebugDatabase::AddFunction(const CDebugFunction &function)
 	return (u32)functions.size() - 1;
 }
 
+void CDebugDatabase::AddType(const CDebugType &type)
+{
+	types[type.id] = type;
+}
+
+void CDebugDatabase::AddVariable(const CDebugVariable &variable)
+{
+	variables.push_back(variable);
+}
+
+const CDebugType *CDebugDatabase::GetType(u32 typeId) const
+{
+	auto it = types.find(typeId);
+	return it == types.end() ? NULL : &it->second;
+}
+
 void CDebugDatabase::Finalize()
 {
 	if (finalized)
@@ -388,7 +404,11 @@ std::shared_ptr<CDebugDatabase> DebugDatabaseMerge(const CDebugDatabase *base,
 		for (const CDebugSourceMapping &mapping : base->Mappings())
 			merged->AddMapping(mapping);
 		for (const CDebugFunction &function : base->Functions())
-			merged->AddFunction(function);
+			merged->AddFunction(function);		// same indices: the variables' functionIndex holds
+		for (auto &it : base->Types())
+			merged->AddType(it.second);
+		for (const CDebugVariable &variable : base->Variables())
+			merged->AddVariable(variable);
 	}
 	merged->capabilities.lineMappings = true;
 	if (*regionId < 0 || *regionId >= (int)merged->NumRegions())

@@ -56,6 +56,9 @@ public:
 	// RD-007: the code in memory against the program file (default: the one
 	// the debug info was loaded for)
 	nlohmann::json VerifySourceCodeJson(const std::string &programPath);
+	// RD-022: C variables at ADDRESS (default: the PC) -- NAME, or every one
+	// in scope when NAME is empty: location, type, quality and reason, bytes
+	nlohmann::json GetSourceVariablesJson(const std::string &name, int address, const std::string &cpu = "");
 	// RD-045: recording on/off, the capabilities, and the COUNT lines executed last
 	virtual nlohmann::json GetSourceTraceJson(int count);
 	// FILE:LINE -> the line actually used and its first addresses

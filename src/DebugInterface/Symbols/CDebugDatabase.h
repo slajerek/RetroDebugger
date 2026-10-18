@@ -39,6 +39,10 @@ struct CDebugDatabaseCapabilities
 	bool functions = false;
 	bool statements = false;
 	bool physicalIdentity = false;
+	// RD-022: C variables (RESEARCH-c-symbols.md #6)
+	bool variables = false;			// globals with addresses
+	bool localVariables = false;	// parameters and locals
+	bool types = false;				// sizes and kinds of the variables' types
 };
 
 class CDebugSourceFile
@@ -89,6 +93,59 @@ struct CDebugFunction
 	bool lineIsDefinition = false;	// the producer or the source text said so
 	bool hasImageOffset = false;	// where start's byte is in the program file (RD-007)
 	u64 imageOffset = 0;
+};
+
+// RD-022: a variable's type, as the producer records it (Oscar64 "uint",
+// "ptr", "array"; cc65 nothing). Never guessed from the name.
+enum class DebugTypeKind : u8
+{
+	Unknown,
+	UInt,
+	SInt,
+	Pointer,
+	Array,
+	Struct,
+	Function
+};
+static const u32 kNoDebugType = 0xFFFFFFFF;
+
+struct CDebugType
+{
+	u32 id = 0;
+	DebugTypeKind kind = DebugTypeKind::Unknown;
+	u32 size = 0;
+	u32 elementType = kNoDebugType;		// Pointer: the target, Array: the element
+	u32 count = 0;						// Array: size / element size
+	std::string name;
+};
+
+// RD-022: where a variable lives (RESEARCH-c-symbols.md #5), which decides
+// what may be claimed about its value at a PC.
+enum class DebugVariableLocation : u8
+{
+	Fixed,			// an absolute address, always
+	FixedScoped,	// an absolute address, valid while its function runs its enter..leave lines
+	ZpParam,		// a zero-page parameter register: valid at the function's entry
+	FrameRelative,	// word(baseZp) + address: the software stack frame
+	Register,		// a CPU register: not readable from memory
+	Constant,		// folded: never a memory location
+	Absent			// optimized out
+};
+
+struct CDebugVariable
+{
+	std::string name;
+	i32 functionIndex = -1;			// -1: global; else the AddFunction index
+	u32 typeId = kNoDebugType;
+	DebugVariableLocation location = DebugVariableLocation::Fixed;
+	u32 address = 0;				// absolute; FrameRelative: the offset from the stack pointer
+	u32 baseZp = 0;					// FrameRelative: the zero-page address of the 16-bit stack pointer
+	u32 size = 0;					// bytes; 0 when unknown
+	bool sizeApproximate = false;	// cc65: from the next label or the segment end
+	bool frameExactAtLineStarts = false;	// Oscar64: the frame is set up at every line start of the body
+	i32 enterLine = 0;				// FixedScoped: the source lines of its scope
+	i32 leaveLine = 0;
+	u32 regionId = 0;
 };
 
 // RD-017: one call an inlined function's code came from -- the caller's
@@ -142,6 +199,8 @@ public:
 	void AddMapping(const CDebugSourceMapping &mapping);
 	u32 AddFunction(const CDebugFunction &function);
 	u32 AddInlineChain(const std::vector<CDebugInlineSite> &chain);
+	void AddType(const CDebugType &type);
+	void AddVariable(const CDebugVariable &variable);
 	void Finalize();
 
 	// --- queries: after Finalize() ---
@@ -167,6 +226,11 @@ public:
 	const CDebugSourceMapping *ResolveImage(u32 regionId, u32 address, bool hasImageOffset, u64 imageOffset) const;
 	const CDebugFunction *FindFunctionImage(u32 regionId, u32 address, bool hasImageOffset, u64 imageOffset) const;
 	const std::vector<CDebugFunction> &Functions() const { return functions; }
+
+	// RD-022: variables (globals first, in producer order) and their types
+	const std::vector<CDebugVariable> &Variables() const { return variables; }
+	const CDebugType *GetType(u32 typeId) const;
+	const std::map<u32, CDebugType> &Types() const { return types; }
 
 	// RD-017: the inline calls of a mapping, innermost first; empty when the
 	// code is its function's own. The logical depth adds their number to the
@@ -200,6 +264,8 @@ private:
 	std::vector<CDebugBlock *> blocks;
 	std::vector<CDebugSourceMapping> mappings;
 	std::vector<CDebugFunction> functions;
+	std::vector<CDebugVariable> variables;
+	std::map<u32, CDebugType> types;
 	std::vector<std::vector<CDebugInlineSite>> inlineChains;
 	// Per region: function indices sorted by start.
 	std::vector<std::vector<u32>> functionsByStart;
