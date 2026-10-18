@@ -47,12 +47,29 @@ Results include `address`, `requestId` (zero if no target was armed), `initialPC
 
 The deadline bounds feature-owned waiting, not hard real-time scheduling, lock acquisition, core work, or transport.  There is no instruction/cycle budget.  The idle cost is one additional drive0 boundary call and an atomic owner check per instruction; an inactive target performs no allocation, map scan, or explicit mutex acquisition.  An active target checks its PC and locks only on a match.  No performance measurement is claimed.
 
+## Read drive state
+
+Call `retro_drive1541_state` with `{"platform":"c64","device":8}`.  It forwards to the existing `c64/drive1541/state` endpoint, which still accepts an empty object or null for legacy no-argument calls.  Only device8 and an enabled 1541 or 1541-II are supported.  Unknown fields, other devices, and invalid types are rejected.
+
+A successful sample has `available:true`, `outcome:"sampled"`, and `consistency:"best_effort"`.  Fields are:
+
+- `pc`, `a`, `x`, `y`, `sp`, and `flags`: actual core registers, with negative and zero reconstructed from VICE's separately cached values.  `flags` also includes the core's always-set unused bit.
+- `cycle`: the core drive-clock sample, not a promise of a monotonically increasing counter across resets or timeline restoration.
+- `model` and `modelName`: drive type identifier and `1541` or `1541-II`.
+- `headTrackPosition`: the existing half-track/side encoding, not a decoded physical track number.
+- `ramSize`: the legacy direct-RAM adapter's address-window length, not a claim about physical RAM capacity.
+- `debugMode` and `parked`: separate whole-emulator observations, not stop attribution or a lease.
+
+When the running core, supported drive, or adapter is unavailable, `available:false` and `outcome:"unavailable"` accompany null register, model, cycle, position, and RAM-length fields.  Mode and parked observations remain available.  Null does not mean register or counter value zero.  Transport errors remain errors, not unavailable samples.
+
+The query does not pause, step, resume, arm/cancel a target, change debug selection, or edit breakpoints.  It uses the existing endpoint locking convention once, with no polling.  Running samples can combine different instants.  Pausing first improves inspectability but does not upgrade this interface to a coherent snapshot or lifecycle guarantee.  It reports no global stop cause or feature-local target history.
+
 ## Intended sequence and limitations
 
 1. Request pause and check for `paused_observed` and `parked:true`.
-2. Perform the intended existing debugger inspection.
-3. Run toward a PC with a bounded wait, and inspect owned evidence and the pause observation separately.
-4. Inspect again, or resume explicitly only when desired.
+2. Call `retro_drive1541_state`, and check `available` before reading registers.
+3. Call `retro_drive1541_run_until` with a bounded wait, and inspect owned evidence and the pause observation separately.
+4. Query state again, or resume explicitly only when desired.
 
 A sampled pause is **not a lifecycle lease**.  GUI actions, reset, shutdown, and legacy APIs can still change state after the response.  The nonblocking admission guard serializes only these new drive-control operations.  It does not change global debugger ownership or claim authoritative stop attribution.  No background polling, new worker, snapshot, tracing, or networking is introduced.
 

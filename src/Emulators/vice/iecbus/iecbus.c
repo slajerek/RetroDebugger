@@ -43,6 +43,7 @@
 #include "drive/iec/cmdhd.h"
 
 #include "SYS_Types.h"
+#include "ViceWrapper.h"
 
 #ifdef DEBUG_IECBUS
 #include "log.h"
@@ -241,6 +242,7 @@ uint8_t c64d_iecbus_cpu_peek_conf1()
 }
 
 void c64d_get_drivecpu_regs_internal(drive_context_t *drv, uint8 *a, uint8 *x, uint8 *y, uint8 *p, uint8 *sp, uint16 *pc);
+uint8 c64d_get_drivecpu_status_internal(drive_context_t *drv);
 uint8 c64d_peek_mem_drive_internal(drive_context_t *drv, uint16 addr);
 void c64d_peek_memory_drive_internal(drive_context_t *drv, uint8_t *memoryBuffer, int addrStart, int addrEnd);
 void c64d_copy_ram_memory_drive_internal(drive_context_t *drv, uint8_t *memoryBuffer, int addrStart, int addrEnd);
@@ -255,6 +257,20 @@ int c64d_is_drive1541_available(void)
 	return drv != NULL && drv->drive != NULL && drv->cpu != NULL && drv->cpud != NULL
 		&& drv->drive->enable
 		&& (drv->drive->type == DRIVE_TYPE_1541 || drv->drive->type == DRIVE_TYPE_1541II);
+}
+
+int c64d_drive1541_sample_state(c64d_drive1541_state_t *state)
+{
+	drive_context_t *drv;
+	if (state == NULL || !c64d_is_drive1541_available()) return 0;
+	drv = drive_context[0];
+	c64d_get_drivecpu_regs_internal(drv, &state->a, &state->x, &state->y,
+		&state->flags, &state->sp, &state->pc);
+	state->flags = c64d_get_drivecpu_status_internal(drv);
+	state->cycle = (uint64_t)drive_clk[0];
+	state->model = drv->drive->type;
+	state->headTrackPosition = drv->drive->current_half_track + drv->drive->side * 70;
+	return 1;
 }
 
 void c64d_get_drivecpu_regs(int driveNum, uint8 *a, uint8 *x, uint8 *y, uint8 *p, uint8 *sp, uint16 *pc)

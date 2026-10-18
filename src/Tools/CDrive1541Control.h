@@ -23,6 +23,16 @@ namespace Drive1541Control
 		return true;
 	}
 
+	inline bool ParseState(const nlohmann::json &params, bool tool)
+	{
+		if (!tool && params.is_null()) return true; // Legacy no-argument endpoint call.
+		if (!params.is_object()) return false;
+		if (tool && (!params.contains("platform") || params.at("platform") != "c64")) return false;
+		for (auto it = params.begin(); it != params.end(); ++it)
+			if (it.key() != "device" && !(tool && it.key() == "platform")) return false;
+		return !params.contains("device") || (params.at("device").is_number_integer() && params.at("device") == 8);
+	}
+
 	inline bool ParseRunUntil(const nlohmann::json &params, bool tool, int &address, int &timeoutMs)
 	{
 		if (!params.is_object() || !params.contains("address")) return false;

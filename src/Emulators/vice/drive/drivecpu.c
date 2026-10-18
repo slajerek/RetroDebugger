@@ -368,6 +368,12 @@ inline static int interrupt_check_irq_delay(interrupt_cpu_status_t *cs,
 #define flag_z  (cpu->cpu_regs.z)
 #define flag_n  (cpu->cpu_regs.n)
 
+uint8 c64d_get_drivecpu_status_internal(drive_context_t *drv)
+{
+	/* N and Z are cached separately; reg_p alone is not a complete status byte. */
+	return MOS6510_REGS_GET_STATUS(&drv->cpu->cpu_regs);
+}
+
 void c64d_get_drivecpu_regs_internal(drive_context_t *drv, uint8 *a, uint8 *x, uint8 *y, uint8 *p, uint8 *sp, uint16 *pc)
 {
 	drivecpu_context_t *cpu = drv->cpu;

@@ -286,6 +286,17 @@ typedef struct c64d_drive1541_run_result_s
 int c64d_drive1541_run_until(int address, int timeoutMs, c64d_drive1541_run_result_t *result);
 void c64d_drive1541_control_boundary(uint16 pc);
 
+typedef struct c64d_drive1541_state_s
+{
+	uint16 pc;
+	uint8 a, x, y, sp, flags;
+	uint64_t cycle;
+	int model;
+	int headTrackPosition;
+} c64d_drive1541_state_t;
+// One best-effort drive8 sample, with complete N/Z status; caller uses normal API locking.
+int c64d_drive1541_sample_state(c64d_drive1541_state_t *state);
+
 void c64d_show_message(char *message);
 
 // SID

@@ -67,6 +67,22 @@ static bool HasDriveRunUntilSchema(const json &tools)
 	return matches == 1;
 }
 
+static bool HasDriveStateSchema(const json &tools)
+{
+	int matches = 0;
+	for (const auto &tool : tools)
+	{
+		if (tool.value("name", "") != "retro_drive1541_state") continue;
+		matches++;
+		const auto &schema = tool.at("inputSchema");
+		const auto &properties = schema.at("properties");
+		if (schema.at("additionalProperties") != false || schema.at("required") != json::array({"platform"})
+			|| properties.size() != 2 || properties.at("platform").at("enum") != json::array({"c64"})
+			|| properties.at("device").at("enum") != json::array({8})) return false;
+	}
+	return matches == 1;
+}
+
 static bool WaitForBridgeState(CMCPBridgeClient *bridge, MCPBridgeState target, int timeoutMs)
 {
 	for (int elapsed = 0; elapsed < timeoutMs; elapsed += 50)
@@ -558,10 +574,15 @@ void CTestMCPBridge::Run(ITestCallback *cb)
 			bridge.Stop(); FinishTest(false, "Missing, duplicated, or stale drive run-until schema"); return;
 		}
 
-		// Should be 51: 48 debugger + 3 bridge-local (drive pause and run-until).
-		if (toolCount != 51)
+		if (!HasDriveStateSchema(tools))
 		{
-			sprintf(sFailMsg, "Test %d FAIL: expected 51 tools, got %d", testNum, toolCount);
+			bridge.Stop(); FinishTest(false, "Missing, duplicated, or stale drive state schema"); return;
+		}
+
+		// Should be 52: 49 debugger + 3 bridge-local (drive pause, run-until, and state).
+		if (toolCount != 52)
+		{
+			sprintf(sFailMsg, "Test %d FAIL: expected 52 tools, got %d", testNum, toolCount);
 			bridge.Stop();
 			FinishTest(false, sFailMsg);
 			return;
@@ -712,9 +733,9 @@ void CTestMCPBridge::Run(ITestCallback *cb)
 			json response = server.HandleRequest(request);
 			json tools = response["result"]["tools"];
 			int toolCount = (int)tools.size();
-			if (toolCount != 51)
+			if (toolCount != 52)
 			{
-				sprintf(sFailMsg, "Test %d FAIL: after reconnect expected 51 tools, got %d",
+				sprintf(sFailMsg, "Test %d FAIL: after reconnect expected 52 tools, got %d",
 						testNum, toolCount);
 				bridge2.Stop();
 				FinishTest(false, sFailMsg);
@@ -737,6 +758,11 @@ void CTestMCPBridge::Run(ITestCallback *cb)
 			if (!HasDriveRunUntilSchema(tools))
 			{
 				bridge2.Stop(); FinishTest(false, "Missing, duplicated, or stale drive run-until schema after reconnect"); return;
+			}
+
+			if (!HasDriveStateSchema(tools))
+			{
+				bridge2.Stop(); FinishTest(false, "Missing, duplicated, or stale drive state schema after reconnect"); return;
 			}
 
 			// Check no duplicate names

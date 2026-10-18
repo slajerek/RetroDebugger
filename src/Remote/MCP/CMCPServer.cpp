@@ -1111,6 +1111,30 @@ void CMCPServer::RegisterDebuggerTools(CDebuggerServer *server)
 		RegisterTool(tool);
 	}
 
+	// One best-effort query, with no implicit execution control or global stop claim.
+	{
+		MCPToolDescriptor tool;
+		tool.name = "retro_drive1541_state";
+		tool.description = "C64 drive8: sample actual registers/PC, complete flags, cycles, model, RAM adapter length, "
+			"head position, and observed mode/parked state. No pause, step, resume, or breakpoint changes. "
+			"Best effort, not a coherent snapshot or lifecycle lease; unavailable values are null, not zero.";
+		tool.inputSchema = {
+			{"type", "object"}, {"additionalProperties", false},
+			{"properties", {
+				{"platform", {{"type", "string"}, {"enum", json::array({"c64"})}}},
+				{"device", {{"type", "integer"}, {"enum", json::array({8})}, {"default", 8}}}
+			}}, {"required", json::array({"platform"})}
+		};
+		tool.handler = [server](const json &params) -> json
+		{
+			if (!Drive1541Control::ParseState(params, true))
+				throw runtime_error("retro_drive1541_state requires platform=c64, device=8; no extra fields");
+			return ConsumeEndpointResult(server->RunEndpointFunction("c64/drive1541/state", "", {{"device", 8}}, nullptr, 0),
+				"retro_drive1541_state");
+		};
+		RegisterTool(tool);
+	}
+
 	// Continue
 	{
 		MCPToolDescriptor tool;
