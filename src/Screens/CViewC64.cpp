@@ -57,6 +57,7 @@ extern "C"{
 #include "CViewDisassembly.h"
 #include "CViewC64Disassembly.h"
 #include "CViewSourceCode.h"
+#include "CViewWorkspace.h"
 
 #include "CViewC64Screen.h"
 #include "CViewC64ScreenViewfinder.h"
@@ -437,6 +438,11 @@ CViewC64::CViewC64(float posX, float posY, float posZ, float sizeX, float sizeY)
 	viewPluginManager = new CViewPluginManager(200, 100, -1, 320, 200);
 	viewPluginManager->visible = false;
 	guiMain->AddView(viewPluginManager);
+
+	// RD-018..021: a folder as a project -- explorer, tabs, editor, builds
+	viewWorkspace = new CViewWorkspace("Project", 120, 80, -1, 760, 520);
+	viewWorkspace->visible = false;
+	guiMain->AddView(viewWorkspace);
 
 	//
 	viewProgressBarWindow = new CGuiViewProgressBarWindow("Progress", 100, 100, -1, 150, 150, NULL);

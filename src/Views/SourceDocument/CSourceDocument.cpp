@@ -6,10 +6,20 @@
 
 static const std::string kEmptyLine;
 
-// a UTF-8 path (u8path is deprecated in C++20)
+std::filesystem::path SourcePath(const std::string &utf8)
+{
+	return std::filesystem::path(std::u8string(utf8.begin(), utf8.end()));
+}
+
+std::string SourcePathString(const std::filesystem::path &path)
+{
+	std::u8string s = path.u8string();
+	return std::string(s.begin(), s.end());
+}
+
 static std::filesystem::path Utf8Path(const std::string &path)
 {
-	return std::filesystem::path(std::u8string(path.begin(), path.end()));
+	return SourcePath(path);
 }
 
 std::string SourceDocumentFileName(const std::string &path)

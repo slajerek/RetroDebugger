@@ -8,6 +8,7 @@
 // top of this, not a second model.
 
 #include "SYS_Defs.h"
+#include <filesystem>
 #include <map>
 #include <memory>
 #include <string>
@@ -65,5 +66,10 @@ private:
 };
 
 std::string SourceDocumentFileName(const std::string &path);
+
+// UTF-8 strings and filesystem paths (u8path is deprecated in C++20, and
+// u8string() returns std::u8string there)
+std::filesystem::path SourcePath(const std::string &utf8);
+std::string SourcePathString(const std::filesystem::path &path);
 
 #endif

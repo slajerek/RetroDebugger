@@ -172,6 +172,7 @@ class CViewColodore;
 class CViewAbout;
 class CViewAudioMixer;
 class CViewPluginManager;
+class CViewWorkspace;
 
 class CMainMenuBar;
 class CColorsTheme;
@@ -488,6 +489,7 @@ public:
 	//
 	CViewAudioMixer *viewAudioMixer;
 	CViewPluginManager *viewPluginManager;
+	CViewWorkspace *viewWorkspace;
 	CViewCamera *viewCamera;
 	CGuiViewProgressBarWindow *viewProgressBarWindow;
 	

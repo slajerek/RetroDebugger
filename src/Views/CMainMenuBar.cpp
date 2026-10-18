@@ -1,4 +1,5 @@
 #include "CSourceStepController.h"
+#include "CViewWorkspace.h"
 #include "DBG_Log.h"
 #include "GUI_Main.h"
 #include "SYS_DefaultConfig.h"
@@ -814,6 +815,29 @@ void CMainMenuBar::RenderImGui()
 			{
 				kbsStepOutSubroutine->Run();
 			}
+
+			ImGui::Separator();
+			// RD-018..021: the project (a folder): explorer, tabs, builds
+			bool projectVisible = viewC64->viewWorkspace->visible;
+			if (ImGui::MenuItem("Project", "", &projectVisible))
+			{
+				viewC64->viewWorkspace->SetVisible(projectVisible);
+				if (projectVisible)
+					viewC64->viewWorkspace->SetFocus();
+			}
+			if (ImGui::MenuItem("Open Project Folder..."))
+			{
+				viewC64->viewWorkspace->SetVisible(true);
+				SYS_DialogPickFolder(viewC64->viewWorkspace, NULL);
+			}
+			bool canBuild = viewC64->viewWorkspace->workspace.IsOpen() && !viewC64->viewWorkspace->workspace.buildTasks.empty()
+				&& !viewC64->viewWorkspace->build.IsRunning();
+			if (ImGui::MenuItem("Build Project", NULL, false, canBuild))
+			{
+				viewC64->viewWorkspace->SetVisible(true);
+				viewC64->viewWorkspace->StartBuild(0, false);
+			}
+			ImGui::Separator();
 
 			// greyed out when no running machine can source step (the C64U is observed only)
 			bool canSourceStep = viewC64->CanSourceStep();

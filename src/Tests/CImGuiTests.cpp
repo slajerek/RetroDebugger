@@ -27,6 +27,11 @@
 #include "CDebugSourceBreakpoint.h"
 #include "CDebugInfoLoader.h"
 #include "CViewSourceCode.h"
+#include "CViewWorkspace.h"
+#include <filesystem>
+#include <fstream>
+#include "CSourceBuffer.h"
+#include "CSourceDocument.h"
 #include "../DebugInterface/MenuItems/CDebugInterfaceMenuItem.h"
 #include "../Emulators/c64u/C64UTestFixture.h"
 #include "../Plugins/GoatTracker/C64DebuggerPluginGoatTracker.h"
@@ -738,6 +743,58 @@ void RegisterRetroDebuggerTests(ImGuiTestEngine *engine)
 
 	// RD-003/RD-005: the Source Code view renders the Oscar64 basic-flow
 	// source, scrolls to a line, and a gutter click toggles a breakpoint
+	// RD-018: a folder opens as a project; files open from the explorer as
+	// tabs, which switch; the editor takes typing and the tab shows it dirty
+	ImGuiTest *tProject = IM_REGISTER_TEST(engine, "ui", "project_opens_folder_and_switches_tabs");
+	tProject->TestFunc = [](ImGuiTestContext *ctx)
+	{
+		namespace fs = std::filesystem;
+		std::error_code ec;
+		fs::path root = fs::temp_directory_path(ec) / "rd-project-imgui";
+		fs::remove_all(root, ec);
+		fs::create_directories(root, ec);
+		{
+			std::ofstream((root / "alpha.c").string()) << "int alpha;\n";
+			std::ofstream((root / "beta.s").string()) << "        rts\n";
+		}
+		CViewWorkspace *view = viewC64->viewWorkspace;
+		IM_CHECK(view != NULL);
+		bool wasVisible = view->visible;
+		IM_CHECK(view->OpenFolder(root.string()));
+		view->SetVisible(true);
+		ctx->Yield(5);
+
+		ctx->SetRef("Project");
+		ctx->ItemClick("**/alpha.c");
+		ctx->Yield(2);
+		ctx->ItemClick("**/beta.s");
+		ctx->Yield(2);
+		bool two = view->NumTabs() == 2 && view->GetActiveBuffer() && SourceDocumentFileName(view->GetActiveBuffer()->path) == "beta.s";
+		ctx->ItemClick("**/alpha.c");
+		ctx->Yield(3);
+		bool switched = view->NumTabs() == 2 && view->GetActiveBuffer() && SourceDocumentFileName(view->GetActiveBuffer()->path) == "alpha.c";
+
+		// edit: the Edit box, then typing into the editor
+		ctx->ItemClick("**/Edit");
+		ctx->Yield(2);
+		ctx->ItemClick("**/##projectEdit");
+		ctx->KeyCharsAppend("/* typed */");
+		ctx->Yield(2);
+		bool dirty = view->GetActiveBuffer() && view->GetActiveBuffer()->IsDirty()
+			&& view->GetActiveBuffer()->GetText().find("/* typed */") != std::string::npos;
+
+		view->CloseTab(1, true);
+		view->CloseTab(0, true);
+		view->CloseFolder();
+		view->SetVisible(wasVisible);
+		ctx->Yield(2);
+		fs::remove_all(root, ec);
+
+		IM_CHECK(two);
+		IM_CHECK(switched);
+		IM_CHECK(dirty);
+	};
+
 	ImGuiTest *tSourceView = IM_REGISTER_TEST(engine, "ui", "source_view_opens_and_scrolls");
 	tSourceView->TestFunc = [](ImGuiTestContext *ctx)
 	{

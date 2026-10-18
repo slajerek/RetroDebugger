@@ -4888,16 +4888,52 @@
     <ClCompile Include="..\..\..\src\Tools\Shaders\CRenderShaderCRTMonitorOpenGL4.cpp">
       <Filter>Source Files\src\Tools\Shaders</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\src\Tests\CTestWorkspace.cpp">
+      <Filter>src\Tests</Filter>
+    </ClCompile>
+    <ClInclude Include="..\..\..\src\Tests\CTestWorkspace.h">
+      <Filter>src\Tests</Filter>
+    </ClInclude>
+    <ClCompile Include="..\..\..\src\Views\CViewWorkspace.cpp">
+      <Filter>src\Views</Filter>
+    </ClCompile>
+    <ClInclude Include="..\..\..\src\Views\CViewWorkspace.h">
+      <Filter>src\Views</Filter>
+    </ClInclude>
+    <ClCompile Include="..\..\..\src\Tools\CWorkspaceSession.cpp">
+      <Filter>src\Tools</Filter>
+    </ClCompile>
+    <ClInclude Include="..\..\..\src\Tools\CWorkspaceSession.h">
+      <Filter>src\Tools</Filter>
+    </ClInclude>
+    <ClCompile Include="..\..\..\src\Tools\CWorkspace.cpp">
+      <Filter>src\Tools</Filter>
+    </ClCompile>
+    <ClInclude Include="..\..\..\src\Tools\CWorkspace.h">
+      <Filter>src\Tools</Filter>
+    </ClInclude>
+    <ClCompile Include="..\..\..\src\Tools\CBuildTask.cpp">
+      <Filter>src\Tools</Filter>
+    </ClCompile>
+    <ClInclude Include="..\..\..\src\Tools\CBuildTask.h">
+      <Filter>src\Tools</Filter>
+    </ClInclude>
+    <ClCompile Include="..\..\..\src\Views\SourceDocument\CSourceBuffer.cpp">
+      <Filter>src\Views\SourceDocument</Filter>
+    </ClCompile>
+    <ClInclude Include="..\..\..\src\Views\SourceDocument\CSourceBuffer.h">
+      <Filter>src\Views\SourceDocument</Filter>
+    </ClInclude>
+    <ClCompile Include="..\..\..\src\Views\SourceDocument\CSourceRendering.cpp">
+      <Filter>src\Views\SourceDocument</Filter>
+    </ClCompile>
+    <ClInclude Include="..\..\..\src\Views\SourceDocument\CSourceRendering.h">
+      <Filter>src\Views\SourceDocument</Filter>
+    </ClInclude>
     <ClCompile Include="..\..\..\src\Tests\CTestSourceTrace.cpp">
       <Filter>src\Tests</Filter>
     </ClCompile>
     <ClInclude Include="..\..\..\src\Tests\CTestSourceTrace.h">
-      <Filter>src\Tests</Filter>
-    </ClInclude>
-    <ClCompile Include="..\..\..\src\Tests\CTestDriveSourceStepping.cpp">
-      <Filter>src\Tests</Filter>
-    </ClCompile>
-    <ClInclude Include="..\..\..\src\Tests\CTestDriveSourceStepping.h">
       <Filter>src\Tests</Filter>
     </ClInclude>
     <ClCompile Include="..\..\..\src\DebugInterface\CDebugSourceTrace.cpp">
@@ -4905,6 +4941,12 @@
     </ClCompile>
     <ClInclude Include="..\..\..\src\DebugInterface\CDebugSourceTrace.h">
       <Filter>src\DebugInterface</Filter>
+    </ClInclude>
+    <ClCompile Include="..\..\..\src\Tests\CTestDriveSourceStepping.cpp">
+      <Filter>src\Tests</Filter>
+    </ClCompile>
+    <ClInclude Include="..\..\..\src\Tests\CTestDriveSourceStepping.h">
+      <Filter>src\Tests</Filter>
     </ClInclude>
     <ClCompile Include="..\..\..\src\Tests\CTestAssembledSource.cpp">
       <Filter>src\Tests</Filter>
