@@ -2,6 +2,7 @@
 #include "CDebugSymbols.h"
 #include "CDebugInterface.h"
 #include "SYS_Threading.h"
+#include <cstring>
 
 CDebugEventsHistory::CDebugEventsHistory(CDebugSymbols *debugSymbols)
 {
@@ -63,6 +64,22 @@ CDebugEventManual *CDebugEventsHistory::CreateEventManual()
 	return event;
 }
 
+CDebugEventStep *CDebugEventsHistory::CreateEventStep(const char *description)
+{
+	u64 currentCycle = debugSymbols->debugInterface->GetMainCpuCycleCounter();
+	u32 currentFrame = debugSymbols->debugInterface->GetEmulationFrameNumber();
+
+	mutex->Lock();
+	CDebugEventStep *event = NULL;
+	if (events.find(currentCycle) == events.end())
+	{
+		event = new CDebugEventStep(description, debugSymbols->currentSegment, currentCycle, currentFrame);
+		events[currentCycle] = event;
+	}
+	mutex->Unlock();
+
+	return event;
+}
 
 void CDebugEventsHistory::DeleteEvent(CDebugEventBreakpoint *event)
 {
@@ -95,6 +112,13 @@ CDebugEventBreakpoint::CDebugEventBreakpoint(CDebugBreakpoint *breakpoint, u32 c
 CDebugEventManual::CDebugEventManual(CDebugSymbolsSegment *segment, u64 cycle, u32 frame)
 : CDebugEvent(DEBUG_EVENT_TYPE_MANUAL, segment, cycle, frame)
 {
+}
+
+CDebugEventStep::CDebugEventStep(const char *description, CDebugSymbolsSegment *segment, u64 cycle, u32 frame)
+: CDebugEvent(DEBUG_EVENT_TYPE_STEP, segment, cycle, frame)
+{
+	strncpy(this->description, description, DEBUG_EVENTS_HISTORY_MAX_DESCRIPTION_LENGTH - 1);
+	this->description[DEBUG_EVENTS_HISTORY_MAX_DESCRIPTION_LENGTH - 1] = 0;
 }
 
 void CDebugEventsHistory::DeleteAllEvents()

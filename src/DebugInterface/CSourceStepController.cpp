@@ -108,6 +108,8 @@ void CSourceStepController::Finish(SourceStepStopReason reason, u16 pc, const CD
 		lastResult.mapped = (location != NULL);
 		lastResult.fileId = location ? location->fileId : 0;
 		lastResult.line = location ? location->lineStart : 0;
+		const CDebugSourceFile *file = (location && database) ? database->GetFile(location->fileId) : NULL;
+		lastResult.fileName = file ? file->fileName : "";
 		lastResult.depth = tracker.HasLeftBase() ? -1 : tracker.GetCallDepth();
 	}
 	Cancel(reason);

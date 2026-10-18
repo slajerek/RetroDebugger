@@ -19,6 +19,7 @@ extern "C"{
 
 #include "EmulatorsConfig.h"
 #include "CViewC64.h"
+#include "CSourceStepController.h"
 #include "SYS_DefaultConfig.h"
 #include "VID_Main.h"
 #include "VID_Fonts.h"
@@ -2692,7 +2693,11 @@ void CViewC64::SourceStep(SourceStepKind kind)
 		CDebugInterface *debugInterface = *it;
 		if (!debugInterface->isRunning || !debugInterface->SupportsExecutionEvents())
 			continue;
-		debugInterface->SourceStep(kind);
+		if (!debugInterface->SourceStep(kind)
+			&& debugInterface->sourceStepper->GetLastResult().reason == SourceStepStopReason::NoSource)
+		{
+			ShowMessageWarning("%s: no source line at the PC, source step not started", debugInterface->GetPlatformNameString());
+		}
 	}
 }
 

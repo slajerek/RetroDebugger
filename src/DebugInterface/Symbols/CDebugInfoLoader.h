@@ -13,6 +13,7 @@
 class CByteBuffer;
 class CSlrString;
 class CDebugSymbols;
+class CDebugDatabase;
 
 enum class DebugInfoFormat : u8
 {
@@ -68,5 +69,15 @@ bool DebugInfoLoadOscar64(CDebugSymbols *symbols, CByteBuffer *byteBuffer, const
 // candidate; functions from C symbols with external linkage via their asm
 // scope; labels from asm labels except cc65's generated Lxxxx ones. No columns.
 bool DebugInfoLoadCc65(CDebugSymbols *symbols, CByteBuffer *byteBuffer, const CDebugInfoLoadOptions &options);
+
+// Stale debug info (RD-014, spec #6.1): none of the supported producers
+// records a build id or a hash of the binary, so the check is by file time.
+// Stale when a source DATABASE read is newer than DEBUGFILEPATH, or when
+// PROGRAMPATH (may be NULL) and the debug file were not written by one build
+// (more than kDebugInfoBuildSkewSeconds apart). Each reason is one sentence
+// naming the files; empty when nothing is stale or a file is missing.
+static const int kDebugInfoBuildSkewSeconds = 120;
+std::vector<std::string> DebugInfoCheckStale(const CDebugDatabase *database, const char *debugFilePath,
+											 const char *programPath);
 
 #endif

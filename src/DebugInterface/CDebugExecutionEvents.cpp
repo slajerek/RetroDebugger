@@ -5,6 +5,7 @@
 #include "CDebugSymbolsSegment.h"
 #include "CDebugInterface.h"
 #include "CSnapshotsManager.h"
+#include "CDebugEventsHistory.h"
 #include "DBG_Log.h"
 
 const char *DebugExecutionEventName(DebugExecutionEvent event)
@@ -92,14 +93,22 @@ void CDebugInterface::NotifyInstructionBoundary(u16 pc, u8 sp, u8 opcode)
 	lastBoundary = boundary;
 	hasLastBoundary = true;
 
-	bool stepperArmed = instructionStepper->IsArmed() || sourceStepper->IsArmed();
-	if (instructionStepper->IsArmed())
+	bool instructionStepArmed = instructionStepper->IsArmed();
+	bool sourceStepArmed = sourceStepper->IsArmed();
+	bool stepperArmed = instructionStepArmed || sourceStepArmed;
+	if (instructionStepArmed)
 	{
 		instructionStepper->OnInstructionBoundary(this, boundary);
+		if (!instructionStepper->IsArmed())
+			RecordInstructionStepStop();
 	}
-	if (sourceStepper->IsArmed() && sourceStepper->OnInstructionBoundary(this, boundary))
+	if (sourceStepArmed)
 	{
-		SetDebugMode(DEBUGGER_MODE_PAUSED);
+		bool stop = sourceStepper->OnInstructionBoundary(this, boundary);
+		if (stop)
+			SetDebugMode(DEBUGGER_MODE_PAUSED);
+		if (!sourceStepper->IsArmed())
+			RecordSourceStepStop();
 	}
 
 	std::vector<CDebugExecutionObserver *> observers;
@@ -116,6 +125,35 @@ void CDebugInterface::NotifyInstructionBoundary(u16 pc, u8 sp, u8 opcode)
 	{
 		UpdateExecutionObserved();
 	}
+}
+
+// RD-013/RD-037: a step that stopped leaves an entry in the events history
+// (kind, reason, where); a breakpoint event at the same cycle wins.
+void CDebugInterface::RecordInstructionStepStop()
+{
+	if (!symbols || !symbols->debugEventsHistory)
+		return;
+	char description[DEBUG_EVENTS_HISTORY_MAX_DESCRIPTION_LENGTH];
+	snprintf(description, sizeof(description), "Step %s: %s at $%04X",
+			 instructionStepper->GetLastKind() == DebugStepKind::StepOut ? "Out" : "Over",
+			 DebugStepStopReasonName(instructionStepper->GetLastStopReason()), instructionStepper->GetLastStopPc());
+	symbols->debugEventsHistory->CreateEventStep(description);
+}
+
+void CDebugInterface::RecordSourceStepStop()
+{
+	if (!symbols || !symbols->debugEventsHistory)
+		return;
+	CSourceStepResult result = sourceStepper->GetLastResult();
+	char description[DEBUG_EVENTS_HISTORY_MAX_DESCRIPTION_LENGTH];
+	const char *kindName = result.kind == SourceStepKind::Into ? "Into" : result.kind == SourceStepKind::Out ? "Out" : "Over";
+	if (result.mapped)
+		snprintf(description, sizeof(description), "Source %s: %s at %s:%d ($%04X)", kindName,
+				 SourceStepStopReasonName(result.reason), result.fileName.c_str(), result.line, result.pc);
+	else
+		snprintf(description, sizeof(description), "Source %s: %s at $%04X", kindName,
+				 SourceStepStopReasonName(result.reason), result.pc);
+	symbols->debugEventsHistory->CreateEventStep(description);
 }
 
 void CDebugInterface::AddExecutionObserver(CDebugExecutionObserver *observer)

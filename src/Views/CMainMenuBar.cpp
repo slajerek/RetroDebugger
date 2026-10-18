@@ -5737,9 +5737,9 @@ void CMainMenuBar::SystemDialogFileOpenSelected(CSlrString *path)
 			{
 				viewC64->ShowMessageError("Loading labels failed, unrecognized file format");
 			}
-			else if (format == DebugInfoFormat::Cc65Dbg)
+			else if (!selectedDebugInterface->symbols->debugInfoWarnings.empty())
 			{
-				viewC64->ShowMessageWarning("%s debug info is recognized but not supported yet", DebugInfoFormatName(format));
+				viewC64->ShowMessageWarning("Stale debug info: %s", selectedDebugInterface->symbols->debugInfoWarnings.front().c_str());
 			}
 		}
 		else if (ext->CompareWith("lbl"))

@@ -5,6 +5,7 @@
 #include "hjson.h"
 #include <list>
 #include <memory>
+#include <string>
 #include <vector>
 
 class CSlrFile;
@@ -47,6 +48,11 @@ public:
 	// Swaps the database and re-resolves the source breakpoints against it
 	// (NULL unloads). Loaders call this instead of assigning debugDatabase.
 	void SetDebugDatabase(std::shared_ptr<const CDebugDatabase> database);
+
+	// The debug file the database came from, and why it may not match the
+	// program or the sources (DebugInfoCheckStale); empty when it matches.
+	std::string debugInfoPath;
+	std::vector<std::string> debugInfoWarnings;
 
 	// Source breakpoints (RD-014, CDebugSourceBreakpoint.h): file + line,
 	// resolved to address breakpoints in the segments of the loaded database.

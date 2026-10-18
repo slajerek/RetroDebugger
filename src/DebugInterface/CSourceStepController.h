@@ -28,6 +28,7 @@
 #include <atomic>
 #include <memory>
 #include <mutex>
+#include <string>
 
 class CDebugDatabase;
 struct CDebugSourceMapping;
@@ -62,6 +63,7 @@ struct CSourceStepResult
 	bool mapped = false;	// file/line are valid
 	u32 fileId = 0;
 	i32 line = 0;
+	std::string fileName;	// of fileId, when mapped
 	int depth = 0;			// call depth of the stop from the start; -1 when the starting frame returned
 	u64 instructions = 0;
 };

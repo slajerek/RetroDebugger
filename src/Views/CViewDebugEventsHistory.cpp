@@ -104,6 +104,10 @@ void CViewDebugEventsHistory::RenderImGui()
 			{
 				Text("Manual");
 			}
+			else if (event->eventType == DEBUG_EVENT_TYPE_STEP)
+			{
+				Text("%s", ((CDebugEventStep *)event)->description);
+			}
 			else
 			{
 				Text("");

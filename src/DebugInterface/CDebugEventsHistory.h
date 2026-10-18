@@ -13,7 +13,8 @@ enum
 {
 	DEBUG_EVENT_TYPE_NONE,
 	DEBUG_EVENT_TYPE_BREAKPOINT,
-	DEBUG_EVENT_TYPE_MANUAL
+	DEBUG_EVENT_TYPE_MANUAL,
+	DEBUG_EVENT_TYPE_STEP
 };
 
 #define DEBUG_EVENTS_HISTORY_MAX_COMMENT_LENGTH	512
@@ -46,6 +47,18 @@ public:
 	CDebugEventManual(CDebugSymbolsSegment *segment, u64 cycle, u32 frame);
 };
 
+// a step (instruction Over/Out, source Into/Over/Out) that stopped: kind,
+// stop reason and where, e.g. "Source Over: completed at main.c:17 ($0885)"
+#define DEBUG_EVENTS_HISTORY_MAX_DESCRIPTION_LENGTH	160
+
+class CDebugEventStep : public CDebugEvent
+{
+public:
+	CDebugEventStep(const char *description, CDebugSymbolsSegment *segment, u64 cycle, u32 frame);
+
+	char description[DEBUG_EVENTS_HISTORY_MAX_DESCRIPTION_LENGTH];
+};
+
 class CDebugEventsHistory
 {
 public:
@@ -60,6 +73,9 @@ public:
 	
 	CDebugEventBreakpoint *CreateEventBreakpoint(CDebugBreakpoint *breakpoint, u32 condition, CDebugSymbolsSegment *segment);
 	CDebugEventManual *CreateEventManual();
+	// emulation thread, the machine stopping; NULL when another event already
+	// owns this cycle (a breakpoint that ended the step says more)
+	CDebugEventStep *CreateEventStep(const char *description);
 	void DeleteEvent(CDebugEventBreakpoint *event);
 	
 	void DeleteAllEvents();

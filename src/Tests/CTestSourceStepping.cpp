@@ -1,4 +1,5 @@
 #include "CTestSourceStepping.h"
+#include "CDebugEventsHistory.h"
 #include "EmulatorsConfig.h"
 #include "CViewC64.h"
 #include "CGuiMain.h"
@@ -15,6 +16,7 @@
 #include "DebuggerDefs.h"
 #include "SYS_Main.h"
 #include <cstdio>
+#include <filesystem>
 #include <vector>
 
 bool CTestSourceStepping::Check(bool condition, const char *message)
@@ -191,6 +193,28 @@ bool CTestSourceStepping::RunOscar64(CDebugInterfaceVice *di)
 		ok = Check(result == 6 && irqs != 0 && !di->IsObservingExecution(), msg);
 	}
 
+	if (ok)
+	{
+		// every stop left an entry in the events history (RD-013)
+		int steps = 0;
+		bool first = false, budget = false;
+		CDebugEventsHistory *history = scratch->debugEventsHistory;
+		history->mutex->Lock();
+		for (auto &it : history->events)
+		{
+			if (it.second->eventType != DEBUG_EVENT_TYPE_STEP)
+				continue;
+			const char *description = ((CDebugEventStep *)it.second)->description;
+			steps++;
+			first = first || !strcmp(description, "Source Over: completed at main.c:17 ($0885)");
+			budget = budget || !strcmp(description, "Source Over: budget-exceeded at $0897");
+		}
+		history->mutex->Unlock();
+		char msg[160];
+		snprintf(msg, sizeof(msg), "Oscar64 basic-flow: each of the 9 source steps left a step event in the history (%d found)", steps);
+		ok = Check(steps == 9 && first && budget, msg);
+	}
+
 	return ok;
 }
 
@@ -271,7 +295,81 @@ bool CTestSourceStepping::RunSourceBreakpoints(CDebugInterfaceVice *di)
 	symbols->RemoveSourceBreakpoint(bp);
 	ok = ok && !HasPcBreakpoint(symbols, 0x089A) && symbols->sourceBreakpoints.empty();
 	symbols->currentSegment->breakpointsPC->DeleteBreakpoint(0x0880);
-	return Check(ok, "Removing source breakpoints deletes only the address breakpoints they created");
+	if (!Check(ok, "Removing source breakpoints deletes only the address breakpoints they created"))
+		return false;
+
+	// Persistence: the breakpoints file keeps file + line, not the address
+	// breakpoint it made; loading it binds the source breakpoint again.
+	std::string bpPath = "/tmp/rd-source-breakpoints.hjson";
+	symbols->AddSourceBreakpoint("main.c", 11);
+	CSlrString *bpPathSlr = new CSlrString(bpPath.c_str());
+	symbols->SaveBreakpointsRetroDebuggerFormat(bpPathSlr);
+	CDebugSourceBreakpoint *saved = symbols->FindSourceBreakpoint("main.c", 11);
+	ok = saved && saved->IsResolved() && HasPcBreakpoint(symbols, 0x089A);
+	if (saved)
+		symbols->RemoveSourceBreakpoint(saved);
+	ok = ok && !HasPcBreakpoint(symbols, 0x089A);
+	symbols->LoadBreakpointsRetroDebuggerFormat(bpPathSlr);
+	delete bpPathSlr;
+	CDebugSourceBreakpoint *loaded = symbols->FindSourceBreakpoint("main.c", 11);
+	ok = ok && loaded && loaded->IsResolved() && loaded->resolvedLine == 12
+		&& loaded->bindings.size() == 1 && loaded->bindings[0].created && HasPcBreakpoint(symbols, 0x089A);
+	if (loaded)
+		symbols->RemoveSourceBreakpoint(loaded);
+	ok = ok && !HasPcBreakpoint(symbols, 0x089A) && symbols->sourceBreakpoints.empty();
+	if (!Check(ok, "Source breakpoints save to the breakpoints file as file + line and bind again when it loads"))
+		return false;
+
+	return CheckStaleDebugInfo();
+}
+
+// RD-014: stale debug info by file time, on scratch files in /tmp.
+bool CTestSourceStepping::CheckStaleDebugInfo()
+{
+	namespace fs = std::filesystem;
+	fs::path dir = "/tmp/rd-stale-debug-info";
+	std::error_code error;
+	fs::create_directories(dir, error);
+	const char *names[] = { "main.prg", "main.dbj", "main.c" };
+	for (const char *name : names)
+	{
+		FILE *f = fopen((dir / name).string().c_str(), "wb");
+		if (f)
+		{
+			fputs("x", f);
+			fclose(f);
+		}
+	}
+	auto setTime = [&](const char *name, int secondsAgo) {
+		fs::last_write_time(dir / name, fs::file_time_type::clock::now() - std::chrono::seconds(secondsAgo), error);
+	};
+	std::string prg = (dir / "main.prg").string(), dbj = (dir / "main.dbj").string();
+	CDebugDatabase database("test");
+	CDebugSourceFile *source = database.AddFile(0, "main.c");
+	source->loadedPath = (dir / "main.c").string();
+	source->fileName = "main.c";
+
+	// one build: all three within a few seconds
+	setTime("main.c", 1000);
+	setTime("main.dbj", 990);
+	setTime("main.prg", 990);
+	bool ok = DebugInfoCheckStale(&database, dbj.c_str(), prg.c_str()).empty();
+	// the source edited after the build
+	setTime("main.c", 10);
+	std::vector<std::string> edited = DebugInfoCheckStale(&database, dbj.c_str(), prg.c_str());
+	ok = ok && edited.size() == 1 && edited[0].find("main.c changed after main.dbj") == 0;
+	setTime("main.c", 1000);
+	// the program rebuilt without its debug info
+	setTime("main.prg", 100);
+	std::vector<std::string> newer = DebugInfoCheckStale(&database, dbj.c_str(), prg.c_str());
+	ok = ok && newer.size() == 1 && newer[0].find("main.prg is newer than main.dbj") == 0;
+	// the debug info from a later build than the program
+	setTime("main.prg", 2000);
+	std::vector<std::string> older = DebugInfoCheckStale(&database, dbj.c_str(), prg.c_str());
+	ok = ok && older.size() == 1 && older[0].find("main.dbj is newer than main.prg") == 0;
+	// a missing debug file decides nothing
+	ok = ok && DebugInfoCheckStale(&database, (dir / "none.dbj").string().c_str(), prg.c_str()).empty();
+	return Check(ok, "Stale debug info: a source edited after the build, or a program and debug file from different builds, is reported; one build is not");
 }
 
 void CTestSourceStepping::Run(ITestCallback *cb)

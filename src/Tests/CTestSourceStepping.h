@@ -32,6 +32,7 @@ private:
 	bool RunTracker();
 	bool RunOscar64(CDebugInterfaceVice *di);
 	bool RunSourceBreakpoints(CDebugInterfaceVice *di);
+	bool CheckStaleDebugInfo();
 	bool Step(CDebugInterfaceVice *di, SourceStepKind kind, u16 expectedPc, int expectedLine,
 			  SourceStepStopReason expectedReason, u64 budget = 0);
 };

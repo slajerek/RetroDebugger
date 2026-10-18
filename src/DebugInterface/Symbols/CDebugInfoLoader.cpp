@@ -16,6 +16,8 @@
 #include <cstring>
 #include <cctype>
 #include <cstdlib>
+#include <filesystem>
+#include <system_error>
 #include <istream>
 #include <list>
 #include <memory>
@@ -162,6 +164,15 @@ DebugInfoFormat DebugInfoLoadFile(CDebugSymbols *symbols, const char *cPath, con
 		case DebugInfoFormat::Unknown:
 			LOGError("DebugInfoLoadFile: %s is not a recognized symbols or debug info format", cPath);
 			break;
+	}
+
+	if (format == DebugInfoFormat::KickAssDbg || format == DebugInfoFormat::Oscar64Dbj || format == DebugInfoFormat::Cc65Dbg)
+	{
+		// the program is not known here; the autoload next to it adds that check
+		symbols->debugInfoPath = cPath;
+		symbols->debugInfoWarnings = DebugInfoCheckStale(symbols->debugDatabase.get(), cPath, NULL);
+		for (const std::string &warning : symbols->debugInfoWarnings)
+			LOGWarning("DebugInfoLoadFile: %s", warning.c_str());
 	}
 
 	delete byteBuffer;
@@ -1083,4 +1094,52 @@ bool DebugInfoLoadCc65(CDebugSymbols *symbols, CByteBuffer *byteBuffer, const CD
 	LOGM("DebugInfoLoadCc65: %d files, %d functions, %d mappings", (int)database->NumFiles(),
 		 (int)database->Functions().size(), (int)database->NumMappings());
 	return true;
+}
+
+// RD-014: stale debug info, by file time (see the header).
+static bool FileTime(const std::string &path, std::filesystem::file_time_type *time)
+{
+	std::error_code error;
+	*time = std::filesystem::last_write_time(std::filesystem::u8path(path), error);
+	return !error;
+}
+
+static std::string FileNameOf(const std::string &path)
+{
+	size_t slash = path.find_last_of("/\\");
+	return slash == std::string::npos ? path : path.substr(slash + 1);
+}
+
+std::vector<std::string> DebugInfoCheckStale(const CDebugDatabase *database, const char *debugFilePath,
+											 const char *programPath)
+{
+	std::vector<std::string> reasons;
+	std::filesystem::file_time_type debugTime;
+	if (!debugFilePath || !FileTime(debugFilePath, &debugTime))
+		return reasons;
+	std::string debugName = FileNameOf(debugFilePath);
+
+	if (database)
+	{
+		for (auto &it : database->Files())
+		{
+			const CDebugSourceFile *file = it.second;
+			std::filesystem::file_time_type sourceTime;
+			if (file->loadedPath.empty() || !FileTime(file->loadedPath, &sourceTime))
+				continue;
+			if (sourceTime > debugTime + std::chrono::seconds(2))
+				reasons.push_back(file->fileName + " changed after " + debugName + " was written: rebuild, lines may not match the code");
+		}
+	}
+
+	std::filesystem::file_time_type programTime;
+	if (programPath && FileTime(programPath, &programTime))
+	{
+		std::string programName = FileNameOf(programPath);
+		if (programTime > debugTime + std::chrono::seconds(kDebugInfoBuildSkewSeconds))
+			reasons.push_back(programName + " is newer than " + debugName + ": the debug info is from an older build");
+		else if (debugTime > programTime + std::chrono::seconds(kDebugInfoBuildSkewSeconds))
+			reasons.push_back(debugName + " is newer than " + programName + ": the program is from an older build");
+	}
+	return reasons;
 }

@@ -14,6 +14,7 @@
 #include "CViewDataWatch.h"
 #include "CGuiMain.h"
 #include "CDebugSymbols.h"
+#include "CDebugSourceBreakpoint.h"
 #include "CDebugSymbolsSegment.h"
 #include "CDebugSymbolsSegmentC64.h"
 #include "CDebugDataAdapter.h"
@@ -1394,6 +1395,12 @@ void CDebugSymbols::SaveBreakpointsRetroDebuggerFormat(CSlrString *filePath)
 
 bool CDebugSymbols::SerializeBreakpointsToHjson(Hjson::Value hjsonRoot)
 {
+	// source breakpoints are stored as file + line (RD-014); the address
+	// breakpoints they created are left out, a load re-resolves them
+	debugInterface->LockMutex();
+	for (CDebugSourceBreakpoint *breakpoint : sourceBreakpoints)
+		UnbindSourceBreakpoint(breakpoint);
+
 	Hjson::Value hjsonSegmentsArray;
 	for (auto segment : segments)
 	{
@@ -1409,6 +1416,21 @@ bool CDebugSymbols::SerializeBreakpointsToHjson(Hjson::Value hjsonRoot)
 		hjsonSegmentsArray.push_back(hjsonSegment);
 	}
 	hjsonRoot["Segments"] = hjsonSegmentsArray;
+
+	Hjson::Value hjsonSourceBreakpoints;
+	for (CDebugSourceBreakpoint *breakpoint : sourceBreakpoints)
+	{
+		Hjson::Value hjsonSourceBreakpoint;
+		hjsonSourceBreakpoint["File"] = breakpoint->path;
+		hjsonSourceBreakpoint["Line"] = (int)breakpoint->line;
+		hjsonSourceBreakpoints.push_back(hjsonSourceBreakpoint);
+	}
+	if (!sourceBreakpoints.empty())
+		hjsonRoot["SourceBreakpoints"] = hjsonSourceBreakpoints;
+
+	for (CDebugSourceBreakpoint *breakpoint : sourceBreakpoints)
+		BindSourceBreakpoint(breakpoint);
+	debugInterface->UnlockMutex();
 	return true;
 }
 
@@ -1432,6 +1454,19 @@ bool CDebugSymbols::DeserializeBreakpointsFromHjson(Hjson::Value hjsonRoot)
 		
 		Hjson::Value hjsonBreakpointsTypes = hjsonSegment["Breakpoints"];
 		segment->DeserializeBreakpoints(hjsonBreakpointsTypes);
+	}
+
+	Hjson::Value hjsonSourceBreakpoints = hjsonRoot["SourceBreakpoints"];
+	if (hjsonSourceBreakpoints.type() == Hjson::Type::Vector)
+	{
+		for (int i = 0; i < hjsonSourceBreakpoints.size(); i++)
+		{
+			Hjson::Value hjsonSourceBreakpoint = hjsonSourceBreakpoints[i];
+			std::string path = hjsonSourceBreakpoint["File"].to_string();
+			int line = (int)hjsonSourceBreakpoint["Line"].to_int64();
+			if (!path.empty() && line > 0)
+				AddSourceBreakpoint(path.c_str(), line);
+		}
 	}
 	return true;
 }

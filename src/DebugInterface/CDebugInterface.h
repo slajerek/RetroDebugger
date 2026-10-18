@@ -370,6 +370,8 @@ protected:
 private:
 	bool BeginInstructionStep(u16 *pc, u8 *sp, u8 *opcode);
 	void UpdateExecutionObserved();
+	void RecordInstructionStepStop();
+	void RecordSourceStepStop();
 
 	enum { BoundaryHistoryKeep, BoundaryHistoryReset, BoundaryHistorySeed };
 	std::atomic<bool> executionObserved;
