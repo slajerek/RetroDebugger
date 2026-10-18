@@ -1604,6 +1604,30 @@ void CMCPServer::RegisterDebuggerTools(CDebuggerServer *server)
 		RegisterTool(tool);
 	}
 
+	// Call stack from the stack annotation (RD-012)
+	{
+		MCPToolDescriptor tool;
+		tool.name = "retro_callstack";
+		tool.description = "The call stack now, innermost first, rebuilt from the stack annotation: each frame's kind (call, "
+			"interrupt, break), the instruction that entered it, its return address and, with debug info, the caller's "
+			"function and line. complete:false means part of the stack was pushed before annotation started.";
+		tool.inputSchema = {
+			{"type", "object"},
+			{"properties", {{"platform", {{"type", "string"}}}}},
+			{"required", json::array({"platform"})}
+		};
+		tool.handler = [server](const json &params) -> json
+		{
+			string platform = params.value("platform", "c64");
+			vector<char> *result = server->RunEndpointFunction(platform + "/cpu/callstack", "", json::object(), nullptr, 0);
+			if (!result || result->empty()) { delete result; return json::object(); }
+			string raw(result->data(), result->size());
+			delete result;
+			return json::parse(raw, nullptr, false);
+		};
+		RegisterTool(tool);
+	}
+
 	// Load symbols / debug info by content (RD-036)
 	{
 		MCPToolDescriptor tool;

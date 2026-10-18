@@ -46,6 +46,9 @@ public:
 	virtual nlohmann::json ListSourceBreakpointsJson();
 	// loads a symbols / debug info file by content (DebugInfoLoadFile)
 	virtual nlohmann::json LoadDebugInfoJson(const std::string &path);
+	// RD-012: the frames on the stack now, innermost first, from the stack
+	// annotation; each with its return address and, when mapped, function/line
+	virtual nlohmann::json GetCallStackJson();
 
 	virtual u64 GetMainCpuCycleCounter();
 	virtual u64 GetMainCpuInstructionCycleCounter();

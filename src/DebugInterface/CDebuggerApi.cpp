@@ -2,6 +2,8 @@
 #include "CDebugDatabase.h"
 #include "CDebugSymbols.h"
 #include "CDebugSourceBreakpoint.h"
+#include "CDebugExecutionContext.h"
+#include "CDebugDataAdapter.h"
 #include "CDebugInfoLoader.h"
 #include "CDebuggerApi.h"
 #include "CViewC64.h"
@@ -266,6 +268,70 @@ nlohmann::json CDebuggerApi::LoadDebugInfoJson(const std::string &path)
 		j["functions"] = (int)database->Functions().size();
 	}
 	j["warnings"] = debugInterface->symbols->debugInfoWarnings;
+	return j;
+}
+
+// the function and line an address is in, when the debug info maps it
+static void AddSourceOf(nlohmann::json &j, CDebugSymbols *symbols, const CDebugDatabase *database, u16 address)
+{
+	if (!database || !symbols || !symbols->currentSegment || symbols->currentSegment->debugRegionId < 0)
+		return;
+	u32 regionId = (u32)symbols->currentSegment->debugRegionId;
+	const CDebugFunction *function = database->FindFunction(regionId, address);
+	if (function)
+		j["function"] = function->name;
+	const CDebugSourceMapping *m = database->Resolve(regionId, address);
+	if (m)
+	{
+		const CDebugSourceFile *file = database->GetFile(m->fileId);
+		j["file"] = file ? file->fileName : "";
+		j["line"] = m->lineStart;
+	}
+}
+
+nlohmann::json CDebuggerApi::GetCallStackJson()
+{
+	nlohmann::json j;
+	u16 pc;
+	u8 a, x, y, p, sp;
+	debugInterface->GetCpuRegs(&pc, &a, &x, &y, &p, &sp);
+	u8 stackPage[0x100];
+	CDebugDataAdapter *adapter = debugInterface->GetDataAdapter();
+	for (int i = 0; i < 0x100; i++)
+	{
+		bool available = false;
+		stackPage[i] = 0;
+		if (adapter)
+			adapter->AdapterReadByte(0x0100 + i, &stackPage[i], &available);
+	}
+
+	std::vector<CDebugPhysicalFrame> frames;
+	bool complete = DebugSeedFramesFromStack(debugInterface->mainCpuStack, stackPage, sp, frames);
+
+	CDebugSymbols *symbols = debugInterface->symbols;
+	std::shared_ptr<const CDebugDatabase> database = symbols ? symbols->debugDatabase : nullptr;
+
+	j["pc"] = pc;
+	j["sp"] = sp;
+	j["complete"] = complete;
+	nlohmann::json top;
+	AddSourceOf(top, symbols, database.get(), pc);
+	j["current"] = top;
+	j["frames"] = nlohmann::json::array();
+	for (auto it = frames.rbegin(); it != frames.rend(); it++)
+	{
+		nlohmann::json frame;
+		frame["kind"] = DebugFrameKindName(it->kind);
+		frame["from"] = it->fromPc;
+		frame["return"] = it->returnPc;
+		frame["sp"] = it->spBefore;
+		// a call returns into its caller; an interrupt resumes the interrupted code
+		nlohmann::json caller;
+		AddSourceOf(caller, symbols, database.get(), it->kind == DebugFrameKind::Call ? it->fromPc : it->returnPc);
+		if (!caller.empty())
+			frame["caller"] = caller;
+		j["frames"].push_back(frame);
+	}
 	return j;
 }
 

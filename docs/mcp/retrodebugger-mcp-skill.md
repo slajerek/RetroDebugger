@@ -22,6 +22,9 @@ Use this skill when working with the RetroDebugger MCP server to debug 8-bit pro
 - `retro_watch_list` — list all data watches
 - `retro_machine_state` — platform state (running/paused, PC) — **use this for pre-flight check, not retro_list_platforms**
 - `retro_snapshot_save` — save emulator state (file path)
+- `retro_callstack` — the frames on the stack now (innermost first): call/interrupt/break, the
+  instruction that entered each, its return address and, with debug info, the caller's
+  function and line; `complete:false` means part of the stack predates the annotation
 - `retro_source_location` — code to source and back on the loaded debug info: with `address`
   (default: the PC) the file, line and function in effect plus every candidate mapping; with
   `file` and `line` the line actually used and its addresses

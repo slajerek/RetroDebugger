@@ -1342,6 +1342,7 @@ void CTestMCPProtocol::Run(ITestCallback *cb)
 			{ "retro_source_breakpoint", {{"platform", "atari"}, {"action", "remove"}, {"file", "main.c"}, {"line", 11}}, "atari/source/breakpoint/remove", {{"file", "main.c"}, {"line", 11}} },
 			{ "retro_source_breakpoint", {{"platform", "c64"}, {"action", "list"}}, "c64/source/breakpoint/list", json::object() },
 			{ "retro_symbols_load", {{"platform", "c64"}, {"path", "/tmp/main.dbj"}}, "c64/symbols/load", {{"path", "/tmp/main.dbj"}} },
+			{ "retro_callstack", {{"platform", "nes"}}, "nes/cpu/callstack", json::object() },
 		};
 		for (const Route &route : routes)
 		{

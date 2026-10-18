@@ -27,7 +27,22 @@ struct CDebugPhysicalFrame
 	u16 fromPc = 0;		// the JSR/BRK, or the instruction after which the interrupt hit
 	u16 entryPc = 0;	// the first instruction of the frame
 	u8 spBefore = 0;	// the stack pointer before the frame's pushes
+	u16 returnPc = 0;	// where the frame returns to (seeded frames, from the stack bytes)
+	bool seeded = false;	// rebuilt from the stack annotation, not observed
 };
+
+struct CStackAnnotationData;
+
+// The frames on the stack right now, from the stack annotation (RD-012):
+// walking up from SP+1, a JSR's PCL/PCH pair is a Call frame, an
+// IRQ/NMI/BRK status/PCL/PCH triple an Interrupt or Break frame, PHA/PHP
+// bytes are data. OUT is outermost first, like the tracker's frames.
+// STACKPAGE ($0100-$01FF, may be NULL) gives the return addresses.
+// Returns false when a live stack byte has no annotation (pushed before
+// annotation started): the frames found up to there are kept, the rest of
+// the stack is Unknown.
+bool DebugSeedFramesFromStack(const CStackAnnotationData &stack, const u8 *stackPage, u8 sp,
+							  std::vector<CDebugPhysicalFrame> &out);
 
 class CDebugExecutionContextTracker
 {

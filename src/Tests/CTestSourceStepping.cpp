@@ -13,6 +13,7 @@
 #include "CDebugSourceBreakpoint.h"
 #include "CDebugBreakpointsAddr.h"
 #include "CDebugExecutionContext.h"
+#include "CStackAnnotation.h"
 #include "CSourceStepController.h"
 #include "DebuggerDefs.h"
 #include "SYS_Main.h"
@@ -77,7 +78,32 @@ bool CTestSourceStepping::RunTracker()
 	ok = t.GetDepth() == 0 && !t.HasLeftBase();
 	t.Apply(B(0x2002, 0x60, 0xF0, 0x0900, 0xF2));
 	ok = ok && t.HasLeftBase();
-	return Check(ok, "Tracker: PLA/PLA of the return address ends the frame; an RTS above the base leaves it");
+	if (!Check(ok, "Tracker: PLA/PLA of the return address ends the frame; an RTS above the base leaves it"))
+		return false;
+
+	// Seeding from the stack annotation: from the top, a JSR pair (return
+	// $0812+1), a PHA, an IRQ triple, a JSR pair, then an unannotated byte
+	CStackAnnotationData stack;
+	stack.Clear();
+	u8 page[0x100] = {};
+	auto put = [&](int at, u8 type, u16 origin, u8 value) { stack.entryTypes[at] = type; stack.originPC[at] = origin; page[at] = value; };
+	put(0xF1, STACK_ENTRY_JSR_PCL, 0x0810, 0x12);	put(0xF2, STACK_ENTRY_JSR_PCH, 0x0810, 0x08);
+	put(0xF3, STACK_ENTRY_VALUE, 0x0900, 0x55);
+	put(0xF4, STACK_ENTRY_IRQ_STATUS, 0x0A00, 0x20);	put(0xF5, STACK_ENTRY_IRQ_PCL, 0x0A00, 0x00);	put(0xF6, STACK_ENTRY_IRQ_PCH, 0x0A00, 0x0A);
+	put(0xF7, STACK_ENTRY_JSR_PCL, 0x0B00, 0x02);	put(0xF8, STACK_ENTRY_JSR_PCH, 0x0B00, 0x0B);
+	std::vector<CDebugPhysicalFrame> seeded;
+	bool complete = DebugSeedFramesFromStack(stack, page, 0xF0, seeded);
+	ok = !complete && seeded.size() == 3
+		&& seeded[2].kind == DebugFrameKind::Call && seeded[2].fromPc == 0x0810 && seeded[2].returnPc == 0x0813 && seeded[2].spBefore == 0xF2
+		&& seeded[1].kind == DebugFrameKind::Interrupt && seeded[1].returnPc == 0x0A00 && seeded[1].spBefore == 0xF6
+		&& seeded[0].kind == DebugFrameKind::Call && seeded[0].fromPc == 0x0B00 && seeded[0].returnPc == 0x0B03 && seeded[0].seeded;
+	// fully annotated to $01FF: complete
+	for (int at = 0xF9; at <= 0xFF; at++)
+		put(at, STACK_ENTRY_VALUE, 0, 0);
+	complete = DebugSeedFramesFromStack(stack, page, 0xF0, seeded);
+	ok = ok && complete && seeded.size() == 3;
+	return Check(ok, "Tracker: frames seeded from the stack annotation -- JSR pairs and IRQ triples, PHA skipped, an unannotated byte ends the walk as incomplete");
+
 }
 
 bool CTestSourceStepping::Step(CDebugInterfaceVice *di, SourceStepKind kind, u16 expectedPc, int expectedLine,
@@ -177,6 +203,18 @@ bool CTestSourceStepping::RunOscar64(CDebugInterfaceVice *di)
 	ok = ok && Step(di, SourceStepKind::Over, 0x0885, 17, SourceStepStopReason::Completed);
 	ok = ok && Step(di, SourceStepKind::Into, 0x089A, 12, SourceStepStopReason::Completed);
 	ok = ok && Step(di, SourceStepKind::Into, 0x08AA, 8, SourceStepStopReason::Completed);
+	if (ok)
+	{
+		// RD-012: the call stack seeded from the stack annotation, in add()
+		nlohmann::json stack = di->GetDebuggerApi()->GetCallStackJson();
+		const nlohmann::json &frames = stack["frames"];
+		bool seeded = stack["current"].value("function", "") == "add" && frames.size() >= 2
+			&& frames[0].value("kind", "") == "call" && frames[0]["caller"].value("function", "") == "doSomething"
+			&& frames[0]["caller"].value("line", 0) == 12
+			&& frames[1]["caller"].value("function", "") == "main" && frames[1]["caller"].value("line", 0) == 17;
+		std::string message = "Call stack from the stack annotation in add(): called from doSomething() line 12, called from main() line 17: " + stack.dump();
+		ok = Check(seeded, message.c_str());
+	}
 	ok = ok && Step(di, SourceStepKind::Out, 0x08A6, 12, SourceStepStopReason::Completed);
 	ok = ok && Step(di, SourceStepKind::Over, 0x08A9, 13, SourceStepStopReason::Completed);
 	ok = ok && Step(di, SourceStepKind::Over, 0x0888, 18, SourceStepStopReason::FrameExited);

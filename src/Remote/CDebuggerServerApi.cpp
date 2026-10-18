@@ -371,6 +371,13 @@ void CDebuggerServerApi::RegisterEndpoints(CDebuggerServer *server)
 		return server->PrepareResult(HTTP_OK, token, json{{"breakpoints", debuggerApi->ListSourceBreakpointsJson()}}, NULL, 0);
 	});
 
+	sprintf(buf, "%s/cpu/callstack", plat);
+	RegisterEndpoint(server, buf, plat, "cpu", "Frames on the stack, innermost first, from the stack annotation: kind, return address, caller function and line",
+	[this, server](const string token, json params, unsigned char *binaryData, int binaryDataSize) -> vector<char>*
+	{
+		return server->PrepareResult(HTTP_OK, token, debuggerApi->GetCallStackJson(), NULL, 0);
+	});
+
 	sprintf(buf, "%s/symbols/load", plat);
 	RegisterEndpoint(server, buf, plat, "source", "Load a symbols or debug info file by its content (KickAssembler/cc65 .dbg, Oscar64 .dbj, VICE/64tass labels)",
 	[this, server](const string token, json params, unsigned char *binaryData, int binaryDataSize) -> vector<char>*

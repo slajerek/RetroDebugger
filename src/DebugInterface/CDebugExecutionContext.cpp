@@ -1,4 +1,7 @@
 #include "CDebugExecutionContext.h"
+#include "CStackAnnotation.h"
+#include <algorithm>
+#include <cstring>
 
 const char *DebugFrameKindName(DebugFrameKind kind)
 {
@@ -102,4 +105,54 @@ void CDebugExecutionContextTracker::Apply(const CDebugInstructionBoundary &bound
 		default:
 			break;
 	}
+}
+
+bool DebugSeedFramesFromStack(const CStackAnnotationData &stack, const u8 *stackPage, u8 sp,
+							  std::vector<CDebugPhysicalFrame> &out)
+{
+	out.clear();
+	bool complete = true;
+	int p = sp + 1;
+	while (p <= 0xFF)
+	{
+		u8 type = stack.entryTypes[p];
+		if (type == STACK_ENTRY_JSR_PCL && p + 1 <= 0xFF && stack.entryTypes[p + 1] == STACK_ENTRY_JSR_PCH)
+		{
+			CDebugPhysicalFrame frame;
+			frame.kind = DebugFrameKind::Call;
+			frame.fromPc = stack.originPC[p];
+			frame.spBefore = (u8)(p + 1);
+			frame.seeded = true;
+			if (stackPage)
+				frame.returnPc = (u16)(((stackPage[p + 1] << 8) | stackPage[p]) + 1);
+			out.push_back(frame);
+			p += 2;
+			continue;
+		}
+		bool irq = (type == STACK_ENTRY_IRQ_STATUS || type == STACK_ENTRY_NMI_STATUS || type == STACK_ENTRY_BRK_STATUS);
+		if (irq && p + 2 <= 0xFF)
+		{
+			CDebugPhysicalFrame frame;
+			frame.kind = (type == STACK_ENTRY_BRK_STATUS) ? DebugFrameKind::Break : DebugFrameKind::Interrupt;
+			frame.fromPc = stack.originPC[p];
+			frame.spBefore = (u8)(p + 2);
+			frame.seeded = true;
+			if (stackPage)
+				frame.returnPc = (u16)((stackPage[p + 2] << 8) | stackPage[p + 1]);
+			out.push_back(frame);
+			p += 3;
+			continue;
+		}
+		if (type == STACK_ENTRY_VALUE || type == STACK_ENTRY_STATUS)
+		{
+			p++;
+			continue;
+		}
+		// unannotated, or half of a pair whose other half was overwritten
+		complete = false;
+		break;
+	}
+	// innermost was found first
+	std::reverse(out.begin(), out.end());
+	return complete;
 }
