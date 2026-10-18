@@ -11,16 +11,16 @@
   "machine": "nes",
   "outputs": {
     "main.asm": {
-      "sha256": "b6cbd0eebfad8afcde003e692f33a175284f165bf0bac0c97b1ce0cee3f64087",
-      "size": 2084
+      "sha256": "e0817a4b6b6a07b089090469fffe39374ea98bc6a6f857f0e4ada7d0f6794b1e",
+      "size": 2855
     },
     "main.dbg": {
-      "sha256": "fc75ab6b69178f779e52ee6c33e7a6c66125d7601d0c342474650ed701df2be8",
-      "size": 3701
+      "sha256": "2976065de1f7de43ff5611221dbc5d3de47c56edba41b627110b1f0fa91f58e6",
+      "size": 4172
     },
     "main.nes": {
-      "sha256": "114d1a9f3fbffb84465f658cafd0e80141757ce70bf226e3950bec47d1277be8",
-      "size": 8251
+      "sha256": "9424d43a99990069d9e6c67da7f64353043e64366e5e97b74ccf057561838919",
+      "size": 24592
     }
   },
   "source": "main.c",
@@ -28,7 +28,9 @@
     [
       "kickc",
       "-t=nes",
-      "main.c"
+      "-Sl",
+      "main.c",
+      "{toolchains}/kickc-nes-vectors.c"
     ],
     [
       "kickass",
@@ -37,8 +39,8 @@
     ]
   ],
   "toolDirs": {
-    "kickass": "/home/user/toolchains/bin",
-    "kickc": "/home/user/toolchains/bin"
+    "kickass": "/private/tmp/claude-501/-Users-mars-develop-github-RetroDebugger/53b1db2e-8b8e-4db0-8821-2827ab2f434c/scratchpad/toolchains/bin",
+    "kickc": "/private/tmp/claude-501/-Users-mars-develop-github-RetroDebugger/53b1db2e-8b8e-4db0-8821-2827ab2f434c/scratchpad/toolchains/bin"
   },
   "toolchain": "kickc",
   "version": "0.8.6",

@@ -12,16 +12,21 @@
   .label result = 2
 .segment Code
 __start: {
+    // /private/tmp/rd-source-debug/kickc/c64/same-line/main.c:5
     lda #0
     sta.z result
     jsr main
     rts
 }
 main: {
+    // /private/tmp/rd-source-debug/kickc/c64/same-line/main.c:11
     lda #0
     sta.z result
+    // /private/tmp/rd-source-debug/kickc/c64/same-line/main.c:12
     jsr a
+    // /private/tmp/rd-source-debug/kickc/c64/same-line/main.c:12
     jsr b
+    // /private/tmp/rd-source-debug/kickc/c64/same-line/main.c:13
     lda.z result
     asl
     sta.z result
@@ -30,12 +35,14 @@ main: {
     jmp __b1
 }
 a: {
+    // /private/tmp/rd-source-debug/kickc/c64/same-line/main.c:7
     ldx.z result
     inx
     stx.z result
     rts
 }
 b: {
+    // /private/tmp/rd-source-debug/kickc/c64/same-line/main.c:8
     lda.z result
     clc
     adc #2

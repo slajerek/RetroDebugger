@@ -9,12 +9,12 @@
   "machine": "atari",
   "outputs": {
     "main.asm": {
-      "sha256": "81cb2111c285f5269b1189496ba8314b23259aa3f76a3a47fe2911bfc1cdd19a",
-      "size": 964
+      "sha256": "a638c88761eca3146aa38a0f6fe4960aebe1789728af321dabdc602df7fca070",
+      "size": 1437
     },
     "main.dbg": {
-      "sha256": "32e3ec7124de8aec7f6bdf0585d483969432832263e4d8b0ff23ef163e6ed40f",
-      "size": 2763
+      "sha256": "40751b6a740a48fb8c3cb3e14089cbd7d64dd974f6b96a692e32edb6a53bbf5e",
+      "size": 2771
     },
     "main.xex": {
       "sha256": "5c4e688384b561e988e8c7cca1fdbf5c50fbaf17a2219f298f691142cb2a2ccd",
@@ -26,6 +26,7 @@
     [
       "kickc",
       "-t=atarixl",
+      "-Sl",
       "main.c"
     ],
     [
@@ -35,8 +36,8 @@
     ]
   ],
   "toolDirs": {
-    "kickass": "/home/user/toolchains/bin",
-    "kickc": "/home/user/toolchains/bin"
+    "kickass": "/private/tmp/claude-501/-Users-mars-develop-github-RetroDebugger/53b1db2e-8b8e-4db0-8821-2827ab2f434c/scratchpad/toolchains/bin",
+    "kickc": "/private/tmp/claude-501/-Users-mars-develop-github-RetroDebugger/53b1db2e-8b8e-4db0-8821-2827ab2f434c/scratchpad/toolchains/bin"
   },
   "toolchain": "kickc",
   "version": "0.8.6",

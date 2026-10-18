@@ -261,6 +261,225 @@ static std::string ToStd(CSlrString *str)
 //	>   &gt;
 //	&   &amp;
 
+// cc65 and KickC record no definition line. From the line mapped at a function's
+// entry upwards, the first line naming the function before a '(' and without
+// a ';' (not a call statement); the entry line when the text is missing or
+// nothing matches within 50 lines.
+static i32 DefinitionLineFromText(const CDebugSourceFile *file, const std::string &name, i32 entryLine, bool *found)
+{
+	*found = false;
+	if (file == NULL || name.empty())
+		return entryLine;
+	for (i32 line = entryLine; line >= 1 && line > entryLine - 50; line--)
+	{
+		if (line >= (i32)file->lines.size() || file->lines[line] == NULL)
+			continue;
+		char *text = file->lines[line]->GetStdASCII();
+		std::string s(text);
+		delete [] text;
+		size_t at = s.find(name);
+		bool named = false;
+		while (at != std::string::npos)
+		{
+			size_t after = at + name.size();
+			while (after < s.size() && s[after] == ' ')
+				after++;
+			bool wordStart = (at == 0 || !(isalnum((unsigned char)s[at - 1]) || s[at - 1] == '_'));
+			if (wordStart && after < s.size() && s[after] == '(')
+			{
+				named = true;
+				break;
+			}
+			at = s.find(name, at + 1);
+		}
+		if (named && s.find(';') == std::string::npos)
+		{
+			*found = true;
+			return line;
+		}
+	}
+	return entryLine;
+}
+
+// RD-010: KickC. KickAssembler's .dbg maps addresses to lines of the .asm
+// KickC generated; compiled with -Sl, that .asm names the C file and line
+// before each statement's code ("// /path/main.c:16"). Each asm range under
+// such a comment gets a C mapping too, after the asm ones (C wins, asm stays
+// a candidate), marked Approximate: the comments are KickC's annotations,
+// not debug information. Each "name: {" scope of the .asm is a function over
+// the addresses its lines map to.
+static bool ParseKickCLineComment(const std::string &text, std::string &path, i32 &line)
+{
+	size_t at = text.find_first_not_of(" \t");
+	if (at == std::string::npos || text.compare(at, 2, "//") != 0)
+		return false;
+	std::string rest = text.substr(at + 2);
+	size_t first = rest.find_first_not_of(" \t");
+	if (first == std::string::npos)
+		return false;
+	rest = rest.substr(first);
+	while (!rest.empty() && (rest.back() == ' ' || rest.back() == '\t' || rest.back() == '\r'))
+		rest.pop_back();
+	size_t colon = rest.find_last_of(':');
+	if (colon == std::string::npos || colon + 1 >= rest.size())
+		return false;
+	std::string number = rest.substr(colon + 1);
+	for (char c : number)
+	{
+		if (!isdigit((unsigned char)c))
+			return false;
+	}
+	path = rest.substr(0, colon);
+	size_t dot = path.find_last_of('.');
+	if (dot == std::string::npos)
+		return false;
+	std::string ext = path.substr(dot + 1);
+	if (ext != "c" && ext != "h")
+		return false;
+	line = atoi(number.c_str());
+	return line > 0;
+}
+
+static void AddKickCSourceMappings(CDebugDatabase *database, const CDebugInfoLoadOptions &options)
+{
+	std::vector<CDebugSourceMapping> asmMappings = database->Mappings();
+	u32 nextFileId = 0;
+	for (auto &it : database->Files())
+		nextFileId = std::max(nextFileId, it.first + 1);
+
+	std::map<std::string, u32> cFiles;
+	std::vector<CDebugSourceFile *> newFiles;
+	struct Scope { std::string name; i32 first; i32 last; };
+	std::vector<std::pair<u32, Scope>> scopes;		// asm file id, scope
+	std::map<u32, std::vector<std::pair<u32, i32>>> cAtAsmLine;	// asm file id -> [asm line] = (C file id, C line)
+	std::vector<u32> asmFiles;
+	for (auto &it : database->Files())
+		asmFiles.push_back(it.first);
+
+	for (u32 asmFileId : asmFiles)
+	{
+		const CDebugSourceFile *asmFile = database->GetFile(asmFileId);
+		if (asmFile == NULL || asmFile->lines.size() < 2)
+			continue;
+		std::vector<std::pair<u32, i32>> &cLoc = cAtAsmLine[asmFileId];
+		cLoc.assign(asmFile->lines.size(), std::make_pair(0u, 0));
+		std::pair<u32, i32> current(0, 0);
+		int depth = 0;
+		Scope scope;
+		for (size_t n = 1; n < asmFile->lines.size(); n++)
+		{
+			char *raw = asmFile->lines[n] ? asmFile->lines[n]->GetStdASCII() : NULL;
+			std::string text = raw ? raw : "";
+			delete [] raw;
+
+			std::string path;
+			i32 cLine = 0;
+			if (ParseKickCLineComment(text, path, cLine))
+			{
+				auto known = cFiles.find(path);
+				if (known == cFiles.end())
+				{
+					newFiles.push_back(database->AddFile(nextFileId, path));
+					known = cFiles.insert(std::make_pair(path, nextFileId++)).first;
+				}
+				current = std::make_pair(known->second, cLine);
+				continue;
+			}
+			// "name: {" opens a function scope: no C statement carries over into it
+			size_t brace = text.find('{');
+			size_t colon = text.find(':');
+			if (brace != std::string::npos && colon != std::string::npos && colon < brace && depth == 0)
+			{
+				std::string name = text.substr(0, colon);
+				name.erase(0, name.find_first_not_of(" \t"));
+				bool identifier = !name.empty();
+				for (char c : name)
+					identifier = identifier && (isalnum((unsigned char)c) || c == '_');
+				if (identifier)
+				{
+					scope = Scope{ name, (i32)n, (i32)n };
+					depth = 1;
+					current = std::make_pair(0u, 0);
+					continue;
+				}
+			}
+			if (depth > 0 && text.find('}') != std::string::npos && text.find('{') == std::string::npos)
+			{
+				scope.last = (i32)n;
+				scopes.push_back(std::make_pair(asmFileId, scope));
+				depth = 0;
+				current = std::make_pair(0u, 0);
+				continue;
+			}
+			cLoc[n] = current;
+		}
+	}
+	if (cFiles.empty())
+		return;		// not KickC output, or built without -Sl
+
+	for (CDebugSourceFile *file : newFiles)
+		LoadSourceTextFor(file, options);
+
+	for (const CDebugSourceMapping &m : asmMappings)
+	{
+		auto loc = cAtAsmLine.find(m.fileId);
+		if (loc == cAtAsmLine.end() || m.lineStart <= 0 || m.lineStart >= (i32)loc->second.size())
+			continue;
+		std::pair<u32, i32> c = loc->second[m.lineStart];
+		if (c.second <= 0)
+			continue;
+		CDebugSourceMapping mapping = m;
+		mapping.fileId = c.first;
+		mapping.lineStart = mapping.lineEnd = c.second;
+		mapping.columnStart = mapping.columnEnd = 0;
+		mapping.quality = DebugMappingQuality::Approximate;
+		database->AddMapping(mapping);
+	}
+
+	// one function per region the scope's code is listed in: KickAssembler
+	// lists the same code under a segment and its member segments
+	for (auto &entry : scopes)
+	{
+		const Scope &scope = entry.second;
+		std::map<u32, CDebugFunction> byRegion;
+		std::map<u32, std::pair<u32, i32>> firstC;
+		std::map<u32, u32> firstCStart;
+		for (const CDebugSourceMapping &m : asmMappings)
+		{
+			if (m.fileId != entry.first || m.lineStart <= scope.first || m.lineStart >= scope.last)
+				continue;
+			bool fresh = (byRegion.find(m.regionId) == byRegion.end());
+			CDebugFunction &function = byRegion[m.regionId];
+			if (fresh || m.start < function.start)
+				function.start = m.start;
+			if (fresh || m.end > function.end)
+				function.end = m.end;
+			function.regionId = m.regionId;
+			std::pair<u32, i32> c = cAtAsmLine[entry.first][m.lineStart];
+			if (c.second > 0 && (firstC[m.regionId].second == 0 || m.start < firstCStart[m.regionId]))
+			{
+				firstC[m.regionId] = c;
+				firstCStart[m.regionId] = m.start;
+			}
+		}
+		for (auto &it : byRegion)
+		{
+			CDebugFunction &function = it.second;
+			std::pair<u32, i32> c = firstC[it.first];
+			if (c.second == 0)
+				continue;	// KickC's own __start and helpers have no C lines
+			function.name = scope.name;
+			function.fileId = c.first;
+			function.line = DefinitionLineFromText(database->GetFile(c.first), function.name, c.second,
+												   &function.lineIsDefinition);
+			database->AddFunction(function);
+		}
+	}
+	database->capabilities.functions = true;
+	LOGM("DebugInfoLoadKickAss: KickC -Sl comments: %d C file(s), %d scope(s), %d function(s)",
+		 (int)cFiles.size(), (int)scopes.size(), (int)database->Functions().size());
+}
+
 bool DebugInfoLoadKickAss(CDebugSymbols *symbols, CByteBuffer *byteBuffer, const char *debugFileDir)
 {
 	CDebugInfoLoadOptions options;
@@ -712,6 +931,9 @@ bool DebugInfoLoadKickAss(CDebugSymbols *symbols, CByteBuffer *byteBuffer, const
 	for (auto &it : database->Files())
 		LoadSourceTextFor(it.second, options);
 
+	// RD-010: C lines of KickC output (-Sl comments in the .asm)
+	AddKickCSourceMappings(database.get(), options);
+
 	database->Finalize();
 	symbols->SetDebugDatabase(database);
 
@@ -932,46 +1154,6 @@ static bool IsCc65GeneratedLabel(const std::string &name)
 	return true;
 }
 
-// cc65 records no definition line. From the line mapped at a function's
-// entry upwards, the first line naming the function before a '(' and without
-// a ';' (not a call statement); the entry line when the text is missing or
-// nothing matches within 50 lines.
-static i32 Cc65DefinitionLine(const CDebugSourceFile *file, const std::string &name, i32 entryLine, bool *found)
-{
-	*found = false;
-	if (file == NULL || name.empty())
-		return entryLine;
-	for (i32 line = entryLine; line >= 1 && line > entryLine - 50; line--)
-	{
-		if (line >= (i32)file->lines.size() || file->lines[line] == NULL)
-			continue;
-		char *text = file->lines[line]->GetStdASCII();
-		std::string s(text);
-		delete [] text;
-		size_t at = s.find(name);
-		bool named = false;
-		while (at != std::string::npos)
-		{
-			size_t after = at + name.size();
-			while (after < s.size() && s[after] == ' ')
-				after++;
-			bool wordStart = (at == 0 || !(isalnum((unsigned char)s[at - 1]) || s[at - 1] == '_'));
-			if (wordStart && after < s.size() && s[after] == '(')
-			{
-				named = true;
-				break;
-			}
-			at = s.find(name, at + 1);
-		}
-		if (named && s.find(';') == std::string::npos)
-		{
-			*found = true;
-			return line;
-		}
-	}
-	return entryLine;
-}
-
 bool DebugInfoLoadCc65(CDebugSymbols *symbols, CByteBuffer *byteBuffer, const CDebugInfoLoadOptions &options)
 {
 	std::map<long, Cc65Record> files, segs, spans, scopes, syms;
@@ -1129,7 +1311,7 @@ bool DebugInfoLoadCc65(CDebugSymbols *symbols, CByteBuffer *byteBuffer, const CD
 			if (entryLine.second > 0)
 			{
 				function.fileId = entryLine.first;
-				function.line = Cc65DefinitionLine(database->GetFile(function.fileId), function.name, entryLine.second,
+				function.line = DefinitionLineFromText(database->GetFile(function.fileId), function.name, entryLine.second,
 												   &function.lineIsDefinition);
 			}
 			database->AddFunction(function);

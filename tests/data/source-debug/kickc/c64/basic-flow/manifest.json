@@ -11,12 +11,12 @@
   "machine": "c64",
   "outputs": {
     "main.asm": {
-      "sha256": "14587d23858aa6352a44ba25a50fb7b35d698709598c575217d8a435c133b8a3",
-      "size": 966
+      "sha256": "6a54879a067700156770da399447f1f2b9da15d9376107fc1ff6d9436ba25009",
+      "size": 1633
     },
     "main.dbg": {
-      "sha256": "8f7df74608961fce0926b5383c4c1de85104a3fc9cf4bf90225a4b01a1c19298",
-      "size": 3148
+      "sha256": "3b7a4e804072b3df27b5a1353b5511f98536866f04d702ca399424baa3fc3510",
+      "size": 3156
     },
     "main.prg": {
       "sha256": "413d90b777945bdefb66ec7a9719e4f09400ce853efa6b1b3cfd334f960289de",
@@ -28,6 +28,7 @@
     [
       "kickc",
       "-t=c64",
+      "-Sl",
       "main.c"
     ],
     [
@@ -37,8 +38,8 @@
     ]
   ],
   "toolDirs": {
-    "kickass": "/home/user/toolchains/bin",
-    "kickc": "/home/user/toolchains/bin"
+    "kickass": "/private/tmp/claude-501/-Users-mars-develop-github-RetroDebugger/53b1db2e-8b8e-4db0-8821-2827ab2f434c/scratchpad/toolchains/bin",
+    "kickc": "/private/tmp/claude-501/-Users-mars-develop-github-RetroDebugger/53b1db2e-8b8e-4db0-8821-2827ab2f434c/scratchpad/toolchains/bin"
   },
   "toolchain": "kickc",
   "version": "0.8.6",

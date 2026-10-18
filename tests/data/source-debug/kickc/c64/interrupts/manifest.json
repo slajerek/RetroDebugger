@@ -1,0 +1,48 @@
+{
+  "buildDir": "/tmp/rd-source-debug/kickc/c64/interrupts",
+  "commit": "b99b0cf59dca331436c9df7f0ea67cdf3a69b2ca",
+  "fixedMtime": 1767225600,
+  "fixture": "interrupts",
+  "inputs": {
+    "main.c": "ea2ba8a2c970d923eb8f0c5a24bfb9a4753bdad09cca503dc52ea76e35f2fd33"
+  },
+  "machine": "c64",
+  "outputs": {
+    "main.asm": {
+      "sha256": "e56e857b7a0bf0ab9eeddf287c5554d46dac9f356795282c275627f992b8ac8b",
+      "size": 1259
+    },
+    "main.dbg": {
+      "sha256": "388716a9b7cc315c043112100091c8af58aa9ffcba93dbae9d88c5d46f6bffd9",
+      "size": 2851
+    },
+    "main.prg": {
+      "sha256": "26941615a4b504228f6a2fee0aa7608ba302de99a1979bb075a8b6ecdf3ba4b3",
+      "size": 47
+    }
+  },
+  "source": "main.c",
+  "steps": [
+    [
+      "kickc",
+      "-t=c64",
+      "-Sl",
+      "main.c"
+    ],
+    [
+      "kickass",
+      "main.asm",
+      "-debugdump"
+    ]
+  ],
+  "toolDirs": {
+    "kickass": "/private/tmp/claude-501/-Users-mars-develop-github-RetroDebugger/53b1db2e-8b8e-4db0-8821-2827ab2f434c/scratchpad/toolchains/bin",
+    "kickc": "/private/tmp/claude-501/-Users-mars-develop-github-RetroDebugger/53b1db2e-8b8e-4db0-8821-2827ab2f434c/scratchpad/toolchains/bin"
+  },
+  "toolchain": "kickc",
+  "version": "0.8.6",
+  "versionReported": {
+    "kickass": "//         Kick Assembler v5.24 by Mads Nielsen",
+    "kickc": "KickC 0.8.6 BETA"
+  }
+}

@@ -171,11 +171,17 @@ bool CTestSourceDocument::RunView()
 	const CDebugSourceFile *file = ok ? scratch->debugDatabase->Files().begin()->second : NULL;
 	if (ok)
 	{
-		bool missingFirst = !view->documents.Open(file->originalPath, file->loadedPath);
-		view->documents.sourceRoots.push_back(ResolveProjectPath("tests/source-debug/fixtures/basic-flow"));
+		// the recorded build directory exists only where the fixtures were built
+		std::error_code error;
+		bool builtHere = std::filesystem::exists(std::filesystem::path(file->originalPath), error);
+		bool missingFirst = builtHere || !view->documents.Open(file->originalPath, file->loadedPath);
+		std::string root = ResolveProjectPath("tests/source-debug/fixtures/basic-flow");
+		view->documents.sourceRoots.push_back(root);
 		auto document = view->documents.Open(file->originalPath, file->loadedPath);
-		ok = Check(missingFirst && document && document->GetLine(16) == "    result = 1;",
-				   "Source view: main.c is missing at its recorded path and found through a source root");
+		std::vector<std::string> candidates = view->documents.Candidates(file->originalPath, file->loadedPath);
+		ok = Check(missingFirst && document && document->GetLine(16) == "    result = 1;"
+				   && !candidates.empty() && candidates.back() == root + "/main.c",
+				   "Source view: main.c, missing at its recorded path (unless built on this machine), is found through a source root");
 	}
 
 	// the disassembly's "Show source": $0885 is line 17

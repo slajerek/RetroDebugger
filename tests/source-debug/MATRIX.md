@@ -21,30 +21,39 @@ do not edit by hand. `ok` = built and committed under `tests/data/source-debug/`
 | branches-loops | 64tass | 1.59.3120 | n/a | n/a | n/a | n/a |
 | branches-loops | cc65 | 2.19 | ok | ok | ok | n/a |
 | branches-loops | kickass | 5.24-65ce02.e | n/a | n/a | n/a | n/a |
-| branches-loops | kickc | 0.8.6 | not built | not built | not built | n/a |
+| branches-loops | kickc | 0.8.6 | ok | ok | ok | n/a |
 | branches-loops | oscar64 | 1.32.273 | ok | ok | ok | n/a |
 | indirect-calls | 64tass | 1.59.3120 | n/a | n/a | n/a | n/a |
 | indirect-calls | cc65 | 2.19 | ok | ok | ok | n/a |
 | indirect-calls | kickass | 5.24-65ce02.e | n/a | n/a | n/a | n/a |
-| indirect-calls | kickc | 0.8.6 | not built | not built | not built | n/a |
+| indirect-calls | kickc | 0.8.6 | fail [1] | fail [2] | fail [3] | n/a |
 | indirect-calls | oscar64 | 1.32.273 | ok | ok | ok | n/a |
 | interrupts | 64tass | 1.59.3120 | n/a | n/a | n/a | n/a |
 | interrupts | cc65 | 2.19 | ok | ok | ok | n/a |
 | interrupts | kickass | 5.24-65ce02.e | n/a | n/a | n/a | n/a |
-| interrupts | kickc | 0.8.6 | not built | not built | not built | n/a |
+| interrupts | kickc | 0.8.6 | ok | ok | ok | n/a |
 | interrupts | oscar64 | 1.32.273 | ok | ok | ok | n/a |
 | nested-calls | 64tass | 1.59.3120 | n/a | n/a | n/a | n/a |
 | nested-calls | cc65 | 2.19 | ok | ok | ok | n/a |
 | nested-calls | kickass | 5.24-65ce02.e | n/a | n/a | n/a | n/a |
-| nested-calls | kickc | 0.8.6 | not built | not built | not built | n/a |
+| nested-calls | kickc | 0.8.6 | ok | ok | ok | n/a |
 | nested-calls | oscar64 | 1.32.273 | ok | ok | ok | n/a |
 | recursion | 64tass | 1.59.3120 | n/a | n/a | n/a | n/a |
 | recursion | cc65 | 2.19 | ok | ok | ok | n/a |
 | recursion | kickass | 5.24-65ce02.e | n/a | n/a | n/a | n/a |
-| recursion | kickc | 0.8.6 | not built | not built | not built | n/a |
+| recursion | kickc | 0.8.6 | fail [4] | fail [5] | fail [6] | n/a |
 | recursion | oscar64 | 1.32.273 | ok | ok | ok | n/a |
 | same-line | 64tass | 1.59.3120 | n/a | n/a | n/a | n/a |
 | same-line | cc65 | 2.19 | ok | ok | ok | n/a |
 | same-line | kickass | 5.24-65ce02.e | n/a | n/a | n/a | n/a |
 | same-line | kickc | 0.8.6 | ok | ok | ok | n/a |
 | same-line | oscar64 | 1.32.273 | ok | ok | ok | n/a |
+
+Notes:
+
+[1] indirect-calls / kickc / c64: fail kickc exited 1: //-------------------------------------------------- | Compiling main.c  | /private/tmp/rd-source-debug/kickc/c64/indirect-calls/main.c:17: error: Initializer is not a constant value.
+[2] indirect-calls / kickc / atari: fail kickc exited 1: //-------------------------------------------------- | Compiling main.c  | /private/tmp/rd-source-debug/kickc/atari/indirect-calls/main.c:17: error: Initializer is not a constant value.
+[3] indirect-calls / kickc / nes: fail kickc exited 1: //-------------------------------------------------- | Compiling main.c /Users/mars/develop/github/RetroDebugger/tests/source-debug/toolchains/kickc-nes-vectors.c  | /private/tmp/rd-source-debug/kickc/nes/indirect-calls/main.c:17: error: Initializer is not a constant value.
+[4] recursion / kickc / c64: fail kickc exited 1: //-------------------------------------------------- | Compiling main.c  | ERROR! Recursion not allowed! Occurs in sum
+[5] recursion / kickc / atari: fail kickc exited 1: //-------------------------------------------------- | Compiling main.c  | ERROR! Recursion not allowed! Occurs in sum
+[6] recursion / kickc / nes: fail kickc exited 1: //-------------------------------------------------- | Compiling main.c /Users/mars/develop/github/RetroDebugger/tests/source-debug/toolchains/kickc-nes-vectors.c  | ERROR! Recursion not allowed! Occurs in sum

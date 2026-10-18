@@ -1,0 +1,172 @@
+{
+  "fixture": "nested-calls",
+  "compiler": "kickc",
+  "optimization": "debug",
+  "machine": "c64",
+  "artifacts": "tests/data/source-debug/kickc/c64/nested-calls",
+  "binary": "main.prg",
+  "debugInfo": "main.dbg",
+  "entry": "0x080D",
+  "start": {
+    "file": "main.c",
+    "line": 22
+  },
+  "steps": [
+    {
+      "action": "sourceInto",
+      "expected": {
+        "file": "main.c",
+        "line": 18,
+        "function": "top",
+        "depth": 1
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceInto",
+      "expected": {
+        "file": "main.c",
+        "line": 13,
+        "function": "middle",
+        "depth": 2
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceInto",
+      "expected": {
+        "file": "main.c",
+        "line": 9,
+        "function": "leaf",
+        "depth": 3
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceOut",
+      "note": "KickC keeps w in a register: the code after the first call is already line 14's",
+      "expected": {
+        "file": "main.c",
+        "line": 14,
+        "function": "middle",
+        "depth": 2
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceInto",
+      "expected": {
+        "file": "main.c",
+        "line": 9,
+        "function": "leaf",
+        "depth": 3
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceOut",
+      "note": "the call is line 14's last code: it returns onto the RTS, placed under the closing brace",
+      "expected": {
+        "file": "main.c",
+        "line": 15,
+        "function": "middle",
+        "depth": 2
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceOver",
+      "expected": {
+        "file": "main.c",
+        "line": 18,
+        "function": "top",
+        "depth": 1
+      },
+      "expectedReason": "frame-exited"
+    },
+    {
+      "action": "sourceOver",
+      "note": "top()'s RTS is under its closing brace",
+      "expected": {
+        "file": "main.c",
+        "line": 19,
+        "function": "top",
+        "depth": 1
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceOver",
+      "expected": {
+        "file": "main.c",
+        "line": 22,
+        "function": "main",
+        "depth": 0
+      },
+      "expectedReason": "frame-exited"
+    },
+    {
+      "action": "sourceOver",
+      "expected": {
+        "file": "main.c",
+        "line": 23,
+        "function": "main",
+        "depth": 0
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceInto",
+      "expected": {
+        "file": "main.c",
+        "line": 9,
+        "function": "leaf",
+        "depth": 1
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceOut",
+      "expected": {
+        "file": "main.c",
+        "line": 23,
+        "function": "main",
+        "depth": 0
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceInto",
+      "expected": {
+        "file": "main.c",
+        "line": 9,
+        "function": "leaf",
+        "depth": 1
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceOut",
+      "expected": {
+        "file": "main.c",
+        "line": 23,
+        "function": "main",
+        "depth": 0
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceOver",
+      "budget": 20000,
+      "note": "for (;;) has no comment: its JMP stays under line 23",
+      "expected": {
+        "file": "main.c",
+        "line": 23,
+        "function": "main",
+        "depth": 0
+      },
+      "expectedReason": "budget-exceeded"
+    }
+  ],
+  "note": "KickC 0.8.6 -Sl: C lines come from KickC's '// file:line' comments in main.asm (Approximate); arguments and locals in registers"
+}

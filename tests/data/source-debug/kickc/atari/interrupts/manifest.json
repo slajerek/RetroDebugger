@@ -1,0 +1,48 @@
+{
+  "buildDir": "/tmp/rd-source-debug/kickc/atari/interrupts",
+  "commit": "b99b0cf59dca331436c9df7f0ea67cdf3a69b2ca",
+  "fixedMtime": 1767225600,
+  "fixture": "interrupts",
+  "inputs": {
+    "main.c": "ea2ba8a2c970d923eb8f0c5a24bfb9a4753bdad09cca503dc52ea76e35f2fd33"
+  },
+  "machine": "atari",
+  "outputs": {
+    "main.asm": {
+      "sha256": "75e0a7324743dacb3c4ec6ad716401f8ea6674260b34b637a6420df94881b4c5",
+      "size": 1410
+    },
+    "main.dbg": {
+      "sha256": "819d3a2f7edabaf288bc35d34a514d8a0df63de7a0ffc5d6cdb5c78579fb9af7",
+      "size": 2414
+    },
+    "main.xex": {
+      "sha256": "353eefa1334acdc55931077bf5b783e48cdad5452a6418bc99ee42788086df38",
+      "size": 45
+    }
+  },
+  "source": "main.c",
+  "steps": [
+    [
+      "kickc",
+      "-t=atarixl",
+      "-Sl",
+      "main.c"
+    ],
+    [
+      "kickass",
+      "main.asm",
+      "-debugdump"
+    ]
+  ],
+  "toolDirs": {
+    "kickass": "/private/tmp/claude-501/-Users-mars-develop-github-RetroDebugger/53b1db2e-8b8e-4db0-8821-2827ab2f434c/scratchpad/toolchains/bin",
+    "kickc": "/private/tmp/claude-501/-Users-mars-develop-github-RetroDebugger/53b1db2e-8b8e-4db0-8821-2827ab2f434c/scratchpad/toolchains/bin"
+  },
+  "toolchain": "kickc",
+  "version": "0.8.6",
+  "versionReported": {
+    "kickass": "//         Kick Assembler v5.24 by Mads Nielsen",
+    "kickc": "KickC 0.8.6 BETA"
+  }
+}

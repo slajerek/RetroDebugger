@@ -1,0 +1,199 @@
+{
+  "fixture": "branches-loops",
+  "compiler": "kickc",
+  "optimization": "debug",
+  "machine": "c64",
+  "artifacts": "tests/data/source-debug/kickc/c64/branches-loops",
+  "binary": "main.prg",
+  "debugInfo": "main.dbg",
+  "entry": "0x080D",
+  "start": {
+    "file": "main.c",
+    "line": 21
+  },
+  "steps": [
+    {
+      "action": "sourceOver",
+      "expected": {
+        "file": "main.c",
+        "line": 22,
+        "function": "main",
+        "depth": 0
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceOver",
+      "expected": {
+        "file": "main.c",
+        "line": 23,
+        "function": "main",
+        "depth": 0
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceOver",
+      "expected": {
+        "file": "main.c",
+        "line": 22,
+        "function": "main",
+        "depth": 0
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceOver",
+      "expected": {
+        "file": "main.c",
+        "line": 23,
+        "function": "main",
+        "depth": 0
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceOver",
+      "expected": {
+        "file": "main.c",
+        "line": 22,
+        "function": "main",
+        "depth": 0
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceOver",
+      "expected": {
+        "file": "main.c",
+        "line": 23,
+        "function": "main",
+        "depth": 0
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceOver",
+      "expected": {
+        "file": "main.c",
+        "line": 22,
+        "function": "main",
+        "depth": 0
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceOver",
+      "expected": {
+        "file": "main.c",
+        "line": 24,
+        "function": "main",
+        "depth": 0
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceOver",
+      "expected": {
+        "file": "main.c",
+        "line": 25,
+        "function": "main",
+        "depth": 0
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceOver",
+      "expected": {
+        "file": "main.c",
+        "line": 24,
+        "function": "main",
+        "depth": 0
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceOver",
+      "expected": {
+        "file": "main.c",
+        "line": 26,
+        "function": "main",
+        "depth": 0
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceOver",
+      "expected": {
+        "file": "main.c",
+        "line": 27,
+        "function": "main",
+        "depth": 0
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceInto",
+      "expected": {
+        "file": "main.c",
+        "line": 8,
+        "function": "classify",
+        "depth": 1
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceOver",
+      "expected": {
+        "file": "main.c",
+        "line": 11,
+        "function": "classify",
+        "depth": 1
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceOver",
+      "note": "return 2 is folded into the switch's code (no comment of its own); the RTS is under the closing brace",
+      "expected": {
+        "file": "main.c",
+        "line": 17,
+        "function": "classify",
+        "depth": 1
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceOver",
+      "expected": {
+        "file": "main.c",
+        "line": 27,
+        "function": "main",
+        "depth": 0
+      },
+      "expectedReason": "frame-exited"
+    },
+    {
+      "action": "sourceOver",
+      "note": "the loop's JMP sits after the else branch, under line 29's comment",
+      "expected": {
+        "file": "main.c",
+        "line": 29,
+        "function": "main",
+        "depth": 0
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceOver",
+      "expected": {
+        "file": "main.c",
+        "line": 29,
+        "function": "main",
+        "depth": 0
+      },
+      "expectedReason": "completed"
+    }
+  ],
+  "note": "KickC 0.8.6 -Sl: C lines come from KickC's '// file:line' comments in main.asm (Approximate); classify() takes v in A"
+}

@@ -1,0 +1,49 @@
+{
+  "buildDir": "/tmp/rd-source-debug/kickc/nes/branches-loops",
+  "commit": "b99b0cf59dca331436c9df7f0ea67cdf3a69b2ca",
+  "fixedMtime": 1767225600,
+  "fixture": "branches-loops",
+  "inputs": {
+    "main.c": "1b233cca00be417d7abf18ec2446954ea62ee538fae42ec2695f3033a5c6f579"
+  },
+  "machine": "nes",
+  "outputs": {
+    "main.asm": {
+      "sha256": "47c059a3568c678b62a810fe0a8ce6b60edb2893c31087f06ed18561d5628ff3",
+      "size": 3481
+    },
+    "main.dbg": {
+      "sha256": "8ac5810f26341ee5b640f5b497e7aa88a42aea6806c6aee0f57c9d2b2fd5553a",
+      "size": 5937
+    },
+    "main.nes": {
+      "sha256": "e90bbeb49d068bc6944ed8694967096b1b56730592d0217bc8ed4e596ec1aee5",
+      "size": 24592
+    }
+  },
+  "source": "main.c",
+  "steps": [
+    [
+      "kickc",
+      "-t=nes",
+      "-Sl",
+      "main.c",
+      "{toolchains}/kickc-nes-vectors.c"
+    ],
+    [
+      "kickass",
+      "main.asm",
+      "-debugdump"
+    ]
+  ],
+  "toolDirs": {
+    "kickass": "/private/tmp/claude-501/-Users-mars-develop-github-RetroDebugger/53b1db2e-8b8e-4db0-8821-2827ab2f434c/scratchpad/toolchains/bin",
+    "kickc": "/private/tmp/claude-501/-Users-mars-develop-github-RetroDebugger/53b1db2e-8b8e-4db0-8821-2827ab2f434c/scratchpad/toolchains/bin"
+  },
+  "toolchain": "kickc",
+  "version": "0.8.6",
+  "versionReported": {
+    "kickass": "//         Kick Assembler v5.24 by Mads Nielsen",
+    "kickc": "KickC 0.8.6 BETA"
+  }
+}

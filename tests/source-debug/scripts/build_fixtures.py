@@ -96,6 +96,9 @@ def expand(argv, exes, fixture):
     for arg in argv:
         for name, path in exes.items():
             arg = arg.replace("{" + name + "}", path)
+        # {toolchains}: tests/source-debug/toolchains, for per-toolchain
+        # companion sources (kickc-nes-vectors.c)
+        arg = arg.replace("{toolchains}", os.path.join(ROOT, "tests", "source-debug", "toolchains"))
         out.append(arg.replace("{fixture}", fixture))
     return out
 
@@ -103,7 +106,8 @@ def expand(argv, exes, fixture):
 def portable_argv(argv, exes):
     """argv with executable paths replaced by their names, for the manifest."""
     by_path = {path: name for name, path in exes.items()}
-    return [by_path.get(arg, arg) for arg in argv]
+    toolchains = os.path.join(ROOT, "tests", "source-debug", "toolchains")
+    return [by_path.get(arg, arg).replace(toolchains, "{toolchains}") for arg in argv]
 
 
 def run(argv, cwd):

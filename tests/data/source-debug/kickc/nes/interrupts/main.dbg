@@ -1,0 +1,124 @@
+<C64debugger version="1.0">
+   <Sources values="INDEX,FILE">
+      0,KickAss.jar:/include/autoinclude.asm
+      1,/private/tmp/rd-source-debug/kickc/nes/interrupts/main.asm
+   </Sources>
+
+   <Segment name="Default" dest="" values="START,END,FILE_IDX,LINE1,COL1,LINE2,COL2">
+   </Segment>
+
+   <Segment name="Header" dest="" values="START,END,FILE_IDX,LINE1,COL1,LINE2,COL2">
+      <Block name="Header">
+         $0000,$0003,1,27,1,27,5
+         $0004,$0004,1,28,1,28,5
+         $0005,$0005,1,29,1,29,5
+         $0006,$0006,1,30,1,30,5
+      </Block>
+      <Block name="FillMinMax">
+         $0007,$000f,1,13,1,13,11
+      </Block>
+   </Segment>
+
+   <Segment name="Tiles" dest="" values="START,END,FILE_IDX,LINE1,COL1,LINE2,COL2">
+      <Block name="FillMinMax">
+         $0000,$1fff,1,14,1,14,11
+      </Block>
+   </Segment>
+
+   <Segment name="Code" dest="" values="START,END,FILE_IDX,LINE1,COL1,LINE2,COL2">
+      <Block name="Code">
+         $c000,$c001,1,37,5,37,7
+         $c002,$c003,1,38,5,38,7
+         $c004,$c004,1,39,5,39,7
+         $c005,$c005,1,40,5,40,7
+         $c006,$c008,1,41,5,41,7
+         $c009,$c009,1,42,5,42,7
+         $c00a,$c00a,1,43,5,43,7
+         $c00b,$c00b,1,44,5,44,7
+         $c00c,$c00d,1,48,5,48,7
+         $c00e,$c00f,1,49,5,49,7
+         $c010,$c012,1,51,5,51,7
+         $c013,$c015,1,53,5,53,7
+         $c016,$c018,1,55,5,55,7
+         $c019,$c01a,1,59,5,59,7
+         $c01b,$c01b,1,60,5,60,7
+         $c01c,$c01d,1,61,5,61,7
+         $c01e,$c01e,1,63,5,63,7
+         $c01f,$c01f,1,64,5,64,7
+         $c020,$c021,1,65,5,65,7
+         $c022,$c023,1,66,5,66,7
+         $c024,$c024,1,68,5,68,7
+      </Block>
+   </Segment>
+
+   <Segment name="Data" dest="" values="START,END,FILE_IDX,LINE1,COL1,LINE2,COL2">
+   </Segment>
+
+   <Segment name="Vectors" dest="" values="START,END,FILE_IDX,LINE1,COL1,LINE2,COL2">
+      <Block name="Vectors">
+         $fffa,$ffff,1,71,12,71,16
+      </Block>
+   </Segment>
+
+   <Segment name="GameRam" dest="" values="START,END,FILE_IDX,LINE1,COL1,LINE2,COL2">
+   </Segment>
+
+   <Segment name="ProgramRom" dest="" values="START,END,FILE_IDX,LINE1,COL1,LINE2,COL2">
+      <Block name="Code">
+         $c000,$c001,1,37,5,37,7
+         $c002,$c003,1,38,5,38,7
+         $c004,$c004,1,39,5,39,7
+         $c005,$c005,1,40,5,40,7
+         $c006,$c008,1,41,5,41,7
+         $c009,$c009,1,42,5,42,7
+         $c00a,$c00a,1,43,5,43,7
+         $c00b,$c00b,1,44,5,44,7
+         $c00c,$c00d,1,48,5,48,7
+         $c00e,$c00f,1,49,5,49,7
+         $c010,$c012,1,51,5,51,7
+         $c013,$c015,1,53,5,53,7
+         $c016,$c018,1,55,5,55,7
+         $c019,$c01a,1,59,5,59,7
+         $c01b,$c01b,1,60,5,60,7
+         $c01c,$c01d,1,61,5,61,7
+         $c01e,$c01e,1,63,5,63,7
+         $c01f,$c01f,1,64,5,64,7
+         $c020,$c021,1,65,5,65,7
+         $c022,$c023,1,66,5,66,7
+         $c024,$c024,1,68,5,68,7
+      </Block>
+      <Block name="Vectors">
+         $fffa,$ffff,1,71,12,71,16
+      </Block>
+   </Segment>
+
+   <Segment name="CharacterRom" dest="" values="START,END,FILE_IDX,LINE1,COL1,LINE2,COL2">
+      <Block name="FillMinMax">
+         $0000,$1fff,1,14,1,14,11
+      </Block>
+   </Segment>
+
+   <Segment name="NesRom" dest="" values="START,END,FILE_IDX,LINE1,COL1,LINE2,COL2">
+      <Block name="NesRom">
+         $2000,$200f,1,23,1,23,11
+         $2010,$600f,1,24,1,24,11
+         $6010,$800f,1,25,1,25,11
+      </Block>
+   </Segment>
+
+   <Labels values="SEGMENT,ADDRESS,NAME,START,END,FILE_IDX,LINE1,COL1,LINE2,COL2">
+      Header,$0002,result,1,33,10,33,15
+      Code,$c000,__start,1,35,1,35,8
+      Code,$c00c,main,1,46,1,46,5
+      Code,$c016,__b1,1,54,3,54,7
+      Code,$c019,work,1,57,1,57,5
+      Vectors,$fffa,VECTORS,1,71,3,71,10
+   </Labels>
+
+   <Breakpoints values="SEGMENT,ADDRESS,ARGUMENT">
+   </Breakpoints>
+
+   <Watchpoints values="SEGMENT,ADDRESS1,ADDRESS2,ARGUMENT">
+   </Watchpoints>
+
+</C64debugger>

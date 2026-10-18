@@ -21,18 +21,19 @@ executables:
     version_argv: ["{kickass}", "-help"]
     version_match: "5.24"
 # KickC emits KickAssembler source; KickAssembler's -debugdump writes the .dbg.
-# That .dbg maps addresses to lines of main.asm (KickC's output), not of main.c:
-# C lines are only comments in main.asm (input for RD-010).
+# That .dbg maps addresses to lines of main.asm (KickC's output), not of main.c.
+# -Sl makes KickC write "// <path>:<line>" before each statement's code in
+# main.asm; the KickAssembler loader turns those into C mappings (RD-010).
 machines:
   c64:
     source: main.c
-    steps: [["{kickc}", "-t=c64", "main.c"], ["{kickass}", "main.asm", "-debugdump"]]
+    steps: [["{kickc}", "-t=c64", "-Sl", "main.c"], ["{kickass}", "main.asm", "-debugdump"]]
     outputs: [main.prg, main.dbg, main.asm]
   atari:
     source: main.c
-    steps: [["{kickc}", "-t=atarixl", "main.c"], ["{kickass}", "main.asm", "-debugdump"]]
+    steps: [["{kickc}", "-t=atarixl", "-Sl", "main.c"], ["{kickass}", "main.asm", "-debugdump"]]
     outputs: [main.xex, main.dbg, main.asm]
   nes:
     source: main.c
-    steps: [["{kickc}", "-t=nes", "main.c"], ["{kickass}", "main.asm", "-debugdump"]]
+    steps: [["{kickc}", "-t=nes", "-Sl", "main.c", "{toolchains}/kickc-nes-vectors.c"], ["{kickass}", "main.asm", "-debugdump"]]
     outputs: [main.nes, main.dbg, main.asm]

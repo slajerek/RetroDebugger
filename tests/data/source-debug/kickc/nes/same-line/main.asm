@@ -29,19 +29,29 @@
 .byte   $01           // 1x 8KB VROM (CHR)
 .byte   %00000001     // Mapper nibble 0000 == No mapping (a simple 16KB PRG + 8KB CHR game)
                       // Mirroring nibble 0001 == Vertical mirroring only
+  .const STACK_BASE = $103
   .label result = 2
 .segment Code
 __start: {
+    // /private/tmp/rd-source-debug/kickc/nes/same-line/main.c:5
     lda #0
     sta.z result
+    pha
+    pha
     jsr main
+    pla
+    pla
     rts
 }
 main: {
+    // /private/tmp/rd-source-debug/kickc/nes/same-line/main.c:11
     lda #0
     sta.z result
+    // /private/tmp/rd-source-debug/kickc/nes/same-line/main.c:12
     jsr a
+    // /private/tmp/rd-source-debug/kickc/nes/same-line/main.c:12
     jsr b
+    // /private/tmp/rd-source-debug/kickc/nes/same-line/main.c:13
     lda.z result
     asl
     sta.z result
@@ -50,15 +60,19 @@ main: {
     jmp __b1
 }
 a: {
+    // /private/tmp/rd-source-debug/kickc/nes/same-line/main.c:7
     ldx.z result
     inx
     stx.z result
     rts
 }
 b: {
+    // /private/tmp/rd-source-debug/kickc/nes/same-line/main.c:8
     lda.z result
     clc
     adc #2
     sta.z result
     rts
 }
+.segment Vectors
+  VECTORS: .word 0, main, 0

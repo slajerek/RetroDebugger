@@ -160,6 +160,7 @@ public:
 	size_t NumFiles() const { return files.size(); }
 	size_t NumRegions() const { return regions.size(); }
 	size_t NumMappings() const { return mappings.size(); }
+	const std::vector<CDebugSourceMapping> &Mappings() const { return mappings; }
 	const std::map<u32, CDebugSourceFile *> &Files() const { return files; }
 
 private:

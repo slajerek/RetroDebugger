@@ -43,6 +43,21 @@
     "cc65/recursion-atari.json",
     "cc65/indirect-calls-atari.json",
     "cc65/recursion-nes.json",
-    "cc65/indirect-calls-nes.json"
+    "cc65/indirect-calls-nes.json",
+    "kickc/basic-flow.json",
+    "kickc/basic-flow-atari.json",
+    "kickc/basic-flow-nes.json",
+    "kickc/same-line.json",
+    "kickc/same-line-atari.json",
+    "kickc/same-line-nes.json",
+    "kickc/nested-calls.json",
+    "kickc/nested-calls-atari.json",
+    "kickc/nested-calls-nes.json",
+    "kickc/branches-loops.json",
+    "kickc/branches-loops-atari.json",
+    "kickc/branches-loops-nes.json",
+    "kickc/interrupts.json",
+    "kickc/interrupts-atari.json",
+    "kickc/interrupts-nes.json"
   ]
 }

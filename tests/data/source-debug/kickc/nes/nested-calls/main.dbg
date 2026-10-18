@@ -1,0 +1,135 @@
+<C64debugger version="1.0">
+   <Sources values="INDEX,FILE">
+      0,KickAss.jar:/include/autoinclude.asm
+      1,/private/tmp/rd-source-debug/kickc/nes/nested-calls/main.asm
+   </Sources>
+
+   <Segment name="Default" dest="" values="START,END,FILE_IDX,LINE1,COL1,LINE2,COL2">
+   </Segment>
+
+   <Segment name="Header" dest="" values="START,END,FILE_IDX,LINE1,COL1,LINE2,COL2">
+      <Block name="Header">
+         $0000,$0003,1,28,1,28,5
+         $0004,$0004,1,29,1,29,5
+         $0005,$0005,1,30,1,30,5
+         $0006,$0006,1,31,1,31,5
+      </Block>
+      <Block name="FillMinMax">
+         $0007,$000f,1,14,1,14,11
+      </Block>
+   </Segment>
+
+   <Segment name="Tiles" dest="" values="START,END,FILE_IDX,LINE1,COL1,LINE2,COL2">
+      <Block name="FillMinMax">
+         $0000,$1fff,1,15,1,15,11
+      </Block>
+   </Segment>
+
+   <Segment name="Code" dest="" values="START,END,FILE_IDX,LINE1,COL1,LINE2,COL2">
+      <Block name="Code">
+         $c000,$c001,1,38,5,38,7
+         $c002,$c003,1,39,5,39,7
+         $c004,$c004,1,40,5,40,7
+         $c005,$c005,1,41,5,41,7
+         $c006,$c008,1,42,5,42,7
+         $c009,$c009,1,43,5,43,7
+         $c00a,$c00a,1,44,5,44,7
+         $c00b,$c00b,1,45,5,45,7
+         $c00c,$c00e,1,49,5,49,7
+         $c00f,$c010,1,51,5,51,7
+         $c011,$c013,1,53,5,53,7
+         $c014,$c016,1,56,5,56,7
+         $c017,$c018,1,58,5,58,7
+         $c019,$c01b,1,60,5,60,7
+         $c01c,$c01e,1,66,5,66,7
+         $c01f,$c01f,1,68,5,68,7
+         $c020,$c021,1,69,5,69,7
+         $c022,$c022,1,71,5,71,7
+         $c023,$c023,1,76,5,76,7
+         $c024,$c025,1,77,5,77,7
+         $c026,$c026,1,79,5,79,7
+         $c027,$c028,1,84,5,84,7
+         $c029,$c02b,1,85,5,85,7
+         $c02c,$c02e,1,88,5,88,7
+         $c02f,$c02f,1,91,5,91,7
+      </Block>
+   </Segment>
+
+   <Segment name="Data" dest="" values="START,END,FILE_IDX,LINE1,COL1,LINE2,COL2">
+   </Segment>
+
+   <Segment name="Vectors" dest="" values="START,END,FILE_IDX,LINE1,COL1,LINE2,COL2">
+      <Block name="Vectors">
+         $fffa,$ffff,1,94,12,94,16
+      </Block>
+   </Segment>
+
+   <Segment name="GameRam" dest="" values="START,END,FILE_IDX,LINE1,COL1,LINE2,COL2">
+   </Segment>
+
+   <Segment name="ProgramRom" dest="" values="START,END,FILE_IDX,LINE1,COL1,LINE2,COL2">
+      <Block name="Code">
+         $c000,$c001,1,38,5,38,7
+         $c002,$c003,1,39,5,39,7
+         $c004,$c004,1,40,5,40,7
+         $c005,$c005,1,41,5,41,7
+         $c006,$c008,1,42,5,42,7
+         $c009,$c009,1,43,5,43,7
+         $c00a,$c00a,1,44,5,44,7
+         $c00b,$c00b,1,45,5,45,7
+         $c00c,$c00e,1,49,5,49,7
+         $c00f,$c010,1,51,5,51,7
+         $c011,$c013,1,53,5,53,7
+         $c014,$c016,1,56,5,56,7
+         $c017,$c018,1,58,5,58,7
+         $c019,$c01b,1,60,5,60,7
+         $c01c,$c01e,1,66,5,66,7
+         $c01f,$c01f,1,68,5,68,7
+         $c020,$c021,1,69,5,69,7
+         $c022,$c022,1,71,5,71,7
+         $c023,$c023,1,76,5,76,7
+         $c024,$c025,1,77,5,77,7
+         $c026,$c026,1,79,5,79,7
+         $c027,$c028,1,84,5,84,7
+         $c029,$c02b,1,85,5,85,7
+         $c02c,$c02e,1,88,5,88,7
+         $c02f,$c02f,1,91,5,91,7
+      </Block>
+      <Block name="Vectors">
+         $fffa,$ffff,1,94,12,94,16
+      </Block>
+   </Segment>
+
+   <Segment name="CharacterRom" dest="" values="START,END,FILE_IDX,LINE1,COL1,LINE2,COL2">
+      <Block name="FillMinMax">
+         $0000,$1fff,1,15,1,15,11
+      </Block>
+   </Segment>
+
+   <Segment name="NesRom" dest="" values="START,END,FILE_IDX,LINE1,COL1,LINE2,COL2">
+      <Block name="NesRom">
+         $2000,$200f,1,24,1,24,11
+         $2010,$600f,1,25,1,25,11
+         $6010,$800f,1,26,1,26,11
+      </Block>
+   </Segment>
+
+   <Labels values="SEGMENT,ADDRESS,NAME,START,END,FILE_IDX,LINE1,COL1,LINE2,COL2">
+      Header,$0002,result,1,34,10,34,15
+      Code,$c000,__start,1,36,1,36,8
+      Code,$c00c,main,1,47,1,47,5
+      Code,$c019,__b1,1,59,3,59,7
+      Code,$c01c,top,1,63,1,63,4
+      Code,$0001,v,1,64,12,64,12
+      Code,$c023,leaf,1,74,1,74,5
+      Code,$c027,middle,1,82,1,82,7
+      Vectors,$fffa,VECTORS,1,94,3,94,10
+   </Labels>
+
+   <Breakpoints values="SEGMENT,ADDRESS,ARGUMENT">
+   </Breakpoints>
+
+   <Watchpoints values="SEGMENT,ADDRESS1,ADDRESS2,ARGUMENT">
+   </Watchpoints>
+
+</C64debugger>

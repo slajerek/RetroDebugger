@@ -1,4 +1,6 @@
 #include "CByteBuffer.h"
+#include <set>
+#include <map>
 #include "CSlrString.h"
 #include "CSlrFileFromOS.h"
 #include "SYS_Threading.h"
@@ -1547,11 +1549,50 @@ CDebugSymbolsSegment *CDebugSymbols::FindSegment(CSlrString *segmentName)
 
 void CDebugSymbols::ActivateSelectedSegment()
 {
+	// RD-025: the first segment with code from the program's own sources --
+	// KickAssembler writes an empty "Default" segment, and segments holding
+	// only its built-in include (an Atari XEX header), ahead of the program's;
+	// the previously selected segment's name wins only when it has code too
+	std::set<u32> regionsWithCode;
+	if (debugDatabase)
+	{
+		for (const CDebugSourceMapping &m : debugDatabase->Mappings())
+		{
+			const CDebugSourceFile *file = debugDatabase->GetFile(m.fileId);
+			if (file && file->originalPath.compare(0, 11, "KickAss.jar") == 0)
+				continue;
+			regionsWithCode.insert(m.regionId);
+		}
+	}
+	auto hasCode = [&](CDebugSymbolsSegment *s) {
+		return s->debugRegionId >= 0 && regionsWithCode.count((u32)s->debugRegionId) > 0;
+	};
+
+	// where the debug info knows functions (KickC, Oscar64, cc65), the code
+	// is where they are: KickC's Atari XEX header is mapped to its .asm too
+	std::set<u32> regionsWithFunctions;
+	if (debugDatabase)
+	{
+		for (const CDebugFunction &function : debugDatabase->Functions())
+			regionsWithFunctions.insert(function.regionId);
+	}
+	auto hasFunctions = [&](CDebugSymbolsSegment *s) {
+		return s->debugRegionId >= 0 && regionsWithFunctions.count((u32)s->debugRegionId) > 0;
+	};
+
 	CDebugSymbolsSegment *segment = segments[0];
+	for (CDebugSymbolsSegment *candidate : segments)
+	{
+		if (!regionsWithFunctions.empty() ? hasFunctions(candidate) : hasCode(candidate))
+		{
+			segment = candidate;
+			break;
+		}
+	}
 	if (this->previousSegmentName != NULL)
 	{
 		CDebugSymbolsSegment* selectedSegment = FindSegment(this->previousSegmentName);
-		if (selectedSegment != NULL)
+		if (selectedSegment != NULL && (regionsWithCode.empty() || hasCode(selectedSegment)))
 		{
 			segment = selectedSegment;
 		}
