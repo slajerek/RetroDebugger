@@ -27,3 +27,8 @@ machines:
     source: main.c
     steps: [["{oscar64}", "-tm=nes", "-n", "-g", "-O0", "-o=main.nes", "main.c"]]
     outputs: [main.nes, main.dbj, main.mlb, main.map, main.asm]
+  # optimized, for inlined code (RD-017): fixtures with a main-O2.c
+  c64-O2:
+    source: main-O2.c
+    steps: [["{oscar64}", "-tm=c64", "-n", "-g", "-O2", "-o=main.prg", "main-O2.c"]]
+    outputs: [main.prg, main.dbj, main.lbl, main.map, main.asm]

@@ -87,6 +87,20 @@ void CDebugDatabase::AddMapping(const CDebugSourceMapping &mapping)
 	mappings.push_back(mapping);
 }
 
+u32 CDebugDatabase::AddInlineChain(const std::vector<CDebugInlineSite> &chain)
+{
+	inlineChains.push_back(chain);
+	return (u32)inlineChains.size() - 1;
+}
+
+const std::vector<CDebugInlineSite> &CDebugDatabase::InlineChain(const CDebugSourceMapping *mapping) const
+{
+	static const std::vector<CDebugInlineSite> kNone;
+	if (mapping == NULL || mapping->inlineChain == kNoInlineChain || mapping->inlineChain >= inlineChains.size())
+		return kNone;
+	return inlineChains[mapping->inlineChain];
+}
+
 u32 CDebugDatabase::AddFunction(const CDebugFunction &function)
 {
 	if (finalized || function.end <= function.start || function.regionId >= regions.size())
@@ -369,6 +383,8 @@ std::shared_ptr<CDebugDatabase> DebugDatabaseMerge(const CDebugDatabase *base,
 			CopyFile(merged.get(), it.first, it.second);
 			nextFileId = std::max(nextFileId, it.first + 1);
 		}
+		for (u32 i = 0; i < (u32)base->NumInlineChains(); i++)
+			merged->AddInlineChain(base->GetInlineChain(i));
 		for (const CDebugSourceMapping &mapping : base->Mappings())
 			merged->AddMapping(mapping);
 		for (const CDebugFunction &function : base->Functions())
@@ -393,6 +409,16 @@ std::shared_ptr<CDebugDatabase> DebugDatabaseMerge(const CDebugDatabase *base,
 			mapping.regionId = region;
 			mapping.blockId = block;
 			mapping.fileId = fileIds[mapping.fileId];
+			const std::vector<CDebugInlineSite> &chain = fragment->InlineChain(&mapping);
+			if (!chain.empty())
+			{
+				std::vector<CDebugInlineSite> sites = chain;
+				for (CDebugInlineSite &site : sites)
+					site.fileId = fileIds[site.fileId];
+				mapping.inlineChain = merged->AddInlineChain(sites);
+			}
+			else
+				mapping.inlineChain = kNoInlineChain;
 			merged->AddMapping(mapping);
 		}
 		for (CDebugFunction function : fragment->Functions())

@@ -58,6 +58,8 @@ CSourceStepController::CSourceStepController(CDebugInterface *owner)
 	startFileId = 0;
 	startLine = 0;
 	startRangeStart = 0;
+	startInlineDepth = 0;
+	lastInlineDepth = 0;
 	budget = kDefaultBudget;
 	instructions = 0;
 }
@@ -86,6 +88,8 @@ bool CSourceStepController::Arm(SourceStepKind kind, std::shared_ptr<const CDebu
 	this->startFileId = start ? start->fileId : 0;
 	this->startLine = start ? start->lineStart : 0;
 	this->startRangeStart = start ? start->start : 0;
+	this->startInlineDepth = (start && database) ? database->InlineDepth(start) : 0;
+	this->lastInlineDepth = this->startInlineDepth;
 	this->budget = budget;
 	this->instructions = 0;
 	tracker.Reset();
@@ -127,7 +131,16 @@ void CSourceStepController::Finish(SourceStepStopReason reason, u16 pc, const CD
 		lastResult.line = location ? location->lineStart : 0;
 		const CDebugSourceFile *file = (location && database) ? database->GetFile(location->fileId) : NULL;
 		lastResult.fileName = file ? file->fileName : "";
-		lastResult.depth = tracker.HasLeftBase() ? -1 : tracker.GetCallDepth();
+		// logical (RD-017): inline calls count as calls. In a callee its own
+		// inline depth adds to the call; in the start frame the change of
+		// inline depth is the change; leaving the frame leaves the start's
+		// inline calls with it
+		int inlineDepth = (location && database) ? database->InlineDepth(location) : lastInlineDepth;
+		int calls = tracker.GetCallDepth();
+		if (tracker.HasLeftBase())
+			lastResult.depth = -(1 + startInlineDepth);
+		else
+			lastResult.depth = calls > 0 ? calls + inlineDepth : inlineDepth - startInlineDepth;
 	}
 	Cancel(reason);
 }
@@ -197,10 +210,25 @@ bool CSourceStepController::OnInstructionBoundary(CDebugInterface *debugInterfac
 		return true;
 	}
 
-	if (kind == SourceStepKind::Out || location == NULL || boundary.pc != location->start)
+	if (location == NULL || boundary.pc != location->start)
 		return false;
+	int inlineDepth = database->InlineDepth(location);
+	lastInlineDepth = inlineDepth;
 
-	bool deeper = tracker.GetCallDepth() > 0;
+	// RD-017: out of an inlined function -- its caller's next statement --
+	// within the same physical frame
+	if (kind == SourceStepKind::Out)
+	{
+		if (tracker.GetCallDepth() == 0 && inlineDepth < startInlineDepth)
+		{
+			Finish(SourceStepStopReason::Completed, boundary.pc, location);
+			return true;
+		}
+		return false;
+	}
+
+	// deeper: a call made, or code inlined into this statement
+	bool deeper = tracker.GetCallDepth() > 0 || (tracker.GetCallDepth() == 0 && inlineDepth > startInlineDepth);
 	if (deeper && kind == SourceStepKind::Over)
 		return false;
 

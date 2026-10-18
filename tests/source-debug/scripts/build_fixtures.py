@@ -64,7 +64,7 @@ MATRIX = os.path.join(SOURCE_DEBUG, "MATRIX.md")
 BUILD_ROOT = "/tmp/rd-source-debug"
 FIXED_MTIME = 1767225600  # 2026-01-01T00:00:00Z
 STEP_TIMEOUT = 300
-MACHINES = ["c64", "atari", "nes", "c64-magicdesk", "atari-xegs", "nes-uxrom", "nes-mmc1", "drive1541"]	# banked cartridge builds (RD-026, RD-030); drive1541: the 1541 drive CPU (RD-044)
+MACHINES = ["c64", "atari", "nes", "c64-magicdesk", "atari-xegs", "nes-uxrom", "nes-mmc1", "drive1541", "c64-O2"]	# banked cartridge builds (RD-026, RD-030); drive1541: the 1541 drive CPU (RD-044); c64-O2: Oscar64 -O2 (RD-017)
 
 
 def sha256(path):

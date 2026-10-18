@@ -1,0 +1,65 @@
+{	"memory": [		{"name": "ZeroEnd", "xname": "ZeroEnd", "start": 247, "end": 247, "type": "END", "source": "/private/tmp/claude-501/-Users-mars-develop-github-RetroDebugger/53b1db2e-8b8e-4db0-8821-2827ab2f434c/scratchpad/toolchains/oscar64/include/crt.c", "line": 21 },
+		{"name": "ZeroStart", "xname": "ZeroStart", "start": 247, "end": 247, "type": "START", "source": "/private/tmp/claude-501/-Users-mars-develop-github-RetroDebugger/53b1db2e-8b8e-4db0-8821-2827ab2f434c/scratchpad/toolchains/oscar64/include/crt.c", "line": 21 },
+		{"name": "startup", "xname": "startup", "start": 2049, "end": 2131, "type": "NATIVE_CODE", "source": "/private/tmp/claude-501/-Users-mars-develop-github-RetroDebugger/53b1db2e-8b8e-4db0-8821-2827ab2f434c/scratchpad/toolchains/oscar64/include/crt.c", "line": 69 },
+		{"name": "main", "xname": "main()->i16", "start": 2176, "end": 2199, "type": "NATIVE_CODE", "source": "/private/tmp/rd-source-debug/oscar64/c64-O2/inline/main-O2.c", "line": 22 },
+		{"name": "addOne", "xname": "addOne(u8)->u8", "start": 2199, "end": 2203, "type": "NATIVE_CODE", "source": "/private/tmp/rd-source-debug/oscar64/c64-O2/inline/main-O2.c", "line": 13 },
+		{"name": "spentry", "xname": "spentry", "start": 2203, "end": 2204, "type": "DATA", "source": "/private/tmp/claude-501/-Users-mars-develop-github-RetroDebugger/53b1db2e-8b8e-4db0-8821-2827ab2f434c/scratchpad/toolchains/oscar64/include/crt.h", "line": 4 },
+		{"name": "BSSStart", "xname": "BSSStart", "start": 2204, "end": 2204, "type": "START", "source": "/private/tmp/claude-501/-Users-mars-develop-github-RetroDebugger/53b1db2e-8b8e-4db0-8821-2827ab2f434c/scratchpad/toolchains/oscar64/include/crt.c", "line": 21 },
+		{"name": "result", "xname": "result", "start": 2204, "end": 2205, "type": "DATA", "source": "/private/tmp/rd-source-debug/oscar64/c64-O2/inline/main-O2.c", "line": 7 },
+		{"name": "BSSEnd", "xname": "BSSEnd", "start": 2205, "end": 2205, "type": "END", "source": "/private/tmp/claude-501/-Users-mars-develop-github-RetroDebugger/53b1db2e-8b8e-4db0-8821-2827ab2f434c/scratchpad/toolchains/oscar64/include/crt.c", "line": 21 },
+		{"name": "StackEnd", "xname": "StackEnd", "start": 40960, "end": 40960, "type": "END", "source": "/private/tmp/claude-501/-Users-mars-develop-github-RetroDebugger/53b1db2e-8b8e-4db0-8821-2827ab2f434c/scratchpad/toolchains/oscar64/include/crt.c", "line": 21 }],
+	"variables": [
+		{"name": "spentry", "start": 2203, "end": 2204, "typeid": 0, "references": [
+			{"source": "/private/tmp/claude-501/-Users-mars-develop-github-RetroDebugger/53b1db2e-8b8e-4db0-8821-2827ab2f434c/scratchpad/toolchains/oscar64/include/crt.h", "line": 4, "column": 13}]},
+		{"name": "BSSStart", "start": 2204, "end": 2204, "typeid": 1, "references": [
+			{"source": "/private/tmp/claude-501/-Users-mars-develop-github-RetroDebugger/53b1db2e-8b8e-4db0-8821-2827ab2f434c/scratchpad/toolchains/oscar64/include/crt.c", "line": 21, "column": 28}]},
+		{"name": "BSSEnd", "start": 2205, "end": 2205, "typeid": 1, "references": [
+			{"source": "/private/tmp/claude-501/-Users-mars-develop-github-RetroDebugger/53b1db2e-8b8e-4db0-8821-2827ab2f434c/scratchpad/toolchains/oscar64/include/crt.c", "line": 21, "column": 38}]},
+		{"name": "ZeroStart", "start": 247, "end": 247, "typeid": 1, "references": [
+			{"source": "/private/tmp/claude-501/-Users-mars-develop-github-RetroDebugger/53b1db2e-8b8e-4db0-8821-2827ab2f434c/scratchpad/toolchains/oscar64/include/crt.c", "line": 21, "column": 66}]},
+		{"name": "ZeroEnd", "start": 247, "end": 247, "typeid": 1, "references": [
+			{"source": "/private/tmp/claude-501/-Users-mars-develop-github-RetroDebugger/53b1db2e-8b8e-4db0-8821-2827ab2f434c/scratchpad/toolchains/oscar64/include/crt.c", "line": 21, "column": 77}]},
+		{"name": "StackEnd", "start": 40960, "end": 40960, "typeid": 1, "references": [
+			{"source": "/private/tmp/claude-501/-Users-mars-develop-github-RetroDebugger/53b1db2e-8b8e-4db0-8821-2827ab2f434c/scratchpad/toolchains/oscar64/include/crt.c", "line": 21, "column": 18}]},
+		{"name": "result", "start": 2204, "end": 2205, "typeid": 2, "references": [
+			{"source": "/private/tmp/rd-source-debug/oscar64/c64-O2/inline/main-O2.c", "line": 7, "column": 24},
+			{"source": "/private/tmp/rd-source-debug/oscar64/c64-O2/inline/main-O2.c", "line": 23, "column": 5},
+			{"source": "/private/tmp/rd-source-debug/oscar64/c64-O2/inline/main-O2.c", "line": 18, "column": 5},
+			{"source": "/private/tmp/rd-source-debug/oscar64/c64-O2/inline/main-O2.c", "line": 18, "column": 20},
+			{"source": "/private/tmp/rd-source-debug/oscar64/c64-O2/inline/main-O2.c", "line": 19, "column": 5},
+			{"source": "/private/tmp/rd-source-debug/oscar64/c64-O2/inline/main-O2.c", "line": 19, "column": 21},
+			{"source": "/private/tmp/rd-source-debug/oscar64/c64-O2/inline/main-O2.c", "line": 25, "column": 5},
+			{"source": "/private/tmp/rd-source-debug/oscar64/c64-O2/inline/main-O2.c", "line": 25, "column": 20}]}	],
+	"functions": [
+		{"name": "main", "xname": "main()->i16", "start": 2176, "end": 2199, "typeid": 3, "source": "/private/tmp/rd-source-debug/oscar64/c64-O2/inline/main-O2.c", "line": 22, "lines": [
+			{"start": 2176, "end": 2181, "source": "/private/tmp/rd-source-debug/oscar64/c64-O2/inline/main-O2.c", "line": 23},
+			{"start": 2181, "end": 2184, "source": "/private/tmp/rd-source-debug/oscar64/c64-O2/inline/main-O2.c", "line": 18},
+			{"start": 2184, "end": 2193, "source": "/private/tmp/rd-source-debug/oscar64/c64-O2/inline/main-O2.c", "line": 19},
+			{"start": 2193, "end": 2196, "source": "/private/tmp/rd-source-debug/oscar64/c64-O2/inline/main-O2.c", "line": 25}], 
+			"origins":[
+			{"start": 2176, "end": 2181, "source": "/private/tmp/rd-source-debug/oscar64/c64-O2/inline/main-O2.c", "line": 23},
+			{"start": 2181, "end": 2184, "source": "/private/tmp/rd-source-debug/oscar64/c64-O2/inline/main-O2.c", "line": 18},
+			{"start": 2181, "end": 2184, "source": "/private/tmp/rd-source-debug/oscar64/c64-O2/inline/main-O2.c", "line": 24},
+			{"start": 2184, "end": 2193, "source": "/private/tmp/rd-source-debug/oscar64/c64-O2/inline/main-O2.c", "line": 19},
+			{"start": 2184, "end": 2193, "source": "/private/tmp/rd-source-debug/oscar64/c64-O2/inline/main-O2.c", "line": 24},
+			{"start": 2193, "end": 2196, "source": "/private/tmp/rd-source-debug/oscar64/c64-O2/inline/main-O2.c", "line": 25}], 
+			"variables":[
+], "references": [
+			{"source": "/private/tmp/rd-source-debug/oscar64/c64-O2/inline/main-O2.c", "line": 22, "column": 5}]}
+,
+		{"name": "addOne", "xname": "addOne(u8)->u8", "start": 2199, "end": 2203, "typeid": 4, "source": "/private/tmp/rd-source-debug/oscar64/c64-O2/inline/main-O2.c", "line": 13, "lines": [
+			{"start": 2199, "end": 2203, "source": "/private/tmp/rd-source-debug/oscar64/c64-O2/inline/main-O2.c", "line": 14}], 
+			"origins":[
+			{"start": 2199, "end": 2203, "source": "/private/tmp/rd-source-debug/oscar64/c64-O2/inline/main-O2.c", "line": 14}], 
+			"variables":[
+			{"name": "v", "start": 13, "end": 14, "typeid": 5}], "references": [
+			{"source": "/private/tmp/rd-source-debug/oscar64/c64-O2/inline/main-O2.c", "line": 13, "column": 26},
+			{"source": "/private/tmp/rd-source-debug/oscar64/c64-O2/inline/main-O2.c", "line": 19, "column": 14}]}
+	],
+	"types": [
+		{"name": "", "typeid": 0, "size": 1, "type": "uint"},
+		{"name": "", "typeid": 1, "size": 0},
+		{"name": "", "typeid": 2, "size": 1, "type": "uint"},
+		{"name": "", "typeid": 3, "size": 0},
+		{"name": "", "typeid": 4, "size": 0},
+		{"name": "", "typeid": 5, "size": 1, "type": "uint"}	]}

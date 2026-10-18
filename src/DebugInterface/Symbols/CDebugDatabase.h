@@ -91,6 +91,16 @@ struct CDebugFunction
 	u64 imageOffset = 0;
 };
 
+// RD-017: one call an inlined function's code came from -- the caller's
+// FILEID:LINE and the inlined function's name ("" when unknown)
+struct CDebugInlineSite
+{
+	u32 fileId = 0;
+	i32 line = 0;
+	std::string function;
+};
+static const u32 kNoInlineChain = 0xFFFFFFFF;
+
 struct CDebugSourceMapping
 {
 	u32 start = 0;		// half-open address range [start, end)
@@ -108,6 +118,9 @@ struct CDebugSourceMapping
 	// share CPU addresses differ here: it is the bank-independent identity.
 	bool hasImageOffset = false;
 	u64 imageOffset = 0;
+	// RD-017: code inlined into its caller(s): the calls it came from,
+	// innermost first (AddInlineChain); kNoInlineChain when not inlined
+	u32 inlineChain = kNoInlineChain;
 };
 
 class CDebugDatabase
@@ -128,6 +141,7 @@ public:
 	// earlier ones stay available as candidates.
 	void AddMapping(const CDebugSourceMapping &mapping);
 	u32 AddFunction(const CDebugFunction &function);
+	u32 AddInlineChain(const std::vector<CDebugInlineSite> &chain);
 	void Finalize();
 
 	// --- queries: after Finalize() ---
@@ -154,6 +168,14 @@ public:
 	const CDebugFunction *FindFunctionImage(u32 regionId, u32 address, bool hasImageOffset, u64 imageOffset) const;
 	const std::vector<CDebugFunction> &Functions() const { return functions; }
 
+	// RD-017: the inline calls of a mapping, innermost first; empty when the
+	// code is its function's own. The logical depth adds their number to the
+	// physical call depth; the innermost names the logical function.
+	const std::vector<CDebugInlineSite> &InlineChain(const CDebugSourceMapping *mapping) const;
+	int InlineDepth(const CDebugSourceMapping *mapping) const { return (int)InlineChain(mapping).size(); }
+	size_t NumInlineChains() const { return inlineChains.size(); }
+	const std::vector<CDebugInlineSite> &GetInlineChain(u32 index) const { return inlineChains[index]; }
+
 	int FindRegion(const char *name) const;
 	const CDebugSourceFile *GetFile(u32 producerFileId) const;
 	const CDebugRegion *GetRegion(u32 regionId) const;
@@ -178,6 +200,7 @@ private:
 	std::vector<CDebugBlock *> blocks;
 	std::vector<CDebugSourceMapping> mappings;
 	std::vector<CDebugFunction> functions;
+	std::vector<std::vector<CDebugInlineSite>> inlineChains;
 	// Per region: function indices sorted by start.
 	std::vector<std::vector<u32>> functionsByStart;
 

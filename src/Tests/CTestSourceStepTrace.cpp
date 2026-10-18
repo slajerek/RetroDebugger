@@ -900,6 +900,11 @@ bool CTestSourceStepTrace::RunTrace(const std::string &path)
 		const CDebugFunction *function = di->FindFunctionAt(database.get(), regionId, r.pc);
 		std::string actualFile = file ? file->fileName : "";
 		std::string actualFunction = function ? function->name : "";
+		// RD-017: in inlined code, the logical function is the inlined one
+		const CDebugSourceMapping *stopMapping = r.mapped ? di->ResolveSourceAt(database.get(), regionId, r.pc) : NULL;
+		const std::vector<CDebugInlineSite> &inlineChain = database->InlineChain(stopMapping);
+		if (!inlineChain.empty() && !inlineChain[0].function.empty())
+			actualFunction = inlineChain[0].function;
 		std::string actualReason = SourceStepStopReasonName(r.reason);
 
 		const json &expected = step["expected"];

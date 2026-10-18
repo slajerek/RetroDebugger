@@ -61,6 +61,8 @@
     "kickc/branches-loops-nes.json",
     "kickc/interrupts.json",
     "kickc/interrupts-atari.json",
-    "kickc/interrupts-nes.json"
+    "kickc/interrupts-nes.json",
+    "oscar64/inline.json",
+    "oscar64/inline-over.json"
   ]
 }

@@ -67,7 +67,7 @@ struct CSourceStepResult
 	u32 fileId = 0;
 	i32 line = 0;
 	std::string fileName;	// of fileId, when mapped
-	int depth = 0;			// call depth of the stop from the start; -1 when the starting frame returned
+	int depth = 0;			// logical call depth of the stop from the start (inline calls count, RD-017); negative when the starting frame returned
 	u64 instructions = 0;
 };
 
@@ -106,6 +106,8 @@ private:
 	u32 startFileId;
 	i32 startLine;
 	u32 startRangeStart;
+	int startInlineDepth;		// RD-017: inline calls around the start line
+	int lastInlineDepth;		// at the latest mapped boundary, for the result's depth
 	u64 budget;
 	u64 instructions;
 	CDebugExecutionContextTracker tracker;

@@ -1,0 +1,71 @@
+{
+  "fixture": "inline",
+  "compiler": "oscar64",
+  "optimization": "O2",
+  "machine": "c64",
+  "artifacts": "tests/data/source-debug/oscar64/c64-O2/inline",
+  "binary": "main.prg",
+  "debugInfo": "main.dbj",
+  "entry": "0x080D",
+  "note": "Oscar64 -O2 inlines work() into main: its lines 18 and 19 are a logical frame of their own (RD-017, the .dbj origins)",
+  "start": {
+    "file": "main-O2.c",
+    "line": 23
+  },
+  "steps": [
+    {
+      "action": "sourceInto",
+      "expected": {
+        "file": "main-O2.c",
+        "line": 18,
+        "function": "work",
+        "depth": 1
+      },
+      "expectedReason": "completed",
+      "note": "into the inlined work(): no call instruction, the origins name the frame"
+    },
+    {
+      "action": "sourceOver",
+      "expected": {
+        "file": "main-O2.c",
+        "line": 19,
+        "function": "work",
+        "depth": 1
+      },
+      "expectedReason": "completed"
+    },
+    {
+      "action": "sourceInto",
+      "expected": {
+        "file": "main-O2.c",
+        "line": 14,
+        "function": "addOne",
+        "depth": 2
+      },
+      "expectedReason": "completed",
+      "note": "a real call from inlined code: one deeper than the inline frame"
+    },
+    {
+      "action": "sourceOut",
+      "expected": {
+        "file": "main-O2.c",
+        "line": 19,
+        "function": "work",
+        "depth": 1
+      },
+      "expectedReason": "completed",
+      "note": "back after the call, in the inlined work()"
+    },
+    {
+      "action": "sourceOut",
+      "expected": {
+        "file": "main-O2.c",
+        "line": 25,
+        "function": "main",
+        "depth": 0
+      },
+      "expectedReason": "completed",
+      "note": "out of the inlined work(): main's next line"
+    }
+  ]
+}

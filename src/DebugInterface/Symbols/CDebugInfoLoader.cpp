@@ -314,6 +314,43 @@ static i32 DefinitionLineFromText(const CDebugSourceFile *file, const std::strin
 	return entryLine;
 }
 
+// RD-017: the function a source line belongs to, from the text: upwards from
+// LINE, the first line that defines one -- an identifier before a '(' that
+// is not a keyword, on a line without a ';' -- within 200 lines; "" when the
+// text is missing or nothing matches.
+static std::string FunctionNameAtLineFromText(const CDebugSourceFile *file, i32 line)
+{
+	static const char *keywords[] = { "if", "while", "for", "switch", "return", "sizeof", "do", "else" };
+	if (file == NULL)
+		return "";
+	for (i32 at = line; at >= 1 && at > line - 200; at--)
+	{
+		if (at >= (i32)file->lines.size() || file->lines[at] == NULL)
+			continue;
+		char *text = file->lines[at]->GetStdASCII();
+		std::string s(text);
+		delete [] text;
+		if (s.find(';') != std::string::npos || s.empty() || s[0] == ' ' || s[0] == '\t' || s[0] == '#')
+			continue;		// a definition starts in the first column; statements are indented
+		size_t paren = s.find('(');
+		if (paren == std::string::npos)
+			continue;
+		size_t end = paren;
+		while (end > 0 && s[end - 1] == ' ')
+			end--;
+		size_t begin = end;
+		while (begin > 0 && (isalnum((unsigned char)s[begin - 1]) || s[begin - 1] == '_'))
+			begin--;
+		std::string name = s.substr(begin, end - begin);
+		bool keyword = false;
+		for (const char *k : keywords)
+			keyword = keyword || name == k;
+		if (!name.empty() && !keyword && !isdigit((unsigned char)name[0]))
+			return name;
+	}
+	return "";
+}
+
 // RD-010: KickC. KickAssembler's .dbg maps addresses to lines of the .asm
 // KickC generated; compiled with -Sl, that .asm names the C file and line
 // before each statement's code ("// /path/main.c:16"). Each asm range under
@@ -999,6 +1036,13 @@ bool DebugInfoLoadOscar64(CDebugSymbols *symbols, CByteBuffer *byteBuffer, const
 
 	struct Label { u32 address; std::string name; };
 	std::vector<Label> labels;
+	// the mappings wait for the source text: an inlined line's function is named from it
+	struct PendingLine
+	{
+		CDebugSourceMapping mapping;
+		std::vector<std::pair<u32, i32>> callers;	// the inline calls, innermost first
+	};
+	std::vector<PendingLine> pendingLines;
 
 	for (size_t i = 0; i < functions.size(); i++)
 	{
@@ -1023,11 +1067,23 @@ bool DebugInfoLoadOscar64(CDebugSymbols *symbols, CByteBuffer *byteBuffer, const
 		labels.push_back(Label{ function.start, function.name });
 
 		u32 blockId = database->AddBlock(function.name, regionId);
+		// RD-017: "origins" repeats each range with the lines it came from,
+		// innermost first: after the range's own line, the calls it was
+		// inlined from (Oscar64 -O2)
+		std::map<std::pair<u32, u32>, std::vector<std::pair<u32, i32>>> origins;
+		const Hjson::Value &originList = f["origins"];
+		for (size_t o = 0; originList.type() == Hjson::Type::Vector && o < originList.size(); o++)
+		{
+			const Hjson::Value &origin = originList[(int)o];
+			std::pair<u32, u32> range((u32)origin["start"].to_int64(), (u32)origin["end"].to_int64());
+			origins[range].push_back(std::make_pair(fileIdFor(origin["source"].to_string()), (i32)origin["line"].to_int64()));
+		}
 		const Hjson::Value &lines = f["lines"];
 		for (size_t l = 0; l < lines.size(); l++)
 		{
 			const Hjson::Value &line = lines[(int)l];
-			CDebugSourceMapping mapping;
+			PendingLine pending;
+			CDebugSourceMapping &mapping = pending.mapping;
 			mapping.start = (u32)line["start"].to_int64();
 			mapping.end = (u32)line["end"].to_int64();
 			if (mapping.end > (u32)maxAddress)
@@ -1038,8 +1094,11 @@ bool DebugInfoLoadOscar64(CDebugSymbols *symbols, CByteBuffer *byteBuffer, const
 			mapping.lineStart = (i32)line["line"].to_int64();
 			mapping.lineEnd = mapping.lineStart;
 			mapping.quality = DebugMappingQuality::Exact;
+			auto origin = origins.find(std::make_pair(mapping.start, (u32)line["end"].to_int64()));
+			if (origin != origins.end() && origin->second.size() > 1)
+				pending.callers.assign(origin->second.begin() + 1, origin->second.end());
 			if (mapping.start < mapping.end)
-				database->AddMapping(mapping);
+				pendingLines.push_back(pending);
 		}
 	}
 
@@ -1054,6 +1113,31 @@ bool DebugInfoLoadOscar64(CDebugSymbols *symbols, CByteBuffer *byteBuffer, const
 
 	for (auto &it : database->Files())
 		LoadSourceTextFor(it.second, options);
+	int inlined = 0;
+	for (PendingLine &pending : pendingLines)
+	{
+		if (!pending.callers.empty())
+		{
+			// site k: the call at callers[k]; the function inlined there is
+			// the one holding the line below it (the mapping's, or callers[k-1])
+			std::vector<CDebugInlineSite> chain;
+			u32 innerFile = pending.mapping.fileId;
+			i32 innerLine = pending.mapping.lineStart;
+			for (const std::pair<u32, i32> &caller : pending.callers)
+			{
+				CDebugInlineSite site;
+				site.fileId = caller.first;
+				site.line = caller.second;
+				site.function = FunctionNameAtLineFromText(database->GetFile(innerFile), innerLine);
+				chain.push_back(site);
+				innerFile = caller.first;
+				innerLine = caller.second;
+			}
+			pending.mapping.inlineChain = database->AddInlineChain(chain);
+			inlined++;
+		}
+		database->AddMapping(pending.mapping);
+	}
 	database->Finalize();
 
 	guiMain->LockMutex();
@@ -1075,6 +1159,8 @@ bool DebugInfoLoadOscar64(CDebugSymbols *symbols, CByteBuffer *byteBuffer, const
 	symbols->debugInterface->UnlockMutex();
 	guiMain->UnlockMutex();
 
+	if (inlined > 0)
+		LOGM("DebugInfoLoadOscar64: %d ranges inlined", inlined);
 	LOGM("DebugInfoLoadOscar64: %d files, %d functions, %d mappings", (int)database->NumFiles(),
 		 (int)database->Functions().size(), (int)database->NumMappings());
 	return true;
