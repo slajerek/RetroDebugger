@@ -162,27 +162,53 @@ static bool WaitForPause(CDebugInterface *di, int timeoutMs)
 // A C64 paused before its reset routine ends keeps zeroed RAM vectors, and a
 // trace then takes the CPU over for good: code that calls the KERNAL (cc65's
 // crt0 does) jumps through $0326 to $0000. Wait, running, for the READY
-// prompt's keyboard loop at $E5CD; a machine already running other code
-// passes once RESTOR has set the vectors.
+// prompt's keyboard loop at $E5CD. A machine left in a previous test's
+// program -- paused again by a BRK it runs into, or running code in RAM with
+// its page 3 overwritten (macOS CI after SourceStepping) -- is hard reset
+// first.
 static bool WaitForKernalBoot(CDebugInterfaceVice *di)
 {
-	auto vectorsSet = [di]() {
-		return di->GetByteFromRamC64(0x0326) == 0xCA && di->GetByteFromRamC64(0x0327) == 0xF1
-			&& di->GetByteFromRamC64(0x0314) != 0 && di->GetByteFromRamC64(0x0315) != 0;
-	};
-	if (di->GetDebugMode() != DEBUGGER_MODE_RUNNING)
-		di->SetDebugMode(DEBUGGER_MODE_RUNNING);
-	int timeoutMs = vectorsSet() ? 1000 : 10000;
-	for (int waited = 0; waited < timeoutMs; waited += 20)
-	{
+	auto atReady = [di]() {
 		u16 pc;
 		u8 a, x, y, p, sp;
 		di->GetCpuRegs(&pc, &a, &x, &y, &p, &sp);
-		if (vectorsSet() && pc >= 0xE5CD && pc <= 0xE5D5)
+		return di->GetByteFromRamC64(0x0326) == 0xCA && di->GetByteFromRamC64(0x0327) == 0xF1
+			&& di->GetByteFromRamC64(0x0314) != 0 && di->GetByteFromRamC64(0x0315) != 0
+			&& pc >= 0xE5CD && pc <= 0xE5D5;
+	};
+	auto inRam = [di]() {
+		u16 pc;
+		u8 a, x, y, p, sp;
+		di->GetCpuRegs(&pc, &a, &x, &y, &p, &sp);
+		return pc < 0xA000;
+	};
+	if (di->GetDebugMode() != DEBUGGER_MODE_RUNNING)
+		di->SetDebugMode(DEBUGGER_MODE_RUNNING);
+	bool reset = false;
+	for (int waited = 0; waited < 10000; waited += 20)
+	{
+		if (atReady())
+			return true;
+		if (di->GetDebugMode() != DEBUGGER_MODE_RUNNING || (waited >= 1000 && inRam()))
+		{
+			reset = true;
+			break;
+		}
+		SYS_Sleep(20);
+	}
+	if (!reset)
+		return false;
+	LOGM("WaitForKernalBoot: the C64 is not booting to READY, hard reset");
+	di->ResetHard();
+	if (di->GetDebugMode() != DEBUGGER_MODE_RUNNING)
+		di->SetDebugMode(DEBUGGER_MODE_RUNNING);
+	for (int waited = 0; waited < 10000; waited += 20)
+	{
+		if (atReady())
 			return true;
 		SYS_Sleep(20);
 	}
-	return vectorsSet();
+	return false;
 }
 
 #ifdef RUN_NES
@@ -255,7 +281,7 @@ CTestSourceStepTrace::Machine *CTestSourceStepTrace::GetMachine(const std::strin
 	}
 	if (name == "c64" && !WaitForKernalBoot((CDebugInterfaceVice *)di))
 	{
-		Check(false, "the C64 KERNAL finishes booting (vectors at $0314/$0326 set)");
+		Check(false, "the C64 boots to the READY prompt (vectors at $0314/$0326 set), hard reset if needed");
 		if (machine.started)
 			viewC64->StopEmulationThread(di);
 		return NULL;
