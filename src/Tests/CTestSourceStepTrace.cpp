@@ -424,21 +424,32 @@ bool CTestSourceStepTrace::LaunchC64Cartridge(Machine &machine, const std::strin
 	return Check(false, name + ": the cartridge attaches and runs to the start line");
 }
 
-// the cartridge off (VICE resets), the C64 back at the READY prompt, paused
+// the cartridge off (VICE resets), the C64 back at the READY prompt, paused.
+// The detach runs on the emulation thread: until EXROM and GAME are both
+// inactive the cartridge's program still runs.
 bool CTestSourceStepTrace::DetachC64Cartridge(Machine &machine)
 {
 	CDebugInterfaceVice *di = (CDebugInterfaceVice *)machine.di;
 	di->SetDebugMode(DEBUGGER_MODE_RUNNING);
 	di->DetachCartridge();
 	machine.c64Cartridge = false;
+	bool detached = false;
+	for (int waited = 0; waited < 5000 && !detached; waited += 10)
+	{
+		C64StateCartridge state;
+		state.exrom = state.game = 0;
+		di->GetC64CartridgeState(&state);
+		detached = state.exrom == 1 && state.game == 1;
+		if (!detached)
+			SYS_Sleep(10);
+	}
 	guiMain->LockMutex();
 	if (c64SettingsPathToCartridge)
 		delete c64SettingsPathToCartridge;
 	c64SettingsPathToCartridge = machine.savedCartridgePath;
 	machine.savedCartridgePath = NULL;
 	guiMain->UnlockMutex();
-	SYS_Sleep(200);
-	bool ready = WaitForKernalBoot(di);
+	bool ready = detached && WaitForKernalBoot(di);
 	di->PauseEmulationBlockedWait();
 	return ready;
 }
@@ -771,6 +782,22 @@ bool CTestSourceStepTrace::RunTrace(const std::string &path)
 	std::vector<u8> binary;
 	if (!Check(ReadFile(binaryPath, binary) && !binary.empty(), name + ": the binary reads"))
 		return false;
+	auto hasExtension = [&](const char *extension) {
+		return binaryPath.size() > 4 && binaryPath.compare(binaryPath.size() - 4, 4, extension) == 0;
+	};
+	bool cartridge = (machineName == "c64" && hasExtension(".crt")) || (machineName == "atari" && hasExtension(".car"));
+
+	// a cartridge a previous trace inserted comes out first, before this
+	// trace's symbols and breakpoints are in: the old program runs on until
+	// the machine has reset
+	if (!cartridge && machine->c64Cartridge && !DetachC64Cartridge(*machine))
+		return Check(false, name + ": the previous trace's cartridge detaches and the C64 boots to READY");
+	if (!cartridge && machine->atariCartridge)
+	{
+		RemoveAtariInterrupt(*machine);
+		if (!RemoveAtariCartridge(*machine))
+			return Check(false, name + ": the previous trace's cartridge comes out");
+	}
 
 	// fresh scratch symbols per trace; the live ones come back in RestoreMachines
 	CDebugSymbols *scratch;
@@ -812,31 +839,17 @@ bool CTestSourceStepTrace::RunTrace(const std::string &path)
 	int startAddress = startBp->bindings[0].address;
 
 	bool launched = false;
-	auto hasExtension = [&](const char *extension) {
-		return binaryPath.size() > 4 && binaryPath.compare(binaryPath.size() - 4, 4, extension) == 0;
-	};
-	bool cartridge = (machineName == "c64" && hasExtension(".crt")) || (machineName == "atari" && hasExtension(".car"));
 	if (machineName == "c64" && cartridge)
 		launched = LaunchC64Cartridge(*machine, binaryPath, (u16)startAddress, name);
 	else if (machineName == "c64")
-	{
-		// a cartridge a previous trace attached: off, back to the READY prompt
-		if (machine->c64Cartridge && !DetachC64Cartridge(*machine))
-			return Check(false, name + ": the previous trace's cartridge detaches and the C64 boots to READY");
 		launched = LaunchC64(di, trace, binary, database.get(), name);
-	}
 	else if (machineName == "atari")
 	{
 		RemoveAtariInterrupt(*machine);		// its handler would call into code about to be overwritten
 		if (cartridge)
 			launched = LaunchAtariCartridge(*machine, binaryPath, (u16)startAddress, name);
 		else
-		{
-			// a cartridge a previous trace inserted: out, the machine cold started
-			if (machine->atariCartridge && !RemoveAtariCartridge(*machine))
-				return Check(false, name + ": the previous trace's cartridge comes out");
 			launched = LaunchAtari(di, trace, binary, name);
-		}
 	}
 #ifdef RUN_NES
 	else if (machineName == "nes")
