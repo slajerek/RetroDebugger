@@ -204,6 +204,19 @@ CDebugBreakpointAddr *CDebugBreakpointsAddr::EvaluateBreakpoint(int addr)
 				|| std::find(breakpoint->imageOffsets.begin(), breakpoint->imageOffsets.end(), imageOffset) == breakpoint->imageOffsets.end())
 				return NULL;
 		}
+
+		// RD-025: a breakpoint bound to physical byte(s), whatever bank is in
+		if (!breakpoint->physicalIdentities.empty())
+		{
+			CDebugInterface *debugInterface = (segment && segment->symbols) ? segment->symbols->debugInterface : NULL;
+			CDebugMemoryMappingResolver *resolver = debugInterface ? debugInterface->GetMemoryMappingResolver() : NULL;
+			if (resolver == NULL)
+				return NULL;
+			CDebugPhysicalAddress fetched = resolver->ResolveFetch((u16)addr).physical;
+			if (std::find(breakpoint->physicalIdentities.begin(), breakpoint->physicalIdentities.end(), fetched)
+				== breakpoint->physicalIdentities.end())
+				return NULL;
+		}
 		
 		if (breakpoint->callback)
 		{

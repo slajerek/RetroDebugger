@@ -210,6 +210,9 @@ public:
 	
 	// breakpoints
 	u64 AddBreakpointPC(int addr);
+	// RD-025: a PC breakpoint that fires only where the fetch at addr is one
+	// of these physical bytes; replaces the breakpoint's previous identities
+	u64 AddBreakpointPC(int addr, const std::vector<CDebugPhysicalAddress> &physicalIdentities);
 	u64 RemoveBreakpointPC(int addr);
 	u64 AddBreakpointMemory(int address, u32 memoryAccess, DataBreakpointComparison comparison, int value);
 	u64 RemoveBreakpointMemory(int address);

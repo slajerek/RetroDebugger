@@ -1276,8 +1276,9 @@ void atrd_get_banking_state(int *machineType, int *ramSizeKb, int *portb, int *p
 	if (portbMask) *portbMask = PIA_PORTB_mask;
 	if (xeBank) *xeBank = atrd_cpu_xe_bank();
 	if (anticXeBank) {
+		/* NULL: ANTIC fetches MEMORY_mem, whatever bank the CPU has in */
 		*anticXeBank = (ANTIC_xe_ptr == NULL || atarixe_memory == NULL)
-			? 0 : (int)((ANTIC_xe_ptr - atarixe_memory) >> 14);
+			? atrd_cpu_xe_bank() : (int)((ANTIC_xe_ptr - atarixe_memory) >> 14);
 	}
 	if (selftestEnabled) *selftestEnabled = MEMORY_selftest_enabled;
 	if (cart809fEnabled) *cart809fEnabled = cart809F_enabled;

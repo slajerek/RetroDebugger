@@ -41,6 +41,9 @@ void CDebugBreakpointAddr::GetDetailsJson(nlohmann::json &j)
 	CDebugBreakpoint::GetDetailsJson(j);
 	j["type"] = "addr";
 //	j["triggerAddr"] = addr;
+	for (const CDebugPhysicalAddress &physical : physicalIdentities)
+		j["physical"].push_back({ {"kind", DebugMemoryKindName(physical.kind)}, {"device", physical.device},
+								  {"region", physical.region}, {"offset", physical.offset} });
 }
 
 CDebugBreakpointAddr::~CDebugBreakpointAddr()

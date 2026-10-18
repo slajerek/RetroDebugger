@@ -1256,12 +1256,14 @@ void CMCPServer::RegisterDebuggerTools(CDebuggerServer *server)
 	{
 		MCPToolDescriptor tool;
 		tool.name = "retro_breakpoint_add";
-		tool.description = "Add a CPU breakpoint at an address";
+		tool.description = "Add a CPU breakpoint at an address, optionally bound to the physical byte(s) the CPU fetches there (one bank)";
 		tool.inputSchema = {
 			{"type", "object"},
 			{"properties", {
 				{"platform", {{"type", "string"}}},
-				{"address", {{"type", "integer"}, {"description", "Address for breakpoint"}}}
+				{"address", {{"type", "integer"}, {"description", "Address for breakpoint"}}},
+				{"physical", {{"description", "Fire only where the fetch at address is this byte: {kind, device, region, offset} "
+										   "(e.g. {\"kind\":\"Extended RAM\",\"device\":\"atari-xe-ram\",\"region\":3,\"offset\":0}) or an array of them"}}}
 			}},
 			{"required", json::array({"platform", "address"})}
 		};
@@ -1271,6 +1273,8 @@ void CMCPServer::RegisterDebuggerTools(CDebuggerServer *server)
 			string fn = platform + "/cpu/breakpoint/add";
 			json ep;
 			ep["addr"] = params.at("address");
+			if (params.contains("physical"))
+				ep["physical"] = params["physical"];
 			ConsumeEndpointResult(server->RunEndpointFunction(fn, "", ep, nullptr, 0), "retro_breakpoint_add");
 			return {{"status", "breakpoint_added"}, {"address", params.at("address")}};
 		};

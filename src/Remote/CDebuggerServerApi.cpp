@@ -647,7 +647,40 @@ void CDebuggerServerApi::RegisterEndpoints(CDebuggerServer *server)
 		u64 addr = FUN_JsonValueDecOrHexStrWithPrefixToU64(params.at("addr"));
 		json j;
 
-		u64 breakpointId = debuggerApi->AddBreakpointPC((int)addr);
+		// RD-025: "physical": {kind, device, region, offset} or an array of them --
+		// fire only where the fetch at addr is that byte (one 130XE bank...)
+		u64 breakpointId;
+		if (params.contains("physical"))
+		{
+			json list = params["physical"].is_array() ? params["physical"] : json::array({ params["physical"] });
+			std::vector<CDebugPhysicalAddress> identities;
+			for (const json &item : list)
+			{
+				CDebugPhysicalAddress physical;
+				physical.device = item.at("device").get<string>();
+				physical.region = (u32)FUN_JsonValueDecOrHexStrWithPrefixToU64(item.value("region", json(0)));
+				physical.offset = (u32)FUN_JsonValueDecOrHexStrWithPrefixToU64(item.at("offset"));
+				physical.kind = DebugMemoryKind::Unknown;
+				if (item.contains("kind"))
+				{
+					string kindName = item["kind"].get<string>();
+					for (int k = (int)DebugMemoryKind::Unmapped; k <= (int)DebugMemoryKind::ExtendedRam; k++)
+						if (kindName == DebugMemoryKindName((DebugMemoryKind)k))
+							physical.kind = (DebugMemoryKind)k;
+				}
+				if (physical.kind == DebugMemoryKind::Unknown)
+				{
+					j["error"] = "physical: give the kind (\"RAM\", \"Extended RAM\", \"Cartridge ROM\"...) of device " + physical.device;
+					return server->PrepareResult(HTTP_BAD_REQUEST, token, j, NULL, 0);
+				}
+				identities.push_back(physical);
+			}
+			breakpointId = debuggerApi->AddBreakpointPC((int)addr, identities);
+		}
+		else
+		{
+			breakpointId = debuggerApi->AddBreakpointPC((int)addr);
+		}
 		if (breakpointId != UNKNOWN_BREAKPOINT_ID)
 		{
 			j["breakpointId"] = breakpointId;

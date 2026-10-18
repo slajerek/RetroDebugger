@@ -4888,6 +4888,12 @@
     <ClCompile Include="..\..\..\src\Tools\Shaders\CRenderShaderCRTMonitorOpenGL4.cpp">
       <Filter>Source Files\src\Tools\Shaders</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\src\Tests\CTestAtariXeBanks.cpp">
+      <Filter>src\Tests</Filter>
+    </ClCompile>
+    <ClInclude Include="..\..\..\src\Tests\CTestAtariXeBanks.h">
+      <Filter>src\Tests</Filter>
+    </ClInclude>
     <ClCompile Include="..\..\..\src\Tests\CTestWorkspace.cpp">
       <Filter>src\Tests</Filter>
     </ClCompile>

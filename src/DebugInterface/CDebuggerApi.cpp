@@ -921,6 +921,15 @@ u64 CDebuggerApi::AddBreakpointPC(int addr)
 	return breakpoint->breakpointId;
 }
 
+u64 CDebuggerApi::AddBreakpointPC(int addr, const std::vector<CDebugPhysicalAddress> &physicalIdentities)
+{
+	debugInterface->LockMutex();
+	CDebugBreakpointAddr *breakpoint = debugInterface->viewDisassembly->AddPCBreakpoint(addr);
+	breakpoint->physicalIdentities = physicalIdentities;
+	debugInterface->UnlockMutex();
+	return breakpoint->breakpointId;
+}
+
 u64 CDebuggerApi::RemoveBreakpointPC(int addr)
 {
 	debugInterface->LockMutex();
