@@ -19,7 +19,11 @@ Use this skill when working with the RetroDebugger MCP server to debug 8-bit pro
   - `retro_screenshot(platform)` — returns base64-encoded PNG inline
   - `retro_screenshot(platform, savePath:"/tmp/screen.png")` — saves PNG to file, returns metadata only (use this when you need to view the image with the Read tool)
 - `retro_breakpoint_list` — list all CPU breakpoints
-- `retro_watch_list` — list all data watches
+- `retro_watch_list` — list all data watches. A watch added from the UI or with `retro_watch_add`
+  keeps the memory mapped at its address then (`memory`: "c64-ram", "atari-xe-ram bank 1",
+  "nes-prg $04003"), so it still shows those bytes after a bank switch: `mappedIn:false` and
+  `bytes` from that memory (C64 RAM under ROM, Atari extended banks, cartridge/PRG banks);
+  `retro_watch_add(bind:false)` watches what the CPU sees instead; I/O addresses never bind
 - `retro_machine_state` — platform state (running/paused, PC) — **use this for pre-flight check, not retro_list_platforms**
 - `retro_snapshot_save` — save emulator state (file path)
 - `retro_callstack` — the frames on the stack now (innermost first): call/interrupt/break, the
