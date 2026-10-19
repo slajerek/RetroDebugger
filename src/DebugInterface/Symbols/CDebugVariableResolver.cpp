@@ -1,4 +1,5 @@
 #include "CDebugVariableResolver.h"
+#include "CDebugStackDepth.h"
 #include "CDebugInterface.h"
 #include "CDebugDataAdapter.h"
 #include <algorithm>
@@ -109,6 +110,25 @@ static CDebugVariableResolution Resolve(const CDebugDatabase *database, CDebugIn
 			u32 sp = readByte(variable.baseZp) | (readByte(variable.baseZp + 1) << 8);
 			r.hasAddress = true;
 			r.address = (sp + variable.address) & 0xFFFF;
+			// RD-055: cc65's offset counts from sp after the prologue; how far sp
+			// has moved since is decoded from the code (Settings: off/limited/full)
+			DebugStackDecoding decoding = variable.cc65Stack && function ? DebugGetStackDecoding() : DebugStackDecoding::Off;
+			if (decoding != DebugStackDecoding::Off)
+			{
+				CDebugStackDepth depth = DebugCc65StackDepth(database, debugInterface, *function, function->regionId, pc, decoding);
+				if (depth.known)
+				{
+					r.address = (sp + variable.address + (u32)(depth.depth - depth.refDepth)) & 0xFFFF;
+					r.quality = depth.exact ? DebugMappingQuality::Exact : DebugMappingQuality::Approximate;
+					if (!depth.exact)
+						r.reason = "stack depth decoding (" + std::string(DebugStackDecodingName(decoding)) + "): " + depth.reason;
+					break;
+				}
+				r.quality = DebugMappingQuality::Approximate;
+				r.reason = "stack depth decoding (" + std::string(DebugStackDecodingName(decoding)) + ") failed: " + depth.reason
+					+ "; the offset is taken from the current sp";
+				break;
+			}
 			if (variable.frameExactAtLineStarts && pc == mapping->start)
 				r.quality = DebugMappingQuality::Exact;
 			else

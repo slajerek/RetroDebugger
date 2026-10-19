@@ -1293,6 +1293,28 @@ void CMainMenuBar::RenderImGui()
 				
 				ImGui::EndMenu();
 			}
+
+			// RD-055: where a cc65 local is: sp moves inside a function, cc65 records not how far
+			if (ImGui::BeginMenu("C variables"))
+			{
+				ImGui::TextDisabled("cc65 locals: stack depth decoding");
+				static const char *modes[] = { "Off", "Limited", "Full" };
+				static const char *hints[] = {
+					"The offset cc65 records, from the current sp: wrong where the function has pushed since its prologue",
+					"One linear walk from the function's entry to the PC; exact only without a jump or branch on the way",
+					"The depth at every instruction, following the branches; exact where every path agrees" };
+				for (int m = 0; m < 3; m++)
+				{
+					if (ImGui::MenuItem(modes[m], NULL, c64SettingsCc65StackDecoding == m))
+					{
+						c64SettingsCc65StackDecoding = m;
+						viewC64->config->SetInt("Cc65StackDecoding", &c64SettingsCc65StackDecoding);
+					}
+					if (ImGui::IsItemHovered())
+						ImGui::SetTooltip("%s", hints[m]);
+				}
+				ImGui::EndMenu();
+			}
 			
 			ImGui::Separator();
 			

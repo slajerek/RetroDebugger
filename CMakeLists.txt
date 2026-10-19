@@ -1796,6 +1796,8 @@ add_executable(retrodebugger
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Tools/libpsid64/libpsid-screen.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Tools/C64SIDFrequencies.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Tools/Shaders/CRenderShaderCRTMonitorOpenGL4.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CTestCc65StackDepth.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/DebugInterface/Symbols/CDebugStackDepth.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CTestBankedWatches.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/DebugInterface/Symbols/CDebugSourceWatch.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Tests/CTestSourceVariables.cpp"

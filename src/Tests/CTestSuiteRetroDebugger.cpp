@@ -23,6 +23,7 @@
 #include "CTestSourceDocument.h"
 #include "CTestBankedSource.h"
 #include "CTestBankedWatches.h"
+#include "CTestCc65StackDepth.h"
 #include "CTestAssembledSource.h"
 #include "CTestDriveSourceStepping.h"
 #include "CTestSourceTrace.h"
@@ -138,6 +139,7 @@ void CTestSuiteRegisterRetroDebuggerTests(std::vector<std::unique_ptr<CTest> > &
 	tests.push_back(std::make_unique<CTestSourceDocument>());
 	tests.push_back(std::make_unique<CTestBankedSource>());
 	tests.push_back(std::make_unique<CTestBankedWatches>());
+	tests.push_back(std::make_unique<CTestCc65StackDepth>());
 	tests.push_back(std::make_unique<CTestAssembledSource>());
 	tests.push_back(std::make_unique<CTestDriveSourceStepping>());
 	tests.push_back(std::make_unique<CTestSourceTrace>());

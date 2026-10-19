@@ -301,6 +301,7 @@ extern int c64SettingsDisassemblyNonExecuteColor;
 extern bool c64SettingsDisassemblyUseNearLabels;
 extern bool c64SettingsDisassemblyUseNearLabelsForJumps;
 extern int c64SettingsDisassemblyNearLabelMaxOffset;
+extern int c64SettingsCc65StackDecoding;		// RD-055: 0 off, 1 limited, 2 full (DebugStackDecoding)
 extern bool c64SettingsDisassemblyColorizeHexOpcodes;
 extern bool c64SettingsDisassemblyShowEffectiveAddress;
 extern int c64SettingsDisassemblyEAInstructionBudget;

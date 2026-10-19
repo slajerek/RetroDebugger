@@ -9,6 +9,8 @@
 #include "CDebugSymbolsDataWatch.h"
 #include "CDebugSourceWatch.h"
 #include "CDebugVariableResolver.h"
+#include "CDebugStackDepth.h"
+#include "C64SettingsStorage.h"
 #include "CViewDataDump.h"
 #include "CViewDisassembly.h"
 #include "CViewSourceCode.h"
@@ -126,6 +128,12 @@ nlohmann::json CTestSourceVariables::Variable(const std::string &name)
 static bool Is(const nlohmann::json &v, const char *quality, int value)
 {
 	return v.value("quality", "") == std::string(quality) && v.contains("value") && v["value"] == value;
+}
+
+// cc65 records no types: the first byte instead of a typed value
+static bool IsByte(const nlohmann::json &v, const char *quality, int value)
+{
+	return v.value("quality", "") == std::string(quality) && v.contains("bytes") && !v["bytes"].empty() && v["bytes"][0] == value;
 }
 #endif
 
@@ -308,6 +316,8 @@ void CTestSourceVariables::Run(ITestCallback *cb)
 
 	// cc65 recursion: the global from its "_result" label, size not recorded;
 	// n at offs 0 from sp ($02, from main.lbl), the stack depth not recorded
+	int savedStackDecoding = c64SettingsCc65StackDecoding;
+	c64SettingsCc65StackDecoding = (int)DebugStackDecoding::Off;
 	ok = ok && Check(BootToReady(di), "the C64 is reset to READY for the cc65 build") && Load("cc65", "recursion", "main.dbg");
 	if (ok)
 	{
@@ -325,8 +335,62 @@ void CTestSourceVariables::Run(ITestCallback *cb)
 		u16 sp = (u16)(di->GetByteFromRamC64(0x02) | (di->GetByteFromRamC64(0x03) << 8));
 		ok = ok && Check(v.value("quality", "") == "approximate" && v.value("location", "") == "stack frame"
 						 && v.contains("address") && v["address"] == sp && v.value("reason", "").find("stack depth") != std::string::npos,
-						 "cc65: sum's n is word(sp) + 0, approximate: the stack depth is not recorded (" + v.dump() + ")");
+						 "cc65, stack depth decoding off: sum's n is word(sp) + 0, approximate: the stack depth is not recorded (" + v.dump() + ")");
+		// RD-055: decoded, the depth at line 8 is the prologue's: n is exact
+		c64SettingsCc65StackDecoding = (int)DebugStackDecoding::Full;
+		v = ok ? Variable("n") : nlohmann::json();
+		ok = ok && Check(IsByte(v, "exact", 3) && v["address"] == sp,
+						 "cc65, decoding full: at sum's line 8 n is exact: 3 at word(sp) (" + v.dump() + ")");
+		c64SettingsCc65StackDecoding = (int)DebugStackDecoding::Limited;
+		v = ok ? Variable("n") : nlohmann::json();
+		ok = ok && Check(IsByte(v, "exact", 3), "cc65, decoding limited: at line 8 no branch lies on the way from the entry: n is exact 3 (" + v.dump() + ")");
 	}
+	if (ok)
+	{
+		// line 10 (return n + sum(n - 1)) is reached through the if's branch
+		nlohmann::json j = di->GetDebuggerApi()->ResolveSourceLineJson("main.c", 10);
+		u16 line10 = (j.contains("addresses") && !j["addresses"].empty()) ? (u16)j["addresses"][0].get<int>() : 0;
+		ok = Check(line10 != 0, "cc65: sum's line 10 has code") && RunTo(0x080D, line10, false);
+		c64SettingsCc65StackDecoding = (int)DebugStackDecoding::Limited;
+		nlohmann::json limited = ok ? Variable("n") : nlohmann::json();
+		c64SettingsCc65StackDecoding = (int)DebugStackDecoding::Full;
+		nlohmann::json full = ok ? Variable("n") : nlohmann::json();
+		ok = ok && Check(limited.value("quality", "") == "approximate" && limited.value("reason", "").find("branch") != std::string::npos
+						 && IsByte(full, "exact", 3),
+						 "cc65: at sum's line 10, after the if's branch, limited decoding is approximate and full decoding exact: n = 3 ("
+						 + limited.value("reason", "") + "; " + full.dump() + ")");
+	}
+
+	// RD-055 nested-calls: middle(v) { unsigned char w = leaf(v); return leaf(w); }
+	// cc65 pushes w after the first call: at line 14, v is at sp + 1, w at sp + 0
+	// (offs 0 and -1 count from before that push). From top(1): v = 1, w = 2.
+	ok = ok && Check(BootToReady(di), "the C64 is reset to READY for the cc65 nested-calls build") && Load("cc65", "nested-calls", "main.dbg");
+	if (ok)
+	{
+		nlohmann::json j = di->GetDebuggerApi()->ResolveSourceLineJson("main.c", 14);
+		u16 line14 = (j.contains("addresses") && !j["addresses"].empty()) ? (u16)j["addresses"][0].get<int>() : 0;
+		ok = Check(line14 != 0, "cc65: middle's line 14 has code") && RunTo(0x080D, line14, true);
+		struct Mode { DebugStackDecoding mode; int v, w; const char *quality; };
+		const Mode modes[] = {
+			{ DebugStackDecoding::Off, 2, -1, "approximate" },		// v read at sp + 0: that is w's byte
+			{ DebugStackDecoding::Limited, 1, 2, "exact" },
+			{ DebugStackDecoding::Full, 1, 2, "exact" },
+		};
+		for (const Mode &m : modes)
+		{
+			if (!ok)
+				break;
+			c64SettingsCc65StackDecoding = (int)m.mode;
+			nlohmann::json v = Variable("v"), w = Variable("w");
+			bool good = IsByte(v, m.quality, m.v) && (m.w < 0 || IsByte(w, m.quality, m.w));
+			ok = Check(good, std::string("cc65, decoding ") + DebugStackDecodingName(m.mode) + ": at middle's line 14 v = "
+					   + (v.contains("bytes") ? v["bytes"].dump() : "?") + ", w = " + (w.contains("bytes") ? w["bytes"].dump() : "?")
+					   + (m.mode == DebugStackDecoding::Off ? " (off: v is read at w's byte -- the wrong value decoding fixes)" : " (exact)"));
+		}
+	}
+	c64SettingsCc65StackDecoding = (int)DebugStackDecoding::Full;
+
+	c64SettingsCc65StackDecoding = savedStackDecoding;
 
 	// KickC nested-calls: "result" a zero-page global (.label result = 2);
 	// leaf(__register(A) char v): at its entry ($082C) from middle, v = A =

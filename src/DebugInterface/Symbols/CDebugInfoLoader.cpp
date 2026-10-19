@@ -1969,8 +1969,13 @@ bool DebugInfoLoadCc65(CDebugSymbols *symbols, CByteBuffer *byteBuffer, const CD
 		{
 			unsigned value = 0;
 			char name[64] = "";
-			if (sscanf(lblLine.c_str(), "al %x .%63s", &value, name) == 2 && !strcmp(name, "sp"))
+			if (sscanf(lblLine.c_str(), "al %x .%63s", &value, name) != 2)
+				continue;
+			if (!strcmp(name, "sp"))
 				spAddress = value;
+			// RD-055: the runtime's entry points (pusha, incsp2, tosaddax...) are
+			// imports in the .dbg, with no address: the .lbl has them
+			database->runtimeSymbols.insert(std::make_pair((u32)value, std::string(name)));
 		}
 	}
 	for (const Cc65Record &csym : csyms)
@@ -1987,6 +1992,7 @@ bool DebugInfoLoadCc65(CDebugSymbols *symbols, CByteBuffer *byteBuffer, const CD
 		variable.address = (u32)csym.Num("offs", 0);		// omitted when 0; may be negative
 		variable.baseZp = spAddress;
 		variable.regionId = regionId;
+		variable.cc65Stack = true;
 		if (!variable.name.empty())
 		{
 			database->AddVariable(variable);

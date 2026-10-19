@@ -329,6 +329,7 @@ int c64SettingsDisassemblyNonExecuteColor = C64D_COLOR_LIGHT_GRAY;
 bool c64SettingsDisassemblyUseNearLabels = true;
 bool c64SettingsDisassemblyUseNearLabelsForJumps = false;
 int c64SettingsDisassemblyNearLabelMaxOffset = 6;
+int c64SettingsCc65StackDecoding = 2;
 bool c64SettingsDisassemblyColorizeHexOpcodes = false;
 bool c64SettingsDisassemblyShowEffectiveAddress = false;
 int c64SettingsDisassemblyEAInstructionBudget = 128;
@@ -691,6 +692,7 @@ void C64DebuggerStoreSettings()
 	viewC64->config->SetBoolSkipConfigSave("DisassemblyUseNearLabels", &c64SettingsDisassemblyUseNearLabels);
 	viewC64->config->SetBoolSkipConfigSave("DisassemblyUseNearLabelsForJumps", &c64SettingsDisassemblyUseNearLabelsForJumps);
 	viewC64->config->SetIntSkipConfigSave("DisassemblyNearLabelMaxOffset", &c64SettingsDisassemblyNearLabelMaxOffset);
+	viewC64->config->SetIntSkipConfigSave("Cc65StackDecoding", &c64SettingsCc65StackDecoding);
 
 	storeSettingU8(byteBuffer, "MenusColorTheme", c64SettingsMenusColorTheme);
 	
@@ -825,6 +827,7 @@ void C64DebuggerRestoreSettings(uint8 settingsBlockType)
 	gApplicationDefaultConfig->GetBool("DisassemblyUseNearLabels", &c64SettingsDisassemblyUseNearLabels, true);
 	gApplicationDefaultConfig->GetBool("DisassemblyUseNearLabelsForJumps", &c64SettingsDisassemblyUseNearLabelsForJumps, false);
 	gApplicationDefaultConfig->GetInt("DisassemblyNearLabelMaxOffset", &c64SettingsDisassemblyNearLabelMaxOffset, 6);
+	gApplicationDefaultConfig->GetInt("Cc65StackDecoding", &c64SettingsCc65StackDecoding, 2);
 	gApplicationDefaultConfig->GetBool("DisassemblyColorizeHexOpcodes", &c64SettingsDisassemblyColorizeHexOpcodes, false);
 	gApplicationDefaultConfig->GetBool("DisassemblyShowEffectiveAddress", &c64SettingsDisassemblyShowEffectiveAddress, false);
 	gApplicationDefaultConfig->GetInt("DisassemblyEAInstructionBudget", &c64SettingsDisassemblyEAInstructionBudget, 128);

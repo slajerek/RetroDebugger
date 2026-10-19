@@ -4888,6 +4888,18 @@
     <ClCompile Include="..\..\..\src\Tools\Shaders\CRenderShaderCRTMonitorOpenGL4.cpp">
       <Filter>Source Files\src\Tools\Shaders</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\src\Tests\CTestCc65StackDepth.cpp">
+      <Filter>src\Tests</Filter>
+    </ClCompile>
+    <ClInclude Include="..\..\..\src\Tests\CTestCc65StackDepth.h">
+      <Filter>src\Tests</Filter>
+    </ClInclude>
+    <ClCompile Include="..\..\..\src\DebugInterface\Symbols\CDebugStackDepth.cpp">
+      <Filter>src\DebugInterface\Symbols</Filter>
+    </ClCompile>
+    <ClInclude Include="..\..\..\src\DebugInterface\Symbols\CDebugStackDepth.h">
+      <Filter>src\DebugInterface\Symbols</Filter>
+    </ClInclude>
     <ClCompile Include="..\..\..\src\Tests\CTestBankedWatches.cpp">
       <Filter>src\Tests</Filter>
     </ClCompile>

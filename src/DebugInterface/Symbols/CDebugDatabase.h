@@ -143,6 +143,7 @@ struct CDebugVariable
 	u32 size = 0;					// bytes; 0 when unknown
 	bool sizeApproximate = false;	// cc65: from the next label or the segment end
 	bool frameExactAtLineStarts = false;	// Oscar64: the frame is set up at every line start of the body
+	bool cc65Stack = false;			// cc65 (RD-055): offset from sp after the prologue's pushes; the depth at a PC is decoded
 	i32 enterLine = 0;				// FixedScoped: the source lines of its scope
 	i32 leaveLine = 0;
 	u32 regionId = 0;
@@ -191,6 +192,10 @@ public:
 
 	std::string producer;
 	CDebugDatabaseCapabilities capabilities;
+	// RD-055: linker symbols by address that are not labels of the program --
+	// cc65's runtime routines from the .lbl -- so the stack depth decoder can
+	// name a JSR target; the first name per address
+	std::map<u32, std::string> runtimeSymbols;
 
 	// --- building: loaders only, before Finalize() ---
 	CDebugSourceFile *AddFile(u32 producerFileId, const std::string &originalPath);
