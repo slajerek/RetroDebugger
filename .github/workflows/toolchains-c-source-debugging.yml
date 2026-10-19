@@ -1,0 +1,18 @@
+name: Toolchains (c-source-debugging)
+
+# TEMPORARY (RD-035): runs the nightly toolchain check on the
+# c-source-debugging branch, where GitHub cannot schedule or dispatch
+# nightly-toolchains.yml because that workflow is not on the default branch
+# yet. Delete this file when the branch is merged.
+on:
+  push:
+    branches: [ c-source-debugging ]
+    paths:
+      - 'tests/source-debug/**'
+      - 'tests/data/source-debug/**'
+      - '.github/workflows/nightly-toolchains.yml'
+      - '.github/workflows/toolchains-c-source-debugging.yml'
+
+jobs:
+  toolchains:
+    uses: ./.github/workflows/nightly-toolchains.yml
