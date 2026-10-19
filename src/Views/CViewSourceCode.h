@@ -119,6 +119,16 @@ private:
 	void RenderDocument(const CDebugSourceFile *file, const CSourceDocument *document);
 	void RenderLineText(const std::string &text, const CSyntaxLexer *lexer, int *state);
 	void ShowVariableTooltip(const std::string &name);
+	// RD-022: the variable under the mouse at the last right-click, for the
+	// context menu's "Show in memory" and "Add watch"
+	std::string contextVariable;
+	void RenderVariableMenuItems();
+public:
+	// the context menu's actions, at the main CPU's PC: false when the
+	// variable has no address (or, for a watch, no fixed one)
+	bool ShowVariableInMemory(const std::string &name);
+	bool AddVariableWatch(const std::string &name);
+private:
 
 	// line states for the gutter
 	bool LineHasCode(i32 line) const;

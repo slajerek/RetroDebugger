@@ -6,6 +6,10 @@
 #include "CDebugSymbols.h"
 #include "CDebugSymbolsSegment.h"
 #include "CDebugSymbolsCodeLabel.h"
+#include "CDebugSymbolsDataWatch.h"
+#include "CViewDataDump.h"
+#include "CViewDisassembly.h"
+#include "CViewSourceCode.h"
 #include "CDebugBreakpointsAddr.h"
 #include "CDebugInfoLoader.h"
 #include "CDebugDatabase.h"
@@ -165,6 +169,29 @@ void CTestSourceVariables::Run(ITestCallback *cb)
 				   "Oscar64: at add's entry its zero-page parameters are exact, left 1 and right 3 (" + left.dump() + ")")
 			&& Check(Is(result, "exact", 1) && result.value("location", "") == "fixed" && result.value("size", 0) == 1,
 					 "Oscar64: the global result is a fixed u8, exact (" + result.dump() + ")");
+	}
+	if (ok)
+	{
+		// the source view's context menu actions: result shown in the memory
+		// dump, watched as an unsigned byte; add's left is not watchable
+		// (a zero-page parameter register), nothing named "nothing" either
+		CViewSourceCode *view = viewC64->viewC64SourceCode;
+		guiMain->LockMutex();
+		CDebugSymbols *viewSymbols = view->debugSymbols;
+		view->debugSymbols = di->symbols;
+		bool shown = view->ShowVariableInMemory("result");
+		CViewDataDump *dump = view->viewDisassembly ? view->viewDisassembly->viewDataDump : NULL;
+		int dumpStart = dump ? dump->dataShowStart : -1;
+		bool watched = view->AddVariableWatch("result");
+		CDebugSymbolsDataWatch *watch = di->symbols->currentSegment->FindWatch(2225);
+		bool refused = !view->AddVariableWatch("left") && !view->AddVariableWatch("nothing");
+		view->debugSymbols = viewSymbols;
+		guiMain->UnlockMutex();
+		char msg[200];
+		snprintf(msg, sizeof(msg), "Oscar64: the source view shows result in the memory dump (start $%04X) and watches it as an unsigned byte; a parameter register is not watchable",
+				 (unsigned)dumpStart);
+		ok = Check(shown && dump && dumpStart <= 2225 && dumpStart + 0x400 > 2225 && watched && watch
+				   && watch->representation == WATCH_REPRESENTATION_UNSIGNED_DEC_8 && refused, msg);
 	}
 	if (ok)
 	{

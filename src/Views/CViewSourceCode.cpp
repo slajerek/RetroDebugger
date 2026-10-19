@@ -1,5 +1,7 @@
 #include "CViewSourceCode.h"
 #include "CDebugVariableResolver.h"
+#include "DebuggerDefs.h"
+#include "CViewDataDump.h"
 #include "CSourceRendering.h"
 #include "CDebugSourceTrace.h"
 #include "CSyntaxLexer.h"
@@ -383,9 +385,11 @@ void CViewSourceCode::ShowVariableTooltip(const std::string &name)
 		|| !debugSymbols->currentSegment || debugSymbols->currentSegment->debugRegionId < 0)
 		return;
 	CDebugVariableResolution r = DebugResolveVariable(database.get(), debugInterface, (u32)debugSymbols->currentSegment->debugRegionId,
-													  name, (u16)cpuPc());
+													  name, (u16)debugInterface->GetCpuPC());
 	if (r.variable == NULL)
 		return;		// not a variable: keywords, functions, macros
+	if (ImGui::IsMouseClicked(ImGuiMouseButton_Right))
+		contextVariable = name;
 	std::string text = r.name + (r.function.empty() ? "" : " (" + r.function + ")") + "  " + r.type
 		+ "  " + DebugVariableLocationName(r.variable->location);
 	char buf[48];
@@ -526,6 +530,10 @@ void CViewSourceCode::RenderImGui()
 {
 	PreRenderImGui();
 
+	// a right-click here: the variable under it, if any, is set again by the lines below
+	if (ImGui::IsMouseClicked(ImGuiMouseButton_Right) && ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows))
+		contextVariable.clear();
+
 	// Hold the snapshot for the whole frame: a reload swaps in a new one.
 	database = debugSymbols->debugDatabase;
 	regionId = debugSymbols->currentSegment ? debugSymbols->currentSegment->debugRegionId : -1;
@@ -588,9 +596,92 @@ bool CViewSourceCode::HasContextMenuItems()
 	return true;
 }
 
+// RD-022: an address watch's representation from the variable's type
+static u8 WatchRepresentationFor(const CDebugDatabase *database, const CDebugVariable *variable, int *count)
+{
+	const CDebugType *type = database->GetType(variable->typeId);
+	*count = 1;
+	if (type && type->kind == DebugTypeKind::Array)
+	{
+		*count = std::max<int>(1, (int)type->count);
+		type = database->GetType(type->elementType);
+	}
+	if (type == NULL)
+	{
+		*count = std::max<int>(1, std::min<int>((int)variable->size, 16));
+		return WATCH_REPRESENTATION_HEX_8;
+	}
+	switch (type->kind)
+	{
+		case DebugTypeKind::UInt:
+			return type->size == 2 ? WATCH_REPRESENTATION_UNSIGNED_DEC_16_LITTLE_ENDIAN
+				: type->size == 4 ? WATCH_REPRESENTATION_UNSIGNED_DEC_32_LITTLE_ENDIAN : WATCH_REPRESENTATION_UNSIGNED_DEC_8;
+		case DebugTypeKind::SInt:
+			return type->size == 2 ? WATCH_REPRESENTATION_SIGNED_DEC_16_LITTLE_ENDIAN
+				: type->size == 4 ? WATCH_REPRESENTATION_SIGNED_DEC_32_LITTLE_ENDIAN : WATCH_REPRESENTATION_SIGNED_DEC_8;
+		case DebugTypeKind::Pointer:
+			return WATCH_REPRESENTATION_HEX_16_LITTLE_ENDIAN;
+		default:
+			return WATCH_REPRESENTATION_HEX_8;
+	}
+}
+
+bool CViewSourceCode::ShowVariableInMemory(const std::string &name)
+{
+	std::shared_ptr<const CDebugDatabase> database = debugSymbols->debugDatabase;		// not only during a frame
+	if (!database || !debugSymbols->currentSegment || debugSymbols->currentSegment->debugRegionId < 0)
+		return false;
+	CDebugVariableResolution r = DebugResolveVariable(database.get(), debugInterface, (u32)debugSymbols->currentSegment->debugRegionId,
+													  name, (u16)debugInterface->GetCpuPC());
+	CViewDataDump *dump = viewDisassembly ? viewDisassembly->viewDataDump : NULL;
+	if (!r.hasAddress || dump == NULL)
+		return false;
+	dump->ScrollToAddress((int)r.address);
+	return true;
+}
+
+bool CViewSourceCode::AddVariableWatch(const std::string &name)
+{
+	std::shared_ptr<const CDebugDatabase> database = debugSymbols->debugDatabase;		// not only during a frame
+	if (!database || !debugSymbols->currentSegment || debugSymbols->currentSegment->debugRegionId < 0)
+		return false;
+	CDebugVariableResolution r = DebugResolveVariable(database.get(), debugInterface, (u32)debugSymbols->currentSegment->debugRegionId,
+													  name, (u16)debugInterface->GetCpuPC());
+	// an address watch stays at its address: only for variables that do
+	if (r.variable == NULL || !r.hasAddress || !(r.variable->location == DebugVariableLocation::Fixed
+												 || r.variable->location == DebugVariableLocation::FixedScoped))
+		return false;
+	int count = 1;
+	u8 representation = WatchRepresentationFor(database.get(), r.variable, &count);
+	debugSymbols->currentSegment->AddWatch((int)r.address, (char *)r.name.c_str(), representation, count);
+	return true;
+}
+
+void CViewSourceCode::RenderVariableMenuItems()
+{
+	if (contextVariable.empty() || !database || !debugSymbols->currentSegment || debugSymbols->currentSegment->debugRegionId < 0)
+		return;
+	CDebugVariableResolution r = DebugResolveVariable(database.get(), debugInterface, (u32)debugSymbols->currentSegment->debugRegionId,
+													  contextVariable, (u16)debugInterface->GetCpuPC());
+	if (r.variable == NULL)
+		return;
+	ImGui::Separator();
+	std::string show = "Show " + r.name + " in memory";
+	if (ImGui::MenuItem(show.c_str(), NULL, false, r.hasAddress && viewDisassembly && viewDisassembly->viewDataDump))
+		ShowVariableInMemory(r.name);
+	bool fixedAddress = r.variable->location == DebugVariableLocation::Fixed
+		|| r.variable->location == DebugVariableLocation::FixedScoped;
+	std::string watch = "Add watch " + r.name;
+	if (ImGui::MenuItem(watch.c_str(), NULL, false, r.hasAddress && fixedAddress))
+		AddVariableWatch(r.name);
+	if (!fixedAddress && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
+		ImGui::SetTooltip("a %s moves with its frame or register: no address watch", DebugVariableLocationName(r.variable->location));
+}
+
 void CViewSourceCode::RenderContextMenuItems()
 {
 	CGuiView::RenderContextMenuItems();
+	RenderVariableMenuItems();
 	ImGui::MenuItem("Show line numbers", NULL, &showLineNumbers);
 	if (ImGui::MenuItem("Follow PC", NULL, follow == SourceViewFollow::Pc))
 		follow = SourceViewFollow::Pc;
