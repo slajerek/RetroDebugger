@@ -85,8 +85,8 @@ sum: ; sum(u8)->u8
 ;   8, "/private/tmp/rd-source-debug/oscar64/c64/recursion/main.c"
 08ad : a0 07 __ LDY #$07
 08af : b1 23 __ LDA (SP + 0),y 
-08b1 : f0 11 __ BEQ $08c4 ; (sum.s6 + 0)
-.s5:
+08b1 : f0 11 __ BEQ $08c4 ; (sum.s5 + 0)
+.s6:
 08b3 : 85 53 __ STA T1 + 0 
 ;  10, "/private/tmp/rd-source-debug/oscar64/c64/recursion/main.c"
 08b5 : 38 __ __ SEC
@@ -97,11 +97,10 @@ sum: ; sum(u8)->u8
 08bf : 18 __ __ CLC
 08c0 : a5 1b __ LDA ACCU + 0 
 08c2 : 65 53 __ ADC T1 + 0 
-.s6:
+.s5:
 ;   9, "/private/tmp/rd-source-debug/oscar64/c64/recursion/main.c"
 08c4 : 85 1b __ STA ACCU + 0 
 .s3:
-;  10, "/private/tmp/rd-source-debug/oscar64/c64/recursion/main.c"
 08c6 : a0 03 __ LDY #$03
 08c8 : b1 23 __ LDA (SP + 0),y 
 08ca : 85 53 __ STA T1 + 0 

@@ -12,8 +12,8 @@ P:0019:main@l5
 P:0000:main
 P:001c:sum@s1
 P:002d:sum@s4
-P:0033:sum@s5
-P:0044:sum@s6
+P:0033:sum@s6
+P:0044:sum@s5
 P:0046:sum@s3
 P:001c:sum
 P:7f80:startup

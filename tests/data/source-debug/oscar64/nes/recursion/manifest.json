@@ -9,19 +9,19 @@
   "machine": "nes",
   "outputs": {
     "main.asm": {
-      "sha256": "c9d6266e0fdc6652aeaa1207723c5e35ec971a02ad98ab788ad00d04376e0ddc",
-      "size": 3381
+      "sha256": "af8e9b8bbe39a1a8ec93051498b2c18d2522abc9d348939a20032a6d511989f0",
+      "size": 3314
     },
     "main.dbj": {
-      "sha256": "fb69b93cdd25f98a0c8a0282490ce36e1eea026bb615d7ec1b0bbcc89cb446f0",
-      "size": 6130
+      "sha256": "2fd4756f13711b0947e227ced35a8d2693653dc389bd71510f5056e53cfab905",
+      "size": 5839
     },
     "main.map": {
       "sha256": "ff3eee601f6560b3df3f1826fa9bd5167417ae02b59be56e5a8300cd53bb6b96",
       "size": 1243
     },
     "main.mlb": {
-      "sha256": "ccf278246b68dd8a49d4a177bd4215968dcefe79a7407016646e5472cca07faa",
+      "sha256": "4dc406b032fed786b376e3db4c343dc89f4c038a4a11442f03be3ab31b375b1d",
       "size": 260
     },
     "main.nes": {
@@ -42,7 +42,7 @@
     ]
   ],
   "toolDirs": {
-    "oscar64": "/private/tmp/claude-501/-Users-mars-develop-github-RetroDebugger/53b1db2e-8b8e-4db0-8821-2827ab2f434c/scratchpad/toolchains/oscar64/bin"
+    "oscar64": "/private/tmp/claude-501/-Users-mars-develop-github-RetroDebugger/53b1db2e-8b8e-4db0-8821-2827ab2f434c/scratchpad/osc-p1/bin"
   },
   "toolchain": "oscar64",
   "version": "1.32.273",

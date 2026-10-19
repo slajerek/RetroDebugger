@@ -68,8 +68,8 @@ sum: ; sum(u8)->u8
 ;   8, "/private/tmp/rd-source-debug/oscar64/atari/recursion/main.c"
 20ad : a0 07 __ LDY #$07
 20af : b1 a1 __ LDA (SP + 0),y 
-20b1 : f0 11 __ BEQ $20c4 ; (sum.s6 + 0)
-.s5:
+20b1 : f0 11 __ BEQ $20c4 ; (sum.s5 + 0)
+.s6:
 20b3 : 85 c5 __ STA T1 + 0 
 ;  10, "/private/tmp/rd-source-debug/oscar64/atari/recursion/main.c"
 20b5 : 38 __ __ SEC
@@ -80,11 +80,10 @@ sum: ; sum(u8)->u8
 20bf : 18 __ __ CLC
 20c0 : a5 99 __ LDA ACCU + 0 
 20c2 : 65 c5 __ ADC T1 + 0 
-.s6:
+.s5:
 ;   9, "/private/tmp/rd-source-debug/oscar64/atari/recursion/main.c"
 20c4 : 85 99 __ STA ACCU + 0 
 .s3:
-;  10, "/private/tmp/rd-source-debug/oscar64/atari/recursion/main.c"
 20c6 : a0 03 __ LDY #$03
 20c8 : b1 a1 __ LDA (SP + 0),y 
 20ca : 85 c5 __ STA T1 + 0 

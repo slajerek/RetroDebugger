@@ -1,23 +1,23 @@
-{	"memory": [		{"name": "ZeroEnd", "xname": "ZeroEnd", "start": 224, "end": 224, "type": "END", "source": "/private/tmp/claude-501/-Users-mars-develop-github-RetroDebugger/53b1db2e-8b8e-4db0-8821-2827ab2f434c/scratchpad/toolchains/oscar64/include/crt.c", "line": 21 },
-		{"name": "ZeroStart", "xname": "ZeroStart", "start": 224, "end": 224, "type": "START", "source": "/private/tmp/claude-501/-Users-mars-develop-github-RetroDebugger/53b1db2e-8b8e-4db0-8821-2827ab2f434c/scratchpad/toolchains/oscar64/include/crt.c", "line": 21 },
-		{"name": "startup", "xname": "startup", "start": 8192, "end": 8249, "type": "NATIVE_CODE", "source": "/private/tmp/claude-501/-Users-mars-develop-github-RetroDebugger/53b1db2e-8b8e-4db0-8821-2827ab2f434c/scratchpad/toolchains/oscar64/include/crt.c", "line": 69 },
+{	"memory": [		{"name": "ZeroEnd", "xname": "ZeroEnd", "start": 224, "end": 224, "type": "END", "source": "/private/tmp/claude-501/-Users-mars-develop-github-RetroDebugger/53b1db2e-8b8e-4db0-8821-2827ab2f434c/scratchpad/osc-nd/src-p1/include/crt.c", "line": 21 },
+		{"name": "ZeroStart", "xname": "ZeroStart", "start": 224, "end": 224, "type": "START", "source": "/private/tmp/claude-501/-Users-mars-develop-github-RetroDebugger/53b1db2e-8b8e-4db0-8821-2827ab2f434c/scratchpad/osc-nd/src-p1/include/crt.c", "line": 21 },
+		{"name": "startup", "xname": "startup", "start": 8192, "end": 8249, "type": "NATIVE_CODE", "source": "/private/tmp/claude-501/-Users-mars-develop-github-RetroDebugger/53b1db2e-8b8e-4db0-8821-2827ab2f434c/scratchpad/osc-nd/src-p1/include/crt.c", "line": 69 },
 		{"name": "main", "xname": "main()->i16", "start": 8320, "end": 8348, "type": "NATIVE_CODE", "source": "/private/tmp/rd-source-debug/oscar64/atari/recursion/main.c", "line": 13 },
 		{"name": "sum", "xname": "sum(u8)->u8", "start": 8348, "end": 8408, "type": "NATIVE_CODE", "source": "/private/tmp/rd-source-debug/oscar64/atari/recursion/main.c", "line": 7 },
-		{"name": "BSSStart", "xname": "BSSStart", "start": 8408, "end": 8408, "type": "START", "source": "/private/tmp/claude-501/-Users-mars-develop-github-RetroDebugger/53b1db2e-8b8e-4db0-8821-2827ab2f434c/scratchpad/toolchains/oscar64/include/crt.c", "line": 21 },
+		{"name": "BSSStart", "xname": "BSSStart", "start": 8408, "end": 8408, "type": "START", "source": "/private/tmp/claude-501/-Users-mars-develop-github-RetroDebugger/53b1db2e-8b8e-4db0-8821-2827ab2f434c/scratchpad/osc-nd/src-p1/include/crt.c", "line": 21 },
 		{"name": "result", "xname": "result", "start": 8408, "end": 8409, "type": "DATA", "source": "/private/tmp/rd-source-debug/oscar64/atari/recursion/main.c", "line": 5 },
-		{"name": "BSSEnd", "xname": "BSSEnd", "start": 8409, "end": 8409, "type": "END", "source": "/private/tmp/claude-501/-Users-mars-develop-github-RetroDebugger/53b1db2e-8b8e-4db0-8821-2827ab2f434c/scratchpad/toolchains/oscar64/include/crt.c", "line": 21 },
-		{"name": "StackEnd", "xname": "StackEnd", "start": 48128, "end": 48128, "type": "END", "source": "/private/tmp/claude-501/-Users-mars-develop-github-RetroDebugger/53b1db2e-8b8e-4db0-8821-2827ab2f434c/scratchpad/toolchains/oscar64/include/crt.c", "line": 21 }],
+		{"name": "BSSEnd", "xname": "BSSEnd", "start": 8409, "end": 8409, "type": "END", "source": "/private/tmp/claude-501/-Users-mars-develop-github-RetroDebugger/53b1db2e-8b8e-4db0-8821-2827ab2f434c/scratchpad/osc-nd/src-p1/include/crt.c", "line": 21 },
+		{"name": "StackEnd", "xname": "StackEnd", "start": 48128, "end": 48128, "type": "END", "source": "/private/tmp/claude-501/-Users-mars-develop-github-RetroDebugger/53b1db2e-8b8e-4db0-8821-2827ab2f434c/scratchpad/osc-nd/src-p1/include/crt.c", "line": 21 }],
 	"variables": [
 		{"name": "BSSStart", "start": 8408, "end": 8408, "typeid": 0, "references": [
-			{"source": "/private/tmp/claude-501/-Users-mars-develop-github-RetroDebugger/53b1db2e-8b8e-4db0-8821-2827ab2f434c/scratchpad/toolchains/oscar64/include/crt.c", "line": 21, "column": 28}]},
+			{"source": "/private/tmp/claude-501/-Users-mars-develop-github-RetroDebugger/53b1db2e-8b8e-4db0-8821-2827ab2f434c/scratchpad/osc-nd/src-p1/include/crt.c", "line": 21, "column": 28}]},
 		{"name": "BSSEnd", "start": 8409, "end": 8409, "typeid": 0, "references": [
-			{"source": "/private/tmp/claude-501/-Users-mars-develop-github-RetroDebugger/53b1db2e-8b8e-4db0-8821-2827ab2f434c/scratchpad/toolchains/oscar64/include/crt.c", "line": 21, "column": 38}]},
+			{"source": "/private/tmp/claude-501/-Users-mars-develop-github-RetroDebugger/53b1db2e-8b8e-4db0-8821-2827ab2f434c/scratchpad/osc-nd/src-p1/include/crt.c", "line": 21, "column": 38}]},
 		{"name": "ZeroStart", "start": 224, "end": 224, "typeid": 0, "references": [
-			{"source": "/private/tmp/claude-501/-Users-mars-develop-github-RetroDebugger/53b1db2e-8b8e-4db0-8821-2827ab2f434c/scratchpad/toolchains/oscar64/include/crt.c", "line": 21, "column": 66}]},
+			{"source": "/private/tmp/claude-501/-Users-mars-develop-github-RetroDebugger/53b1db2e-8b8e-4db0-8821-2827ab2f434c/scratchpad/osc-nd/src-p1/include/crt.c", "line": 21, "column": 66}]},
 		{"name": "ZeroEnd", "start": 224, "end": 224, "typeid": 0, "references": [
-			{"source": "/private/tmp/claude-501/-Users-mars-develop-github-RetroDebugger/53b1db2e-8b8e-4db0-8821-2827ab2f434c/scratchpad/toolchains/oscar64/include/crt.c", "line": 21, "column": 77}]},
+			{"source": "/private/tmp/claude-501/-Users-mars-develop-github-RetroDebugger/53b1db2e-8b8e-4db0-8821-2827ab2f434c/scratchpad/osc-nd/src-p1/include/crt.c", "line": 21, "column": 77}]},
 		{"name": "StackEnd", "start": 48128, "end": 48128, "typeid": 0, "references": [
-			{"source": "/private/tmp/claude-501/-Users-mars-develop-github-RetroDebugger/53b1db2e-8b8e-4db0-8821-2827ab2f434c/scratchpad/toolchains/oscar64/include/crt.c", "line": 21, "column": 18}]},
+			{"source": "/private/tmp/claude-501/-Users-mars-develop-github-RetroDebugger/53b1db2e-8b8e-4db0-8821-2827ab2f434c/scratchpad/osc-nd/src-p1/include/crt.c", "line": 21, "column": 18}]},
 		{"name": "result", "start": 8408, "end": 8409, "typeid": 1, "references": [
 			{"source": "/private/tmp/rd-source-debug/oscar64/atari/recursion/main.c", "line": 5, "column": 24},
 			{"source": "/private/tmp/rd-source-debug/oscar64/atari/recursion/main.c", "line": 14, "column": 5}]}	],
@@ -33,13 +33,11 @@
 		{"name": "sum", "xname": "sum(u8)->u8", "start": 8348, "end": 8408, "typeid": 3, "source": "/private/tmp/rd-source-debug/oscar64/atari/recursion/main.c", "line": 7, "lines": [
 			{"start": 8365, "end": 8371, "source": "/private/tmp/rd-source-debug/oscar64/atari/recursion/main.c", "line": 8},
 			{"start": 8371, "end": 8388, "source": "/private/tmp/rd-source-debug/oscar64/atari/recursion/main.c", "line": 10},
-			{"start": 8388, "end": 8390, "source": "/private/tmp/rd-source-debug/oscar64/atari/recursion/main.c", "line": 9},
-			{"start": 8390, "end": 8408, "source": "/private/tmp/rd-source-debug/oscar64/atari/recursion/main.c", "line": 10}], 
+			{"start": 8388, "end": 8408, "source": "/private/tmp/rd-source-debug/oscar64/atari/recursion/main.c", "line": 9}], 
 			"origins":[
 			{"start": 8365, "end": 8373, "source": "/private/tmp/rd-source-debug/oscar64/atari/recursion/main.c", "line": 8},
 			{"start": 8373, "end": 8388, "source": "/private/tmp/rd-source-debug/oscar64/atari/recursion/main.c", "line": 10},
-			{"start": 8388, "end": 8390, "source": "/private/tmp/rd-source-debug/oscar64/atari/recursion/main.c", "line": 9},
-			{"start": 8390, "end": 8408, "source": "/private/tmp/rd-source-debug/oscar64/atari/recursion/main.c", "line": 10}], 
+			{"start": 8388, "end": 8408, "source": "/private/tmp/rd-source-debug/oscar64/atari/recursion/main.c", "line": 9}], 
 			"variables":[
 			{"name": "n", "start": 7, "end": 8, "base": 161, "typeid": 4}], "references": [
 			{"source": "/private/tmp/rd-source-debug/oscar64/atari/recursion/main.c", "line": 7, "column": 15},
