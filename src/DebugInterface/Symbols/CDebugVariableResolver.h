@@ -33,6 +33,12 @@ std::string DebugTypeName(const CDebugDatabase *database, u32 typeId);
 CDebugVariableResolution DebugResolveVariable(const CDebugDatabase *database, CDebugInterface *debugInterface,
 											  u32 regionId, const std::string &name, u16 pc);
 
+// RD-053: the variable NAME of FUNCTION ("" for the global NAME) at PC --
+// what a watch kept by name shows. Missing with a reason when the PC is not
+// in FUNCTION: a local is not in scope there.
+CDebugVariableResolution DebugResolveVariableIn(const CDebugDatabase *database, CDebugInterface *debugInterface,
+												u32 regionId, const std::string &name, const std::string &function, u16 pc);
+
 // Every variable visible at PC: the PC's function's locals, then the globals.
 std::vector<CDebugVariableResolution> DebugVariablesInScope(const CDebugDatabase *database, CDebugInterface *debugInterface,
 															u32 regionId, u16 pc);

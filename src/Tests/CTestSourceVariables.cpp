@@ -7,6 +7,8 @@
 #include "CDebugSymbolsSegment.h"
 #include "CDebugSymbolsCodeLabel.h"
 #include "CDebugSymbolsDataWatch.h"
+#include "CDebugSourceWatch.h"
+#include "CDebugVariableResolver.h"
 #include "CViewDataDump.h"
 #include "CViewDisassembly.h"
 #include "CViewSourceCode.h"
@@ -184,14 +186,25 @@ void CTestSourceVariables::Run(ITestCallback *cb)
 		int dumpStart = dump ? dump->dataShowStart : -1;
 		bool watched = view->AddVariableWatch("result");
 		CDebugSymbolsDataWatch *watch = di->symbols->currentSegment->FindWatch(2225);
-		bool refused = !view->AddVariableWatch("left") && !view->AddVariableWatch("nothing");
+		// RD-053: add's left (a zero-page parameter) is watched by name, not by address
+		bool byName = view->AddVariableWatch("left");
+		CDebugSourceWatch *leftWatch = di->symbols->FindSourceWatch("left", "add");
+		bool refused = !view->AddVariableWatch("nothing");
 		view->debugSymbols = viewSymbols;
 		guiMain->UnlockMutex();
 		char msg[200];
-		snprintf(msg, sizeof(msg), "Oscar64: the source view shows result in the memory dump (start $%04X) and watches it as an unsigned byte; a parameter register is not watchable",
+		snprintf(msg, sizeof(msg), "Oscar64: the source view shows result in the memory dump (start $%04X) and watches it as an unsigned byte at its address; add's parameter left is watched by name; no watch for an unknown name",
 				 (unsigned)dumpStart);
 		ok = Check(shown && dump && dumpStart <= 2225 && dumpStart + 0x400 > 2225 && watched && watch
-				   && watch->representation == WATCH_REPRESENTATION_UNSIGNED_DEC_8 && refused, msg);
+				   && watch->representation == WATCH_REPRESENTATION_UNSIGNED_DEC_8 && byName && leftWatch
+				   && !di->symbols->currentSegment->FindWatch(0) && refused, msg);
+		if (ok)
+		{
+			di->symbols->UpdateSourceWatches(true);
+			ok = Check(leftWatch->hasValue && leftWatch->live && leftWatch->state.empty() && leftWatch->FormatValue() == "1",
+					   "RD-053: stopped in add, the source watch on left shows 1 (" + leftWatch->FormatValue() + ", " + leftWatch->state + ")");
+		}
+		di->symbols->DeleteAllSourceWatches();
 	}
 	if (ok)
 	{
@@ -238,6 +251,59 @@ void CTestSourceVariables::Run(ITestCallback *cb)
 		nlohmann::json v = ok ? Variable("n") : nlohmann::json();
 		ok = ok && Check(Is(v, "exact", n) && v.value("location", "") == "stack frame",
 						 "Oscar64: at sum's first line n is exact through the recursion: " + std::to_string(n) + " (" + v.dump() + ")");
+	}
+
+	// RD-053: a watch on sum's n, by name: exact at each stop down the
+	// recursion, its last value kept (not live) while running, not in scope
+	// in main, kept across a reload of the debug info and through the
+	// watches' HJSON
+	CDebugSourceWatch *nWatch = ok ? di->symbols->AddSourceWatch("n", "sum", WATCH_REPRESENTATION_UNSIGNED_DEC_8, 1) : NULL;
+	if (ok)
+	{
+		ok = RunTo(0x080D, 0x089C, true);
+		di->symbols->UpdateSourceWatches(true);
+		ok = ok && Check(nWatch->state == "frame not set up" && nWatch->FormatValue().empty(),
+						 "RD-053: at sum's entry the watch on n says the frame is not set up (" + nWatch->state + ")");
+	}
+	for (int n = 3; ok && n >= 2; n--)
+	{
+		ok = RunTo(0x080D, 0x08AD, false);
+		di->symbols->UpdateSourceWatches(true);
+		ok = ok && Check(nWatch->live && nWatch->state.empty() && nWatch->FormatValue() == std::to_string(n)
+						 && nWatch->value.quality == DebugMappingQuality::Exact,
+						 "RD-053: stopped at sum's first line the watch on n shows " + std::to_string(n) + " (" + nWatch->FormatValue() + ")");
+	}
+	if (ok)
+	{
+		di->symbols->UpdateSourceWatches(false);		// as the view does while the machine runs
+		ok = Check(!nWatch->live && nWatch->hasValue && nWatch->FormatValue() == "2",
+				   "RD-053: while running the watch on n keeps the last stop's value 2, marked as not live");
+	}
+	if (ok)
+	{
+		const CDebugFunction *mainFunction = NULL;
+		for (const CDebugFunction &f : di->symbols->debugDatabase->Functions())
+			if (f.name == "main")
+				mainFunction = &f;
+		CDebugVariableResolution r = mainFunction
+			? DebugResolveVariableIn(di->symbols->debugDatabase.get(), di, (u32)di->symbols->currentSegment->debugRegionId, "n", "sum", (u16)mainFunction->start)
+			: CDebugVariableResolution();
+		ok = Check(mainFunction && r.variable == NULL && r.reason.find("not in scope") != std::string::npos,
+				   "RD-053: in main, sum's n is not in scope (" + r.reason + ")");
+	}
+	if (ok)
+	{
+		Hjson::Value hjsonWatches;
+		di->symbols->SerializeWatchesToHjson(hjsonWatches);
+		DebugInfoLoadFile(di->symbols, (currentDir + "/main.dbj").c_str());
+		bool keptOverReload = di->symbols->FindSourceWatch("n", "sum") == nWatch;
+		di->symbols->DeleteAllSourceWatches();
+		di->symbols->DeserializeWatchesFromHjson(hjsonWatches);
+		CDebugSourceWatch *restored = di->symbols->FindSourceWatch("n", "sum");
+		ok = Check(keptOverReload && restored && restored->representation == WATCH_REPRESENTATION_UNSIGNED_DEC_8
+				   && hjsonWatches["SourceWatches"].size() == 1,
+				   "RD-053: the watch on n survives a reload of main.dbj, and is saved and loaded with the watches (\"SourceWatches\")");
+		di->symbols->DeleteAllSourceWatches();
 	}
 
 	// cc65 recursion: the global from its "_result" label, size not recorded;

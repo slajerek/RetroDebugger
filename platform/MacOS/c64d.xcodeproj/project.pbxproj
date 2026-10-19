@@ -84,6 +84,7 @@
 		4111C8BD262EE4380092E150 /* C64DebuggerPluginGoatTracker.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4111C8BC262EE4370092E150 /* C64DebuggerPluginGoatTracker.cpp */; };
 		4113F62629E2C5B7002FE970 /* CViewC64KeyMap.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4113F62429E2C5B7002FE970 /* CViewC64KeyMap.cpp */; };
 		411D2E402D71D4D3007714A9 /* CRenderShaderCRTMonitorOpenGL4.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4150D9DB2D71D15B0068351B /* CRenderShaderCRTMonitorOpenGL4.cpp */; };
+		057B543124733F526E517485 /* CDebugSourceWatch.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4B8010456FF50A15537FBA3A /* CDebugSourceWatch.cpp */; };
 		42A68421ED34196FB1B5261B /* CTestSourceVariables.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F881C5A68F9AC53B6BE23BE2 /* CTestSourceVariables.cpp */; };
 		B8CC17D80F8F7BCCBB9880E7 /* CDebugVariableResolver.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 243B880D4BCCEA5C90D9EF3A /* CDebugVariableResolver.cpp */; };
 		79970CE999068BF0BC878713 /* CTestSourceVerify.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8DBE44C618CB1D49E6D959DE /* CTestSourceVerify.cpp */; };
@@ -1741,6 +1742,8 @@
 		414AD73728797F1200244453 /* CViewC64ScreenViewfinder.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = "$(SRCROOT)/../../src/Views/C64/CViewC64ScreenViewfinder.cpp"; sourceTree = "<absolute>"; };
 		414AD73828797F1200244453 /* CViewC64ScreenViewfinder.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "$(SRCROOT)/../../src/Views/C64/CViewC64ScreenViewfinder.h"; sourceTree = "<absolute>"; };
 		4150D9DB2D71D15B0068351B /* CRenderShaderCRTMonitorOpenGL4.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = "$(SRCROOT)/../../src/Tools/Shaders/CRenderShaderCRTMonitorOpenGL4.cpp"; sourceTree = "<absolute>"; };
+		4B8010456FF50A15537FBA3A /* CDebugSourceWatch.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CDebugSourceWatch.cpp; path = ../../src/DebugInterface/Symbols/CDebugSourceWatch.cpp; sourceTree = SOURCE_ROOT; };
+		2E111862BEB5C92439167528 /* CDebugSourceWatch.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = CDebugSourceWatch.h; path = ../../src/DebugInterface/Symbols/CDebugSourceWatch.h; sourceTree = SOURCE_ROOT; };
 		F881C5A68F9AC53B6BE23BE2 /* CTestSourceVariables.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CTestSourceVariables.cpp; path = ../../src/Tests/CTestSourceVariables.cpp; sourceTree = SOURCE_ROOT; };
 		818431A7B913E9046C1738D1 /* CTestSourceVariables.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = CTestSourceVariables.h; path = ../../src/Tests/CTestSourceVariables.h; sourceTree = SOURCE_ROOT; };
 		243B880D4BCCEA5C90D9EF3A /* CDebugVariableResolver.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CDebugVariableResolver.cpp; path = ../../src/DebugInterface/Symbols/CDebugVariableResolver.cpp; sourceTree = SOURCE_ROOT; };
@@ -5017,6 +5020,8 @@
 			isa = PBXGroup;
 			children = (
 				4150D9DB2D71D15B0068351B /* CRenderShaderCRTMonitorOpenGL4.cpp */,
+				4B8010456FF50A15537FBA3A /* CDebugSourceWatch.cpp */,
+				2E111862BEB5C92439167528 /* CDebugSourceWatch.h */,
 				F881C5A68F9AC53B6BE23BE2 /* CTestSourceVariables.cpp */,
 				818431A7B913E9046C1738D1 /* CTestSourceVariables.h */,
 				243B880D4BCCEA5C90D9EF3A /* CDebugVariableResolver.cpp */,
@@ -8915,6 +8920,7 @@
 				05B51DEEE6500A4D5D45DD85 /* events_posix.c in Sources */,
 				05B51D3B2773C59545583663 /* threads_posix.c in Sources */,
 				411D2E402D71D4D3007714A9 /* CRenderShaderCRTMonitorOpenGL4.cpp in Sources */,
+				057B543124733F526E517485 /* CDebugSourceWatch.cpp in Sources */,
 				42A68421ED34196FB1B5261B /* CTestSourceVariables.cpp in Sources */,
 				B8CC17D80F8F7BCCBB9880E7 /* CDebugVariableResolver.cpp in Sources */,
 				79970CE999068BF0BC878713 /* CTestSourceVerify.cpp in Sources */,

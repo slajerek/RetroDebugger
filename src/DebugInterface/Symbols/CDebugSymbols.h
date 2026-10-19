@@ -21,6 +21,7 @@ class CDebugEventsHistory;
 class CDebugMemoryCell;
 class CDebugMemory;
 class CDebugSourceBreakpoint;
+class CDebugSourceWatch;
 
 #define MAX_LABEL_TEXT_BUFFER_SIZE	512
 
@@ -82,6 +83,17 @@ public:
 	void RemoveSourceBreakpoint(CDebugSourceBreakpoint *breakpoint);
 	CDebugSourceBreakpoint *FindSourceBreakpoint(const char *path, i32 line);
 	
+	// RD-053 (CDebugSourceWatch.h): watches kept by a C variable's name. Not
+	// in a segment: a debug info reload keeps them. DeleteAllWatches (a
+	// .watch file replacing the address watches) leaves them too.
+	std::vector<CDebugSourceWatch *> sourceWatches;
+	CDebugSourceWatch *AddSourceWatch(const std::string &name, const std::string &function, int representation, int numberOfValues);
+	CDebugSourceWatch *FindSourceWatch(const std::string &name, const std::string &function);
+	void RemoveSourceWatch(CDebugSourceWatch *watch);
+	void DeleteAllSourceWatches();
+	// resolves every source watch: at the PC when PAUSED, else the fixed globals only
+	void UpdateSourceWatches(bool paused);
+
 	std::vector<CDebugSymbolsSegment *> segments;
 	CDebugSymbolsSegment *currentSegment;
 

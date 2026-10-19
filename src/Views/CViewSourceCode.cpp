@@ -659,13 +659,19 @@ bool CViewSourceCode::AddVariableWatch(const std::string &name)
 		return false;
 	CDebugVariableResolution r = DebugResolveVariable(database.get(), debugInterface, (u32)debugSymbols->currentSegment->debugRegionId,
 													  name, (u16)debugInterface->GetCpuPC());
-	// an address watch stays at its address: only for variables that do
-	if (r.variable == NULL || !r.hasAddress || !(r.variable->location == DebugVariableLocation::Fixed
-												 || r.variable->location == DebugVariableLocation::FixedScoped))
+	if (r.variable == NULL)
 		return false;
 	int count = 1;
 	u8 representation = WatchRepresentationFor(database.get(), r.variable, &count);
-	debugSymbols->currentSegment->AddWatch((int)r.address, (char *)r.name.c_str(), representation, count);
+	// a global at a fixed address: an address watch, its bytes stay there;
+	// anything else (RD-053) is watched by its name and function, resolved
+	// again at every stop
+	if (r.variable->location == DebugVariableLocation::Fixed && r.function.empty() && r.hasAddress)
+	{
+		debugSymbols->currentSegment->AddWatch((int)r.address, (char *)r.name.c_str(), representation, count);
+		return true;
+	}
+	debugSymbols->AddSourceWatch(r.name, r.function, representation, count);
 	return true;
 }
 
@@ -681,13 +687,12 @@ void CViewSourceCode::RenderVariableMenuItems()
 	std::string show = "Show " + r.name + " in memory";
 	if (ImGui::MenuItem(show.c_str(), NULL, false, r.hasAddress && viewDisassembly && viewDisassembly->viewDataDump))
 		ShowVariableInMemory(r.name);
-	bool fixedAddress = r.variable->location == DebugVariableLocation::Fixed
-		|| r.variable->location == DebugVariableLocation::FixedScoped;
+	bool fixedAddress = r.variable->location == DebugVariableLocation::Fixed && r.function.empty();
 	std::string watch = "Add watch " + r.name;
-	if (ImGui::MenuItem(watch.c_str(), NULL, false, r.hasAddress && fixedAddress))
+	if (ImGui::MenuItem(watch.c_str()))
 		AddVariableWatch(r.name);
-	if (!fixedAddress && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
-		ImGui::SetTooltip("a %s moves with its frame or register: no address watch", DebugVariableLocationName(r.variable->location));
+	if (!fixedAddress && ImGui::IsItemHovered())
+		ImGui::SetTooltip("a %s: watched by name, resolved at every stop (greyed while running)", DebugVariableLocationName(r.variable->location));
 }
 
 void CViewSourceCode::RenderContextMenuItems()

@@ -1,6 +1,8 @@
 #include "SYS_Defs.h"
 #include "DBG_Log.h"
 #include "CViewDataWatch.h"
+#include "CDebugSourceWatch.h"
+#include "CDebugVariableResolver.h"
 #include "CViewC64.h"
 #include "CViewC64Screen.h"
 #include "CImageData.h"
@@ -116,6 +118,7 @@ void CViewDataWatch::RenderImGui()
 	sprintf(buf, "##DataWatchTable_%s", dataAdapter->adapterID);
 
 	CDebugSymbolsDataWatch *watchToDelete = NULL;
+	CDebugSourceWatch *sourceWatchToDelete = NULL;
 
 	// address | label | value | format | delete
 	if (ImGui::BeginTable(buf, 5, ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable | ImGuiTableFlags_Hideable | ImGuiTableFlags_Sortable | ImGuiTableFlags_Borders))
@@ -299,13 +302,74 @@ void CViewDataWatch::RenderImGui()
 				watchToDelete = watch;
 			}
 		}
-		
+
+		// RD-053: watches by C variable name. A fixed global is read live; the
+		// rest are resolved while the machine is stopped and keep the last
+		// stop's value, greyed, while it runs
+		bool paused = debugInterface->GetDebugMode() == DEBUGGER_MODE_PAUSED;
+		symbols->UpdateSourceWatches(paused);
+		for (CDebugSourceWatch *watch : symbols->sourceWatches)
+		{
+			const CDebugVariableResolution &r = watch->value;
+			bool stale = watch->hasValue && !watch->live;
+
+			ImGui::TableNextColumn();
+			if (r.hasAddress)
+				ImGui::TextDisabled("%04X", r.address);
+			else
+				ImGui::TextDisabled("-");
+
+			ImGui::TableNextColumn();
+			if (watch->function.empty())
+				ImGui::Text("%s", watch->name.c_str());
+			else
+				ImGui::Text("%s  (%s)", watch->name.c_str(), watch->function.c_str());
+
+			ImGui::TableNextColumn();
+			std::string text = watch->FormatValue();
+			if (!watch->hasValue)
+				ImGui::TextDisabled("<not resolved yet>");
+			else if (!watch->state.empty() && text.empty())
+				ImGui::TextColored(ImVec4(0.9f, 0.6f, 0.3f, 1.0f), "<%s>", watch->state.c_str());
+			else if (stale)
+				ImGui::TextDisabled("%s", text.c_str());
+			else if (r.quality != DebugMappingQuality::Exact)
+				ImGui::Text("%s ~", text.c_str());
+			else
+				ImGui::Text("%s", text.c_str());
+			if (ImGui::IsItemHovered())
+			{
+				std::string tip = (r.type.empty() ? std::string() : r.type + "  ")
+					+ (r.variable ? DebugVariableLocationName(r.variable->location) : "");
+				if (stale)
+					tip += "\nrunning, value at last stop";
+				if (!r.reason.empty())
+					tip += "\n" + r.reason;
+				if (!tip.empty())
+					ImGui::SetTooltip("%s", tip.c_str());
+			}
+
+			ImGui::TableNextColumn();
+			sprintf(buf, "##SourceWatchCombo%p", (void *)watch);
+			ImGui::SetNextItemWidth(-FLT_MIN);
+			ImGui::Combo(buf, &(watch->representation), "Hex 8-bits\0Hex 16-bits LE\0Hex 16-bits BE\0Hex 32-bits LE\0Hex 32-bits BE\0Unsigned Dec 8-bits\0Unsigned Dec 16-bits LE\0Unsigned Dec 16-bits BE\0Unsigned Dec 32-bits LE\0Unsigned Dec 32-bits BE\0Signed Dec 8-bits\0Signed Dec 16-bits LE\0Signed Dec 16-bits BE\0Signed Dec 32-bits LE\0Signed Dec 32-bits BE\0Binary\0\0");
+
+			ImGui::TableNextColumn();
+			sprintf(buf, "##delsrc%p", (void *)watch);
+			if (TrashIconButton(buf))
+				sourceWatchToDelete = watch;
+		}
+
 		ImGui::EndTable();
 	}
 
 	if (watchToDelete)
 	{
 		symbols->currentSegment->DeleteWatch(watchToDelete->address);
+	}
+	if (sourceWatchToDelete)
+	{
+		symbols->RemoveSourceWatch(sourceWatchToDelete);
 	}
 
 	if (ImGui::Button("+") || (ImGui::IsWindowFocused() && ImGui::IsKeyPressed(ImGuiKey_Enter)))

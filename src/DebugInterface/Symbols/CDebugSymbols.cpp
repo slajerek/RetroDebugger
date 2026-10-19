@@ -14,6 +14,8 @@
 #include "CSlrString.h"
 #include "CDebugSymbolsSegment.h"
 #include "CViewDataWatch.h"
+#include "CDebugSourceWatch.h"
+#include <algorithm>
 #include "CGuiMain.h"
 #include "CDebugSymbols.h"
 #include "CDebugSourceBreakpoint.h"
@@ -59,6 +61,7 @@ void CDebugSymbols::SetDataAdapter(CDebugDataAdapter *dataAdapter)
 CDebugSymbols::~CDebugSymbols()
 {
 	this->DeactivateSegment();
+	DeleteAllSourceWatches();
 
 	delete debugEventsHistory;
 
@@ -1305,6 +1308,52 @@ void CDebugSymbols::SaveWatchesRetroDebuggerFormat(CSlrString *filePath)
 	fclose(fp);
 }
 
+// RD-053
+CDebugSourceWatch *CDebugSymbols::AddSourceWatch(const std::string &name, const std::string &function, int representation, int numberOfValues)
+{
+	CDebugSourceWatch *watch = FindSourceWatch(name, function);
+	if (watch == NULL)
+	{
+		watch = new CDebugSourceWatch();
+		watch->name = name;
+		watch->function = function;
+		sourceWatches.push_back(watch);
+	}
+	watch->representation = representation;
+	watch->numberOfValues = numberOfValues;
+	return watch;
+}
+
+CDebugSourceWatch *CDebugSymbols::FindSourceWatch(const std::string &name, const std::string &function)
+{
+	for (CDebugSourceWatch *watch : sourceWatches)
+		if (watch->name == name && watch->function == function)
+			return watch;
+	return NULL;
+}
+
+void CDebugSymbols::RemoveSourceWatch(CDebugSourceWatch *watch)
+{
+	auto it = std::find(sourceWatches.begin(), sourceWatches.end(), watch);
+	if (it == sourceWatches.end())
+		return;
+	sourceWatches.erase(it);
+	delete watch;
+}
+
+void CDebugSymbols::DeleteAllSourceWatches()
+{
+	for (CDebugSourceWatch *watch : sourceWatches)
+		delete watch;
+	sourceWatches.clear();
+}
+
+void CDebugSymbols::UpdateSourceWatches(bool paused)
+{
+	for (CDebugSourceWatch *watch : sourceWatches)
+		watch->Update(this, paused);
+}
+
 bool CDebugSymbols::SerializeWatchesToHjson(Hjson::Value hjsonRoot)
 {
 	Hjson::Value hjsonSegmentsArray;
@@ -1322,11 +1371,38 @@ bool CDebugSymbols::SerializeWatchesToHjson(Hjson::Value hjsonRoot)
 		hjsonSegmentsArray.push_back(hjsonSegment);
 	}
 	hjsonRoot["Segments"] = hjsonSegmentsArray;
+	// RD-053: watches by C variable name, beside the segments' address
+	// watches; a file without them loads as before
+	if (!sourceWatches.empty())
+	{
+		Hjson::Value hjsonSourceWatches;
+		for (CDebugSourceWatch *watch : sourceWatches)
+		{
+			Hjson::Value hjsonWatch;
+			watch->Serialize(hjsonWatch);
+			hjsonSourceWatches.push_back(hjsonWatch);
+		}
+		hjsonRoot["SourceWatches"] = hjsonSourceWatches;
+	}
 	return true;
 }
 
 bool CDebugSymbols::DeserializeWatchesFromHjson(Hjson::Value hjsonRoot)
 {
+	Hjson::Value hjsonSourceWatches = hjsonRoot["SourceWatches"];
+	if (hjsonSourceWatches.type() == Hjson::Type::Vector)
+	{
+		DeleteAllSourceWatches();
+		for (int i = 0; i < (int)hjsonSourceWatches.size(); i++)
+		{
+			CDebugSourceWatch *watch = new CDebugSourceWatch();
+			if (watch->Deserialize(hjsonSourceWatches[i]) && FindSourceWatch(watch->name, watch->function) == NULL)
+				sourceWatches.push_back(watch);
+			else
+				delete watch;
+		}
+	}
+
 	Hjson::Value hjsonSegmentsArray = hjsonRoot["Segments"];
 	for (int i = 0; i < hjsonSegmentsArray.size(); i++)
 	{

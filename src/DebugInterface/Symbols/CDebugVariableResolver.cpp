@@ -197,6 +197,37 @@ CDebugVariableResolution DebugResolveVariable(const CDebugDatabase *database, CD
 	return missing;
 }
 
+CDebugVariableResolution DebugResolveVariableIn(const CDebugDatabase *database, CDebugInterface *debugInterface,
+												u32 regionId, const std::string &name, const std::string &function, u16 pc)
+{
+	CDebugVariableResolution missing;
+	missing.name = name;
+	missing.function = function;
+	if (database == NULL)
+	{
+		missing.reason = "no debug info is loaded";
+		return missing;
+	}
+	const CDebugFunction *pcFunction = NULL;
+	const CDebugSourceMapping *mapping = NULL;
+	i32 pcFunctionIndex = FunctionAt(database, debugInterface, regionId, pc, &pcFunction, &mapping);
+	bool found = false;
+	for (const CDebugVariable &variable : database->Variables())
+	{
+		if (variable.name != name)
+			continue;
+		if (function.empty() ? variable.functionIndex >= 0
+			: (variable.functionIndex < 0 || database->Functions()[variable.functionIndex].name != function))
+			continue;
+		found = true;
+		if (function.empty() || variable.functionIndex == pcFunctionIndex)
+			return Resolve(database, debugInterface, variable, pcFunction, mapping, pc);
+	}
+	missing.reason = !found ? (function.empty() ? "no such global" : "no such variable in " + function + "()")
+		: "not in scope: the PC is not in " + function + "()";
+	return missing;
+}
+
 std::vector<CDebugVariableResolution> DebugVariablesInScope(const CDebugDatabase *database, CDebugInterface *debugInterface,
 															u32 regionId, u16 pc)
 {
