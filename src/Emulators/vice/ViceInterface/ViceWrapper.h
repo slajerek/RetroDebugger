@@ -368,6 +368,7 @@ int c64d_is_performing_snapshot_restore();
 int c64d_is_external_snapshot_request_active();
 // True while a snapshot save/load is running, whoever started it.
 int c64d_is_snapshot_operation_in_progress();
+int c64d_drive_pause_deferred();
 int c64d_check_cpu_snapshot_manager_restore();
 void c64d_check_cpu_snapshot_manager_store();
 void c64d_check_snapshot_interval();

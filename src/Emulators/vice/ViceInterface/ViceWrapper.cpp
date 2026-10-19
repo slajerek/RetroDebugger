@@ -1846,6 +1846,18 @@ int c64d_is_snapshot_operation_in_progress()
 	return debugInterfaceVice->snapshotsManager->IsSnapshotOperationInProgress() ? 1 : 0;
 }
 		
+// A drive stop (breakpoint, source step) that lands while a snapshot is being
+// written cannot park the drive (see above). The drive then leaves its
+// catch-up at that PC instead of running on: the rest of its cycles
+// (stop_clk, saved with the snapshot) run at its next sync. Not during a
+// restore: there the replay must reach its target state.
+int c64d_drive_pause_deferred()
+{
+	return c64d_debug_mode.load(std::memory_order_acquire) == DEBUGGER_MODE_PAUSED
+		&& !c64d_is_performing_snapshot_restore()
+		&& (c64d_is_snapshot_operation_in_progress() || c64d_is_external_snapshot_request_active());
+}
+
 // Fast C-level flag for the CPU hot loop — avoids C++ pointer dereferences per cycle.
 // Set by C++ code when replay/recording is toggled or tasks are added.
 volatile int c64d_vice_input_tasks_flag = 0;

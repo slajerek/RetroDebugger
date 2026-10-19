@@ -1,4 +1,6 @@
 #include "CTestDriveSourceStepping.h"
+#include "CByteBuffer.h"
+#include "CSnapshotsManager.h"
 #include "EmulatorsConfig.h"
 #include "CViewC64.h"
 #include "CGuiMain.h"
@@ -260,6 +262,34 @@ bool CTestDriveSourceStepping::RunDrive()
 		snprintf(msg, sizeof(msg), "1541: a drive PC set while the drive is parked stops at the breakpoint on the new PC $0500 (drive PC $%04X, count %d to %d)",
 				 pc, countBefore, di->GetByteFromRam1541(0x0600));
 		ok = Check(paused && pc == 0x0500 && di->GetByteFromRam1541(0x0600) == countBefore, msg);
+	}
+	if (ok)
+	{
+		// a snapshot written while the debugger is paused at a drive stop: the
+		// write runs the drive up to the C64's clock, and a drive stop there
+		// cannot park it (it would wait for itself) -- it now waits at its PC
+		// instead of running on
+		u16 pcBefore = di->GetDrive1541PC();
+		u8 countBefore = di->GetByteFromRam1541(0x0600);
+		CByteBuffer *snapshot = new CByteBuffer();
+		bool saved = di->snapshotsManager->PerformExternalSnapshotRequest(CSnapshotsManager::EXTERNAL_SNAPSHOT_REQUEST_SAVE, snapshot, 5000);
+		delete snapshot;
+		u16 pcAfter = di->GetDrive1541PC();
+		char msg[200];
+		snprintf(msg, sizeof(msg), "1541: a snapshot saved while paused at a drive stop leaves the drive at its PC (saved %d, drive PC $%04X to $%04X, count %d to %d, mode %d)",
+				 saved ? 1 : 0, pcBefore, pcAfter, countBefore, di->GetByteFromRam1541(0x0600), (int)di->GetDebugMode());
+		ok = Check(saved && pcAfter == pcBefore && di->GetByteFromRam1541(0x0600) == countBefore
+				   && di->GetDebugMode() == DEBUGGER_MODE_PAUSED, msg);
+		if (ok)
+		{
+			// run on: the drive leaves the PC it waited at and runs its loop
+			di->SetDebugMode(DEBUGGER_MODE_RUNNING);
+			SYS_Sleep(500);
+			di->PauseEmulationBlockedWait();
+			snprintf(msg, sizeof(msg), "1541: run on from there, the drive runs its loop again (count %d to %d)",
+					 countBefore, di->GetByteFromRam1541(0x0600));
+			ok = Check(di->GetByteFromRam1541(0x0600) != countBefore, msg);
+		}
 	}
 
 	// the drive back to its ROM, its RAM and the symbols back

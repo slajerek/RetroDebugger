@@ -63,6 +63,8 @@
 //       look at lines such drive_context[0]->via1d1541->c64d_irq_flagged ...
 
 int _c64d_new_drive_pc = -1;
+// a drive stop deferred out of a snapshot write: the PC it waits at (-1: none)
+static int c64d_drive_deferred_pause_pc = -1;
 int _c64d_new_drive_dnr = -1;
 
 //
@@ -2592,6 +2594,16 @@ opcode.op.op8[0] = ((o) >> 16) & 0xff; \
 				if (_dm != DEBUGGER_MODE_RUN_ONE_INSTRUCTION
 					&& _dm != DEBUGGER_MODE_RUN_ONE_CYCLE)
 				{
+					if (c64d_drive_deferred_pause_pc == (int)reg_pc)
+					{
+						// back at a stop deferred out of a snapshot write: it was
+						// reported; park now if still paused, else run on
+						c64d_drive_deferred_pause_pc = -1;
+						viceCurrentDiskPC[0] = reg_pc;
+						c64d_debug_pause_check(0);
+					}
+					else
+					{
 					// c64d check PC breakpoint after IRQ or trap
 					c64d_drive1541_check_pc_breakpoint(reg_pc);
 					// the boundary for a drive source step (RD-044): here only,
@@ -2599,6 +2611,7 @@ opcode.op.op8[0] = ((o) >> 16) & 0xff; \
 					c64d_drive1541_notify_boundary(reg_pc, reg_sp);
 					viceCurrentDiskPC[0] = reg_pc;
 					c64d_debug_pause_check(0);
+					}
 					// a PC set while the drive was parked just above: the
 					// instruction there gets its breakpoint check and boundary
 					// too, instead of running unchecked from the fetch below
@@ -2611,6 +2624,13 @@ opcode.op.op8[0] = ((o) >> 16) & 0xff; \
 						c64d_drive1541_check_pc_breakpoint(reg_pc);
 						c64d_drive1541_notify_boundary(reg_pc, reg_sp);
 						c64d_debug_pause_check(0);
+					}
+					if (c64d_drive_pause_deferred())
+					{
+						// stopped inside a snapshot write: wait at this PC (see
+						// c64d_drive_pause_deferred), the cycles left run later
+						c64d_drive_deferred_pause_pc = reg_pc;
+						goto c64d_drive_leave_catch_up;
 					}
 				}
 				}
@@ -3725,6 +3745,12 @@ opcode.op.op8[0] = ((o) >> 16) & 0xff; \
 			viceCurrentDiskPC[0] = reg_pc;
 			
 			c64d_debug_pause_check(0);
+			if (c64d_drive_pause_deferred())
+			{
+				// as at the top of the loop: wait at this PC out of a snapshot write
+				c64d_drive_deferred_pause_pc = reg_pc;
+				goto c64d_drive_leave_catch_up;
+			}
 		}
 		
 		//		if (c64d_debug_mode == C64_DEBUG_SHUTDOWN)
@@ -3739,6 +3765,7 @@ opcode.op.op8[0] = ((o) >> 16) & 0xff; \
 
     }
 
+c64d_drive_leave_catch_up:
     cpu->last_clk = clk_value;
     drivecpu_sleep(drv);
 }
