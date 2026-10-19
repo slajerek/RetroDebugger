@@ -13,6 +13,11 @@ do not edit by hand. `ok` = built and committed under `tests/data/source-debug/`
 | banked | kickass | 5.24-65ce02.e | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
 | banked | kickc | 0.8.6 | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
 | banked | oscar64 | 1.32.273 | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
+| banked-kickass | 64tass | 1.59.3120 | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
+| banked-kickass | cc65 | 2.19 | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
+| banked-kickass | kickass | 5.24-65ce02.e | n/a | n/a | n/a | ok | n/a | n/a | n/a | n/a | n/a | n/a |
+| banked-kickass | kickc | 0.8.6 | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
+| banked-kickass | oscar64 | 1.32.273 | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
 | basic-flow | 64tass | 1.59.3120 | ok | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
 | basic-flow | cc65 | 2.19 | ok | ok | ok | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
 | basic-flow | kickass | 5.24-65ce02.e | ok | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |

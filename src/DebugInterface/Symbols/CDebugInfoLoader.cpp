@@ -3,6 +3,8 @@
 #include "CDebugSymbols.h"
 #include "CDebugSymbolsSegment.h"
 #include "CDebugSymbolsCodeLabel.h"
+#include "CDebugBreakpointsAddr.h"
+#include "CDebugBreakpointAddr.h"
 #include "CDebugInterface.h"
 #include "CDebugDataAdapter.h"
 #include "CByteBuffer.h"
@@ -151,6 +153,18 @@ DebugInfoFormat DebugInfoLoadFile(CDebugSymbols *symbols, const char *cPath, con
 		std::string dir(cPath);
 		size_t slash = dir.find_last_of("/\\");
 		options.debugFileDir = (slash == std::string::npos) ? std::string(".") : dir.substr(0, slash);
+	}
+
+	if (format == DebugInfoFormat::KickAssDbg && options.segmentImages.empty())
+	{
+		// RD-007: the project's segment table next to the debug file
+		std::string tablePath = DebugInfoSegmentTablePath(cPath);
+		std::string error;
+		CSlrFileFromOS *table = new CSlrFileFromOS((char *)tablePath.c_str());
+		bool exists = table->Exists();
+		delete table;
+		if (exists && !DebugInfoReadSegmentTable(tablePath.c_str(), options.segmentImages, error))
+			LOGError("DebugInfoLoadFile: %s", error.c_str());
 	}
 
 	switch (format)
@@ -742,6 +756,96 @@ static void ClassifyKickCLabels(CDebugDatabase *database, const std::vector<u32>
 	}
 }
 
+static std::filesystem::path Utf8Path(const std::string &path);
+
+std::string DebugInfoSegmentTablePath(const char *debugFilePath)
+{
+	std::string path(debugFilePath);
+	size_t slash = path.find_last_of("/\\");
+	size_t dot = path.find_last_of('.');
+	if (dot != std::string::npos && (slash == std::string::npos || dot > slash))
+		path.erase(dot);
+	return path + ".segments.json";
+}
+
+// a JSON number, or a "$hex" / "0xhex" / decimal string
+static bool SegmentTableNumber(const Hjson::Value &value, u64 &out)
+{
+	if (value.type() == Hjson::Type::Int64 || value.type() == Hjson::Type::Double)
+	{
+		if (value.to_double() < 0)
+			return false;
+		out = (u64)value.to_int64();
+		return true;
+	}
+	if (value.type() != Hjson::Type::String)
+		return false;
+	std::string text = value.to_string();
+	int base = 10;
+	size_t at = 0;
+	if (!text.empty() && text[0] == '$')
+	{
+		base = 16;
+		at = 1;
+	}
+	else if (text.size() > 2 && text[0] == '0' && (text[1] == 'x' || text[1] == 'X'))
+	{
+		base = 16;
+		at = 2;
+	}
+	if (at >= text.size())
+		return false;
+	char *end = NULL;
+	out = strtoull(text.c_str() + at, &end, base);
+	return end && *end == 0;
+}
+
+bool DebugInfoReadSegmentTable(const char *path, std::vector<CDebugSegmentImage> &segments, std::string &error)
+{
+	segments.clear();
+	std::ifstream in(Utf8Path(path), std::ios::binary);
+	if (!in)
+	{
+		error = std::string(path) + ": cannot be read";
+		return false;
+	}
+	std::string text((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+	Hjson::Value root;
+	try
+	{
+		root = Hjson::Unmarshal(text.c_str(), text.size());
+	}
+	catch (const std::exception &e)
+	{
+		error = std::string(path) + ": " + e.what();
+		return false;
+	}
+	const Hjson::Value list = root.type() == Hjson::Type::Map ? root["segments"] : Hjson::Value();
+	if (list.type() != Hjson::Type::Vector)
+	{
+		error = std::string(path) + ": no \"segments\" list";
+		return false;
+	}
+	for (int i = 0; i < (int)list.size(); i++)
+	{
+		const Hjson::Value entry = list[i];
+		CDebugSegmentImage image;
+		u64 address = 0;
+		if (entry.type() != Hjson::Type::Map || entry["segment"].type() != Hjson::Type::String
+			|| !SegmentTableNumber(entry["address"], address) || address > 0xFFFF
+			|| !SegmentTableNumber(entry["image"], image.imageOffset))
+		{
+			error = std::string(path) + ": entry " + std::to_string(i) + " needs \"segment\", \"address\" ($0000-$FFFF) and \"image\"";
+			segments.clear();
+			return false;
+		}
+		image.segment = entry["segment"].to_string();
+		image.address = (u32)address;
+		segments.push_back(image);
+	}
+	return true;
+}
+
 bool DebugInfoLoadKickAss(CDebugSymbols *symbols, CByteBuffer *byteBuffer, const char *debugFileDir)
 {
 	CDebugInfoLoadOptions options;
@@ -839,19 +943,79 @@ bool DebugInfoLoadKickAss(CDebugSymbols *symbols, CByteBuffer *byteBuffer, const
 
 	int maxAddress = symbols->dataAdapter->AdapterGetDataLength();
 
+	// RD-007: the segments the project's table places in the program file,
+	// in the table's order, loaded together into one symbols segment and
+	// region (named after them: "Bank0+Bank1") whose code resolves by the
+	// bank in. A table entry for a segment the file does not have is ignored.
+	std::set<std::string> fileSegments;
+	for (pugi::xml_node segmentNode = rootTag.child("Segment"); segmentNode; segmentNode = segmentNode.next_sibling("Segment"))
+		fileSegments.insert(segmentNode.attribute("name").value());
+	std::map<std::string, const CDebugSegmentImage *> segmentImage;
+	std::string bankedName;
+	for (const CDebugSegmentImage &image : options.segmentImages)
+	{
+		if (!fileSegments.count(image.segment))
+		{
+			LOGError("DebugInfoLoadKickAss: the segment table names %s, which the .dbg does not have", image.segment.c_str());
+			continue;
+		}
+		if (segmentImage.count(image.segment))
+			continue;
+		segmentImage[image.segment] = &image;
+		bankedName += (bankedName.empty() ? "" : "+") + image.segment;
+	}
+	CDebugSymbolsSegment *bankedSegment = NULL;
+	u32 bankedRegionId = 0;
+	// the symbols segment of each .dbg segment name (labels, watches, breakpoints)
+	std::map<std::string, CDebugSymbolsSegment *> segmentByName;
+	auto findSegment = [&](CSlrString *name) -> CDebugSymbolsSegment * {
+		auto it = segmentByName.find(ToStd(name));
+		return it != segmentByName.end() ? it->second : symbols->FindSegment(name);
+	};
+	// the image offset of ADDRESS in a table segment's code
+	auto imageOf = [&](const std::string &segmentName, u32 address, u64 *imageOffset) -> bool {
+		auto it = segmentImage.find(segmentName);
+		if (it == segmentImage.end() || address < it->second->address)
+			return false;
+		*imageOffset = it->second->imageOffset + (address - it->second->address);
+		return true;
+	};
+
 	// == Segments: "START,END,FILE_IDX,LINE1,COL1,LINE2,COL2" per <Block>, END inclusive
+	std::vector<CDebugSourceMapping> segmentMappings;
 	int segmentNum = 0;
 	for (pugi::xml_node segmentNode = rootTag.child("Segment"); segmentNode; segmentNode = segmentNode.next_sibling("Segment"))
 	{
 		const char *segmentNameStr = segmentNode.attribute("name").value();
-		u32 regionId = database->AddRegion(segmentNameStr, segmentNode.attribute("dest").value());
-
-		CDebugSymbolsSegment *segment = symbols->CreateNewDebugSymbolsSegment(new CSlrString(segmentNameStr), segmentNum++);
-		segment->debugRegionId = (int)regionId;
-		symbols->segments.push_back(segment);
+		bool inTable = segmentImage.count(segmentNameStr) > 0;
+		u32 regionId;
+		CDebugSymbolsSegment *segment;
+		if (inTable && bankedSegment != NULL)
+		{
+			regionId = bankedRegionId;
+			segment = bankedSegment;
+		}
+		else
+		{
+			regionId = database->AddRegion(inTable ? bankedName.c_str() : segmentNameStr, segmentNode.attribute("dest").value());
+			segment = symbols->CreateNewDebugSymbolsSegment(new CSlrString(inTable ? bankedName.c_str() : segmentNameStr), segmentNum++);
+			segment->debugRegionId = (int)regionId;
+			symbols->segments.push_back(segment);
+			if (inTable)
+			{
+				bankedSegment = segment;
+				bankedRegionId = regionId;
+			}
+		}
+		segmentByName[segmentNameStr] = segment;
 
 		for (pugi::xml_node blockNode = segmentNode.child("Block"); blockNode; blockNode = blockNode.next_sibling("Block"))
 		{
+			// KickAssembler's fill of a segment's min..max range ([fill]) is
+			// mapped to the .segmentdef line: no code, and in a banked
+			// cartridge it would cover the other banks' code
+			if (strcmp(blockNode.attribute("name").value(), "FillMinMax") == 0)
+				continue;
 			u32 blockId = database->AddBlock(blockNode.attribute("name").value(), regionId);
 
 			CSlrString *strBlock = new CSlrString(blockNode.child_value());
@@ -896,7 +1060,8 @@ bool DebugInfoLoadKickAss(CDebugSymbols *symbols, CByteBuffer *byteBuffer, const
 						mapping.lineEnd = (*words)[10]->ToInt();
 						mapping.columnEnd = (*words)[12]->ToInt();
 						mapping.quality = DebugMappingQuality::Exact;
-						database->AddMapping(mapping);
+						mapping.hasImageOffset = imageOf(segmentNameStr, mapping.start, &mapping.imageOffset);
+						segmentMappings.push_back(mapping);
 					}
 				}
 				else if (words->size() != 0)
@@ -909,6 +1074,40 @@ bool DebugInfoLoadKickAss(CDebugSymbols *symbols, CByteBuffer *byteBuffer, const
 			delete strBlock;
 		}
 	}
+
+	// RD-007: code that two segments place at one CPU address -- banks, or
+	// overlays loaded over each other -- is Ambiguous unless its offset in
+	// the program file is known (the segment table): only then can the bytes
+	// fetched there be told apart
+	{
+		std::vector<int> regionAt(0x10000, -1);
+		std::vector<bool> shared(0x10000, false);
+		for (const CDebugSourceMapping &mapping : segmentMappings)
+		{
+			for (u32 address = mapping.start; address < mapping.end && address < 0x10000; address++)
+			{
+				if (regionAt[address] < 0)
+					regionAt[address] = (int)mapping.regionId;
+				else if (regionAt[address] != (int)mapping.regionId)
+					shared[address] = true;
+			}
+		}
+		for (CDebugSourceMapping &mapping : segmentMappings)
+		{
+			if (mapping.hasImageOffset)
+				continue;
+			for (u32 address = mapping.start; address < mapping.end && address < 0x10000; address++)
+			{
+				if (shared[address])
+				{
+					mapping.quality = DebugMappingQuality::Ambiguous;
+					break;
+				}
+			}
+		}
+	}
+	for (const CDebugSourceMapping &mapping : segmentMappings)
+		database->AddMapping(mapping);
 
 	if (symbols->segments.empty())
 	{
@@ -943,7 +1142,7 @@ bool DebugInfoLoadKickAss(CDebugSymbols *symbols, CByteBuffer *byteBuffer, const
 				continue;
 			}
 
-			CDebugSymbolsSegment *segment = symbols->FindSegment((*words)[0]);
+			CDebugSymbolsSegment *segment = findSegment((*words)[0]);
 			if (segment == NULL)
 			{
 				LOGError("ParseLabels: segment not found");
@@ -952,7 +1151,12 @@ bool DebugInfoLoadKickAss(CDebugSymbols *symbols, CByteBuffer *byteBuffer, const
 			}
 			int address = (*words)[1]->ToIntFromHex();
 			char *labelNameStr = (*words)[2]->GetStdASCII();
-			if (labelNameStr[0] != 0)
+			u64 imageOffset = 0;
+			if (labelNameStr[0] != 0 && imageOf(ToStd((*words)[0]), (u32)address, &imageOffset))
+			{
+				segment->AddBankedCodeLabel(address, imageOffset, labelNameStr);	// RD-007: the label of its bank
+			}
+			else if (labelNameStr[0] != 0)
 			{
 				segment->AddCodeLabel(address, labelNameStr);	// copies the text
 			}
@@ -1021,7 +1225,7 @@ bool DebugInfoLoadKickAss(CDebugSymbols *symbols, CByteBuffer *byteBuffer, const
 				}
 			}
 
-			CDebugSymbolsSegment *segment = symbols->FindSegment((*words)[0]);
+			CDebugSymbolsSegment *segment = findSegment((*words)[0]);
 			if (segment == NULL)
 			{
 				LOGError("ParseWatches: segment not found");
@@ -1058,7 +1262,7 @@ bool DebugInfoLoadKickAss(CDebugSymbols *symbols, CByteBuffer *byteBuffer, const
 				continue;
 			}
 
-			CDebugSymbolsSegment *segment = symbols->FindSegment((*breakpointWords)[0]);
+			CDebugSymbolsSegment *segment = findSegment((*breakpointWords)[0]);
 			int breakpointAddress = (*breakpointWords)[2]->ToIntFromHex();
 			if (segment == NULL)
 			{
@@ -1066,11 +1270,20 @@ bool DebugInfoLoadKickAss(CDebugSymbols *symbols, CByteBuffer *byteBuffer, const
 				CSlrString::DeleteVector(breakpointWords);
 				continue;
 			}
+			// RD-007: in a table segment, a PC breakpoint stops only in its bank
+			u64 breakpointImage = 0;
+			bool breakpointBanked = imageOf(ToStd((*breakpointWords)[0]), (u32)breakpointAddress, &breakpointImage);
+			auto addBreakpointPC = [&]() {
+				segment->AddBreakpointPC(breakpointAddress);
+				CDebugBreakpointAddr *added = breakpointBanked ? segment->breakpointsPC->GetBreakpoint(breakpointAddress) : NULL;
+				if (added && std::find(added->imageOffsets.begin(), added->imageOffsets.end(), breakpointImage) == added->imageOffsets.end())
+					added->imageOffsets.push_back(breakpointImage);
+			};
 
 			// "SEGMENT,ADDRESS," -- a plain PC breakpoint
 			if (breakpointWords->size() == 4)
 			{
-				segment->AddBreakpointPC(breakpointAddress);
+				addBreakpointPC();
 				CSlrString::DeleteVector(breakpointWords);
 				continue;
 			}
@@ -1094,7 +1307,7 @@ bool DebugInfoLoadKickAss(CDebugSymbols *symbols, CByteBuffer *byteBuffer, const
 				command->ConvertToLowerCase();
 				if (command->Equals("break") || command->Equals("breakpc") || command->Equals("breakonpc"))
 				{
-					segment->AddBreakpointPC(breakpointAddress);
+					addBreakpointPC();
 				}
 				else if (command->Equals("setbkg") || command->Equals("setbackground"))
 				{
@@ -1570,7 +1783,6 @@ static bool IsCc65GeneratedLabel(const std::string &name)
 	return true;
 }
 
-static std::filesystem::path Utf8Path(const std::string &path);
 
 bool DebugInfoLoadCc65(CDebugSymbols *symbols, CByteBuffer *byteBuffer, const CDebugInfoLoadOptions &options)
 {

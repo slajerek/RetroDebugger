@@ -1,0 +1,41 @@
+{
+  "buildDir": "/tmp/rd-source-debug/kickass/c64-magicdesk/banked-kickass",
+  "commit": null,
+  "fixedMtime": 1767225600,
+  "fixture": "banked-kickass",
+  "inputs": {
+    "kickass-magicdesk.asm": "6e06917b5a7b5b18b0857288a2f0316ea2391cc00260cfe7c30e3b4434d71657",
+    "main.segments.json": "df4d0459d6d44f74ed8030186413cfa71f5424817420976eb409b93b908234f1"
+  },
+  "machine": "c64-magicdesk",
+  "outputs": {
+    "main.crt": {
+      "sha256": "b2b8d99f08d6433ff47669f89c43b5dbb55a129d22b67920db9feae067fb1fa1",
+      "size": 16480
+    },
+    "main.dbg": {
+      "sha256": "02b09061f9e221574e185adde3acde79215f8a9c1f6f0ed6f3dbd89472d953ec",
+      "size": 3421
+    },
+    "main.segments.json": {
+      "sha256": "df4d0459d6d44f74ed8030186413cfa71f5424817420976eb409b93b908234f1",
+      "size": 315
+    }
+  },
+  "source": "kickass-magicdesk.asm",
+  "steps": [
+    [
+      "kickass",
+      "kickass-magicdesk.asm",
+      "-debugdump"
+    ]
+  ],
+  "toolDirs": {
+    "kickass": "/private/tmp/claude-501/-Users-mars-develop-github-RetroDebugger/53b1db2e-8b8e-4db0-8821-2827ab2f434c/scratchpad/toolchains/bin"
+  },
+  "toolchain": "kickass",
+  "version": "5.24-65ce02.e",
+  "versionReported": {
+    "kickass": "//         Kick Assembler v5.24 by Mads Nielsen"
+  }
+}

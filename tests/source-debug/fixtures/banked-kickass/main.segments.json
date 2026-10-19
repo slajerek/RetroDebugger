@@ -1,0 +1,7 @@
+{
+  "about": "RD-007: where kickass-magicdesk.asm's banked segments are in main.crt (64-byte CRT header, then per bank a 16-byte CHIP header and the 8 KB bank)",
+  "segments": [
+    { "segment": "Bank0", "address": "$8000", "image": "$0050" },
+    { "segment": "Bank1", "address": "$8000", "image": "$2060" }
+  ]
+}

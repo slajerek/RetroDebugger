@@ -11,7 +11,10 @@
 // once, bankA's line on each of its two calls, never on the other bank's
 // code at the same address. The C64 runs the same checks on a Magic Desk
 // cartridge build (banks 0 and 1 at $9000, .crt file offsets), the Atari on
-// an XEGS 32 KB build (banks 0 and 1 at $8000, .car file offsets).
+// an XEGS 32 KB build (banks 0 and 1 at $8000, .car file offsets). RD-007:
+// a KickAssembler Magic Desk build (segments Bank0 and Bank1 at $9000):
+// without its segment table the shared code is Ambiguous; with it the two
+// segments load as one and stop, label and resolve by the bank in.
 class CTestBankedSource : public CTest
 {
 public:
@@ -36,5 +39,6 @@ private:
 	bool RunDatabase();
 	bool RunNes(const NesCartridge &cart);
 	bool RunC64();
+	bool RunC64KickAss();
 	bool RunAtari();
 };

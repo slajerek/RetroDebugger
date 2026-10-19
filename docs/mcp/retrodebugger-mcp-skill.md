@@ -84,7 +84,11 @@ Use this skill when working with the RetroDebugger MCP server to debug 8-bit pro
   to the next line with code in that function; `resolved:false` means nothing matched yet
 - `retro_symbols_load` — load symbols / debug info by content (KickAssembler or cc65 `.dbg`,
   Oscar64 `.dbj`, VICE/64tass labels); returns counts and `warnings` for stale debug info
-  (a source edited after the build, or a program and debug file from different builds)
+  (a source edited after the build, or a program and debug file from different builds), and
+  `segments`. A KickAssembler cartridge with banks assembled at one address needs a segment
+  table next to the `.dbg` (`main.segments.json`: `{"segments": [{"segment": "Bank0",
+  "address": "$8000", "image": "$0050"}]}`, the segment's byte at `address` is at `image`
+  in the .crt/.car/.nes); without it `retro_source_location` reports `quality:"ambiguous"`
 - `retro_assemble` — assemble 6502 code into memory. Default `assembler:"line"`: one
   instruction per line, atomic. `assembler:"64tass"`: a whole 64tass source (labels,
   directives, `*=` origin; `address` is prepended as the origin when given). Its code labels

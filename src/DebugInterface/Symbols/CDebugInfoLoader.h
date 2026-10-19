@@ -30,6 +30,29 @@ enum class DebugInfoFormat : u8
 
 const char *DebugInfoFormatName(DebugInfoFormat format);
 
+// RD-007: where a KickAssembler segment's bytes are in the program file.
+// KickAssembler names its segments but records no file offset, so code of
+// several banks assembled at one CPU address cannot be told apart from the
+// .dbg alone: without an entry such segments' mappings are Ambiguous. With
+// one, the byte at CPU ADDRESS of SEGMENT is at IMAGEOFFSET in the program
+// file (a .crt, .car or .nes, header included), and every listed segment is
+// loaded into one symbols segment whose code resolves by the bank in.
+struct CDebugSegmentImage
+{
+	std::string segment;
+	u32 address = 0;
+	u64 imageOffset = 0;
+};
+
+// Reads a segment table, (H)JSON: {"segments": [{"segment": "Bank0",
+// "address": "$8000", "image": "$0050"}, ...]}; numbers as JSON numbers or
+// "$hex"/"0xhex" strings. DebugInfoLoadFile reads <debug file without its
+// extension>.segments.json when the caller gives no table. False with
+// ERROR set when the file is unreadable or malformed.
+bool DebugInfoReadSegmentTable(const char *path, std::vector<CDebugSegmentImage> &segments, std::string &error);
+// The table's path for a debug file: main.dbg -> main.segments.json
+std::string DebugInfoSegmentTablePath(const char *debugFilePath);
+
 // Where loaders look for the source files a debug file names. A source is
 // looked up (1) through each remap rule whose FROM prefixes its recorded path
 // (FROM replaced by TO: a build directory that moved, another machine's
@@ -42,6 +65,7 @@ struct CDebugInfoLoadOptions
 	std::string debugFilePath;		// set by DebugInfoLoadFile
 	std::vector<std::pair<std::string, std::string>> pathRemaps;
 	std::vector<std::string> sourceRoots;
+	std::vector<CDebugSegmentImage> segmentImages;		// KickAssembler only
 };
 
 // Decides the format from the first bytes of a file.

@@ -44,6 +44,7 @@ CViewSourceCode::CViewSourceCode(const char *name, float posX, float posY, float
 	fileId = 0;
 	pcLine = 0;
 	pcCandidates = 0;
+	pcSegmentAmbiguous = false;
 	selectedLine = 0;
 	scrollToLine = 0;
 	lastFollowAddress = -1;
@@ -98,6 +99,7 @@ void CViewSourceCode::UpdatePosition()
 	pcLine = 0;
 	pcCandidates = 0;
 	pcInline.clear();
+	pcSegmentAmbiguous = false;
 	if (!database || regionId < 0)
 		return;
 
@@ -116,6 +118,7 @@ void CViewSourceCode::UpdatePosition()
 		std::vector<const CDebugSourceMapping *> candidates;
 		database->ResolveCandidates((u32)regionId, (u32)pc, candidates);
 		pcCandidates = (int)candidates.size();
+		pcSegmentAmbiguous = pcMapping->quality == DebugMappingQuality::Ambiguous;
 	}
 
 	int followAddress = -1;
@@ -331,6 +334,15 @@ void CViewSourceCode::RenderHeader(const CDebugSourceFile *file)
 		ImGui::TextColored(kColorWarning, "PC: ambiguous (%d)", pcCandidates);
 		if (ImGui::IsItemHovered())
 			ImGui::SetTooltip("%d source ranges cover the PC; showing the one in effect", pcCandidates);
+	}
+	if (pcSegmentAmbiguous)
+	{
+		ImGui::SameLine();
+		ImGui::TextColored(kColorWarning, "PC: segment ambiguous");
+		if (ImGui::IsItemHovered())
+			ImGui::SetTooltip("Other segments place code at this address too, and which bytes of the program file\n"
+							  "each one is is not known, so this may be another bank's line.\n"
+							  "A segment table (main.segments.json next to main.dbg) tells the banks apart.");
 	}
 	CSourceStepResult step = (stepper ? stepper : debugInterface->sourceStepper)->GetLastResult();
 	if (step.reason != SourceStepStopReason::None)

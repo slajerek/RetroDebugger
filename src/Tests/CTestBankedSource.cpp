@@ -368,6 +368,206 @@ bool CTestBankedSource::RunC64()
 #endif
 }
 
+bool CTestBankedSource::RunC64KickAss()
+{
+#ifdef RUN_COMMODORE64
+	CDebugInterfaceVice *di = (CDebugInterfaceVice *)viewC64->debugInterfaceC64;
+	if (!di)
+	{
+		ReportRequiredGap("C64 not created");
+		return true;
+	}
+	bool wasRunning = di->isRunning;
+	if (!wasRunning)
+	{
+		viewC64->StartEmulationThread(di);
+		SYS_Sleep(2000);
+	}
+	const std::string label = "Banked KickAssembler Magic Desk: ";
+	std::string dir = ResolveProjectPath("tests/data/source-debug/kickass/c64-magicdesk/banked-kickass");
+	const char *source = "kickass-magicdesk.asm";
+	const int lineA = 80, lineB = 86;		// bankA's and bankB's first instruction, both at $9000
+	const u16 resultAddress = 0x0002;
+
+	guiMain->LockMutex();
+	CSlrString *savedPathToCartridge = c64SettingsPathToCartridge;
+	c64SettingsPathToCartridge = NULL;
+	guiMain->UnlockMutex();
+
+	di->PauseEmulationBlockedWait();
+	CDebugSymbols *liveSymbols = di->symbols;
+	CDebugSymbols *scratch = new CDebugSymbolsC64(di);
+	scratch->SetDataAdapter(di->dataAdapterC64);
+	scratch->CreateDefaultSegment();
+	guiMain->LockMutex();
+	di->LockMutex();
+	di->symbols = scratch;
+	di->UnlockMutex();
+	guiMain->UnlockMutex();
+
+	auto segmentNamed = [&](const char *name) -> CDebugSymbolsSegment * {
+		CSlrString *str = new CSlrString(name);
+		CDebugSymbolsSegment *segment = scratch->FindSegment(str);
+		delete str;
+		return segment;
+	};
+	auto lineAt = [&](CDebugSymbolsSegment *segment, u16 address, DebugMappingQuality *quality) -> int {
+		const CDebugSourceMapping *m = (segment && scratch->debugDatabase)
+			? scratch->debugDatabase->Resolve((u32)segment->debugRegionId, address) : NULL;
+		if (quality)
+			*quality = m ? m->quality : DebugMappingQuality::Missing;
+		return m ? m->lineStart : 0;
+	};
+
+	// without the table: the .dbg loaded from a copy that has none next to it
+	CDebugInfoLoadOptions options;
+	options.sourceRoots.push_back(ResolveProjectPath("tests/source-debug/fixtures/banked-kickass"));
+	std::string bare = "/tmp/rd-kickass-banked-no-table.dbg";
+	bool copied = false;
+	{
+		FILE *in = fopen((dir + "/main.dbg").c_str(), "rb");
+		FILE *out = in ? fopen(bare.c_str(), "wb") : NULL;
+		if (in && out)
+		{
+			char buf[4096];
+			size_t n;
+			while ((n = fread(buf, 1, sizeof(buf), in)) > 0)
+				fwrite(buf, 1, n, out);
+			copied = true;
+		}
+		if (in) fclose(in);
+		if (out) fclose(out);
+	}
+	DebugInfoFormat format = copied ? DebugInfoLoadFile(scratch, bare.c_str(), options) : DebugInfoFormat::Unknown;
+	CDebugSymbolsSegment *bank0 = segmentNamed("Bank0");
+	CDebugSymbolsSegment *bank1 = segmentNamed("Bank1");
+	DebugMappingQuality q0 = DebugMappingQuality::Missing, q1 = DebugMappingQuality::Missing, qReset = DebugMappingQuality::Missing;
+	int l0 = lineAt(bank0, 0x9000, &q0), l1 = lineAt(bank1, 0x9000, &q1);
+	lineAt(bank0, 0x8009, &qReset);
+	char msg[300];
+	snprintf(msg, sizeof(msg), "%swithout a segment table, Bank0 and Bank1 load as two segments and the code both place at $9000 is ambiguous (lines %d/%d, quality %d/%d); bank 0's own code at $8009 stays exact, the [fill] bytes are no code",
+			 label.c_str(), l0, l1, (int)q0, (int)q1);
+	bool ok = Check(format == DebugInfoFormat::KickAssDbg && bank0 && bank1 && bank0 != bank1
+					&& l0 == lineA && l1 == lineB && q0 == DebugMappingQuality::Ambiguous && q1 == DebugMappingQuality::Ambiguous
+					&& qReset == DebugMappingQuality::Exact && lineAt(bank1, 0x8009, NULL) == 0, msg);
+	remove(bare.c_str());
+
+	// with the table next to the .dbg (main.segments.json)
+	format = ok ? DebugInfoLoadFile(scratch, (dir + "/main.dbg").c_str(), options) : DebugInfoFormat::Unknown;
+	CDebugSymbolsSegment *banked = segmentNamed("Bank0+Bank1");
+	DebugMappingQuality qBanked = DebugMappingQuality::Missing;
+	if (banked)
+		lineAt(banked, 0x9000, &qBanked);
+	ok = ok && Check(format == DebugInfoFormat::KickAssDbg && banked && !segmentNamed("Bank0") && !segmentNamed("Bank1")
+					 && scratch->currentSegment == banked && scratch->debugDatabase->HasImageOffsets()
+					 && scratch->debugDatabase->IsBankedAddress((u32)banked->debugRegionId, 0x9000)
+					 && !scratch->debugDatabase->IsBankedAddress((u32)banked->debugRegionId, 0x8009)
+					 && qBanked == DebugMappingQuality::Exact,
+					 label + "with main.segments.json, Bank0 and Bank1 load as one segment \"Bank0+Bank1\" whose code at $9000 is banked and exact");
+
+	CDebugSourceBreakpoint *onB = ok ? scratch->AddSourceBreakpoint(source, lineB) : NULL;
+	CDebugBreakpointAddr *addressB = (onB && onB->IsResolved())
+		? scratch->currentSegment->breakpointsPC->GetBreakpoint(onB->bindings[0].address) : NULL;
+	ok = ok && Check(onB && onB->IsResolved() && onB->bindings.size() == 1 && onB->bindings[0].banked
+					 && addressB && addressB->imageOffsets.size() == 1 && addressB->imageOffsets[0] == 0x2060 + 0x1000,
+					 label + "the source breakpoint on bankB's line binds to $9000 in bank 1 (.crt offset $3060, from the table)");
+
+	auto waitForPause = [&](int timeoutMs) -> bool {
+		for (int waited = 0; waited < timeoutMs; waited += 10)
+		{
+			SYS_Sleep(10);
+			if (di->GetDebugMode() == DEBUGGER_MODE_PAUSED)
+				return true;
+		}
+		return false;
+	};
+	auto runToPause = [&](int timeoutMs) -> bool {
+		di->SetDebugMode(DEBUGGER_MODE_RUNNING);
+		return waitForPause(timeoutMs);
+	};
+	auto readResult = [&]() { return di->GetByteFromRamC64(resultAddress); };
+
+	bool attached = false;
+	if (ok)
+	{
+		di->SetDebugMode(DEBUGGER_MODE_RUNNING);
+		CSlrString *path = new CSlrString((dir + "/main.crt").c_str());
+		di->AttachCartridge(path);
+		delete path;
+		attached = true;
+		bool paused = false;
+		for (int waited = 0; waited < 5000 && !paused; waited += 10)
+		{
+			SYS_Sleep(10);
+			paused = di->GetDebugMode() == DEBUGGER_MODE_PAUSED && (u16)di->GetCpuPC() == 0x9000;
+		}
+		u16 pc = (u16)di->GetCpuPC();
+		u8 value = readResult();
+		const CDebugSourceMapping *m = di->ResolveSourceAt(scratch->debugDatabase.get(), (u32)banked->debugRegionId, 0x9000);
+		snprintf(msg, sizeof(msg), "%sthe cartridge attaches; the bankB breakpoint stops once bank 1 is in, after bankA's first call (PC $%04X, result %d), and the PC resolves to bankB's line (%d)",
+				 label.c_str(), pc, value, m ? m->lineStart : 0);
+		ok = Check(paused && pc == 0x9000 && value == 1 && m && m->lineStart == lineB, msg);
+		std::string got;
+		ok = ok && Check(LabelIs(scratch, 0x9000, "bankB", got), label + "with bank 1 in, the label at $9000 is bankB (got " + got + ")");
+	}
+
+	CDebugSourceBreakpoint *onA = NULL;
+	if (ok)
+	{
+		scratch->RemoveSourceBreakpoint(onB);
+		onB = NULL;
+		onA = scratch->AddSourceBreakpoint(source, lineA);
+		ok = Check(onA && onA->IsResolved() && onA->bindings.size() == 1 && onA->bindings[0].banked,
+				   label + "the source breakpoint on bankA's line binds with bank 0's .crt offset");
+	}
+	if (ok)
+	{
+		bool paused = runToPause(3000);
+		u16 pc = (u16)di->GetCpuPC();
+		u8 value = readResult();
+		const CDebugSourceMapping *m = di->ResolveSourceAt(scratch->debugDatabase.get(), (u32)banked->debugRegionId, 0x9000);
+		snprintf(msg, sizeof(msg), "%sthe bankA breakpoint next stops at bankA's second call (PC $%04X, result %d, line %d), skipping the rest of bankB",
+				 label.c_str(), pc, value, m ? m->lineStart : 0);
+		ok = Check(paused && pc == 0x9000 && value == 11 && m && m->lineStart == lineA, msg);
+		std::string got;
+		ok = ok && Check(LabelIs(scratch, 0x9000, "bankA", got), label + "with bank 0 in, the label at $9000 is bankA (got " + got + ")");
+	}
+	if (ok)
+	{
+		bool paused = runToPause(500);
+		ok = Check(!paused, label + "no further stop -- main's loop never reaches bank 0's line again");
+	}
+
+	if (onA)
+		scratch->RemoveSourceBreakpoint(onA);
+	if (onB)
+		scratch->RemoveSourceBreakpoint(onB);
+	di->SetDebugMode(DEBUGGER_MODE_RUNNING);
+	if (attached)
+	{
+		di->DetachCartridge();		// resets the machine
+		SYS_Sleep(200);
+	}
+	di->PauseEmulationBlockedWait();
+	guiMain->LockMutex();
+	di->LockMutex();
+	di->symbols = liveSymbols;
+	di->UnlockMutex();
+	if (c64SettingsPathToCartridge)
+		delete c64SettingsPathToCartridge;
+	c64SettingsPathToCartridge = savedPathToCartridge;
+	guiMain->UnlockMutex();
+	// scratch leaked on purpose, see CTestSymbolLoaders
+	di->SetDebugMode(DEBUGGER_MODE_RUNNING);
+	if (!wasRunning)
+		viewC64->StopEmulationThread(di);
+	return ok;
+#else
+	ReportRequiredGap("C64 emulation not compiled in");
+	return true;
+#endif
+}
+
 #ifdef RUN_ATARI
 // Atari cartridge changes on the emulation thread, between two frames
 class CTaskInsertAtariCartridge : public CDebugInterfaceTask
@@ -559,11 +759,11 @@ void CTestBankedSource::Run(ITestCallback *cb)
 	const NesCartridge uxrom = { "UxROM", "nes-uxrom", "uxrom.c", 18, 24, 0x6000, 0x4010 };
 	const NesCartridge mmc1 = { "MMC1", "nes-mmc1", "mmc1.c", 19, 25, 0x0300, 0x4010 };
 	const NesCartridge mmc3 = { "MMC3", "nes-mmc3", "mmc3.c", 17, 23, 0x0300, 0x2010 };	// 8 KB banks
-	bool ok = RunDatabase() && RunNes(uxrom) && RunNes(mmc1) && RunNes(mmc3) && RunC64() && RunAtari();
+	bool ok = RunDatabase() && RunNes(uxrom) && RunNes(mmc1) && RunNes(mmc3) && RunC64() && RunC64KickAss() && RunAtari();
 	if (!ok)
 	{
 		TestCompleted(false, failure.c_str());
 		return;
 	}
-	TestCompleted(true, "Banked code resolves and breaks by the bank in the window (NES UxROM, MMC1 and MMC3, C64 Magic Desk, Atari XEGS; cc65)");
+	TestCompleted(true, "Banked code resolves and breaks by the bank in the window (NES UxROM, MMC1 and MMC3, C64 Magic Desk, Atari XEGS; cc65, and KickAssembler with a segment table)");
 }

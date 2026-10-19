@@ -167,6 +167,8 @@ nlohmann::json CDebuggerApi::GetSourceStepStatusJson(const std::string &cpu)
 	return status;
 }
 
+static const char *QualityName(DebugMappingQuality quality);
+
 static nlohmann::json MappingJson(const CDebugDatabase *database, const CDebugSourceMapping *m)
 {
 	nlohmann::json j;
@@ -176,6 +178,9 @@ static nlohmann::json MappingJson(const CDebugDatabase *database, const CDebugSo
 	j["lineEnd"] = m->lineEnd;
 	j["start"] = m->start;
 	j["end"] = m->end;
+	j["quality"] = QualityName(m->quality);
+	if (m->hasImageOffset)
+		j["imageOffset"] = m->imageOffset;
 	return j;
 }
 
@@ -325,6 +330,9 @@ nlohmann::json CDebuggerApi::GetSourceLocationJson(int address, const std::strin
 		j["file"] = file ? file->originalPath : "";
 		j["fileName"] = file ? file->fileName : "";
 		j["line"] = m->lineStart;
+		// RD-007: "ambiguous" when segments place other code here too and
+		// the program file offset that would tell them apart is not known
+		j["quality"] = QualityName(m->quality);
 		const CDebugFunction *function = FunctionFor(debugInterface, target, database.get(), regionId, (u16)address);
 		if (function)
 			j["function"] = function->name;
@@ -457,6 +465,14 @@ nlohmann::json CDebuggerApi::LoadDebugInfoJson(const std::string &path, const st
 		j["files"] = (int)database->NumFiles();
 		j["mappings"] = (int)database->NumMappings();
 		j["functions"] = (int)database->Functions().size();
+	}
+	// RD-007: the symbols segments (a segment table loads its banks as one)
+	j["segments"] = nlohmann::json::array();
+	for (CDebugSymbolsSegment *segment : target.symbols->segments)
+	{
+		char *name = segment->name->GetStdASCII();
+		j["segments"].push_back(name);
+		delete [] name;
 	}
 	j["warnings"] = target.symbols->debugInfoWarnings;
 	return j;

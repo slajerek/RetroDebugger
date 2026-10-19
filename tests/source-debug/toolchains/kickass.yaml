@@ -15,3 +15,10 @@ machines:
     source: kickass-c64.asm
     steps: [["{kickass}", "kickass-c64.asm", "-debugdump", "-o", "main.prg"]]
     outputs: [main.prg, main.dbg]
+  # C64 Magic Desk cartridge (RD-007): KickAssembler writes the whole .crt
+  # (.file + .segmentout); its .dbg records no file offsets, so the project's
+  # segment table (main.segments.json, from the fixture) gives them.
+  c64-magicdesk:
+    source: kickass-magicdesk.asm
+    steps: [["{kickass}", "kickass-magicdesk.asm", "-debugdump"]]
+    outputs: [main.crt, main.dbg, main.segments.json]
