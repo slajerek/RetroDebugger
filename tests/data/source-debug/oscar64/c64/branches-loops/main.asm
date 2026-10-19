@@ -50,78 +50,77 @@ startup: ; startup
 0852 : 60 __ __ RTS
 --------------------------------------------------------------------
 main: ; main()->i16
-;  19, "/tmp/rd-source-debug/oscar64/c64/branches-loops/main.c"
+;  19, "/private/tmp/rd-source-debug/oscar64/c64/branches-loops/main.c"
 .s4:
-;  21, "/tmp/rd-source-debug/oscar64/c64/branches-loops/main.c"
+;  21, "/private/tmp/rd-source-debug/oscar64/c64/branches-loops/main.c"
 0880 : a9 00 __ LDA #$00
 0882 : 8d d0 08 STA $08d0 ; (result + 0)
-;  22, "/tmp/rd-source-debug/oscar64/c64/branches-loops/main.c"
+;  22, "/private/tmp/rd-source-debug/oscar64/c64/branches-loops/main.c"
 0885 : 8d ff 9f STA $9fff ; (i + 0)
-;  23, "/tmp/rd-source-debug/oscar64/c64/branches-loops/main.c"
+;  23, "/private/tmp/rd-source-debug/oscar64/c64/branches-loops/main.c"
 0888 : 18 __ __ CLC
 .l12:
 0889 : ad ff 9f LDA $9fff ; (i + 0)
 088c : aa __ __ TAX
-;  22, "/tmp/rd-source-debug/oscar64/c64/branches-loops/main.c"
+;  22, "/private/tmp/rd-source-debug/oscar64/c64/branches-loops/main.c"
 088d : e8 __ __ INX
 088e : 8e ff 9f STX $9fff ; (i + 0)
-;  23, "/tmp/rd-source-debug/oscar64/c64/branches-loops/main.c"
+;  23, "/private/tmp/rd-source-debug/oscar64/c64/branches-loops/main.c"
 0891 : 6d d0 08 ADC $08d0 ; (result + 0)
 0894 : 8d d0 08 STA $08d0 ; (result + 0)
-;  22, "/tmp/rd-source-debug/oscar64/c64/branches-loops/main.c"
+;  22, "/private/tmp/rd-source-debug/oscar64/c64/branches-loops/main.c"
 0897 : e0 03 __ CPX #$03
 0899 : 90 ee __ BCC $0889 ; (main.l12 + 0)
 .l5:
-;  24, "/tmp/rd-source-debug/oscar64/c64/branches-loops/main.c"
+;  24, "/private/tmp/rd-source-debug/oscar64/c64/branches-loops/main.c"
 089b : ad d0 08 LDA $08d0 ; (result + 0)
 089e : c9 02 __ CMP #$02
-;  25, "/tmp/rd-source-debug/oscar64/c64/branches-loops/main.c"
+;  25, "/private/tmp/rd-source-debug/oscar64/c64/branches-loops/main.c"
 08a0 : ad d0 08 LDA $08d0 ; (result + 0)
-;  24, "/tmp/rd-source-debug/oscar64/c64/branches-loops/main.c"
-08a3 : 90 08 __ BCC $08ad ; (main.s6 + 0)
-.s10:
-;  25, "/tmp/rd-source-debug/oscar64/c64/branches-loops/main.c"
+;  24, "/private/tmp/rd-source-debug/oscar64/c64/branches-loops/main.c"
+08a3 : 90 08 __ BCC $08ad ; (main.s7 + 0)
+.s6:
+;  25, "/private/tmp/rd-source-debug/oscar64/c64/branches-loops/main.c"
 08a5 : e9 02 __ SBC #$02
 08a7 : 8d d0 08 STA $08d0 ; (result + 0)
 08aa : 4c 9b 08 JMP $089b ; (main.l5 + 0)
-.s6:
-;  26, "/tmp/rd-source-debug/oscar64/c64/branches-loops/main.c"
+.s7:
+;  26, "/private/tmp/rd-source-debug/oscar64/c64/branches-loops/main.c"
 08ad : c9 01 __ CMP #$01
-08af : d0 04 __ BNE $08b5 ; (main.s7 + 0)
-.s9:
-;  27, "/tmp/rd-source-debug/oscar64/c64/branches-loops/main.c"
+08af : d0 04 __ BNE $08b5 ; (main.s10 + 0)
+.s8:
+;  27, "/private/tmp/rd-source-debug/oscar64/c64/branches-loops/main.c"
 08b1 : a9 03 __ LDA #$03
 08b3 : d0 02 __ BNE $08b7 ; (main.s11 + 0)
-.s7:
-;  29, "/tmp/rd-source-debug/oscar64/c64/branches-loops/main.c"
+.s10:
+;  29, "/private/tmp/rd-source-debug/oscar64/c64/branches-loops/main.c"
 08b5 : a9 05 __ LDA #$05
 .s11:
 08b7 : 20 c0 08 JSR $08c0 ; (classify.s4 + 0)
 08ba : 8d d0 08 STA $08d0 ; (result + 0)
-.l8:
-08bd : 4c bd 08 JMP $08bd ; (main.l8 + 0)
+.l9:
+08bd : 4c bd 08 JMP $08bd ; (main.l9 + 0)
 --------------------------------------------------------------------
 classify: ; classify(u8)->u8
-;   7, "/tmp/rd-source-debug/oscar64/c64/branches-loops/main.c"
+;   7, "/private/tmp/rd-source-debug/oscar64/c64/branches-loops/main.c"
 .s4:
-;   8, "/tmp/rd-source-debug/oscar64/c64/branches-loops/main.c"
+;   8, "/private/tmp/rd-source-debug/oscar64/c64/branches-loops/main.c"
 08c0 : c9 03 __ CMP #$03
-08c2 : b0 03 __ BCS $08c7 ; (classify.s5 + 0)
-.s8:
-;   9, "/tmp/rd-source-debug/oscar64/c64/branches-loops/main.c"
+08c2 : b0 03 __ BCS $08c7 ; (classify.s6 + 0)
+.s5:
+;   9, "/private/tmp/rd-source-debug/oscar64/c64/branches-loops/main.c"
 08c4 : a9 01 __ LDA #$01
 .s3:
-;  16, "/tmp/rd-source-debug/oscar64/c64/branches-loops/main.c"
 08c6 : 60 __ __ RTS
-.s5:
-;  10, "/tmp/rd-source-debug/oscar64/c64/branches-loops/main.c"
-08c7 : d0 03 __ BNE $08cc ; (classify.s6 + 0)
+.s6:
+;  10, "/private/tmp/rd-source-debug/oscar64/c64/branches-loops/main.c"
+08c7 : d0 03 __ BNE $08cc ; (classify.s8 + 0)
 .s7:
-;  12, "/tmp/rd-source-debug/oscar64/c64/branches-loops/main.c"
+;  12, "/private/tmp/rd-source-debug/oscar64/c64/branches-loops/main.c"
 08c9 : a9 02 __ LDA #$02
 08cb : 60 __ __ RTS
-.s6:
-;  16, "/tmp/rd-source-debug/oscar64/c64/branches-loops/main.c"
+.s8:
+;  16, "/private/tmp/rd-source-debug/oscar64/c64/branches-loops/main.c"
 08cc : a9 03 __ LDA #$03
 08ce : 60 __ __ RTS
 --------------------------------------------------------------------

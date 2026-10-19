@@ -9,12 +9,12 @@
   "machine": "c64",
   "outputs": {
     "main.asm": {
-      "sha256": "0608b2d96c23e25f386a0f37509841791f1304c0eb9c9f7f89cc42dad2d45be3",
-      "size": 3592
+      "sha256": "3c938e66c96418097591d8005ac6760a33a204624154523df5023c68a288404a",
+      "size": 3659
     },
     "main.dbj": {
-      "sha256": "ede1c33f58e5ac9c3dd8be9da2430050b7a716e5d7773a8edaa5b68fd1854e59",
-      "size": 6403
+      "sha256": "325706605c010f271d28b0d61a7b7f7260fb2a6d2f98b85445ae190fd81988d6",
+      "size": 6700
     },
     "main.lbl": {
       "sha256": "1b6628139f9e70e5f3f867b2594b9995fc3fc9d96908b1fe2dd2b647d49f5c7f",
@@ -42,7 +42,7 @@
     ]
   ],
   "toolDirs": {
-    "oscar64": "/private/tmp/claude-501/-Users-mars-develop-github-RetroDebugger/53b1db2e-8b8e-4db0-8821-2827ab2f434c/scratchpad/osc-p1/bin"
+    "oscar64": "/private/tmp/claude-501/-Users-mars-develop-github-RetroDebugger/53b1db2e-8b8e-4db0-8821-2827ab2f434c/scratchpad/toolchains/oscar64/bin"
   },
   "toolchain": "oscar64",
   "version": "1.32.273",

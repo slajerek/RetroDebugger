@@ -33,78 +33,77 @@ startup: ; startup
 2038 : 60 __ __ RTS
 --------------------------------------------------------------------
 main: ; main()->i16
-;  19, "/tmp/rd-source-debug/oscar64/atari/branches-loops/main.c"
+;  19, "/private/tmp/rd-source-debug/oscar64/atari/branches-loops/main.c"
 .s4:
-;  21, "/tmp/rd-source-debug/oscar64/atari/branches-loops/main.c"
+;  21, "/private/tmp/rd-source-debug/oscar64/atari/branches-loops/main.c"
 2080 : a9 00 __ LDA #$00
 2082 : 8d cf 20 STA $20cf ; (result + 0)
-;  22, "/tmp/rd-source-debug/oscar64/atari/branches-loops/main.c"
+;  22, "/private/tmp/rd-source-debug/oscar64/atari/branches-loops/main.c"
 2085 : 8d ff bb STA $bbff ; (i + 0)
-;  23, "/tmp/rd-source-debug/oscar64/atari/branches-loops/main.c"
+;  23, "/private/tmp/rd-source-debug/oscar64/atari/branches-loops/main.c"
 2088 : 18 __ __ CLC
 .l12:
 2089 : ad ff bb LDA $bbff ; (i + 0)
 208c : aa __ __ TAX
-;  22, "/tmp/rd-source-debug/oscar64/atari/branches-loops/main.c"
+;  22, "/private/tmp/rd-source-debug/oscar64/atari/branches-loops/main.c"
 208d : e8 __ __ INX
 208e : 8e ff bb STX $bbff ; (i + 0)
-;  23, "/tmp/rd-source-debug/oscar64/atari/branches-loops/main.c"
+;  23, "/private/tmp/rd-source-debug/oscar64/atari/branches-loops/main.c"
 2091 : 6d cf 20 ADC $20cf ; (result + 0)
 2094 : 8d cf 20 STA $20cf ; (result + 0)
-;  22, "/tmp/rd-source-debug/oscar64/atari/branches-loops/main.c"
+;  22, "/private/tmp/rd-source-debug/oscar64/atari/branches-loops/main.c"
 2097 : e0 03 __ CPX #$03
 2099 : 90 ee __ BCC $2089 ; (main.l12 + 0)
 .l5:
-;  24, "/tmp/rd-source-debug/oscar64/atari/branches-loops/main.c"
+;  24, "/private/tmp/rd-source-debug/oscar64/atari/branches-loops/main.c"
 209b : ad cf 20 LDA $20cf ; (result + 0)
 209e : c9 02 __ CMP #$02
-;  25, "/tmp/rd-source-debug/oscar64/atari/branches-loops/main.c"
+;  25, "/private/tmp/rd-source-debug/oscar64/atari/branches-loops/main.c"
 20a0 : ad cf 20 LDA $20cf ; (result + 0)
-;  24, "/tmp/rd-source-debug/oscar64/atari/branches-loops/main.c"
-20a3 : 90 08 __ BCC $20ad ; (main.s6 + 0)
-.s10:
-;  25, "/tmp/rd-source-debug/oscar64/atari/branches-loops/main.c"
+;  24, "/private/tmp/rd-source-debug/oscar64/atari/branches-loops/main.c"
+20a3 : 90 08 __ BCC $20ad ; (main.s7 + 0)
+.s6:
+;  25, "/private/tmp/rd-source-debug/oscar64/atari/branches-loops/main.c"
 20a5 : e9 02 __ SBC #$02
 20a7 : 8d cf 20 STA $20cf ; (result + 0)
 20aa : 4c 9b 20 JMP $209b ; (main.l5 + 0)
-.s6:
-;  26, "/tmp/rd-source-debug/oscar64/atari/branches-loops/main.c"
+.s7:
+;  26, "/private/tmp/rd-source-debug/oscar64/atari/branches-loops/main.c"
 20ad : c9 01 __ CMP #$01
-20af : d0 04 __ BNE $20b5 ; (main.s7 + 0)
-.s9:
-;  27, "/tmp/rd-source-debug/oscar64/atari/branches-loops/main.c"
+20af : d0 04 __ BNE $20b5 ; (main.s10 + 0)
+.s8:
+;  27, "/private/tmp/rd-source-debug/oscar64/atari/branches-loops/main.c"
 20b1 : a9 03 __ LDA #$03
 20b3 : d0 02 __ BNE $20b7 ; (main.s11 + 0)
-.s7:
-;  29, "/tmp/rd-source-debug/oscar64/atari/branches-loops/main.c"
+.s10:
+;  29, "/private/tmp/rd-source-debug/oscar64/atari/branches-loops/main.c"
 20b5 : a9 05 __ LDA #$05
 .s11:
 20b7 : 20 c0 20 JSR $20c0 ; (classify.s4 + 0)
 20ba : 8d cf 20 STA $20cf ; (result + 0)
-.l8:
-20bd : 4c bd 20 JMP $20bd ; (main.l8 + 0)
+.l9:
+20bd : 4c bd 20 JMP $20bd ; (main.l9 + 0)
 --------------------------------------------------------------------
 classify: ; classify(u8)->u8
-;   7, "/tmp/rd-source-debug/oscar64/atari/branches-loops/main.c"
+;   7, "/private/tmp/rd-source-debug/oscar64/atari/branches-loops/main.c"
 .s4:
-;   8, "/tmp/rd-source-debug/oscar64/atari/branches-loops/main.c"
+;   8, "/private/tmp/rd-source-debug/oscar64/atari/branches-loops/main.c"
 20c0 : c9 03 __ CMP #$03
-20c2 : b0 03 __ BCS $20c7 ; (classify.s5 + 0)
-.s8:
-;   9, "/tmp/rd-source-debug/oscar64/atari/branches-loops/main.c"
+20c2 : b0 03 __ BCS $20c7 ; (classify.s6 + 0)
+.s5:
+;   9, "/private/tmp/rd-source-debug/oscar64/atari/branches-loops/main.c"
 20c4 : a9 01 __ LDA #$01
 .s3:
-;  16, "/tmp/rd-source-debug/oscar64/atari/branches-loops/main.c"
 20c6 : 60 __ __ RTS
-.s5:
-;  10, "/tmp/rd-source-debug/oscar64/atari/branches-loops/main.c"
-20c7 : d0 03 __ BNE $20cc ; (classify.s6 + 0)
+.s6:
+;  10, "/private/tmp/rd-source-debug/oscar64/atari/branches-loops/main.c"
+20c7 : d0 03 __ BNE $20cc ; (classify.s8 + 0)
 .s7:
-;  12, "/tmp/rd-source-debug/oscar64/atari/branches-loops/main.c"
+;  12, "/private/tmp/rd-source-debug/oscar64/atari/branches-loops/main.c"
 20c9 : a9 02 __ LDA #$02
 20cb : 60 __ __ RTS
-.s6:
-;  16, "/tmp/rd-source-debug/oscar64/atari/branches-loops/main.c"
+.s8:
+;  16, "/private/tmp/rd-source-debug/oscar64/atari/branches-loops/main.c"
 20cc : a9 03 __ LDA #$03
 20ce : 60 __ __ RTS
 --------------------------------------------------------------------

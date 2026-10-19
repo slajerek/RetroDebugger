@@ -1,23 +1,23 @@
-{	"memory": [		{"name": "ZeroEnd", "xname": "ZeroEnd", "start": 128, "end": 128, "type": "END", "source": "/private/tmp/claude-501/-Users-mars-develop-github-RetroDebugger/53b1db2e-8b8e-4db0-8821-2827ab2f434c/scratchpad/osc-nd/src-p1/include/crt.c", "line": 21 },
-		{"name": "ZeroStart", "xname": "ZeroStart", "start": 128, "end": 128, "type": "START", "source": "/private/tmp/claude-501/-Users-mars-develop-github-RetroDebugger/53b1db2e-8b8e-4db0-8821-2827ab2f434c/scratchpad/osc-nd/src-p1/include/crt.c", "line": 21 },
-		{"name": "BSSStart", "xname": "BSSStart", "start": 512, "end": 512, "type": "START", "source": "/private/tmp/claude-501/-Users-mars-develop-github-RetroDebugger/53b1db2e-8b8e-4db0-8821-2827ab2f434c/scratchpad/osc-nd/src-p1/include/crt.c", "line": 21 },
+{	"memory": [		{"name": "ZeroEnd", "xname": "ZeroEnd", "start": 128, "end": 128, "type": "END", "source": "/private/tmp/claude-501/-Users-mars-develop-github-RetroDebugger/53b1db2e-8b8e-4db0-8821-2827ab2f434c/scratchpad/toolchains/oscar64/include/crt.c", "line": 21 },
+		{"name": "ZeroStart", "xname": "ZeroStart", "start": 128, "end": 128, "type": "START", "source": "/private/tmp/claude-501/-Users-mars-develop-github-RetroDebugger/53b1db2e-8b8e-4db0-8821-2827ab2f434c/scratchpad/toolchains/oscar64/include/crt.c", "line": 21 },
+		{"name": "BSSStart", "xname": "BSSStart", "start": 512, "end": 512, "type": "START", "source": "/private/tmp/claude-501/-Users-mars-develop-github-RetroDebugger/53b1db2e-8b8e-4db0-8821-2827ab2f434c/scratchpad/toolchains/oscar64/include/crt.c", "line": 21 },
 		{"name": "result", "xname": "result", "start": 512, "end": 513, "type": "DATA", "source": "/private/tmp/rd-source-debug/oscar64/nes/recursion/main.c", "line": 5 },
-		{"name": "BSSEnd", "xname": "BSSEnd", "start": 513, "end": 513, "type": "END", "source": "/private/tmp/claude-501/-Users-mars-develop-github-RetroDebugger/53b1db2e-8b8e-4db0-8821-2827ab2f434c/scratchpad/osc-nd/src-p1/include/crt.c", "line": 21 },
-		{"name": "StackEnd", "xname": "StackEnd", "start": 2048, "end": 2048, "type": "END", "source": "/private/tmp/claude-501/-Users-mars-develop-github-RetroDebugger/53b1db2e-8b8e-4db0-8821-2827ab2f434c/scratchpad/osc-nd/src-p1/include/crt.c", "line": 21 },
+		{"name": "BSSEnd", "xname": "BSSEnd", "start": 513, "end": 513, "type": "END", "source": "/private/tmp/claude-501/-Users-mars-develop-github-RetroDebugger/53b1db2e-8b8e-4db0-8821-2827ab2f434c/scratchpad/toolchains/oscar64/include/crt.c", "line": 21 },
+		{"name": "StackEnd", "xname": "StackEnd", "start": 2048, "end": 2048, "type": "END", "source": "/private/tmp/claude-501/-Users-mars-develop-github-RetroDebugger/53b1db2e-8b8e-4db0-8821-2827ab2f434c/scratchpad/toolchains/oscar64/include/crt.c", "line": 21 },
 		{"name": "main", "xname": "main()->i16", "start": 32768, "end": 32796, "type": "NATIVE_CODE", "source": "/private/tmp/rd-source-debug/oscar64/nes/recursion/main.c", "line": 13 },
 		{"name": "sum", "xname": "sum(u8)->u8", "start": 32796, "end": 32856, "type": "NATIVE_CODE", "source": "/private/tmp/rd-source-debug/oscar64/nes/recursion/main.c", "line": 7 },
-		{"name": "startup", "xname": "startup", "start": 65408, "end": 65467, "type": "NATIVE_CODE", "source": "/private/tmp/claude-501/-Users-mars-develop-github-RetroDebugger/53b1db2e-8b8e-4db0-8821-2827ab2f434c/scratchpad/osc-nd/src-p1/include/crt.c", "line": 69 }],
+		{"name": "startup", "xname": "startup", "start": 65408, "end": 65467, "type": "NATIVE_CODE", "source": "/private/tmp/claude-501/-Users-mars-develop-github-RetroDebugger/53b1db2e-8b8e-4db0-8821-2827ab2f434c/scratchpad/toolchains/oscar64/include/crt.c", "line": 69 }],
 	"variables": [
 		{"name": "BSSStart", "start": 512, "end": 512, "typeid": 0, "references": [
-			{"source": "/private/tmp/claude-501/-Users-mars-develop-github-RetroDebugger/53b1db2e-8b8e-4db0-8821-2827ab2f434c/scratchpad/osc-nd/src-p1/include/crt.c", "line": 21, "column": 28}]},
+			{"source": "/private/tmp/claude-501/-Users-mars-develop-github-RetroDebugger/53b1db2e-8b8e-4db0-8821-2827ab2f434c/scratchpad/toolchains/oscar64/include/crt.c", "line": 21, "column": 28}]},
 		{"name": "BSSEnd", "start": 513, "end": 513, "typeid": 0, "references": [
-			{"source": "/private/tmp/claude-501/-Users-mars-develop-github-RetroDebugger/53b1db2e-8b8e-4db0-8821-2827ab2f434c/scratchpad/osc-nd/src-p1/include/crt.c", "line": 21, "column": 38}]},
+			{"source": "/private/tmp/claude-501/-Users-mars-develop-github-RetroDebugger/53b1db2e-8b8e-4db0-8821-2827ab2f434c/scratchpad/toolchains/oscar64/include/crt.c", "line": 21, "column": 38}]},
 		{"name": "ZeroStart", "start": 128, "end": 128, "typeid": 0, "references": [
-			{"source": "/private/tmp/claude-501/-Users-mars-develop-github-RetroDebugger/53b1db2e-8b8e-4db0-8821-2827ab2f434c/scratchpad/osc-nd/src-p1/include/crt.c", "line": 21, "column": 66}]},
+			{"source": "/private/tmp/claude-501/-Users-mars-develop-github-RetroDebugger/53b1db2e-8b8e-4db0-8821-2827ab2f434c/scratchpad/toolchains/oscar64/include/crt.c", "line": 21, "column": 66}]},
 		{"name": "ZeroEnd", "start": 128, "end": 128, "typeid": 0, "references": [
-			{"source": "/private/tmp/claude-501/-Users-mars-develop-github-RetroDebugger/53b1db2e-8b8e-4db0-8821-2827ab2f434c/scratchpad/osc-nd/src-p1/include/crt.c", "line": 21, "column": 77}]},
+			{"source": "/private/tmp/claude-501/-Users-mars-develop-github-RetroDebugger/53b1db2e-8b8e-4db0-8821-2827ab2f434c/scratchpad/toolchains/oscar64/include/crt.c", "line": 21, "column": 77}]},
 		{"name": "StackEnd", "start": 2048, "end": 2048, "typeid": 0, "references": [
-			{"source": "/private/tmp/claude-501/-Users-mars-develop-github-RetroDebugger/53b1db2e-8b8e-4db0-8821-2827ab2f434c/scratchpad/osc-nd/src-p1/include/crt.c", "line": 21, "column": 18}]},
+			{"source": "/private/tmp/claude-501/-Users-mars-develop-github-RetroDebugger/53b1db2e-8b8e-4db0-8821-2827ab2f434c/scratchpad/toolchains/oscar64/include/crt.c", "line": 21, "column": 18}]},
 		{"name": "result", "start": 512, "end": 513, "typeid": 1, "references": [
 			{"source": "/private/tmp/rd-source-debug/oscar64/nes/recursion/main.c", "line": 5, "column": 24},
 			{"source": "/private/tmp/rd-source-debug/oscar64/nes/recursion/main.c", "line": 14, "column": 5}]}	],
@@ -33,11 +33,13 @@
 		{"name": "sum", "xname": "sum(u8)->u8", "start": 32796, "end": 32856, "typeid": 3, "source": "/private/tmp/rd-source-debug/oscar64/nes/recursion/main.c", "line": 7, "lines": [
 			{"start": 32813, "end": 32819, "source": "/private/tmp/rd-source-debug/oscar64/nes/recursion/main.c", "line": 8},
 			{"start": 32819, "end": 32836, "source": "/private/tmp/rd-source-debug/oscar64/nes/recursion/main.c", "line": 10},
-			{"start": 32836, "end": 32856, "source": "/private/tmp/rd-source-debug/oscar64/nes/recursion/main.c", "line": 9}], 
+			{"start": 32836, "end": 32838, "source": "/private/tmp/rd-source-debug/oscar64/nes/recursion/main.c", "line": 9},
+			{"start": 32838, "end": 32856, "source": "/private/tmp/rd-source-debug/oscar64/nes/recursion/main.c", "line": 10}], 
 			"origins":[
 			{"start": 32813, "end": 32821, "source": "/private/tmp/rd-source-debug/oscar64/nes/recursion/main.c", "line": 8},
 			{"start": 32821, "end": 32836, "source": "/private/tmp/rd-source-debug/oscar64/nes/recursion/main.c", "line": 10},
-			{"start": 32836, "end": 32856, "source": "/private/tmp/rd-source-debug/oscar64/nes/recursion/main.c", "line": 9}], 
+			{"start": 32836, "end": 32838, "source": "/private/tmp/rd-source-debug/oscar64/nes/recursion/main.c", "line": 9},
+			{"start": 32838, "end": 32856, "source": "/private/tmp/rd-source-debug/oscar64/nes/recursion/main.c", "line": 10}], 
 			"variables":[
 			{"name": "n", "start": 7, "end": 8, "base": 47, "typeid": 4}], "references": [
 			{"source": "/private/tmp/rd-source-debug/oscar64/nes/recursion/main.c", "line": 7, "column": 15},

@@ -9,12 +9,12 @@
   "machine": "atari",
   "outputs": {
     "main.asm": {
-      "sha256": "8636db949025776f12eaacd63d81ca7acd5d2ef37fb9811a0431684907363f7e",
-      "size": 3940
+      "sha256": "a0d06997d9a3df5d28d7dce7e4fce1a96700b5db50cbc5b137ac8d112600e58d",
+      "size": 4035
     },
     "main.dbj": {
-      "sha256": "fdc67190ab27e7838c32dee8677a42eb6a990577f553b9461647ce1160ab6581",
-      "size": 9700
+      "sha256": "83830017f5f78299a62b28ed0b1602b3a6290fdc03b6402d3017f78621bb3368",
+      "size": 11072
     },
     "main.lbl": {
       "sha256": "8875b90689876ffa79853a33c28e81063e5758bf8a52f3394953f1caa23f185c",
@@ -42,7 +42,7 @@
     ]
   ],
   "toolDirs": {
-    "oscar64": "/home/user/toolchains/oscar64/bin"
+    "oscar64": "/private/tmp/claude-501/-Users-mars-develop-github-RetroDebugger/53b1db2e-8b8e-4db0-8821-2827ab2f434c/scratchpad/toolchains/oscar64/bin"
   },
   "toolchain": "oscar64",
   "version": "1.32.273",

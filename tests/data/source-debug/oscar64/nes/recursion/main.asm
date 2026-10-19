@@ -39,8 +39,8 @@ sum: ; sum(u8)->u8
 ;   8, "/private/tmp/rd-source-debug/oscar64/nes/recursion/main.c"
 00:802d : a0 07 __ LDY #$07
 00:802f : b1 2f __ LDA (SP + 0),y 
-00:8031 : f0 11 __ BEQ $8044 ; (sum.s5 + 0)
-.s6:
+00:8031 : f0 11 __ BEQ $8044 ; (sum.s6 + 0)
+.s5:
 00:8033 : 85 53 __ STA T1 + 0 
 ;  10, "/private/tmp/rd-source-debug/oscar64/nes/recursion/main.c"
 00:8035 : 38 __ __ SEC
@@ -51,10 +51,11 @@ sum: ; sum(u8)->u8
 00:803f : 18 __ __ CLC
 00:8040 : a5 27 __ LDA ACCU + 0 
 00:8042 : 65 53 __ ADC T1 + 0 
-.s5:
+.s6:
 ;   9, "/private/tmp/rd-source-debug/oscar64/nes/recursion/main.c"
 00:8044 : 85 27 __ STA ACCU + 0 
 .s3:
+;  10, "/private/tmp/rd-source-debug/oscar64/nes/recursion/main.c"
 00:8046 : a0 03 __ LDY #$03
 00:8048 : b1 2f __ LDA (SP + 0),y 
 00:804a : 85 53 __ STA T1 + 0 

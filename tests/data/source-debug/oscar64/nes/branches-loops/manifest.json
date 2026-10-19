@@ -9,19 +9,19 @@
   "machine": "nes",
   "outputs": {
     "main.asm": {
-      "sha256": "036d2b9959541c6eaef81fd2dfb3dfc6088ea83211c75084bc5338dfa62b558e",
-      "size": 4143
+      "sha256": "88ab3334606dc6e505cf347e6faac333c6cfed1f83c67a24e2321b2849cf2636",
+      "size": 4240
     },
     "main.dbj": {
-      "sha256": "dcc68ca195e0a20f09b1f6a4228363178ae8ea975da79452fcb22bcce2c1f898",
-      "size": 9636
+      "sha256": "8cb670b4f3169106f3e71748d09ec2b90f8688d106a219254628466f42006f13",
+      "size": 11008
     },
     "main.map": {
       "sha256": "2a4a6212afb640eb98e06e6aba605e3079f159d961d81b88ed16817cb7818694",
       "size": 1328
     },
     "main.mlb": {
-      "sha256": "9672dd091b0044b3935f6d2f1ee7e6dcb7384d1f72ca16880c5c7e302f8495e4",
+      "sha256": "cfdc39575fe69698f9d8af136aa9862068e9fcfc7dfac9bbd850c975803c955e",
       "size": 402
     },
     "main.nes": {
@@ -42,7 +42,7 @@
     ]
   ],
   "toolDirs": {
-    "oscar64": "/home/user/toolchains/oscar64/bin"
+    "oscar64": "/private/tmp/claude-501/-Users-mars-develop-github-RetroDebugger/53b1db2e-8b8e-4db0-8821-2827ab2f434c/scratchpad/toolchains/oscar64/bin"
   },
   "toolchain": "oscar64",
   "version": "1.32.273",

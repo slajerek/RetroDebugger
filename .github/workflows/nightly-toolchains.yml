@@ -26,7 +26,7 @@ jobs:
       - name: Install packaged toolchains
         run: |
           sudo apt-get update
-          sudo apt-get install -y cc65 64tass maven openjdk-17-jdk-headless python3-yaml
+          sudo apt-get install -y cc65 64tass maven openjdk-17-jdk-headless python3-yaml clang
 
       - name: Build Oscar64 and KickC from their tags
         run: tests/source-debug/scripts/provision_toolchains.sh "$RUNNER_TEMP/toolchains"

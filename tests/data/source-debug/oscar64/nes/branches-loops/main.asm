@@ -4,78 +4,77 @@ result:
 0200 : __ __ __ BSS	1
 --------------------------------------------------------------------
 main: ; main()->i16
-;  19, "/tmp/rd-source-debug/oscar64/nes/branches-loops/main.c"
+;  19, "/private/tmp/rd-source-debug/oscar64/nes/branches-loops/main.c"
 .s4:
-;  21, "/tmp/rd-source-debug/oscar64/nes/branches-loops/main.c"
+;  21, "/private/tmp/rd-source-debug/oscar64/nes/branches-loops/main.c"
 00:8000 : a9 00 __ LDA #$00
 00:8002 : 8d 00 02 STA $0200 ; (result + 0)
-;  22, "/tmp/rd-source-debug/oscar64/nes/branches-loops/main.c"
+;  22, "/private/tmp/rd-source-debug/oscar64/nes/branches-loops/main.c"
 00:8005 : 8d ff 07 STA $07ff ; (i + 0)
-;  23, "/tmp/rd-source-debug/oscar64/nes/branches-loops/main.c"
+;  23, "/private/tmp/rd-source-debug/oscar64/nes/branches-loops/main.c"
 00:8008 : 18 __ __ CLC
 .l12:
 00:8009 : ad ff 07 LDA $07ff ; (i + 0)
 00:800c : aa __ __ TAX
-;  22, "/tmp/rd-source-debug/oscar64/nes/branches-loops/main.c"
+;  22, "/private/tmp/rd-source-debug/oscar64/nes/branches-loops/main.c"
 00:800d : e8 __ __ INX
 00:800e : 8e ff 07 STX $07ff ; (i + 0)
-;  23, "/tmp/rd-source-debug/oscar64/nes/branches-loops/main.c"
+;  23, "/private/tmp/rd-source-debug/oscar64/nes/branches-loops/main.c"
 00:8011 : 6d 00 02 ADC $0200 ; (result + 0)
 00:8014 : 8d 00 02 STA $0200 ; (result + 0)
-;  22, "/tmp/rd-source-debug/oscar64/nes/branches-loops/main.c"
+;  22, "/private/tmp/rd-source-debug/oscar64/nes/branches-loops/main.c"
 00:8017 : e0 03 __ CPX #$03
 00:8019 : 90 ee __ BCC $8009 ; (main.l12 + 0)
 .l5:
-;  24, "/tmp/rd-source-debug/oscar64/nes/branches-loops/main.c"
+;  24, "/private/tmp/rd-source-debug/oscar64/nes/branches-loops/main.c"
 00:801b : ad 00 02 LDA $0200 ; (result + 0)
 00:801e : c9 02 __ CMP #$02
-;  25, "/tmp/rd-source-debug/oscar64/nes/branches-loops/main.c"
+;  25, "/private/tmp/rd-source-debug/oscar64/nes/branches-loops/main.c"
 00:8020 : ad 00 02 LDA $0200 ; (result + 0)
-;  24, "/tmp/rd-source-debug/oscar64/nes/branches-loops/main.c"
-00:8023 : 90 08 __ BCC $802d ; (main.s6 + 0)
-.s10:
-;  25, "/tmp/rd-source-debug/oscar64/nes/branches-loops/main.c"
+;  24, "/private/tmp/rd-source-debug/oscar64/nes/branches-loops/main.c"
+00:8023 : 90 08 __ BCC $802d ; (main.s7 + 0)
+.s6:
+;  25, "/private/tmp/rd-source-debug/oscar64/nes/branches-loops/main.c"
 00:8025 : e9 02 __ SBC #$02
 00:8027 : 8d 00 02 STA $0200 ; (result + 0)
 00:802a : 4c 1b 80 JMP $801b ; (main.l5 + 0)
-.s6:
-;  26, "/tmp/rd-source-debug/oscar64/nes/branches-loops/main.c"
+.s7:
+;  26, "/private/tmp/rd-source-debug/oscar64/nes/branches-loops/main.c"
 00:802d : c9 01 __ CMP #$01
-00:802f : d0 04 __ BNE $8035 ; (main.s7 + 0)
-.s9:
-;  27, "/tmp/rd-source-debug/oscar64/nes/branches-loops/main.c"
+00:802f : d0 04 __ BNE $8035 ; (main.s10 + 0)
+.s8:
+;  27, "/private/tmp/rd-source-debug/oscar64/nes/branches-loops/main.c"
 00:8031 : a9 03 __ LDA #$03
 00:8033 : d0 02 __ BNE $8037 ; (main.s11 + 0)
-.s7:
-;  29, "/tmp/rd-source-debug/oscar64/nes/branches-loops/main.c"
+.s10:
+;  29, "/private/tmp/rd-source-debug/oscar64/nes/branches-loops/main.c"
 00:8035 : a9 05 __ LDA #$05
 .s11:
 00:8037 : 20 40 80 JSR $8040 ; (classify.s4 + 0)
 00:803a : 8d 00 02 STA $0200 ; (result + 0)
-.l8:
-00:803d : 4c 3d 80 JMP $803d ; (main.l8 + 0)
+.l9:
+00:803d : 4c 3d 80 JMP $803d ; (main.l9 + 0)
 --------------------------------------------------------------------
 classify: ; classify(u8)->u8
-;   7, "/tmp/rd-source-debug/oscar64/nes/branches-loops/main.c"
+;   7, "/private/tmp/rd-source-debug/oscar64/nes/branches-loops/main.c"
 .s4:
-;   8, "/tmp/rd-source-debug/oscar64/nes/branches-loops/main.c"
+;   8, "/private/tmp/rd-source-debug/oscar64/nes/branches-loops/main.c"
 00:8040 : c9 03 __ CMP #$03
-00:8042 : b0 03 __ BCS $8047 ; (classify.s5 + 0)
-.s8:
-;   9, "/tmp/rd-source-debug/oscar64/nes/branches-loops/main.c"
+00:8042 : b0 03 __ BCS $8047 ; (classify.s6 + 0)
+.s5:
+;   9, "/private/tmp/rd-source-debug/oscar64/nes/branches-loops/main.c"
 00:8044 : a9 01 __ LDA #$01
 .s3:
-;  16, "/tmp/rd-source-debug/oscar64/nes/branches-loops/main.c"
 00:8046 : 60 __ __ RTS
-.s5:
-;  10, "/tmp/rd-source-debug/oscar64/nes/branches-loops/main.c"
-00:8047 : d0 03 __ BNE $804c ; (classify.s6 + 0)
+.s6:
+;  10, "/private/tmp/rd-source-debug/oscar64/nes/branches-loops/main.c"
+00:8047 : d0 03 __ BNE $804c ; (classify.s8 + 0)
 .s7:
-;  12, "/tmp/rd-source-debug/oscar64/nes/branches-loops/main.c"
+;  12, "/private/tmp/rd-source-debug/oscar64/nes/branches-loops/main.c"
 00:8049 : a9 02 __ LDA #$02
 00:804b : 60 __ __ RTS
-.s6:
-;  16, "/tmp/rd-source-debug/oscar64/nes/branches-loops/main.c"
+.s8:
+;  16, "/private/tmp/rd-source-debug/oscar64/nes/branches-loops/main.c"
 00:804c : a9 03 __ LDA #$03
 00:804e : 60 __ __ RTS
 --------------------------------------------------------------------

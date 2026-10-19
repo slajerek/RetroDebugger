@@ -17,7 +17,12 @@ DIR=$(cd "$DIR" && pwd)
 
 if [ ! -x "$DIR/oscar64/bin/oscar64" ]; then
     git clone --depth 1 --branch v1.32.273 https://github.com/drmortalwombat/oscar64 "$DIR/oscar64"
-    make -C "$DIR/oscar64/make" -j"$(getconf _NPROCESSORS_ONLN 2>/dev/null || echo 2)"
+    # clang, not the default c++: v1.32.273 compiles a branch's two successor
+    # blocks as two arguments of one call, so the C++ compiler that builds it
+    # picks their order, and with it the .dbj line tables and .asm labels
+    # (gcc on x86-64 differs from clang). Upstream fixes the order to the
+    # true block first (drmortalwombat/oscar64#434), which is clang's.
+    make -C "$DIR/oscar64/make" CXX=clang++ -j"$(getconf _NPROCESSORS_ONLN 2>/dev/null || echo 2)"
 fi
 
 if [ ! -f "$DIR/kickc/target/kickc-release.jar" ]; then
