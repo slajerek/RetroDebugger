@@ -201,6 +201,6 @@ The numbers continue after RD-045. All rows come after the RD-023 review (#17.3 
 
 ## 11. Open questions for the maintainer
 
-1. Should context watches live in `CDebugSymbolsSegment` beside address watches, or in a separate list owned by the source-debug layer?
+1. Should context watches live in `CDebugSymbolsSegment` beside address watches, or in a separate list owned by the source-debug layer? **Decided (2026-10-19): a separate list owned by `CDebugSymbols`**, so a debug info reload (which replaces the segments) keeps them, saved in its own HJSON section. The maintainer also asked that watches support banking (today a watch is a CPU address read through the CPU's current mapping); see RD-053 in TRACKER.md.
 2. Is the cc65 stack-depth decoding (RD-055) worth doing, or should cc65 locals stay `Approximate` until cc65 emits more?
-3. Should the Oscar64 `.lbl` and cc65 `.lbl` be read in addition to the debug file? `.lbl` is the only source of the `sp` address for cc65.
+3. Should the Oscar64 `.lbl` and cc65 `.lbl` be read in addition to the debug file? `.lbl` is the only source of the `sp` address for cc65. **Settled by RD-022:** the cc65 loader reads `main.lbl` for `sp`.
