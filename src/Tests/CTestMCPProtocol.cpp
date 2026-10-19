@@ -6,6 +6,7 @@
 #include "CDebugInterface.h"
 #include "CDebugMemoryCell.h"
 #include "CTimelineNavigation.h"
+#include "CDrive1541Control.h"
 #include "C64DShutdown.h"
 #include "SYS_Main.h"
 #include <cstdio>
@@ -1331,7 +1332,68 @@ void CTestMCPProtocol::Run(ITestCallback *cb)
 		}
 	}
 
-	TestCompleted(true, "All MCP protocol tests passed (37/37)");
+	// --- Test 38: drive pause forwarding preserves observations and refusals ---
+	{
+		for (const auto &outcome : {"paused_observed", "timeout", "busy", "unavailable"})
+		{
+			json payload = {{"device", 8}, {"outcome", outcome}, {"parked", false}, {"debugMode", 0}, {"pauseRequested", false}};
+			CCannedDebuggerServer debuggerServer({{"status", HTTP_OK}, {"result", payload}});
+			CMCPServer server;
+			PrepareToolTestServer(server, debuggerServer);
+			json response = CallTool(server, 38, "retro_drive1541_pause", {{"platform", "c64"}});
+			if (!ToolErrorText(response).empty() || debuggerServer.callCount != 1
+				|| debuggerServer.lastEndpointName != "c64/drive1541/pause"
+				|| debuggerServer.lastParams != json({{"device", 8}, {"timeoutMs", 1000}})
+				|| json::parse(response["result"]["content"][0]["text"].get<std::string>()) != payload)
+			{
+				TestCompleted(false, "Test 38 FAIL: drive pause payload/routing changed"); return;
+			}
+		}
+	}
+
+	// --- Test 39: invalid drive pause requests cannot reach execution control ---
+	{
+		CCannedDebuggerServer debuggerServer({{"status", HTTP_OK}, {"result", json::object()}});
+		CMCPServer server;
+		PrepareToolTestServer(server, debuggerServer);
+		json invalid = json::array({nullptr, json::object(), {{"platform", "c64"}, {"extra", true}}});
+		for (const auto &platform : json::array({nullptr, true, 8, "atari800", "nes", "c64/drive1541"}))
+			invalid.push_back({{"platform", platform}});
+		for (const auto &device : json::array({nullptr, true, "8", 8.0, -1, 9, 18446744073709551615ULL}))
+			invalid.push_back({{"platform", "c64"}, {"device", device}});
+		for (const auto &timeout : json::array({nullptr, true, "1", 1.5, -1, 5001, 18446744073709551615ULL}))
+			invalid.push_back({{"platform", "c64"}, {"timeoutMs", timeout}});
+		for (const auto &args : invalid)
+		{
+			if (ToolErrorText(CallTool(server, 39, "retro_drive1541_pause", args)).empty() || debuggerServer.callCount != 0)
+			{
+				TestCompleted(false, "Test 39 FAIL: invalid drive pause reached endpoint"); return;
+			}
+		}
+		int timeoutMs = -1;
+		if (!Drive1541Control::ParsePause(json::object(), false, timeoutMs) || timeoutMs != 1000
+			|| !Drive1541Control::ParsePause({{"device", 8}, {"timeoutMs", 0}}, false, timeoutMs) || timeoutMs != 0
+			|| !Drive1541Control::ParsePause({{"device", 8}, {"timeoutMs", 5000}}, false, timeoutMs) || timeoutMs != 5000
+			|| Drive1541Control::ParsePause({{"platform", "c64"}}, false, timeoutMs)
+			|| Drive1541Control::ParsePause({{"device", 9}}, false, timeoutMs)
+			|| Drive1541Control::ParsePause({{"timeoutMs", -1}}, false, timeoutMs))
+		{
+			TestCompleted(false, "Test 39 FAIL: backend drive pause contract mismatch"); return;
+		}
+	}
+
+	// --- Test 40: transport failure is not a successful pause ---
+	{
+		CCannedDebuggerServer debuggerServer({{"status", HTTP_SERVICE_UNAVAILABLE}, {"error", "desktop_unavailable"}});
+		CMCPServer server;
+		PrepareToolTestServer(server, debuggerServer);
+		if (ToolErrorText(CallTool(server, 40, "retro_drive1541_pause", {{"platform", "c64"}})).empty())
+		{
+			TestCompleted(false, "Test 40 FAIL: drive pause transport error swallowed"); return;
+		}
+	}
+
+	TestCompleted(true, "All MCP protocol tests passed (40/40)");
 }
 
 void CTestMCPProtocol::Cancel()

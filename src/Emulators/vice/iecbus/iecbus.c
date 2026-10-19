@@ -248,6 +248,15 @@ void c64d_peek_whole_map_drive_internal(drive_context_t *drv, uint8 *memoryBuffe
 uint8 c64d_mem_ram_read_drive_internal(drive_context_t *drv, uint16 addr);
 void c64d_mem_ram_write_drive_internal(drive_context_t *drv, uint16 addr, uint8 value);
 
+/* Availability sample for new drive8 operations, not lifetime synchronization. */
+int c64d_is_drive1541_available(void)
+{
+	drive_context_t *drv = drive_context[0];
+	return drv != NULL && drv->drive != NULL && drv->cpu != NULL && drv->cpud != NULL
+		&& drv->drive->enable
+		&& (drv->drive->type == DRIVE_TYPE_1541 || drv->drive->type == DRIVE_TYPE_1541II);
+}
+
 void c64d_get_drivecpu_regs(int driveNum, uint8 *a, uint8 *x, uint8 *y, uint8 *p, uint8 *sp, uint16 *pc)
 {
 	drive_context_t *drv = drive_context[driveNum];
