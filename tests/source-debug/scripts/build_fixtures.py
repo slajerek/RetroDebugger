@@ -172,6 +172,25 @@ def normalized(text):
     return text
 
 
+def kickass_sources_by_path(text):
+    """A KickAssembler .dbg with its source indexes renumbered by path: it
+    lists the sources (KickAss.jar's autoinclude, the program) in no fixed
+    order, and every block and label line names its file by that index."""
+    sources = re.search(r"(<Sources[^>]*>)(.*?)(</Sources>)", text, re.S)
+    if not sources or not text.lstrip().startswith("<C64debugger"):
+        return text
+    rows = [r.strip().split(",", 1) for r in sources.group(2).strip().splitlines() if r.strip()]
+    order = {old: str(new) for new, (old, _) in enumerate(sorted(rows, key=lambda r: r[1]))}
+    listed = "".join("\n      %s,%s" % (order[old], name) for old, name in sorted(rows, key=lambda r: r[1]))
+    text = text[:sources.start(2)] + listed + "\n   " + text[sources.end(2):]
+    def block_line(m):
+        return "%s,%s,%s,%s" % (m.group(1), m.group(2), order.get(m.group(3), m.group(3)), m.group(4))
+    text = re.sub(r"^(\s*\$[0-9a-f]+),(\$[0-9a-f]+),(\d+),(\d+,\d+,\d+,\d+)$", block_line, text, flags=re.M)
+    def label_line(m):	# SEGMENT,ADDRESS,NAME,FILE_IDX,LINE1,COL1,LINE2,COL2
+        return "%s,%s,%s" % (m.group(1), order.get(m.group(2), m.group(2)), m.group(3))
+    return re.sub(r"^(\s*[^,\s]+,\$[0-9a-f]+,[^,\n]*),(\d+),(\d+,\d+,\d+,\d+)$", label_line, text, flags=re.M)
+
+
 def same_output(committed, built):
     """Binaries byte for byte; text outputs after normalized()."""
     if sha256(committed) == sha256(built):
@@ -182,6 +201,8 @@ def same_output(committed, built):
         x, y = normalized(a.read()), normalized(b.read())
     if committed.endswith(".map"):
         return sorted(x.split()) == sorted(y.split())	# ld65 lists its exports in no fixed order
+    if committed.endswith(".dbg"):
+        x, y = kickass_sources_by_path(x), kickass_sources_by_path(y)
     return x == y
 
 
