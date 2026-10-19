@@ -729,6 +729,13 @@ namespace Nes
 					return false;
 				}
 
+				// RetroDebugger (RD-059): a byte of the PRG (isWrk false) or WRK
+				// source by its offset, the bank not mapped in included
+				bool PeekPrgSource(bool isWrk,uint source,dword offset,byte& value) const
+				{
+					return isWrk ? wrk.PeekSource( source, offset, value ) : prg.PeekSource( source, offset, value );
+				}
+
 			protected:
 
 				explicit Board(const Context&);

@@ -4,6 +4,10 @@
 #include "CDebuggerServer.h"
 #include "CDebugMemoryMapping.h"
 #include "DebuggerDefs.h"
+#include "CGuiMain.h"
+#include "CDebugSymbols.h"
+#include "CDebugSymbolsSegment.h"
+#include "CDebugSymbolsDataWatch.h"
 #include "SYS_Main.h"
 #include "C64SettingsStorage.h"
 #ifdef RUN_ATARI
@@ -141,6 +145,40 @@ void CTestAtariXeBanks::Run(ITestCallback *cb)
 	for (int i = 0; i < 4; i++) atari->SetByte((u16)(0x4000 + i), bank3Code[i]);
 	atari->SetByte(0xD301, portbBase);
 	u8 baseByte = atari->GetByte(0x4000);
+
+	// RD-059: a watch added at $4000 with bank 1 in keeps bank 1's bytes:
+	// read from that bank while bank 3 or the base RAM is in
+	bool ok = true;
+	{
+		CDebugSymbolsSegment *segment = atari->symbols->currentSegment;
+		atari->SetByte(0xD301, portbBank1);
+		guiMain->LockMutex();
+		segment->AddWatch(0x4000, (char *)"rd059-xe", WATCH_REPRESENTATION_HEX_8, 4);
+		CDebugSymbolsDataWatch *watch = segment->FindWatch(0x4000);
+		bool bound = watch && watch->BindToMemory();
+		guiMain->UnlockMutex();
+		bool inBank1 = bound, inBank3 = bound, inBase = bound;
+		for (int i = 0; bound && i < 4; i++)
+		{
+			bool e = true;
+			inBank1 = inBank1 && watch->ReadByte(i, &e) == bank1Code[i] && !e;
+		}
+		atari->SetByte(0xD301, portbBank3);
+		for (int i = 0; bound && i < 4; i++)
+		{
+			bool e = false;
+			inBank3 = inBank3 && watch->ReadByte(i, &e) == bank1Code[i] && e;
+		}
+		atari->SetByte(0xD301, portbBase);
+		bool e = false;
+		inBase = inBase && watch->ReadByte(0, &e) == bank1Code[0] && e && atari->GetByte(0x4000) == baseByte;
+		char msg[220];
+		snprintf(msg, sizeof(msg), "RD-059: a watch added at $4000 with bank 1 in binds to %s and shows bank 1's bytes with bank 3 in and with the base RAM in, marked as not mapped in",
+				 bound ? watch->MemoryName().c_str() : "nothing");
+		ok = Check(bound && watch->physical.kind == DebugMemoryKind::ExtendedRam && watch->physical.region == 1
+				   && watch->MemoryName() == "atari-xe-ram bank 1" && inBank1 && inBank3 && inBase, msg);
+		segment->DeleteWatch(0x4000);
+	}
 	// $3000: LDA #bank1 / STA PORTB / JSR $4000 / LDA #bank3 / STA PORTB / JSR $4000 / JMP $3000
 	const u8 program[] = { 0xA9, portbBank1, 0x8D, 0x01, 0xD3, 0x20, 0x00, 0x40,
 						   0xA9, portbBank3, 0x8D, 0x01, 0xD3, 0x20, 0x00, 0x40, 0x4C, 0x00, 0x30 };
@@ -150,7 +188,7 @@ void CTestAtariXeBanks::Run(ITestCallback *cb)
 
 	const std::string fnAdd = std::string(atari->GetPlatformNameEndpointString()) + "/cpu/breakpoint/add";
 	const std::string fnRemove = std::string(atari->GetPlatformNameEndpointString()) + "/cpu/breakpoint/remove";
-	bool ok = true;
+	if (ok)
 	{
 		json noKind = CallEndpoint(server, fnAdd, { {"addr", 0x4000}, {"physical", { {"device", "atari-xe-ram"}, {"region", 3}, {"offset", 0} }} });
 		ok = Check(noKind.value("status", 0) == HTTP_BAD_REQUEST, "remote: a physical identity without its kind is refused");

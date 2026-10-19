@@ -14,6 +14,7 @@
 #include "CDebugSymbols.h"
 #include "CDebugSymbolsSegment.h"
 #include "CDebugSymbolsCodeLabel.h"
+#include "CDebugSymbolsDataWatch.h"
 #include "CDebugBreakpointsAddr.h"
 #include "CDebugBreakpointAddr.h"
 #include "CDebugDatabase.h"
@@ -148,6 +149,8 @@ bool CTestBankedSource::RunNes(const NesCartridge &cart)
 	// _result is the one BSS byte (main.map)
 	auto readResult = [&]() { u8 v = 0; bool available = false; di->GetDataAdapter()->AdapterReadByte(cart.resultAddress, &v, &available); return v; };
 
+	CDebugSymbolsDataWatch *prgWatch = NULL;		// RD-059
+	u8 prgBytes[16] = { 0 };		// bankA and bankB begin alike: 16 bytes tell them apart
 	if (ok)
 	{
 		// the cartridge loads paused at reset; run to the first stop
@@ -163,6 +166,20 @@ bool CTestBankedSource::RunNes(const NesCartridge &cart)
 		ok = Check(paused && pc == onB->bindings[0].address && value == 1, msg);
 		std::string got;
 		ok = ok && Check(LabelIs(scratch, 0x8000, "_bankB", got), label + "with bank 1 in, the label at $8000 is _bankB (got " + got + ")");
+		// RD-059: a watch on bankB's code, added with bank 1 in, keeps bank 1's bytes
+		if (ok)
+		{
+			u16 at = onB->bindings[0].address;
+			guiMain->LockMutex();
+			scratch->currentSegment->AddWatch(at, (char *)"rd059-prg", WATCH_REPRESENTATION_HEX_8, 16);
+			prgWatch = scratch->currentSegment->FindWatch(at);
+			bool bound = prgWatch && prgWatch->BindToMemory();
+			guiMain->UnlockMutex();
+			for (int i = 0; bound && i < 16; i++)
+				prgBytes[i] = prgWatch->ReadByte(i, NULL);
+			ok = Check(bound && prgWatch->physical.device == "nes-prg" && prgWatch->physical.kind == DebugMemoryKind::CartridgeRom,
+					   label + "RD-059: a watch on bankB's code binds to " + (bound ? prgWatch->MemoryName() : std::string("nothing")));
+		}
 		// RD-007: the code check counts the bank in, not the other one at $8000
 		nlohmann::json verify = di->GetDebuggerApi()->VerifySourceCodeJson(dir + "/main.nes");
 		ok = ok && Check(verify.value("matches", false) && verify.value("checked", 0) > 0,
@@ -189,6 +206,25 @@ bool CTestBankedSource::RunNes(const NesCartridge &cart)
 		ok = Check(paused && pc == onA->bindings[0].address && value == 11, msg);
 		std::string got;
 		ok = ok && Check(LabelIs(scratch, 0x8000, "_bankA", got), label + "with bank 0 in, the label at $8000 is _bankA (got " + got + ")");
+		if (ok && prgWatch)
+		{
+			CDebugMemoryMappingResolver *resolver = di->GetMemoryMappingResolver();
+			bool same = true, elsewhere = true, differs = false;
+			for (int i = 0; i < 16; i++)
+			{
+				bool e = false;
+				u8 v = prgWatch->ReadByte(i, &e);
+				same = same && v == prgBytes[i];
+				elsewhere = elsewhere && e;
+				differs = differs || v != di->GetDataAdapter()->AdapterReadByteModulus(prgWatch->address + i);
+			}
+			char detail[160];
+			snprintf(detail, sizeof(detail), " (same %d, not mapped in %d, differs %d; at $%04X %s $%05X now)", same, elsewhere, differs, prgWatch->address,
+					 resolver ? resolver->ResolveRead(prgWatch->address).physical.device.c_str() : "?",
+					 resolver ? resolver->ResolveRead(prgWatch->address).physical.offset : 0);
+			ok = Check(same && elsewhere && differs,
+					   label + "RD-059: with bank 0 in, the watch still shows bank 1's bytes (read from that bank, not mapped in), which differ from what the CPU sees" + detail);
+		}
 	}
 	if (ok)
 	{
@@ -198,6 +234,8 @@ bool CTestBankedSource::RunNes(const NesCartridge &cart)
 		di->SetDebugMode(DEBUGGER_MODE_PAUSED);
 	}
 
+	if (prgWatch)
+		scratch->currentSegment->DeleteWatch(prgWatch->address);
 	if (onA)
 		scratch->RemoveSourceBreakpoint(onA);
 	TestNesUnloadCartridge(di, false);

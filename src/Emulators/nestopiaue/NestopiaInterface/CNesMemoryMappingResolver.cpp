@@ -88,3 +88,16 @@ CDebugMappedAddress CNesMemoryMappingResolver::Resolve(u16 cpuAddress, DebugMemo
 	}
 	return mapped;
 }
+
+bool CNesMemoryMappingResolver::ReadPhysical(const CDebugPhysicalAddress &physical, u8 *value)
+{
+	const std::string &d = physical.device;
+	int isWrk = d == "nes-ram" ? 2 : d == "nes-wram" ? 1 : d == "nes-prg" ? 0 : -1;
+	if (isWrk < 0)
+		return false;
+	unsigned char v = 0;
+	if (!nesd_peek_prg_source(isWrk, (int)physical.region, physical.offset, &v))
+		return false;
+	*value = v;
+	return true;
+}

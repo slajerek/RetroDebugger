@@ -1333,6 +1333,46 @@ int atrd_peek_backing(int region, int offset)
 	return -1;
 }
 
+/* RD-059: the byte at a physical location CAtariMemoryMappingResolver
+   reports, from its backing store whatever the CPU has mapped in. DEVICE:
+   0 base RAM (offset = address; the RAM under a ROM or the XE window as
+   atrd_peek_ram), 1 extended RAM (region = bank, offset in the 16 KB bank;
+   the CPU's current bank lives in MEMORY_mem), 2 XL/XE OS ROM (offset from
+   $C000), 3 BASIC, 4 XEGS game, 5 the cartridge image (offset in it).
+   Returns the byte, or -1 when it is not known or not readable. */
+int atrd_peek_ram(int addr);
+
+int atrd_peek_physical(int device, int region, int offset)
+{
+	if (offset < 0)
+		return -1;
+	switch (device) {
+	case 0:
+		return offset <= 0xffff ? atrd_peek_ram(offset) : -1;
+	case 1:
+		if (atarixe_memory == NULL || offset >= 0x4000 || region <= 0
+			|| ((ULONG)region << 14) + 0x4000 > atarixe_memory_size)
+			return -1;
+		if (region == atrd_cpu_xe_bank()) {
+			if (MEMORY_selftest_enabled && offset >= 0x1000 && offset < 0x1800)
+				return -1;		/* the Self Test covers that part of the window */
+			return MEMORY_mem[0x4000 + offset];
+		}
+		return atarixe_memory[((ULONG)region << 14) + offset];
+	case 2:
+		return (Atari800_machine_type == Atari800_MACHINE_XLXE && offset < (int)sizeof(MEMORY_os)) ? MEMORY_os[offset] : -1;
+	case 3:
+		return offset < (int)sizeof(MEMORY_basic) ? MEMORY_basic[offset] : -1;
+	case 4:
+		return offset < (int)sizeof(MEMORY_xegame) ? MEMORY_xegame[offset] : -1;
+	case 5:
+		if (CARTRIDGE_main.image == NULL || offset >= CARTRIDGE_main.size * 1024)
+			return -1;
+		return CARTRIDGE_main.image[offset];
+	}
+	return -1;
+}
+
 /* RD-029: the RAM byte at ADDR, whatever the CPU sees there: where a ROM
    (XL/XE OS, Self Test, BASIC, a cartridge) is switched in, the RAM kept
    under it; where a 130XE extended bank is switched in at $4000-$7FFF, the

@@ -319,6 +319,53 @@ int c64d_cartridge_romh_file_offset(uint32_t offset, uint32_t *fileOffset)
     return 0;
 }
 
+/* RD-059: the byte at a physical location c64d_resolve_access reports, read
+   from the backing array itself -- RAM under ROM or I/O, a ROM, a cartridge
+   bank that is not banked in -- without going through the CPU's mapping.
+   I/O and the CPU port have side effects or no backing byte: not readable.
+   Returns 1 when VALUE was set. */
+/* the "Main Slot" image buffers (c64-generic.c; declared in c64cartsystem.h
+   under CARTRIDGE_INCLUDE_SLOTMAIN_API, which this file does not include) */
+extern uint8_t *roml_banks, *romh_banks, *export_ram0;
+
+int c64d_peek_physical(int kind, uint32_t offset, uint8_t *value)
+{
+    switch (kind) {
+        case C64D_ACCESS_RAM:
+            *value = mem_ram[offset & 0xffff];
+            return 1;
+        case C64D_ACCESS_BASIC:
+            if (offset >= 0x2000) return 0;
+            *value = c64memrom_basic64_rom[offset];
+            return 1;
+        case C64D_ACCESS_KERNAL:
+            if (offset >= 0x2000) return 0;
+            *value = c64memrom_kernal64_rom[offset];
+            return 1;
+        case C64D_ACCESS_CHARGEN:
+            if (offset >= C64_CHARGEN_ROM_SIZE) return 0;
+            *value = mem_chargen_rom[offset];
+            return 1;
+        case C64D_ACCESS_COLORRAM:
+            *value = mem_color_ram[offset & 0x3ff];
+            return 1;
+        case C64D_ACCESS_ROML:
+            if (roml_banks == NULL || offset >= C64CART_ROM_LIMIT) return 0;
+            *value = roml_banks[offset];
+            return 1;
+        case C64D_ACCESS_ROMH:
+            if (romh_banks == NULL || offset >= C64CART_ROM_LIMIT) return 0;
+            *value = romh_banks[offset];
+            return 1;
+        case C64D_ACCESS_CART_RAM:
+            if (export_ram0 == NULL || offset >= 0x2000) return 0;
+            *value = export_ram0[offset];
+            return 1;
+        default:
+            return 0;
+    }
+}
+
 void c64d_resolve_access(uint16_t addr, int isWrite, int *kind, uint32_t *offset)
 {
     int page = addr >> 8;

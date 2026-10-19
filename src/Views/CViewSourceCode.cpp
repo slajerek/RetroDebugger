@@ -1,5 +1,6 @@
 #include "CViewSourceCode.h"
 #include "CDebugVariableResolver.h"
+#include "CDebugSymbolsDataWatch.h"
 #include "DebuggerDefs.h"
 #include "CViewDataDump.h"
 #include "CSourceRendering.h"
@@ -669,6 +670,9 @@ bool CViewSourceCode::AddVariableWatch(const std::string &name)
 	if (r.variable->location == DebugVariableLocation::Fixed && r.function.empty() && r.hasAddress)
 	{
 		debugSymbols->currentSegment->AddWatch((int)r.address, (char *)r.name.c_str(), representation, count);
+		CDebugSymbolsDataWatch *added = debugSymbols->currentSegment->FindWatch((int)r.address);
+		if (added)
+			added->BindToMemory();		// RD-059: the variable's memory, also when it is banked out
 		return true;
 	}
 	debugSymbols->AddSourceWatch(r.name, r.function, representation, count);

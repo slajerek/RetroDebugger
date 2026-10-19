@@ -22,6 +22,9 @@ public:
 	virtual const char *GetMachineVariant() override { return "C64 (VICE)"; }
 	virtual CDebugMappedAddress Resolve(u16 cpuAddress, DebugMemoryAccess access,
 										DebugMemoryBusMaster busMaster = DebugMemoryBusMaster::Cpu) override;
+	// RD-059: RAM, the ROMs, color RAM and the cartridge images from VICE's
+	// arrays (c64d_peek_physical); I/O and the CPU port are not read
+	virtual bool ReadPhysical(const CDebugPhysicalAddress &physical, u8 *value) override;
 };
 
 #endif

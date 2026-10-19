@@ -188,7 +188,7 @@ void CViewDataWatch::RenderImGui()
 					{
 						CDebugMemoryCell *c = symbols->memory->GetMemoryCell(watch->address + i);
 						if (!c) continue;
-						u8 v = dataAdapter->AdapterReadByteModulus(watch->address + i);
+						u8 v = watch->ReadByte(i, NULL);
 						c->UpdateCellColors(v, false, 0);
 						if (c->sa > ha) { hr = c->sr; hg = c->sg; hb = c->sb; ha = c->sa; }
 					}
@@ -199,42 +199,46 @@ void CViewDataWatch::RenderImGui()
 					}
 				}
 
+				// RD-059: a watch bound to its memory reads it there when the CPU
+				// has something else mapped at its address
+				bool elsewhere = false;
+				auto readByte = [&](int i) -> u32 { bool e = false; u8 v = watch->ReadByte(i, &e); elsewhere = elsewhere || e; return v; };
 				u32 value = 0;
 				switch(watch->representation)
 				{
 					default:
 					case WATCH_REPRESENTATION_BIN:
 					case WATCH_REPRESENTATION_HEX_8:
-						value = dataAdapter->AdapterReadByteModulus(watch->address);
+						value = readByte(0);
 						break;
 					case WATCH_REPRESENTATION_HEX_16_LITTLE_ENDIAN:
 					case WATCH_REPRESENTATION_UNSIGNED_DEC_16_LITTLE_ENDIAN:
 					case WATCH_REPRESENTATION_SIGNED_DEC_16_LITTLE_ENDIAN:
-						value =   dataAdapter->AdapterReadByteModulus(watch->address    )
-								| dataAdapter->AdapterReadByteModulus(watch->address + 1) << 8;
+						value =   readByte(0)
+								| readByte(1) << 8;
 						break;
 					case WATCH_REPRESENTATION_HEX_16_BIG_ENDIAN:
 					case WATCH_REPRESENTATION_UNSIGNED_DEC_16_BIG_ENDIAN:
 					case WATCH_REPRESENTATION_SIGNED_DEC_16_BIG_ENDIAN:
-						value =   dataAdapter->AdapterReadByteModulus(watch->address    ) << 8
-								| dataAdapter->AdapterReadByteModulus(watch->address + 1);
+						value =   readByte(0) << 8
+								| readByte(1);
 						break;
 
 					case WATCH_REPRESENTATION_HEX_32_LITTLE_ENDIAN:
 					case WATCH_REPRESENTATION_UNSIGNED_DEC_32_LITTLE_ENDIAN:
 					case WATCH_REPRESENTATION_SIGNED_DEC_32_LITTLE_ENDIAN:
-						value =   dataAdapter->AdapterReadByteModulus(watch->address    )
-								| dataAdapter->AdapterReadByteModulus(watch->address + 1) << 8
-								| dataAdapter->AdapterReadByteModulus(watch->address + 2) << 16
-								| dataAdapter->AdapterReadByteModulus(watch->address + 3) << 24;
+						value =   readByte(0)
+								| readByte(1) << 8
+								| readByte(2) << 16
+								| readByte(3) << 24;
 						break;
 					case WATCH_REPRESENTATION_HEX_32_BIG_ENDIAN:
 					case WATCH_REPRESENTATION_UNSIGNED_DEC_32_BIG_ENDIAN:
 					case WATCH_REPRESENTATION_SIGNED_DEC_32_BIG_ENDIAN:
-						value =   dataAdapter->AdapterReadByteModulus(watch->address    ) << 24
-								| dataAdapter->AdapterReadByteModulus(watch->address + 1) << 16
-								| dataAdapter->AdapterReadByteModulus(watch->address + 2) << 8
-								| dataAdapter->AdapterReadByteModulus(watch->address + 3);
+						value =   readByte(0) << 24
+								| readByte(1) << 16
+								| readByte(2) << 8
+								| readByte(3);
 						break;
 				}
 
@@ -287,6 +291,14 @@ void CViewDataWatch::RenderImGui()
 						ImGui::Text(buf);
 						break;
 				}
+				if (elsewhere)
+				{
+					ImGui::SameLine();
+					ImGui::TextColored(ImVec4(0.9f, 0.6f, 0.3f, 1.0f), "(%s)", watch->MemoryName().c_str());
+				}
+				if (watch->hasPhysical && ImGui::IsItemHovered())
+					ImGui::SetTooltip(elsewhere ? "%s, not mapped at $%04X now: read from that memory" : "%s, mapped at $%04X now",
+									  watch->MemoryName().c_str(), watch->address);
 			}
 
 			ImGui::TableNextColumn();
@@ -536,6 +548,10 @@ void CViewDataWatch::RenderImGui()
 				addWatchPopupAddr = URANGE(0, addWatchPopupAddr, dataAdapter->AdapterGetDataLength());
 
 				symbols->currentSegment->AddWatch(addWatchPopupAddr, "");
+				// RD-059: the watch keeps the memory at that address now
+				CDebugSymbolsDataWatch *added = symbols->currentSegment->FindWatch(addWatchPopupAddr);
+				if (added)
+					added->BindToMemory();
 				
 //				CBreakpointAddr *breakpoint = new CBreakpointAddr(addBreakpointPopupAddr);
 //				AddBreakpoint(breakpoint);

@@ -23,6 +23,9 @@ public:
 	virtual const char *GetMachineVariant() override;
 	virtual CDebugMappedAddress Resolve(u16 cpuAddress, DebugMemoryAccess access,
 										DebugMemoryBusMaster busMaster = DebugMemoryBusMaster::Cpu) override;
+	// RD-059: base and extended RAM, the OS/BASIC/XEGS ROMs and the cartridge
+	// image from Atari800's arrays (atrd_peek_physical); I/O is not read
+	virtual bool ReadPhysical(const CDebugPhysicalAddress &physical, u8 *value) override;
 private:
 	char variant[64];
 };

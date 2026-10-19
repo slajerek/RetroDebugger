@@ -147,3 +147,17 @@ CDebugMappedAddress CAtariMemoryMappingResolver::Resolve(u16 cpuAddress, DebugMe
 	}
 	return mapped;
 }
+
+bool CAtariMemoryMappingResolver::ReadPhysical(const CDebugPhysicalAddress &physical, u8 *value)
+{
+	const std::string &d = physical.device;
+	int device = d == "atari-ram" ? 0 : d == "atari-xe-ram" ? 1 : d == "atari-os" ? 2
+		: d == "atari-basic" ? 3 : d == "atari-xegame" ? 4 : d == "atari-cart" ? 5 : -1;
+	if (device < 0)
+		return false;
+	int v = atrd_peek_physical(device, (int)physical.region, (int)physical.offset);
+	if (v < 0)
+		return false;
+	*value = (u8)v;
+	return true;
+}

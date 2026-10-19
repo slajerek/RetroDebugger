@@ -942,6 +942,21 @@ void CDebuggerServerApi::RegisterEndpoints(CDebuggerServer *server)
 						watch["name"] = w->watchName;
 					watch["representation"] = w->representation;
 					watch["numberOfValues"] = w->numberOfValues;
+					// RD-059: the memory the watch is bound to, and its byte(s) from there
+					if (w->hasPhysical)
+					{
+						bool elsewhere = false;
+						json bytes = json::array();
+						for (int i = 0; i < std::max(1, w->numberOfValues); i++)
+						{
+							bool e = false;
+							bytes.push_back(w->ReadByte(i, &e));
+							elsewhere = elsewhere || e;
+						}
+						watch["memory"] = w->MemoryName();
+						watch["mappedIn"] = !elsewhere;
+						watch["bytes"] = bytes;
+					}
 					watchList.push_back(watch);
 				}
 			}
@@ -973,6 +988,10 @@ void CDebuggerServerApi::RegisterEndpoints(CDebuggerServer *server)
 				}
 				symbols->currentSegment->AddWatch(address, nameBuf, 0, numValues);
 				if (nameBuf) delete[] nameBuf;
+				// RD-059: bound to the memory at that address now ("bind": false keeps the CPU view)
+				CDebugSymbolsDataWatch *added = symbols->currentSegment->FindWatch(address);
+				if (added && params.value("bind", true))
+					added->BindToMemory();
 			}
 		}
 

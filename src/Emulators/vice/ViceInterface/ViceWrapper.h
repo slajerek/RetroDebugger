@@ -145,6 +145,9 @@ void c64d_mark_c64_cell_write(uint16 addr, uint8 value);
 #define C64D_ACCESS_CART_RAM	10	// offset in export_ram0
 #define C64D_ACCESS_UNMAPPED	11	// nothing answers (open bus)
 void c64d_resolve_access(uint16 addr, int isWrite, int *kind, uint32 *offset);
+// RD-059: the byte at a physical location (KIND, OFFSET as above) from its
+// backing array, whatever the CPU has mapped in; 0 for I/O and the CPU port
+int c64d_peek_physical(int kind, uint32 offset, uint8 *value);
 // RD-030: the .crt file offset of a C64D_ACCESS_ROML offset (generic and Magic
 // Desk cartridges attached from a .crt); 0 when unknown.
 int c64d_cartridge_roml_file_offset(uint32 offset, uint32 *fileOffset);

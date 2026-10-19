@@ -126,6 +126,7 @@ int atrd_get_memory_attrib(int addr);
 int atrd_peek_ram(int addr);
 void atrd_poke_ram(int addr, int value);
 int atrd_peek_backing(int region, int offset);
+int atrd_peek_physical(int device, int region, int offset);
 int atrd_get_builtin_rom_a000(void);
 #ifdef __cplusplus
 }

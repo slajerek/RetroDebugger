@@ -1157,6 +1157,30 @@ int nesd_get_prg_mapping(unsigned short addr, int *isWrk, int *source, unsigned 
 	return 1;
 }
 
+// RD-059: the byte at OFFSET of the PRG (isWrk 0) or WRK (isWrk 1) SOURCE
+// nesd_get_prg_mapping reports, whatever bank the CPU has mapped in; the
+// internal RAM when isWrk is 2 (offset 0-$7FF). Returns 0 when unknown.
+int nesd_peek_prg_source(int isWrk, int source, unsigned int offset, unsigned char *value)
+{
+	Core::Machine& machine = nesEmulator;
+	if (isWrk == 2)
+	{
+		if (offset >= 0x800)
+			return 0;
+		*value = machine.cpu.GetRam()[offset];
+		return 1;
+	}
+	std::shared_lock<std::shared_mutex> cartridgeLock(nesdCartridgeMutex);
+	if (machine.image == NULL || machine.image->GetType() != Core::Image::CARTRIDGE || source < 0)
+		return 0;
+	const Core::Boards::Board *board = static_cast<const Core::Cartridge*>(machine.image)->GetBoard();
+	Nes::byte v = 0;
+	if (board == NULL || !board->PeekPrgSource(isWrk != 0, (uint)source, (dword)offset, v))
+		return 0;
+	*value = (unsigned char)v;
+	return 1;
+}
+
 // RD-027: the loaded cartridge's mapper, submapper and PRG-ROM size in bytes.
 // Returns 0 when no cartridge is loaded.
 int nesd_get_cartridge_info(int *mapper, int *subMapper, unsigned int *prgRomSize)
@@ -2165,6 +2189,7 @@ unsigned int nesd_get_cpu_pc() { return 0; }
 unsigned char nesd_peek_io(unsigned short addr) { return 0; }
 unsigned char nesd_peek_safe_io(unsigned short addr) { return 0; }
 int nesd_get_prg_mapping(unsigned short addr, int *isWrk, int *source, unsigned int *offset, int *writable) { return 0; }
+int nesd_peek_prg_source(int isWrk, int source, unsigned int offset, unsigned char *value) { return 0; }
 int nesd_get_cartridge_info(int *mapper, int *subMapper, unsigned int *prgRomSize) { return 0; }
 void nesd_get_cpu_regs(unsigned short *pc, unsigned char *a, unsigned char *x, unsigned char *y, unsigned char *p, unsigned char *s, unsigned char *irq) {}
 void nesd_check_pc_breakpoint(uint16 pc) {}

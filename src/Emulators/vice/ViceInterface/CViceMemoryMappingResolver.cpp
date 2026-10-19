@@ -65,3 +65,23 @@ CDebugMappedAddress CViceMemoryMappingResolver::Resolve(u16 cpuAddress, DebugMem
 	}
 	return mapped;
 }
+
+bool CViceMemoryMappingResolver::ReadPhysical(const CDebugPhysicalAddress &physical, u8 *value)
+{
+	int kind = C64D_ACCESS_UNKNOWN;
+	const std::string &d = physical.device;
+	if (d == "c64-ram")					kind = C64D_ACCESS_RAM;
+	else if (d == "c64-basic")			kind = C64D_ACCESS_BASIC;
+	else if (d == "c64-kernal")			kind = C64D_ACCESS_KERNAL;
+	else if (d == "c64-chargen")		kind = C64D_ACCESS_CHARGEN;
+	else if (d == "c64-color-ram")		kind = C64D_ACCESS_COLORRAM;
+	else if (d == "c64-cart")			kind = physical.region == 0 ? C64D_ACCESS_ROML : C64D_ACCESS_ROMH;
+	else if (d == "c64-cart-ram")		kind = C64D_ACCESS_CART_RAM;
+	else
+		return false;
+	uint8 v = 0;
+	if (!c64d_peek_physical(kind, physical.offset, &v))
+		return false;
+	*value = v;
+	return true;
+}

@@ -488,6 +488,16 @@ namespace Nes
 				writable = sources[source].Writable();
 				return true;
 			}
+
+			// RetroDebugger (RD-059): the byte at OFFSET of SOURCE, whatever bank
+			// is mapped in; false when the source is empty or OFFSET is past it
+			bool PeekSource(uint source,dword offset,byte& value) const
+			{
+				if (source >= NUM_SOURCES || offset >= sources[source].Size())
+					return false;
+				value = sources[source].Mem()[offset];
+				return true;
+			}
 		};
 
 		template<dword SPACE,uint U,uint V> template<uint SIZE,uint ADDRESS>

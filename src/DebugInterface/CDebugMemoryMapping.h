@@ -129,6 +129,13 @@ public:
 	virtual std::vector<u16> ResolveCpuWindows(const CDebugPhysicalAddress &physical,
 											   DebugMemoryAccess access = DebugMemoryAccess::Fetch);
 
+	// RD-059: the byte at PHYSICAL read from its backing store, whatever the
+	// CPU has mapped in now -- RAM under ROM, an extended RAM bank or a
+	// cartridge bank that is not banked in. False when it cannot be read
+	// without side effects (I/O registers) or the device is not known here.
+	// Call it on the emulation thread or with the emulation paused.
+	virtual bool ReadPhysical(const CDebugPhysicalAddress &physical, u8 *value) { (void)physical; (void)value; return false; }
+
 	// Incremented each time the resolver observes that the effective mapping
 	// changed (see ObserveMappingState). Starts at 1 once state was observed.
 	u64 GetMappingEpoch() const { return mappingEpoch; }

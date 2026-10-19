@@ -24,6 +24,9 @@ public:
 	virtual const char *GetMachineVariant() override { return "NES (Nestopia)"; }
 	virtual CDebugMappedAddress Resolve(u16 cpuAddress, DebugMemoryAccess access,
 										DebugMemoryBusMaster busMaster = DebugMemoryBusMaster::Cpu) override;
+	// RD-059: the internal RAM and the cartridge's PRG/WRK sources by bank
+	// offset (nesd_peek_prg_source), banks not mapped in included
+	virtual bool ReadPhysical(const CDebugPhysicalAddress &physical, u8 *value) override;
 };
 
 #endif

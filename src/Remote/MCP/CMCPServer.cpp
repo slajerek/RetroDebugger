@@ -1785,7 +1785,7 @@ void CMCPServer::RegisterDebuggerTools(CDebuggerServer *server)
 	{
 		MCPToolDescriptor tool;
 		tool.name = "retro_watch_list";
-		tool.description = "List all watches for a platform";
+		tool.description = "List all watches for a platform; a bound watch also gives its memory, whether that is mapped in now, and its bytes from there";
 		tool.inputSchema = {
 			{"type", "object"},
 			{"properties", {{"platform", {{"type", "string"}}}}},
@@ -1808,13 +1808,14 @@ void CMCPServer::RegisterDebuggerTools(CDebuggerServer *server)
 	{
 		MCPToolDescriptor tool;
 		tool.name = "retro_watch_add";
-		tool.description = "Add a watch at a memory address";
+		tool.description = "Add a watch at a memory address. It keeps the memory mapped there now (RAM under ROM, an extended RAM or cartridge bank) and reads it even after a bank switch; bind:false watches what the CPU sees instead";
 		tool.inputSchema = {
 			{"type", "object"},
 			{"properties", {
 				{"platform", {{"type", "string"}}},
 				{"address", {{"type", "integer"}, {"description", "Memory address to watch"}}},
-				{"name", {{"type", "string"}, {"description", "Watch label (optional)"}}}
+				{"name", {{"type", "string"}, {"description", "Watch label (optional)"}}},
+				{"bind", {{"type", "boolean"}, {"description", "Keep the memory mapped at the address now (default true)"}}}
 			}},
 			{"required", json::array({"platform", "address"})}
 		};
@@ -1825,6 +1826,7 @@ void CMCPServer::RegisterDebuggerTools(CDebuggerServer *server)
 			json ep;
 			ep["address"] = params.at("address");
 			if (params.contains("name")) ep["name"] = params["name"];
+			if (params.contains("bind")) ep["bind"] = params["bind"];
 			ConsumeEndpointResult(server->RunEndpointFunction(fn, "", ep, nullptr, 0), "retro_watch_add");
 			return {{"status", "watch_added"}, {"address", params.at("address")}};
 		};
