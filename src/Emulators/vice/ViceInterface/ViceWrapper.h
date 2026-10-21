@@ -229,7 +229,12 @@ void c64d_drive1541_check_irqvia2_breakpoint();
 void c64d_c64_check_irqvic_breakpoint();
 void c64d_c64_check_irqcia_breakpoint(int ciaNum);
 void c64d_c64_check_irqnmi_breakpoint();
-void c64d_debug_pause_check(int allowRestore);
+void c64d_timeline_instruction_boundary(int executable);
+void c64d_timeline_instruction_dispatch(int executable);
+void c64d_timeline_after_register_import();
+// PC application is safe only at a main-CPU instruction boundary, not in a
+// per-cycle or drive park. This is independent of snapshot-restore permission.
+void c64d_debug_pause_check(int allowRestore, int allowPcChange);
 
 // c64d: deferred PC change requested by the debugger (CDebugInterfaceVice::MakeJmpC64).
 // c64d_set_c64_pc() queues a VICE trap to write the CPU's PC, but that trap is only
@@ -239,10 +244,12 @@ void c64d_debug_pause_check(int allowRestore);
 // instructions (from the pause loop, or at the pause-loop exit in maincpu_mainloop).
 // It returns 1 if a pending change was applied.
 int c64d_is_pc_change_pending(void);
+int c64d_get_pending_pc(void);  // requested address, or -1 when nothing is pending
 int c64d_apply_pending_debugger_pc(void);
 
-// 1 while the emulation thread is parked in the pause loop holding no debugger locks.
+// Parked-state queries do not advance emulation.
 int c64d_is_cpu_parked_in_pause_loop(void);
+int c64d_can_apply_pc_in_pause_loop(void);
 
 void c64d_show_message(char *message);
 

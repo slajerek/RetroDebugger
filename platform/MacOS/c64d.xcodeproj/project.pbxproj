@@ -3870,6 +3870,9 @@
 		41D4AE4623AA0F1100A54EB2 /* CSnapshotsManager.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = "$(SRCROOT)/../../src/Tools/CSnapshotsManager.cpp"; sourceTree = "<absolute>"; };
 		C1A064001026101000000001 /* CTimelineNavigation.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "$(SRCROOT)/../../src/Tools/CTimelineNavigation.h"; sourceTree = "<absolute>"; };
 		41D4AE4723AA0F1100A54EB2 /* CSnapshotsManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "$(SRCROOT)/../../src/Tools/CSnapshotsManager.h"; sourceTree = "<absolute>"; };
+		D54F8EC20BA8DF99000A2001 /* CTimelineSeekPlan.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "$(SRCROOT)/../../src/Tools/CTimelineSeekPlan.h"; sourceTree = "<absolute>"; };
+		D54F8EC20BA8DF99000A2002 /* CTimelineSeekTransaction.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "$(SRCROOT)/../../src/Tools/CTimelineSeekTransaction.h"; sourceTree = "<absolute>"; };
+		D54F8EC20BA8DF99000A2003 /* CTimelineSeekJson.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "$(SRCROOT)/../../src/Tools/CTimelineSeekJson.h"; sourceTree = "<absolute>"; };
 		41D4AE4923AA0F1100A54EB2 /* exomizer-chunkpool.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "$(SRCROOT)/../../src/Tools/exomizer/exomizer-chunkpool.c"; sourceTree = "<absolute>"; };
 		41D4AE4A23AA0F1100A54EB2 /* exomizer-chunkpool.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "$(SRCROOT)/../../src/Tools/exomizer/exomizer-chunkpool.h"; sourceTree = "<absolute>"; };
 		41D4AE4B23AA0F1100A54EB2 /* exomizer-log.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "$(SRCROOT)/../../src/Tools/exomizer/exomizer-log.h"; sourceTree = "<absolute>"; };
@@ -4165,6 +4168,8 @@
 		681D899FB87330853D12B799 /* CViewC64MemoryBank.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = "$(SRCROOT)/../../src/Views/C64/CViewC64MemoryBank.cpp"; sourceTree = "<absolute>"; };
 		7291E98CF8736BD2C610B903 /* video-render-rgbi.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "$(SRCROOT)/../../src/Emulators/vice/video/video-render-rgbi.c"; sourceTree = "<absolute>"; };
 		7306DDDCAF163CFAF0564969 /* CTestSnapshotBoundary.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = CTestSnapshotBoundary.h; path = ../../src/Tests/CTestSnapshotBoundary.h; sourceTree = "<group>"; };
+		12C35C4FE356414F92ED8741 /* CTestTimelineCancellation.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = CTestTimelineCancellation.h; path = ../../src/Tests/CTestTimelineCancellation.h; sourceTree = "<group>"; };
+		CA2C3656B6AD4BA695F74E06 /* CTestTimelineCancellationChecks.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = CTestTimelineCancellationChecks.h; path = ../../src/Tests/CTestTimelineCancellationChecks.h; sourceTree = "<group>"; };
 		731097FF510E196CDB32601F /* CViewC64MemoryBank.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "$(SRCROOT)/../../src/Views/C64/CViewC64MemoryBank.h"; sourceTree = "<absolute>"; };
 		7394243CF375410BB005A81E /* archdep_tick.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "$(SRCROOT)/../../src/Emulators/vice/arch/archdep_tick.c"; sourceTree = "<absolute>"; };
 		77051290644E4AFAAFD444C7 /* userport_ps2mouse.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "$(SRCROOT)/../../src/Emulators/vice/userport/userport_ps2mouse.c"; sourceTree = "<absolute>"; };
@@ -7950,6 +7955,9 @@
 				41D4AE4623AA0F1100A54EB2 /* CSnapshotsManager.cpp */,
 				41D4AE4723AA0F1100A54EB2 /* CSnapshotsManager.h */,
 				C1A064001026101000000001 /* CTimelineNavigation.h */,
+				D54F8EC20BA8DF99000A2001 /* CTimelineSeekPlan.h */,
+				D54F8EC20BA8DF99000A2002 /* CTimelineSeekTransaction.h */,
+				D54F8EC20BA8DF99000A2003 /* CTimelineSeekJson.h */,
 				41D4AE4823AA0F1100A54EB2 /* exomizer */,
 				41D4AE5A23AA0F1100A54EB2 /* libpsid64 */,
 				41D4AE6923AA0F1100A54EB2 /* sidplay */,
@@ -8458,6 +8466,8 @@
 				AA0000000000000000000A10 /* CTestIde64UsbListener.h */,
 				AA0000000000000000000A12 /* CTestIde64UsbListener.cpp */,
 				7306DDDCAF163CFAF0564969 /* CTestSnapshotBoundary.h */,
+				12C35C4FE356414F92ED8741 /* CTestTimelineCancellation.h */,
+				CA2C3656B6AD4BA695F74E06 /* CTestTimelineCancellationChecks.h */,
 				0D9CA36DE0546283AF5FE7AF /* CTestSnapshotBoundary.cpp */,
 				E1E0AA9271261C07DCE42AE9 /* CTestViceModelConfig.h */,
 				01BCC63C205198A2545DE195 /* CTestViceModelConfig.cpp */,

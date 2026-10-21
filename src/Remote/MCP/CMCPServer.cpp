@@ -5,6 +5,7 @@
 #include "CViewC64.h"
 #include "CDebugInterface.h"
 #include "CDebuggerServerApi.h"
+#include "CTimelineSeekJson.h"
 #include "C64DShutdown.h"
 #include "CTimelineNavigation.h"
 #include "DBG_Log.h"
@@ -823,7 +824,9 @@ void CMCPServer::RegisterDebuggerTools(CDebuggerServer *server)
 						   "Returns status \"jumped\" with applied=true once the new PC has been "
 						   "committed to the CPU, so a following step executes at the target. "
 						   "Returns status \"queued\" with applied=false if the change could not be "
-						   "committed (emulation thread not running, or backend unsupported).";
+						   "committed yet (including a C64 mid-instruction pause). At that phase, "
+						   "deliberate resume/step finishes the current instruction before applying "
+						   "the queued target; it is not a step at the target.";
 		tool.inputSchema = {
 			{"type", "object"},
 			{"properties", {
@@ -899,6 +902,53 @@ void CMCPServer::RegisterDebuggerTools(CDebuggerServer *server)
 			string raw(result->data(), result->size());
 			delete result;
 			return json::parse(raw);
+		};
+		RegisterTool(tool);
+	}
+
+	// One strict timeline operation; no implicit pause and no recorder changes.
+	{
+		MCPToolDescriptor tool;
+		tool.name = "retro_timeline_seek";
+		tool.description = "Read timeline capabilities/status or perform a bounded C64 backward restore ending paused. "
+			"C64 (PAL and NTSC) is the only supported seek platform; Atari/NES status is capability-only and "
+			"all their mutating modes return unsupported_platform without dispatch. Mutating C64 modes require "
+			"an already paused machine. Select last_read/last_write at a CPU address, an explicit recorded "
+			"cycle/frame, or back by instructions/video_frames/emulated_seconds. Seconds require a verified "
+			"constant C64 clock/timebase. Check outcome, success, completed, and mutationStarted: "
+			"transport success is not a successful restore. Input replay and external-media rollback are not guaranteed.";
+		tool.inputSchema = {
+			{"type", "object"}, {"additionalProperties", false},
+			{"properties", {
+				{"platform", {{"type", "string"}, {"enum", json::array({"c64", "atari800", "nes"})}}},
+				{"mode", {{"type", "string"}, {"enum", json::array({"status", "last_read", "last_write", "cycle", "frame", "back"})}}},
+				{"address", {{"type", "integer"}, {"minimum", 0}, {"maximum", 65535}}},
+				{"cycle", {{"type", "integer"}, {"minimum", 0}, {"description", "Exact backend recorded counter, not necessarily hardware cycles"}}},
+				{"frame", {{"type", "integer"}, {"minimum", 0}}},
+				{"unit", {{"type", "string"}, {"enum", json::array({"instructions", "video_frames", "emulated_seconds"})}}},
+				{"count", {{"type", "integer"}, {"minimum", 1}, {"maximum", 1000000}, {"default", 1}}},
+				{"timeoutMs", {{"type", "integer"}, {"minimum", 1}, {"maximum", 60000}, {"default", 5000}}}
+			}},
+			{"required", json::array({"platform", "mode"})}
+		};
+		tool.handler = [server](const json &params) -> json
+		{
+			if (!params.is_object() || !params.contains("platform") || !params.at("platform").is_string())
+				throw runtime_error("platform must be c64, atari800 or nes");
+			const string platform = params.at("platform").get<string>();
+			if (platform != "c64" && platform != "atari800" && platform != "nes")
+				throw runtime_error("platform must be c64, atari800 or nes");
+			json endpointParams = params;
+			endpointParams.erase("platform");
+			TimelineSeek::Request request;
+			bool status = false;
+			std::uint32_t timeoutMs = 5000;
+			if (const char *error = TimelineSeek::ParseRequest(endpointParams, request, status, timeoutMs))
+				throw runtime_error(error);
+			if (!status && platform != "c64")
+				return TimelineSeek::UnsupportedPlatformJson(platform, endpointParams);
+			return ConsumeEndpointResult(server->RunEndpointFunction(platform + "/timeline/seek", "",
+				endpointParams, nullptr, 0), "retro_timeline_seek");
 		};
 		RegisterTool(tool);
 	}

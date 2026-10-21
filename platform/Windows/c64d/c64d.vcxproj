@@ -3041,6 +3041,9 @@
     <ClInclude Include="..\..\..\src\Tools\CGuiLockableList.h" />
     <ClInclude Include="..\..\..\src\Tools\CSnapshotsManager.h" />
     <ClInclude Include="..\..\..\src\Tools\CTimelineNavigation.h" />
+    <ClInclude Include="..\..\..\src\Tools\CTimelineSeekPlan.h" />
+    <ClInclude Include="..\..\..\src\Tools\CTimelineSeekTransaction.h" />
+    <ClInclude Include="..\..\..\src\Tools\CTimelineSeekJson.h" />
     <ClInclude Include="..\..\..\src\Tools\64tass\64tass-encoding.h" />
     <ClInclude Include="..\..\..\src\Tools\64tass\64tass-error.h" />
     <ClInclude Include="..\..\..\src\Tools\64tass\64tass-eval.h" />
@@ -3136,6 +3139,8 @@
     <ClInclude Include="..\..\..\src\Tests\CTestViceNetworkSocket.h" />
     <ClInclude Include="..\..\..\src\Tests\CTestViceSnapshot.h" />
     <ClInclude Include="..\..\..\src\Tests\CTestSnapshotBoundary.h" />
+    <ClInclude Include="..\..\..\src\Tests\CTestTimelineCancellation.h" />
+    <ClInclude Include="..\..\..\src\Tests\CTestTimelineCancellationChecks.h" />
     <ClInclude Include="..\..\..\src\Tests\CTestViceModelConfig.h" />
     <ClInclude Include="..\..\..\src\Tests\CTestVicePlatformAbstraction.h" />
     <ClInclude Include="..\..\..\src\Tests\CTestViceSoundIntegration.h" />

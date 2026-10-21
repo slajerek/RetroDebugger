@@ -5,6 +5,8 @@
 // Regression test for a jump requested while the debugger is paused on a CPU
 // breakpoint. MakeJmpC64 must commit the new PC before the next single step, so
 // that the step executes at the requested target and not at the pre-jump PC.
+// A third-clock JMP pause must instead retain a queued request without advancing;
+// after deliberate resume/step, that target must survive the in-flight opcode.
 class CTestViceJumpWhilePaused : public CTest
 {
 public:

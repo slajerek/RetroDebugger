@@ -1289,7 +1289,8 @@ void _c64d_set_c64_pc_trap(uint16_t addr, void *data)
 
 void c64d_set_c64_pc(uint16 pc)
 {
-	viceCurrentC64PC = pc;
+	/* Keep the published PC actual; the requested address is pendingPc until
+	   the trap or a safe instruction-boundary park consumes it. */
 	_c64d_new_pc = pc;
 	interrupt_maincpu_trigger_trap(_c64d_set_c64_pc_trap, NULL);
 }
@@ -1297,6 +1298,11 @@ void c64d_set_c64_pc(uint16 pc)
 int c64d_is_pc_change_pending(void)
 {
 	return _c64d_new_pc != -1;
+}
+
+int c64d_get_pending_pc(void)
+{
+	return _c64d_new_pc;
 }
 
 /* c64d: apply a debugger-requested PC change directly to the CPU working
@@ -3233,14 +3239,7 @@ INC_PC(1);                \
 		
 		{
 			//LOGD("reg_pc=%4.4x", reg_pc);
-			if (_c64d_new_pc == -1)
-			{
-				viceCurrentC64PC = reg_pc;
-			}
-			else
-			{
-				viceCurrentC64PC = _c64d_new_pc;
-			}
+			viceCurrentC64PC = reg_pc;
 			
 #ifdef CHECK_AND_RUN_ALTERNATE_CPU
 			CHECK_AND_RUN_ALTERNATE_CPU
@@ -3348,6 +3347,7 @@ INC_PC(1);                \
 				}
 				
 				c64d_maincpu_current_instruction_clk = maincpu_clk;
+				c64d_timeline_instruction_boundary(!CPU_IS_JAMMED);
 				
 				{
 					int _dm = c64d_debug_mode_get();
@@ -3357,7 +3357,7 @@ INC_PC(1);                \
 						// c64d check PC breakpoint after IRQ or trap
 						c64d_c64_check_pc_breakpoint(reg_pc);
 						viceCurrentC64PC = reg_pc;
-						c64d_debug_pause_check(1);
+						c64d_debug_pause_check(1, 1);
 						
 						// c64d: this is the pause point a CPU breakpoint parks on, and it
 						// sits BELOW the trap dispatch (DO_INTERRUPT) in this loop body.
@@ -3378,6 +3378,10 @@ INC_PC(1);                \
 			
 			{
 				opcode_t opcode;
+				/* A restore while paused can replace the clock above.  Access
+				   hooks for this opcode must use the imported instruction start. */
+				c64d_maincpu_current_instruction_clk = maincpu_clk;
+				c64d_timeline_instruction_dispatch(!CPU_IS_JAMMED);
 #if defined (DEBUG) || defined (FEATURE_CPUMEMHISTORY)
 				debug_clk = maincpu_clk;
 #endif
@@ -4444,7 +4448,7 @@ INC_PC(1);                \
 
 			viceCurrentC64PC = reg_pc;
 
-			c64d_debug_pause_check(0);
+			c64d_debug_pause_check(0, 1);
 		}
 		
 		//		if (c64d_debug_mode == C64_DEBUG_SHUTDOWN)
@@ -4588,7 +4592,7 @@ int c64d_c64_do_cycle()
 			LOGD("DIAG: mid-instruction pause at cycle %d (set by: %s)", c64d_c64_instruction_cycle, c64d_debug_mode_last_setter);
 		}
 
-		c64d_debug_pause_check(0);
+		c64d_debug_pause_check(0, 0);
 	}
 
 	return vicii_cycle();
@@ -4869,6 +4873,9 @@ int c64d_check_cpu_snapshot_manager_restore()
 		
 		LOGD("after alarm_context_dispatch: viceCurrentC64PC=%04x reg_pc=%04x cycle=%d", viceCurrentC64PC, reg_pc, maincpu_clk);
 		
+		/* A strict seek may acknowledge only after cached registers and pending
+		 * interrupt/alarm work have reached this imported CPU boundary. */
+		c64d_timeline_after_register_import();
 		return 1;
 	}
 	return 0;

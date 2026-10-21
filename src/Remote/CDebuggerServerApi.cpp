@@ -8,6 +8,7 @@
 #include "CDebugSymbols.h"
 #include "CDebugMemory.h"
 #include "CDebugMemoryCell.h"
+#include "CTimelineSeekJson.h"
 #include "CDebugSymbolsSegment.h"
 #include "CDebugBreakpointsAddr.h"
 #include "CDebugBreakpointsData.h"
@@ -124,6 +125,62 @@ void CDebuggerServerApi::RegisterEndpoints(CDebuggerServer *server)
 		});
 	}
 	
+	sprintf(buf, "%s/timeline/seek", plat);
+	RegisterEndpoint(server, buf, plat, "timeline", "Read timeline capabilities/coverage; strict backward restoration is supported on C64 only",
+	[this, server](const string token, json params, unsigned char *binaryData, int binaryDataSize) -> vector<char>*
+	{
+		TimelineSeek::Request request;
+		bool status = false;
+		std::uint32_t timeoutMs = 5000;
+		const char *error = TimelineSeek::ParseRequest(params, request, status, timeoutMs);
+		if (error || binaryDataSize != 0)
+			return server->PrepareResult(HTTP_BAD_REQUEST, token,
+				json{{"error", error ? error : "timeline seek does not accept binary input"}}, NULL, 0);
+		const std::string platform = debugInterface->GetPlatformNameEndpointString();
+		if (!status && platform != "c64")
+			return server->PrepareResult(HTTP_OK, token,
+				TimelineSeek::UnsupportedPlatformJson(platform, params), NULL, 0);
+		CSnapshotsManager *manager = debugInterface->snapshotsManager;
+		if (!manager)
+			return server->PrepareResult(HTTP_BAD_REQUEST, token, json{{"error", "timeline manager unavailable"}}, NULL, 0);
+		json result;
+		if (status)
+		{
+			result = TimelineSeek::StatusJson(manager->GetTimelineStatus());
+			result["outcome"] = "status";
+		}
+		else
+		{
+			const TimelineSeek::Result completion = manager->PerformTimelineSeek(request, timeoutMs);
+			result = TimelineSeek::ResultJson(completion);
+			result["counterDomain"] = TimelineSeek::DomainName(manager->GetTimelineStatus().bounds.domain);
+			result["requested"] = params;
+			if (request.access != TimelineSeek::Access::None)
+				result["source"] = {{"address", request.address},
+					{"kind", request.access == TimelineSeek::Access::Read ? "read" : "write"},
+					{"pc", completion.sourceAccessAvailable ? json(completion.sourcePC) : json(nullptr)}};
+			if (completion.contextAvailable && completion.actualAvailable && completion.completed)
+			{
+				result["counterDifference"] = completion.origin.counter >= completion.actual.counter
+					? json(completion.origin.counter - completion.actual.counter) : json(nullptr);
+				result["frameDifference"] = completion.origin.frame >= completion.actual.frame
+					? json(completion.origin.frame - completion.actual.frame) : json(nullptr);
+			}
+			if (completion.destinationResolved && params.at("mode") == "back")
+				result["resolvedRelativeDistance"] = {{"unit", params.at("unit")}, {"count", request.value},
+					{"basis", "retained boundary index or verified counter/frame conversion; not replay-equivalence proof"}};
+		}
+		result["platform"] = debugInterface->GetPlatformNameEndpointString();
+		result["finalStatePolicy"] = "paused; running origins are refused without an implicit pause";
+		result["accessBoundary"] = "recorded CPU instruction boundary, not the individual read/write bus cycle";
+		result["frameBoundary"] = "backend video-frame snapshot boundary, not a display refresh or animation update";
+		result["replayEquivalenceVerified"] = false;
+		result["externalMediaRollbackGuaranteed"] = false;
+		// A well-formed refusal remains structured data.  Transport success is
+		// not seek success: callers must check outcome/success/completed.
+		return server->PrepareResult(HTTP_OK, token, result, NULL, 0);
+	});
+
 	sprintf(buf, "%s/reset/hard", plat);
 	RegisterEndpoint(server, buf, plat, "control", "Hard reset the machine",
 	[this, server](const string token, json params, unsigned char *binaryData, int binaryDataSize) -> vector<char>*
@@ -321,8 +378,9 @@ void CDebuggerServerApi::RegisterEndpoints(CDebuggerServer *server)
 		result["applied"] = applied;
 		if (!applied)
 		{
-			// The PC change is queued but has not reached the CPU yet, so a step
-			// issued now would still execute at the old PC.
+			// A queued PC change has not committed yet. At a mid-instruction
+			// pause, deliberate resume/step must finish the current instruction
+			// before the target can be applied at a safe boundary.
 			result["pendingPc"] = address;
 		}
 		return server->PrepareResult(HTTP_OK, token, result, NULL, 0);

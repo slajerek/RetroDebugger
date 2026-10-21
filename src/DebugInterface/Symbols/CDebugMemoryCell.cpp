@@ -403,6 +403,26 @@ void CDebugMemoryCell::MarkCellExecuteArgument()
 
 void CDebugMemoryCell::ClearEventsAfterCycle(u64 cycle)
 {
+	// Latest-access metadata is not a historical log.  A snapshot boundary
+	// precedes accesses attributed to that instruction, so discard equal as
+	// well as newer timestamps.  Do not invent a previous reader/writer.
+	// Keep unrelated visual markers; this only invalidates access provenance.
+	{
+		std::lock_guard<std::mutex> guard(readWriteAccessMutex);
+		if (readCycle >= cycle)
+		{
+			readPC = readRasterLine = readRasterCycle = -1;
+			readCycle = (u64)-1;
+			readFrame = (u32)-1;
+		}
+		if (writeCycle >= cycle)
+		{
+			writePC = writeRasterLine = writeRasterCycle = -1;
+			writeCycle = (u64)-1;
+			writeFrame = (u32)-1;
+		}
+	}
+
 	// value write events
 	while(valuesHistory.size > 0)
 	{

@@ -32,10 +32,15 @@ Use this skill when working with the RetroDebugger MCP server to debug 8-bit pro
 - `retro_step_subroutine` — step over a JSR (runs until the subroutine returns)
 - `retro_cpu_jump` — force PC to a specific address. Returns `{"status":"jumped","applied":true}`
   once the new PC has been committed to the CPU, so a following `retro_step_instruction`
-  executes at the target. `{"status":"queued","applied":false}` means the change did not
-  reach the CPU (emulation thread not running, or an unsupported backend) — do not chain a
-  step onto a queued jump.
+  executes at the target.  `{"status":"queued","applied":false}` means it has not committed
+  yet (including a C64 mid-instruction/drive pause, running or unparked CPU, stopped thread,
+  or unsupported backend).  On C64, `pendingPc` in CPU status is the requested target,
+  separate from the published PC.  A mid-instruction pause does not execute hidden clocks:
+  deliberate resume/step must finish the suspended instruction before the queued target
+  can commit at a safe boundary.  Do not treat that step as a step at the target; verify
+  commitment first.  Waiting while still paused at that phase cannot apply the request.
 - `retro_cpu_counters` — read cycle, instruction, and frame counters
+- `retro_timeline_seek` -- read timeline capabilities/status, or restore a paused **C64 (PAL or NTSC)** to a retained access/counter/frame destination or bounded backward distance.  Atari/NES seeking returns `unsupported_platform` without mutation; their status does not advertise seeking.  Check structured outcomes; see [Timeline seek](timeline-seek.md).
 - `retro_warp` — enable/disable warp speed (run as fast as possible)
 - `retro_media_detach` — detach all cartridges, disks, and tapes. **Power-cycles the C64** (RAM and CPU state are lost) — do not use it just to remove a disk
 - `retro_disk_detach` — detach the disk from one drive **without resetting** (`platform`, optional `device`: C64 8-11 default 8, Atari 1-8 default 1). Use this when swapping or ejecting a disk mid-session
@@ -100,7 +105,7 @@ These are available as WebSocket endpoints, not yet wrapped as MCP tools:
 ## Safe Debugging Defaults
 
 1. **Always inspect before mutating.** Read CPU status and memory before writing or stepping.
-2. **Verify platform is not paused** before issuing commands. Use `retro_machine_state` — check `isPaused` and `isRunning`. If paused, call `retro_continue` first. PC=0 while paused is normal, not a crash.  Exception: `retro_timeline` frame navigation requires an already paused emulator -- do not resume before that request.
+2. **Check the required run state** before issuing commands.  Use `retro_machine_state` to inspect `isPaused` and `isRunning`.  Do not automatically resume before inspection, `retro_timeline` frame navigation, or `retro_timeline_seek`; both timeline mutation tools require an already paused emulator.  PC=0 while paused is normal, not a crash.
 3. **Pause before memory inspection** for consistent state. Memory can change between reads if emulation is running.
 4. **Use platform parameter** on every tool call. Don't assume which emulator is active.
 5. **Prefer read-only tools** when exploring. Use mutation tools only when you have a clear goal.
@@ -112,6 +117,9 @@ These are available as WebSocket endpoints, not yet wrapped as MCP tools:
    call that loses the connection mid-flight fails with `desktop_unavailable`.
    For `retro_timeline`, also check `accepted`: a well-formed request can return
    `status:"refused"` without an MCP transport error, and `queued` is not completion.
+   The separate `retro_timeline_seek` tool returns structured refusals and
+   post-mutation failures: require `outcome:"restored"`, `success:true`, and
+   `completed:true` before treating a precise seek as successful.
 8. **Never call `retro_shutdown` on your own initiative.** It ends the session —
    the app quits and every later tool call fails. Call it only when the user
    explicitly asked to close RetroDebugger. It is not a way to recover from a
@@ -129,9 +137,10 @@ Call `retro_memory_last_access(platform:"c64", address:1024)` (also `atari800` o
 - `available:false` means no PC-and-cycle-bearing record is retained; all record
   fields are `null`. PC zero and cycle zero are valid, not absence sentinels.
 - `cycle` uses the backend's **execution-counter units**, not a guarantee of the
-  exact bus-access cycle. C64/Atari report instruction-start CPU cycles; NES
-  currently counts instructions, not hardware cycles. Do not compare these
-  values across platforms. Frame/raster fields are `null` when not recorded.
+  exact bus-access cycle.  C64 uses its CPU clock; Atari uses an instruction
+  debug clock that is not assumed to measure all elapsed hardware time; NES
+  counts instructions, not hardware cycles.  Do not compare these values
+  across platforms.  Frame/raster fields are `null` when not recorded.
 - Records are copied coherently without pausing or reading emulated memory. A
   running emulator can produce a newer record immediately after the query; pause
   it separately when you need stable follow-up disassembly.
@@ -140,10 +149,12 @@ Call `retro_memory_last_access(platform:"c64", address:1024)` (also `atari800` o
   hardware/DMA and debugger-originated accesses follow each backend's existing
   marker hooks; the result does not resolve their physical identity.
 - These are debugger records, not snapshot state or an execution-epoch guarantee.
-  Resets/rewinds can leave retained records from an earlier timeline. Existing
-  visual-only marker clearing preserves them; read/write-marker clearing erases
-  them. An access hook without PC/cycle metadata invalidates that side's record
-  instead of reporting an older or fabricated instruction.
+  Checkpoint restoration invalidates equal/newer access records rather than
+  inventing an earlier writer, but records still are not a complete branch or
+  reset-generation history.  Existing visual-only marker clearing preserves
+  them; read/write-marker clearing erases them.  An access hook without
+  PC/cycle metadata invalidates that side's record instead of reporting an
+  older or fabricated instruction.
 - C64U hardware and 1541-drive address spaces are not supported by this tool.
   Missing/unavailable endpoints are errors, not successful empty results.
 

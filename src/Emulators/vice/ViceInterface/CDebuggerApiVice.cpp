@@ -689,12 +689,12 @@ nlohmann::json CDebuggerApiVice::GetCpuStatusJson()
 	cpuStatus["exrom"] = viewC64->viciiStateToShow.exrom;
 	cpuStatus["game"] = viewC64->viciiStateToShow.game;
 	
-	// A debugger-requested PC change that has not reached the CPU yet. "pc" already
-	// reflects the request, so this only appears when the CPU would still execute at
-	// the old PC — which normally cannot happen, as MakeJmpC64 waits for the commit.
-	if (c64d_is_pc_change_pending())
+	// Keep the queued target separate from the published CPU PC. A cycle/drive
+	// pause must finish the in-flight instruction before committing this request.
+	int pendingPc = c64d_get_pending_pc();
+	if (pendingPc >= 0)
 	{
-		cpuStatus["pendingPc"] = viewC64->viciiStateToShow.pc;
+		cpuStatus["pendingPc"] = pendingPc;
 	}
 	
 	return cpuStatus;
