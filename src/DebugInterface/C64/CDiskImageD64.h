@@ -56,6 +56,9 @@ public:
 	// get disk image from drive attached
 	CDiskImageD64(CDebugInterfaceVice *debugInterface, int driveId);
 	
+	// Borrow an isolated adapter for this model's lifetime; no GUI/shared cache lookup.
+	CDiskImageD64(CDataAdapterViceDrive1541DiskContents *adapter);
+
 	// get disk image from file
 	CDiskImageD64(char *fileName);
 	
@@ -75,6 +78,12 @@ public:
 	
 	bool ReadImage();
 	bool isDirectoryValid = false;
+	// Diagnostic survives clearing an incomplete directory.  Track is DOS 1-based.
+	const char *directoryStatus = "unavailable";
+	int directoryErrorTrack = 0;
+	int directoryErrorSector = 0;
+	int directorySectorsRead = 0;
+	bool directoryPartial = false;
 
 	u8 diskName[0x10];
 	u8 diskId[0x07];
@@ -96,6 +105,8 @@ public:
 	
 private:
 	bool isDiskAttached;
+	bool strictDirectory = false;
+	bool FailDirectory(const char *status, int track, int sector);
 };
 
 #endif

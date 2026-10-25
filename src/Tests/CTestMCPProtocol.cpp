@@ -1331,7 +1331,45 @@ void CTestMCPProtocol::Run(ITestCallback *cb)
 		}
 	}
 
-	TestCompleted(true, "All MCP protocol tests passed (37/37)");
+	// --- Test 38: directory routing, explicit outcomes, and bounds ---
+	{
+		for (const char *status : {"ok", "empty", "busy", "unavailable", "timeout", "partial", "cyclic", "malformed", "unreadable", "unsupported"})
+		{
+			json payload = {{"status", status}};
+			CCannedDebuggerServer debuggerServer({{"status", HTTP_OK}, {"result", payload}});
+			CMCPServer server;
+			PrepareToolTestServer(server, debuggerServer);
+			for (int device = 8; device <= 11; ++device)
+			{
+				json response = CallTool(server, 38, "retro_disk_directory", {{"platform", "c64"}, {"device", device}});
+				if (!ToolErrorText(response).empty() || debuggerServer.lastEndpointName != "c64/disk/directory"
+					|| debuggerServer.lastParams != json({{"device", device}})
+					|| json::parse(response["result"]["content"][0]["text"].get<std::string>()) != payload)
+				{
+					TestCompleted(false, "Test 38 FAIL: directory routing or outcome changed"); return;
+				}
+			}
+			CallTool(server, 38, "retro_disk_directory", {{"platform", "c64"}});
+			if (debuggerServer.lastParams != json({{"device", 8}}))
+			{
+				TestCompleted(false, "Test 38 FAIL: directory default device"); return;
+			}
+			int before = debuggerServer.callCount;
+			json invalid = json::array({json::object(), {{"platform", "c64u"}}, {{"platform", "nes"}}});
+			for (const auto &value : json::array({7, 12, "8", 8.0, true, nullptr, 18446744073709551615ULL}))
+				invalid.push_back({{"platform", "c64"}, {"device", value}});
+			for (const auto &args : invalid)
+			{
+				if (ToolErrorText(CallTool(server, 38, "retro_disk_directory", args)).empty()
+					|| debuggerServer.callCount != before)
+				{
+					TestCompleted(false, "Test 38 FAIL: invalid directory request dispatched"); return;
+				}
+			}
+		}
+	}
+
+	TestCompleted(true, "All MCP protocol tests passed (38/38)");
 }
 
 void CTestMCPProtocol::Cancel()
