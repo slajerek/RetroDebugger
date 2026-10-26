@@ -1,11 +1,11 @@
 # Vendored emulator files that are REFERENCE, not live code
 
-**140 files** under `src/Emulators/atari800/sdl/` and `src/Emulators/vice/arch/`.
-**139 of them contain zero live SDL library calls.** The single exception is
+**143 files** under `src/Emulators/atari800/sdl/` and `src/Emulators/vice/arch/`.
+**142 of them contain zero live SDL library calls.** The single exception is
 `src/Emulators/atari800/sdl/a-input.c`.
 
 Note the two axes, which are easy to conflate: *live SDL calls* (one file) and
-*live code* (two files — see "Live-exception files" below). A file can be
+*live code* (five files — see "Live-exception files" below). A file can be
 compiled-and-called live code and still contain no SDL call at all.
 
 Modelled on `~/develop/MTEngineSDL/src/Engine/Libs/imgui/MTENGINE_PATCHES.md`,
@@ -83,6 +83,9 @@ must be maintained like ordinary source, not like reference material.
 |---|---|
 | `src/Emulators/atari800/sdl/a-input.c` | The SDL exception above. |
 | `src/Emulators/vice/arch/socketimpl.h` | Socket platform header (`SOCKET`, `TIMEVAL`, `closesocket`, `INVALID_SOCKET`, `ARCHDEP_SOCKET_ERROR`). `root/socket.c` includes it whenever `HAVE_NETWORK` is defined — which it is, since the IDE64 USB server was enabled (2026-09). Contains no SDL calls. |
+| `src/Emulators/vice/arch/hwsiddrv/usbsid-unixwin-drv.c` | USBSID-Pico SID engine backend (`usbsid_drv_*`), added with the engine in 895f4fc. Compiled under `HAVE_USBSID` by CMake (`USBSID_SUPPORT`, ON when libusb-1.0 is found), the Windows vcxproj and the Xcode project. Called from `sid/usbsid.c` when `SID_ENGINE_USBSID` is selected; forwards to `us-unixwin-device.c`. Contains no SDL calls. |
+| `src/Emulators/vice/arch/hwsiddrv/us-unixwin-device.c` | The `us_device_*` layer behind `usbsid-unixwin-drv.c`; drives the device through `lib/libusbsiddrv` (`create_USBSID()` ...). Compiled in all three build systems under `HAVE_USBSID`. Contains no SDL calls. |
+| `src/Emulators/vice/arch/hwsiddrv/us-unixwin.h` | `us_device_*` prototypes, included by the two files above. Contains no SDL calls. |
 
 `archdep_network_init()` / `archdep_network_shutdown()` are NOT here: each
 platform's own `platform/<OS>/src.<OS>/archdep.c` has always defined them
@@ -94,8 +97,8 @@ platform's own `platform/<OS>/src.<OS>/archdep.c` has always defined them
 ## The registry
 
 Every file below carries a `[C64D-REFERENCE-ONLY]` header marker, except the
-two live-exception files listed above (`a-input.c`, `socketimpl.h`), which
-carry `[C64D-REFERENCE-LIVE-EXCEPTION]`.
+five live-exception files listed above (`a-input.c`, `socketimpl.h` and the
+three `hwsiddrv/` USBSID files), which carry `[C64D-REFERENCE-LIVE-EXCEPTION]`.
 `tests/test-reference-files.sh` fails if a marker and this table ever disagree.
 
 Rows are sorted by path; any later addition is **appended** rather than
@@ -244,5 +247,8 @@ for no benefit. Do not re-sort.
 | 138 | `src/Emulators/vice/arch/vsidui_sdl.h` | VICE |
 | 139 | `src/Emulators/vice/arch/vsyncarch.c` | VICE |
 | 140 | `src/Emulators/vice/arch/x64sc_ui.c` | VICE |
+| 141 | `src/Emulators/vice/arch/hwsiddrv/us-unixwin-device.c` | VICE (**live exception** — USBSID-Pico engine, see above) |
+| 142 | `src/Emulators/vice/arch/hwsiddrv/us-unixwin.h` | VICE (**live exception** — USBSID-Pico engine, see above) |
+| 143 | `src/Emulators/vice/arch/hwsiddrv/usbsid-unixwin-drv.c` | VICE (**live exception** — USBSID-Pico engine, see above) |
 
-**Total: 140 files.**
+**Total: 143 files.**

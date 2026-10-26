@@ -3869,6 +3869,7 @@
 		41D4AE4523AA0F1100A54EB2 /* CGuiLockableList.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "$(SRCROOT)/../../src/Tools/CGuiLockableList.h"; sourceTree = "<absolute>"; };
 		41D4AE4623AA0F1100A54EB2 /* CSnapshotsManager.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = "$(SRCROOT)/../../src/Tools/CSnapshotsManager.cpp"; sourceTree = "<absolute>"; };
 		C1A064001026101000000001 /* CTimelineNavigation.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "$(SRCROOT)/../../src/Tools/CTimelineNavigation.h"; sourceTree = "<absolute>"; };
+		C1D154101026101000000001 /* CDrive1541Control.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "$(SRCROOT)/../../src/Tools/CDrive1541Control.h"; sourceTree = "<absolute>"; };
 		41D4AE4723AA0F1100A54EB2 /* CSnapshotsManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "$(SRCROOT)/../../src/Tools/CSnapshotsManager.h"; sourceTree = "<absolute>"; };
 		D54F8EC20BA8DF99000A2001 /* CTimelineSeekPlan.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "$(SRCROOT)/../../src/Tools/CTimelineSeekPlan.h"; sourceTree = "<absolute>"; };
 		D54F8EC20BA8DF99000A2002 /* CTimelineSeekTransaction.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "$(SRCROOT)/../../src/Tools/CTimelineSeekTransaction.h"; sourceTree = "<absolute>"; };
@@ -7958,6 +7959,7 @@
 				D54F8EC20BA8DF99000A2001 /* CTimelineSeekPlan.h */,
 				D54F8EC20BA8DF99000A2002 /* CTimelineSeekTransaction.h */,
 				D54F8EC20BA8DF99000A2003 /* CTimelineSeekJson.h */,
+				C1D154101026101000000001 /* CDrive1541Control.h */,
 				41D4AE4823AA0F1100A54EB2 /* exomizer */,
 				41D4AE5A23AA0F1100A54EB2 /* libpsid64 */,
 				41D4AE6923AA0F1100A54EB2 /* sidplay */,

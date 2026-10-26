@@ -1,3 +1,9 @@
+/* [C64D-REFERENCE-LIVE-EXCEPTION]
+ * Vendored from VICE 3.10 (arch/shared/hwsiddrv/us-unixwin-device.c). LIVE
+ * code: the us_device_* layer behind usbsid-unixwin-drv.c that drives the
+ * USBSID-Pico through lib/libusbsiddrv (HAVE_USBSID). Contains no SDL calls.
+ * See src/Emulators/REFERENCE_FILES.md.
+ */
 /*
  * us-unixwin-device.c
  *

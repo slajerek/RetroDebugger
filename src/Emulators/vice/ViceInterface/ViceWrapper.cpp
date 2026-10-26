@@ -23,12 +23,14 @@ extern "C" {
 }
 
 #include "CDebugInterfaceVice.h"
+#include "CDebuggerServerApi.h"
 #include "CAudioChannelVice.h"
 #include "VID_Main.h"
 #include "SND_Main.h"
 #include "SYS_Main.h"
 #include "SYS_Types.h"
 #include <atomic>
+#include <chrono>
 #include "C64SettingsStorage.h"
 #include "SYS_CommandLine.h"
 #include "CGuiMain.h"
@@ -48,6 +50,68 @@ extern "C" {
 
 std::atomic<int> c64d_debug_mode{DEBUGGER_MODE_RUNNING};
 static int pauseRefreshDone = 0;  // Flag to ensure refresh happens only once when pausing
+
+// Admission for the new control calls only, not GUI or legacy API exclusion.
+static std::atomic_flag drive1541ControlBusy = ATOMIC_FLAG_INIT;
+
+int c64d_drive1541_try_begin_control(void)
+{
+	return !drive1541ControlBusy.test_and_set(std::memory_order_acquire);
+}
+
+void c64d_drive1541_end_control(void)
+{
+	drive1541ControlBusy.clear(std::memory_order_release);
+}
+
+class CDrive1541ControlGuard
+{
+public:
+	CDrive1541ControlGuard() : acquired(c64d_drive1541_try_begin_control() != 0) {}
+	~CDrive1541ControlGuard() { if (acquired) c64d_drive1541_end_control(); }
+	CDrive1541ControlGuard(const CDrive1541ControlGuard &) = delete;
+	CDrive1541ControlGuard &operator=(const CDrive1541ControlGuard &) = delete;
+	const bool acquired;
+};
+
+int c64d_drive1541_pause_outcome(int mode, int parked, int deadlineReached)
+{
+	if (mode == DEBUGGER_MODE_PAUSED && parked) return C64D_DRIVE_PAUSE_OBSERVED;
+	return deadlineReached ? C64D_DRIVE_PAUSE_TIMEOUT : C64D_DRIVE_PAUSE_PENDING;
+}
+
+int c64d_drive1541_pause(int timeoutMs, c64d_drive1541_pause_result_t *result)
+{
+	if (!result) return C64D_DRIVE_INVALID_ARGUMENT;
+	result->debugMode = c64d_debug_mode.load(std::memory_order_acquire);
+	result->parked = c64d_is_cpu_parked_in_pause_loop();
+	result->pauseRequested = 0;
+	if (timeoutMs < 0 || timeoutMs > 5000) return C64D_DRIVE_INVALID_ARGUMENT;
+	CDrive1541ControlGuard admission;
+	if (!admission.acquired) return C64D_DRIVE_CONTROL_BUSY;
+	if (!debugInterfaceVice) return C64D_DRIVE_UNAVAILABLE;
+	{
+		// Match existing endpoint locking for this brief precondition sample only.
+		CDebugInterfaceMutexGuard guard(debugInterfaceVice);
+		if (!debugInterfaceVice->isRunning || !c64d_is_drive1541_available()) return C64D_DRIVE_UNAVAILABLE;
+	}
+
+	const auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(timeoutMs);
+	if (result->debugMode != DEBUGGER_MODE_PAUSED || !result->parked)
+	{
+		debugInterfaceVice->SetDebugMode(DEBUGGER_MODE_PAUSED);
+		result->pauseRequested = 1;
+	}
+	for (;;)
+	{
+		result->debugMode = c64d_debug_mode.load(std::memory_order_acquire);
+		result->parked = c64d_is_cpu_parked_in_pause_loop();
+		int outcome = c64d_drive1541_pause_outcome(result->debugMode, result->parked,
+			std::chrono::steady_clock::now() >= deadline);
+		if (outcome != C64D_DRIVE_PAUSE_PENDING) return outcome;
+		SYS_Sleep(1); // No debugger, snapshot, or I/O lock is held while waiting.
+	}
+}
 
 // Diagnostic: track who last changed c64d_debug_mode and detect unexpected transitions
 const char *c64d_debug_mode_last_setter = "init";
