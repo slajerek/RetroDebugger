@@ -49,6 +49,24 @@ static bool HasDrivePauseSchema(const json &tools)
 	return matches == 1;
 }
 
+static bool HasDriveRunUntilSchema(const json &tools)
+{
+	int matches = 0;
+	for (const auto &tool : tools)
+	{
+		if (tool.value("name", "") != "retro_drive1541_run_until") continue;
+		matches++;
+		const auto &schema = tool.at("inputSchema");
+		const auto &properties = schema.at("properties");
+		if (schema.at("additionalProperties") != false || schema.at("required") != json::array({"platform", "address"})
+			|| properties.at("platform").at("enum") != json::array({"c64"})
+			|| properties.at("device").at("enum") != json::array({8})
+			|| properties.at("address").at("minimum") != 0 || properties.at("address").at("maximum") != 65535
+			|| properties.at("timeoutMs").at("minimum") != 1 || properties.at("timeoutMs").at("maximum") != 5000) return false;
+	}
+	return matches == 1;
+}
+
 static bool WaitForBridgeState(CMCPBridgeClient *bridge, MCPBridgeState target, int timeoutMs)
 {
 	for (int elapsed = 0; elapsed < timeoutMs; elapsed += 50)
@@ -544,10 +562,15 @@ void CTestMCPBridge::Run(ITestCallback *cb)
 			bridge.Stop(); FinishTest(false, "Missing, duplicated, or stale drive pause schema"); return;
 		}
 
-		// Should be 51: 48 debugger + 3 bridge-local (directory and drive pause).
-		if (toolCount != 51)
+		if (!HasDriveRunUntilSchema(tools))
 		{
-			sprintf(sFailMsg, "Test %d FAIL: expected 51 tools, got %d", testNum, toolCount);
+			bridge.Stop(); FinishTest(false, "Missing, duplicated, or stale drive run-until schema"); return;
+		}
+
+		// Should be 52: 49 debugger + 3 bridge-local (directory, drive pause, and run-until).
+		if (toolCount != 52)
+		{
+			sprintf(sFailMsg, "Test %d FAIL: expected 52 tools, got %d", testNum, toolCount);
 			bridge.Stop();
 			FinishTest(false, sFailMsg);
 			return;
@@ -698,9 +721,9 @@ void CTestMCPBridge::Run(ITestCallback *cb)
 			json response = server.HandleRequest(request);
 			json tools = response["result"]["tools"];
 			int toolCount = (int)tools.size();
-			if (toolCount != 51)
+			if (toolCount != 52)
 			{
-				sprintf(sFailMsg, "Test %d FAIL: after reconnect expected 51 tools, got %d",
+				sprintf(sFailMsg, "Test %d FAIL: after reconnect expected 52 tools, got %d",
 						testNum, toolCount);
 				bridge2.Stop();
 				FinishTest(false, sFailMsg);
@@ -718,6 +741,11 @@ void CTestMCPBridge::Run(ITestCallback *cb)
 			if (!HasDrivePauseSchema(tools))
 			{
 				bridge2.Stop(); FinishTest(false, "Missing, duplicated, or stale drive pause schema after reconnect"); return;
+			}
+
+			if (!HasDriveRunUntilSchema(tools))
+			{
+				bridge2.Stop(); FinishTest(false, "Missing, duplicated, or stale drive run-until schema after reconnect"); return;
 			}
 
 			// Check no duplicate names

@@ -881,6 +881,35 @@ void CDebuggerServerApiVice::RegisterEndpoints(CDebuggerServer *server)
 		});
 	}
 
+	// Owned target observation, independent of user/temporary breakpoint containers.
+	{
+		sprintf(buf, "%s/drive1541/run-until", plat);
+		EndpointDescriptor desc;
+		desc.fn = buf; desc.platform = plat; desc.category = "cpu";
+		desc.description = "Run an initially paused emulator toward a drive8 PC with an owned target and bounded wait";
+		server->AddEndpointFunction(desc, [server](const string token, json params, unsigned char *binaryData, int binaryDataSize) -> vector<char>*
+		{
+			int address, timeoutMs;
+			if (!Drive1541Control::ParseRunUntil(params, false, address, timeoutMs))
+				return server->PrepareResult(HTTP_BAD_REQUEST, token, {{"error", "invalid_drive_run_until_arguments"}}, NULL, 0);
+			c64d_drive1541_run_result_t observed;
+			int status = c64d_drive1541_run_until(address, timeoutMs, &observed);
+			const char *outcome = status == C64D_DRIVE_TARGET_OBSERVED ? "target_observed"
+				: status == C64D_DRIVE_ALREADY_AT_TARGET ? "already_at_target"
+				: status == C64D_DRIVE_STOPPED_UNKNOWN ? "stopped_unknown"
+				: status == C64D_DRIVE_RUN_TIMEOUT ? "timeout"
+				: status == C64D_DRIVE_NOT_PAUSED ? "not_paused"
+				: status == C64D_DRIVE_CONTROL_BUSY ? "busy" : "unavailable";
+			json result = {{"device", 8}, {"address", address}, {"outcome", outcome}, {"requestId", observed.requestId},
+				{"initialPC", observed.initialPc < 0 ? json(nullptr) : json(observed.initialPc)},
+				{"hitPC", observed.ownedTargetHit ? json(address) : json(nullptr)},
+				{"ownedTargetHit", observed.ownedTargetHit != 0}, {"resumed", observed.resumed != 0},
+				{"pauseRequested", observed.pause.pauseRequested != 0}, {"debugMode", observed.pause.debugMode},
+				{"parked", observed.pause.parked != 0}, {"timeoutMs", timeoutMs}};
+			return server->PrepareResult(HTTP_OK, token, result, NULL, 0);
+		});
+	}
+
 	// Drive 1541 CPU status
 	{
 		sprintf(buf, "%s/drive1541/cpu/status", plat);

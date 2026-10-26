@@ -1085,6 +1085,33 @@ void CMCPServer::RegisterDebuggerTools(CDebuggerServer *server)
 		RegisterTool(tool);
 	}
 
+	// Run-until reports only this request's target evidence, never global stop provenance.
+	{
+		MCPToolDescriptor tool;
+		tool.name = "retro_drive1541_run_until";
+		tool.description = "C64 drive8: from an observed paused/parked emulator, resume toward a PC using a request-owned target. "
+			"Does not change user or temporary breakpoints. Check outcome, ownedTargetHit, and parked separately. "
+			"Timeout disarms the target and requests pause, but does not guarantee suspension. No exclusive GUI/reset/shutdown control.";
+		tool.inputSchema = {
+			{"type", "object"}, {"additionalProperties", false},
+			{"properties", {
+				{"platform", {{"type", "string"}, {"enum", json::array({"c64"})}}},
+				{"device", {{"type", "integer"}, {"enum", json::array({8})}, {"default", 8}}},
+				{"address", {{"type", "integer"}, {"minimum", 0}, {"maximum", 65535}}},
+				{"timeoutMs", {{"type", "integer"}, {"minimum", 1}, {"maximum", 5000}, {"default", 1000}}}
+			}}, {"required", json::array({"platform", "address"})}
+		};
+		tool.handler = [server](const json &params) -> json
+		{
+			int address, timeoutMs;
+			if (!Drive1541Control::ParseRunUntil(params, true, address, timeoutMs))
+				throw runtime_error("retro_drive1541_run_until requires platform=c64, device=8, address integer0..65535, timeoutMs integer1..5000; no extra fields");
+			return ConsumeEndpointResult(server->RunEndpointFunction("c64/drive1541/run-until", "",
+				{{"device", 8}, {"address", address}, {"timeoutMs", timeoutMs}}, nullptr, 0), "retro_drive1541_run_until");
+		};
+		RegisterTool(tool);
+	}
+
 	// Continue
 	{
 		MCPToolDescriptor tool;
