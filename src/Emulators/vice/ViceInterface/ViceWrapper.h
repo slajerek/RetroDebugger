@@ -4,6 +4,7 @@
 #include "SYS_Types.h"
 #include "DebuggerDefs.h"
 #include "vicetypes.h"
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C++" {
@@ -261,12 +262,29 @@ enum
 	C64D_DRIVE_CONTROL_BUSY,
 	C64D_DRIVE_UNAVAILABLE,
 	C64D_DRIVE_INVALID_ARGUMENT,
-	C64D_DRIVE_PAUSE_PENDING
+	C64D_DRIVE_PAUSE_PENDING,
+	C64D_DRIVE_TARGET_OBSERVED,
+	C64D_DRIVE_ALREADY_AT_TARGET,
+	C64D_DRIVE_STOPPED_UNKNOWN,
+	C64D_DRIVE_RUN_TIMEOUT,
+	C64D_DRIVE_NOT_PAUSED
 };
 // Pure observation decision, shared by polling and focused unit tests.
 int c64d_drive1541_pause_outcome(int mode, int parked, int deadlineReached);
 // timeoutMs0..5000 bounds observation waiting, not forced CPU suspension.
 int c64d_drive1541_pause(int timeoutMs, c64d_drive1541_pause_result_t *result);
+
+typedef struct c64d_drive1541_run_result_s
+{
+	uint64_t requestId;
+	int initialPc; // -1 until an available drive was sampled
+	int resumed;
+	int ownedTargetHit;
+	c64d_drive1541_pause_result_t pause;
+} c64d_drive1541_run_result_t;
+// Device8 only; address0..65535, timeoutMs1..5000.  Does not modify user breakpoints.
+int c64d_drive1541_run_until(int address, int timeoutMs, c64d_drive1541_run_result_t *result);
+void c64d_drive1541_control_boundary(uint16 pc);
 
 void c64d_show_message(char *message);
 

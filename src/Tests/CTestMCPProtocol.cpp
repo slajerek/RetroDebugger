@@ -1393,7 +1393,66 @@ void CTestMCPProtocol::Run(ITestCallback *cb)
 		}
 	}
 
-	TestCompleted(true, "All MCP protocol tests passed (40/40)");
+	// --- Test 41: run-until forwards owned evidence without inventing stop attribution ---
+	{
+		for (const auto &outcome : {"target_observed", "already_at_target", "stopped_unknown", "timeout", "not_paused", "busy", "unavailable"})
+		{
+			json payload = {{"device", 8}, {"outcome", outcome}, {"parked", false}, {"ownedTargetHit", false}, {"requestId", 9}};
+			CCannedDebuggerServer debuggerServer({{"status", HTTP_OK}, {"result", payload}});
+			CMCPServer server;
+			PrepareToolTestServer(server, debuggerServer);
+			json response = CallTool(server, 41, "retro_drive1541_run_until", {{"platform", "c64"}, {"address", 49152}});
+			if (!ToolErrorText(response).empty() || debuggerServer.callCount != 1
+				|| debuggerServer.lastEndpointName != "c64/drive1541/run-until"
+				|| debuggerServer.lastParams != json({{"device", 8}, {"address", 49152}, {"timeoutMs", 1000}})
+				|| json::parse(response["result"]["content"][0]["text"].get<std::string>()) != payload)
+			{
+				TestCompleted(false, "Test 41 FAIL: drive run-until routing/evidence changed"); return;
+			}
+		}
+	}
+
+	// --- Test 42: validate every input before reaching execution control ---
+	{
+		CCannedDebuggerServer debuggerServer({{"status", HTTP_OK}, {"result", json::object()}});
+		CMCPServer server;
+		PrepareToolTestServer(server, debuggerServer);
+		json invalid = json::array({nullptr, json::object(), {{"platform", "c64"}},
+			{{"platform", "c64"}, {"address", 0}, {"extra", true}}});
+		for (const auto &address : json::array({nullptr, true, "0", 0.0, -1, 65536, 18446744073709551615ULL}))
+			invalid.push_back({{"platform", "c64"}, {"address", address}});
+		for (const auto &platform : json::array({nullptr, true, 8, "atari800", "nes", "c64/drive1541"}))
+			invalid.push_back({{"platform", platform}, {"address", 0}});
+		for (const auto &device : json::array({nullptr, true, "8", 8.0, 9, -1, 18446744073709551615ULL}))
+			invalid.push_back({{"platform", "c64"}, {"address", 0}, {"device", device}});
+		for (const auto &timeout : json::array({nullptr, true, "1", 1.5, 0, -1, 5001, 18446744073709551615ULL}))
+			invalid.push_back({{"platform", "c64"}, {"address", 0}, {"timeoutMs", timeout}});
+		for (const auto &args : invalid)
+			if (ToolErrorText(CallTool(server, 42, "retro_drive1541_run_until", args)).empty() || debuggerServer.callCount != 0)
+			{
+				TestCompleted(false, "Test 42 FAIL: invalid drive run-until reached endpoint"); return;
+			}
+		int address = -1, timeoutMs = -1;
+		if (!Drive1541Control::ParseRunUntil({{"address", 0}, {"timeoutMs", 1}}, false, address, timeoutMs) || address != 0 || timeoutMs != 1
+			|| !Drive1541Control::ParseRunUntil({{"address", 65535}, {"timeoutMs", 5000}}, false, address, timeoutMs) || address != 65535 || timeoutMs != 5000
+			|| Drive1541Control::ParseRunUntil({{"address", 0}, {"platform", "c64"}}, false, address, timeoutMs))
+		{
+			TestCompleted(false, "Test 42 FAIL: backend run-until contract mismatch"); return;
+		}
+	}
+
+	// --- Test 43: transport refusal cannot become arrival at the target ---
+	{
+		CCannedDebuggerServer debuggerServer({{"status", HTTP_SERVICE_UNAVAILABLE}, {"error", "desktop_unavailable"}});
+		CMCPServer server;
+		PrepareToolTestServer(server, debuggerServer);
+		if (ToolErrorText(CallTool(server, 43, "retro_drive1541_run_until", {{"platform", "c64"}, {"address", 0}})).empty())
+		{
+			TestCompleted(false, "Test 43 FAIL: drive run-until transport error swallowed"); return;
+		}
+	}
+
+	TestCompleted(true, "All MCP protocol tests passed (43/43)");
 }
 
 void CTestMCPProtocol::Cancel()

@@ -26,6 +26,7 @@ Use this skill when working with the RetroDebugger MCP server to debug 8-bit pro
 ### Control (changes emulator state)
 - `retro_pause` — pause emulation
 - `retro_drive1541_pause(platform:"c64", device:8, timeoutMs:1000)` -- request whole-emulator pause without stepping and report observed mode/parked state.  Check `outcome`; timeout, busy, and unavailable are not successful suspension.  No exclusive lifecycle control.  See [drive8 control](drive1541.md).
+- `retro_drive1541_run_until(platform:"c64", address:49152, device:8, timeoutMs:1000)` -- from an observed pause, resume toward an owned drive8 target without using user breakpoints.  Check `outcome`, `ownedTargetHit`, and `parked` separately; timeout disarms the target and requests pause, not forced suspension.
 - `retro_continue` — resume emulation
 - `retro_reset` — hard or soft reset
 - `retro_step_instruction` — step one CPU instruction

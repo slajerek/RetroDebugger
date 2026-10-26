@@ -31,6 +31,7 @@ extern "C" {
 #include "SYS_Types.h"
 #include <atomic>
 #include <chrono>
+#include "CDrive1541Target.h"
 #include "C64SettingsStorage.h"
 #include "SYS_CommandLine.h"
 #include "CGuiMain.h"
@@ -111,6 +112,90 @@ int c64d_drive1541_pause(int timeoutMs, c64d_drive1541_pause_result_t *result)
 		if (outcome != C64D_DRIVE_PAUSE_PENDING) return outcome;
 		SYS_Sleep(1); // No debugger, snapshot, or I/O lock is held while waiting.
 	}
+}
+
+// Request-owned target: separate from every user/temporary breakpoint container.
+static CDrive1541Target drive1541Target;
+
+void c64d_drive1541_control_boundary(uint16 pc)
+{
+	drive1541Target.AtBoundary(pc, []() -> bool {
+		// Do not convert someone else's step/pause into this request's hit evidence.
+		if (c64d_debug_mode.load(std::memory_order_acquire) != DEBUGGER_MODE_RUNNING) return false;
+		debugInterfaceVice->SetDebugMode(DEBUGGER_MODE_PAUSED);
+		return true;
+	});
+}
+
+extern "C" void c64d_get_drivecpu_regs(int driveNum, uint8 *a, uint8 *x, uint8 *y,
+	uint8 *p, uint8 *sp, uint16 *pc);
+
+int c64d_drive1541_run_until(int address, int timeoutMs, c64d_drive1541_run_result_t *result)
+{
+	if (!result) return C64D_DRIVE_INVALID_ARGUMENT;
+	*result = {};
+	result->initialPc = -1;
+	auto observePause = [&]() {
+		result->pause.debugMode = c64d_debug_mode.load(std::memory_order_acquire);
+		result->pause.parked = c64d_is_cpu_parked_in_pause_loop();
+	};
+	observePause();
+	if (address < 0 || address > 65535 || timeoutMs < 1 || timeoutMs > 5000) return C64D_DRIVE_INVALID_ARGUMENT;
+	CDrive1541ControlGuard admission;
+	if (!admission.acquired) return C64D_DRIVE_CONTROL_BUSY;
+	if (!debugInterfaceVice) return C64D_DRIVE_UNAVAILABLE;
+	{
+		CDebugInterfaceMutexGuard guard(debugInterfaceVice);
+		if (!debugInterfaceVice->isRunning || !c64d_is_drive1541_available()) return C64D_DRIVE_UNAVAILABLE;
+		observePause();
+		if (result->pause.debugMode != DEBUGGER_MODE_PAUSED || !result->pause.parked) return C64D_DRIVE_NOT_PAUSED;
+		uint8 a, x, y, p, sp;
+		uint16 pc;
+		c64d_get_drivecpu_regs(0, &a, &x, &y, &p, &sp, &pc);
+		result->initialPc = pc;
+	}
+	if (result->initialPc == address) return C64D_DRIVE_ALREADY_AT_TARGET;
+	observePause();
+	if (result->pause.debugMode != DEBUGGER_MODE_PAUSED || !result->pause.parked) return C64D_DRIVE_NOT_PAUSED;
+
+	const auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(timeoutMs);
+	result->requestId = drive1541Target.Arm((uint16)address);
+	struct CancelOnExit
+	{
+		uint64_t owner;
+		~CancelOnExit() { drive1541Target.Cancel(owner); }
+	} cleanup = {result->requestId};
+	debugInterfaceVice->SetDebugMode(DEBUGGER_MODE_RUNNING);
+	result->resumed = 1;
+	for (;;)
+	{
+		observePause();
+		if ((result->pause.debugMode == DEBUGGER_MODE_PAUSED && result->pause.parked)
+			|| std::chrono::steady_clock::now() >= deadline) break;
+		SYS_Sleep(1); // No debugger, snapshot, I/O, or owned-target lock while waiting.
+	}
+
+	// Serialize disarming with an in-flight match; no stale owned pause after return.
+	const auto terminal = drive1541Target.Cancel(result->requestId);
+	if (terminal.requestId == result->requestId && terminal.hit)
+	{
+		result->ownedTargetHit = 1;
+		result->pause.pauseRequested = 1;
+		observePause();
+		return C64D_DRIVE_TARGET_OBSERVED;
+	}
+	observePause();
+	if (result->pause.debugMode == DEBUGGER_MODE_PAUSED && result->pause.parked)
+		return C64D_DRIVE_STOPPED_UNKNOWN;
+	// We resumed this request's run.  Request pause on expiry, without claiming an
+	// acknowledgment or extending the wait budget to force arbitrary core work out.
+	if (result->pause.debugMode != DEBUGGER_MODE_PAUSED)
+	{
+		debugInterfaceVice->SetDebugMode(DEBUGGER_MODE_PAUSED);
+		result->pause.pauseRequested = 1;
+	}
+	observePause();
+	return C64D_DRIVE_RUN_TIMEOUT;
 }
 
 // Diagnostic: track who last changed c64d_debug_mode and detect unexpected transitions
