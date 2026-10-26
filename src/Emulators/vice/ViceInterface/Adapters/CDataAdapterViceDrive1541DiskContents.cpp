@@ -13,6 +13,7 @@ extern "C" {
 
 #include "CDebugInterfaceVice.h"
 #include "CDataAdapterViceDrive1541DiskContents.h"
+#include "CDataAdapterViceDiskDirectory.h"
 #include "CDiskImageD64.h"
 #include "CViewC64.h"
 #include "CViewDrive1541Browser.h"
@@ -51,6 +52,31 @@ CDataAdapterViceDrive1541DiskContents::CDataAdapterViceDrive1541DiskContents(CDe
 	gcr = NULL;
 	dataIndexes = NULL;
 	tracks = NULL;
+}
+
+CDataAdapterViceDiskDirectory::CDataAdapterViceDiskDirectory(CDebugSymbols *symbols,
+	int driveId, disk_image_t *image)
+: CDataAdapterViceDrive1541DiskContents(symbols, driveId)
+{
+	if (!image || (image->type != DISK_IMAGE_TYPE_D64 && image->type != DISK_IMAGE_TYPE_G64)
+		|| image->tracks < 35 || image->tracks > MAX_TRACKS_1541)
+		return;
+	if (!image->gcr)
+	{
+		status = "unavailable";
+		reason = "mounted_gcr_unavailable";
+		return;
+	}
+	imageType = image->type == DISK_IMAGE_TYPE_D64 ? "D64" : "G64";
+	const char *path = disk_image_name_get(image);
+	imagePath = path ? path : "";
+	diskImage = image;
+	gcr = image->gcr;
+	// The base destructor owns this metadata.  No sector cache is populated.
+	tracks = new Drive1541ContentsTrack[image->tracks]();
+	numOfTracks = image->tracks;
+	status = "ok";
+	reason = "";
 }
 
 int CDataAdapterViceDrive1541DiskContents::AdapterGetDataLength()
@@ -388,6 +414,30 @@ void CDataAdapterViceDrive1541DiskContents::MarkTrackDirty(int track)
 		tracks[track].isDirty = true;
 }
 
+// GUI vdrive writers share mounted GCR with CPU-task readers.  Release I/O
+// before DiskAttached takes the interface mutex, preserving lock order.
+namespace
+{
+class DiskContentsIoLock
+{
+	CDebugInterface *debugInterface;
+public:
+	explicit DiskContentsIoLock(CDebugInterface *debugInterface) : debugInterface(debugInterface)
+	{
+		debugInterface->LockIoMutex();
+	}
+	~DiskContentsIoLock() { Unlock(); }
+	void Unlock()
+	{
+		if (!debugInterface) return;
+		debugInterface->UnlockIoMutex();
+		debugInterface = nullptr;
+	}
+	DiskContentsIoLock(const DiskContentsIoLock &) = delete;
+	DiskContentsIoLock &operator=(const DiskContentsIoLock &) = delete;
+};
+}
+
 // disk operations on vdrive
 bool CDataAdapterViceDrive1541DiskContents::CreateDiskImage(const char *cPath)
 {
@@ -404,6 +454,7 @@ void CDataAdapterViceDrive1541DiskContents::FormatDisk(const char *diskName, con
 {
 	LOGD("CDataAdapterViceDrive1541DiskContents::FormatDisk: %s %s", diskName, diskId);
 
+	DiskContentsIoLock ioLock(debugInterface);
 	int driveId = 0;
 	disk_image_t *diskImage = c64d_get_drive_disk_image(driveId);
 	
@@ -433,6 +484,7 @@ void CDataAdapterViceDrive1541DiskContents::FormatDisk(const char *diskName, con
 	vdrive_detach_image(diskImage, (unsigned int)8, 0, vdrive);
 	drive_image_attach(diskImage, 8);
 	
+	ioLock.Unlock();
 	DiskAttached();
 	
 	lib_free(vdrive);
@@ -440,6 +492,7 @@ void CDataAdapterViceDrive1541DiskContents::FormatDisk(const char *diskName, con
 
 int CDataAdapterViceDrive1541DiskContents::InsertFile(std::filesystem::path filePath, bool alwaysReplace)
 {
+	DiskContentsIoLock ioLock(debugInterface);
 	int driveId = 0;
 	disk_image_t *diskImage = c64d_get_drive_disk_image(driveId);
 
@@ -560,6 +613,7 @@ int CDataAdapterViceDrive1541DiskContents::InsertFile(std::filesystem::path file
 	vdrive_detach_image(diskImage, (unsigned int)8, 0, vdrive);
 	drive_image_attach(diskImage, 8);
 	
+	ioLock.Unlock();
 	DiskAttached();
 	
 	lib_free(vdrive);

@@ -148,6 +148,7 @@ When connected, Claude gets debugger tools (including these examples) and bridge
 | `retro_disk_detach` | Remove only the disk image from a drive, without resetting the machine |
 | `retro_disk_attach` | Attach a C64 disk image to device 8 without reset, program load, or autorun |
 | `retro_drive_dos_status` | Non-consuming, qualified native C64 buffered DOS status; inspect availability and provenance ([contract and examples](../mcp/dos-status.md)) |
+| [`retro_disk_directory`](disk-directory.md) | Inspect the mounted native C64 D64/G64 DOS directory without opening a browser, flushing, or changing run/pause |
 | `retro_watch_add` | Add a memory watch |
 | `retro_watch_remove` | Remove a watch |
 | `retro_watch_list` | List all watches |

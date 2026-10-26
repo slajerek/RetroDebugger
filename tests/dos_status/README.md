@@ -14,4 +14,4 @@ Coverage:
 - Allocation failure after the enqueue method's inner recursive acquisition, unavailable result, task destruction, slot reuse, and foreign-thread mutex reacquisition.  `extract_enqueue.py` takes the existing production method verbatim; the added test substitutes a throwing list allocator and a small interface adapter, not a reimplemented enqueue body.
 - Fake run/pause remains unchanged.  This is deliberately not native run/pause evidence.
 
-Native MCPProtocol separately tests routing, input bounds, structured refusals, and transport errors.  MCPBridge checks the tool name and total 52 both connected and reconnected, with the disconnected roster still 3.  Those application suites and native feature behavior require a real build/run; compiling these fixtures is not a substitute.
+Native MCPProtocol separately tests routing, input bounds, structured refusals, and transport errors.  MCPBridge checks the tool name and total 53 both connected and reconnected, with the disconnected roster still 3.  Those application suites and native feature behavior require a real build/run; compiling these fixtures is not a substitute.

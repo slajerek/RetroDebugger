@@ -1452,7 +1452,45 @@ void CTestMCPProtocol::Run(ITestCallback *cb)
 		}
 	}
 
-	// --- Test 44: DOS-status forwarding and explicit observation refusals ---
+	// --- Test 44: directory routing, explicit outcomes, and bounds ---
+	{
+		for (const char *status : {"ok", "empty", "busy", "unavailable", "timeout", "partial", "cyclic", "malformed", "unreadable", "unsupported"})
+		{
+			json payload = {{"status", status}};
+			CCannedDebuggerServer debuggerServer({{"status", HTTP_OK}, {"result", payload}});
+			CMCPServer server;
+			PrepareToolTestServer(server, debuggerServer);
+			for (int device = 8; device <= 11; ++device)
+			{
+				json response = CallTool(server, 44, "retro_disk_directory", {{"platform", "c64"}, {"device", device}});
+				if (!ToolErrorText(response).empty() || debuggerServer.lastEndpointName != "c64/disk/directory"
+					|| debuggerServer.lastParams != json({{"device", device}})
+					|| json::parse(response["result"]["content"][0]["text"].get<std::string>()) != payload)
+				{
+					TestCompleted(false, "Test 44 FAIL: directory routing or outcome changed"); return;
+				}
+			}
+			CallTool(server, 44, "retro_disk_directory", {{"platform", "c64"}});
+			if (debuggerServer.lastParams != json({{"device", 8}}))
+			{
+				TestCompleted(false, "Test 44 FAIL: directory default device"); return;
+			}
+			int before = debuggerServer.callCount;
+			json invalid = json::array({json::object(), {{"platform", "c64u"}}, {{"platform", "nes"}}});
+			for (const auto &value : json::array({7, 12, "8", 8.0, true, nullptr, 18446744073709551615ULL}))
+				invalid.push_back({{"platform", "c64"}, {"device", value}});
+			for (const auto &args : invalid)
+			{
+				if (ToolErrorText(CallTool(server, 44, "retro_disk_directory", args)).empty()
+					|| debuggerServer.callCount != before)
+				{
+					TestCompleted(false, "Test 44 FAIL: invalid directory request dispatched"); return;
+				}
+			}
+		}
+	}
+
+	// --- Test 45: DOS-status forwarding and explicit observation refusals ---
 	{
 		for (int device : {8, 9, 10, 11})
 		for (const char *outcome : {"complete", "unsupported", "transient", "unavailable", "busy", "timeout"})
@@ -1462,18 +1500,18 @@ void CTestMCPProtocol::Run(ITestCallback *cb)
 			CCannedDebuggerServer debuggerServer({{"status", HTTP_OK}, {"result", payload}});
 			CMCPServer server;
 			PrepareToolTestServer(server, debuggerServer);
-			json response = CallTool(server, 44, "retro_drive_dos_status", {{"platform", "c64"}, {"device", device}});
+			json response = CallTool(server, 45, "retro_drive_dos_status", {{"platform", "c64"}, {"device", device}});
 			if (!ToolErrorText(response).empty() || debuggerServer.callCount != 1
 				|| debuggerServer.lastEndpointName != "c64/drive/dosStatus"
 				|| debuggerServer.lastParams != json({{"device", device}})
 				|| json::parse(response["result"]["content"][0]["text"].get<std::string>()) != payload)
 			{
-				TestCompleted(false, "Test 44 FAIL: DOS-status forwarding or refusal changed"); return;
+				TestCompleted(false, "Test 45 FAIL: DOS-status forwarding or refusal changed"); return;
 			}
 		}
 	}
 
-	// --- Test 45: status input bounds and native-only routing ---
+	// --- Test 46: status input bounds and native-only routing ---
 	{
 		CCannedDebuggerServer debuggerServer({{"status", HTTP_OK}, {"result", json::object()}});
 		CMCPServer server;
@@ -1485,14 +1523,14 @@ void CTestMCPProtocol::Run(ITestCallback *cb)
 			invalid.push_back({{"platform", platform}, {"device", 8}});
 		for (const auto &args : invalid)
 		{
-			if (ToolErrorText(CallTool(server, 45, "retro_drive_dos_status", args)).empty() || debuggerServer.callCount)
+			if (ToolErrorText(CallTool(server, 46, "retro_drive_dos_status", args)).empty() || debuggerServer.callCount)
 			{
-				TestCompleted(false, "Test 45 FAIL: invalid DOS-status input reached endpoint"); return;
+				TestCompleted(false, "Test 46 FAIL: invalid DOS-status input reached endpoint"); return;
 			}
 		}
 	}
 
-	// --- Test 46: transport/device endpoint errors are not status success ---
+	// --- Test 47: transport/device endpoint errors are not status success ---
 	{
 		for (const auto &envelope : json::array({
 			{{"status", HTTP_BAD_REQUEST}, {"result", {{"error", "invalid device"}}}},
@@ -1501,14 +1539,14 @@ void CTestMCPProtocol::Run(ITestCallback *cb)
 			CCannedDebuggerServer debuggerServer(envelope);
 			CMCPServer server;
 			PrepareToolTestServer(server, debuggerServer);
-			if (ToolErrorText(CallTool(server, 46, "retro_drive_dos_status", {{"platform", "c64"}, {"device", 8}})).empty())
+			if (ToolErrorText(CallTool(server, 47, "retro_drive_dos_status", {{"platform", "c64"}, {"device", 8}})).empty())
 			{
-				TestCompleted(false, "Test 46 FAIL: DOS-status transport failure swallowed"); return;
+				TestCompleted(false, "Test 47 FAIL: DOS-status transport failure swallowed"); return;
 			}
 		}
 	}
 
-	TestCompleted(true, "All MCP protocol tests passed (46/46)");
+	TestCompleted(true, "All MCP protocol tests passed (47/47)");
 }
 
 void CTestMCPProtocol::Cancel()

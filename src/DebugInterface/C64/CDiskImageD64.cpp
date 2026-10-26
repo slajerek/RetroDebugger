@@ -20,6 +20,13 @@ CDiskImageD64::CDiskImageD64(CDebugInterfaceVice *debugInterface, int driveId)
 	this->SetDiskImage(driveId);
 }
 
+CDiskImageD64::CDiskImageD64(CDataAdapterViceDrive1541DiskContents *adapter)
+: debugInterface(adapter->debugInterfaceVice), dataAdapter(adapter), isFromFile(false),
+  isDiskAttached(false), strictDirectory(true)
+{
+	ReadImage();
+}
+
 // get disk image from file
 CDiskImageD64::CDiskImageD64(char *fileName)
 {
@@ -110,11 +117,24 @@ bool CDiskImageD64::IsDiskAttached()
 //#define LOGReadImage LOGD
 #define LOGReadImage(...) ;
 
+bool CDiskImageD64::FailDirectory(const char *status, int track, int sector)
+{
+	directoryPartial = directorySectorsRead > 0;
+	Clear();
+	directoryStatus = status;
+	directoryErrorTrack = track;
+	directoryErrorSector = sector;
+	return false;
+}
+
 bool CDiskImageD64::ReadImage()
 {
 	LOGD("CDiskImageD64::ReadImage");
 	
 	Clear();
+	directoryStatus = "unavailable";
+	directoryPartial = false;
+	directoryErrorTrack = directoryErrorSector = directorySectorsRead = 0;
 	
 	if (dataAdapter->IsDiskAttached() == false)
 	{
@@ -131,9 +151,13 @@ bool CDiskImageD64::ReadImage()
 	
 	// Do not interpret unavailable bytes as DOS metadata.
 	if (!dataAdapter->ReadSector(D64_BAM_TRACK-1, D64_BAM_SECTOR, sectorData))
-		return false;
-	
-	
+		return FailDirectory("unreadable", D64_BAM_TRACK, D64_BAM_SECTOR);
+
+	// Headless inspection promises only standard 1541 DOS layouts.  The legacy
+	// browser remains permissive; do not mislabel a custom filesystem as empty.
+	if (strictDirectory && (sectorData[2] != 0x41 || sectorData[0] != 18 || sectorData[1] != 1))
+		return FailDirectory("unsupported", D64_BAM_TRACK, D64_BAM_SECTOR);
+
 	int offset = 0x90;
 	for (int i = 0; i < 0x10; i++)
 	{
@@ -156,6 +180,8 @@ bool CDiskImageD64::ReadImage()
 	{
 		offset = 4*i;
 		int freeSectors = sectorData[offset];
+		if (strictDirectory && freeSectors > (int)dataAdapter->GetNumberOfSectorsPerTrack(i-1))
+			return FailDirectory("malformed", D64_BAM_TRACK, D64_BAM_SECTOR);
 		numFreeSectors += freeSectors;
 		
 		LOGReadImage("...track %d freeSectors=%d numFreeSectors=%d", i, freeSectors, numFreeSectors);
@@ -175,13 +201,14 @@ bool CDiskImageD64::ReadImage()
 	while(track != -1)
 	{
 		LOGReadImage("--> dirTrack=%d dirSector=%d", track+1, sector);
-		if (!visited.insert({track, sector}).second
-			|| !dataAdapter->ReadSector(track, sector, sectorData))
-		{
-			LOGError("1541 directory chain is unavailable or cyclic: track=%d sector=%d", track+1, sector);
-			Clear();
-			return false;
-		}
+		if (track < 0 || track >= dataAdapter->numOfTracks || sector < 0
+			|| sector >= (int)dataAdapter->GetNumberOfSectorsPerTrack(track))
+			return FailDirectory("malformed", track+1, sector);
+		if (!visited.insert({track, sector}).second)
+			return FailDirectory("cyclic", track+1, sector);
+		if (!dataAdapter->ReadSector(track, sector, sectorData))
+			return FailDirectory("unreadable", track+1, sector);
+		++directorySectorsRead;
 		
 		for (int entryNum = 0; entryNum < 8; entryNum++)
 		{
@@ -194,6 +221,8 @@ bool CDiskImageD64::ReadImage()
 			
 			if (fileType != 0x00)
 			{
+				if (strictDirectory && ((fileType & 0x07) > 4 || (fileType & 0x38) != 0))
+					return FailDirectory("unsupported", track+1, sector);
 				DiskImageFileEntry *fileEntry = new DiskImageFileEntry;
 				fileEntry->fileType = fileType & 0x07;
 				fileEntry->locked = ((fileType & 0x40) == 0x40);
@@ -228,14 +257,12 @@ bool CDiskImageD64::ReadImage()
 		LOGReadImage("next track=%d sector=%d", track, sector);
 		
 		if (this->fileEntries.size() > D64_MAX_FILES)
-		{
-			Clear();
-			return false;
-		}
+			return FailDirectory("malformed", track+1, sector);
 	}
 	LOGReadImage("--> done dir");
 	
 	isDirectoryValid = true;
+	directoryStatus = fileEntries.empty() ? "empty" : "ok";
 	
 	LOGD("CDiskImageD64::ReadImage: done");
 	return true;
