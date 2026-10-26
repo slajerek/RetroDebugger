@@ -493,6 +493,7 @@ void CTestMCPBridge::Run(ITestCallback *cb)
 		bool hasDiskAttach = false;
 		int directoryCount = 0;
 		bool hasMemoryLastAccess = false;
+		bool hasDosStatus = false;
 		int timelineCount = 0;
 		int toolCount = 0;
 		for (const auto &t : tools)
@@ -504,6 +505,7 @@ void CTestMCPBridge::Run(ITestCallback *cb)
 			if (name == "retro_disk_attach") hasDiskAttach = true;
 			if (name == "retro_disk_directory") directoryCount++;
 			if (name == "retro_memory_last_access") hasMemoryLastAccess = true;
+			if (name == "retro_drive_dos_status") hasDosStatus = true;
 			if (name == "retro_timeline") timelineCount++;
 			toolCount++;
 		}
@@ -550,6 +552,13 @@ void CTestMCPBridge::Run(ITestCallback *cb)
 			return;
 		}
 
+		if (!hasDosStatus)
+		{
+			bridge.Stop();
+			FinishTest(false, "Connected tools must contain retro_drive_dos_status");
+			return;
+		}
+
 		if (directoryCount != 1)
 		{
 			bridge.Stop();
@@ -567,10 +576,10 @@ void CTestMCPBridge::Run(ITestCallback *cb)
 			bridge.Stop(); FinishTest(false, "Missing, duplicated, or stale drive run-until schema"); return;
 		}
 
-		// Should be 52: 49 debugger + 3 bridge-local (directory, drive pause, and run-until).
-		if (toolCount != 52)
+		// Should be 53: 50 debugger + 3 bridge-local (directory, drive pause, run-until, and DOS status).
+		if (toolCount != 53)
 		{
-			sprintf(sFailMsg, "Test %d FAIL: expected 52 tools, got %d", testNum, toolCount);
+			sprintf(sFailMsg, "Test %d FAIL: expected 53 tools, got %d", testNum, toolCount);
 			bridge.Stop();
 			FinishTest(false, sFailMsg);
 			return;
@@ -721,9 +730,9 @@ void CTestMCPBridge::Run(ITestCallback *cb)
 			json response = server.HandleRequest(request);
 			json tools = response["result"]["tools"];
 			int toolCount = (int)tools.size();
-			if (toolCount != 52)
+			if (toolCount != 53)
 			{
-				sprintf(sFailMsg, "Test %d FAIL: after reconnect expected 52 tools, got %d",
+				sprintf(sFailMsg, "Test %d FAIL: after reconnect expected 53 tools, got %d",
 						testNum, toolCount);
 				bridge2.Stop();
 				FinishTest(false, sFailMsg);
@@ -766,6 +775,13 @@ void CTestMCPBridge::Run(ITestCallback *cb)
 			{
 				bridge2.Stop(); FinishTest(false, "retro_timeline missing after reconnect"); return;
 			}
+			if (!names.count("retro_drive_dos_status"))
+			{
+				bridge2.Stop();
+				FinishTest(false, "retro_drive_dos_status missing after reconnect");
+				return;
+			}
+
 			if (!names.count("retro_memory_last_access"))
 			{
 				sprintf(sFailMsg, "Test %d FAIL: retro_memory_last_access missing after reconnect", testNum);

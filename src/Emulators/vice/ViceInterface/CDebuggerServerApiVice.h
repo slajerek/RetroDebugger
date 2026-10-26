@@ -2,7 +2,9 @@
 #define _CDebuggerServerApiVice_h_
 
 #include "CDebuggerServerApi.h"
+extern "C" {
 #include "drive.h"
+}
 
 class CDebugInterfaceVice;
 class CDebuggerApiVice;

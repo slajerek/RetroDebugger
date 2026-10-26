@@ -7,6 +7,7 @@
 #include "CDebugSymbolsSegment.h"
 #include "CDebugBreakpointsAddr.h"
 #include "CDebugBreakpointAddr.h"
+#include "CDosStatusTask.h"
 #include "CDiskDirectoryProtocol.h"
 #include "CDiskDirectoryRequest.h"
 #include "CDataAdapterViceDiskDirectory.h"
@@ -149,6 +150,60 @@ void CDebuggerServerApiVice::RegisterEndpoints(CDebuggerServer *server)
 
 	char *buf = SYS_GetCharBuf();
 	const char *plat = debugInterface->GetPlatformNameEndpointString();
+
+	// Non-consuming, qualified native C64 DOS-status observation.
+	{
+		EndpointDescriptor desc;
+		desc.fn = "c64/drive/dosStatus";
+		desc.platform = "c64";
+		desc.category = "media";
+		desc.description = "Copy qualified buffered DOS status without IEC access or machine control; check outcome";
+		server->AddEndpointFunction(desc, [this, server](const string token, json params, unsigned char *binaryData, int binaryDataSize) -> vector<char>*
+		{
+			if (string(debugInterface->GetPlatformNameEndpointString()) != "c64"
+				|| binaryDataSize != 0 || !params.contains("device") || !params["device"].is_number_integer()
+				|| params["device"] < 8 || params["device"] > 11)
+				return server->PrepareResult(HTTP_BAD_REQUEST, token,
+					{{"error", "native C64 device must be an integer from 8 to 11; no binary input"}}, NULL, 0);
+			unsigned int device = params["device"].get<unsigned int>();
+			auto s = DosStatus::Observe(debugInterfaceVice, device);
+			json result = {{"device", device}, {"platform", "c64"}, {"outcome", s.outcome},
+				{"available", s.outcome == "complete"}, {"reason", s.reason}, {"backend", s.backend},
+				{"observation", "buffered-state-not-fresh-IEC"}, {"rawBytes", s.raw},
+				{"interpretation", "bounded status syntax; not media health or proof of stock DOS execution"}};
+			result["mediaPresent"] = s.mediaKnown ? json(s.mediaPresent) : json(nullptr);
+			if (!s.raw.empty())
+			{
+				result["pointer"] = s.pointer;
+				result["end"] = s.end;
+			}
+			if (s.backend == "true-drive-rom-workspace")
+			{
+				if (s.driveType) result["driveType"] = s.driveType;
+				if (!s.firmwareSha256.empty()) result["firmwareSha256"] = s.firmwareSha256;
+				if (!s.raw.empty())
+				{
+					result["rawAddress"] = 0x2D5;
+					result["channelState"] = s.channelState;
+				}
+			}
+			else if (s.backend == "virtual-command-channel" && s.mediaKnown)
+			{
+				result["mode"] = s.mode;
+				result["readMode"] = s.readMode;
+				result["lastCode"] = s.lastCode;
+			}
+			if (s.outcome == "complete")
+			{
+				result["text"] = s.text;
+				result["code"] = s.code;
+				result["track"] = s.track;
+				result["sector"] = s.sector;
+			}
+			// Refusals are structured observations, not invented status payloads.
+			return server->PrepareResult(HTTP_OK, token, result, NULL, 0);
+		});
+	}
 
 	// Native VICE only, with one retained request across endpoint registrations.
 	{

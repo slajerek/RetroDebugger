@@ -10,7 +10,7 @@ assert names.count('retro_disk_directory') == 1
 assert len(names) == len(set(names)), 'duplicate tools'
 assert 'desc.fn = "c64/disk/directory";' in vice
 assert 'server->RunEndpointFunction("c64/disk/directory"' in mcp
-assert bridge.count('toolCount != 52') == 2, 'connected AND reconnected counts'
+assert bridge.count('toolCount != 53') == 2, 'connected AND reconnected counts'
 assert 'directoryCount != 1' in bridge
 assert '!names.count("retro_disk_directory")' in bridge
 assert 'toolCount != 49' not in bridge
