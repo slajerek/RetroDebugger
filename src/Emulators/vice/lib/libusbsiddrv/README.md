@@ -9,6 +9,9 @@ For native C applications refer to [USBSIDInterface.h](src/USBSIDInterface.h) wh
 For using multiple boards at once refer to [USBSID_Manager.h](src/USBSID_Manager.h), which opens every attached board and addresses all their SIDs as one continuous range of SID numbers. Each board's SIDs follow that board's own configuration (its SID numbering, flipped/mixed socket presets included). Remapping them is up to the player/emulator settings or command line.  
 For native C applications refer to [USBSIDManagerInterface.h](src/USBSIDManagerInterface.h) which is a wrapper around the multiboard C++ functions.  
 
+## Vice
+[libusbsiddrv-vice](libusbsiddrv-vice) holds the `Makefile.am` for the driver in Vice (`vice/src/lib/libusbsiddrv`), the sources are the ones in [src](src). Run `test/ci/sync_vice.sh` to copy `src/*.cpp`, `src/*.h`, `README.md` and `LICENSE` into it, or use the `USBSID-Pico-driver-vice-<version>` archive of a release. See [NOTICE.md](libusbsiddrv-vice/NOTICE.md).  
+
 # Java API
 See the interface file for available functions [IUSBSID.java](java/usbsid-usb-driver-library-java/src/main/java/usbsid/IUSBSID.java).  
 

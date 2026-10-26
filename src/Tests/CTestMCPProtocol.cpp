@@ -1452,7 +1452,101 @@ void CTestMCPProtocol::Run(ITestCallback *cb)
 		}
 	}
 
-	// --- Test 44: state observations, including unavailable/null fields, remain unchanged ---
+	// --- Test 44: directory routing, explicit outcomes, and bounds ---
+	{
+		for (const char *status : {"ok", "empty", "busy", "unavailable", "timeout", "partial", "cyclic", "malformed", "unreadable", "unsupported"})
+		{
+			json payload = {{"status", status}};
+			CCannedDebuggerServer debuggerServer({{"status", HTTP_OK}, {"result", payload}});
+			CMCPServer server;
+			PrepareToolTestServer(server, debuggerServer);
+			for (int device = 8; device <= 11; ++device)
+			{
+				json response = CallTool(server, 44, "retro_disk_directory", {{"platform", "c64"}, {"device", device}});
+				if (!ToolErrorText(response).empty() || debuggerServer.lastEndpointName != "c64/disk/directory"
+					|| debuggerServer.lastParams != json({{"device", device}})
+					|| json::parse(response["result"]["content"][0]["text"].get<std::string>()) != payload)
+				{
+					TestCompleted(false, "Test 44 FAIL: directory routing or outcome changed"); return;
+				}
+			}
+			CallTool(server, 44, "retro_disk_directory", {{"platform", "c64"}});
+			if (debuggerServer.lastParams != json({{"device", 8}}))
+			{
+				TestCompleted(false, "Test 44 FAIL: directory default device"); return;
+			}
+			int before = debuggerServer.callCount;
+			json invalid = json::array({json::object(), {{"platform", "c64u"}}, {{"platform", "nes"}}});
+			for (const auto &value : json::array({7, 12, "8", 8.0, true, nullptr, 18446744073709551615ULL}))
+				invalid.push_back({{"platform", "c64"}, {"device", value}});
+			for (const auto &args : invalid)
+			{
+				if (ToolErrorText(CallTool(server, 44, "retro_disk_directory", args)).empty()
+					|| debuggerServer.callCount != before)
+				{
+					TestCompleted(false, "Test 44 FAIL: invalid directory request dispatched"); return;
+				}
+			}
+		}
+	}
+
+	// --- Test 45: DOS-status forwarding and explicit observation refusals ---
+	{
+		for (int device : {8, 9, 10, 11})
+		for (const char *outcome : {"complete", "unsupported", "transient", "unavailable", "busy", "timeout"})
+		{
+			json payload = {{"outcome", outcome}, {"available", std::string(outcome) == "complete"},
+				{"backend", "true-drive-rom-workspace"}, {"rawBytes", json::array({48, 48, 44})}};
+			CCannedDebuggerServer debuggerServer({{"status", HTTP_OK}, {"result", payload}});
+			CMCPServer server;
+			PrepareToolTestServer(server, debuggerServer);
+			json response = CallTool(server, 45, "retro_drive_dos_status", {{"platform", "c64"}, {"device", device}});
+			if (!ToolErrorText(response).empty() || debuggerServer.callCount != 1
+				|| debuggerServer.lastEndpointName != "c64/drive/dosStatus"
+				|| debuggerServer.lastParams != json({{"device", device}})
+				|| json::parse(response["result"]["content"][0]["text"].get<std::string>()) != payload)
+			{
+				TestCompleted(false, "Test 45 FAIL: DOS-status forwarding or refusal changed"); return;
+			}
+		}
+	}
+
+	// --- Test 46: status input bounds and native-only routing ---
+	{
+		CCannedDebuggerServer debuggerServer({{"status", HTTP_OK}, {"result", json::object()}});
+		CMCPServer server;
+		PrepareToolTestServer(server, debuggerServer);
+		json invalid = json::array({json::object(), {{"platform", "c64"}}, {{"device", 8}}});
+		for (const auto &device : json::array({nullptr, true, "8", 8.0, -1, 7, 12, 18446744073709551615ULL}))
+			invalid.push_back({{"platform", "c64"}, {"device", device}});
+		for (const auto &platform : json::array({nullptr, 7, "c64u", "nes", "atari800", "unknown"}))
+			invalid.push_back({{"platform", platform}, {"device", 8}});
+		for (const auto &args : invalid)
+		{
+			if (ToolErrorText(CallTool(server, 46, "retro_drive_dos_status", args)).empty() || debuggerServer.callCount)
+			{
+				TestCompleted(false, "Test 46 FAIL: invalid DOS-status input reached endpoint"); return;
+			}
+		}
+	}
+
+	// --- Test 47: transport/device endpoint errors are not status success ---
+	{
+		for (const auto &envelope : json::array({
+			{{"status", HTTP_BAD_REQUEST}, {"result", {{"error", "invalid device"}}}},
+			{{"status", HTTP_SERVICE_UNAVAILABLE}, {"error", "desktop_unavailable"}}}))
+		{
+			CCannedDebuggerServer debuggerServer(envelope);
+			CMCPServer server;
+			PrepareToolTestServer(server, debuggerServer);
+			if (ToolErrorText(CallTool(server, 47, "retro_drive_dos_status", {{"platform", "c64"}, {"device", 8}})).empty())
+			{
+				TestCompleted(false, "Test 47 FAIL: DOS-status transport failure swallowed"); return;
+			}
+		}
+	}
+
+	// --- Test 48: state observations, including unavailable/null fields, remain unchanged ---
 	{
 		for (const auto &payload : json::array({
 			{{"available", true}, {"outcome", "sampled"}, {"pc", 49152}, {"flags", 167}, {"cycle", 123456789ULL}, {"parked", true}},
@@ -1461,18 +1555,18 @@ void CTestMCPProtocol::Run(ITestCallback *cb)
 			CCannedDebuggerServer debuggerServer({{"status", HTTP_OK}, {"result", payload}});
 			CMCPServer server;
 			PrepareToolTestServer(server, debuggerServer);
-			json response = CallTool(server, 44, "retro_drive1541_state", {{"platform", "c64"}});
+			json response = CallTool(server, 48, "retro_drive1541_state", {{"platform", "c64"}});
 			if (!ToolErrorText(response).empty() || debuggerServer.callCount != 1
 				|| debuggerServer.lastEndpointName != "c64/drive1541/state"
 				|| debuggerServer.lastParams != json({{"device", 8}})
 				|| json::parse(response["result"]["content"][0]["text"].get<std::string>()) != payload)
 			{
-				TestCompleted(false, "Test 44 FAIL: drive state routing or null observations changed"); return;
+				TestCompleted(false, "Test 48 FAIL: drive state routing or null observations changed"); return;
 			}
 		}
 	}
 
-	// --- Test 45: state query accepts only drive8, without execution-control arguments ---
+	// --- Test 49: state query accepts only drive8, without execution-control arguments ---
 	{
 		CCannedDebuggerServer debuggerServer({{"status", HTTP_OK}, {"result", json::object()}});
 		CMCPServer server;
@@ -1484,9 +1578,9 @@ void CTestMCPProtocol::Run(ITestCallback *cb)
 		for (const auto &device : json::array({nullptr, true, "8", 8.0, -1, 9, 18446744073709551615ULL}))
 			invalid.push_back({{"platform", "c64"}, {"device", device}});
 		for (const auto &args : invalid)
-			if (ToolErrorText(CallTool(server, 45, "retro_drive1541_state", args)).empty() || debuggerServer.callCount != 0)
+			if (ToolErrorText(CallTool(server, 49, "retro_drive1541_state", args)).empty() || debuggerServer.callCount != 0)
 			{
-				TestCompleted(false, "Test 45 FAIL: invalid drive state request reached endpoint"); return;
+				TestCompleted(false, "Test 49 FAIL: invalid drive state request reached endpoint"); return;
 			}
 		if (!Drive1541Control::ParseState(nullptr, false) || !Drive1541Control::ParseState(json::object(), false)
 			|| !Drive1541Control::ParseState({{"device", 8}}, false)
@@ -1494,22 +1588,22 @@ void CTestMCPProtocol::Run(ITestCallback *cb)
 			|| Drive1541Control::ParseState({{"platform", "c64"}}, false)
 			|| Drive1541Control::ParseState({{"timeoutMs", 0}}, false))
 		{
-			TestCompleted(false, "Test 45 FAIL: backend drive state contract mismatch"); return;
+			TestCompleted(false, "Test 49 FAIL: backend drive state contract mismatch"); return;
 		}
 	}
 
-	// --- Test 46: failed transport is not an unavailable sample ---
+	// --- Test 50: failed transport is not an unavailable sample ---
 	{
 		CCannedDebuggerServer debuggerServer({{"status", HTTP_SERVICE_UNAVAILABLE}, {"error", "desktop_unavailable"}});
 		CMCPServer server;
 		PrepareToolTestServer(server, debuggerServer);
-		if (ToolErrorText(CallTool(server, 46, "retro_drive1541_state", {{"platform", "c64"}})).empty())
+		if (ToolErrorText(CallTool(server, 50, "retro_drive1541_state", {{"platform", "c64"}})).empty())
 		{
-			TestCompleted(false, "Test 46 FAIL: drive state transport error swallowed"); return;
+			TestCompleted(false, "Test 50 FAIL: drive state transport error swallowed"); return;
 		}
 	}
 
-	TestCompleted(true, "All MCP protocol tests passed (46/46)");
+	TestCompleted(true, "All MCP protocol tests passed (50/50)");
 }
 
 void CTestMCPProtocol::Cancel()

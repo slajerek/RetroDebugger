@@ -7,6 +7,16 @@
 #include "CDebugSymbolsSegment.h"
 #include "CDebugBreakpointsAddr.h"
 #include "CDebugBreakpointAddr.h"
+#include "CDosStatusTask.h"
+#include "CDiskDirectoryProtocol.h"
+#include "CDiskDirectoryRequest.h"
+#include "CDataAdapterViceDiskDirectory.h"
+#include "CDiskImageD64.h"
+
+extern "C" {
+disk_image_t *c64d_get_drive_disk_image(int driveId);
+unsigned int c64d_get_drive_is_disk_attached(int driveId);
+}
 #include "CDrive1541Control.h"
 #include "ViceWrapper.h"
 
@@ -90,12 +100,134 @@ CDebuggerServerApiVice::CDebuggerServerApiVice(CDebugInterface *debugInterface)
 	this->sidData = new CSidData();
 }
 
+static json ReadMountedDiskDirectory(CDebugInterfaceVice *vice, int device)
+{
+	CDiskDirectoryTryLock interfaceLock(vice->breakpointsMutex);
+	if (!interfaceLock.locked) return {{"status", "unavailable"}, {"reason", "interface_locked"}};
+	CDiskDirectoryTryLock ioLock(vice->ioMutex);
+	if (!ioLock.locked) return {{"status", "unavailable"}, {"reason", "media_locked"}};
+
+	const int driveId = device-8;
+	if (!c64d_get_drive_is_disk_attached(driveId))
+		return {{"status", "unavailable"}, {"reason", "no_mounted_disk"}};
+	disk_image_t *image = c64d_get_drive_disk_image(driveId);
+	// Mounted true-drive bytes, never a newly opened/persisted host substitute.
+	CDataAdapterViceDiskDirectory adapter(vice->symbolsDrive1541DiskContents, driveId, image);
+	if (std::string(adapter.status) != "ok")
+		return {{"status", adapter.status}, {"reason", adapter.reason}};
+	CDiskImageD64 directory(&adapter);
+	json result = {{"device", device}, {"source", "mounted_gcr"},
+		{"imageType", adapter.imageType}, {"imagePath", adapter.imagePath},
+		{"complete", directory.isDirectoryValid}};
+	if (!directory.isDirectoryValid)
+	{
+		result["status"] = directory.directoryPartial ? "partial" : directory.directoryStatus;
+		result["reason"] = directory.directoryStatus;
+		result["errorTrack"] = directory.directoryErrorTrack;
+		result["errorSector"] = directory.directoryErrorSector;
+		result["directorySectorsRead"] = directory.directorySectorsRead;
+		return result; // No partial entries, header, or invented free-block count.
+	}
+	result["status"] = directory.directoryStatus;
+	result["diskName"] = DirectoryName(directory.diskName, 16);
+	result["diskId"] = DirectoryName(directory.diskId, 7);
+	result["freeBlocks"] = directory.numFreeSectors;
+	result["freeBlocksScope"] = "standard_35_tracks_excluding_directory_track";
+	result["entries"] = json::array();
+	for (const auto *entry : directory.fileEntries)
+	{
+		result["entries"].push_back({{"name", DirectoryName(entry->fileName, 16)},
+			{"type", CDiskImageD64::FileEntryTypeToStr(entry->fileType)}, {"typeCode", entry->fileType},
+			{"blocks", entry->fileSize}, {"closed", entry->closed}, {"locked", entry->locked},
+			{"startTrack", entry->track}, {"startSector", entry->sector}});
+	}
+	return result;
+}
+
 void CDebuggerServerApiVice::RegisterEndpoints(CDebuggerServer *server)
 {
 	CDebuggerServerApi::RegisterEndpoints(server);
 
 	char *buf = SYS_GetCharBuf();
 	const char *plat = debugInterface->GetPlatformNameEndpointString();
+
+	// Non-consuming, qualified native C64 DOS-status observation.
+	{
+		EndpointDescriptor desc;
+		desc.fn = "c64/drive/dosStatus";
+		desc.platform = "c64";
+		desc.category = "media";
+		desc.description = "Copy qualified buffered DOS status without IEC access or machine control; check outcome";
+		server->AddEndpointFunction(desc, [this, server](const string token, json params, unsigned char *binaryData, int binaryDataSize) -> vector<char>*
+		{
+			if (string(debugInterface->GetPlatformNameEndpointString()) != "c64"
+				|| binaryDataSize != 0 || !params.contains("device") || !params["device"].is_number_integer()
+				|| params["device"] < 8 || params["device"] > 11)
+				return server->PrepareResult(HTTP_BAD_REQUEST, token,
+					{{"error", "native C64 device must be an integer from 8 to 11; no binary input"}}, NULL, 0);
+			unsigned int device = params["device"].get<unsigned int>();
+			auto s = DosStatus::Observe(debugInterfaceVice, device);
+			json result = {{"device", device}, {"platform", "c64"}, {"outcome", s.outcome},
+				{"available", s.outcome == "complete"}, {"reason", s.reason}, {"backend", s.backend},
+				{"observation", "buffered-state-not-fresh-IEC"}, {"rawBytes", s.raw},
+				{"interpretation", "bounded status syntax; not media health or proof of stock DOS execution"}};
+			result["mediaPresent"] = s.mediaKnown ? json(s.mediaPresent) : json(nullptr);
+			if (!s.raw.empty())
+			{
+				result["pointer"] = s.pointer;
+				result["end"] = s.end;
+			}
+			if (s.backend == "true-drive-rom-workspace")
+			{
+				if (s.driveType) result["driveType"] = s.driveType;
+				if (!s.firmwareSha256.empty()) result["firmwareSha256"] = s.firmwareSha256;
+				if (!s.raw.empty())
+				{
+					result["rawAddress"] = 0x2D5;
+					result["channelState"] = s.channelState;
+				}
+			}
+			else if (s.backend == "virtual-command-channel" && s.mediaKnown)
+			{
+				result["mode"] = s.mode;
+				result["readMode"] = s.readMode;
+				result["lastCode"] = s.lastCode;
+			}
+			if (s.outcome == "complete")
+			{
+				result["text"] = s.text;
+				result["code"] = s.code;
+				result["track"] = s.track;
+				result["sector"] = s.sector;
+			}
+			// Refusals are structured observations, not invented status payloads.
+			return server->PrepareResult(HTTP_OK, token, result, NULL, 0);
+		});
+	}
+
+	// Native VICE only, with one retained request across endpoint registrations.
+	{
+		static auto directorySlot = std::make_shared<std::atomic<bool>>(false);
+		auto slot = directorySlot;
+		EndpointDescriptor desc;
+		desc.fn = "c64/disk/directory";
+		desc.platform = "c64";
+		desc.category = "media";
+		desc.description = "Read the mounted D64/G64 standard DOS directory without opening a browser, flushing, or changing run/pause";
+		server->AddEndpointFunction(desc, [this, server, slot](const string token, json params,
+			unsigned char *binaryData, int binaryDataSize) -> vector<char>*
+		{
+			int device;
+			if (!ParseDiskDirectoryDevice(params, device) || binaryDataSize != 0)
+				return server->PrepareResult(HTTP_NOT_ACCEPTABLE, token,
+					{{"status", "invalid_parameters"}, {"reason", "device_must_be_integer_8_to_11"}}, NULL, 0);
+			auto *vice = debugInterfaceVice;
+			json result = RequestDiskDirectory(vice, slot, [vice, device] { return ReadMountedDiskDirectory(vice, device); });
+			result["device"] = device;
+			if (!result.contains("complete")) result["complete"] = false;
+			return server->PrepareResult(HTTP_OK, token, result, NULL, 0);
+		});
+	}
 
 	// save PRG
 	{

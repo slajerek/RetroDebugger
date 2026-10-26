@@ -754,7 +754,15 @@ void CDebugInterface::ExecuteVSyncTasks()
 void CDebugInterface::AddCpuDebugInterruptTask(CDebugInterfaceTask *task)
 {
 	this->LockTasksMutex();
-	cpuDebugInterruptTasks.push_back(task);
+	try
+	{
+		cpuDebugInterruptTasks.push_back(task);
+	}
+	catch (...)
+	{
+		this->UnlockTasksMutex();
+		throw;
+	}
 	hasPendingCpuDebugInterruptTasks.store(true, std::memory_order_release);
 	this->UnlockTasksMutex();
 }

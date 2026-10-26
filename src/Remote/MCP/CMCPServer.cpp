@@ -1,4 +1,5 @@
 #include "CMCPServer.h"
+#include "CDiskDirectoryProtocol.h"
 #include "CMCPBridgeClient.h"
 #include "CDebuggerServer.h"
 #include "C64D_Version.h"
@@ -998,6 +999,32 @@ void CMCPServer::RegisterDebuggerTools(CDebuggerServer *server)
 		RegisterTool(tool);
 	}
 
+	// Native C64 only; an observation can explicitly refuse qualification.
+	{
+		MCPToolDescriptor tool;
+		tool.name = "retro_drive_dos_status";
+		tool.description = "Non-consuming native C64 buffered DOS-status observation for device 8-11. Check available/outcome: complete, unsupported, transient, unavailable, busy, or timeout. No fresh IEC query, media-health proof, reset, or resume. True drive requires qualified stock 1541/1541-II firmware; never falls back to virtual status.";
+		tool.inputSchema = {
+			{"type", "object"},
+			{"properties", {
+				{"platform", {{"type", "string"}, {"enum", json::array({"c64"})}}},
+				{"device", {{"type", "integer"}, {"minimum", 8}, {"maximum", 11}}}
+			}},
+			{"required", json::array({"platform", "device"})}
+		};
+		tool.handler = [server](const json &params) -> json
+		{
+			if (!params.contains("platform") || params["platform"] != "c64")
+				throw runtime_error("DOS status supports native c64 only");
+			if (!params.contains("device") || !params["device"].is_number_integer()
+				|| params["device"] < 8 || params["device"] > 11)
+				throw runtime_error("device must be an integer from 8 to 11");
+			return ConsumeEndpointResult(server->RunEndpointFunction("c64/drive/dosStatus", "",
+				{{"device", params["device"]}}, nullptr, 0), "retro_drive_dos_status");
+		};
+		RegisterTool(tool);
+	}
+
 	// Memory write (accepts base64-encoded data)
 	{
 		MCPToolDescriptor tool;
@@ -1274,6 +1301,30 @@ void CMCPServer::RegisterDebuggerTools(CDebuggerServer *server)
 				ep["device"] = params.at("device");
 			}
 			return ConsumeEndpointResult(server->RunEndpointFunction(platform + "/attachDiskImage", "", ep, nullptr, 0), "retro_disk_attach");
+		};
+		RegisterTool(tool);
+	}
+
+	// Headless mounted-image directory (native C64 only).
+	{
+		MCPToolDescriptor tool;
+		tool.name = "retro_disk_directory";
+		tool.description = "Inspect the mounted D64/G64 standard DOS directory on native C64, without GUI, flush, or run/pause changes. Returns owned names/raw PETSCII, types, block counts, and BAM free blocks. Busy/unavailable/timeout and incomplete/unsupported directories are explicit outcomes; availability at every paused breakpoint is not guaranteed.";
+		tool.inputSchema = {
+			{"type", "object"},
+			{"properties", {
+				{"platform", {{"type", "string"}, {"enum", json::array({"c64"})}}},
+				{"device", {{"type", "integer"}, {"minimum", 8}, {"maximum", 11}, {"default", 8}}}
+			}},
+			{"required", json::array({"platform"})}
+		};
+		tool.handler = [server](const json &params) -> json
+		{
+			int device;
+			if (!params.contains("platform") || !ParseDiskDirectoryDevice(params, device))
+				throw std::runtime_error("retro_disk_directory requires platform c64 and integer device 8-11");
+			return ConsumeEndpointResult(server->RunEndpointFunction("c64/disk/directory", "",
+				{{"device", device}}, nullptr, 0), "retro_disk_directory");
 		};
 		RegisterTool(tool);
 	}
