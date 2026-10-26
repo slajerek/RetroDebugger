@@ -6,15 +6,156 @@
 #include "SYS_Main.h"
 #include "SYS_Funct.h"
 #include "DebuggerDefs.h"
+#include "CDrive1541Target.h"
+#include "CDebugSymbolsDrive1541.h"
+#include "CDebugSymbolsSegmentDrive1541.h"
+#include "CDebugBreakpointsAddr.h"
 #include <cstdio>
 #include <cstring>
 
 extern "C"
 {
 #include "ViceWrapper.h"
+void c64d_set_drivecpu_pc_no_trap(int driveNr, uint16 pc);
+void c64d_set_drivecpu_regs_no_trap(int driveNr, uint8 a, uint8 x, uint8 y, uint8 p, uint8 sp);
 };
 
 static char failureMsg[512];
+
+static bool CheckOwnedTargetDecisions()
+{
+	CDrive1541Target target;
+	int pauses = 0;
+	auto pause = [&]() -> bool { pauses++; return true; };
+	if (target.AtBoundary(0x600, pause) || pauses) return false;
+	uint64_t first = target.Arm(0x600);
+	if (!first || target.Observe().hit || target.AtBoundary(0x601, pause)) return false;
+	// A sampled target PC alone, or a refused mode change, is not hit evidence.
+	if (target.AtBoundary(0x600, []() -> bool { return false; }) || target.Observe().hit) return false;
+	target.Cancel(first);
+	if (target.AtBoundary(0x600, pause) || target.Observe().active || pauses) return false;
+	uint64_t second = target.Arm(0x602);
+	if (second == first || target.Cancel(first).active == false) return false;
+	if (!target.AtBoundary(0x602, pause) || pauses != 1) return false;
+	auto observed = target.Cancel(second);
+	return observed.requestId == second && observed.pc == 0x602 && observed.hit && !observed.active
+		&& !target.AtBoundary(0x602, pause) && pauses == 1;
+}
+
+#ifdef RUN_COMMODORE64
+// Controlled RAM-only instruction loops; no disk image, drive-debug selection,
+// snapshot, or lifecycle transition is part of the fixture.
+static bool CheckNativeOwnedRun(CDebugInterfaceVice *di)
+{
+	bool passed = true;
+	auto require = [&](bool condition, const char *message) -> bool {
+		if (!condition && passed) { snprintf(failureMsg, sizeof(failureMsg), "%s", message); passed = false; }
+		return condition;
+	};
+	c64d_drive1541_pause_result_t paused;
+	if (!require(c64d_drive1541_pause(1000, &paused) == C64D_DRIVE_PAUSE_OBSERVED,
+		"Run-until fixture requires an observed pause")) return false;
+	CDebugSymbolsSegment *segment = di->symbolsDrive1541 ? di->symbolsDrive1541->currentSegment : nullptr;
+	if (!require(segment && segment->breakpointsPC, "Drive breakpoint context unavailable for fixture")) return false;
+	CDebugBreakpointsAddr *bps = segment->breakpointsPC;
+	if (!require(bps->GetBreakpoint(0x601) == nullptr, "Fixture needs unused breakpoint address $0601")) return false;
+
+	C64StateCPU saved;
+	di->GetDrive1541CpuState(&saved);
+	const int savedCachedPC = di->GetDrive1541PC();
+	const int savedTemporary = bps->temporaryBreakpointPC;
+	const bool savedBreakOnPC = segment->breakOnPC;
+	uint8 savedRam[8];
+	const uint8 program[8] = {0xEA, 0xEA, 0x4C, 0x00, 0x06, 0x4C, 0x05, 0x06};
+	CDebugBreakpointAddr *fixtureBreakpoint = nullptr;
+	di->LockMutex();
+	for (int i = 0; i < 8; i++) { savedRam[i] = di->GetByteFromRam1541(0x600 + i); di->SetByteToRam1541(0x600 + i, program[i]); }
+	bps->temporaryBreakpointPC = 0x700; // Unreachable, independently owned legacy fixture.
+	c64d_set_drivecpu_regs_no_trap(0, saved.a, saved.x, saved.y, saved.processorFlags | 4, saved.sp);
+	c64d_set_drivecpu_pc_no_trap(0, 0x600);
+	di->UnlockMutex();
+
+	c64d_drive1541_run_result_t result;
+	int status = c64d_drive1541_run_until(0x600, 1000, &result);
+	require(status == C64D_DRIVE_ALREADY_AT_TARGET && !result.ownedTargetHit && !result.resumed && result.requestId == 0,
+		"Initial PC sample was incorrectly reported as an owned hit");
+	if (passed && c64d_drive1541_try_begin_control())
+	{
+		status = c64d_drive1541_run_until(0x601, 1000, &result);
+		c64d_drive1541_end_control();
+		require(status == C64D_DRIVE_CONTROL_BUSY && !result.resumed && !result.requestId, "Busy run-until changed execution");
+	}
+	else if (passed) require(false, "Run-until admission unexpectedly busy");
+	if (passed)
+	{
+		status = c64d_drive1541_run_until(0x601, 1000, &result);
+		require(status == C64D_DRIVE_TARGET_OBSERVED && result.ownedTargetHit && result.requestId && result.resumed,
+			"Owned drive boundary hit was not reported");
+	}
+	require(c64d_drive1541_pause(1000, &paused) == C64D_DRIVE_PAUSE_OBSERVED, "Drive did not park after owned hit");
+	if (passed)
+	{
+		di->LockMutex();
+		segment->AddBreakpointPC(0x601);
+		segment->breakOnPC = true; // Fixture must exercise checks even if the prior UI disabled them.
+		fixtureBreakpoint = bps->GetBreakpoint(0x601);
+		c64d_set_drivecpu_pc_no_trap(0, 0x600);
+		di->UnlockMutex();
+		require(fixtureBreakpoint != nullptr, "User breakpoint fixture was not installed");
+	}
+	if (passed)
+	{
+		status = c64d_drive1541_run_until(0x601, 1000, &result);
+		// With drive-debug selection, the legacy post-instruction check can stop first.
+		require((status == C64D_DRIVE_TARGET_OBSERVED && result.ownedTargetHit)
+			|| (status == C64D_DRIVE_STOPPED_UNKNOWN && !result.ownedTargetHit), "Same-address breakpoint lost truthful attribution");
+		require(c64d_drive1541_pause(1000, &paused) == C64D_DRIVE_PAUSE_OBSERVED, "Drive did not park at user breakpoint");
+		require(bps->GetBreakpoint(0x601) == fixtureBreakpoint && bps->temporaryBreakpointPC == 0x700,
+			"Run-until overwrote user or temporary breakpoint state");
+	}
+	if (passed)
+	{
+		c64d_set_drivecpu_pc_no_trap(0, 0x600);
+		status = c64d_drive1541_run_until(0x602, 1000, &result);
+		require(status == C64D_DRIVE_STOPPED_UNKNOWN && !result.ownedTargetHit, "Earlier user stop was misreported as owned target");
+		require(c64d_drive1541_pause(1000, &paused) == C64D_DRIVE_PAUSE_OBSERVED, "Drive did not park after unknown stop");
+	}
+	if (passed)
+	{
+		di->LockMutex();
+		bps->DeleteBreakpoint(fixtureBreakpoint); fixtureBreakpoint = nullptr;
+		c64d_set_drivecpu_pc_no_trap(0, 0x600);
+		di->UnlockMutex();
+		status = c64d_drive1541_run_until(0x605, 25, &result);
+		require(status == C64D_DRIVE_RUN_TIMEOUT && !result.ownedTargetHit, "Unreachable target did not expire truthfully");
+		require(c64d_drive1541_pause(1000, &paused) == C64D_DRIVE_PAUSE_OBSERVED, "Timeout pause was not observed");
+	}
+	if (passed)
+	{
+		c64d_set_drivecpu_pc_no_trap(0, 0x605); // Execute the cancelled target afterward.
+		di->SetDebugMode(DEBUGGER_MODE_RUNNING);
+		SYS_Sleep(10);
+		require(di->GetDebugMode() == DEBUGGER_MODE_RUNNING, "Cancelled target caused a later pause");
+		require(c64d_drive1541_pause(1000, &paused) == C64D_DRIVE_PAUSE_OBSERVED, "Running-to-parked pause failed");
+	}
+	// Never write fixture bytes back into a core that has not acknowledged pause.
+	if (c64d_drive1541_pause(1000, &paused) == C64D_DRIVE_PAUSE_OBSERVED)
+	{
+		di->LockMutex();
+		if (fixtureBreakpoint && bps->GetBreakpoint(0x601) == fixtureBreakpoint) bps->DeleteBreakpoint(fixtureBreakpoint);
+		require(bps->temporaryBreakpointPC == 0x700, "Legacy temporary target was changed");
+		bps->temporaryBreakpointPC = savedTemporary;
+		segment->breakOnPC = savedBreakOnPC;
+		for (int i = 0; i < 8; i++) di->SetByteToRam1541(0x600 + i, savedRam[i]);
+		c64d_set_drivecpu_regs_no_trap(0, saved.a, saved.x, saved.y, saved.processorFlags, saved.sp);
+		c64d_set_drivecpu_pc_no_trap(0, saved.pc);
+		viceCurrentDiskPC[0] = (uint16)savedCachedPC;
+		di->UnlockMutex();
+	}
+	else require(false, "Fixture restoration refused because pause was not observed");
+	return passed;
+}
+#endif
 
 void CTestViceDrive1541::Run(ITestCallback *cb)
 {
@@ -281,12 +422,27 @@ void CTestViceDrive1541::Run(ITestCallback *cb)
 		StepCompleted(9, allPassed, allPassed ? "Timeout requires no acknowledgment; mode alone is insufficient" : failureMsg);
 	}
 
+	// --- Step 10: exact request ownership, no sampled-PC inference, and cancellation ---
+	if (allPassed)
+	{
+		allPassed = CheckOwnedTargetDecisions();
+		if (!allPassed) sprintf(failureMsg, "Owned target decisions accepted stale, cancelled, or unobserved evidence");
+		StepCompleted(10, allPassed, allPassed ? "Owned target identity and cancellation controls passed" : failureMsg);
+	}
+
+	// --- Step 11: normal drive execution, existing breakpoints, timeout, and post-cancel run ---
+	if (allPassed)
+	{
+		allPassed = CheckNativeOwnedRun(di);
+		StepCompleted(11, allPassed, allPassed ? "Owned drive run-until preserves legacy breakpoints and disarms on return" : failureMsg);
+	}
+
 	// Restore emulator state
 	if (!wasRunning)
 		viewC64->StopEmulationThread(di);
 
 	if (allPassed)
-		TestCompleted(true, "1541 drive verified: CPU state, memory, registers, adapter, dirty flags, observed pause, control admission");
+		TestCompleted(true, "1541 drive verified: CPU state, memory, registers, adapter, dirty flags, observed pause, control admission, owned run-until");
 	else
 		TestCompleted(false, failureMsg);
 #endif

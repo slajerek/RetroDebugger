@@ -23,11 +23,36 @@ Result fields are `device`, `outcome`, `pauseRequested`, `debugMode`, `parked`, 
 
 A zero budget still permits a pause request and one immediate observation.  The finite budget bounds the polling wait, not forced interruption of core work, real-time scheduling, bridge transport, or existing pause-signaling internals.
 
+## Run toward a drive PC
+
+Call `retro_drive1541_run_until` after observing pause:
+
+```json
+{"platform":"c64","device":8,"address":49152,"timeoutMs":1000}
+```
+
+This invokes `c64/drive1541/run-until` without the `platform` field.  Address is an integer 0..65535; timeout defaults to 1000 and is an integer 1..5000.  Other argument rules match pause.  The emulator must already be observed paused and parked.  This operation resumes the **whole emulator**, without changing drive-debug selection.
+
+The target has its own request identity and slot, separate from ordinary and temporary breakpoints.  Only device8's pre-instruction boundary can publish owned-hit evidence.  Ordinary breakpoint checks remain in place, including at the same address.  In drive-debug mode, an earlier legacy post-instruction check can stop first; a matching sampled PC still does not prove an owned hit.
+
+Outcomes:
+
+- `target_observed`: this request's boundary hook matched and requested pause.  Check `parked` separately; this is not global stop attribution.
+- `already_at_target`: the initial actual PC sample matched.  No resume, owned hit, or target allocation occurred.
+- `stopped_unknown`: pause was observed without this request's hit evidence.  No CPU or breakpoint cause is inferred.
+- `timeout`: no owned hit or acknowledged stop was observed before expiry.  The target is disarmed, and pause is requested if needed; acknowledgment is not guaranteed.
+- `not_paused`, `busy`, or `unavailable`: the initial pause, admission, or drive precondition failed, without resuming.
+
+Results include `address`, `requestId` (zero if no target was armed), `initialPC` (null if not sampled), `hitPC` (null without owned evidence), `ownedTargetHit`, `resumed`, and the pause-observation fields.  Hit publication and cancellation serialize.  The target is disarmed before returning, including when a different breakpoint stops first; it cannot pause a later run after cancellation.  A legacy temporary breakpoint retains its normal hit semantics, but this operation never sets, clears, or borrows it.
+
+The deadline bounds feature-owned waiting, not hard real-time scheduling, lock acquisition, core work, or transport.  There is no instruction/cycle budget.  The idle cost is one additional drive0 boundary call and an atomic owner check per instruction; an inactive target performs no allocation, map scan, or explicit mutex acquisition.  An active target checks its PC and locks only on a match.  No performance measurement is claimed.
+
 ## Intended sequence and limitations
 
 1. Request pause and check for `paused_observed` and `parked:true`.
 2. Perform the intended existing debugger inspection.
-3. Resume explicitly only when desired.
+3. Run toward a PC with a bounded wait, and inspect owned evidence and the pause observation separately.
+4. Inspect again, or resume explicitly only when desired.
 
 A sampled pause is **not a lifecycle lease**.  GUI actions, reset, shutdown, and legacy APIs can still change state after the response.  The nonblocking admission guard serializes only these new drive-control operations.  It does not change global debugger ownership or claim authoritative stop attribution.  No background polling, new worker, snapshot, tracing, or networking is introduced.
 

@@ -2586,6 +2586,11 @@ opcode.op.op8[0] = ((o) >> 16) & 0xff; \
 			}
 			//
 			
+			// One owned-target observation for device8, before this instruction fetch.
+			// Ordinary PC breakpoint evaluation below remains unchanged.
+			if (drv->mynumber == 0)
+				c64d_drive1541_control_boundary(reg_pc);
+
 			{
 				{
 				int _dm = c64d_debug_mode_get();

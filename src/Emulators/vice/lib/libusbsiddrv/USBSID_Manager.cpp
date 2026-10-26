@@ -64,8 +64,8 @@ bool USBSID_Manager::OpenAll(
 
     if (dev->USBSID_Init(start_threaded, with_cycles) < 0) {
       /* Couldn't open this particular board (permissions, unplugged between
-       * Enumerate() and here, ... or whatever other reason)
-       * Skip it and keep going with the rest. */
+       * Enumerate() and this call, ... or whatever other reason)
+       * Skip it and keep going with the rest */
       continue;
     }
 
@@ -75,6 +75,7 @@ bool USBSID_Manager::OpenAll(
     info.numsids = dev->USBSID_GetNumSIDs();
     info.fmoplsid = dev->USBSID_GetFMOplSID();
     info.pcbversion = dev->USBSID_GetPCBVersion();
+    (void)dev->USBSID_GetFirmwareVersionInt();  /* one-time read at open, cached in the device, avoids a read during playback */
 
     uint8_t cfg[SOCKET_BUFFER_SIZE];
     info.socketconfig_valid = (dev->USBSID_GetSocketConfig(cfg) != nullptr);
@@ -90,11 +91,10 @@ bool USBSID_Manager::OpenAll(
   return !devices_.empty();
 }
 
-/* BuildLogicalMap() follows each board's own configuration: a board's SIDs
- * are numbered by the SID id its firmware gave them (READ_SOCKETCFG bytes 8
- * and 9, one nibble per socket SID), and that id is also the register block
- * the firmware routes to it (id * 0x20). Default presets keep ids in socket
- * order, flipped and mixed presets do not: socket order alone falls short. */
+/* BuildLogicalMap() numbers the SIDs of a board by the SID id from its firmware
+ * (READ_SOCKETCFG bytes 8 and 9, one nibble per socket SID)
+ * This id is also the register block the firmware routes to it (id * 0x20)
+ * Default presets keep ids in socket order, flipped and mixed presets do not */
 void USBSID_Manager::BuildLogicalMap(void)
 {
   logical_map_.clear();
@@ -103,8 +103,8 @@ void USBSID_Manager::BuildLogicalMap(void)
     BoardInfo &board = boards_[b];
 
     if (!board.socketconfig_valid) {
-      /* No usable socket config reply for this board. Fall back to its flat
-       * SID count with an unknown type rather than dropping it entirely. */
+      /* No usable socket config reply for this board
+       * Fall back to its flat SID count with an unknown type */
       for (int n = 0; n < board.numsids; n++) {
         logical_map_.push_back({(int)b, n, 0});
       }
@@ -129,9 +129,9 @@ void USBSID_Manager::BuildLogicalMap(void)
       }
     }
 
-    /* Ids are 0..3 and, unless mirrored, each one used once. Anything else
-     * (a firmware that does not fill bytes 8/9 sends all zeroes) falls back
-     * to socket order, which is what such a firmware routes by as well. */
+    /* Ids are 0..3 and unless mirrored used once each
+     * Anything else (firmware that does not fill bytes 8/9 sends all zeroes)
+     * falls back to socket order, the same order such firmware routes by */
     bool ids_valid = true;
     uint8_t seen = 0;
     for (const Found &f : found) {
@@ -145,8 +145,8 @@ void USBSID_Manager::BuildLogicalMap(void)
       continue;
     }
 
-    /* In id order. A mirrored id (two sockets on one address) is one slot:
-     * a write to it reaches both, the first socket's type describes it. */
+    /* In id order, a mirrored id (two sockets on one address) is one slot
+     * A write to it reaches both, the type of the first socket is used */
     std::stable_sort(found.begin(), found.end(),
                      [](const Found &x, const Found &y) { return x.id < y.id; });
     int last_id = -1;
@@ -156,6 +156,12 @@ void USBSID_Manager::BuildLogicalMap(void)
       last_id = f.id;
     }
   }
+}
+
+int USBSID_Manager::FirmwareVersionInt(int board) const
+{
+  if (board < 0 || board >= (int)devices_.size() || !devices_[board]) return -1;
+  return devices_[board]->USBSID_GetFirmwareVersionInt();
 }
 
 void USBSID_Manager::CloseAll(void)
@@ -193,6 +199,34 @@ unsigned char USBSID_Manager::Read(int logical_sid, uint8_t reg)
   return devices_[logical_map_[logical_sid].board_index]->USBSID_Read(reg);
 }
 
+int USBSID_Manager::ReadMulti(int logical_sid, const uint8_t *regs, uint8_t *out, int n)
+{
+  if (logical_sid < 0 || (size_t)logical_sid >= logical_map_.size()) return -1;
+  return devices_[logical_map_[logical_sid].board_index]->USBSID_ReadMulti(regs, out, n);
+}
+
+#ifdef USBSID_SID_STREAM
+int USBSID_Manager::StreamStartAll(int rate_hz)
+{
+  int started = 0;
+  for (auto & dev : devices_) {
+    if (dev->USBSID_StreamStart(rate_hz, 0) == 0) started++;
+  }
+  return started;
+}
+
+void USBSID_Manager::StreamStopAll(void)
+{
+  for (auto & dev : devices_) dev->USBSID_StreamStop();
+}
+
+int USBSID_Manager::ReadCached(int logical_sid, uint8_t reg)
+{
+  if (logical_sid < 0 || (size_t)logical_sid >= logical_map_.size()) return -1;
+  return devices_[logical_map_[logical_sid].board_index]->USBSID_ReadCached(reg);
+}
+#endif /* USBSID_SID_STREAM */
+
 void USBSID_Manager::WriteRingCycledN(int logical_sid, const uint8_t *items, int count)
 {
   if (logical_sid < 0 || (size_t)logical_sid >= logical_map_.size()) return;
@@ -209,6 +243,20 @@ void USBSID_Manager::FlushBoard(int logical_sid)
 {
   if (logical_sid < 0 || (size_t)logical_sid >= logical_map_.size()) return;
   devices_[logical_map_[logical_sid].board_index]->USBSID_SetFlush();
+}
+
+bool USBSID_Manager::BoardLost(int board_index)
+{
+  if (board_index < 0 || (size_t)board_index >= devices_.size()) return false;
+  return devices_[board_index]->USBSID_IsDeviceLost();
+}
+
+bool USBSID_Manager::AnyBoardLost(void)
+{
+  for (auto &dev : devices_) {
+    if (dev->USBSID_IsDeviceLost()) return true;
+  }
+  return false;
 }
 
 void USBSID_Manager::FlushAll(void)
@@ -243,5 +291,10 @@ void USBSID_Manager::SetMutedAll(bool muted)
 
 void USBSID_Manager::SetClockRateAll(long clockrate_cycles, bool suspend_sids)
 {
-  for (auto &dev : devices_) dev->USBSID_SetClockRate(clockrate_cycles, suspend_sids);
+  SetClockRateAll(clockrate_cycles, suspend_sids, false);
+}
+
+void USBSID_Manager::SetClockRateAll(long clockrate_cycles, bool suspend_sids, bool force)
+{
+  for (auto &dev : devices_) dev->USBSID_SetClockRate(clockrate_cycles, suspend_sids, force);
 }

@@ -101,6 +101,10 @@ extern "C"
     memcpy(out->socketconfig, b.socketconfig, USBSID_SOCKETCONFIG_LEN);
     return true;
   };
+  int getfirmwareversionint_USBSIDMgr(USBSIDmgr m, int board){
+    if( m == NULL ) return -1;
+    return ((USBSID_Manager*) m)->FirmwareVersionInt(board);
+  };
   bool getlogicalslot_USBSIDMgr(USBSIDmgr m, int logical_sid, USBSIDlogicalslot *out){
     if( m == NULL || out == NULL ) return false;
     const std::vector<USBSID_Manager::LogicalSlot> &map = ((USBSID_Manager*) m)->LogicalMap();
@@ -109,6 +113,10 @@ extern "C"
     out->local_slot = map[logical_sid].local_slot;
     out->sid_type = map[logical_sid].sid_type;
     return true;
+  };
+  USBSIDitf board_USBSIDMgr(USBSIDmgr m, int board){
+    if( m == NULL ) return NULL;
+    return (USBSIDitf) ((USBSID_Manager*) m)->Board(board);
   };
   void writering_USBSIDMgr(USBSIDmgr m, int logical_sid, uint8_t reg, uint8_t val){
     if( m == NULL ) return;
@@ -122,6 +130,24 @@ extern "C"
     if( m == NULL ) return 0;
     return ((USBSID_Manager*) m)->Read(logical_sid, reg);
   };
+  int readmulti_USBSIDMgr(USBSIDmgr m, int logical_sid, const uint8_t *regs, uint8_t *out, int n){
+    if( m == NULL ) return -1;
+    return ((USBSID_Manager*) m)->ReadMulti(logical_sid, regs, out, n);
+  };
+#ifdef USBSID_SID_STREAM
+  int streamstartall_USBSIDMgr(USBSIDmgr m, int rate_hz){
+    if( m == NULL ) return 0;
+    return ((USBSID_Manager*) m)->StreamStartAll(rate_hz);
+  };
+  void streamstopall_USBSIDMgr(USBSIDmgr m){
+    if( m == NULL ) return;
+    ((USBSID_Manager*) m)->StreamStopAll();
+  };
+  int readcached_USBSIDMgr(USBSIDmgr m, int logical_sid, uint8_t reg){
+    if( m == NULL ) return -1;
+    return ((USBSID_Manager*) m)->ReadCached(logical_sid, reg);
+  };
+#endif /* USBSID_SID_STREAM */
   void writeringcycledn_USBSIDMgr(USBSIDmgr m, int logical_sid, const uint8_t *items, int count){
     if( m == NULL ) return;
     return ((USBSID_Manager*) m)->WriteRingCycledN(logical_sid, items, count);
@@ -133,6 +159,14 @@ extern "C"
   void flushboard_USBSIDMgr(USBSIDmgr m, int logical_sid){
     if( m == NULL ) return;
     return ((USBSID_Manager*) m)->FlushBoard(logical_sid);
+  };
+  bool boardlost_USBSIDMgr(USBSIDmgr m, int board_index){
+    if( m == NULL ) return false;
+    return ((USBSID_Manager*) m)->BoardLost(board_index);
+  };
+  bool anyboardlost_USBSIDMgr(USBSIDmgr m){
+    if( m == NULL ) return false;
+    return ((USBSID_Manager*) m)->AnyBoardLost();
   };
   void flushall_USBSIDMgr(USBSIDmgr m){
     if( m == NULL ) return;
@@ -161,5 +195,9 @@ extern "C"
   void setclockrateall_USBSIDMgr(USBSIDmgr m, long clockrate_cycles, bool suspend_sids){
     if( m == NULL ) return;
     return ((USBSID_Manager*) m)->SetClockRateAll(clockrate_cycles, suspend_sids);
+  };
+  void setclockrateallforced_USBSIDMgr(USBSIDmgr m, long clockrate_cycles, bool suspend_sids, bool force){
+    if( m == NULL ) return;
+    return ((USBSID_Manager*) m)->SetClockRateAll(clockrate_cycles, suspend_sids, force);
   };
 }
