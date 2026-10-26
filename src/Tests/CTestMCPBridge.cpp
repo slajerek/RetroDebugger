@@ -456,6 +456,7 @@ void CTestMCPBridge::Run(ITestCallback *cb)
 		bool hasTransportDiag = false;
 		bool hasDiskAttach = false;
 		bool hasMemoryLastAccess = false;
+		bool hasDosStatus = false;
 		int timelineCount = 0;
 		int toolCount = 0;
 		for (const auto &t : tools)
@@ -466,6 +467,7 @@ void CTestMCPBridge::Run(ITestCallback *cb)
 			if (name == "retro_transport_diagnostics") hasTransportDiag = true;
 			if (name == "retro_disk_attach") hasDiskAttach = true;
 			if (name == "retro_memory_last_access") hasMemoryLastAccess = true;
+			if (name == "retro_drive_dos_status") hasDosStatus = true;
 			if (name == "retro_timeline") timelineCount++;
 			toolCount++;
 		}
@@ -512,10 +514,17 @@ void CTestMCPBridge::Run(ITestCallback *cb)
 			return;
 		}
 
-		// Should be 49: 46 debugger + 3 bridge-local
-		if (toolCount != 49)
+		if (!hasDosStatus)
 		{
-			sprintf(sFailMsg, "Test %d FAIL: expected 49 tools, got %d", testNum, toolCount);
+			bridge.Stop();
+			FinishTest(false, "Connected tools must contain retro_drive_dos_status");
+			return;
+		}
+
+		// Should be 50: 47 debugger + 3 bridge-local
+		if (toolCount != 50)
+		{
+			sprintf(sFailMsg, "Test %d FAIL: expected 50 tools, got %d", testNum, toolCount);
 			bridge.Stop();
 			FinishTest(false, sFailMsg);
 			return;
@@ -666,9 +675,9 @@ void CTestMCPBridge::Run(ITestCallback *cb)
 			json response = server.HandleRequest(request);
 			json tools = response["result"]["tools"];
 			int toolCount = (int)tools.size();
-			if (toolCount != 49)
+			if (toolCount != 50)
 			{
-				sprintf(sFailMsg, "Test %d FAIL: after reconnect expected 49 tools, got %d",
+				sprintf(sFailMsg, "Test %d FAIL: after reconnect expected 50 tools, got %d",
 						testNum, toolCount);
 				bridge2.Stop();
 				FinishTest(false, sFailMsg);
@@ -701,6 +710,13 @@ void CTestMCPBridge::Run(ITestCallback *cb)
 			{
 				bridge2.Stop(); FinishTest(false, "retro_timeline missing after reconnect"); return;
 			}
+			if (!names.count("retro_drive_dos_status"))
+			{
+				bridge2.Stop();
+				FinishTest(false, "retro_drive_dos_status missing after reconnect");
+				return;
+			}
+
 			if (!names.count("retro_memory_last_access"))
 			{
 				sprintf(sFailMsg, "Test %d FAIL: retro_memory_last_access missing after reconnect", testNum);

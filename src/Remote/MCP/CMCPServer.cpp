@@ -997,6 +997,32 @@ void CMCPServer::RegisterDebuggerTools(CDebuggerServer *server)
 		RegisterTool(tool);
 	}
 
+	// Native C64 only; an observation can explicitly refuse qualification.
+	{
+		MCPToolDescriptor tool;
+		tool.name = "retro_drive_dos_status";
+		tool.description = "Non-consuming native C64 buffered DOS-status observation for device 8-11. Check available/outcome: complete, unsupported, transient, unavailable, busy, or timeout. No fresh IEC query, media-health proof, reset, or resume. True drive requires qualified stock 1541/1541-II firmware; never falls back to virtual status.";
+		tool.inputSchema = {
+			{"type", "object"},
+			{"properties", {
+				{"platform", {{"type", "string"}, {"enum", json::array({"c64"})}}},
+				{"device", {{"type", "integer"}, {"minimum", 8}, {"maximum", 11}}}
+			}},
+			{"required", json::array({"platform", "device"})}
+		};
+		tool.handler = [server](const json &params) -> json
+		{
+			if (!params.contains("platform") || params["platform"] != "c64")
+				throw runtime_error("DOS status supports native c64 only");
+			if (!params.contains("device") || !params["device"].is_number_integer()
+				|| params["device"] < 8 || params["device"] > 11)
+				throw runtime_error("device must be an integer from 8 to 11");
+			return ConsumeEndpointResult(server->RunEndpointFunction("c64/drive/dosStatus", "",
+				{{"device", params["device"]}}, nullptr, 0), "retro_drive_dos_status");
+		};
+		RegisterTool(tool);
+	}
+
 	// Memory write (accepts base64-encoded data)
 	{
 		MCPToolDescriptor tool;
