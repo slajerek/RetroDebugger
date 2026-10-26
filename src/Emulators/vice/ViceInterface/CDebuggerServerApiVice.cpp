@@ -7,6 +7,8 @@
 #include "CDebugSymbolsSegment.h"
 #include "CDebugBreakpointsAddr.h"
 #include "CDebugBreakpointAddr.h"
+#include "CDrive1541Control.h"
+#include "ViceWrapper.h"
 
 extern "C" {
 	unsigned long c64d_get_vice_drivecpu_clk(int driveNum);
@@ -777,6 +779,28 @@ void CDebuggerServerApiVice::RegisterEndpoints(CDebuggerServer *server)
 				j["registers"] = registers;
 			}
 			return server->PrepareResult(HTTP_OK, token, j, NULL, 0);
+		});
+	}
+
+	// Observed whole-emulator pause for drive8 work; no stepping or auto-resume.
+	{
+		sprintf(buf, "%s/drive1541/pause", plat);
+		EndpointDescriptor desc;
+		desc.fn = buf; desc.platform = plat; desc.category = "cpu";
+		desc.description = "Request whole-emulator pause for drive8 and observe parked state within a wait budget";
+		server->AddEndpointFunction(desc, [server](const string token, json params, unsigned char *binaryData, int binaryDataSize) -> vector<char>*
+		{
+			int timeoutMs;
+			if (!Drive1541Control::ParsePause(params, false, timeoutMs))
+				return server->PrepareResult(HTTP_BAD_REQUEST, token, {{"error", "invalid_drive_pause_arguments"}}, NULL, 0);
+			c64d_drive1541_pause_result_t observed;
+			int status = c64d_drive1541_pause(timeoutMs, &observed);
+			const char *outcome = status == C64D_DRIVE_PAUSE_OBSERVED ? "paused_observed"
+				: status == C64D_DRIVE_PAUSE_TIMEOUT ? "timeout"
+				: status == C64D_DRIVE_CONTROL_BUSY ? "busy" : "unavailable";
+			json result = {{"device", 8}, {"outcome", outcome}, {"pauseRequested", observed.pauseRequested != 0},
+				{"debugMode", observed.debugMode}, {"parked", observed.parked != 0}, {"timeoutMs", timeoutMs}};
+			return server->PrepareResult(HTTP_OK, token, result, NULL, 0);
 		});
 	}
 

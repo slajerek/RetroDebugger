@@ -213,12 +213,80 @@ void CTestViceDrive1541::Run(ITestCallback *cb)
 			StepCompleted(6, false, failureMsg);
 	}
 
+	// --- Step 7: observed pause never steps or resumes an already parked CPU ---
+	if (allPassed)
+	{
+		c64d_drive1541_pause_result_t observed;
+		int status = c64d_drive1541_pause(1000, &observed);
+		if (status != C64D_DRIVE_PAUSE_OBSERVED || !observed.parked || observed.debugMode != DEBUGGER_MODE_PAUSED)
+		{
+			sprintf(failureMsg, "Drive pause not observed: status=%d mode=%d parked=%d", status, observed.debugMode, observed.parked);
+			allPassed = false;
+		}
+		if (allPassed)
+		{
+			int pc = di->GetDrive1541PC();
+			u64 cycle = di->GetMainCpuCycleCounter();
+			status = c64d_drive1541_pause(0, &observed);
+			if (status != C64D_DRIVE_PAUSE_OBSERVED || observed.pauseRequested || !observed.parked
+				|| di->GetDrive1541PC() != pc || di->GetMainCpuCycleCounter() != cycle)
+			{
+				sprintf(failureMsg, "Already parked drive pause stepped, resumed, or requested execution change");
+				allPassed = false;
+			}
+		}
+		StepCompleted(7, allPassed, allPassed ? "Parked pause observation preserves execution" : failureMsg);
+	}
+
+	// --- Step 8: busy and invalid requests cannot issue another pause ---
+	if (allPassed)
+	{
+		c64d_drive1541_pause_result_t observed;
+		if (c64d_drive1541_pause(-1, &observed) != C64D_DRIVE_INVALID_ARGUMENT || observed.pauseRequested
+			|| c64d_drive1541_pause(5001, &observed) != C64D_DRIVE_INVALID_ARGUMENT || observed.pauseRequested)
+		{
+			sprintf(failureMsg, "Invalid timeout changed execution"); allPassed = false;
+		}
+		if (allPassed && c64d_drive1541_try_begin_control())
+		{
+			int status = c64d_drive1541_pause(1000, &observed);
+			c64d_drive1541_end_control();
+			if (status != C64D_DRIVE_CONTROL_BUSY || observed.pauseRequested)
+			{
+				sprintf(failureMsg, "Nested control admission was not refused"); allPassed = false;
+			}
+		}
+		else if (allPassed)
+		{
+			sprintf(failureMsg, "Control admission remained busy after pause"); allPassed = false;
+		}
+		StepCompleted(8, allPassed, allPassed ? "Invalid/busy control requests refused without mutation" : failureMsg);
+	}
+
+	// --- Step 9: mode alone, stale parked alone, and elapsed time cannot fake an acknowledgment ---
+	if (allPassed)
+	{
+		for (int expired = 0; expired <= 1; expired++)
+		{
+			int expected = expired ? C64D_DRIVE_PAUSE_TIMEOUT : C64D_DRIVE_PAUSE_PENDING;
+			if (c64d_drive1541_pause_outcome(DEBUGGER_MODE_PAUSED, 0, expired) != expected
+				|| c64d_drive1541_pause_outcome(DEBUGGER_MODE_RUNNING, 1, expired) != expected
+				|| c64d_drive1541_pause_outcome(DEBUGGER_MODE_RUNNING, 0, expired) != expected
+				|| c64d_drive1541_pause_outcome(DEBUGGER_MODE_PAUSED, 1, expired) != C64D_DRIVE_PAUSE_OBSERVED)
+			{
+				sprintf(failureMsg, "Pause observation decision falsely acknowledged or ignored a deadline");
+				allPassed = false; break;
+			}
+		}
+		StepCompleted(9, allPassed, allPassed ? "Timeout requires no acknowledgment; mode alone is insufficient" : failureMsg);
+	}
+
 	// Restore emulator state
 	if (!wasRunning)
 		viewC64->StopEmulationThread(di);
 
 	if (allPassed)
-		TestCompleted(true, "1541 drive verified: CPU state, memory, registers, adapter, dirty flags");
+		TestCompleted(true, "1541 drive verified: CPU state, memory, registers, adapter, dirty flags, observed pause, control admission");
 	else
 		TestCompleted(false, failureMsg);
 #endif
