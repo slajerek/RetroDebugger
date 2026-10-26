@@ -3045,6 +3045,7 @@
     <ClInclude Include="..\..\..\src\Tools\CTimelineSeekTransaction.h" />
     <ClInclude Include="..\..\..\src\Tools\CTimelineSeekJson.h" />
     <ClInclude Include="..\..\..\src\Tools\CDrive1541Control.h" />
+    <ClInclude Include="..\..\..\src\Tools\CDrive1541Target.h" />
     <ClInclude Include="..\..\..\src\Tools\64tass\64tass-encoding.h" />
     <ClInclude Include="..\..\..\src\Tools\64tass\64tass-error.h" />
     <ClInclude Include="..\..\..\src\Tools\64tass\64tass-eval.h" />
