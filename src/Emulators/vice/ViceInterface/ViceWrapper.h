@@ -244,6 +244,30 @@ int c64d_apply_pending_debugger_pc(void);
 // 1 while the emulation thread is parked in the pause loop holding no debugger locks.
 int c64d_is_cpu_parked_in_pause_loop(void);
 
+// Drive8-only observation, not a lease against reset, GUI actions, or shutdown.
+int c64d_is_drive1541_available(void);
+int c64d_drive1541_try_begin_control(void);
+void c64d_drive1541_end_control(void);
+typedef struct c64d_drive1541_pause_result_s
+{
+	int debugMode;
+	int parked;
+	int pauseRequested;
+} c64d_drive1541_pause_result_t;
+enum
+{
+	C64D_DRIVE_PAUSE_OBSERVED = 0,
+	C64D_DRIVE_PAUSE_TIMEOUT,
+	C64D_DRIVE_CONTROL_BUSY,
+	C64D_DRIVE_UNAVAILABLE,
+	C64D_DRIVE_INVALID_ARGUMENT,
+	C64D_DRIVE_PAUSE_PENDING
+};
+// Pure observation decision, shared by polling and focused unit tests.
+int c64d_drive1541_pause_outcome(int mode, int parked, int deadlineReached);
+// timeoutMs0..5000 bounds observation waiting, not forced CPU suspension.
+int c64d_drive1541_pause(int timeoutMs, c64d_drive1541_pause_result_t *result);
+
 void c64d_show_message(char *message);
 
 // SID
