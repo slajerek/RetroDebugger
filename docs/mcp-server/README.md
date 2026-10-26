@@ -147,6 +147,7 @@ When connected, Claude gets debugger tools (including these examples) and bridge
 | `retro_load` | Load a PRG/XEX/NES ROM/D64 from a path the RetroDebugger process can open; may autostart the first PRG on a disk |
 | `retro_disk_detach` | Remove only the disk image from a drive, without resetting the machine |
 | `retro_disk_attach` | Attach a C64 disk image to device 8 without reset, program load, or autorun |
+| [`retro_disk_directory`](disk-directory.md) | Inspect the mounted native C64 D64/G64 DOS directory without opening a browser, flushing, or changing run/pause |
 | `retro_watch_add` | Add a memory watch |
 | `retro_watch_remove` | Remove a watch |
 | `retro_watch_list` | List all watches |
