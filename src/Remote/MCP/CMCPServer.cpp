@@ -8,6 +8,7 @@
 #include "CDebuggerServerApi.h"
 #include "C64DShutdown.h"
 #include "CTimelineNavigation.h"
+#include "CDrive1541Control.h"
 #include "DBG_Log.h"
 
 #include <iostream>
@@ -1054,6 +1055,32 @@ void CMCPServer::RegisterDebuggerTools(CDebuggerServer *server)
 			string fn = platform + "/pause";
 			ConsumeEndpointResult(server->RunEndpointFunction(fn, "", json(), nullptr, 0), "retro_pause");
 			return {{"status", "paused"}};
+		};
+		RegisterTool(tool);
+	}
+
+	// A pause observation is not a lifecycle lease or a drive-only suspension.
+	{
+		MCPToolDescriptor tool;
+		tool.name = "retro_drive1541_pause";
+		tool.description = "C64 drive8: request whole-emulator pause without stepping, then observe mode and parked state. "
+			"timeoutMs bounds observation waiting, not forced suspension. Busy/unavailable/timeout are not success. "
+			"No exclusive control against GUI, reset, shutdown, or other APIs; inspect outcome and parked before further work.";
+		tool.inputSchema = {
+			{"type", "object"}, {"additionalProperties", false},
+			{"properties", {
+				{"platform", {{"type", "string"}, {"enum", json::array({"c64"})}}},
+				{"device", {{"type", "integer"}, {"enum", json::array({8})}, {"default", 8}}},
+				{"timeoutMs", {{"type", "integer"}, {"minimum", 0}, {"maximum", 5000}, {"default", 1000}}}
+			}}, {"required", json::array({"platform"})}
+		};
+		tool.handler = [server](const json &params) -> json
+		{
+			int timeoutMs;
+			if (!Drive1541Control::ParsePause(params, true, timeoutMs))
+				throw runtime_error("retro_drive1541_pause requires platform=c64, device=8, timeoutMs integer0..5000; no extra fields");
+			return ConsumeEndpointResult(server->RunEndpointFunction("c64/drive1541/pause", "",
+				{{"device", 8}, {"timeoutMs", timeoutMs}}, nullptr, 0), "retro_drive1541_pause");
 		};
 		RegisterTool(tool);
 	}
