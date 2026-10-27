@@ -8,6 +8,8 @@
 #include "CDebugSymbols.h"
 #include "CDebugMemory.h"
 #include "CDebugMemoryCell.h"
+#include "CTimelineNavigation.h"
+#include "CSnapshotsManager.h"
 #include "C64DShutdown.h"
 #include "SYS_Main.h"
 #include "SYS_Funct.h"
@@ -235,6 +237,60 @@ static bool TestMemoryReadEndpoints(CDebuggerServer *server)
 			if (!Check(params, HTTP_OK, params.at("size").get<int>())) return false;
 	}
 	return true;
+}
+
+// Reuse the already-running C64 fixture.  No new test registration or project
+// wiring is needed, and all recording settings/mode are restored afterward.
+static bool TestTimelineCompletionEndpoints(CDebuggerServer *server, CDebugInterface *di)
+{
+	CSnapshotsManager *manager = di->snapshotsManager;
+	const auto saved = manager->GetFrameNavigationStatus();
+	const uint8 savedMode = di->GetDebugMode();
+	manager->SetRecordingIsActive(true);
+	manager->SetRecordingStoreInterval(1);
+	manager->SetRecordingLimit(saved.retention < 32 ? 32 : saved.retention);
+	di->SetDebugMode(DEBUGGER_MODE_RUNNING);
+	SYS_Sleep(500);
+	di->PauseEmulationBlockedWait();
+	auto history = manager->GetFrameNavigationStatus();
+	bool valid = history.snapshots >= 3 && history.newestFrame > history.oldestFrame + 1;
+	if (valid)
+	{
+		const int target = static_cast<int>(history.newestFrame - 1);
+		json response = CallEndpointWithParams(server, "c64/timeline/frame", {{"frame", target}, {"waitMs", 5000}});
+		json result = response.value("result", json::object());
+		uint64_t requestId = result.value("requestId", uint64_t(0));
+		valid = response.value("status", 0) == HTTP_OK && result.value("status", std::string()) == "completed"
+			&& requestId != 0 && result.value("completionKnown", false)
+			&& result.value("requestedFrame", -1) == target
+			&& result["observedFrame"] == di->GetEmulationFrameNumber()
+			&& result["observedCycle"] == di->GetMainCpuCycleCounter()
+			&& di->GetDebugMode() == DEBUGGER_MODE_PAUSED;
+		json followup = CallEndpointWithParams(server, "c64/timeline/status", {{"requestId", requestId}});
+		valid = valid && followup.value("status", 0) == HTTP_OK && followup["result"] == result;
+		if (valid)
+		{
+			// Deterministically prevent dequeue, without a timed wait under the
+			// manager lock.  Unknown pause/queue state cannot prove completion.
+			manager->LockMutex();
+			auto admission = manager->RequestFrameNavigation(target, &requestId);
+			manager->NotifyFrameNavigationPaused();
+			auto pending = manager->WaitForFrameNavigation(requestId, 0);
+			manager->CancelRestore();
+			manager->UnlockMutex();
+			json cancelled = CallEndpointWithParams(server, "c64/timeline/status", {{"requestId", requestId}});
+			valid = admission.accepted && std::string(pending.status) == "pending"
+				&& cancelled.value("status", 0) == HTTP_OK && cancelled["result"]["status"] == "cancelled"
+				&& cancelled["result"]["reason"] == "cancelled" && cancelled["result"]["completionKnown"] == false
+				&& cancelled["result"]["observedFrame"].is_null();
+		}
+	}
+	if (!valid) manager->CancelRestore();
+	manager->SetRecordingIsActive(saved.recording);
+	manager->SetRecordingStoreInterval(saved.intervalFrames);
+	manager->SetRecordingLimit(saved.retention);
+	di->SetDebugMode(savedMode);
+	return valid;
 }
 
 void CTestRemoteProtocol::Run(ITestCallback *cb)
@@ -522,6 +578,13 @@ void CTestRemoteProtocol::Run(ITestCallback *cb)
 			FinishTest(false, "Test 10 FAIL: native memory read range/status/binary-size mismatch");
 			return;
 		}
+		// --- Test 12: real CPU-thread completion and request-specific cancellation ---
+		if (!TestTimelineCompletionEndpoints(server, diC64))
+		{
+			if (startedByTest) viewC64->StopEmulationThread(diC64);
+			FinishTest(false, "Test 12 FAIL: native timeline completion/observation/cancellation mismatch");
+			return;
+		}
 		if (startedByTest) viewC64->StopEmulationThread(diC64);
 	}
 
@@ -734,6 +797,35 @@ void CTestRemoteProtocol::Run(ITestCallback *cb)
 				pauseGuard.Restore(); FinishTest(false, "Test 11 FAIL: invalid raw frame request accepted/mutated"); return;
 			}
 		}
+		for (const auto &value : json::array({nullptr, true, "1", 1.0, -1, 5001, 18446744073709551615ULL}))
+		{
+			response = CallEndpointWithParams(server, "c64/timeline/frame", {{"frame", 1}, {"waitMs", value}});
+			if (response.value("status", 0) != HTTP_BAD_REQUEST
+				|| di->GetDebugMode() != mode || di->GetMainCpuCycleCounter() != cycle)
+			{ pauseGuard.Restore(); FinishTest(false, "Test 11 FAIL: invalid raw wait accepted/mutated"); return; }
+		}
+		for (const auto &params : json::array({{{"waitMs", 1}}, {{"requestId", 0}}, {{"requestId", true}},
+			{{"requestId", 1.0}}, {{"requestId", "1"}}, {{"requestId", -1}}, {{"requestId", 1}, {"extra", true}}}))
+		{
+			response = CallEndpointWithParams(server, "c64/timeline/status", params);
+			if (response.value("status", 0) != HTTP_BAD_REQUEST)
+			{ pauseGuard.Restore(); FinishTest(false, "Test 11 FAIL: invalid raw request observation accepted"); return; }
+		}
+		response = CallEndpointWithParams(server, "c64/timeline/status", {{"requestId", 18446744073709551615ULL}});
+		if (response.value("status", 0) != HTTP_OK || response["result"].value("status", std::string()) != "unavailable"
+			|| response["result"].value("completionKnown", true) || !response["result"]["observedFrame"].is_null()
+			|| di->GetDebugMode() != mode || di->GetMainCpuCycleCounter() != cycle)
+		{ pauseGuard.Restore(); FinishTest(false, "Test 11 FAIL: request observation mutated/fabricated completion"); return; }
+		for (int waitMs : {0, TimelineNavigation::MaxWaitMs})
+		{
+			// Frame zero is always outside the strict retained range: refusal
+			// must not turn into a pending request merely because waitMs exists.
+			response = CallEndpointWithParams(server, "c64/timeline/frame", {{"frame", 0}, {"waitMs", waitMs}});
+			if (response.value("status", 0) != HTTP_OK || response["result"].value("status", std::string()) != "refused"
+				|| response["result"].value("accepted", true) || response["result"].contains("requestId")
+				|| di->GetDebugMode() != mode || di->GetMainCpuCycleCounter() != cycle)
+			{ pauseGuard.Restore(); FinishTest(false, "Test 11 FAIL: refused frame acquired completion ownership"); return; }
+		}
 		response = CallEndpointWithParams(server, "c64/timeline/status", {{"frame", 1}});
 		if (response.value("status", 0) != HTTP_BAD_REQUEST)
 		{
@@ -754,7 +846,7 @@ void CTestRemoteProtocol::Run(ITestCallback *cb)
 		}
 	}
 
-	FinishTest(true, "All remote protocol tests passed (11/11)");
+	FinishTest(true, "All remote protocol tests passed (12/12)");
 }
 
 void CTestRemoteProtocol::Cancel()

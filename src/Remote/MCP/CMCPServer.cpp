@@ -856,29 +856,36 @@ void CMCPServer::RegisterDebuggerTools(CDebuggerServer *server)
 		tool.name = "retro_timeline";
 		tool.description = "C64-only existing timeline status or native frame-navigation request. "
 			"Status is read-only. Frame requires an already paused emulator and retained history; "
-			"acceptance is queued, not completed/exact restoration. May resume replay before pausing. "
-			"No instruction/cycle seek, automatic recording, or request-specific completion.";
+			"Omit waitMs for legacy queued acceptance, or wait 0 through 5000 ms for this request's "
+			"stable paused observation. A pending timeout does not cancel navigation. "
+			"Status with requestId observes the single retained request. May resume replay before pausing; "
+			"no exact instruction/cycle seek or automatic recording.";
 		tool.inputSchema = {
 			{"type", "object"}, {"additionalProperties", false},
 			{"properties", {
 				{"platform", {{"type", "string"}, {"enum", json::array({"c64"})}}},
 				{"action", {{"type", "string"}, {"enum", json::array({"status", "frame"})}}},
-				{"frame", {{"type", "integer"}, {"minimum", 0}, {"maximum", INT_MAX}}}
+				{"frame", {{"type", "integer"}, {"minimum", 0}, {"maximum", INT_MAX}}},
+				{"waitMs", {{"type", "integer"}, {"minimum", 0}, {"maximum", TimelineNavigation::MaxWaitMs}}},
+				{"requestId", {{"type", "integer"}, {"minimum", 1}, {"maximum", UINT64_MAX}}}
 			}}, {"required", json::array({"platform", "action"})},
 			{"oneOf", json::array({
-				{{"properties", {{"action", {{"enum", json::array({"status"})}}}}}, {"not", {{"required", json::array({"frame"})}}}},
-				{{"properties", {{"action", {{"enum", json::array({"frame"})}}}}}, {"required", json::array({"frame"})}}
+				{{"properties", {{"action", {{"enum", json::array({"status"})}}}}},
+				 {"not", {{"anyOf", json::array({{{"required", json::array({"frame"})}}, {{"required", json::array({"waitMs"})}}})}}}},
+				{{"properties", {{"action", {{"enum", json::array({"frame"})}}}}}, {"required", json::array({"frame"})},
+				 {"not", {{"required", json::array({"requestId"})}}}}
 			})}
 		};
 		tool.handler = [server](const json &params) -> json
 		{
-			bool statusOnly = false;
-			int frame = 0;
-			if (!TimelineNavigation::ParseTool(params, statusOnly, frame))
-				throw runtime_error("retro_timeline requires c64 and action=status, or action=frame with an integer frame in [0, INT_MAX]; no extra fields");
-			json args = statusOnly ? json::object() : json({{"frame", frame}});
-			return ConsumeEndpointResult(server->RunEndpointFunction(statusOnly ? "c64/timeline/status" : "c64/timeline/frame",
-				"", args, nullptr, 0), "retro_timeline");
+			TimelineNavigation::Arguments args;
+			if (!TimelineNavigation::ParseTool(params, args))
+				throw runtime_error("retro_timeline requires c64, action=status with optional positive requestId, or action=frame with integer frame in [0, INT_MAX] and optional waitMs in [0, 5000]; no extra fields");
+			json endpointParams = params;
+			endpointParams.erase("platform");
+			endpointParams.erase("action");
+			return ConsumeEndpointResult(server->RunEndpointFunction(args.statusOnly ? "c64/timeline/status" : "c64/timeline/frame",
+				"", endpointParams, nullptr, 0), "retro_timeline");
 		};
 		RegisterTool(tool);
 	}

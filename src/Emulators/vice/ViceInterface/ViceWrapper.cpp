@@ -1753,7 +1753,10 @@ void c64d_debug_pause_check(int allowRestore)
 	}
 	else
 	{
-		if (c64d_is_performing_snapshot_restore() || c64d_is_external_snapshot_request_active()
+		// Target arrival clears the legacy restore flag before an interrupt may
+		// run.  Let that interrupt unwind to the main CPU's stable pause hook.
+		if (debugInterfaceVice->snapshotsManager->IsFrameNavigationAwaitingStablePause()
+			|| c64d_is_performing_snapshot_restore() || c64d_is_external_snapshot_request_active()
 			|| c64d_is_snapshot_operation_in_progress())
 			return;
 	}
@@ -1808,6 +1811,11 @@ void c64d_debug_pause_check(int allowRestore)
 			c64d_refresh_cia();
 		}
 
+		// Main CPU instruction-boundary pause only: restoration/imports and
+		// pause refresh have finished.  Never publish from drive/mid-cycle calls.
+		if (allowRestore)
+			debugInterfaceVice->snapshotsManager->NotifyFrameNavigationPaused();
+
 		{
 			CParkedInPauseLoopGuard parkedGuard;
 			std::unique_lock<std::mutex> lock(debugInterfaceVice->pauseMutex);
@@ -1844,8 +1852,9 @@ void c64d_debug_pause_check(int allowRestore)
 					}
 					else
 					{
-						if (c64d_is_performing_snapshot_restore() || c64d_is_external_snapshot_request_active()
-			|| c64d_is_snapshot_operation_in_progress())
+						if (debugInterfaceVice->snapshotsManager->IsFrameNavigationAwaitingStablePause()
+							|| c64d_is_performing_snapshot_restore() || c64d_is_external_snapshot_request_active()
+							|| c64d_is_snapshot_operation_in_progress())
 						{
 							if (debugInterfaceVice->ShouldProcessPausedVSync())
 							{
@@ -1861,6 +1870,10 @@ void c64d_debug_pause_check(int allowRestore)
 						debugInterfaceVice->sidDataToRestore = NULL;
 					}
 
+					// Also covers a restore consumed while already parked.  The
+					// pause mutex is still unlocked here, and imports are complete.
+					if (allowRestore)
+						debugInterfaceVice->snapshotsManager->NotifyFrameNavigationPaused();
 
 					if (debugInterfaceVice->ShouldProcessPausedVSync())
 					{
