@@ -1,0 +1,151 @@
+name: Unstable release
+
+# Every push to devel builds all three platforms (the build-*.yml workflows,
+# called as reusable workflows) and, only if ALL of them are green, refreshes
+# the single rolling `unstable` pre-release. Stable releases (v*) are made by
+# hand and are never touched here.
+#
+# The build-*.yml workflows no longer trigger on pushes to devel themselves;
+# this file is what runs them there. Pull requests still use them directly.
+on:
+  push:
+    branches: [ devel ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  MTENGINE_PIN_STRICT: '1'
+
+jobs:
+  linux:
+    uses: ./.github/workflows/build-linux.yml
+    secrets: inherit
+
+  macos:
+    uses: ./.github/workflows/build-macos.yml
+    secrets: inherit
+
+  windows:
+    uses: ./.github/workflows/build-windows.yml
+    secrets: inherit
+
+  publish:
+    name: Publish unstable
+    needs: [ linux, macos, windows ]
+    # Never publish from a manually dispatched run on some other branch.
+    if: github.ref == 'refs/heads/devel'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    # Serialise publishers, but never cancel one mid-upload: a cancelled upload
+    # leaves the release with half its assets. A newer pending run replaces an
+    # older pending one, which is exactly what we want.
+    concurrency:
+      group: unstable-publish
+      cancel-in-progress: false
+
+    steps:
+      - name: Checkout RetroDebugger
+        uses: actions/checkout@v6
+
+      # Only the shipping leg (verbose logs compiled out) goes into unstable.
+      # The logs-on leg still had to pass: it is a gate, not a download.
+      - name: Download shipping builds
+        uses: actions/download-artifact@v4
+        with:
+          pattern: '*-logs-off'
+          path: dist
+
+      - name: Package and publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # A newer commit landed while we were building: let its run publish.
+          TIP="$(gh api "repos/$REPO/git/ref/heads/devel" --jq .object.sha)"
+          if [ "$TIP" != "$GITHUB_SHA" ]; then
+            echo "devel moved on ($TIP); not publishing $GITHUB_SHA."
+            exit 0
+          fi
+
+          find dist -maxdepth 2 | sort
+
+          # Fixed asset names, so --clobber replaces them in place instead of
+          # piling up one set of files per version.
+          mkdir -p out stage
+          shopt -s nullglob
+
+          pack_dir() {   # $1 = artifact dir, $2 = platform-arch, $3 = format
+            local src="$1" name="RetroDebugger-unstable-$2" top="RetroDebugger-unstable"
+            rm -rf "stage/$top"; mkdir -p "stage/$top"
+            cp -a "$src/." "stage/$top/"
+            if [ "$3" = tgz ]; then
+              # upload-artifact drops the executable bit.
+              chmod +x "stage/$top/retrodebugger"
+              tar -C stage -czf "out/$name.tar.gz" "$top"
+            else
+              (cd stage && zip -qr "../out/$name.zip" "$top")
+            fi
+          }
+
+          n=0
+          for d in dist/*-linux-*-logs-off; do
+            arch="$(basename "$d" | sed -E 's/^RetroDebugger-v.*-(linux-[^-]+)-logs-off$/\1/')"
+            pack_dir "$d" "$arch" tgz; n=$((n+1))
+          done
+          for d in dist/*-windows-*-logs-off; do
+            arch="$(basename "$d" | sed -E 's/^RetroDebugger-v.*-(windows-[^-]+)-logs-off$/\1/')"
+            pack_dir "$d" "$arch" zip; n=$((n+1))
+          done
+          for d in dist/*-macos-logs-off; do
+            zips=("$d"/*.zip)
+            [ "${#zips[@]}" -eq 1 ] || { echo "expected exactly one zip in $d" >&2; exit 1; }
+            cp "${zips[0]}" out/RetroDebugger-unstable-macos.zip; n=$((n+1))
+          done
+
+          # All three platforms must be present, or this is not a release.
+          [ "$n" -eq 3 ] || { echo "expected 3 platform packages, got $n" >&2; exit 1; }
+          ls -l out
+
+          VERSION="$(sed -n 's/.*RETRODEBUGGER_VERSION_STRING[[:space:]]*"\([^"]*\)".*/\1/p' src/C64D_Version.h)"
+          SHORT="${GITHUB_SHA::8}"
+          SUBJECT="$(git log -1 --format=%s)"
+          TITLE="Unstable (${VERSION} @ ${SHORT})"
+          {
+            echo "Rolling development build of \`devel\`. Replaced on every successful push; for stable releases see the Releases page."
+            echo
+            echo "- Version: ${VERSION}"
+            echo "- Commit: [${SHORT}](https://github.com/${REPO}/commit/${GITHUB_SHA}) - ${SUBJECT}"
+            echo "- Built: $(date -u +'%Y-%m-%d %H:%M UTC')"
+            echo "- Run: ${GITHUB_SERVER_URL}/${REPO}/actions/runs/${GITHUB_RUN_ID}"
+            echo "- Shipping configuration (verbose logs compiled out)."
+          } > notes.md
+
+          # Move the tag to this commit (create it the first time).
+          if gh api "repos/$REPO/git/ref/tags/unstable" >/dev/null 2>&1; then
+            gh api -X PATCH "repos/$REPO/git/refs/tags/unstable" \
+              -f sha="$GITHUB_SHA" -F force=true >/dev/null
+          else
+            gh api -X POST "repos/$REPO/git/refs" \
+              -f ref=refs/tags/unstable -f sha="$GITHUB_SHA" >/dev/null
+          fi
+
+          if gh release view unstable >/dev/null 2>&1; then
+            gh release upload unstable out/* --clobber
+            gh release edit unstable --title "$TITLE" --notes-file notes.md \
+              --prerelease --latest=false
+          else
+            gh release create unstable out/* --verify-tag --title "$TITLE" \
+              --notes-file notes.md --prerelease --latest=false
+          fi
+
+          # Drop assets left behind by a renamed package (e.g. an arch change).
+          keep="$(ls out)"
+          gh release view unstable --json assets --jq '.assets[].name' | while read -r a; do
+            grep -qxF "$a" <<<"$keep" || gh release delete-asset unstable "$a" -y
+          done

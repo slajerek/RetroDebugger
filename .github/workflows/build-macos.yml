@@ -5,12 +5,17 @@ name: macOS build
 # proved. CI that runs on master and not on devel therefore runs after the
 # question has been answered rather than while it is open -- which is how a
 # devel branch can be published green and untested, as v3.21.1 was.
+#
+# A push to devel does not trigger this workflow directly: unstable.yml calls it
+# (workflow_call) so the same build also feeds the `unstable` release, and a
+# direct push trigger would build every devel commit twice.
 on:
   push:
-    branches: [ master, main, devel ]
+    branches: [ master, main ]
   pull_request:
     branches: [ master, main, devel ]
   workflow_dispatch:
+  workflow_call:
 
 env:
   # MTENGINE_REF holds a BRANCH by default (`origin/master`), and a branch is
