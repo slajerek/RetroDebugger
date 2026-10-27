@@ -91,7 +91,7 @@ void CDebuggerServerApi::RegisterEndpoints(CDebuggerServer *server)
 	char *buf = SYS_GetCharBuf();
 	const char *plat = debugInterface->GetPlatformNameEndpointString();
 
-	// PR1 exposes only the existing frame-navigation queue, not precise seek.
+	// Existing native frame navigation, with an optional bounded completion wait.
 	for (bool statusOnly : {true, false})
 	{
 		EndpointDescriptor desc;
@@ -99,11 +99,15 @@ void CDebuggerServerApi::RegisterEndpoints(CDebuggerServer *server)
 		desc.platform = plat;
 		desc.category = "timeline";
 		desc.description = statusOnly ? "C64-only read-only frame history/recording status"
-			: "C64-only native frame navigation; queued acceptance, not completed restoration";
+			: "C64-only native frame navigation; optionally wait for a request-specific paused observation";
 		desc.paramsSchema = {{"type", "object"}, {"additionalProperties", false}};
-		if (!statusOnly)
+		if (statusOnly)
+			desc.paramsSchema["properties"] = {{"requestId", {{"type", "integer"}, {"minimum", 1}, {"maximum", UINT64_MAX}}}};
+		else
 		{
-			desc.paramsSchema["properties"] = {{"frame", {{"type", "integer"}, {"minimum", 0}, {"maximum", INT_MAX}}}};
+			desc.paramsSchema["properties"] = {
+				{"frame", {{"type", "integer"}, {"minimum", 0}, {"maximum", INT_MAX}}},
+				{"waitMs", {{"type", "integer"}, {"minimum", 0}, {"maximum", TimelineNavigation::MaxWaitMs}}}};
 			desc.paramsSchema["required"] = json::array({"frame"});
 		}
 		server->AddEndpointFunction(desc,
@@ -111,15 +115,24 @@ void CDebuggerServerApi::RegisterEndpoints(CDebuggerServer *server)
 		{
 			if (debugInterface->GetEmulatorType() != EMULATOR_TYPE_C64_VICE)
 				return server->PrepareResult(HTTP_BAD_REQUEST, token, {{"error", "unsupported_platform"}}, NULL, 0);
-			int frame = 0;
-			if (statusOnly ? !(params.is_null() || (params.is_object() && params.empty()))
-				: !TimelineNavigation::ParseFrame(params, frame))
+			TimelineNavigation::Arguments args;
+			if (!TimelineNavigation::ParseEndpoint(params, statusOnly, args))
 				return server->PrepareResult(HTTP_BAD_REQUEST, token, {{"error", "invalid_timeline_arguments"}}, NULL, 0);
 			CSnapshotsManager *manager = debugInterface->snapshotsManager;
 			if (!manager)
 				return server->PrepareResult(HTTP_SERVICE_UNAVAILABLE, token, {{"error", "timeline_unavailable"}}, NULL, 0);
-			json result = statusOnly ? TimelineNavigation::StatusJson(manager->GetFrameNavigationStatus())
-				: TimelineNavigation::ResultJson(manager->RequestFrameNavigation(frame), frame);
+			json result;
+			if (statusOnly)
+				result = args.requestId ? TimelineNavigation::ObservationJson(manager->WaitForFrameNavigation(args.requestId, 0))
+					: TimelineNavigation::StatusJson(manager->GetFrameNavigationStatus());
+			else
+			{
+				uint64_t requestId = 0;
+				auto admission = manager->RequestFrameNavigation(args.frame, args.waitMs < 0 ? nullptr : &requestId);
+				result = admission.accepted && args.waitMs >= 0
+					? TimelineNavigation::ObservationJson(manager->WaitForFrameNavigation(requestId, args.waitMs))
+					: TimelineNavigation::ResultJson(admission, args.frame);
+			}
 			return server->PrepareResult(HTTP_OK, token, result, NULL, 0);
 		});
 	}

@@ -1147,6 +1147,7 @@ void CDebugInterfaceVice::ClearDebugMarkers()
 
 void CDebugInterfaceVice::ResetSoft()
 {
+	snapshotsManager->InvalidateFrameNavigation("reset");
 	if (isRunning && GetDebugMode() == DEBUGGER_MODE_RUNNING)
 	{
 		CDebugInterfaceViceTaskReset *task = new CDebugInterfaceViceTaskReset(this, false);
@@ -1184,6 +1185,7 @@ void CDebugInterfaceVice::ResetSoftSynced()
 
 void CDebugInterfaceVice::ResetHard()
 {
+	snapshotsManager->InvalidateFrameNavigation("reset");
 	if (isRunning && GetDebugMode() == DEBUGGER_MODE_RUNNING)
 	{
 		CDebugInterfaceViceTaskReset *task = new CDebugInterfaceViceTaskReset(this, true);
@@ -3339,6 +3341,7 @@ static void load_snapshot_trap(uint16_t addr, void *v)
 
 bool CDebugInterfaceVice::LoadFullSnapshot(char *filePath)
 {
+	snapshotsManager->InvalidateFrameNavigation("snapshot_load");
 	char *buf = SYS_GetCharBuf();
 	strcpy(buf, filePath);
 	
@@ -3399,6 +3402,7 @@ bool CDebugInterfaceVice::LoadFullSnapshot(CByteBuffer *byteBuffer)
 {
 	LOGD("LoadFullSnapshot");
 	debugInterfaceVice->LockMutex();
+	snapshotsManager->InvalidateFrameNavigation("snapshot_load");
 	gSoundEngine->LockMutex("LoadFullSnapshot");
 
 	int ret = c64_snapshot_read_from_memory(1, 1, 1, 1, 1, 1, byteBuffer->data, byteBuffer->length);
