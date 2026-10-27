@@ -34,8 +34,9 @@ jobs:
   publish:
     name: Publish unstable
     needs: [ linux, macos, windows ]
-    # Never publish from a manually dispatched run on some other branch.
-    if: github.ref == 'refs/heads/devel'
+    # Never publish from a manually dispatched run on some other branch, nor
+    # from a fork that happens to have Actions enabled.
+    if: github.repository == 'slajerek/RetroDebugger' && github.ref == 'refs/heads/devel'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -66,11 +67,18 @@ jobs:
         run: |
           set -euo pipefail
 
-          # A newer commit landed while we were building: let its run publish.
-          TIP="$(gh api "repos/$REPO/git/ref/heads/devel" --jq .object.sha)"
-          if [ "$TIP" != "$GITHUB_SHA" ]; then
-            echo "devel moved on ($TIP); not publishing $GITHUB_SHA."
-            exit 0
+          # Never move `unstable` backwards. Builds of different commits finish
+          # in any order, so compare with what the release points at now rather
+          # than with the tip of devel: an older green run must still publish if
+          # the newer commit's run failed or has not published yet.
+          CUR="$(gh api "repos/$REPO/git/ref/tags/unstable" --jq .object.sha 2>/dev/null || true)"
+          if [ -n "$CUR" ] && [ "$CUR" != "$GITHUB_SHA" ]; then
+            REL="$(gh api "repos/$REPO/compare/${CUR}...${GITHUB_SHA}" --jq .status 2>/dev/null || echo unknown)"
+            echo "unstable is at $CUR; $GITHUB_SHA is: $REL"
+            if [ "$REL" = behind ]; then
+              echo "A newer commit is already published; not publishing $GITHUB_SHA."
+              exit 0
+            fi
           fi
 
           find dist -maxdepth 2 | sort
@@ -86,7 +94,9 @@ jobs:
             cp -a "$src/." "stage/$top/"
             if [ "$3" = tgz ]; then
               # upload-artifact drops the executable bit.
-              chmod +x "stage/$top/retrodebugger"
+              for x in retrodebugger tools/c64d-champ/c64d-champ.rb; do
+                if [ -f "stage/$top/$x" ]; then chmod +x "stage/$top/$x"; fi
+              done
               tar -C stage -czf "out/$name.tar.gz" "$top"
             else
               (cd stage && zip -qr "../out/$name.zip" "$top")
@@ -126,23 +136,25 @@ jobs:
             echo "- Shipping configuration (verbose logs compiled out)."
           } > notes.md
 
-          # Move the tag to this commit (create it the first time).
-          if gh api "repos/$REPO/git/ref/tags/unstable" >/dev/null 2>&1; then
-            gh api -X PATCH "repos/$REPO/git/refs/tags/unstable" \
-              -f sha="$GITHUB_SHA" -F force=true >/dev/null
-          else
-            gh api -X POST "repos/$REPO/git/refs" \
-              -f ref=refs/tags/unstable -f sha="$GITHUB_SHA" >/dev/null
-          fi
-
+          # Assets and notes first, the tag last: if anything above fails the
+          # release keeps pointing at the commit its assets were built from.
           if gh release view unstable >/dev/null 2>&1; then
             gh release upload unstable out/* --clobber
             gh release edit unstable --title "$TITLE" --notes-file notes.md \
               --prerelease --latest=false
           else
+            # --verify-tag needs the tag to exist before the release does.
+            if ! gh api "repos/$REPO/git/ref/tags/unstable" >/dev/null 2>&1; then
+              gh api -X POST "repos/$REPO/git/refs" \
+                -f ref=refs/tags/unstable -f sha="$GITHUB_SHA" >/dev/null
+            fi
             gh release create unstable out/* --verify-tag --title "$TITLE" \
               --notes-file notes.md --prerelease --latest=false
           fi
+
+          # Point the tag at this commit (a no-op when it was just created).
+          gh api -X PATCH "repos/$REPO/git/refs/tags/unstable" \
+            -f sha="$GITHUB_SHA" -F force=true >/dev/null
 
           # Drop assets left behind by a renamed package (e.g. an arch change).
           keep="$(ls out)"

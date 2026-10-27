@@ -15,6 +15,13 @@ the work counts as done:
 - macOS   -- `.github/workflows/build-macos.yml`
 - Windows -- `.github/workflows/build-windows.yml`
 
+Pushes to `devel` run these three through `.github/workflows/unstable.yml`
+(workflow_call), which then refreshes the rolling `unstable` pre-release only
+if all three pass. So after a push to `devel`, watch the "Unstable release"
+run (`gh run list --workflow unstable.yml`); `gh run list --workflow
+build-linux.yml` no longer lists devel pushes. PRs, `master` and `main` still
+trigger the three directly.
+
 Green on one or two platforms is not green. The runners differ in ways a
 local machine cannot reproduce (arm64 macOS off-logs leg, ClangCL+MSBuild on
 Windows, Music scheduler timing), and failures in the past landed only on
