@@ -10,12 +10,17 @@
 #include "CDebugSymbolsDrive1541.h"
 #include "CDebugSymbolsSegmentDrive1541.h"
 #include "CDebugBreakpointsAddr.h"
+#include "CDebuggerServerApiVice.h"
+#include "CDebuggerServer.h"
+#include "CDebuggerServerProtocol.h"
 #include <cstdio>
 #include <cstring>
 
 extern "C"
 {
 #include "ViceWrapper.h"
+#include "drivetypes.h"
+uint8 c64d_get_drivecpu_status_internal(drive_context_t *drv);
 void c64d_set_drivecpu_pc_no_trap(int driveNr, uint16 pc);
 void c64d_set_drivecpu_regs_no_trap(int driveNr, uint8 a, uint8 x, uint8 y, uint8 p, uint8 sp);
 };
@@ -43,6 +48,94 @@ static bool CheckOwnedTargetDecisions()
 }
 
 #ifdef RUN_COMMODORE64
+// Capture the real state endpoint without opening a socket or replacing the live server.
+class CDriveStateTestServer : public CDebuggerServer
+{
+public:
+	EndpointHandlerV1 stateHandler;
+	nlohmann::json result;
+	int status = 0;
+	virtual void AddEndpointFunction(const EndpointDescriptor &desc, EndpointHandlerV1 handler) override
+	{
+		if (desc.fn == "c64/drive1541/state") stateHandler = handler;
+	}
+	virtual std::vector<char> *PrepareResult(int code, const std::string token, nlohmann::json value,
+		u8 *binaryData, int binaryDataSize) override
+	{
+		status = code; result = value; return nullptr;
+	}
+};
+
+static bool CheckFullDriveFlags()
+{
+	// Independent expected bytes cover every cached N/Z combination on a local CPU.
+	drivecpu_context_t cpu = {};
+	drive_context_t drive = {};
+	drive.cpu = &cpu;
+	cpu.cpu_regs.p = 0x05;
+	const uint8 negative[4] = {0x80, 0, 0x80, 0};
+	const uint8 zeroCache[4] = {0, 1, 1, 0};
+	const uint8 expected[4] = {0xA7, 0x25, 0xA5, 0x27};
+	for (int i = 0; i < 4; i++)
+	{
+		cpu.cpu_regs.n = negative[i]; cpu.cpu_regs.z = zeroCache[i];
+		if (c64d_get_drivecpu_status_internal(&drive) != expected[i]) return false;
+	}
+	return true;
+}
+
+static bool CheckReadOnlyDriveState(CDebugInterfaceVice *di)
+{
+	CDriveStateTestServer server;
+	di->GetDebuggerServerApi()->RegisterEndpoints(&server);
+	if (!server.stateHandler) return false;
+	c64d_drive1541_state_t before = {}, after = {};
+	CDebugSymbolsSegment *segment = di->symbolsDrive1541 ? di->symbolsDrive1541->currentSegment : nullptr;
+	if (!segment || !segment->breakpointsPC) return false;
+	CDebugBreakpointsAddr *bps = segment->breakpointsPC;
+	const int mode = di->GetDebugMode();
+	const int parked = c64d_is_cpu_parked_in_pause_loop();
+	const int temporary = bps->temporaryBreakpointPC;
+	const bool breakOnPC = segment->breakOnPC;
+	CDebugBreakpointAddr *breakpoint = bps->GetBreakpoint(0x601);
+	di->LockMutex();
+	bool sampled = c64d_drive1541_sample_state(&before) != 0;
+	di->UnlockMutex();
+	if (!sampled || mode != DEBUGGER_MODE_PAUSED || !parked || !c64d_drive1541_try_begin_control()) return false;
+	// Prove querying works without acquiring or releasing another operation's admission.
+	struct AdmissionGuard { ~AdmissionGuard() { c64d_drive1541_end_control(); } } admission;
+	bool passed = true;
+	try
+	{
+		for (const auto &params : nlohmann::json::array({nullptr, nlohmann::json::object(), {{"device", 8}}}))
+		{
+			server.status = 0; server.result = nullptr;
+			server.stateHandler("", params, nullptr, 0);
+			const auto &value = server.result;
+			passed = passed && server.status == HTTP_OK && value.at("available") == true
+				&& value.at("outcome") == "sampled" && value.at("consistency") == "best_effort"
+				&& value.at("pc") == before.pc && value.at("a") == before.a && value.at("x") == before.x
+				&& value.at("y") == before.y && value.at("sp") == before.sp && value.at("flags") == before.flags
+				&& value.at("cycle") == before.cycle && value.at("model") == before.model
+				&& value.at("headTrackPosition") == before.headTrackPosition
+				&& value.at("ramSize") == di->dataAdapterDrive1541DirectRam->AdapterGetDataLength()
+				&& value.at("debugMode") == mode && value.at("parked") == true;
+		}
+		server.stateHandler("", {{"device", 9}}, nullptr, 0);
+		passed = passed && server.status == HTTP_BAD_REQUEST;
+	}
+	catch (...) { passed = false; }
+	if (c64d_drive1541_try_begin_control()) passed = false;
+	di->LockMutex();
+	sampled = c64d_drive1541_sample_state(&after) != 0;
+	di->UnlockMutex();
+	return passed && sampled && before.pc == after.pc && before.a == after.a && before.x == after.x
+		&& before.y == after.y && before.sp == after.sp && before.flags == after.flags && before.cycle == after.cycle
+		&& mode == di->GetDebugMode() && parked == c64d_is_cpu_parked_in_pause_loop()
+		&& temporary == bps->temporaryBreakpointPC && breakOnPC == segment->breakOnPC
+		&& breakpoint == bps->GetBreakpoint(0x601);
+}
+
 // Controlled RAM-only instruction loops; no disk image, drive-debug selection,
 // snapshot, or lifecycle transition is part of the fixture.
 static bool CheckNativeOwnedRun(CDebugInterfaceVice *di)
@@ -437,12 +530,28 @@ void CTestViceDrive1541::Run(ITestCallback *cb)
 		StepCompleted(11, allPassed, allPassed ? "Owned drive run-until preserves legacy breakpoints and disarms on return" : failureMsg);
 	}
 
+	// --- Step 12: complete status includes separately cached negative and zero flags ---
+	if (allPassed)
+	{
+		allPassed = CheckFullDriveFlags();
+		if (!allPassed) sprintf(failureMsg, "Drive status omitted or misread cached N/Z flags");
+		StepCompleted(12, allPassed, allPassed ? "Complete drive status matches four N/Z controls" : failureMsg);
+	}
+
+	// --- Step 13: real state endpoint preserves paused CPU and existing control ownership ---
+	if (allPassed)
+	{
+		allPassed = CheckReadOnlyDriveState(di);
+		if (!allPassed) sprintf(failureMsg, "Drive state query changed execution/control or returned incorrect fields");
+		StepCompleted(13, allPassed, allPassed ? "Read-only state fields and legacy pc/ramSize verified" : failureMsg);
+	}
+
 	// Restore emulator state
 	if (!wasRunning)
 		viewC64->StopEmulationThread(di);
 
 	if (allPassed)
-		TestCompleted(true, "1541 drive verified: CPU state, memory, registers, adapter, dirty flags, observed pause, control admission, owned run-until");
+		TestCompleted(true, "1541 drive verified: CPU state, memory, registers, adapter, dirty flags, observed pause, control admission, owned run-until, full flags, read-only state");
 	else
 		TestCompleted(false, failureMsg);
 #endif

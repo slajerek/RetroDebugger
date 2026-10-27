@@ -1546,7 +1546,64 @@ void CTestMCPProtocol::Run(ITestCallback *cb)
 		}
 	}
 
-	TestCompleted(true, "All MCP protocol tests passed (47/47)");
+	// --- Test 48: state observations, including unavailable/null fields, remain unchanged ---
+	{
+		for (const auto &payload : json::array({
+			{{"available", true}, {"outcome", "sampled"}, {"pc", 49152}, {"flags", 167}, {"cycle", 123456789ULL}, {"parked", true}},
+			{{"available", false}, {"outcome", "unavailable"}, {"pc", nullptr}, {"flags", nullptr}, {"cycle", nullptr}}}))
+		{
+			CCannedDebuggerServer debuggerServer({{"status", HTTP_OK}, {"result", payload}});
+			CMCPServer server;
+			PrepareToolTestServer(server, debuggerServer);
+			json response = CallTool(server, 48, "retro_drive1541_state", {{"platform", "c64"}});
+			if (!ToolErrorText(response).empty() || debuggerServer.callCount != 1
+				|| debuggerServer.lastEndpointName != "c64/drive1541/state"
+				|| debuggerServer.lastParams != json({{"device", 8}})
+				|| json::parse(response["result"]["content"][0]["text"].get<std::string>()) != payload)
+			{
+				TestCompleted(false, "Test 48 FAIL: drive state routing or null observations changed"); return;
+			}
+		}
+	}
+
+	// --- Test 49: state query accepts only drive8, without execution-control arguments ---
+	{
+		CCannedDebuggerServer debuggerServer({{"status", HTTP_OK}, {"result", json::object()}});
+		CMCPServer server;
+		PrepareToolTestServer(server, debuggerServer);
+		json invalid = json::array({nullptr, json::object(), {{"platform", "c64"}, {"timeoutMs", 1}},
+			{{"platform", "c64"}, {"extra", true}}});
+		for (const auto &platform : json::array({nullptr, true, 8, "atari800", "nes", "c64/drive1541"}))
+			invalid.push_back({{"platform", platform}});
+		for (const auto &device : json::array({nullptr, true, "8", 8.0, -1, 9, 18446744073709551615ULL}))
+			invalid.push_back({{"platform", "c64"}, {"device", device}});
+		for (const auto &args : invalid)
+			if (ToolErrorText(CallTool(server, 49, "retro_drive1541_state", args)).empty() || debuggerServer.callCount != 0)
+			{
+				TestCompleted(false, "Test 49 FAIL: invalid drive state request reached endpoint"); return;
+			}
+		if (!Drive1541Control::ParseState(nullptr, false) || !Drive1541Control::ParseState(json::object(), false)
+			|| !Drive1541Control::ParseState({{"device", 8}}, false)
+			|| Drive1541Control::ParseState({{"device", 9}}, false)
+			|| Drive1541Control::ParseState({{"platform", "c64"}}, false)
+			|| Drive1541Control::ParseState({{"timeoutMs", 0}}, false))
+		{
+			TestCompleted(false, "Test 49 FAIL: backend drive state contract mismatch"); return;
+		}
+	}
+
+	// --- Test 50: failed transport is not an unavailable sample ---
+	{
+		CCannedDebuggerServer debuggerServer({{"status", HTTP_SERVICE_UNAVAILABLE}, {"error", "desktop_unavailable"}});
+		CMCPServer server;
+		PrepareToolTestServer(server, debuggerServer);
+		if (ToolErrorText(CallTool(server, 50, "retro_drive1541_state", {{"platform", "c64"}})).empty())
+		{
+			TestCompleted(false, "Test 50 FAIL: drive state transport error swallowed"); return;
+		}
+	}
+
+	TestCompleted(true, "All MCP protocol tests passed (50/50)");
 }
 
 void CTestMCPProtocol::Cancel()

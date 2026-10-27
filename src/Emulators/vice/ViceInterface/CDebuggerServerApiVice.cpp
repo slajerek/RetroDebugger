@@ -1013,18 +1013,30 @@ void CDebuggerServerApiVice::RegisterEndpoints(CDebuggerServer *server)
 		desc.fn = buf;
 		desc.platform = plat;
 		desc.category = "cpu";
-		desc.description = "Get 1541 drive state (PC and RAM size)";
+		desc.description = "Sample drive8 registers, full flags, cycles, model, and pause observation without changing execution";
 		server->AddEndpointFunction(desc, [this, server](const string token, json params, unsigned char *binaryData, int binaryDataSize) -> vector<char>*
 		{
-			json result;
+			if (!Drive1541Control::ParseState(params, false))
+				return server->PrepareResult(HTTP_BAD_REQUEST, token, {{"error", "invalid_drive_state_arguments"}}, NULL, 0);
+			json result = {{"device", 8}, {"available", false}, {"outcome", "unavailable"}, {"consistency", "best_effort"},
+				{"pc", nullptr}, {"ramSize", nullptr}, {"a", nullptr}, {"x", nullptr}, {"y", nullptr}, {"sp", nullptr},
+				{"flags", nullptr}, {"cycle", nullptr}, {"model", nullptr}, {"modelName", nullptr}, {"headTrackPosition", nullptr}};
 			{
+				// Existing API locking convention, not a coherent running-CPU snapshot.
 				CDebugInterfaceMutexGuard lock(debugInterfaceVice);
-
-				result["pc"] = debugInterfaceVice->GetDrive1541PC();
-
+				result["debugMode"] = c64d_debug_mode_get();
+				result["parked"] = c64d_is_cpu_parked_in_pause_loop() != 0;
 				CDataAdapter *da = debuggerApiVice->GetDataAdapterDrive1541MemoryDirectRAM();
-				if (da)
-					result["ramSize"] = da->AdapterGetDataLength();
+				c64d_drive1541_state_t state;
+				if (debugInterfaceVice->isRunning && da && c64d_drive1541_sample_state(&state))
+				{
+					result["available"] = true; result["outcome"] = "sampled";
+					result["pc"] = state.pc; result["ramSize"] = da->AdapterGetDataLength();
+					result["a"] = state.a; result["x"] = state.x; result["y"] = state.y;
+					result["sp"] = state.sp; result["flags"] = state.flags; result["cycle"] = state.cycle;
+					result["model"] = state.model; result["modelName"] = state.model == 1541 ? "1541" : "1541-II";
+					result["headTrackPosition"] = state.headTrackPosition;
+				}
 			}
 			return server->PrepareResult(HTTP_OK, token, result, NULL, 0);
 		});
