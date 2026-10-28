@@ -105,4 +105,57 @@ namespace DebuggerProtocol
 								const nlohmann::json &error = nlohmann::json());
 }
 
+namespace GuiControl
+{
+	// A deliberately closed surface, shared by discovery, MCP, and direct calls.
+	inline nlohmann::json Schema()
+	{
+		using nlohmann::json;
+		return {{"type", "object"}, {"additionalProperties", false},
+			{"properties", {
+				{"action", {{"type", "string"}, {"enum", json::array({"capabilities", "status", "show", "open", "set_address", "submit", "cancel", "capture"})}}},
+				{"target", {{"type", "string"}, {"enum", json::array({"c64.memory_breakpoints", "c64.memory_breakpoints.editor"})}}},
+				{"text", {{"type", "string"}, {"minLength", 1}, {"maxLength", 64}, {"not", {{"pattern", "[^ -~]"}}}}},
+				{"requestId", {{"type", "string"}, {"minLength", 1}, {"maxLength", 20}, {"not", {{"pattern", "[^0-9]"}}}}}
+			}}, {"required", json::array({"action"})},
+			{"oneOf", json::array({
+				{{"properties", {{"action", {{"enum", json::array({"capabilities"})}}}}}, {"maxProperties", 1}},
+				{{"properties", {{"action", {{"enum", json::array({"status"})}}}}}, {"required", json::array({"requestId"})}, {"maxProperties", 2}},
+				{{"properties", {{"action", {{"enum", json::array({"show", "open"})}}}, {"target", {{"enum", json::array({"c64.memory_breakpoints"})}}}}}, {"required", json::array({"target"})}, {"maxProperties", 2}},
+				{{"properties", {{"action", {{"enum", json::array({"set_address"})}}}, {"target", {{"enum", json::array({"c64.memory_breakpoints.editor"})}}}}}, {"required", json::array({"target", "text"})}, {"maxProperties", 3}},
+				{{"properties", {{"action", {{"enum", json::array({"submit", "cancel"})}}}, {"target", {{"enum", json::array({"c64.memory_breakpoints.editor"})}}}}}, {"required", json::array({"target"})}, {"maxProperties", 2}},
+				{{"properties", {{"action", {{"enum", json::array({"capture"})}}}}}, {"required", json::array({"target"})}, {"maxProperties", 2}}
+			})}};
+	}
+
+	inline bool Valid(const nlohmann::json &args)
+	{
+		if (!args.is_object() || !args.contains("action") || !args["action"].is_string()) return false;
+		std::string action = args["action"];
+		if (action == "capabilities") return args.size() == 1;
+		if (action == "status")
+		{
+			if (args.size() != 2 || !args.contains("requestId") || !args["requestId"].is_string()) return false;
+			std::string id = args["requestId"];
+			return !id.empty() && id.size() <= 20 && id.find_first_not_of("0123456789") == std::string::npos;
+		}
+		if (!args.contains("target") || !args["target"].is_string()) return false;
+		std::string target = args["target"];
+		bool panel = target == "c64.memory_breakpoints";
+		bool editor = target == "c64.memory_breakpoints.editor";
+		if (action == "set_address")
+		{
+			if (!editor || args.size() != 3 || !args.contains("text") || !args["text"].is_string()) return false;
+			std::string text = args["text"];
+			if (text.empty() || text.size() > 64) return false;
+			for (unsigned char c : text) if (c < 32 || c > 126) return false;
+			return true;
+		}
+		if (args.size() != 2) return false;
+		return ((action == "show" || action == "open") && panel)
+			|| ((action == "submit" || action == "cancel") && editor)
+			|| (action == "capture" && (panel || editor));
+	}
+}
+
 #endif
