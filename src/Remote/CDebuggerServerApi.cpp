@@ -20,6 +20,8 @@
 #include "CImageData.h"
 #include "png.h"
 
+#include "CDebuggerGuiControl.h"
+
 using namespace std;
 using namespace nlohmann;
 
@@ -37,6 +39,16 @@ static void PngWriteCallback(png_structp png_ptr, png_bytep data, png_size_t len
 static void PngFlushCallback(png_structp png_ptr)
 {
 	(void)png_ptr;
+}
+
+void CDebuggerServerApi::GuiPostFrame()
+{
+	GuiControl::PostFrame();
+}
+
+void CDebuggerServerApi::RegisterGuiEndpoint(CDebuggerServer *server)
+{
+	GuiControl::RegisterEndpoint(server);
 }
 
 CDebuggerServerApi::CDebuggerServerApi(CDebugInterface *debugInterface)
