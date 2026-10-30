@@ -8,6 +8,13 @@ Prerequisites: a C++17 compiler, Python 3 with jsonschema, and the directory con
 JSON_INCLUDE=../MTEngineSDL/src/Engine/Libs/nlohmann bash tests/gui_control/run.sh /tmp/retro-gui-protocol-evidence
 ```
 
+The typed-request check consumes that same unchanged case corpus to verify action/target normalization, field preservation, and rejection without mutating the output request:
+
+```sh
+c++ -std=c++17 -Wall -Wextra -Werror -Itests/disk_directory/support -Isrc/Remote -I../MTEngineSDL/src/Engine/Libs/nlohmann tests/gui_control/request_test.cpp -o /tmp/retro-gui-request
+/tmp/retro-gui-request /tmp/retro-gui-protocol-evidence/schema-cases.json
+```
+
 The frame-startup check separately exercises the production readiness predicate.  A newly initialized test engine must observe the current GUI frame before an action can be queued:
 
 ```sh

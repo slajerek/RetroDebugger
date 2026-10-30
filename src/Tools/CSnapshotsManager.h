@@ -123,9 +123,14 @@ public:
 
 	// On-demand coarse navigation only; accepted does not mean restored.
 	TimelineNavigation::Status GetFrameNavigationStatus();
-	TimelineNavigation::Result RequestFrameNavigation(int frame);
+	TimelineNavigation::Result RequestFrameNavigation(int frame, uint64_t *requestId = nullptr);
+	TimelineNavigation::Observation WaitForFrameNavigation(uint64_t requestId, int waitMs);
+	void NotifyFrameNavigationPaused();
+	bool IsFrameNavigationAwaitingStablePause() const { return frameNavigationCompletion.AwaitingStablePause(); }
+	void InvalidateFrameNavigation(const char *reason);
 
 private:
+	TimelineNavigation::Completion frameNavigationCompletion;
 	TimelineNavigation::Status FrameNavigationStatusLocked();
 public:
 	

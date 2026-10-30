@@ -57,7 +57,8 @@ Use this skill when working with the RetroDebugger MCP server to debug 8-bit pro
 
 ### Existing C64 Timeline
 - `retro_timeline(platform:"c64", action:"status")` -- read-only recording/history/frame-range status.
-- `retro_timeline(platform:"c64", action:"frame", frame:120)` -- queue existing frame navigation from an already paused emulator.  Check `accepted`; `status:"queued"` is not completed or precise restoration.  Replay can temporarily resume execution.  No automatic recording or instruction/cycle seek.  See [the acceptance-only contract](timeline-navigation.md).
+- `retro_timeline(platform:"c64", action:"frame", frame:120)` -- queue existing frame navigation from an already paused emulator.  Omitting `waitMs` preserves queued acceptance.
+- Add `waitMs:5000` to wait in the same call for this request's stable paused observation; inspect next only on `status:"completed"`.  `pending` is not success or cancellation.  Optional `action:"status", requestId:7` observes the single retained request without waiting.  Replay can temporarily resume execution.  No automatic recording or exact instruction/cycle seek.  See [the frame-navigation contract](timeline-navigation.md).
 
 ### Memory & Breakpoints (changes emulator state)
 - `retro_memory_write` — write base64-encoded data to memory
@@ -119,7 +120,8 @@ These are available as WebSocket endpoints, not yet wrapped as MCP tools:
    disappear from the roster entirely while no desktop app is attached, and a
    call that loses the connection mid-flight fails with `desktop_unavailable`.
    For `retro_timeline`, also check `accepted`: a well-formed request can return
-   `status:"refused"` without an MCP transport error, and `queued` is not completion.
+   `status:"refused"` without an MCP transport error.  Neither `queued` nor
+   `pending` is completion; only `completed` permits request-specific inspection.
 8. **Never call `retro_shutdown` on your own initiative.** It ends the session —
    the app quits and every later tool call fails. Call it only when the user
    explicitly asked to close RetroDebugger. It is not a way to recover from a

@@ -1400,6 +1400,8 @@
     <ClCompile Include="..\..\..\src\Plugins\GoatTracker\gt2\gtable.c" />
     <ClCompile Include="..\..\..\src\Remote\CDebuggerServer.cpp" />
     <ClCompile Include="..\..\..\src\Remote\CDebuggerServerApi.cpp" />
+    <ClCompile Include="..\..\..\src\Remote\CDebuggerGuiControl.cpp" />
+    <ClCompile Include="..\..\..\src\Remote\GuiControlMemoryBreakpoints.cpp" />
     <ClCompile Include="..\..\..\src\Remote\CDebuggerServerProtocol.cpp" />
     <ClCompile Include="..\..\..\src\Remote\Pipe\CPipeProtocolDebuggerCallback.cpp" />
     <ClCompile Include="..\..\..\src\Remote\WebSockets\CDebuggerServerWebSockets.cpp" />
@@ -2986,6 +2988,9 @@
     <ClInclude Include="..\..\..\src\Plugins\GoatTracker\gt2\gtable.h" />
     <ClInclude Include="..\..\..\src\Remote\CDebuggerServer.h" />
     <ClInclude Include="..\..\..\src\Remote\CDebuggerServerApi.h" />
+    <ClInclude Include="..\..\..\src\Remote\CDebuggerGuiControl.h" />
+    <ClInclude Include="..\..\..\src\Remote\GuiControlRequest.h" />
+    <ClInclude Include="..\..\..\src\Remote\GuiControlOperation.h" />
     <ClInclude Include="..\..\..\src\Remote\Pipe\CPipeProtocolDebuggerCallback.h" />
     <ClInclude Include="..\..\..\src\Remote\WebSockets\CDebuggerServerWebSockets.h" />
     <ClInclude Include="..\..\..\src\RetroDebuggerAppInit.h" />

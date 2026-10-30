@@ -284,6 +284,7 @@ void CSnapshotsManager::ResetLastStoredFrameCounter()
 void CSnapshotsManager::CancelRestore()
 {
 	LockMutex();
+	frameNavigationCompletion.Cancel("cancelled");
 	snapshotToRestore = NULL;
 	isPerformingSnapshotRestore = false;
 	pauseNumFrame = -1;
@@ -314,6 +315,8 @@ bool CSnapshotsManager::CheckSnapshotInterval()
 	if (pauseNumFrame == currentFrame)
 	{
 		LOGD("CSnapshotsManager::CheckSnapshotInterval: pauseNumFrame == currentFrame");
+		// Recognition alone is not completion: registers still need importing.
+		frameNavigationCompletion.TargetReached(currentFrame);
 		debugInterface->SetDebugMode(DEBUGGER_MODE_PAUSED);
 		pauseNumFrame = -1;
 		skipFrameRender = false;
@@ -415,6 +418,7 @@ void CSnapshotsManager::RestoreSnapshot(CStoredChipsSnapshot *snapshot)
 	LOGS("CSnapshotsManager::RestoreSnapshot (set snapshotToRestore only)");
 	this->LockMutex();
 
+	frameNavigationCompletion.Cancel("superseded");
 	snapshotToRestore = snapshot;
 	
 	this->UnlockMutex();
@@ -484,6 +488,8 @@ bool CSnapshotsManager::PerformExternalSnapshotRequest(int requestType, CByteBuf
 	}
 
 	this->LockMutex();
+	if (requestType == EXTERNAL_SNAPSHOT_REQUEST_LOAD)
+		frameNavigationCompletion.Cancel("snapshot_load");
 	externalSnapshotRequestType = requestType;
 	externalSnapshotBuffer = buffer;
 	externalSnapshotPendingSeq = mySeq;
@@ -539,7 +545,8 @@ bool CSnapshotsManager::CheckSnapshotRestore()
 		
 		gSoundEngine->LockMutex("CSnapshotsManager::CheckSnapshotRestore: restore snapshot");
 
-		// restore disk
+		// Missing disk state must not produce a successful completion observation.
+		bool diskRestored = false;
 		CStoredDiskSnapshot *diskSnapshot = snapshotToRestore->diskSnapshot;
 		
 		// TODO: note, we *must* always have a disk snapshot. if disk snapshot is NULL that means there's a bug in storing code.
@@ -549,14 +556,15 @@ bool CSnapshotsManager::CheckSnapshotRestore()
 		if (diskSnapshot != NULL)
 		{
 			LOGS("!!!!!!!!!!!!!!!!!!!!!!!!     -> diskSnapshot frame=%d", diskSnapshot->frame);
-			debugInterface->LoadDiskDataSnapshotSynced(diskSnapshot->byteBuffer);
+			diskRestored = debugInterface->LoadDiskDataSnapshotSynced(diskSnapshot->byteBuffer);
 			
 			// make all following chips snapshots use this diskSnapshot
 			currentDiskSnapshot = diskSnapshot;
 		}
 				
 		// restore chips
-		debugInterface->LoadChipsSnapshotSynced(snapshotToRestore->byteBuffer);
+		bool chipsRestored = debugInterface->LoadChipsSnapshotSynced(snapshotToRestore->byteBuffer);
+		frameNavigationCompletion.Restored(diskRestored && chipsRestored);
 
 		// clear all history events after restored cycle (mem write history, execute history)
 		debugInterface->symbols->memory->ClearEventsAfterCycle(snapshotToRestore->cycle);
@@ -698,8 +706,9 @@ TimelineNavigation::Status CSnapshotsManager::GetFrameNavigationStatus()
 	return status;
 }
 
-TimelineNavigation::Result CSnapshotsManager::RequestFrameNavigation(int frame)
+TimelineNavigation::Result CSnapshotsManager::RequestFrameNavigation(int frame, uint64_t *requestId)
 {
+	if (requestId) *requestId = 0;
 	LockMutex();
 	TimelineNavigation::Result result;
 	const char *refusal = TimelineNavigation::FrameRefusal(FrameNavigationStatusLocked(), frame);
@@ -712,9 +721,39 @@ TimelineNavigation::Result CSnapshotsManager::RequestFrameNavigation(int frame)
 		// under that same lock; never restore chips on this calling thread.
 		result.accepted = RestoreSnapshotByFrame(frame, -1, DEBUGGER_MODE_PAUSED);
 		result.reason = result.accepted ? nullptr : "not_queued";
+		// Still under the manager lock: the CPU cannot consume this restore
+		// until its observation has been armed.  Legacy callers retain no ID.
+		if (result.accepted && requestId)
+			*requestId = frameNavigationCompletion.Begin(frame);
 	}
 	UnlockMutex();
 	return result;
+}
+
+TimelineNavigation::Observation CSnapshotsManager::WaitForFrameNavigation(uint64_t requestId, int waitMs)
+{
+	// Deliberately no manager, interface, sound, GUI, or pause lock held.
+	return frameNavigationCompletion.Wait(requestId, waitMs);
+}
+
+void CSnapshotsManager::InvalidateFrameNavigation(const char *reason)
+{
+	LockMutex();
+	frameNavigationCompletion.Cancel(reason);
+	UnlockMutex();
+}
+
+void CSnapshotsManager::NotifyFrameNavigationPaused()
+{
+	LockMutex();
+	if (debugInterface->GetDebugMode() == DEBUGGER_MODE_PAUSED)
+	{
+		bool busy = snapshotToRestore != NULL || isPerformingSnapshotRestore
+			|| IsExternalSnapshotRequestActive() || IsSnapshotOperationInProgress();
+		frameNavigationCompletion.Paused(busy, debugInterface->GetEmulationFrameNumber(),
+			debugInterface->GetMainCpuCycleCounter());
+	}
+	UnlockMutex();
 }
 
 // @returns false=snapshot was not found, not possible to restore. cycleNum is optional, if -1 only frame will be searched.
@@ -796,6 +835,7 @@ bool CSnapshotsManager::RestoreSnapshotByFrame(int frame, long cycleNum, u8 targ
 	if (nearestChipSnapshot != NULL)
 	{
 		LOGS(".... found snapshot frame %d", nearestChipSnapshot->frame);
+		frameNavigationCompletion.Cancel("superseded");
 		snapshotToRestore = nearestChipSnapshot;
 
 		// Reset replay marker so input events after this snapshot's cycle
@@ -1378,6 +1418,7 @@ void CSnapshotsManager::ClearSnapshotsHistory()
 	
 	this->LockMutex();
 //	LOGD("CSnapshotsManager::ClearSnapshotsHistory: locked");
+	frameNavigationCompletion.Cancel("history_cleared");
 	
 	snapshotToRestore = NULL;
 	currentDiskSnapshot = NULL;

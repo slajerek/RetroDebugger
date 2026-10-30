@@ -14,6 +14,8 @@
 #include <limits>
 #include <string>
 #include <vector>
+#include <future>
+#include <thread>
 
 using namespace nlohmann;
 
@@ -1603,6 +1605,150 @@ void CTestMCPProtocol::Run(ITestCallback *cb)
 		}
 	}
 
+	// --- Test 51: optional completion arguments/schema and untouched payloads ---
+	{
+		for (const char *outcome : {"completed", "pending", "cancelled", "unavailable"})
+		for (bool statusOnly : {false, true})
+		{
+			json payload = {{"status", outcome}, {"requestId", 7}, {"observedFrame", nullptr}};
+			CCannedDebuggerServer debuggerServer({{"status", HTTP_OK}, {"result", payload}});
+			CMCPServer server;
+			PrepareToolTestServer(server, debuggerServer);
+			json endpointArgs = statusOnly ? json({{"requestId", 7}}) : json({{"frame", 120}, {"waitMs", 5000}});
+			json args = endpointArgs;
+			args["platform"] = "c64";
+			args["action"] = statusOnly ? "status" : "frame";
+			json response = CallTool(server, 51, "retro_timeline", args);
+			if (!ToolErrorText(response).empty() || debuggerServer.callCount != 1
+				|| debuggerServer.lastParams != endpointArgs
+				|| debuggerServer.lastEndpointName != (statusOnly ? "c64/timeline/status" : "c64/timeline/frame")
+				|| json::parse(response["result"]["content"][0]["text"].get<std::string>()) != payload)
+			{
+				TestCompleted(false, "Test 51 FAIL: completion observation/arguments changed"); return;
+			}
+			json request = {{"jsonrpc", "2.0"}, {"id", 51}, {"method", "tools/list"}};
+			json tools = server.HandleRequest(request)["result"]["tools"];
+			bool found = false;
+			for (const auto &tool : tools)
+			{
+				if (tool.value("name", "") != "retro_timeline") continue;
+				const auto &schema = tool["inputSchema"];
+				found = schema["properties"]["waitMs"]["maximum"] == TimelineNavigation::MaxWaitMs
+					&& schema["properties"]["requestId"]["minimum"] == 1
+					&& schema.contains("oneOf") && schema["additionalProperties"] == false;
+			}
+			if (!found) { TestCompleted(false, "Test 51 FAIL: completion schema missing/bounds mismatch"); return; }
+		}
+		CCannedDebuggerServer debuggerServer({{"status", HTTP_OK}, {"result", json::object()}});
+		CMCPServer server;
+		PrepareToolTestServer(server, debuggerServer);
+		json invalid = json::array({
+			{{"platform", "c64"}, {"action", "status"}, {"waitMs", 1}},
+			{{"platform", "c64"}, {"action", "frame"}, {"frame", 1}, {"requestId", 1}}});
+		for (const auto &value : json::array({nullptr, true, "1", 1.0, -1, 5001, 18446744073709551615ULL}))
+			invalid.push_back({{"platform", "c64"}, {"action", "frame"}, {"frame", 1}, {"waitMs", value}});
+		for (const auto &value : json::array({nullptr, true, "1", 1.0, -1, 0}))
+			invalid.push_back({{"platform", "c64"}, {"action", "status"}, {"requestId", value}});
+		for (const auto &args : invalid)
+		{
+			if (ToolErrorText(CallTool(server, 51, "retro_timeline", args)).empty() || debuggerServer.callCount)
+			{ TestCompleted(false, "Test 51 FAIL: invalid completion input dispatched"); return; }
+		}
+		for (int waitMs : {0, TimelineNavigation::MaxWaitMs})
+		{
+			TimelineNavigation::Arguments args;
+			if (!TimelineNavigation::ParseEndpoint({{"frame", INT_MAX}, {"waitMs", waitMs}}, false, args)
+				|| args.frame != INT_MAX || args.waitMs != waitMs)
+			{ TestCompleted(false, "Test 51 FAIL: inclusive completion bounds rejected"); return; }
+		}
+	}
+
+	// --- Test 52: the production completion handshake, with no emulator fixture ---
+	{
+		TimelineNavigation::Completion completion;
+		uint64_t id = completion.Begin(120);
+		// An empty queue/unrelated pause is NOT a target event, even after load.
+		completion.Restored(true);
+		completion.Paused(true, 119, 100);
+		auto timeout = completion.Wait(id, 1);
+		bool valid = std::string(timeout.status) == "pending" && std::string(timeout.reason) == "wait_timeout";
+		completion.Paused(false, 119, 101);
+		valid = valid && std::string(completion.Wait(id, 0).status) == "cancelled";
+		completion.TargetReached(120);
+		completion.Paused(false, 120, 102);
+		valid = valid && !TimelineNavigation::ObservationJson(completion.Wait(id, 0))["completionKnown"].get<bool>();
+
+		id = completion.Begin(120);
+		completion.TargetReached(120); // Target recognition before load cannot arm completion.
+		valid = valid && !completion.AwaitingStablePause();
+		completion.Restored(true);
+		completion.Paused(false, 120, 103);
+		valid = valid && std::string(completion.Wait(id, 0).status) == "cancelled";
+
+		id = completion.Begin(120);
+		completion.Restored(false);
+		completion.TargetReached(120);
+		completion.Paused(false, 120, 104);
+		valid = valid && std::string(completion.Wait(id, 0).reason) == "restore_failed";
+
+		id = completion.Begin(120);
+		auto start = std::chrono::steady_clock::now();
+		timeout = completion.Wait(id, 5);
+		valid = valid && std::string(timeout.status) == "pending"
+			&& std::chrono::steady_clock::now() - start < std::chrono::seconds(2);
+		// Timeout must leave ownership intact.  Signal from a second thread;
+		// the waiter must release its lock and observe only this request.
+		std::promise<void> ready;
+		auto started = ready.get_future();
+		std::thread producer([&completion, &ready]{
+			ready.set_value();
+			completion.Restored(true);
+			completion.TargetReached(119); // Wrong frame cannot complete.
+			completion.TargetReached(120);
+			completion.Paused(true, 120, 12344); // Not stable while a load/import is active.
+			completion.Paused(false, 121, 12345); // Report actual, not promised exact frame.
+		});
+		started.wait();
+		auto done = completion.Wait(id, 5000);
+		producer.join();
+		json result = TimelineNavigation::ObservationJson(done);
+		valid = valid && result["status"] == "completed" && result["completionKnown"] == true
+			&& result["requestId"] == id && result["requestedFrame"] == 120
+			&& result["observedFrame"] == 121 && result["observedCycle"] == 12345
+			&& !completion.AwaitingStablePause();
+		completion.Cancel("history_cleared"); // Terminal evidence is immutable.
+		valid = valid && std::string(completion.Wait(id, 0).status) == "completed";
+
+		for (const char *reason : {"cancelled", "history_cleared", "snapshot_load", "superseded", "reset"})
+		{
+			uint64_t previous = id;
+			id = completion.Begin(120);
+			valid = valid && std::string(completion.Wait(previous, 0).status) == "unavailable";
+			completion.Cancel(reason);
+			completion.Restored(true);
+			completion.TargetReached(120);
+			completion.Paused(false, 120, 12346);
+			auto cancelled = completion.Wait(id, 5000);
+			valid = valid && std::string(cancelled.status) == "cancelled" && std::string(cancelled.reason) == reason;
+		}
+		// Regression: target arrival must protect an intervening IRQ/drive
+		// pause until the main-CPU hook, despite the legacy restore flag ending.
+		id = completion.Begin(120);
+		completion.Restored(true);
+		completion.TargetReached(120);
+		valid = valid && completion.AwaitingStablePause();
+		completion.Paused(true, 120, 12347);
+		valid = valid && completion.AwaitingStablePause()
+			&& std::string(completion.Wait(id, 0).status) == "pending";
+		completion.Cancel("cancelled");
+		valid = valid && !completion.AwaitingStablePause();
+		uint64_t previous = completion.Begin(120);
+		id = completion.Begin(121);
+		valid = valid && std::string(completion.Wait(previous, 5000).status) == "unavailable"
+			&& std::string(completion.Wait(id, 0).status) == "pending";
+		if (!valid) { TestCompleted(false, "Test 52 FAIL: completion ownership/lifecycle/wait mismatch"); return; }
+	}
+
 	// GUI dispatch preserves explicit pending/failure outcomes and rejects escapes.
 	{
 		for (const auto &args : json::array({
@@ -1615,7 +1761,7 @@ void CTestMCPProtocol::Run(ITestCallback *cb)
 			CCannedDebuggerServer debuggerServer({{"status", HTTP_OK}, {"result", payload}});
 			CMCPServer server;
 			PrepareToolTestServer(server, debuggerServer);
-			json response = CallTool(server, 51, "retro_gui", args);
+			json response = CallTool(server, 53, "retro_gui", args);
 			if (!ToolErrorText(response).empty() || debuggerServer.callCount != 1
 				|| debuggerServer.lastEndpointName != "gui/control" || debuggerServer.lastParams != args
 				|| json::parse(response["result"]["content"][0]["text"].get<std::string>()) != payload)
@@ -1633,7 +1779,7 @@ void CTestMCPProtocol::Run(ITestCallback *cb)
 			{{"action", "status"}, {"requestId", 1}},
 			{{"action", "capabilities"}, {"extra", true}}}))
 		{
-			if (ToolErrorText(CallTool(server, 52, "retro_gui", args)).empty() || debuggerServer.callCount != 0)
+			if (ToolErrorText(CallTool(server, 54, "retro_gui", args)).empty() || debuggerServer.callCount != 0)
 			{ TestCompleted(false, "Invalid GUI arguments reached endpoint"); return; }
 		}
 	}
@@ -1641,11 +1787,11 @@ void CTestMCPProtocol::Run(ITestCallback *cb)
 		CCannedDebuggerServer debuggerServer({{"status", HTTP_SERVICE_UNAVAILABLE}, {"result", {{"error", "headless"}}}});
 		CMCPServer server;
 		PrepareToolTestServer(server, debuggerServer);
-		if (ToolErrorText(CallTool(server, 53, "retro_gui", {{"action", "capabilities"}})).empty())
+		if (ToolErrorText(CallTool(server, 55, "retro_gui", {{"action", "capabilities"}})).empty())
 		{ TestCompleted(false, "GUI unavailable error swallowed"); return; }
 	}
 
-	TestCompleted(true, "All MCP protocol tests passed (53/53)");
+	TestCompleted(true, "All MCP protocol tests passed (55/55)");
 }
 
 void CTestMCPProtocol::Cancel()

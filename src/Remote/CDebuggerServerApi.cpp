@@ -20,26 +20,7 @@
 #include "CImageData.h"
 #include "png.h"
 
-#include "VID_Main.h"
-#include "CGuiMain.h"
-#include <chrono>
-#include <memory>
-#include <mutex>
-
-#if MT_ENABLE_IMGUI_TEST_ENGINE && defined(RUN_COMMODORE64)
-// windows.h exports a legacy Yield() macro, not an ImGui operation.
-#ifdef Yield
-#undef Yield
-#endif
-#include "CImGuiTestEngine.h"
-#include "imgui_te_engine.h"
-#include "imgui_te_context.h"
-#include "imgui_te_internal.h"
-#include "imgui_internal.h"
-#include "GuiControlFrameGate.h"
-#include "MT_CaptureHelpers.h"
-#include "CViewBreakpoints.h"
-#endif
+#include "CDebuggerGuiControl.h"
 
 using namespace std;
 using namespace nlohmann;
@@ -60,340 +41,14 @@ static void PngFlushCallback(png_structp png_ptr)
 	(void)png_ptr;
 }
 
-namespace
-{
-#if MT_ENABLE_IMGUI_TEST_ENGINE && defined(RUN_COMMODORE64)
-using GuiClock = std::chrono::steady_clock;
-struct GuiOperation
-{
-	string id;
-	json args;
-	json result;
-	GuiClock::time_point deadline;
-	bool terminal = false;
-	bool started = false;
-	bool engineQueued = false;
-	bool finished = false;
-};
-std::mutex guiOperationMutex;
-std::shared_ptr<GuiOperation> guiOperation;
-// UI-only references: pending startup waits for the test engine's frame hook;
-// an active operation remains held through the test engine's teardown.
-std::shared_ptr<GuiOperation> guiPendingStartup;
-std::shared_ptr<GuiOperation> guiUiOperation;
-uint64_t guiNextId = 0;
-const char *guiPanel = "C64 Memory Breakpoints";
-
-void GuiFinish(const std::shared_ptr<GuiOperation> &op, const char *outcome, const char *error = nullptr)
-{
-	std::lock_guard<std::mutex> lock(guiOperationMutex);
-	op->finished = true;
-	op->terminal = !op->engineQueued;
-	op->result["outcome"] = outcome;
-	if (error) op->result["error"] = error;
-}
-
-bool GuiContinue(const std::shared_ptr<GuiOperation> &op, ImGuiTestContext *ctx)
-{
-	if (ctx->IsError()) { GuiFinish(op, "failed", "widget_action_failed"); return false; }
-	if (GuiClock::now() >= op->deadline)
-	{
-		GuiFinish(op, "failed", "action_deadline_exceeded_partial_effects_possible");
-		return false;
-	}
-	return true;
-}
-
-ImGuiWindow *GuiEditor()
-{
-	ImGuiWindow *panel = ImGui::FindWindowByName(guiPanel);
-	if (!panel) return nullptr;
-	ImGuiID id = panel->GetID("addMemBreakpointPopup");
-	for (const ImGuiPopupData &popup : ImGui::GetCurrentContext()->OpenPopupStack)
-		if (popup.PopupId == id && popup.Window && popup.Window->WasActive) return popup.Window;
-	return nullptr;
-}
-
-string GuiBase64(const vector<unsigned char> &data)
-{
-	static const char alphabet[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-	string out;
-	for (size_t i = 0; i < data.size(); i += 3)
-	{
-		unsigned int bits = (unsigned int)data[i] << 16;
-		if (i + 1 < data.size()) bits |= (unsigned int)data[i + 1] << 8;
-		if (i + 2 < data.size()) bits |= data[i + 2];
-		out += alphabet[(bits >> 18) & 63]; out += alphabet[(bits >> 12) & 63];
-		out += i + 1 < data.size() ? alphabet[(bits >> 6) & 63] : '=';
-		out += i + 2 < data.size() ? alphabet[bits & 63] : '=';
-	}
-	return out;
-}
-
-// Restored by GuiPostFrame only AFTER queue cleanup.  Restoring this from
-// teardown would be too early: engine cleanup yields for three more frames.
-bool guiSavedRestoreFocus = true;
-
-void GuiRun(ImGuiTestContext *ctx)
-{
-	auto op = guiUiOperation;
-	if (!GuiContinue(op, ctx)) return;
-	const string action = op->args["action"];
-	const bool editorTarget = op->args["target"] == "c64.memory_breakpoints.editor";
-	if (!viewC64 || !viewC64->viewC64BreakpointsMemory)
-	{
-		GuiFinish(op, "failed", "c64_panel_unavailable"); return;
-	}
-	if (action == "show")
-	{
-		if (ImGui::GetCurrentContext()->OpenPopupStack.Size != 0)
-		{ GuiFinish(op, "failed", "popup_already_open"); return; }
-		viewC64->viewC64BreakpointsMemory->SetVisible(true);
-		ctx->Yield(3);
-		if (!GuiContinue(op, ctx)) return;
-		ctx->WindowFocus(guiPanel);
-	}
-	else
-	{
-		ImGuiWindow *panel = ImGui::FindWindowByName(guiPanel);
-		if (!viewC64->viewC64BreakpointsMemory->visible || !panel || !panel->WasActive)
-		{ GuiFinish(op, "failed", "panel_not_visible_call_show_first"); return; }
-		ImGuiWindow *editor = GuiEditor();
-		if (editorTarget && !editor)
-		{ GuiFinish(op, "failed", "editor_not_open"); return; }
-		if (action == "open")
-		{
-			if (ImGui::GetCurrentContext()->OpenPopupStack.Size != 0)
-			{ GuiFinish(op, "failed", "popup_already_open"); return; }
-			ctx->SetRef(guiPanel);
-			ctx->ItemClick("+");
-			ctx->Yield(3);
-			if (!GuiContinue(op, ctx)) return;
-			if (!GuiEditor()) { GuiFinish(op, "failed", "editor_did_not_open"); return; }
-		}
-		else if (action == "capture")
-		{
-			vector<unsigned int> pixels;
-			int width = 0, height = 0;
-			if (!MT_CaptureWindowRGBA(ctx, editorTarget ? editor->Name : guiPanel, &pixels, &width, &height)
-				|| ctx->IsError())
-			{ GuiFinish(op, "failed", "rendered_capture_unavailable"); return; }
-			png_image image = {};
-			image.version = PNG_IMAGE_VERSION;
-			image.width = width; image.height = height; image.format = PNG_FORMAT_RGBA;
-			png_alloc_size_t size = 0;
-			if (!png_image_write_to_memory(&image, nullptr, &size, 0, pixels.data(), 0, nullptr))
-			{ png_image_free(&image); GuiFinish(op, "failed", "png_encode_failed"); return; }
-			vector<unsigned char> png(size);
-			bool ok = png_image_write_to_memory(&image, png.data(), &size, 0, pixels.data(), 0, nullptr) != 0;
-			png_image_free(&image);
-			if (!ok) { GuiFinish(op, "failed", "png_encode_failed"); return; }
-			png.resize(size);
-			std::lock_guard<std::mutex> lock(guiOperationMutex);
-			op->result["image"] = {{"mimeType", "image/png"}, {"encoding", "base64"},
-				{"width", width}, {"height", height}, {"data", GuiBase64(png)}};
-		}
-		else
-		{
-			// Bind to the identified popup, never whichever window happens to have focus.
-			if (ImGui::GetCurrentContext()->OpenPopupStack.back().Window != editor)
-			{ GuiFinish(op, "failed", "another_popup_blocks_editor"); return; }
-			ctx->SetRef(editor->Name);
-			if (action == "cancel")
-			{
-				// Use the popup's existing outside-click dismissal, without adding
-				// a widget, calling ClosePopupToLevel, or moving unrelated windows.
-				const ImRect bounds = panel->OuterRectClipped;
-				const ImVec2 points[] = {
-					ImVec2(bounds.Min.x + 2, bounds.Min.y + 2),
-					ImVec2(bounds.Min.x + 2, bounds.Max.y - 2),
-					ImVec2(bounds.Max.x - 2, bounds.Min.y + 2),
-					ImVec2(bounds.Max.x - 2, bounds.Max.y - 2)
-				};
-				bool clicked = false;
-				for (const ImVec2 &point : points)
-				{
-					if (!bounds.Contains(point) || editor->Rect().Contains(point)) continue;
-					ctx->MouseMoveToPos(point);
-					if (!GuiContinue(op, ctx)) return;
-					if (GuiEditor() != editor || ImGui::GetCurrentContext()->OpenPopupStack.back().Window != editor)
-					{ GuiFinish(op, "failed", "editor_changed_before_dismissal"); return; }
-					ctx->MouseClick();
-					clicked = true;
-					break;
-				}
-				if (!clicked) { GuiFinish(op, "failed", "no_safe_popup_dismissal_point"); return; }
-			}
-			else
-			{
-				ctx->ItemInput("##addMemBreakpointPopupAddress_Vice");
-				if (!GuiContinue(op, ctx)) return;
-				if (action == "set_address")
-				{
-					string text = op->args["text"];
-					ctx->KeyCharsReplace(text.c_str());
-				}
-				else ctx->KeyPress(ImGuiKey_Enter);
-			}
-			ctx->Yield(3);
-			if (!GuiContinue(op, ctx)) return;
-			if ((action == "submit" || action == "cancel") && GuiEditor())
-			{ GuiFinish(op, "failed", "editor_still_open"); return; }
-		}
-	}
-	if (GuiContinue(op, ctx)) GuiFinish(op, "completed");
-}
-
-class GuiStartOperation : public CUiThreadTaskCallback
-{
-public:
-	std::shared_ptr<GuiOperation> op;
-	GuiStartOperation(std::shared_ptr<GuiOperation> op) : op(op) {}
-	void RunUIThreadTask() override
-	{
-		// CGuiMain removes callbacks but does not delete them.
-		std::unique_ptr<GuiStartOperation> deleteAfterRun(this);
-		Start(op);
-	}
-	static void Start(const std::shared_ptr<GuiOperation> &op)
-	{
-		{
-			std::lock_guard<std::mutex> lock(guiOperationMutex);
-			if (op->terminal) return;
-			if (GuiClock::now() >= op->deadline)
-			{ op->terminal = true; op->result["outcome"] = "expired"; return; }
-		}
-		if (!gHeadlessMode && ImGui::GetCurrentContext()) CImGuiTestEngine::Init();
-		auto *engine = CImGuiTestEngine::GetEngine();
-		if (gHeadlessMode || !engine || !ImGui::GetCurrentContext())
-		{ GuiFinish(op, "failed", "interactive_gui_unavailable"); return; }
-		const int engineFrame = ImGuiTestEngine_GetFrameCount(engine);
-		const int guiFrame = ImGui::GetFrameCount();
-		if (!GuiControl::TestEngineFrameReady(engineFrame, guiFrame))
-		{
-			// Do not queue in the same frame as lazy initialization: the engine's
-			// missing-signal assertion remains enabled.  GuiPostFrame retries under
-			// the original deadline, after the next NewFrame hook can run.
-			guiPendingStartup = op;
-			return;
-		}
-		if (!CImGuiTestEngine::IsTestQueueEmpty())
-		{ GuiFinish(op, "failed", "imgui_test_engine_busy"); return; }
-		{
-			std::lock_guard<std::mutex> lock(guiOperationMutex);
-			// Status may have expired this request while startup was in progress.
-			if (op->terminal) return;
-			if (GuiClock::now() >= op->deadline)
-			{ op->terminal = true; op->result["outcome"] = "expired"; return; }
-			op->started = true;
-			op->engineQueued = true;
-			op->result["outcome"] = "running";
-		}
-		LOGM("MCP GUI request %s: queue on synchronized frame %d", op->id.c_str(), guiFrame);
-		static ImGuiTest *test = nullptr;
-		if (!test) test = IM_REGISTER_TEST(engine, "mcp", "memory_breakpoints_action");
-		guiUiOperation = op;
-		guiSavedRestoreFocus = ImGuiTestEngine_GetIO(engine).ConfigRestoreFocusAfterTests;
-		ImGuiTestEngine_GetIO(engine).ConfigRestoreFocusAfterTests = false;
-		test->TestFunc = GuiRun;
-		test->TeardownFunc = [](ImGuiTestContext *ctx)
-		{
-			auto op = guiUiOperation;
-			std::lock_guard<std::mutex> lock(guiOperationMutex);
-			if (!op->finished)
-			{
-				op->finished = true;
-				op->result["outcome"] = "failed";
-				op->result["error"] = ctx->IsError() ? "widget_action_failed" : "action_interrupted";
-			}
-		};
-		ImGuiTestEngine_QueueTest(engine, test);
-	}
-};
-#endif
-}
-
 void CDebuggerServerApi::GuiPostFrame()
 {
-#if MT_ENABLE_IMGUI_TEST_ENGINE && defined(RUN_COMMODORE64)
-	if (guiUiOperation && CImGuiTestEngine::IsTestQueueEmpty())
-	{
-		ImGuiTestEngine_GetIO(CImGuiTestEngine::GetEngine()).ConfigRestoreFocusAfterTests = guiSavedRestoreFocus;
-		std::lock_guard<std::mutex> lock(guiOperationMutex);
-		guiUiOperation->terminal = true;
-		guiUiOperation.reset();
-	}
-	if (guiPendingStartup)
-	{
-		auto pending = guiPendingStartup;
-		guiPendingStartup.reset();
-		GuiStartOperation::Start(pending);
-	}
-#endif
+	GuiControl::PostFrame();
 }
 
 void CDebuggerServerApi::RegisterGuiEndpoint(CDebuggerServer *server)
 {
-	EndpointDescriptor desc;
-	desc.fn = "gui/control";
-	desc.category = "gui";
-	desc.description = "Allowlisted interactive C64 Memory Breakpoints panel/editor; queued actions require status";
-	desc.paramsSchema = GuiControl::Schema();
-	server->AddEndpointFunction(desc, [server](const string token, json args, unsigned char *, int) -> vector<char>*
-	{
-		if (!GuiControl::Valid(args))
-			return server->PrepareResult(HTTP_BAD_REQUEST, token, {{"error", "invalid_gui_arguments"}}, nullptr, 0);
-		bool available = false;
-		const char *reason = "imgui_test_support_disabled";
-#if MT_ENABLE_IMGUI_TEST_ENGINE && defined(RUN_COMMODORE64)
-		// The driver is initialized lazily on the UI thread by the first action.
-		available = !gHeadlessMode && guiMain;
-		reason = gHeadlessMode ? "headless" : "interactive_gui_unavailable";
-#elif MT_ENABLE_IMGUI_TEST_ENGINE
-		reason = "native_c64_support_disabled";
-#endif
-#ifdef MODE_HEADLESS
-		available = false;
-		reason = "gui_support_disabled";
-#endif
-		if (args["action"] == "capabilities")
-			return server->PrepareResult(HTTP_OK, token, {{"available", available},
-				{"reason", available ? "" : reason}, {"targets", json::array({"c64.memory_breakpoints", "c64.memory_breakpoints.editor"})}}, nullptr, 0);
-		if (!available)
-			return server->PrepareResult(HTTP_SERVICE_UNAVAILABLE, token, {{"error", reason}}, nullptr, 0);
-#if MT_ENABLE_IMGUI_TEST_ENGINE && defined(RUN_COMMODORE64)
-		std::shared_ptr<GuiOperation> op;
-		{
-			std::lock_guard<std::mutex> lock(guiOperationMutex);
-			// Expiration is cancellation BEFORE UI execution.  The queued callback
-			// retains its own record and cannot execute a replacement operation.
-			if (guiOperation && !guiOperation->terminal && !guiOperation->started && GuiClock::now() >= guiOperation->deadline)
-			{ guiOperation->terminal = true; guiOperation->result["outcome"] = "expired"; }
-			if (args["action"] == "status")
-			{
-				if (!guiOperation || guiOperation->id != args["requestId"].get<std::string>())
-					return server->PrepareResult(HTTP_NOT_FOUND, token, {{"error", "unknown_gui_request"}}, nullptr, 0);
-				json result = guiOperation->result;
-				if (!guiOperation->terminal) result = {{"requestId", guiOperation->id}, {"outcome", guiOperation->started ? "running" : "queued"}};
-				result["deadlineExceeded"] = GuiClock::now() >= guiOperation->deadline;
-				return server->PrepareResult(HTTP_OK, token, result, nullptr, 0);
-			}
-			if (guiOperation && !guiOperation->terminal)
-				return server->PrepareResult(HTTP_SERVICE_UNAVAILABLE, token, {{"error", "gui_busy"}, {"requestId", guiOperation->id}}, nullptr, 0);
-			op = std::make_shared<GuiOperation>();
-			op->id = std::to_string(++guiNextId);
-			op->args = args;
-			op->deadline = GuiClock::now() + std::chrono::seconds(5);
-			op->result = {{"requestId", op->id}, {"outcome", "queued"}};
-			guiOperation = op;
-		}
-		guiMain->AddUiThreadTask(new GuiStartOperation(op));
-		// Do not read op->result here: the UI may already be writing it.
-		return server->PrepareResult(HTTP_OK, token, {{"requestId", op->id}, {"outcome", "queued"}}, nullptr, 0);
-#else
-		return nullptr; // Unreachable after the availability refusal.
-#endif
-	});
+	GuiControl::RegisterEndpoint(server);
 }
 
 CDebuggerServerApi::CDebuggerServerApi(CDebugInterface *debugInterface)
@@ -448,7 +103,7 @@ void CDebuggerServerApi::RegisterEndpoints(CDebuggerServer *server)
 	char *buf = SYS_GetCharBuf();
 	const char *plat = debugInterface->GetPlatformNameEndpointString();
 
-	// PR1 exposes only the existing frame-navigation queue, not precise seek.
+	// Existing native frame navigation, with an optional bounded completion wait.
 	for (bool statusOnly : {true, false})
 	{
 		EndpointDescriptor desc;
@@ -456,11 +111,15 @@ void CDebuggerServerApi::RegisterEndpoints(CDebuggerServer *server)
 		desc.platform = plat;
 		desc.category = "timeline";
 		desc.description = statusOnly ? "C64-only read-only frame history/recording status"
-			: "C64-only native frame navigation; queued acceptance, not completed restoration";
+			: "C64-only native frame navigation; optionally wait for a request-specific paused observation";
 		desc.paramsSchema = {{"type", "object"}, {"additionalProperties", false}};
-		if (!statusOnly)
+		if (statusOnly)
+			desc.paramsSchema["properties"] = {{"requestId", {{"type", "integer"}, {"minimum", 1}, {"maximum", UINT64_MAX}}}};
+		else
 		{
-			desc.paramsSchema["properties"] = {{"frame", {{"type", "integer"}, {"minimum", 0}, {"maximum", INT_MAX}}}};
+			desc.paramsSchema["properties"] = {
+				{"frame", {{"type", "integer"}, {"minimum", 0}, {"maximum", INT_MAX}}},
+				{"waitMs", {{"type", "integer"}, {"minimum", 0}, {"maximum", TimelineNavigation::MaxWaitMs}}}};
 			desc.paramsSchema["required"] = json::array({"frame"});
 		}
 		server->AddEndpointFunction(desc,
@@ -468,15 +127,24 @@ void CDebuggerServerApi::RegisterEndpoints(CDebuggerServer *server)
 		{
 			if (debugInterface->GetEmulatorType() != EMULATOR_TYPE_C64_VICE)
 				return server->PrepareResult(HTTP_BAD_REQUEST, token, {{"error", "unsupported_platform"}}, NULL, 0);
-			int frame = 0;
-			if (statusOnly ? !(params.is_null() || (params.is_object() && params.empty()))
-				: !TimelineNavigation::ParseFrame(params, frame))
+			TimelineNavigation::Arguments args;
+			if (!TimelineNavigation::ParseEndpoint(params, statusOnly, args))
 				return server->PrepareResult(HTTP_BAD_REQUEST, token, {{"error", "invalid_timeline_arguments"}}, NULL, 0);
 			CSnapshotsManager *manager = debugInterface->snapshotsManager;
 			if (!manager)
 				return server->PrepareResult(HTTP_SERVICE_UNAVAILABLE, token, {{"error", "timeline_unavailable"}}, NULL, 0);
-			json result = statusOnly ? TimelineNavigation::StatusJson(manager->GetFrameNavigationStatus())
-				: TimelineNavigation::ResultJson(manager->RequestFrameNavigation(frame), frame);
+			json result;
+			if (statusOnly)
+				result = args.requestId ? TimelineNavigation::ObservationJson(manager->WaitForFrameNavigation(args.requestId, 0))
+					: TimelineNavigation::StatusJson(manager->GetFrameNavigationStatus());
+			else
+			{
+				uint64_t requestId = 0;
+				auto admission = manager->RequestFrameNavigation(args.frame, args.waitMs < 0 ? nullptr : &requestId);
+				result = admission.accepted && args.waitMs >= 0
+					? TimelineNavigation::ObservationJson(manager->WaitForFrameNavigation(requestId, args.waitMs))
+					: TimelineNavigation::ResultJson(admission, args.frame);
+			}
 			return server->PrepareResult(HTTP_OK, token, result, NULL, 0);
 		});
 	}

@@ -225,30 +225,8 @@
     <Filter Include="Source Files\src\Plugins\CrtMaker">
       <UniqueIdentifier>{d4c98f09-4571-41d2-805d-d6d305531694}</UniqueIdentifier>
     </Filter>
-      <UniqueIdentifier>{f3a21c45-8b62-4d9e-a17f-3c509e2b1234}</UniqueIdentifier>
-    </Filter>
-      <UniqueIdentifier>{a52e3b71-9c4d-4f12-b8a6-1f5d8e2c4b91}</UniqueIdentifier>
-    </Filter>
-      <UniqueIdentifier>{d2c4b6a8-1e3f-4920-b5c7-8d9ea0b1c2f3}</UniqueIdentifier>
-    </Filter>
-      <UniqueIdentifier>{a1b2c3d4-0001-4f00-9a00-00000000f1e0}</UniqueIdentifier>
-    </Filter>
-      <UniqueIdentifier>{a1b2c3d4-0002-4f00-9a00-00000000f1c0}</UniqueIdentifier>
-    </Filter>
-      <UniqueIdentifier>{a1b2c3d4-0003-4f00-9a00-000000003ea0}</UniqueIdentifier>
-    </Filter>
-      <UniqueIdentifier>{a1b2c3d4-0004-4f00-9a00-0000000f1a0e}</UniqueIdentifier>
-    </Filter>
-      <UniqueIdentifier>{a1b2c3d4-0005-4f00-9a00-00000000fade}</UniqueIdentifier>
-    </Filter>
-      <UniqueIdentifier>{c1b9e2f3-4a5d-46e8-9d27-3b8a1c5f7e90}</UniqueIdentifier>
-    </Filter>
-      <UniqueIdentifier>{e7d2c5a1-9b34-4f80-8c1e-2a6f3d4b5c7d}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Source Files\src\Plugins\MoonshineDragons">
       <UniqueIdentifier>{a8b9c0d1-2e3f-4051-6273-849506172839}</UniqueIdentifier>
-    </Filter>
-      <UniqueIdentifier>{f1a2e3b4-5c6d-47e8-9f10-1b2c3d4e5f60}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source Files\src.Windows\hardsid">
       <UniqueIdentifier>{b730cbaa-9927-41cd-b03e-780aeed38b63}</UniqueIdentifier>
@@ -282,8 +260,6 @@
     </Filter>
     <Filter Include="Source Files\src\Emulators\vice\ViceInterface\Adapters">
       <UniqueIdentifier>{da4c08a7-3ccf-4804-b001-5eef902d5ef8}</UniqueIdentifier>
-    </Filter>
-      <UniqueIdentifier>{c04896c9-3f9c-4714-a338-b5fbbac3244a}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source Files\src\Remote">
       <UniqueIdentifier>{d1406b71-a32f-4393-9871-aafa15f92907}</UniqueIdentifier>
@@ -2910,10 +2886,6 @@
     <ClCompile Include="..\..\..\src\Tests\CTestGT2Oscilloscope.cpp">
       <Filter>Source Files\src\Tests</Filter>
     </ClCompile>
-      <Filter>Source Files\src\Tests</Filter>
-    </ClCompile>
-      <Filter>Source Files\src\Tests</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\..\src\Tests\CTestGT2Patterns.cpp">
       <Filter>Source Files\src\Tests</Filter>
     </ClCompile>
@@ -2944,8 +2916,6 @@
     <ClCompile Include="..\..\..\src\Tests\CTestGT2InstrumentOps.cpp">
       <Filter>Source Files\src\Tests</Filter>
     </ClCompile>
-      <Filter>Source Files\src\Tests</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\..\src\Tests\CTestGT2TableEditor.cpp">
       <Filter>Source Files\src\Tests</Filter>
     </ClCompile>
@@ -2970,150 +2940,20 @@
     <ClCompile Include="..\..\..\src\Tests\CTestArpParity.cpp">
       <Filter>Source Files\src\Tests</Filter>
     </ClCompile>
-    </ClCompile>
-    </ClCompile>
-    </ClCompile>
-    </ClCompile>
-    </ClCompile>
-    </ClCompile>
-    </ClCompile>
-    </ClCompile>
-      <Filter>Source Files\src\Tests</Filter>
-    </ClCompile>
-      <Filter>Source Files\src\Tests</Filter>
-    </ClCompile>
-      <Filter>Source Files\src\Tests</Filter>
-    </ClCompile>
-      <Filter>Source Files\src\Tests</Filter>
-    </ClCompile>
-      <Filter>Source Files\src\Tests</Filter>
-    </ClCompile>
-      <Filter>Source Files\src\Tests</Filter>
-    </ClCompile>
-      <Filter>Source Files\src\Tests</Filter>
-    </ClCompile>
-      <Filter>Source Files\src\Tests</Filter>
-    </ClCompile>
-      <Filter>Source Files\src\Tests</Filter>
-    </ClCompile>
-      <Filter>Source Files\src\Tests</Filter>
-    </ClCompile>
-      <Filter>Source Files\src\Tests</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\..\src\Tests\CTestMonitorConsoleSelection.cpp">
       <Filter>Source Files\src\Tests</Filter>
-    </ClCompile>
-      <Filter>Source Files\src\Tests</Filter>
-    </ClCompile>
-    </ClCompile>
-    </ClCompile>
-    </ClCompile>
-    </ClCompile>
-    </ClCompile>
-    </ClCompile>
-    </ClCompile>
     </ClCompile>
     <ClCompile Include="..\..\..\src\Plugins\CPluginTestRegistry.cpp">
       <Filter>Source Files\src\Plugins</Filter>
     </ClCompile>
-    </ClCompile>
-    </ClCompile>
-    </ClCompile>
-    </ClCompile>
-    </ClCompile>
-    </ClCompile>
-    </ClCompile>
-    </ClCompile>
-    </ClCompile>
-    </ClCompile>
-    </ClCompile>
-    </ClCompile>
-    </ClCompile>
-    </ClCompile>
-    </ClCompile>
-    </ClCompile>
-    </ClCompile>
-    </ClCompile>
     <ClCompile Include="..\..\..\src\Tests\CTestMoonshineDragons.cpp">
       <Filter>Source Files\src\Tests</Filter>
-    </ClCompile>
-    </ClCompile>
-    </ClCompile>
-    </ClCompile>
-    </ClCompile>
-    </ClCompile>
-    </ClCompile>
-    </ClCompile>
-    </ClCompile>
-    </ClCompile>
-    </ClCompile>
-    </ClCompile>
-    </ClCompile>
-    </ClCompile>
-    </ClCompile>
-    </ClCompile>
-    </ClCompile>
-    </ClCompile>
-    </ClCompile>
-    </ClCompile>
-    </ClCompile>
-    </ClCompile>
-    </ClCompile>
     </ClCompile>
     <ClCompile Include="..\..\..\src\Tests\CTestMCPProtocol.cpp">
       <Filter>Source Files\src\Tests</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\Tests\CTestMCPBridge.cpp">
       <Filter>Source Files\src\Tests</Filter>
-    </ClCompile>
-    </ClCompile>
-    </ClCompile>
-      <Filter>Source Files\src\Tests</Filter>
-    </ClCompile>
-    </ClCompile>
-    </ClCompile>
-    </ClCompile>
-    </ClCompile>
-    </ClCompile>
-    </ClCompile>
-    </ClCompile>
-    </ClCompile>
-    </ClCompile>
-    </ClCompile>
-    </ClCompile>
-    </ClCompile>
-    </ClCompile>
-    </ClCompile>
-    </ClCompile>
-    </ClCompile>
-    </ClCompile>
-    </ClCompile>
-    </ClCompile>
-    </ClCompile>
-    </ClCompile>
-    </ClCompile>
-    </ClCompile>
-    </ClCompile>
-    </ClCompile>
-    </ClCompile>
-    </ClCompile>
-    </ClCompile>
-    </ClCompile>
-    </ClCompile>
-    </ClCompile>
-    </ClCompile>
-    </ClCompile>
-    </ClCompile>
-    </ClCompile>
-    </ClCompile>
-    </ClCompile>
-    </ClCompile>
-    </ClCompile>
-    </ClCompile>
-    </ClCompile>
-    </ClCompile>
-    </ClCompile>
-    </ClCompile>
     </ClCompile>
     <ClCompile Include="..\..\..\src\Tests\CTestRemoteProtocol.cpp">
       <Filter>Source Files\src\Tests</Filter>
@@ -4039,112 +3879,11 @@
     <ClCompile Include="..\..\..\src\Emulators\nestopiaue\core\NstZlib.cpp">
       <Filter>Source Files\src\Emulators\nestopiaue\core</Filter>
     </ClCompile>
-    </ClCompile>
-    </ClCompile>
-    </ClCompile>
-    </ClCompile>
-    </ClCompile>
-    </ClCompile>
-    </ClInclude>
-    </ClInclude>
-    </ClInclude>
-    </ClInclude>
-    </ClInclude>
-    </ClCompile>
-    </ClInclude>
-    </ClCompile>
-    </ClInclude>
-    </ClCompile>
-    </ClInclude>
-    </ClInclude>
-    </ClCompile>
-    </ClInclude>
-    </ClCompile>
-    </ClInclude>
-    </ClCompile>
-    </ClInclude>
-    </ClCompile>
-    </ClInclude>
-    </ClCompile>
-    </ClInclude>
-    </ClCompile>
-    </ClInclude>
-    </ClCompile>
-    </ClInclude>
-    </ClCompile>
-    </ClInclude>
-    </ClInclude>
-    </ClCompile>
-    </ClInclude>
-    </ClCompile>
-    </ClInclude>
-    </ClCompile>
-    </ClInclude>
-    </ClCompile>
-    </ClInclude>
-    </ClCompile>
-    </ClInclude>
-    </ClCompile>
-    </ClInclude>
-    </ClCompile>
-    </ClInclude>
-    </ClCompile>
-    </ClInclude>
-    </ClInclude>
-    </ClCompile>
     <ClInclude Include="..\..\..\src\Plugins\MoonshineDragons\C64DebuggerPluginMoonshineDragons.h">
       <Filter>Source Files\src\Plugins\MoonshineDragons</Filter>
     </ClInclude>
     <ClCompile Include="..\..\..\src\Plugins\MoonshineDragons\C64DebuggerPluginMoonshineDragons.cpp">
       <Filter>Source Files\src\Plugins\MoonshineDragons</Filter>
-    </ClCompile>
-    </ClInclude>
-    </ClCompile>
-    </ClInclude>
-    </ClCompile>
-    </ClInclude>
-    </ClCompile>
-    </ClInclude>
-    </ClCompile>
-    </ClInclude>
-    </ClCompile>
-    </ClInclude>
-    </ClCompile>
-    </ClInclude>
-    </ClCompile>
-    </ClCompile>
-    </ClInclude>
-    </ClCompile>
-    </ClCompile>
-    </ClInclude>
-    </ClInclude>
-    </ClInclude>
-    </ClCompile>
-    </ClInclude>
-    </ClCompile>
-    </ClInclude>
-    </ClInclude>
-    </ClCompile>
-    </ClInclude>
-    </ClCompile>
-    </ClInclude>
-    </ClCompile>
-    </ClInclude>
-    </ClCompile>
-    </ClInclude>
-    </ClCompile>
-    </ClInclude>
-    </ClInclude>
-    </ClInclude>
-    </ClCompile>
-    </ClCompile>
-    </ClCompile>
-    </ClCompile>
-    </ClCompile>
-    </ClCompile>
-    </ClInclude>
-    </ClCompile>
-    </ClInclude>
     </ClCompile>
     <ClCompile Include="..\..\..\src\Plugins\GoatTracker\C64DebuggerPluginGoatTracker.cpp">
       <Filter>Source Files\src\Plugins\GoatTracker</Filter>
@@ -4764,7 +4503,6 @@
     <ClCompile Include="..\..\..\src\Emulators\vice\ViceInterface\Adapters\CDataAddressEditBoxDiskContents.cpp">
       <Filter>Source Files\src\Emulators\vice\ViceInterface\Adapters</Filter>
     </ClCompile>
-    </ClCompile>
     <ClCompile Include="..\..\..\src\Views\C64\CViewC64BreakpointsIrq.cpp">
       <Filter>Source Files\src\Views\C64</Filter>
     </ClCompile>
@@ -4865,6 +4603,12 @@
       <Filter>Source Files\src\Remote</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\Remote\CDebuggerServerApi.cpp">
+      <Filter>Source Files\src\Remote</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Remote\CDebuggerGuiControl.cpp">
+      <Filter>Source Files\src\Remote</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Remote\GuiControlMemoryBreakpoints.cpp">
       <Filter>Source Files\src\Remote</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\Remote\CDebuggerServerProtocol.cpp">
@@ -7705,10 +7449,6 @@
     <ClInclude Include="..\..\..\src\Tests\CTestGT2Oscilloscope.h">
       <Filter>Source Files\src\Tests</Filter>
     </ClInclude>
-      <Filter>Source Files\src\Tests</Filter>
-    </ClInclude>
-      <Filter>Source Files\src\Tests</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\..\src\Tests\CTestGT2Patterns.h">
       <Filter>Source Files\src\Tests</Filter>
     </ClInclude>
@@ -7739,8 +7479,6 @@
     <ClInclude Include="..\..\..\src\Tests\CTestGT2InstrumentOps.h">
       <Filter>Source Files\src\Tests</Filter>
     </ClInclude>
-      <Filter>Source Files\src\Tests</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\..\src\Tests\CTestGT2TableEditor.h">
       <Filter>Source Files\src\Tests</Filter>
     </ClInclude>
@@ -7753,97 +7491,14 @@
     <ClInclude Include="..\..\..\src\Tests\CTestGT2ArpGate.h">
       <Filter>Source Files\src\Tests</Filter>
     </ClInclude>
-    </ClInclude>
-    </ClInclude>
-    </ClInclude>
-    </ClInclude>
-    </ClInclude>
-    </ClInclude>
-    </ClInclude>
-    </ClInclude>
-      <Filter>Source Files\src\Tests</Filter>
-    </ClInclude>
-      <Filter>Source Files\src\Tests</Filter>
-    </ClInclude>
-      <Filter>Source Files\src\Tests</Filter>
-    </ClInclude>
-      <Filter>Source Files\src\Tests</Filter>
-    </ClInclude>
-      <Filter>Source Files\src\Tests</Filter>
-    </ClInclude>
-      <Filter>Source Files\src\Tests</Filter>
-    </ClInclude>
-      <Filter>Source Files\src\Tests</Filter>
-    </ClInclude>
-      <Filter>Source Files\src\Tests</Filter>
-    </ClInclude>
-      <Filter>Source Files\src\Tests</Filter>
-    </ClInclude>
-      <Filter>Source Files\src\Tests</Filter>
-    </ClInclude>
-      <Filter>Source Files\src\Tests</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\..\src\Tests\CTestMonitorConsoleSelection.h">
       <Filter>Source Files\src\Tests</Filter>
-    </ClInclude>
-      <Filter>Source Files\src\Tests</Filter>
-    </ClInclude>
-      <Filter>Source Files\src\Tests</Filter>
-    </ClInclude>
-    </ClInclude>
-    </ClInclude>
-    </ClInclude>
-    </ClInclude>
-    </ClInclude>
-    </ClInclude>
-    </ClInclude>
     </ClInclude>
     <ClInclude Include="..\..\..\src\Plugins\CPluginTestRegistry.h">
       <Filter>Source Files\src\Plugins</Filter>
     </ClInclude>
-    </ClInclude>
-    </ClInclude>
-    </ClInclude>
-    </ClInclude>
-    </ClInclude>
-    </ClInclude>
-    </ClInclude>
-    </ClInclude>
-    </ClInclude>
-    </ClInclude>
-    </ClInclude>
-    </ClInclude>
-    </ClInclude>
-    </ClInclude>
-    </ClInclude>
-    </ClInclude>
-    </ClInclude>
-    </ClInclude>
     <ClInclude Include="..\..\..\src\Tests\CTestMoonshineDragons.h">
       <Filter>Source Files\src\Tests</Filter>
-    </ClInclude>
-    </ClInclude>
-    </ClInclude>
-    </ClInclude>
-    </ClInclude>
-    </ClInclude>
-    </ClInclude>
-    </ClInclude>
-    </ClInclude>
-    </ClInclude>
-    </ClInclude>
-    </ClInclude>
-    </ClInclude>
-    </ClInclude>
-    </ClInclude>
-    </ClInclude>
-    </ClInclude>
-    </ClInclude>
-    </ClInclude>
-    </ClInclude>
-    </ClInclude>
-    </ClInclude>
-    </ClInclude>
     </ClInclude>
     <ClInclude Include="..\..\..\src\Tests\CTestDataDumpSelection.h">
       <Filter>Source Files\src\Tests</Filter>
@@ -7853,55 +7508,6 @@
     </ClInclude>
     <ClInclude Include="..\..\..\src\Tests\CTestDefaultWorkspaceSpecs.h">
       <Filter>Source Files\src\Tests</Filter>
-    </ClInclude>
-    </ClInclude>
-    </ClInclude>
-      <Filter>Source Files\src\Tests</Filter>
-    </ClInclude>
-    </ClInclude>
-    </ClInclude>
-    </ClInclude>
-    </ClInclude>
-    </ClInclude>
-    </ClInclude>
-    </ClInclude>
-    </ClInclude>
-    </ClInclude>
-    </ClInclude>
-    </ClInclude>
-    </ClInclude>
-    </ClInclude>
-    </ClInclude>
-    </ClInclude>
-    </ClInclude>
-    </ClInclude>
-    </ClInclude>
-    </ClInclude>
-    </ClInclude>
-    </ClInclude>
-    </ClInclude>
-    </ClInclude>
-    </ClInclude>
-    </ClInclude>
-    </ClInclude>
-    </ClInclude>
-    </ClInclude>
-    </ClInclude>
-    </ClInclude>
-    </ClInclude>
-    </ClInclude>
-    </ClInclude>
-    </ClInclude>
-    </ClInclude>
-    </ClInclude>
-    </ClInclude>
-    </ClInclude>
-    </ClInclude>
-    </ClInclude>
-    </ClInclude>
-    </ClInclude>
-    </ClInclude>
-    </ClInclude>
     </ClInclude>
     <ClInclude Include="..\..\..\src\Views\C64\CViewC64Screen.h">
       <Filter>Source Files\src\Views\C64</Filter>
@@ -8932,11 +8538,6 @@
     <ClInclude Include="..\..\..\src\Embedded\icon_tool_on_top_on_gfx.h">
       <Filter>Source Files\src\Embedded</Filter>
     </ClInclude>
-    </ClInclude>
-    </ClInclude>
-    </ClInclude>
-    </ClInclude>
-    </ClInclude>
     <ClInclude Include="..\..\..\src\Plugins\GoatTracker\C64DebuggerPluginGoatTracker.h">
       <Filter>Source Files\src\Plugins\GoatTracker</Filter>
     </ClInclude>
@@ -9606,7 +9207,6 @@
     <ClInclude Include="..\..\..\src\Emulators\vice\ViceInterface\Adapters\CDataAddressEditBoxDiskContents.h">
       <Filter>Source Files\src\Emulators\vice\ViceInterface\Adapters</Filter>
     </ClInclude>
-    </ClInclude>
     <ClInclude Include="..\..\..\src\Views\C64\CViewC64BreakpointsIrq.h">
       <Filter>Source Files\src\Views\C64</Filter>
     </ClInclude>
@@ -9713,6 +9313,15 @@
       <Filter>Source Files\src\Remote</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\src\Remote\CDebuggerServerApi.h">
+      <Filter>Source Files\src\Remote</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Remote\CDebuggerGuiControl.h">
+      <Filter>Source Files\src\Remote</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Remote\GuiControlRequest.h">
+      <Filter>Source Files\src\Remote</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Remote\GuiControlOperation.h">
       <Filter>Source Files\src\Remote</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\src\Remote\WebSockets\CDebuggerServerWebSockets.h">
