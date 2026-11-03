@@ -144,8 +144,8 @@ void CDebuggerServerApi::RegisterEndpoints(CDebuggerServer *server)
 		return server->PrepareResult(HTTP_OK, token, json(), NULL, 0);
 	});
 
-	// Deterministic replay: run exactly N frames then pause. Blocks until finished,
-	// so the reply arriving means the frames have already run (frame = final counter).
+	// Run N emulation frames then pause, replying after completion.
+	// A frame boundary is not a game-loop boundary and does not settle queued input.
 	sprintf(buf, "%s/run/frames", plat);
 	RegisterEndpoint(server, buf, plat, "control", "Run exactly N frames then pause (blocks until finished; count 1..100000)",
 	[this, server](const string token, json params, unsigned char *binaryData, int binaryDataSize) -> vector<char>*

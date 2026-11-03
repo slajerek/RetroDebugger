@@ -110,9 +110,9 @@ void CDebugInterfaceViceTaskKeyboardEvent::ExecuteTask()
 		inputEventsBuffer->PutU8(buttonState);
 	}
 
-	// press/release via the resolved matrix position — same sequence the virtual keyboard
-	// uses (CViewC64KeyMap::SelectKey); the c64d_*_latch calls latch immediately, without
-	// the randomized KEYBOARD_RAND alarm, so measurements stay cycle-deterministic
+	// Press/release via the resolved matrix position, as CViewC64KeyMap::SelectKey does.
+	// The latch helpers still use KEYBOARD_RAND unless the separate
+	// c64d_input_latch_immediate mode is enabled; queueing alone does not enable it.
 	if (buttonState == DEBUGGER_EVENT_BUTTON_DOWN)
 	{
 		if (matrixRow < 0)
