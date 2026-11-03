@@ -221,6 +221,7 @@ public:
 	virtual void StepOneCycle();
 	virtual void StepOverSubroutine();
 	virtual bool RunEmulationForOneFrame();
+	virtual bool RunEmulationForFrames(uint32 numFrames);
 	
 	virtual void RunContinueEmulation();
 
