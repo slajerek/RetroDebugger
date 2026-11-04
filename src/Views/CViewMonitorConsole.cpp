@@ -134,7 +134,20 @@ bool CViewMonitorConsole::KeyDownRepeat(u32 keyCode, bool isShift, bool isAlt, b
 	{
 		return true;   // swallow repeats
 	}
-	return this->viewConsole->KeyDown(keyCode);
+	if (this->viewConsole->KeyDown(keyCode))
+		return true;
+	return IsTextInputKey(keyCode, isShift, isAlt, isControl, isSuper);
+}
+
+// Printable keys reach the command line through KeyTextInput(), so the console
+// does not act on them in KeyDown(). They must still count as consumed: an
+// unconsumed key falls through to CViewC64::PostKeyDown(), which types it into
+// the emulated machine, echoing every monitor command on the C64 screen.
+bool CViewMonitorConsole::IsTextInputKey(u32 keyCode, bool isShift, bool isAlt, bool isControl, bool isSuper)
+{
+	if (isAlt || isControl || isSuper)
+		return false;
+	return (keyCode >= 0x20 && keyCode < 0x7F);
 }
 
 bool CViewMonitorConsole::KeyDown(u32 keyCode, bool isShift, bool isAlt, bool isControl, bool isSuper)
@@ -159,7 +172,9 @@ bool CViewMonitorConsole::KeyDown(u32 keyCode, bool isShift, bool isAlt, bool is
 		return true;
 	}
 
-	return this->viewConsole->KeyDown(keyCode);
+	if (this->viewConsole->KeyDown(keyCode))
+		return true;
+	return IsTextInputKey(keyCode, isShift, isAlt, isControl, isSuper);
 }
 
 bool CViewMonitorConsole::KeyTextInput(const char *text)

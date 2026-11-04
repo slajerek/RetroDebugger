@@ -30,6 +30,7 @@ public:
 	virtual bool KeyDown(u32 keyCode, bool isShift, bool isAlt, bool isControl, bool isSuper);
 	virtual bool KeyDownRepeat(u32 keyCode, bool isShift, bool isAlt, bool isControl, bool isSuper);
 	virtual bool KeyTextInput(const char *text); // utf text input entered
+	bool IsTextInputKey(u32 keyCode, bool isShift, bool isAlt, bool isControl, bool isSuper);
 	virtual bool DoScrollWheel(float deltaX, float deltaY);
 	virtual bool DoTap(float x, float y);
 	virtual bool DoMove(float x, float y, float distX, float distY, float diffX, float diffY);

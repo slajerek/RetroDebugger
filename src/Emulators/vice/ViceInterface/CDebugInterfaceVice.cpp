@@ -3662,6 +3662,10 @@ CSlrString *CDebugInterfaceVice::GetCodeMonitorPrompt()
 // because the lib.h header turns lib_strdup into a macro that rewrites the
 // declaration into an arity-mismatched lib_strdup_pinpoint signature.
 
+extern "C" {
+	int c64d_monitor_take_exit_request(int *driveNum, int *pc);
+}
+
 static void execute_monitor_command_trap(uint16_t addr, void *v)
 {
 	char *monitorCmdStr = (char*)v;
@@ -3669,6 +3673,37 @@ static void execute_monitor_command_trap(uint16_t addr, void *v)
 	mon_buffer_flush();
 	
 	LOGD("exit_mon=%d", exit_mon);
+}
+
+// The VICE monitor only records "leave the monitor" requests (g, g <addr>, x,
+// step, ...) in exit_mon and expects the monitor_startup() loop to act on
+// them. That loop never runs here: the debugger console feeds monitor_process()
+// directly, so apply the request ourselves. "g <addr>" wrote the PC into the
+// register struct of the addressed memspace, but the CPU loop works on its own
+// copy while paused, so route the jump through the debugger's own PC-change
+// path which commits it before the next opcode fetch.
+void CDebugInterfaceVice::ApplyCodeMonitorExitRequest()
+{
+	int driveNum = -1;
+	int pc = 0;
+	int request = c64d_monitor_take_exit_request(&driveNum, &pc);
+	
+	if (request == exit_mon_change_flow)
+	{
+		if (driveNum >= 0)
+		{
+			MakeJmp1541((uint16)pc);
+		}
+		else
+		{
+			MakeJmpC64((uint16)pc);
+		}
+	}
+	
+	if (request == exit_mon_change_flow || request == exit_mon_continue)
+	{
+		SetDebugMode(DEBUGGER_MODE_RUNNING);
+	}
 }
 
 bool CDebugInterfaceVice::ExecuteCodeMonitorCommand(CSlrString *commandStr)
@@ -3703,6 +3738,8 @@ bool CDebugInterfaceVice::ExecuteCodeMonitorCommand(CSlrString *commandStr)
 		mon_buffer_flush();
 		LOGD("exit_mon=%d", exit_mon);
 	}
+
+	ApplyCodeMonitorExitRequest();
 
 	return true;
 }

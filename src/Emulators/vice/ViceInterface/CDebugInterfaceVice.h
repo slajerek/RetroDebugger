@@ -392,6 +392,7 @@ public:
 	bool isCodeMonitorOpened;
 	virtual CSlrString *GetCodeMonitorPrompt();
 	virtual bool ExecuteCodeMonitorCommand(CSlrString *commandStr);
+	void ApplyCodeMonitorExitRequest();
 	
 	// ROMs
 	virtual void ScanFolderForRoms(const char *folderPath);

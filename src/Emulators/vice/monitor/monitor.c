@@ -989,11 +989,35 @@ void mon_set_mem_val_ex(MEMSPACE mem, int bank, uint16_t mem_addr, uint8_t val)
     }
 }
 
+/* c64d: RetroDebugger drives monitor_process() from its own console, outside
+   the monitor_startup() loop, so nothing there consumes exit_mon. The debugger
+   fetches the pending exit request (and the target of the last "g <addr>")
+   through c64d_monitor_take_exit_request() right after each command. */
+static MEMSPACE c64d_mon_jump_memspace = e_default_space;
+static uint16_t c64d_mon_jump_pc = 0;
+
+int c64d_monitor_take_exit_request(int *driveNum, int *pc)
+{
+    int request = (int)exit_mon;
+
+    exit_mon = exit_mon_no;
+
+    if (driveNum) {
+        *driveNum = monitor_diskspace_dnr(c64d_mon_jump_memspace);
+    }
+    if (pc) {
+        *pc = (int)c64d_mon_jump_pc;
+    }
+    return request;
+}
+
 /* exit monitor, G XXXX  */
 void mon_jump(MON_ADDR addr)
 {
     mon_evaluate_default_addr(&addr);
     (monitor_cpu_for_memspace[addr_memspace(addr)]->mon_register_set_val)(addr_memspace(addr), e_PC, (uint16_t)(addr_location(addr)));
+    c64d_mon_jump_memspace = addr_memspace(addr);
+    c64d_mon_jump_pc = (uint16_t)(addr_location(addr));
     exit_mon = exit_mon_change_flow;
 }
 
