@@ -1246,6 +1246,8 @@
 		41F8CFA7294E0FC7000AECAE /* CViewC64AllGraphicsBitmapsControl.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 41F8CFA4294E0FC7000AECAE /* CViewC64AllGraphicsBitmapsControl.cpp */; };
 		41FB3C0D2CFE0D0800870F9B /* CDebuggerServer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 41FB3C092CFE0D0800870F9B /* CDebuggerServer.cpp */; };
 		41FB3C0E2CFE0D0800870F9B /* CDebuggerServerApi.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 41FB3C0B2CFE0D0800870F9B /* CDebuggerServerApi.cpp */; };
+		A15120261029000000000011 /* CDebuggerGuiControl.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A15120261029000000000001 /* CDebuggerGuiControl.cpp */; };
+		A15120261029000000000012 /* GuiControlMemoryBreakpoints.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A15120261029000000000002 /* GuiControlMemoryBreakpoints.cpp */; };
 		41FD5350293CBAD50051A851 /* CViewC64ColorRamScreen.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 41FD534E293CBAD40051A851 /* CViewC64ColorRamScreen.cpp */; };
 		41FD5357293CC3760051A851 /* CViewC64AllGraphicsSprites.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 41FD5355293CC3760051A851 /* CViewC64AllGraphicsSprites.cpp */; };
 		41FD535B293CD9420051A851 /* CViewC64AllGraphicsBitmaps.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 41FD535A293CD9420051A851 /* CViewC64AllGraphicsBitmaps.cpp */; };
@@ -4128,6 +4130,11 @@
 		41FB3C0A2CFE0D0800870F9B /* CDebuggerServer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "$(SRCROOT)/../../src/Remote/CDebuggerServer.h"; sourceTree = "<absolute>"; };
 		41FB3C0B2CFE0D0800870F9B /* CDebuggerServerApi.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = "$(SRCROOT)/../../src/Remote/CDebuggerServerApi.cpp"; sourceTree = "<absolute>"; };
 		41FB3C0C2CFE0D0800870F9B /* CDebuggerServerApi.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "$(SRCROOT)/../../src/Remote/CDebuggerServerApi.h"; sourceTree = "<absolute>"; };
+		A15120261029000000000001 /* CDebuggerGuiControl.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = "$(SRCROOT)/../../src/Remote/CDebuggerGuiControl.cpp"; sourceTree = "<absolute>"; };
+		A15120261029000000000002 /* GuiControlMemoryBreakpoints.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = "$(SRCROOT)/../../src/Remote/GuiControlMemoryBreakpoints.cpp"; sourceTree = "<absolute>"; };
+		A15120261029000000000003 /* CDebuggerGuiControl.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "$(SRCROOT)/../../src/Remote/CDebuggerGuiControl.h"; sourceTree = "<absolute>"; };
+		A15120261029000000000004 /* GuiControlRequest.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "$(SRCROOT)/../../src/Remote/GuiControlRequest.h"; sourceTree = "<absolute>"; };
+		A15120261029000000000005 /* GuiControlOperation.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "$(SRCROOT)/../../src/Remote/GuiControlOperation.h"; sourceTree = "<absolute>"; };
 		41FD534D293CBAD40051A851 /* CViewC64ColorRamScreen.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "$(SRCROOT)/../../src/Views/C64/CViewC64ColorRamScreen.h"; sourceTree = "<absolute>"; };
 		41FD534E293CBAD40051A851 /* CViewC64ColorRamScreen.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = "$(SRCROOT)/../../src/Views/C64/CViewC64ColorRamScreen.cpp"; sourceTree = "<absolute>"; };
 		41FD5355293CC3760051A851 /* CViewC64AllGraphicsSprites.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = "$(SRCROOT)/../../src/Views/C64/AllGraphics/CViewC64AllGraphicsSprites.cpp"; sourceTree = "<absolute>"; };
@@ -4828,6 +4835,11 @@
 				41FB3C0A2CFE0D0800870F9B /* CDebuggerServer.h */,
 				41FB3C0B2CFE0D0800870F9B /* CDebuggerServerApi.cpp */,
 				41FB3C0C2CFE0D0800870F9B /* CDebuggerServerApi.h */,
+				A15120261029000000000001 /* CDebuggerGuiControl.cpp */,
+				A15120261029000000000002 /* GuiControlMemoryBreakpoints.cpp */,
+				A15120261029000000000003 /* CDebuggerGuiControl.h */,
+				A15120261029000000000004 /* GuiControlRequest.h */,
+				A15120261029000000000005 /* GuiControlOperation.h */,
 				AA0000000000000000000301 /* CDebuggerServerProtocol.cpp */,
 				AA0000000000000000000302 /* CDebuggerServerProtocol.h */,
 				4121FCDC2CC6A1E600095AD3 /* Pipe */,
@@ -8890,6 +8902,8 @@
 				41C84C2C23C6183A007C0889 /* xep80.c in Sources */,
 				41C84C2D23C6183A007C0889 /* xep80_fonts.c in Sources */,
 				41FB3C0E2CFE0D0800870F9B /* CDebuggerServerApi.cpp in Sources */,
+				A15120261029000000000011 /* CDebuggerGuiControl.cpp in Sources */,
+				A15120261029000000000012 /* GuiControlMemoryBreakpoints.cpp in Sources */,
 				AA0000000000000000000303 /* CDebuggerServerProtocol.cpp in Sources */,
 				AA0000000000000000000205 /* archdep_file_io.c in Sources */,
 				C0EB346E537142F4AAB59AC5 /* archdep_tick.c in Sources */,

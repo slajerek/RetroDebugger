@@ -27,6 +27,8 @@ public:
 	CDebuggerApi *debuggerApi;
 	
 	virtual void RegisterEndpoints(CDebuggerServer *server);
+	static void RegisterGuiEndpoint(CDebuggerServer *server);
+	static void GuiPostFrame();
 };
 
 #endif

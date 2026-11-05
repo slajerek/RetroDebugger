@@ -196,6 +196,7 @@ void CTestSuiteRegisterRetroDebuggerTests(std::vector<std::unique_ptr<CTest> > &
 	}
 	tests.push_back(std::make_unique<CTestMCPProtocol>());
 	tests.push_back(std::make_unique<CTestMCPBridge>());
+	tests.push_back(std::make_unique<CTestMCPGuiControl>());
 	tests.push_back(std::make_unique<CTestRemoteProtocol>());
 	tests.push_back(std::make_unique<CTestPlatformSwitching>());
 	tests.push_back(std::make_unique<CTestViceInputReplay>());

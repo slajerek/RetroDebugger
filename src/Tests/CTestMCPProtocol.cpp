@@ -1749,7 +1749,49 @@ void CTestMCPProtocol::Run(ITestCallback *cb)
 		if (!valid) { TestCompleted(false, "Test 52 FAIL: completion ownership/lifecycle/wait mismatch"); return; }
 	}
 
-	TestCompleted(true, "All MCP protocol tests passed (52/52)");
+	// GUI dispatch preserves explicit pending/failure outcomes and rejects escapes.
+	{
+		for (const auto &args : json::array({
+			{{"action", "capabilities"}},
+			{{"action", "status"}, {"requestId", "1"}},
+			{{"action", "show"}, {"target", "c64.memory_breakpoints"}},
+			{{"action", "set_address"}, {"target", "c64.memory_breakpoints.editor"}, {"text", "ce00"}}}))
+		{
+			json payload = {{"requestId", "1"}, {"outcome", "queued"}};
+			CCannedDebuggerServer debuggerServer({{"status", HTTP_OK}, {"result", payload}});
+			CMCPServer server;
+			PrepareToolTestServer(server, debuggerServer);
+			json response = CallTool(server, 53, "retro_gui", args);
+			if (!ToolErrorText(response).empty() || debuggerServer.callCount != 1
+				|| debuggerServer.lastEndpointName != "gui/control" || debuggerServer.lastParams != args
+				|| json::parse(response["result"]["content"][0]["text"].get<std::string>()) != payload)
+			{ TestCompleted(false, "GUI tool changed routing or queued outcome"); return; }
+		}
+		CCannedDebuggerServer debuggerServer({{"status", HTTP_OK}, {"result", json::object()}});
+		CMCPServer server;
+		PrepareToolTestServer(server, debuggerServer);
+		for (const auto &args : json::array({
+			nullptr, json::object(), {{"action", "key"}, {"key", "Enter"}},
+			{{"action", "show"}, {"target", "C64 Screen"}},
+			{{"action", "submit"}, {"target", "c64.memory_breakpoints"}},
+			{{"action", "set_address"}, {"target", "c64.memory_breakpoints.editor"}, {"text", "ce00\n"}},
+			{{"action", "capture"}, {"target", "c64.memory_breakpoints"}, {"path", "out.png"}},
+			{{"action", "status"}, {"requestId", 1}},
+			{{"action", "capabilities"}, {"extra", true}}}))
+		{
+			if (ToolErrorText(CallTool(server, 54, "retro_gui", args)).empty() || debuggerServer.callCount != 0)
+			{ TestCompleted(false, "Invalid GUI arguments reached endpoint"); return; }
+		}
+	}
+	{
+		CCannedDebuggerServer debuggerServer({{"status", HTTP_SERVICE_UNAVAILABLE}, {"result", {{"error", "headless"}}}});
+		CMCPServer server;
+		PrepareToolTestServer(server, debuggerServer);
+		if (ToolErrorText(CallTool(server, 55, "retro_gui", {{"action", "capabilities"}})).empty())
+		{ TestCompleted(false, "GUI unavailable error swallowed"); return; }
+	}
+
+	TestCompleted(true, "All MCP protocol tests passed (55/55)");
 }
 
 void CTestMCPProtocol::Cancel()

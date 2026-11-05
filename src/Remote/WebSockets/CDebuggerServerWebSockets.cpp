@@ -164,6 +164,8 @@ void CDebuggerServerWebSockets::ThreadRun(void *passData)
 		return PrepareResult(HTTP_OK, token, result, NULL, 0);
 	});
 	
+	CDebuggerServerApi::RegisterGuiEndpoint(this);
+
 	// register endpoints for all emulators
 	for (auto it = viewC64->debugInterfaces.begin(); it != viewC64->debugInterfaces.end(); it++)
 	{
