@@ -71,15 +71,15 @@ void Operation::SetImage(const json &image)
 
 namespace
 {
-class GuiStartOperation : public CUiThreadTaskCallback
+class CGuiStartOperation : public CUiThreadTaskCallback
 {
 public:
 	std::shared_ptr<Operation> op;
-	GuiStartOperation(std::shared_ptr<Operation> op) : op(op) {}
+	CGuiStartOperation(std::shared_ptr<Operation> op) : op(op) {}
 	void RunUIThreadTask() override
 	{
 		// CGuiMain removes callbacks but does not delete them.
-		std::unique_ptr<GuiStartOperation> deleteAfterRun(this);
+		std::unique_ptr<CGuiStartOperation> deleteAfterRun(this);
 		Start(op);
 	}
 	static void Start(const std::shared_ptr<Operation> &op)
@@ -155,7 +155,7 @@ void GuiControl::PostFrame()
 	{
 		auto pending = guiPendingStartup;
 		guiPendingStartup.reset();
-		GuiStartOperation::Start(pending);
+		CGuiStartOperation::Start(pending);
 	}
 #endif
 }
@@ -216,7 +216,7 @@ void GuiControl::RegisterEndpoint(CDebuggerServer *server)
 			op->result = {{"requestId", op->id}, {"outcome", "queued"}};
 			guiOperation = op;
 		}
-		guiMain->AddUiThreadTask(new GuiStartOperation(op));
+		guiMain->AddUiThreadTask(new CGuiStartOperation(op));
 		// Do not read op->result here: the UI may already be writing it.
 		return server->PrepareResult(HTTP_OK, token, {{"requestId", op->id}, {"outcome", "queued"}}, nullptr, 0);
 #else
