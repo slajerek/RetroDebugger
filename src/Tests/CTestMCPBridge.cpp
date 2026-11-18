@@ -10,10 +10,83 @@
 #include <cstring>
 #include <string>
 #include <set>
+#include <stdexcept>
+#include <memory>
 
 using namespace nlohmann;
 
 static char sFailMsg[1024];
+
+// Compare the actual named contract, rather than an easy-to-stale tool count.
+// A multiset comparison also rejects duplicates after reconnect.
+static bool HasConnectedRoster(const json &tools)
+{
+	const std::multiset<std::string> expected = {
+		"retro_assemble",
+		"retro_breakpoint_add",
+		"retro_breakpoint_list",
+		"retro_breakpoint_remove",
+		"retro_code_map",
+		"retro_continue",
+		"retro_cpu_counters",
+		"retro_cpu_jump",
+		"retro_cpu_status",
+		"retro_disassemble",
+		"retro_disk_attach",
+		"retro_disk_detach",
+		"retro_disk_directory",
+		"retro_drive1541_pause",
+		"retro_drive1541_run_until",
+		"retro_drive1541_state",
+		"retro_drive_dos_status",
+		"retro_gui",
+		"retro_input_joystick",
+		"retro_input_joystick_state",
+		"retro_input_key",
+		"retro_list_platforms",
+		"retro_load",
+		"retro_machine_state",
+		"retro_media_detach",
+		"retro_memory_breakpoint_add",
+		"retro_memory_breakpoint_list",
+		"retro_memory_breakpoint_remove",
+		"retro_memory_last_access",
+		"retro_memory_read",
+		"retro_memory_search",
+		"retro_memory_write",
+		"retro_pause",
+		"retro_reconnect",
+		"retro_reset",
+		"retro_screenshot",
+		"retro_search_pattern",
+		"retro_segment_read",
+		"retro_segment_write",
+		"retro_shutdown",
+		"retro_snapshot_load",
+		"retro_snapshot_quick_load",
+		"retro_snapshot_quick_save",
+		"retro_snapshot_save",
+		"retro_start_platform",
+		"retro_step_cycle",
+		"retro_step_instruction",
+		"retro_step_subroutine",
+		"retro_stop_platform",
+		"retro_timeline",
+		"retro_transport_diagnostics",
+		"retro_warp",
+		"retro_watch_add",
+		"retro_watch_list",
+		"retro_watch_remove"
+	};
+	std::multiset<std::string> actual;
+	int guiSchemas = 0;
+	for (const auto &tool : tools)
+	{
+		actual.insert(tool.value("name", ""));
+		if (tool.value("name", "") == "retro_gui" && tool.at("inputSchema") == GuiControl::Schema()) guiSchemas++;
+	}
+	return actual == expected && guiSchemas == 1;
+}
 
 static bool HasMemoryReadSchema(const json &tools)
 {
@@ -511,7 +584,6 @@ void CTestMCPBridge::Run(ITestCallback *cb)
 		bool hasMemoryLastAccess = false;
 		bool hasDosStatus = false;
 		int timelineCount = 0;
-		int toolCount = 0;
 		for (const auto &t : tools)
 		{
 			std::string name = t.value("name", "");
@@ -523,7 +595,6 @@ void CTestMCPBridge::Run(ITestCallback *cb)
 			if (name == "retro_memory_last_access") hasMemoryLastAccess = true;
 			if (name == "retro_drive_dos_status") hasDosStatus = true;
 			if (name == "retro_timeline") timelineCount++;
-			toolCount++;
 		}
 
 		if (!hasCpuStatus)
@@ -597,10 +668,9 @@ void CTestMCPBridge::Run(ITestCallback *cb)
 			bridge.Stop(); FinishTest(false, "Missing, duplicated, or stale drive state schema"); return;
 		}
 
-		// Should be 54: 51 debugger + 3 bridge-local (directory, DOS status, drive pause, run-until, and state).
-		if (toolCount != 54)
+		if (!HasConnectedRoster(tools))
 		{
-			sprintf(sFailMsg, "Test %d FAIL: expected 54 tools, got %d", testNum, toolCount);
+			sprintf(sFailMsg, "Test %d FAIL: connected tool roster/schema mismatch", testNum);
 			bridge.Stop();
 			FinishTest(false, sFailMsg);
 			return;
@@ -750,11 +820,9 @@ void CTestMCPBridge::Run(ITestCallback *cb)
 
 			json response = server.HandleRequest(request);
 			json tools = response["result"]["tools"];
-			int toolCount = (int)tools.size();
-			if (toolCount != 54)
+			if (!HasConnectedRoster(tools))
 			{
-				sprintf(sFailMsg, "Test %d FAIL: after reconnect expected 54 tools, got %d",
-						testNum, toolCount);
+				sprintf(sFailMsg, "Test %d FAIL: reconnected tool roster/schema mismatch", testNum);
 				bridge2.Stop();
 				FinishTest(false, sFailMsg);
 				return;
@@ -1049,4 +1117,132 @@ void CTestMCPBridge::Run(ITestCallback *cb)
 void CTestMCPBridge::Cancel()
 {
 	isRunning = false;
+}
+
+CTestMCPGuiControl::~CTestMCPGuiControl()
+{
+	if (worker.joinable()) worker.join();
+}
+
+void CTestMCPGuiControl::Cancel()
+{
+	cancelled = true;
+}
+
+void CTestMCPGuiControl::Run(ITestCallback *cb)
+{
+	callback = cb;
+	isRunning = true;
+	cancelled = false;
+	if (worker.joinable()) worker.join();
+	worker = std::thread([this]() { RunEndpointTest(); });
+}
+
+void CTestMCPGuiControl::RunEndpointTest()
+{
+	CDebuggerServer *server = nullptr;
+	int createdAddress = -1;
+	std::string failure;
+	auto endpoint = [&](const char *name, const json &args) -> json
+	{
+		std::unique_ptr<std::vector<char>> bytes(server->RunEndpointFunction(name, "", args, nullptr, 0));
+		if (!bytes || bytes->empty()) throw std::runtime_error("No GUI endpoint response");
+		return json::parse(bytes->begin(), bytes->end());
+	};
+	auto call = [&](const json &args) -> json
+	{
+		json reply = endpoint("gui/control", args);
+		if (reply.value("status", 0) != HTTP_OK) throw std::runtime_error(reply.dump());
+		return reply.at("result");
+	};
+	auto action = [&](const char *name, bool editor, const std::string &text = "") -> json
+	{
+		json args = {{"action", name}, {"target", editor ? "c64.memory_breakpoints.editor" : "c64.memory_breakpoints"}};
+		if (!text.empty()) args["text"] = text;
+		json reply = call(args);
+		if (reply.value("outcome", "") != "queued" || !reply.contains("requestId"))
+			throw std::runtime_error("Action did not report queued acceptance");
+		std::string id = reply.at("requestId");
+		for (int i = 0; i < 200; i++)
+		{
+			if (cancelled) throw std::runtime_error("GUI test cancelled");
+			reply = call({{"action", "status"}, {"requestId", id}});
+			std::string outcome = reply.value("outcome", "");
+			if (outcome == "completed") return reply;
+			if (outcome != "queued" && outcome != "running") throw std::runtime_error(reply.dump());
+			SYS_Sleep(50);
+		}
+		throw std::runtime_error("GUI request " + id + " still incomplete after bounded 10-second wait; inspect status, and do not retry blindly");
+	};
+	auto breakpoints = [&]() -> json
+	{
+		json reply = endpoint("c64/cpu/memory/breakpoint/list", json::object());
+		if (reply.value("status", 0) != HTTP_OK) throw std::runtime_error(reply.dump());
+		return reply.at("result").at("breakpoints");
+	};
+	auto checkCapture = [](const json &reply)
+	{
+		const json &image = reply.at("image");
+		if (image.at("mimeType") != "image/png" || image.at("encoding") != "base64"
+			|| image.at("width").get<int>() <= 0 || image.at("height").get<int>() <= 0
+			|| image.at("data").get<std::string>().find("iVBORw0KGgo") != 0)
+			throw std::runtime_error("Rendered capture did not contain a sized PNG");
+	};
+	try
+	{
+		if (!EnsureDebuggerServerRunning()) throw std::runtime_error("Debugger server unavailable");
+		server = viewC64->debuggerServer;
+		for (int i = 0; i < 100 && !server->IsEndpointRegistryReady(); i++) SYS_Sleep(50);
+		if (!server->IsEndpointRegistryReady()) throw std::runtime_error("Endpoint registry not ready");
+		json capabilities = call({{"action", "capabilities"}});
+		if (!capabilities.at("available").get<bool>())
+		{
+			for (const char *name : {"show", "capture"})
+				if (endpoint("gui/control", {{"action", name}, {"target", "c64.memory_breakpoints"}}).value("status", 0) != HTTP_SERVICE_UNAVAILABLE)
+					throw std::runtime_error("Unavailable GUI action was not refused");
+			TestSkipped("GUI unavailability verified; real widgets, Enter, dismissal, and rendered capture require a visible test-enabled build");
+			return;
+		}
+		json before = breakpoints();
+		std::set<int> used;
+		for (const auto &bp : before) used.insert(bp.at("address").get<int>());
+		int address = 0xCE00;
+		while (address <= 0xCEFF && used.count(address)) address++;
+		if (address > 0xCEFF) throw std::runtime_error("No unused GUI test address");
+		char text[8]; snprintf(text, sizeof(text), "%04x", address);
+
+		action("show", false);
+		action("open", false);
+		action("set_address", true, text);
+		checkCapture(action("capture", true));
+		action("cancel", true);
+		if (breakpoints() != before) throw std::runtime_error("Popup dismissal changed backend breakpoints");
+
+		action("open", false);
+		action("set_address", true, text);
+		// Fixture cleanup only, even if the eventual UI outcome is uncertain.
+		// The GUI endpoint itself must never call backend add/remove APIs.
+		createdAddress = address;
+		action("submit", true);
+		json after = breakpoints();
+		bool found = false;
+		for (const auto &bp : after) if (bp.at("address") == address) found = true;
+		if (!found || after.size() != before.size() + 1)
+			throw std::runtime_error("GUI Enter did not create exactly one independent backend breakpoint");
+		checkCapture(action("capture", false));
+	}
+	catch (const std::exception &e) { failure = e.what(); }
+
+	if (createdAddress >= 0 && server)
+	{
+		try
+		{
+			json reply = endpoint("c64/cpu/memory/breakpoint/remove", {{"addr", createdAddress}});
+			if (reply.value("status", 0) != HTTP_OK) failure += " Fixture cleanup failed: " + reply.dump();
+		}
+		catch (const std::exception &e) { failure += " Fixture cleanup failed: " + std::string(e.what()); }
+	}
+	TestCompleted(failure.empty(), failure.empty()
+		? "GUI endpoint: real address input and Enter create, popup dismissal unchanged, and panel/editor PNG captures"
+		: failure.c_str());
 }

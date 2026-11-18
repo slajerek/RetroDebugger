@@ -850,6 +850,23 @@ void CMCPServer::RegisterDebuggerTools(CDebuggerServer *server)
 		RegisterTool(tool);
 	}
 
+	// GUI controls are server-level, not emulator keyboard or backend breakpoint APIs.
+	{
+		MCPToolDescriptor tool;
+		tool.name = "retro_gui";
+		tool.description = "Interactive C64 Memory Breakpoints panel and add editor only. "
+			"Call capabilities first. Actions return queued, NOT completed; poll status with requestId "
+			"until completed, failed, or expired before another action. Capture returns rendered PNG. "
+			"No emulator keys, arbitrary targets, OS events, or headless GUI.";
+		tool.inputSchema = GuiControl::Schema();
+		tool.handler = [server](const json &params) -> json
+		{
+			if (!GuiControl::Valid(params)) throw runtime_error("Invalid retro_gui action, target, or fields");
+			return ConsumeEndpointResult(server->RunEndpointFunction("gui/control", "", params, nullptr, 0), "retro_gui");
+		};
+		RegisterTool(tool);
+	}
+
 	// Existing frame-navigation contract stays separate from precise seeking.
 	{
 		MCPToolDescriptor tool;

@@ -30,6 +30,7 @@ extern "C" void archdep_init_stdio(void);
 
 #if MT_ENABLE_IMGUI_TEST_ENGINE
 #include "CImGuiTestEngine.h"
+#include "CDebuggerServerApi.h"
 #include "imgui_te_engine.h"
 extern void RegisterRetroDebuggerTests(ImGuiTestEngine *engine);
 static bool sRunTests = false;
@@ -426,7 +427,9 @@ void MT_PostInit()
 	VID_SetFPS(5);
 
 #if MT_ENABLE_IMGUI_TEST_ENGINE
-	// ONLY when ImGui tests were actually asked for.
+	// Eager initialization only when ImGui tests were actually asked for.
+	// The allowlisted MCP GUI endpoint may initialize the driver lazily on
+	// the UI thread, without registering or scheduling the CLI test suite.
 	//
 	// This used to be unconditional, so every ordinary launch created a test
 	// engine, registered the whole ImGui test suite against it and left it
@@ -502,6 +505,7 @@ void MT_PostRenderEndFrame()
 {
 	#if MT_ENABLE_IMGUI_TEST_ENGINE
 	CImGuiTestEngine::PostSwap();
+	CDebuggerServerApi::GuiPostFrame();
 
 	if (sRunTests && !sTestsQueued)
 	{

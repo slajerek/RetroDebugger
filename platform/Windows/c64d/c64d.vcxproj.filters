@@ -4605,6 +4605,12 @@
     <ClCompile Include="..\..\..\src\Remote\CDebuggerServerApi.cpp">
       <Filter>Source Files\src\Remote</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\src\Remote\CDebuggerGuiControl.cpp">
+      <Filter>Source Files\src\Remote</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Remote\GuiControlMemoryBreakpoints.cpp">
+      <Filter>Source Files\src\Remote</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\..\src\Remote\CDebuggerServerProtocol.cpp">
       <Filter>Source Files\src\Remote</Filter>
     </ClCompile>
@@ -9307,6 +9313,15 @@
       <Filter>Source Files\src\Remote</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\src\Remote\CDebuggerServerApi.h">
+      <Filter>Source Files\src\Remote</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Remote\CDebuggerGuiControl.h">
+      <Filter>Source Files\src\Remote</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Remote\GuiControlRequest.h">
+      <Filter>Source Files\src\Remote</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Remote\GuiControlOperation.h">
       <Filter>Source Files\src\Remote</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\src\Remote\WebSockets\CDebuggerServerWebSockets.h">

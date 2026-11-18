@@ -52,6 +52,9 @@ Use this skill when working with the RetroDebugger MCP server to debug 8-bit pro
   build needs `C:\data\game.d64`, not `/data/game.d64`. A path the debugger cannot see comes
   back as an MCP error (`retro_load failed: File not found: ...`), not as a silent no-op
 
+### Interactive GUI controls
+- `retro_gui(action:"capabilities")` -- check visible GUI/test-driver availability.  Only the C64 Memory Breakpoints panel and add editor are supported.  Actions are queued; poll the returned request ID to a terminal outcome before continuing.  GUI input is separate from emulator keys.  See [safe call sequences, capture output, and deadline semantics](gui-control.md).
+
 ### Existing C64 Timeline
 - `retro_timeline(platform:"c64", action:"status")` -- read-only recording/history/frame-range status.
 - `retro_timeline(platform:"c64", action:"frame", frame:120)` -- queue existing frame navigation from an already paused emulator.  Omitting `waitMs` preserves queued acceptance.

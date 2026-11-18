@@ -1737,6 +1737,8 @@ add_executable(retrodebugger
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Remote/Pipe/CPipeProtocolDebuggerCallback.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Remote/WebSockets/CDebuggerServerWebSockets.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Remote/CDebuggerServerApi.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Remote/CDebuggerGuiControl.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Remote/GuiControlMemoryBreakpoints.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Remote/CDebuggerServer.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Remote/CDebuggerServerProtocol.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Remote/MCP/CMCPServer.cpp"
