@@ -125,7 +125,7 @@ void fsimage_media_destroy(disk_image_t *image)
 int fsimage_open(disk_image_t *image)
 {
     fsimage_t *fsimage;
-    size_t length;
+    unsigned int length;
     unsigned int isdir;
 
     fsimage = image->media.fsimage;
